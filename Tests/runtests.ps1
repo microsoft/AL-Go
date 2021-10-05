@@ -1,0 +1,2 @@
+﻿# PSScriptAnalyzer
+# Run tests

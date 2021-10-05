@@ -1,0 +1,29 @@
+name: PowerShell script
+author: Freddy Kristiansen
+permissions:
+  contents: write
+  pull-requests: write
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  versionnumber:
+    description: New Version Number (Major.Minor)
+    required: true
+  directCommit:
+    description: Direct Commit (Y/N)
+    required: false
+    default: N
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

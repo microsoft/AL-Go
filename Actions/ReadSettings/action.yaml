@@ -1,0 +1,32 @@
+name: PowerShell script
+author: Freddy Kristiansen
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  release:
+    description: Indicates whether this is called from a release pipeline
+    required: false
+    default: 'N'
+  get:
+    description: Specifies which properties to get from the settings file, default is all
+    required: false
+    default: ''
+outputs:
+  Settings:
+    description: Settings in compressed Json format
+    value: ${{steps.getsettings.outputs.Settings}}
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
+      id: getsettings
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

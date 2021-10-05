@@ -1,0 +1,37 @@
+name: PowerShell script
+author: Freddy Kristiansen
+permissions:
+  contents: write
+  pull-requests: write
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  environmentName:
+    description: Name of the online environment
+    required: true
+  reUseExistingEnvironment:
+    description: Reuse environment if it exists
+    required: false
+    default: 'N'
+  adminCenterApiCredentials:
+    description: Admin center API credentials
+    required: false
+    default: ''
+  directCommit:
+    description: Direct Commit (Y/N)
+    required: false
+    default: N
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -environmentName '${{ inputs.environmentName }}' -adminCenterApiCredentials '${{ inputs.adminCenterApiCredentials }}' -reUseExistingEnvironment ('${{ inputs.reUseExistingEnvironment }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

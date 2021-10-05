@@ -1,0 +1,10 @@
+name: PowerShell script
+author: Freddy Kristiansen
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/PipelineCleanup.ps1
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

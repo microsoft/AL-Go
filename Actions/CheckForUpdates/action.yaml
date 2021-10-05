@@ -1,0 +1,43 @@
+name: PowerShell script
+author: Freddy Kristiansen
+permissions:
+  contents: write
+  pull-requests: write
+  workflows: write
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  update:
+    description: Set this input to Y in order to update AL-Go System Files if needed
+    required: false
+    default: N
+  settings:
+    description: Settings from template repository in compressed Json format
+    required: false
+    default: '{"templateUrl": ""; "templateBranch": ""}'
+  templateUrl:
+    description: URL of the template repository (default is the template repository used to create the repository)
+    required: false
+    default: ''
+  templateBranch:
+    description: Branch in template repository to use for the update (default is the default branch)
+    required: false
+    default: ''
+  directCommit:
+    description: Direct Commit (Y/N)
+    required: false
+    default: N
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -update ('${{ inputs.update }}' -eq 'Y') -settingsJson '${{ inputs.settings }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

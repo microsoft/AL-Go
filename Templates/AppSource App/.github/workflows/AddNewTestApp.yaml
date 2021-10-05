@@ -1,0 +1,37 @@
+name: Add new test app
+
+on:
+  workflow_dispatch:
+    inputs:
+      publisher:
+        description: Publisher name of the test app
+        required: true
+      name:
+        description: Name of the test app
+        required: true
+      idrange:
+        description: ID range
+        required: true
+        default: '50000..99999'  
+      directCommit:
+        description: Direct COMMIT (Y/N)
+        required: false
+        default: 'N'
+
+defaults:
+  run:
+    shell: PowerShell
+
+jobs:
+  update:
+    runs-on: windows-latest
+
+    steps:
+      - name: Add new test app
+        uses: microsoft/AL-Go/AddAnApp@main
+        with:
+          type: 'Test App'
+          publisher: ${{ github.event.inputs.publisher }}
+          name: ${{ github.event.inputs.name }}
+          idrange: ${{ github.event.inputs.idrange }}
+          directCommit: ${{ github.event.inputs.directCommit }}

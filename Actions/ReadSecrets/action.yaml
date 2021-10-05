@@ -1,0 +1,21 @@
+name: PowerShell script
+author: Freddy Kristiansen
+inputs:
+  settings:
+    description: Settings from template repository in compressed Json format
+    required: false
+    default: '{"keyVaultName": ""}'
+  keyVaultName:
+    description: Name of keyvault
+    required: true
+  secrets:
+    description: Comma separated list of Secrets to get
+    required: true
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settings }}' -keyVaultName '${{ inputs.keyVaultName }}' -secrets '${{ inputs.secrets }}'
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

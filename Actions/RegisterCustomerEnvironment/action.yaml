@@ -1,0 +1,59 @@
+name: PowerShell script
+author: Freddy Kristiansen
+permissions:
+  contents: write
+  pull-requests: write
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  workflowToken:
+    description: A GitHub token with permissions to modify workflows
+    required: false
+    default: ''
+  name:
+    description: Customer Name
+    required: true
+  tenantId:
+    description: Customer Tenant ID
+    required: true
+  environmentName:
+    description: Customer Environment Name
+    required: true
+  aadAppClientId:
+    description: AAD App Client Id or blank for RefreshToken
+    required: false
+    default: ''
+  aadAppClientSecretName:
+    description: Name of Secret containing AAD App Client Secret or RefreshToken
+    required: false
+    default: ''
+  productionEnvironment:
+    description: Production Environment (Y/N)
+    required: false
+    default: 'N'
+  continuousDeployment:
+    description: Continuous Deployment (Y/N)
+    required: false
+    default: 'N'
+  manualDeployment:
+    description: Create manual deployment workflow for this environment (Y/N)
+    required: false
+    default: 'N'
+  directCommit:
+    description: Direct Commit (Y/N)
+    required: false
+    default: 'N'
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/RegisterCustomerEnvironment.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -workflowToken '${{ inputs.workflowToken }}' -name '${{ inputs.name }}' -tenantId '${{ inputs.tenantId }}' -environmentName '${{ inputs.environmentName }}' -aadAppClientId '${{ inputs.aadAppClientId }}' -aadAppClientSecretName '${{ inputs.aadAppclientSecretName }}' -productionEnvironment ('${{ inputs.productionEnvironment }}' -eq 'Y') -continuousDeployment ('${{ inputs.continuousDeployment }}' -eq 'Y') -manualDeployment ('${{ inputs.manualDeployment }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

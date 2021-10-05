@@ -1,0 +1,29 @@
+name: PowerShell script
+author: Freddy Kristiansen
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  environmentName:
+    description: Name of environment to deploy to
+    required: true
+  artifactsUrl:
+    description: Url of artifacts to deploy
+    required: true
+  appSourceApp:
+    description: AppSource App (or Per Tenant Extension)
+    required: false
+    default: 'N'
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/Deploy.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -environmentName '${{ inputs.environmentName }}' -artifactsUrl '${{ inputs.artifactsUrl }}' -appSourceApp ('${{ inputs.appSourceApp }}' -eq 'Y')
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue

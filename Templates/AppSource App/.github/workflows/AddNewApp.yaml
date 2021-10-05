@@ -1,0 +1,44 @@
+name: Add new app
+
+on:
+  workflow_dispatch:
+    inputs:
+      publisher:
+        description: Publisher name of the app
+        required: true
+      name:
+        description: Name of the app
+        required: true
+      idrange:
+        description: ID range (fromid..toid)
+        required: true
+      directCommit:
+        description: Direct COMMIT (Y/N)
+        required: false
+        default: 'N'
+
+defaults:
+  run:
+    shell: PowerShell
+
+jobs:
+  update:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go/ReadSettings@main
+        with:
+          get: type
+
+      - name: Add new app
+        uses: microsoft/AL-Go/AddAnApp@main
+        with:
+          type: ${{ env.type }}
+          publisher: ${{ github.event.inputs.publisher }}
+          name: ${{ github.event.inputs.name }}
+          idrange: ${{ github.event.inputs.idrange }}
+          directCommit: ${{ github.event.inputs.directCommit }}
