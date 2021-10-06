@@ -35,7 +35,7 @@ jobs:
           get: type
 
       - name: Add new app
-        uses: microsoft/AL-Go/AddAnApp@main
+        uses: microsoft/AL-Go/CreateApp@main
         with:
           type: ${{ env.type }}
           publisher: ${{ github.event.inputs.publisher }}

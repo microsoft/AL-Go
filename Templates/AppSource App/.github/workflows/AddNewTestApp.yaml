@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Add new test app
-        uses: microsoft/AL-Go/AddAnApp@main
+        uses: microsoft/AL-Go/CreateApp@main
         with:
           type: 'Test App'
           publisher: ${{ github.event.inputs.publisher }}
