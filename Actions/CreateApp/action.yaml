@@ -15,19 +15,20 @@ inputs:
   type:
     description: Type of app to add (Per Tenant Extension, AppSource App, Test App)
     required: true
-  publisher:
-    description: Publisher name of the app
-    required: true
   name:
     description: Name of the app
+    required: true
+  publisher:
+    description: Publisher name of the app
     required: true
   idrange:
     description: ID range of the app
     required: true
   directCommit:
+    type: bool
     description: Direct Commit (Y/N)
     required: false
-    default: N
+    default: false
 runs:
   using: composite
   steps:
