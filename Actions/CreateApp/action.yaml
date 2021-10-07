@@ -25,10 +25,9 @@ inputs:
     description: ID range
     required: true
   directCommit:
-    type: bool
-    description: Direct Commit
+    description: Direct Commit (Y/N)
     required: false
-    default: false
+    default: 'N'
 runs:
   using: composite
   steps:
