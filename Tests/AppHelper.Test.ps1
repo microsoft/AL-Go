@@ -5,29 +5,48 @@ Get-Module AppHelper | Remove-Module -Force
 Import-Module (Join-Path -path $here -ChildPath "..\Actions\CreateApp\AppHelper.psm1" -Resolve)
 
 Describe 'AppHelper.psm1 Tests' {
-    It 'ValidateIdRanges validates a valid PTE range' {
-        $ids = ValidateIdRanges -templateType "PTE" -idrange "50000..99999"
+    It 'Confirm-IdRanges validates a valid PTE range' {
+        $ids = Confirm-IdRanges -templateType "PTE" -idrange "50000..99999"
         $ids[0] | Should -EQ "50000"
         $ids[1] | Should -EQ "99999"
     }
 
-    It 'ValidateIdRanges throws on invalid PTE range' {
-        { ValidateIdRanges -templateType "PTE" -idrange "5000..50200" }   | Should -Throw
-        { ValidateIdRanges -templateType "PTE" -idrange "50000..5000" }   | Should -Throw
-        { ValidateIdRanges -templateType "PTE" -idrange "50100..50000" }  | Should -Throw
-        { ValidateIdRanges -templateType "PTE" -idrange "50100..100000" } | Should -Throw
+    It 'Confirm-IdRanges throws on invalid PTE range' {
+        { Confirm-IdRanges -templateType "PTE" -idrange "5000..50200" }   | Should -Throw
+        { Confirm-IdRanges -templateType "PTE" -idrange "50000..5000" }   | Should -Throw
+        { Confirm-IdRanges -templateType "PTE" -idrange "50100..50000" }  | Should -Throw
+        { Confirm-IdRanges -templateType "PTE" -idrange "50100..100000" } | Should -Throw
     }
 
-    It 'ValidateIdRanges validates a valid AppSource app range' {
-        $ids = ValidateIdRanges -templateType "AppSource App" -idrange "100000..110000"
+    It 'Confirm-IdRanges validates a valid AppSource app range' {
+        $ids = Confirm-IdRanges -templateType "AppSource App" -idrange "100000..110000"
         $ids[0] | Should -EQ "100000"
         $ids[1] | Should -EQ "110000"
     }
 
-    It 'ValidateIdRanges throws on invalid AppSource app range' {
-        { ValidateIdRanges -templateType "AppSource app" -idrange "99999..110000" }   | Should -Throw
-        { ValidateIdRanges -templateType "AppSource app" -idrange "100000..1100" }   | Should -Throw
-        { ValidateIdRanges -templateType "AppSource app" -idrange "110000..100000" }  | Should -Throw
-        { ValidateIdRanges -templateType "AppSource app" -idrange "110000..1000000000000000000000" }  | Should -Throw
+    It '(Confirm-IdRanges) should throw on invalid AppSource app range' {
+        { Confirm-IdRanges -templateType "AppSource app" -idrange "99999..110000" }   | Should -Throw
+        { Confirm-IdRanges -templateType "AppSource app" -idrange "100000..1100" }   | Should -Throw
+        { Confirm-IdRanges -templateType "AppSource app" -idrange "110000..100000" }  | Should -Throw
+        { Confirm-IdRanges -templateType "AppSource app" -idrange "110000..1000000000000000000000" }  | Should -Throw
+    }
+
+    It 'Should create a new PTE by calling New-SimplePTE' {
+        New-SimplePTE -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120"
+
+        "$($TestDrive)\TestPTE" | Should -Exist
+        "$($TestDrive)\TestPTE\app.json" | Should -Exist
+        
+        $appJson = Get-Content -Path "$($TestDrive)\TestPTE\app.json" | ConvertFrom-Json
+        $appJson.name | Should -be "TestPTE"
+        $appJson.publisher | Should -be "TestPublisher"
+        $appJson.version | Should -be "1.0.0.0"
+        $appJson.idRanges[0].from | Should -be "50101"
+        $appJson.idRanges[0].to | Should -be "50120"
+
+        "$($TestDrive)\TestPTE\HelloWorld.al" | Should -Exist
+        "$($TestDrive)\TestPTE\HelloWorld.al" | Should -FileContentMatch "pageextension 50101 CustomerListExt extends"
+
+        "$($TestDrive)\TestPTE\.vscode\launch.json" | Should -Exist
     }
 }
