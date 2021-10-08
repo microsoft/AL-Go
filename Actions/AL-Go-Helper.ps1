@@ -274,7 +274,7 @@ function ReadSettings {
     
     # Read Settings file
     $settings = [ordered]@{
-        "type"                                   = "Per Tenant Extension"
+        "type"                                   = "PTE"
         "country"                                = "us"
         "artifact"                               = ""
         "companyName"                            = ""
@@ -355,7 +355,7 @@ function AnalyzeRepo {
 
 
     Write-Host "Checking type"
-    if ($settings.type -eq "Per Tenant Extension") {
+    if ($settings.type -eq "PTE") {
         if (!$settings.Contains('enablePerTenantExtensionCop')) {
             $settings.Add('enablePerTenantExtensionCop', $true)
         }
@@ -363,7 +363,7 @@ function AnalyzeRepo {
             $settings.Add('enableAppSourceCop', $false)
         }
     }
-    elseif ($settings.type -eq "AppSource App") {
+    elseif ($settings.type -eq "AppSource App" ) {
         if (!$settings.Contains('enablePerTenantExtensionCop')) {
             $settings.Add('enablePerTenantExtensionCop', $false)
         }
@@ -985,7 +985,7 @@ function CreateDevEnv {
                 "insiderSasToken" = $insiderSasToken
                 "licenseFileUrl" = $LicenseFileUrl
             }
-            if ($settings.type -eq "AppSource App") {
+            if ($settings.type -eq "AppSource App" ) {
                 if ($licenseFileUrl -eq "") {
                     OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
                     exit

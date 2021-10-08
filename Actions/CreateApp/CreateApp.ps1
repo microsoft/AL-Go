@@ -1,36 +1,19 @@
 Param(
     [string] $actor,
     [string] $token,
-    [string][ValidateSet("Per Tenant Extension", "AppSource App", "Test App")] $type,
+    [string][ValidateSet("PTE", "AppSource App" , "Test App")] $type,
     [string] $publisher,
     [string] $name,
     [string] $idrange,
     [bool] $directCommit
 )
-
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-
-$validRanges =@(
-    {templateType = "Per Tenant Extension", startOfRange = 50000, endOfRange= 99999},
-    {templateType = "AppSource App", startOfRange = 100000, endOfRange=  [int32]::MaxValue},
-    {templateType = "Test App", startOfRange = 50000, endOfRange= [int32]::MaxValue}
-    );
-function ValidateIdRanges ([string] $templateType,[string]$idrange )  
-{  
-    $validRange = $validRanges |.where({$_.templateType -eq $templateType})
-    $ids = $idrange.Replace('..', '-').Split("-")
-
-    if ($ids.Count -ne 2 -or ([int](stringToInt($ids[0])) -lt $validRange.startOfRange) -or ([int](stringToInt($ids[0])) -gt $validRange.endOfRange) -or ([int](stringToInt($ids[1])) -lt $validRange.startOfRange) -or ([int](stringToInt($ids[1])) -gt $validRange.endOfRange) -or ([int](stringToInt($ids[0])) -gt [int](stringToInt($ids[1])))) { 
-        OutputError -message "IdRange should be formattet as fromId..toId, and the Id range must be in $($validRange.startOfRange) and $($validRange.endOfRange)"
-        exit
-    }
-}  
+. (Join-Path -path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+import-module (Join-Path -path $PSScriptRoot -ChildPath "AppHelper.psm1" -Resolve)
 
 try {
-    . (Join-Path $PSScriptRoot "..\GitHub-Go-Helper.ps1")
-
     Write-Host "Template type : $type"
 
     # Check parameters
@@ -44,10 +27,11 @@ try {
         exit
     }
 
-    ValidateIdRanges($type, $idrange)
+    ValidateIdRanges -templateType $type -idrange $idrange
+    $ids = $idrange.Replace('..', '-').Split("-")
 
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
-    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+#    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
 
     $baseFolder = Get-Location
     $orgfolderName = $name.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
@@ -60,7 +44,7 @@ try {
 
     # Modify .github\go\settings.json
     try {
-        $settingsJsonFile = Join-Path $baseFolder $gitHubGoSettingsFile
+        $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile | ConvertFrom-Json
         if ($type -eq "Test App") {
             if ($SettingsJson.testFolders -notcontains $foldername) {
@@ -75,7 +59,7 @@ try {
         $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile
     }
     catch {
-        OutputError -message "A malformed $gitHubGoSettingsFile is encountered. Error: $($_.Exception.Message)"
+        OutputError -message "A malformed $ALGoSettingsFile is encountered. Error: $($_.Exception.Message)"
         exit
     }
 

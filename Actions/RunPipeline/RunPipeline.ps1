@@ -55,7 +55,7 @@ try {
     $bcContainerHelperConfig.TelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
     $bcContainerHelperConfig.UseExtendedTelemetry = $true
 
-    if ($settings.type -eq "AppSource App") {
+    if ($settings.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
             OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             exit
