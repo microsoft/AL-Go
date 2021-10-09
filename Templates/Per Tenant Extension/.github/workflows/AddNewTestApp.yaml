@@ -3,11 +3,11 @@ name: Add new test app
 on:
   workflow_dispatch:
     inputs:
-      publisher:
-        description: Publisher name of the test app
-        required: true
       name:
-        description: Name of the test app
+        description: Name
+        required: true      
+      publisher:
+        description: Publisher
         required: true
       idrange:
         description: ID range
@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Add new test app
-        uses: microsoft/AL-Go-Actions/AddAnApp@main
+        uses: microsoft/AL-Go/CreateApp@main
         with:
           type: 'Test App'
           publisher: ${{ github.event.inputs.publisher }}
