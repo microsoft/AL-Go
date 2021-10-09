@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Increment Version Number
-        uses: microsoft/AL-Go/IncrementVersionNumber@main
+        uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
           versionNumber: ${{ github.event.inputs.versionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}

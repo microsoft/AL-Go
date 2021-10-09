@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Add existing app
-        uses: microsoft/AL-Go/AddExistingApp@main
+        uses: microsoft/AL-Go-Actions/AddExistingApp@main
         with:
           url: ${{ github.event.inputs.url }}
           directCommit: ${{ github.event.inputs.directCommit }}
