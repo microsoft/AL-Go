@@ -18,19 +18,17 @@ try {
 
     # Check parameters
     if (-not $publisher) {
-        OutputError -message "A publisher must be specified."
-        exit
+        throw "A publisher must be specified."
     }
 
     if (-not $name) {
-        OutputError -message "An extension name must be specified."
-        exit
+        throw "An extension name must be specified."
     }
 
     $ids = Confirm-IdRanges -templateType $type -idrange $idrange
 
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
-#    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
 
     $baseFolder = Get-Location
     $orgfolderName = $name.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
@@ -56,8 +54,7 @@ try {
         $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile
     }
     catch {
-        OutputError -message "A malformed $ALGoSettingsFile is encountered. Error: $($_.Exception.Message)"
-        exit
+        throw "A malformed $ALGoSettingsFile is encountered. Error: $($_.Exception.Message)"
     }
 
     $appVersion = "1.0.0.0"
@@ -65,9 +62,14 @@ try {
         $appVersion = "$($settingsJson.AppVersion).0.0"
     }
 
-    New-SimplePTE -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids
-    Update-WorkSpaces -baseFolder $baseFolder -appName $folderName
+    if ($type -eq "Test App") {
+        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids 
+    }
+    else {
+        New-SampleApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids 
+    }
 
+    Update-WorkSpaces -baseFolder $baseFolder -appName $folderName
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch
 }
 catch {

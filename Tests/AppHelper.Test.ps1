@@ -31,8 +31,27 @@ Describe 'AppHelper.psm1 Tests' {
         { Confirm-IdRanges -templateType "AppSource app" -idrange "110000..1000000000000000000000" }  | Should -Throw
     }
 
-    It 'Should create a new PTE by calling New-SimplePTE' {
-        New-SimplePTE -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120"
+    It 'Should create a new app by calling New-SampleApp' {
+        New-SampleApp -destinationPath "$($TestDrive)\SampleApp" -name "SampleApp" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120"
+
+        "$($TestDrive)\SampleApp" | Should -Exist
+        "$($TestDrive)\SampleApp\app.json" | Should -Exist
+        
+        $appJson = Get-Content -Path "$($TestDrive)\SampleApp\app.json" | ConvertFrom-Json
+        $appJson.name | Should -be "SampleApp"
+        $appJson.publisher | Should -be "TestPublisher"
+        $appJson.version | Should -be "1.0.0.0"
+        $appJson.idRanges[0].from | Should -be "50101"
+        $appJson.idRanges[0].to | Should -be "50120"
+
+        "$($TestDrive)\SampleApp\HelloWorld.al" | Should -Exist
+        "$($TestDrive)\SampleApp\HelloWorld.al" | Should -FileContentMatch "pageextension 50101 CustomerListExt extends"
+
+        "$($TestDrive)\SampleApp\.vscode\launch.json" | Should -Exist
+    }
+
+    It 'Should create a new test app by calling New-SampleTest' {
+        New-SampleTestApp -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120"
 
         "$($TestDrive)\TestPTE" | Should -Exist
         "$($TestDrive)\TestPTE\app.json" | Should -Exist
@@ -44,8 +63,8 @@ Describe 'AppHelper.psm1 Tests' {
         $appJson.idRanges[0].from | Should -be "50101"
         $appJson.idRanges[0].to | Should -be "50120"
 
-        "$($TestDrive)\TestPTE\HelloWorld.al" | Should -Exist
-        "$($TestDrive)\TestPTE\HelloWorld.al" | Should -FileContentMatch "pageextension 50101 CustomerListExt extends"
+        "$($TestDrive)\TestPTE\HelloWorld.Test.al" | Should -Exist
+        "$($TestDrive)\TestPTE\HelloWorld.Test.al" | Should -FileContentMatch "codeunit 50101"
 
         "$($TestDrive)\TestPTE\.vscode\launch.json" | Should -Exist
     }

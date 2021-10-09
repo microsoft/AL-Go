@@ -2,8 +2,6 @@ codeunit 50100 "HelloWorld Test"
 {
     Subtype = Test;
 
-    // Test kindly donated by Gunnar Gestsson:-)
-
     [Test]
     [HandlerFunctions('HelloWorldMessageHandler')]
     procedure TestHelloWorldMessage()
@@ -12,9 +10,8 @@ codeunit 50100 "HelloWorld Test"
     begin
         CustList.OpenView();
         CustList.Close();
-        if (not MessageDisplayed) then begin
+        if (not MessageDisplayed) then
             ERROR('Message was not displayed!');
-        end;
     end;
 
     [MessageHandler]

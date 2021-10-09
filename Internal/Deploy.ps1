@@ -67,7 +67,7 @@ $srcOwnerAndRepo = $uri.LocalPath.Trim('/')
 Write-Host "Source Owner+Repo: $srcOwnerAndRepo"
 
 if ($config.baseFolder -ne $null){
-    $baseFolder = $config.baseFolder 
+    $baseFolder =  Join-Path $config.baseFolder $config.localFolder 
 }else {
     $baseFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) $config.localFolder
 }

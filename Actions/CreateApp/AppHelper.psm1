@@ -52,20 +52,21 @@ function UpdateManifest
 
 function UpdateALFile 
 (
-    [string] $alFile,
+    [string] $destinationFolder,
+    [string] $alFileName,
     [string] $startId
 ) 
 {
-    $al = Get-Content -Raw -path "$($alTemplatePath)\HelloWorld.al"
+    $al = Get-Content -Raw -path "$($alTemplatePath)\$alFileName"
     $al = $al.Replace('50100', $startId)
-    Set-Content -Path $alFile -value $al
+    Set-Content -Path "$($destinationFolder)\$($alFileName)" -value $al
 }
 
 <#
 .SYNOPSIS
-Creates a simple PTE.
+Creates a simple app.
 #>
-function New-SimplePTE
+function New-SampleApp
 (
     [string]$destinationPath,
     [string]$name,
@@ -74,13 +75,36 @@ function New-SimplePTE
     [string[]]$idrange
 ) 
 {
-    Write-Host "Creating a new PTE. Path: $destinationPath"
+    Write-Host "Creating a new sample app. Path: $destinationPath"
     New-Item  -Path $destinationPath -ItemType Directory -Force;
     New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
 
     UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
-    UpdateALFile -alFile "$($destinationPath)\HelloWorld.al" -startId $idrange[0]
+    UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.al" -startId $idrange[0]
+}
+
+
+# <#
+# .SYNOPSIS
+# Creates a test app.
+# #>
+function New-SampleTestApp
+(
+    [string]$destinationPath,
+    [string]$name,
+    [string]$publisher,
+    [string]$version,
+    [string[]]$idrange
+) 
+{
+    Write-Host "Creating a new test app. Path: $destinationPath"
+    New-Item  -Path $destinationPath -ItemType Directory -Force;
+    New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force
+    Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
+
+    UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
+    UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.Test.al" -startId $idrange[0]
 }
 
 function Update-WorkSpaces 
@@ -106,34 +130,7 @@ function Update-WorkSpaces
         }
 }
 
-# <#
-# .SYNOPSIS
-# Creates an AppSource app.
-# #>
-# function CreateSimpleAppSource App
-# (
-#     [Parameter(Position = 0, Mandatory = $false, ValueFromPipeline = $True)]
-#     [psobject]$ChangeSet,
-#     [string]$ClientName
-# ) {
-
-# }
-
-# <#
-# .SYNOPSIS
-# Creates a test app.
-# #>
-# function CreateSimpleTestApp
-# (
-#     [Parameter(Position = 0, Mandatory = $false, ValueFromPipeline = $True)]
-#     [psobject]$ChangeSet,
-#     [string]$ClientName
-# ) {
-
-# }
-
-
-Export-ModuleMember -Function New-SimplePTE
-# Export-ModuleMember -Function CreateSimpleAppSource App
+Export-ModuleMember -Function New-SampleApp
+Export-ModuleMember -Function New-SampleTestApp
 Export-ModuleMember -Function Confirm-IdRanges
 Export-ModuleMember -Function Update-WorkSpaces
