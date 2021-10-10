@@ -740,7 +740,7 @@ function Select-Value {
 
     if ($title) {
         Write-Host -ForegroundColor Yellow $title
-        Write-Host -ForegroundColor Yellow ("�"*$title.Length)
+        Write-Host -ForegroundColor Yellow ("-"*$title.Length)
     }
     if ($description) {
         Write-Host $description
@@ -820,7 +820,7 @@ function Enter-Value {
 
     if ($title) {
         Write-Host -ForegroundColor Yellow $title
-        Write-Host -ForegroundColor Yellow ("�"*$title.Length)
+        Write-Host -ForegroundColor Yellow ("-"*$title.Length)
     }
     if ($description) {
         Write-Host $description
