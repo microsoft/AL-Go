@@ -950,18 +950,20 @@ function CreateDevEnv {
 
                     # do not add codesign cert.
                     
-                    $KeyVaultCertificateUrlSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.KeyVaultCertificateUrlSecretName
-                    if ($KeyVaultCertificateUrlSecret) {
-                        $keyVaultCertificatePasswordSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultCertificatePasswordSecretName
-                        $keyVaultClientIdSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultClientIdSecretName
-                        if (-not ($keyVaultCertificatePasswordSecret) -or -not ($keyVaultClientIdSecret)) {
-                            OutputError -message "When specifying a KeyVaultCertificateUrl secret in settings, you also need to provide a KeyVaultCertificatePassword secret and a KeyVaultClientId secret"
-                            exit
-                        }
-                        $runAlPipelineParams += @{ 
-                            "KeyVaultCertPfxFile" = $KeyVaultCertificateUrlSecret.SecretValue | Get-PlainText
-                            "keyVaultCertPfxPassword" = $keyVaultCertificatePasswordSecret.SecretValue
-                            "keyVaultClientId" = $keyVaultClientIdSecret.SecretValue | Get-PlainText
+                    if ($settings.KeyVaultCertificateUrlSecretName) {
+                        $KeyVaultCertificateUrlSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.KeyVaultCertificateUrlSecretName
+                        if ($KeyVaultCertificateUrlSecret) {
+                            $keyVaultCertificatePasswordSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultCertificatePasswordSecretName
+                            $keyVaultClientIdSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultClientIdSecretName
+                            if (-not ($keyVaultCertificatePasswordSecret) -or -not ($keyVaultClientIdSecret)) {
+                                OutputError -message "When specifying a KeyVaultCertificateUrl secret in settings, you also need to provide a KeyVaultCertificatePassword secret and a KeyVaultClientId secret"
+                                exit
+                            }
+                            $runAlPipelineParams += @{ 
+                                "KeyVaultCertPfxFile" = $KeyVaultCertificateUrlSecret.SecretValue | Get-PlainText
+                                "keyVaultCertPfxPassword" = $keyVaultCertificatePasswordSecret.SecretValue
+                                "keyVaultClientId" = $keyVaultClientIdSecret.SecretValue | Get-PlainText
+                            }
                         }
                     }
                 }
