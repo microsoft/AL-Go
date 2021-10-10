@@ -67,7 +67,7 @@ try {
 
     $templatePath = Join-Path $PSScriptRoot $type
 
-    # Modify .github\AL-Go\settings.json
+    # Modify .AL-Go\settings.json
     try {
         $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile | ConvertFrom-Json

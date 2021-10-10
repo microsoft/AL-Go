@@ -14,6 +14,8 @@ try {
 
     . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
+    $baseFolder = $ENV:GITHUB_WORKSPACE
+
     if ($update -and -not $token) {
         OutputError "You need to add a secret called GHTOKENWORKFLOW containing a personal access token with permissions to modify Workflows. This is done by opening https://github.com/settings/tokens, Generate a new token and check the workflow scope."
         exit
@@ -26,7 +28,7 @@ try {
         $templateBranch = $settings.templateBranch
     }
 
-    Set-Location $ENV:GITHUB_WORKSPACE
+    Set-Location $baseFolder
     $headers = @{             
         "Authorization" = "token $token"
         "Accept"        = "application/vnd.github.baptiste-preview+json"
@@ -46,7 +48,7 @@ try {
         Write-Host "Api url $($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)"
         $repoInfo = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)" | ConvertFrom-Json
         if (!($repoInfo.PSObject.Properties.Name -eq "template_repository")) {
-            OutputError -message "This repository wasn't built on a template repository, or the template repository has been deleted. You have to specify a template repository URL manually."
+            OutputWarning -message "This repository wasn't built on a template repository, or the template repository has been deleted. You have to specify a template repository URL manually."
             exit
         }
         $templateInfo = $repoInfo.template_repository
@@ -61,13 +63,24 @@ try {
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     
+    $checkfiles = @(@{ "dstPath" = ".github\workflows"; "srcPath" = ".github\workflows"; "pattern" = "*"; "type" = "workflow" })
+    if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
+        $checkfiles += @(@{ "dstPath" = ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
+    }
+    else {
+        Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object {
+            $checkfiles += @(@{ "dstPath" = Join-Path $_.Name ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
+        }
+
+    }
     $updateFiles = @()
-    @( @{ "path" = ".github\workflows"; "pattern" = "*";     "type" = "workflow" }, 
-       @{ "path" = ".github\AL-Go";        "pattern" = "*.ps1"; "type" = "script" } ) | ForEach-Object {
+
+    $checkfiles | ForEach-Object {
         $type = $_.type
-        $path = $_.path
-        $dstFolder = Join-Path $ENV:GITHUB_WORKSPACE $path
-        $srcFolder = (Get-Item (Join-Path $tempName "*\$($path)")).FullName
+        $srcPath = $_.srcPath
+        $dstPath = $_.dstPath
+        $dstFolder = Join-Path $baseFolder $dstPath
+        $srcFolder = (Get-Item (Join-Path $tempName "*\$($srcPath)")).FullName
         Get-ChildItem -Path $srcFolder -Filter $_.pattern | ForEach-Object {
             $srcFile = $_.FullName
             $fileName = $_.Name
@@ -84,13 +97,13 @@ try {
                 $dstContent = (Get-Content -Path $dstFile -Raw).Replace("`r", "").Replace("`n", "`r`n")
                 if ($dstContent -ne $srcContent) {
                     Write-Host "Updated $name ($fileName) available"
-                    $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $path $filename }
+                    $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $dstPath $filename }
                 }
             }
             else {
                 # new file
                 Write-Host "New $name ($fileName) available"
-                $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $path $filename }
+                $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $dstPath $filename }
             }
         }
     }

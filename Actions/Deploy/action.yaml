@@ -9,20 +9,24 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
+  projects:
+    description: Projects to deploy
+    default: '*'
+    required: false
   environmentName:
     description: Name of environment to deploy to
     required: true
-  artifactsUrl:
-    description: Url of artifacts to deploy
+  artifacts:
+    description: Artifacts to deploy
     required: true
-  appSourceApp:
-    description: AppSource App (or Per Tenant Extension)
+  type:
+    description: Type of deployment (CD or Publish)
     required: false
-    default: 'N'
+    default: ''
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/Deploy.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -environmentName '${{ inputs.environmentName }}' -artifactsUrl '${{ inputs.artifactsUrl }}' -appSourceApp ('${{ inputs.appSourceApp }}' -eq 'Y')
+    - run: ${{ github.action_path }}/Deploy.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -projects '${{ inputs.projects }}' -environmentName '${{ inputs.environmentName }}' -artifacts '${{ inputs.artifacts }}' -type '${{ inputs.type }}'
       shell: PowerShell
 branding:
   icon: terminal
