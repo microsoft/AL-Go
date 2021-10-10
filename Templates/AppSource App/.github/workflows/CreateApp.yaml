@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: Name
+        description: Name 
         required: true      
       publisher:
         description: Publisher
@@ -15,7 +15,7 @@ on:
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
-        default: "N"
+        default: 'N'
 
 defaults:
   run:
@@ -38,7 +38,7 @@ jobs:
         uses: microsoft/AL-Go/CreateApp@main
         with:
           type: ${{ env.type }}
-          name: ${{ github.event.inputs.name }}
           publisher: ${{ github.event.inputs.publisher }}
+          name: ${{ github.event.inputs.name }}
           idrange: ${{ github.event.inputs.idrange }}
           directCommit: ${{ github.event.inputs.directCommit }}

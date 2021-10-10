@@ -1,0 +1,10 @@
+{
+    "type": "AppSource App",
+    "country": "us",
+    "VersioningStrategy": 2,
+    "KeyVaultName": "",
+    "appFolders": [
+    ],
+    "testFolders": [
+    ]
+}

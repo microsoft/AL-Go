@@ -1,0 +1,190 @@
+name: Create release
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: Draft (Y/N)
+        required: false
+        default: 'N'
+      prerelease:
+        description: Prerelease (Y/N)
+        required: false
+        default: 'N'
+
+concurrency: release
+
+defaults:
+  run:
+    shell: PowerShell
+
+jobs:
+  Settings:
+    runs-on: windows-latest
+    outputs:
+      Settings: ${{steps.readsettings.outputs.Settings}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go/ReadSettings@main
+        id: readsettings
+        with:
+          release: 'Y'
+  CheckForUpdates:
+    runs-on: windows-latest
+    needs: Settings
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check for updates to AL-Go system files
+        uses: microsoft/AL-Go/CheckForUpdates@main
+        with:
+          settings: ${{needs.Settings.outputs.Settings}}
+  Environments:
+    runs-on: windows-latest
+    outputs:
+      deployMatrix: ${{steps.Environments.outputs.deployMatrix}}
+    needs: Settings
+    steps:
+      - name: Environments
+        id: Environments
+        run: |
+          $headers = @{ 
+            "Authorization" = "token ${{github.token}}"
+            "Accept"        = "application/vnd.github.v3+json"
+          }
+          $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+          $environments = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
+          $useEnvironments = @($environments.environments | ForEach-Object { $_.Name })
+          if ($useEnvironments.Count -eq 0) { $useEnvironments = @("N/A") }
+          $deployMatrix = @{ "environment" = $useEnvironments } | ConvertTo-Json -compress
+          Write-Host "::set-output name=deployMatrix::$deployMatrix"
+  Build:
+    runs-on: windows-latest
+    needs: Settings
+    outputs:
+      AppsArtifactsName: ${{steps.calculateArtifactNames.outputs.AppsArtifactsName}}
+      TestAppsArtifactsName: ${{steps.calculateArtifactNames.outputs.TestAppsArtifactsName}}
+      TestResultsArtifactsName: ${{steps.calculateArtifactNames.outputs.TestResultsArtifactsName}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read secrets
+        uses: microsoft/AL-Go/ReadSecrets@main
+        env:
+          secrets: ${{toJson(secrets)}}
+        with:
+          settings: ${{needs.Settings.outputs.Settings}}
+          secrets: 'licenseFileUrl,insiderSasToken,CodeSignCertificateUrl,CodeSignCertificatePassword,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
+
+      - name: Run pipeline
+        uses: microsoft/AL-Go/RunPipeline@main
+        with:
+          Settings: ${{ needs.Settings.outputs.Settings }}
+          Secrets: ${{ env.RepoSecrets }}
+
+      - name: Publish test results
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v1
+        with:
+          report_paths: 'TestResults*.xml'
+          github_token: ${{ github.token }}
+
+      - name: Calculate Artifact names
+        id: calculateArtifactNames
+        run: |
+          $settings = '${{ needs.Settings.outputs.Settings }}' | ConvertFrom-Json
+          $AppsArtifactsName = "$($settings.RepoName)-Apps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+          $TestAppsArtifactsName = "$($settings.RepoName)-TestApps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+          $TestResultsArtifactsName = "TestResults"
+          $releaseName = "$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+          $tagName = "$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+          'AppsArtifactsName','TestAppsArtifactsName','TestResultsArtifactsName','releaseName','tagName' | ForEach-Object {
+            $value = (Get-Variable -Name $_).Value
+            Write-Host "::set-output name=$_::$value"
+            Add-Content -Path $env:GITHUB_ENV -Value "$_=$value"
+          }
+
+      - name: Publish artifacts - apps
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{env.appsArtifactsName}}
+          path: output/Apps/
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - test apps
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{env.testAppsArtifactsName}}
+          path: output/TestApps/
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - test results
+        uses: actions/upload-artifact@v2
+        if: success() || failure()
+        with:
+          name: ${{env.testResultsArtifactsName}}
+          path: TestResults.xml
+          if-no-files-found: ignore
+
+      - name: Create release
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          draft: ${{ github.event.inputs.draft == 'Y' }}
+          prerelease: ${{ github.event.inputs.prerelease == 'Y' }}
+          release_name: '${{env.releaseName}}'
+          tag_name: '${{env.tagName}}'
+          body_path: README.md
+
+      - name: Zip release artifacts
+        run: |
+          Compress-Archive -Path 'output/Apps/*' -DestinationPath 'output/${{env.AppsArtifactsName}}.zip'
+
+      - name: Upload release artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: 'output/${{env.appsArtifactsName}}.zip'
+          asset_name: '${{env.appsArtifactsName}}.zip'
+          asset_content_type: application/zip
+
+      - name: Cleanup
+        if: always()
+        uses: microsoft/AL-Go/PipelineCleanup@main
+  Deploy:
+    runs-on: windows-latest
+    needs: [ Build, Environments ]
+    strategy:
+      matrix: ${{fromJson(needs.Environments.outputs.deployMatrix)}}
+      fail-fast: false
+    name: Deploy to ${{matrix.environment}}
+    environment:
+      name: ${{matrix.environment}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{needs.Build.Outputs.AppsArtifactsName}}
+          path: '${{ github.workspace}}\artifacts'
+
+      - name: Deploy
+        if: ${{matrix.environment != 'N/A'}}
+        uses: microsoft/AL-Go/Deploy@main
+        env:
+          authContext: '${{secrets.AuthContext}}'
+        with:
+          environmentName: ${{matrix.environment}}
+          artifactsUrl: '${{ github.workspace}}\artifacts'
+          appSourceApp: 'Y'
