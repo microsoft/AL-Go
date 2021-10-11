@@ -1,18 +1,17 @@
-name: Add new test app
+name: Create a new app
 
 on:
   workflow_dispatch:
     inputs:
-      publisher:
-        description: Publisher name of the test app
-        required: true
       name:
-        description: Name of the test app
+        description: Name 
+        required: true      
+      publisher:
+        description: Publisher
         required: true
       idrange:
-        description: ID range
+        description: ID range (from..to)
         required: true
-        default: '50000..99999'  
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
@@ -27,10 +26,18 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Add new test app
-        uses: microsoft/AL-Go/AddAnApp@main
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go/ReadSettings@main
         with:
-          type: 'Test App'
+          get: type
+
+      - name: Creating a new app
+        uses: microsoft/AL-Go/CreateApp@main
+        with:
+          type: ${{ env.type }}
           publisher: ${{ github.event.inputs.publisher }}
           name: ${{ github.event.inputs.name }}
           idrange: ${{ github.event.inputs.idrange }}

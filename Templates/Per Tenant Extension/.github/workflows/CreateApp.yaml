@@ -1,21 +1,21 @@
-name: Add new app
+name: Create a new app
 
 on:
   workflow_dispatch:
     inputs:
-      publisher:
-        description: Publisher name of the app
-        required: true
       name:
-        description: Name of the app
+        description: Name
+        required: true      
+      publisher:
+        description: Publisher
         required: true
       idrange:
-        description: ID range (fromid..toid)
+        description: ID range (from..to)
         required: true
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
-        default: 'N'
+        default: "N"
 
 defaults:
   run:
@@ -34,11 +34,11 @@ jobs:
         with:
           get: type
 
-      - name: Add new app
-        uses: microsoft/AL-Go/AddAnApp@main
+      - name: Creating a new app
+        uses: microsoft/AL-Go/CreateApp@main
         with:
           type: ${{ env.type }}
-          publisher: ${{ github.event.inputs.publisher }}
           name: ${{ github.event.inputs.name }}
+          publisher: ${{ github.event.inputs.publisher }}
           idrange: ${{ github.event.inputs.idrange }}
           directCommit: ${{ github.event.inputs.directCommit }}

@@ -1,6 +1,6 @@
 {
   "id": "364f68de-c52e-43d5-a70b-10a278d8a086",
-  "name": "ALProject11",
+  "name": "SampleALProject",
   "publisher": "Default publisher",
   "version": "1.0.0.0",
   "brief": "",
@@ -13,13 +13,16 @@
   "dependencies": [],
   "screenshots": [],
   "platform": "1.0.0.0",
-  "application": "18.0.0.0",
+  "application": "19.0.0.0",
   "idRanges": [
     {
       "from": 50100,
       "to": 50149
     }
   ],
-  "showMyCode": false,
-  "runtime": "7.0"
+  "resourceExposurePolicy": {
+    "allowDebugging": true,
+    "allowDownloadingSource": false,
+    "includeSourceInSymbolFile": false
+  }
 }

@@ -1,7 +1,7 @@
 # AL-Go Actions
 ## Actions
-### [Add an app](AddAnApp)
-Add an app to a AL-Go repository
+### [Create a new app](CreateApp)
+Create a new app and add it to your AL-Go repository
 ### [Add existing app](AddExistingApp)
 Add an existing app to a AL-Go repository
 ### [Check for updates](CheckForUpdates)

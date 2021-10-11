@@ -66,7 +66,12 @@ $uri = [Uri]::new($srcUrl)
 $srcOwnerAndRepo = $uri.LocalPath.Trim('/')
 Write-Host "Source Owner+Repo: $srcOwnerAndRepo"
 
-$baseFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) $config.localFolder
+if ($config.baseFolder -ne $null){
+    $baseFolder =  Join-Path $config.baseFolder $config.localFolder 
+}else {
+    $baseFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) $config.localFolder
+}
+
 if ($collect) {
     if (Test-Path $baseFolder) {
         $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
