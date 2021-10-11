@@ -20,7 +20,7 @@ inputs:
   settings:
     description: Settings from template repository in compressed Json format
     required: false
-    default: '{"templateUrl": ""; "templateBranch": ""}'
+    default: '{"templateUrl": "","templateBranch": ""}'
   templateUrl:
     description: URL of the template repository (default is the template repository used to create the repository)
     required: false

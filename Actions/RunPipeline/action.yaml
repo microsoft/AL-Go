@@ -19,11 +19,11 @@ inputs:
   settings:
     description: Settings from repository in compressed Json format
     required: false
-    default: '{"AppBuild":0;"AppRevision":0}'
+    default: '{"AppBuild":0,"AppRevision":0}'
   secrets:
     description: Secrets from repository in compressed Json format
     required: false
-    default: '{"insiderSasToken":"";"licenseFileUrl":"";"CodeSignCertificateUrl":"";"CodeSignCertificatePw":"";"KeyVaultCertificateUrl":"";"KeyVaultCertificatePw":"";"KeyVaultClientId":""}'
+    default: '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePw":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePw":"","KeyVaultClientId":""}'
   insiderSasToken:
     description: insider Sas token from https://aka.ms/collaborate
     required: false
