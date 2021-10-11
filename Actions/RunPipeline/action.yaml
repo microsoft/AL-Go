@@ -12,6 +12,10 @@ inputs:
     description: The GitHub token running the script
     required: false
     default: ${{ github.token }}
+  project:
+    description: Project folder
+    required: false
+    default: '.'
   settings:
     description: Settings from repository in compressed Json format
     required: false
@@ -59,7 +63,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -settingsJson '${{ inputs.settings }}'  -secretsJson '${{ inputs.secrets }}' -insiderSasToken '${{ inputs.insiderSasToken }}' -licenseFileUrl '${{ inputs.licenseFileUrl }}' -codeSignCertificateUrl '${{ inputs.codeSignCertificateUrl }}' -codeSignCertificatePw '${{ inputs.codeSignCertificatePw }}' -keyVaultCertificateUrl '${{ inputs.keyVaultCertificateUrl }}' -keyVaultCertificatePw '${{ inputs.keyVaultCertificatePw }}' -keyVaultClientId '${{ inputs.keyVaultClientId }}' -appBuild '${{ inputs.appBuild }}' -appRevision '${{ inputs.appRevision }}'
+    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settings }}'  -secretsJson '${{ inputs.secrets }}' -insiderSasToken '${{ inputs.insiderSasToken }}' -licenseFileUrl '${{ inputs.licenseFileUrl }}' -codeSignCertificateUrl '${{ inputs.codeSignCertificateUrl }}' -codeSignCertificatePw '${{ inputs.codeSignCertificatePw }}' -keyVaultCertificateUrl '${{ inputs.keyVaultCertificateUrl }}' -keyVaultCertificatePw '${{ inputs.keyVaultCertificatePw }}' -keyVaultClientId '${{ inputs.keyVaultClientId }}' -appBuild '${{ inputs.appBuild }}' -appRevision '${{ inputs.appRevision }}'
       shell: PowerShell
 branding:
   icon: terminal

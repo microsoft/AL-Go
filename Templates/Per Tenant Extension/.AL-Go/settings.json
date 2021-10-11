@@ -1,7 +1,6 @@
 {
     "type": "PTE",
     "country": "us",
-    "VersioningStrategy": 2,
     "KeyVaultName": "",
     "appFolders": [
     ],

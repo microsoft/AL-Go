@@ -21,38 +21,45 @@ jobs:
   Environments:
     runs-on: windows-latest
     outputs:
-      deployMatrix: ${{steps.Environments.outputs.deployMatrix}}
+      environments: ${{steps.Environments.outputs.environments}}
+      environmentCount: ${{steps.Environments.outputs.environmentCount}}
     steps:
       - name: Environments
         id: Environments
         run: |
-          $environmentName = '${{github.event.inputs.environmentName}}'
           $headers = @{ 
             "Authorization" = "token ${{github.token}}"
             "Accept"        = "application/vnd.github.v3+json"
           }
           $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-          $environments = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
-          $useEnvironments = @($environments.environments | Where-Object { $_.Name -notlike '*(Production)*' -and $_.Name.Split(' ')[0] -like $environmentName } | ForEach-Object { $_.Name })
-          if ($useEnvironments.Count -eq 0) { $useEnvironments = @("N/A") }
-          $deployMatrix = @{ "environment" = $useEnvironments } | ConvertTo-Json -compress
-          Write-Host "::set-output name=deployMatrix::$deployMatrix"
+          $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+          if ($environments.Count -eq 1) {
+            $environmentsJSon = "[$($environments | ConvertTo-Json -compress)]"
+          }
+          else {
+            $environmentsJSon = $environments | ConvertTo-Json -compress
+          }
+          Write-Host "::set-output name=environments::$($environments | ConvertTo-Json -compress)"
+          Write-Host "::set-output name=environmentCount::$($environments.Count)"
+        
   Deploy:
     runs-on: windows-latest
     needs: [ Environments ]
+    if: ${{needs.Environments.outputs.environmentCount > 0}}
     strategy:
-      matrix: ${{fromJson(needs.Environments.outputs.deployMatrix)}}
+      matrix:
+        environment: ${{fromJson(needs.Environments.outputs.environments)}}
       fail-fast: false
     name: Deploy to ${{matrix.environment}}
     environment:
       name: ${{matrix.environment}}
     steps:
       - name: Deploy
-        if: ${{matrix.environment != 'N/A'}}
         uses: microsoft/AL-Go/Deploy@main
         env:
           authContext: '${{secrets.AuthContext}}'
         with:
+          type: 'Publish'
+          projects: '${{secrets.Projects}}'
           environmentName: ${{matrix.environment}}
-          artifactsUrl: ${{github.event.inputs.appVersion}}
-          appSourceApp: 'Y'
+          artifacts: ${{github.event.inputs.appVersion}}

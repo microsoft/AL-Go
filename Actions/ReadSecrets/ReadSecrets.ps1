@@ -101,13 +101,19 @@ if ($secretsCollection) {
                     $secret = $secretSplit[1]
                 }
     
-                $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret 
-                if ($keyVaultSecret) {
-                    $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
-                    MaskValueInLog -value $value
-                    Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
-                    $outSecrets += @{ "$envVar" = $value }
-                    Write-Host "Secret $envVar successfully read from KeyVault Secret $secret"
+                if ($secret) {
+                    $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret 
+                    if ($keyVaultSecret) {
+                        $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
+                        MaskValueInLog -value $value
+                        MaskValueInLog -value $value.Replace('&','\u0026')
+                        Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
+                        $outSecrets += @{ "$envVar" = $value }
+                        Write-Host "Secret $envVar successfully read from KeyVault Secret $secret"
+                        $secretsCollection.Remove($_)
+                    }
+                }
+                else {
                     $secretsCollection.Remove($_)
                 }
             }
