@@ -23,9 +23,7 @@ try {
 
     if ($templateUrl -eq "" -and $templateBranch -eq "") {
         # use SettingsJson
-        Write-Host $settingsJson
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
-        Write-Host $settings.templateUrl
         $templateUrl = $settings.templateUrl
         $templateBranch = $settings.templateBranch
     }
