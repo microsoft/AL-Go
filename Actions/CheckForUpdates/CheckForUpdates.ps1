@@ -1,7 +1,7 @@
 Param(
     [string] $actor,
     [string] $token,
-    [string] $settingsJson = '{"templateUrl": ""; "templateBranch": ""}',
+    [string] $settingsJson = '{"templateUrl": "", "templateBranch": ""}',
     [string] $templateUrl = "",
     [string] $templateBranch = "",
     [bool] $update,
