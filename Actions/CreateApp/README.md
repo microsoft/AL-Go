@@ -1,5 +1,5 @@
-# Add an app
-Add an app to a AL-Go repository
+# Create a new app
+Create a new app and add it to your AL-Go repository
 ## Parameters
 ### actor (default github.actor)
 The GitHub actor running the action

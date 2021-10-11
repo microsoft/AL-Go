@@ -1,0 +1,38 @@
+name: PowerShell script
+author: Freddy Kristiansen
+permissions:
+  contents: write
+  pull-requests: write
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  type:
+    description: Type of app to add (Per Tenant Extension, AppSource App, Test App)
+    required: true
+  name:
+    description: App Name
+    required: true
+  publisher:
+    description: Publisher
+    required: true
+  idrange:
+    description: ID range
+    required: true
+  directCommit:
+    description: Direct Commit (Y/N)
+    required: false
+    default: 'N'
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -type '${{ inputs.type }}'  -publisher '${{ inputs.publisher }}' -name '${{ inputs.name }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue
