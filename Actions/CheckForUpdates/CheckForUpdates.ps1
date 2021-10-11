@@ -1,7 +1,7 @@
 Param(
     [string] $actor,
     [string] $token,
-    [string] $settingsJson = '{"templateUrl": ""; "templateBranch": ""}',
+    [string] $settingsJson = '{"templateUrl": "", "templateBranch": ""}',
     [string] $templateUrl = "",
     [string] $templateBranch = "",
     [bool] $update,
@@ -23,7 +23,9 @@ try {
 
     if ($templateUrl -eq "" -and $templateBranch -eq "") {
         # use SettingsJson
+        Write-Host $settingsJson
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+        Write-Host $settings.templateUrl
         $templateUrl = $settings.templateUrl
         $templateBranch = $settings.templateBranch
     }
