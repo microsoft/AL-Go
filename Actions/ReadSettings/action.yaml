@@ -9,6 +9,10 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
+  project:
+    description: Project folder
+    required: false
+    default: '.'
   release:
     description: Indicates whether this is called from a release pipeline
     required: false
@@ -24,7 +28,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
+    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
       id: getsettings
       shell: PowerShell
 branding:

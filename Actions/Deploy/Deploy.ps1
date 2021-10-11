@@ -1,9 +1,11 @@
 Param(
     [string] $actor,
     [string] $token,
+    [string] $projects = "*",
     [string] $environmentName,
-    [string] $artifactsUrl,
-    [boolean] $appSourceApp
+    [string] $artifacts,
+    [ValidateSet('CD','Publish')]
+    [string] $type
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,58 +16,75 @@ try {
 
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper
 
-    if ($artifactsUrl -like "$($ENV:GITHUB_WORKSPACE)*") {
-        $apps = (Get-ChildItem $artifactsUrl -filter '*.app' -Recurse).FullName
+    if ($projects -eq '') { $projects = "*" }
+
+    $apps = @()
+    $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE "artifacts"
+
+    if ($artifacts -like "$($baseFolder)*") {
+        $apps
+        if (Test-Path $artifacts -PathType Container) {
+            $apps = @((Get-ChildItem -Path $artifacts -Filter "*-Apps-*") | ForEach-Object { $_.FullName })
+            if (!($apps)) {
+                OutputError -message "No artifacts present in $artifacts"
+                exit
+            }
+        }
+        elseif (Test-Path $artifacts) {
+            $apps = $artifacts
+        }
+        else {
+            OutputError -message "Unable to use artifact $artifacts"
+        }
     }
-    elseif ($artifactsUrl -eq "current" -or $artifactsUrl -eq "prerelease" -or $artifactsUrl -eq "draft") {
+    elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
         # latest released version
         $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-        if ($artifactsUrl -eq "current") {
+        if ($artifacts -eq "current") {
             $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
         }
-        elseif ($artifactsUrl -eq "prerelease") {
+        elseif ($artifacts -eq "prerelease") {
             $release = $releases | Where-Object { -not ($_.draft) } | Select-Object -First 1
         }
-        elseif ($artifactsUrl -eq "draft") {
+        elseif ($artifacts -eq "draft") {
             $release = $releases | Select-Object -First 1
         }
         if (!($release)) {
-            OutputError -message "Unable to locate $artifactsUrl release"
+            OutputError -message "Unable to locate $artifacts release"
             exit
         }
-        $apps = DownloadRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release
-        if (!($apps)) {
-            OutputError -message "Unable to download $artifactsUrl release"
+        New-Item $baseFolder -ItemType Directory | Out-Null
+        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder
+        $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
+        if (!$apps) {
+            OutputError -message "Unable to download $artifacts release"
             exit
         }
     }
     else {
-        if ($artifactsUrl -like "https://*") {
-            $artifact = GetArtifact -token $token -artifactsUrl $artifactsUrl
+        New-Item $baseFolder -ItemType Directory | Out-Null
+        $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
+        $artifactsVersion = $artifacts
+        if ($artifacts -eq "latest") {
+            $artifact = $allArtifacts | Where-Object { $_.name -like "*-Apps-*" } | Select-Object -First 1
+            $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('-Apps-')+6)
         }
-        else {
-            $artifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-            if ($artifactsUrl -eq "latest") {
-                $artifact = $artifacts | Select-Object -First 1
+        $projects.Split(',') | ForEach-Object {
+            $project = $_
+            $allArtifacts | Where-Object { $_.name -like "$project-Apps-$artifactsVersion" } | ForEach-Object {
+                DownloadArtifact -token $token -artifact $_ -path $baseFolder
             }
-            else {
-                $artifact = $artifacts | Where-Object { $_.name -like "*-Apps-$artifactsUrl" }
-            }
         }
-        if (!($artifact)) {
-            OutputError -message "Unable to locate artifact"
-            exit
-        }
-        $apps = DownloadArtifact -token $token -artifact $artifact
+        $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
         if (!($apps)) {
-            OutputError -message "Unable to download artifact"
+            OutputError -message "Unable to download artifact $project-Apps-$artifacts"
             exit
         }
     }
 
-    Set-Location $ENV:GITHUB_WORKSPACE
+    Set-Location $baseFolder
     if (-not ($ENV:AUTHCONTEXT)) {
-        OutputError -message "You need to create an environment secret called AUTHCONTEXT containing authentication information for the environment"
+        OutputError -message "You need to create an environment secret called AUTHCONTEXT containing authentication information for the environment $environmentName"
         exit 1
     }
 
@@ -78,17 +97,35 @@ try {
     }
 
     $envName = $environmentName.Split(' ')[0]
-    try {
-        if ($appSourceApp) {
-            Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint
-        }
-        else {
-            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
-        }
-    }
-    catch {
-        OutputError -message "Error deploying to $environmentName. Error was $($_.Exception.Message)"
+    $environment = Get-BcEnvironments -bcAuthContext $bcAuthContext | Where-Object { $_.Name -eq $envName }
+    if (-not ($environment)) {
+        OutputError -message "Environment with name $envName does not exist in the current authorization context."
         exit 1
+    }
+
+    $apps | ForEach-Object {
+        try {
+            if ($environment.type -eq "Sandbox") {
+                Write-Host "Publishing apps using development endpoint"
+                Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $_ -useDevEndpoint
+            }
+            else {
+                if ($type -eq 'CD') {
+                    Write-Host "Ignoring environment $environmentName, which is a production environment"
+                }
+                else {
+
+                    # Check for AppSource App - cannot be deployed
+
+                    Write-Host "Publishing apps using automation API"
+                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $_
+                }
+            }
+        }
+        catch {
+            OutputError -message "Error deploying to $environmentName. Error was $($_.Exception.Message)"
+            exit 1
+        }
     }
 }
 catch {
