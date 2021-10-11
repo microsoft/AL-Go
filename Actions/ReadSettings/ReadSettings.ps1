@@ -26,7 +26,7 @@ try {
     if ($getSettings -contains 'appBuild' -or $getSettings -contains 'appRevision') {
         switch ($settings.versioningStrategy -band 15) {
             0 { # Use RUNID
-                $settings.appBuild = [Int32]($ENV:GITHUB_RUN_NUMBER)
+                $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
                 $settings.appRevision = 0
             }
             1 { # USE DATETIME
