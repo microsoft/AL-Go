@@ -274,7 +274,7 @@ function ReadSettings {
     
     # Read Settings file
     $settings = [ordered]@{
-        "type"                                   = "Per Tenant Extension"
+        "type"                                   = "PTE"
         "country"                                = "us"
         "artifact"                               = ""
         "companyName"                            = ""
@@ -353,7 +353,7 @@ function AnalyzeRepo {
 
 
     Write-Host "Checking type"
-    if ($settings.type -eq "Per Tenant Extension") {
+    if ($settings.type -eq "PTE") {
         if (!$settings.Contains('enablePerTenantExtensionCop')) {
             $settings.Add('enablePerTenantExtensionCop', $true)
         }

@@ -1,5 +1,5 @@
 {
-    "type": "Per Tenant Extension",
+    "type": "PTE",
     "country": "us",
     "KeyVaultName": "",
     "appFolders": [
