@@ -28,6 +28,7 @@ try {
     $environment = 'GitHubActions'
     if ($project  -eq ".") { $project = "" }
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+    $sharedFolder = $ENV:GITHUB_WORKSPACE
     $workflowName = $env:GITHUB_WORKFLOW
     $containerName = "bc$env:GITHUB_RUN_ID"
 
@@ -162,6 +163,7 @@ try {
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
         -baseFolder $baseFolder `
+        -sharedFolder $sharedFolder `
         -licenseFile $LicenseFileUrl `
         -installApps $installApps `
         -installTestApps $installTestApps `
