@@ -16,7 +16,7 @@ $reuseExistingEnvironment = Select-Value `
     -question "Select behavior" `
     -default "No"
 
-$baseFolder = (Get-Item -path (Join-Path $PSScriptRoot "..\..")).FullName
+$baseFolder = (Get-Item -path (Join-Path $PSScriptRoot "..")).FullName
 CreateDevEnv `
     -kind cloud `
     -caller local `
