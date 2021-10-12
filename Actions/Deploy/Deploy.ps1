@@ -35,6 +35,7 @@ try {
         }
         else {
             OutputError -message "Unable to use artifact $artifacts"
+            exit
         }
     }
     elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
@@ -85,7 +86,7 @@ try {
     Set-Location $baseFolder
     if (-not ($ENV:AUTHCONTEXT)) {
         OutputError -message "You need to create an environment secret called AUTHCONTEXT containing authentication information for the environment $environmentName"
-        exit 1
+        exit
     }
 
     try {
@@ -93,14 +94,14 @@ try {
         $bcAuthContext = New-BcAuthContext @authContextParams
     } catch {
         OutputError -message "Error trying to authenticate. Error was $($_.exception.message)"
-        exit 1
+        exit
     }
 
     $envName = $environmentName.Split(' ')[0]
     $environment = Get-BcEnvironments -bcAuthContext $bcAuthContext | Where-Object { $_.Name -eq $envName }
     if (-not ($environment)) {
         OutputError -message "Environment with name $envName does not exist in the current authorization context."
-        exit 1
+        exit
     }
 
     $apps | ForEach-Object {
@@ -124,7 +125,7 @@ try {
         }
         catch {
             OutputError -message "Error deploying to $environmentName. Error was $($_.Exception.Message)"
-            exit 1
+            exit
         }
     }
 }

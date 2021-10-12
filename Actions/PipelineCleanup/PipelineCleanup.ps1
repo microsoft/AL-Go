@@ -1,6 +1,5 @@
 $ErrorActionPreference = "Stop"
 
-
 . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper
