@@ -4,6 +4,6 @@
     "perTenantExtensionRepo": "AL-Go-PTE",
     "appSourceAppRepo": "AL-Go-AppSource",
     "branch": "main",
-    "localFolder": "ALGo",
+    "localFolder": "AL-Go-Subs",
     "basefolder": "c:\\repo"
 }
