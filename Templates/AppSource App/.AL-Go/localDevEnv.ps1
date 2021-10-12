@@ -28,7 +28,7 @@ else {
     $credential = Get-Credential -Message "Please enter username and password for your container" -UserName "admin"
 }
 
-$baseFolder = (Get-Item -path (Join-Path $PSScriptRoot "..\..")).FullName
+$baseFolder = (Get-Item -path (Join-Path $PSScriptRoot "..")).FullName
 CreateDevEnv `
     -kind local `
     -caller local `

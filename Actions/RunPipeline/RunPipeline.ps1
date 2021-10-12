@@ -64,7 +64,7 @@ try {
         }
     }
 
-    $repo = AnalyzeRepo -settings $settings -insiderSasToken $insiderSasToken -licenseFileUrl $licenseFileUrl
+    $repo = AnalyzeRepo -settings $settings -baseFolder $baseFolder -insiderSasToken $insiderSasToken -licenseFileUrl $licenseFileUrl
 
     if (-not $repo.appFolders) {
         exit

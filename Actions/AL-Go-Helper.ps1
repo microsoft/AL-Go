@@ -340,6 +340,7 @@ function ReadSettings {
 function AnalyzeRepo {
     Param(
         [hashTable] $settings,
+        [string] $baseFolder,
         [string] $insiderSasToken,
         [string] $licenseFileUrl,
         [switch] $doNotCheckArtifactSetting
@@ -986,6 +987,7 @@ function CreateDevEnv {
 
         $params = @{
             "settings" = $settings
+            "baseFolder" = $baseFolder
         }
         if ($kind -eq "local") {
             $params += @{

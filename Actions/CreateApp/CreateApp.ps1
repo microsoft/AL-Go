@@ -7,13 +7,14 @@ Param(
     [string] $idrange,
     [bool] $directCommit
 )
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-. (Join-Path -path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-import-module (Join-Path -path $PSScriptRoot -ChildPath "AppHelper.psm1" -Resolve)
-
 try {
+    . (Join-Path -path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    import-module (Join-Path -path $PSScriptRoot -ChildPath "AppHelper.psm1" -Resolve)
+
     Write-Host "Template type : $type"
 
     # Check parameters

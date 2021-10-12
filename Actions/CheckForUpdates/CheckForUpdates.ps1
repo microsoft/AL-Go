@@ -8,9 +8,10 @@ Param(
     [bool] $directCommit    
 )
 
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version 2.0
+
 try {
-    $ErrorActionPreference = "Stop"
-    Set-StrictMode -Version 2.0
 
     . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
