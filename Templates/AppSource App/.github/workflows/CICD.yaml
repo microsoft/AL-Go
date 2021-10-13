@@ -134,6 +134,7 @@ jobs:
 
       - name: Calculate Artifact names
         id: calculateArtifactNames
+        if: success() || failure()
         run: |
           $settings = '${{steps.readsettings.outputs.Settings}}' | ConvertFrom-Json
           $project = '${{matrix.project}}'
