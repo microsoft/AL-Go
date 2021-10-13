@@ -629,6 +629,9 @@ function CommitFromNewFolder {
 
     invoke-git add *
     invoke-git commit -m "$commitMessage"
+    if ($commitMessage.Length -gt 250) {
+        $commitMessage = "$($commitMessage.Substring(0,250))...)"
+    }
     if ($branch) {
         invoke-git push -u $serverUrl $branch
         invoke-hub pull-request -h $branch -m "$commitMessage"
@@ -900,7 +903,9 @@ function CreateDevEnv {
         [Parameter(Mandatory=$true, ParameterSetName='local')]
         [pscredential] $credential,
         [Parameter(ParameterSetName='local')]
-        [string] $containerName = ""
+        [string] $containerName = "",
+        [string] $insiderSasToken = "",
+        [string] $LicenseFileUrl = ""
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -925,9 +930,6 @@ function CreateDevEnv {
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
         $settings = ReadSettings @params
     
-        $insiderSasToken = ""
-        $LicenseFileUrl = ""
-
         if ($caller -eq "GitHubActions") {
             if ($kind -ne "cloud") {
                 OutputError -message "Unexpected. kind=$kind, caller=$caller"
