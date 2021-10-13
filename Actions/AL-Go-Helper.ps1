@@ -315,7 +315,7 @@ function ReadSettings {
         "memoryLimit"                            = "6G"
         "templateUrl"                            = ""
         "templateBranch"                         = ""
-        "appDependencyProbingPaths"              = @("[{ ""repo"" : ""https://github.com/PooyaKharamesh/MS1.git"", ""version"": ""latest"", ""release_status"": ""release"" }]")
+        "appDependencyProbingPaths"              = @("[{ ""repo"" : ""https://github.com/PooyaKharamesh/MS1.git"", ""version"": ""latest"", ""release_status"": ""release"", ""AuthTokenSecret"": ""test"" }]")
     }
 
     $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.setting.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {

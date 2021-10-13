@@ -96,7 +96,7 @@ function DownloadRelease {
     $projects.Split(',') | ForEach-Object {
         $project = $_
         Write-Host "project '$project'"
-        $release.assets | % { Write-Host $_.name }
+        $release.assets | ForEach-Object { Write-Host $_.name }
         
         $release.assets | Where-Object { $_.name -like "$project-Apps-*.zip" } | ForEach-Object {
             Write-Host "$api_url/repos/$repository/releases/assets/$($_.id)"
