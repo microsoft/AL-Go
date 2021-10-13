@@ -27,7 +27,7 @@ function Get-dependencies {
                     throw "Could not find any artifacts that matches the criteria."
                 }
 
-                DownloadArtifact -path $saveToPath -token $token -artifact $artifact
+                DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
             }
             else {
                 $releases = GetReleases -api_url $api_url -token $token -repository $repository
@@ -45,8 +45,13 @@ function Get-dependencies {
                 if (!($release)) {
                     throw "Could not find a release that matches the criteria."
                 }
+                
+                $projects = $dependency.projects
+                if ([string]::IsNullOrEmpty($dependency.projects)) {
+                    $projects = "*"
+                }
 
-                $downloadedList += DownloadRelease -token $token -projects "*" -api_url $api_url -repository $repository -path $saveToPath -release $release
+                $downloadedList += DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release
             }
         }
     

@@ -11,10 +11,15 @@ inputs:
   secrets:
     description: Comma separated list of Secrets to get
     required: true
+outputs:
+  Settings:
+    description: Settings in compressed Json format
+    value: ${{steps.readsecrets.outputs.Settings}}
 runs:
   using: composite
   steps:
     - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settings }}' -keyVaultName '${{ inputs.keyVaultName }}' -secrets '${{ inputs.secrets }}'
+      id: readsecrets
       shell: PowerShell
 branding:
   icon: terminal
