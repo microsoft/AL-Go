@@ -28,7 +28,10 @@ try {
     $environment = 'GitHubActions'
     if ($project  -eq ".") { $project = "" }
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
-    $sharedFolder = $ENV:GITHUB_WORKSPACE
+    $sharedFolder = ""
+    if ($project) {
+        $sharedFolder = $ENV:GITHUB_WORKSPACE
+    }
     $workflowName = $env:GITHUB_WORKFLOW
     $containerName = "bc$env:GITHUB_RUN_ID"
 
