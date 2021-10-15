@@ -1,7 +1,8 @@
 Param(
     [string] $settingsJson = '{"keyVaultName": ""}',
     [string] $keyVaultName = "",
-    [string] $secrets = ""
+    [string] $secrets = "",
+    [bool] $updateSettingsWithValues = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,10 +10,34 @@ Set-StrictMode -Version 2.0
 
 try {
     . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
+    function GetGithubSecret {
+        param (
+            [string] $secretName
+        )
+        $secretSplit = $secretName.Split('=')
+        $envVar = $secretSplit[0]
+        $secret = $envVar
+        if ($secretSplit.Count -gt 1) {
+            $secret = $secretSplit[1]
+        }
+    
+        if ($gitHubSecrets.PSObject.Properties.Name -eq $secret) {
+            $value = $githubSecrets."$secret"
+            if ($value) {
+                MaskValueInLog -value $value
+                Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
+                Write-Host "Secret $envVar successfully read from GitHub Secret $secret"
+                return $value
+            }
+        }
+
+        throw "Secret $envVar was not found in GitHub Secrets."
+    }
 
     if ($keyVaultName -eq "") {
         # use SettingsJson
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+        $outSettings = $settings
         $keyVaultName = $settings.KeyVaultName
         [System.Collections.ArrayList]$secretsCollection = @()
         $secrets.Split(',') | ForEach-Object {
@@ -50,10 +75,20 @@ try {
                 }
             }
         }
+
+        if ($updateSettingsWithValues) {
+            $outSettings.appDependencyProbingPaths | 
+            ForEach-Object {
+                if ($($_.authTokenSecret)) {
+                    $_.authTokenSecret = GetGithubSecret -secretName $_.authTokenSecret 
+                }
+            } 
+
+            $outSettings.appDependencyProbingPaths
+        }
     }
     catch {
-        OutputError -message "Error reading from GitHub Secrets. Error was $($_.Exception.Message)"
-        exit
+        throw $_
     }
 
     if ($secretsCollection) {
@@ -93,7 +128,7 @@ try {
                 OutputError -message "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
                 Exit
             }
-        
+    
             try {
                 @($secretsCollection) | ForEach-Object {
                     $secretSplit = $_.Split('=')
@@ -102,13 +137,13 @@ try {
                     if ($secretSplit.Count -gt 1) {
                         $secret = $secretSplit[1]
                     }
-                
+    
                     if ($secret) {
                         $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret 
                         if ($keyVaultSecret) {
                             $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
                             MaskValueInLog -value $value
-                            MaskValueInLog -value $value.Replace('&','\u0026')
+                            MaskValueInLog -value $value.Replace('&', '\u0026')
                             Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
                             $outSecrets += @{ "$envVar" = $value }
                             Write-Host "Secret $envVar successfully read from KeyVault Secret $secret"
@@ -128,20 +163,24 @@ try {
     }
     if ($secretsCollection) {
         Write-Host "The following secrets was not found: $(($secretsCollection | ForEach-Object { 
-            $secretSplit = @($_.Split('='))
-            if ($secretSplit.Count -eq 1) {
-                $secretSplit[0]
-            }
-            else {
-                "$($secretSplit[0]) (Secret $($secretSplit[1]))"
-            }
-            $outSecrets += @{ ""$($secretSplit[0])"" = """" }
-        }) -join ', ')"
+        $secretSplit = @($_.Split('='))
+        if ($secretSplit.Count -eq 1) {
+            $secretSplit[0]
+        }
+        else {
+            "$($secretSplit[0]) (Secret $($secretSplit[1]))"
+        }
+        $outSecrets += @{ ""$($secretSplit[0])"" = """" }
+    }) -join ', ')"
     }
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$OutSecretsJson"
+    Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
+
+    $outSettingsJson = $outSettings | ConvertTo-Json -Compress
+    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
 }
 catch {
     OutputError -message $_.Exception.Message
+    exit
 }

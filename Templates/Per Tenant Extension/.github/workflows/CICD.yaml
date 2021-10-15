@@ -110,18 +110,20 @@ jobs:
           project: ${{matrix.project}}
 
       - name: Read secrets
+        id: readsecrets
         uses: microsoft/AL-Go/ReadSecrets@main
         env:
           secrets: ${{toJson(secrets)}}
         with:
           settings: ${{steps.readsettings.outputs.Settings}}
           secrets: 'licenseFileUrl,insiderSasToken,CodeSignCertificateUrl,CodeSignCertificatePassword,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
+          updateSettingsWithValues: 'Y'
 
       - name: Run pipeline
         uses: microsoft/AL-Go/RunPipeline@main
         with:
           Project: ${{matrix.project}}
-          Settings: ${{ steps.readsettings.outputs.Settings }}
+          Settings: ${{ env.Settings }}
           Secrets: ${{ env.RepoSecrets }}
 
       - name: Publish test results
