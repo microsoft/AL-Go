@@ -308,9 +308,10 @@ function ReadSettings {
         "installPerformanceToolkit"              = $false
         "enableCodeCop"                          = $false
         "enableUICop"                            = $false
+        "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
         "appSourceCopMandatoryAffixes"           = @()
-        "memoryLimit"                            = "6G"
+        "memoryLimit"                            = ""
         "templateUrl"                            = ""
         "templateBranch"                         = ""
     }
@@ -877,6 +878,10 @@ function Enter-Value {
     $answer
 }
 
+function GetContainerName([string] $project) {
+    "bc$($project -replace "\W")$env:GITHUB_RUN_ID"
+}
+
 function CreateDevEnv {
     Param(
         [Parameter(Mandatory=$true)]
@@ -1146,7 +1151,7 @@ function CreateDevEnv {
             -AppSourceCopSupportedCountries @() `
             -doNotRunTests `
             -useDevEndpoint `
-            -keepContainer `
+            -keepContainer
     }
     finally {
         # Cleanup

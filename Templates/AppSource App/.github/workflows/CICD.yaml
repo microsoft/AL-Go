@@ -173,6 +173,8 @@ jobs:
       - name: Cleanup
         if: always()
         uses: microsoft/AL-Go/PipelineCleanup@main
+        with:
+          Project: ${{matrix.project}}
   Deploy:
     runs-on: windows-latest
     needs: [ Build, Environments, Projects ]
