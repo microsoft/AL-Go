@@ -1,11 +1,15 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Direct Download Url of .app or .zip file", Mandatory = $true)]
     [string] $url,
+    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
 
-function getfiles {
+function getfiles {    
     Param(
         [string] $url
     )

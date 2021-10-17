@@ -1,10 +1,17 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [string] $settingsJson = '{"templateUrl": "", "templateBranch": ""}',
+    [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
+    [string] $settings = '{"templateUrl": "", "templateBranch": ""}',
+    [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
+    [Parameter(HelpMessage = "Branch in template repository to use for the update (default is the default branch)", Mandatory = $false)]
     [string] $templateBranch = "",
+    [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
     [bool] $update,
+    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit    
 )
 
@@ -23,8 +30,7 @@ try {
     }
 
     if ($templateUrl -eq "" -and $templateBranch -eq "") {
-        # use SettingsJson
-        $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+        $settings = $settings | ConvertFrom-Json | ConvertTo-HashTable
         $templateUrl = $settings.templateUrl
         $templateBranch = $settings.templateBranch
     }

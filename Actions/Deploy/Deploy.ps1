@@ -1,11 +1,17 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Projects to deploy (default is all)", Mandatory = $false)]
     [string] $projects = "*",
+    [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
     [string] $environmentName,
+    [Parameter(HelpMessage = "Artifacts to deploy", Mandatory = $true)]
     [string] $artifacts,
+    [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
     [ValidateSet('CD','Publish')]
-    [string] $type
+    [string] $type = "CD"
 )
 
 $ErrorActionPreference = "Stop"

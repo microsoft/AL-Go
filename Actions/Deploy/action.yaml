@@ -10,9 +10,9 @@ inputs:
     required: false
     default: ${{ github.token }}
   projects:
-    description: Projects to deploy
-    default: '*'
+    description: Projects to deploy (default is all)
     required: false
+    default: '*'
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -22,7 +22,7 @@ inputs:
   type:
     description: Type of deployment (CD or Publish)
     required: false
-    default: ''
+    default: 'CD'
 runs:
   using: composite
   steps:
