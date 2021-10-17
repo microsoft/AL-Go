@@ -1,4 +1,6 @@
 Param(
+    [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
+    [string] $project = "."
 )
 
 $ErrorActionPreference = "Stop"

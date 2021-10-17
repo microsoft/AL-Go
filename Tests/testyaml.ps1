@@ -1,5 +1,7 @@
 ﻿function TestYaml([string] $scriptPath, $permissions) {
 
+    $scriptPath = Join-Path $PSScriptRoot $scriptPath -Resolve
+
     $filename = [System.IO.Path]::GetFileName($scriptPath)
     $actionname = [System.IO.Path]::GetFileNameWithoutExtension($scriptPath)
     Write-Host -ForegroundColor Green $filename
@@ -100,7 +102,7 @@ $permissions = [ordered]@{
     "contents" = "write"
     "pull-requests" = "write"
 }
-$actionScript = TestYaml -scriptPath "C:\Users\freddyk\Documents\Freddydk-AL-Go\Actions\AddExistingApp\AddExistingApp.ps1" -permissions $permissions
+$actionScript = TestYaml -scriptPath "..\Actions\AddExistingApp\AddExistingApp.ps1" -permissions $permissions
 Invoke-Expression $actionScript
 
 $permissions = [ordered]@{
@@ -108,36 +110,36 @@ $permissions = [ordered]@{
     "pull-requests" = "write"
     "workflows" = "write"
 }
-$actionScript = TestYaml -scriptPath "C:\Users\freddyk\Documents\Freddydk-AL-Go\Actions\CheckForUpdates\CheckForUpdates.ps1" -permissions $permissions
+$actionScript = TestYaml -scriptPath "..\Actions\CheckForUpdates\CheckForUpdates.ps1" -permissions $permissions
 Invoke-Expression $actionScript
 
 $permissions = [ordered]@{
     "contents" = "write"
     "pull-requests" = "write"
 }
-$actionScript = TestYaml -scriptPath "C:\Users\freddyk\Documents\Freddydk-AL-Go\Actions\CreateApp\CreateApp.ps1" -permissions $permissions
+$actionScript = TestYaml -scriptPath "..\Actions\CreateApp\CreateApp.ps1" -permissions $permissions
 Invoke-Expression $actionScript
 
 $permissions = [ordered]@{
     "contents" = "write"
     "pull-requests" = "write"
 }
-$actionScript = TestYaml -scriptPath "C:\Users\freddyk\Documents\Freddydk-AL-Go\Actions\CreateDevelopmentEnvironment\CreateDevelopmentEnvironment.ps1" -permissions $permissions
+$actionScript = TestYaml -scriptPath "..\Actions\CreateDevelopmentEnvironment\CreateDevelopmentEnvironment.ps1" -permissions $permissions
 Invoke-Expression $actionScript
 
 $permissions = [ordered]@{
 }
-$actionScript = TestYaml -scriptPath "C:\Users\freddyk\Documents\Freddydk-AL-Go\Actions\Deploy\Deploy.ps1" -permissions $permissions
+$actionScript = TestYaml -scriptPath "..\Actions\Deploy\Deploy.ps1" -permissions $permissions
 Invoke-Expression $actionScript
 
 $permissions = [ordered]@{
     "contents" = "write"
     "pull-requests" = "write"
 }
-$actionScript = TestYaml -scriptPath "C:\Users\freddyk\Documents\Freddydk-AL-Go\Actions\IncrementVersionNumber\IncrementVersionNumber.ps1" -permissions $permissions
+$actionScript = TestYaml -scriptPath "..\Actions\IncrementVersionNumber\IncrementVersionNumber.ps1" -permissions $permissions
 Invoke-Expression $actionScript
 
 $permissions = [ordered]@{
 }
-$actionScript = TestYaml -scriptPath "C:\Users\freddyk\Documents\Freddydk-AL-Go\Actions\PipelineCleanup\PipelineCleanup.ps1" -permissions $permissions
+$actionScript = TestYaml -scriptPath "..\Actions\PipelineCleanup\PipelineCleanup.ps1" -permissions $permissions
 Invoke-Expression $actionScript
