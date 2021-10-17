@@ -3,6 +3,8 @@ Param(
 )
 
 $ErrorActionPreference = "stop"
+Set-StrictMode -Version 2.0
+
 $ALGoFolder = ".AL-Go\"
 $ALGoSettingsFile = ".AL-Go\settings.json"
 $RepoSettingsFile = ".github\AL-Go-Settings.json"
@@ -334,7 +336,6 @@ function ReadSettings {
         }
     }
 
-    $settings | ConvertTo-Json | Out-Host
     $settings
 }
 
@@ -1058,11 +1059,16 @@ function CreateDevEnv {
                 "artifact" = $repo.artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken)
                 "auth" = $auth
                 "credential" = $credential
-                "updateLaunchJson" = "Local Sandbox"
             }
             if ($containerName) {
                 $runAlPipelineParams += @{
+                    "updateLaunchJson" = "Local Sandbox ($containerName)"
                     "containerName" = $containerName
+                }
+            }
+            else {
+                $runAlPipelineParams += @{
+                    "updateLaunchJson" = "Local Sandbox"
                 }
             }
         }
