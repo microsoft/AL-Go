@@ -12,7 +12,6 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
 try {
-    $PSScriptRoot
     . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
     $baseFolder = $ENV:GITHUB_WORKSPACE

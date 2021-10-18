@@ -15,10 +15,6 @@ inputs:
     description: Specifies if the values of secrets should be updated
     required: false
     default: 'N'    
-outputs:
-  Settings:
-    description: Settings in compressed Json format
-    value: ${{steps.readsecrets.outputs.Settings}}
 runs:
   using: composite
   steps:
