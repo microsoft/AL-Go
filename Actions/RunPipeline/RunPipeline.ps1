@@ -1,18 +1,14 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
-    [string] $settingsJson = '{"AppBuild":"", "AppRevision":""}',
-    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":""}',
-    [string] $licenseFileUrl = "",
-    [string] $insiderSasToken = "",
-    [string] $CodeSignCertificateUrl = "",
-    [string] $CodeSignCertificatePw = "",
-    [string] $KeyVaultCertificateUrl = "",
-    [string] $KeyVaultCertificatePw = "",
-    [string] $KeyVaultClientId = "",
-    [int] $appBuild = -1,
-    [int] $appRevision = -1
+    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
+    [string] $settings = '{"AppBuild":"", "AppRevision":""}',
+    [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
+    [string] $secrets = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":""}'
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,11 +35,11 @@ try {
 
         Write-Host "use settings and secrets"
         
-        $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+        $settings = $settings | ConvertFrom-Json | ConvertTo-HashTable
         $appBuild = $settings.appBuild
         $appRevision = $settings.appRevision
 
-        $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
+        $secrets = $secrets | ConvertFrom-Json | ConvertTo-HashTable
         'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePw','KeyVaultCertificateUrl','KeyVaultCertificatePw','KeyVaultClientId' | ForEach-Object {
             if ($secrets.ContainsKey($_)) {
                 $value = $secrets."$_"

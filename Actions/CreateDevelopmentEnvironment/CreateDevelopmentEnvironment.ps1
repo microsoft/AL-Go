@@ -1,10 +1,16 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Name of the online environment", Mandatory = $true)]
     [string] $environmentName,
+    [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $false)]
     [string] $adminCenterApiCredentials,
+    [Parameter(HelpMessage = "Reuse environment if it exists", Mandatory = $false)]
     [bool] $reUseExistingEnvironment,
-    [bool] $directCommit
+    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
+    [bool] $directCommit    
 )
 
 $ErrorActionPreference = "Stop"

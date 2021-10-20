@@ -1,8 +1,13 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [string] $project = "",
+    [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
+    [string] $project = ".",
+    [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
     [string] $release = "N",
+    [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
     [string] $get = ""
 )
 

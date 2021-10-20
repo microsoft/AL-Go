@@ -1,10 +1,18 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [string][ValidateSet("PTE", "AppSource App" , "Test App")] $type,
-    [string] $publisher,
+    [ValidateSet("PTE", "AppSource App" , "Test App")]
+    [Parameter(HelpMessage = "Type of app to add (Per Tenant Extension, AppSource App, Test App)", Mandatory = $true)]
+    [string] $type,
+    [Parameter(HelpMessage = "App Name", Mandatory = $true)]
     [string] $name,
+    [Parameter(HelpMessage = "Publisher", Mandatory = $true)]
+    [string] $publisher,
+    [Parameter(HelpMessage = "ID range", Mandatory = $true)]
     [string] $idrange,
+    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
 
@@ -12,7 +20,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
 try {
-    . (Join-Path -path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
     import-module (Join-Path -path $PSScriptRoot -ChildPath "AppHelper.psm1" -Resolve)
 
     Write-Host "Template type : $type"

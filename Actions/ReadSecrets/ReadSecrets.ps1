@@ -1,7 +1,9 @@
 Param(
-    [string] $settingsJson = '{"keyVaultName": ""}',
-    [string] $keyVaultName = "",
+    [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
+    [string] $settings = '{"keyVaultName": ""}',
+    [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
+    [Parameter(HelpMessage = "Specifies if the values of secrets should be updated", Mandatory = $false)]
     [bool] $updateSettingsWithValues = $false
 )
 
@@ -13,31 +15,23 @@ try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
-    if ($keyVaultName -eq "") {
-        # use SettingsJson
-        $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
-        $outSettings = $settings
-
-        $keyVaultName = $settings.KeyVaultName
-        if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-            $credentialsJson = Get-AzKeyVaultCredentials
-            if ($credentialsJson.PSObject.Properties.Name -eq "KeyVaultName") {
-                $keyVaultName = $credentialsJson.KeyVaultName
-            }
-        }
-
-        [System.Collections.ArrayList]$secretsCollection = @()
-        $secrets.Split(',') | ForEach-Object {
-            $secret = $_
-            $secretNameProperty = "$($secret)SecretName"
-            if ($settings.containsKey($secretNameProperty)) {
-                $secret = "$($secret)=$($settings."$secretNameProperty")"
-            }
-            $secretsCollection += $secret
+    $settings = $settings | ConvertFrom-Json | ConvertTo-HashTable
+    $outSettings = $settings
+    $keyVaultName = $settings.KeyVaultName
+    if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
+        $credentialsJson = Get-AzKeyVaultCredentials
+        if ($credentialsJson.PSObject.Properties.Name -eq "KeyVaultName") {
+            $keyVaultName = $credentialsJson.KeyVaultName
         }
     }
-    else {
-        [System.Collections.ArrayList]$secretsCollection = @($secrets.Split(','))
+    [System.Collections.ArrayList]$secretsCollection = @()
+    $secrets.Split(',') | ForEach-Object {
+        $secret = $_
+        $secretNameProperty = "$($secret)SecretName"
+        if ($settings.containsKey($secretNameProperty)) {
+            $secret = "$($secret)=$($settings."$secretNameProperty")"
+        }
+        $secretsCollection += $secret
     }
 
     @($secretsCollection) | ForEach-Object {

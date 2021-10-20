@@ -31,7 +31,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -type '${{ inputs.type }}'  -publisher '${{ inputs.publisher }}' -name '${{ inputs.name }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -type '${{ inputs.type }}' -name '${{ inputs.name }}' -publisher '${{ inputs.publisher }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal
