@@ -10,7 +10,7 @@ Set-StrictMode -Version 2.0
 
 try {
     . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
-    Import-Module (Join-Path $PSScriptRoot ".\ReadSecretHelper.psm1")
+    Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
     if ($keyVaultName -eq "") {
