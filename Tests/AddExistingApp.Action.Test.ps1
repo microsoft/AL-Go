@@ -7,7 +7,7 @@ Describe 'AddExistingApp Action Tests' {
             "contents" = "write"
             "pull-requests" = "write"
         }
-        $global:actionScript = TestYaml -scriptPath "..\Actions\AddExistingApp\AddExistingApp.ps1" -permissions $permissions
+        $global:actionScript = YamlTest -scriptPath "..\Actions\AddExistingApp\AddExistingApp.ps1" -permissions $permissions
     }
 
     It 'Compile Action' {

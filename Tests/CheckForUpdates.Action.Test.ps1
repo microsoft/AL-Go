@@ -8,7 +8,7 @@ Describe 'CheckForUpdates Action Tests' {
             "pull-requests" = "write"
             "workflows" = "write"
         }
-        $global:actionScript = TestYaml -scriptPath "..\Actions\CheckForUpdates\CheckForUpdates.ps1" -permissions $permissions
+        $global:actionScript = YamlTest -scriptPath "..\Actions\CheckForUpdates\CheckForUpdates.ps1" -permissions $permissions
     }
 
     It 'Compile Action' {
