@@ -1,9 +1,14 @@
 name: PowerShell script
 author: Freddy Kristiansen
+inputs:
+  project:
+    description: Project folder
+    required: false
+    default: '.'
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/PipelineCleanup.ps1
+    - run: ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}'
       shell: PowerShell
 branding:
   icon: terminal

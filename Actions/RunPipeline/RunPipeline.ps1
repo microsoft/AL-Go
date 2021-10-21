@@ -28,8 +28,12 @@ try {
     $environment = 'GitHubActions'
     if ($project  -eq ".") { $project = "" }
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+    $sharedFolder = ""
+    if ($project) {
+        $sharedFolder = $ENV:GITHUB_WORKSPACE
+    }
     $workflowName = $env:GITHUB_WORKFLOW
-    $containerName = "bc$env:GITHUB_RUN_ID"
+    $containerName = GetContainerName($project)
 
     if ([int]$appBuild -eq -1 -and [int]$appRevision -eq -1 -and $licenseFileUrl -eq "" -and $codeSignCertificateUrl -eq "" -and $CodeSignCertificatePw -eq "" -and $KeyVaultCertificateUrl -eq "" -and $KeyVaultCertificatePw -eq "" -and $KeyVaultClientId -eq "") {
 
@@ -73,6 +77,7 @@ try {
     $artifact = $repo.artifact
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
+    $doNotBuildTests = $repo.doNotBuildTests
     $doNotRunTests = $repo.doNotRunTests
 
     if ($settings.appDependencyProbingPaths) {
@@ -167,12 +172,14 @@ try {
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
         -baseFolder $baseFolder `
+        -sharedFolder $sharedFolder `
         -licenseFile $LicenseFileUrl `
         -installApps $installApps `
         -installTestApps $installTestApps `
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
         -testFolders $repo.testFolders `
+        -doNotBuildTests:$doNotBuildTests `
         -doNotRunTests:$doNotRunTests `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
