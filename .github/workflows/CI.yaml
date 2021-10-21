@@ -24,7 +24,7 @@ jobs:
 
       - name: Publish test results
         if: success() || failure()
-        uses: mikepenz/action-junit-report@v1
+        uses: mikepenz/action-junit-report@v2
         with:
           check_name: 'Test Report'
           report_paths: 'TestResults.xml'
