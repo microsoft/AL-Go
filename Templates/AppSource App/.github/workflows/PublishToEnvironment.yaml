@@ -21,14 +21,14 @@ jobs:
   Environments:
     runs-on: windows-latest
     outputs:
-      environments: ${{steps.Environments.outputs.environments}}
-      environmentCount: ${{steps.Environments.outputs.environmentCount}}
+      environments: ${{ steps.Environments.outputs.environments }}
+      environmentCount: ${{ steps.Environments.outputs.environmentCount }}
     steps:
       - name: Environments
         id: Environments
         run: |
           $headers = @{ 
-            "Authorization" = "token ${{github.token}}"
+            "Authorization" = "token ${{ github.token }}"
             "Accept"        = "application/vnd.github.v3+json"
           }
           $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
@@ -45,21 +45,21 @@ jobs:
   Deploy:
     runs-on: windows-latest
     needs: [ Environments ]
-    if: ${{needs.Environments.outputs.environmentCount > 0}}
+    if: ${{ needs.Environments.outputs.environmentCount > 0 }}
     strategy:
       matrix:
-        environment: ${{fromJson(needs.Environments.outputs.environments)}}
+        environment: ${{ fromJson(needs.Environments.outputs.environments) }}
       fail-fast: false
-    name: Deploy to ${{matrix.environment}}
+    name: Deploy to ${{ matrix.environment }}
     environment:
-      name: ${{matrix.environment}}
+      name: ${{ matrix.environment }}
     steps:
       - name: Deploy
         uses: microsoft/AL-Go/Deploy@main
         env:
-          authContext: '${{secrets.AuthContext}}'
+          authContext: '${{ secrets.AuthContext }}'
         with:
           type: 'Publish'
-          projects: '${{secrets.Projects}}'
-          environmentName: ${{matrix.environment}}
-          artifacts: ${{github.event.inputs.appVersion}}
+          projects: '${{ secrets.Projects }}'
+          environmentName: ${{ matrix.environment }}
+          artifacts: ${{ github.event.inputs.appVersion }}

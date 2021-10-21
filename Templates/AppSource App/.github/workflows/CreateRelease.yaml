@@ -34,8 +34,8 @@ jobs:
   CreateRelease:
     runs-on: windows-latest
     outputs:
-      artifacts: ${{steps.analyzeartifacts.outputs.artifacts}}
-      upload_url: ${{steps.createrelease.outputs.upload_url}}
+      artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
+      upload_url: ${{ steps.createrelease.outputs.upload_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -55,7 +55,7 @@ jobs:
         id: analyzeartifacts
         run: |
           Write-Host "Analyzing artifacts"
-          $appVersion = '${{github.event.inputs.appVersion}}'
+          $appVersion = '${{ github.event.inputs.appVersion }}'
           $headers = @{ 
               "Authorization" = "token ${{ github.token }}"
               "Accept"        = "application/json"
@@ -85,17 +85,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          draft: ${{github.event.inputs.draft=='Y'}}
-          prerelease: ${{github.event.inputs.prerelease=='Y'}}
-          release_name: '${{github.event.inputs.name}}'
-          tag_name: '${{github.event.inputs.tag}}'
+          draft: ${{ github.event.inputs.draft=='Y' }}
+          prerelease: ${{ github.event.inputs.prerelease=='Y' }}
+          release_name: '${{ github.event.inputs.name }}'
+          tag_name: '${{ github.event.inputs.tag }}'
           body_path: README.md
 
   UploadArtifacts:
     runs-on: windows-latest
     needs: [ CreateRelease ]
     strategy:
-      matrix: ${{fromJson(needs.CreateRelease.outputs.artifacts)}}
+      matrix: ${{ fromJson(needs.CreateRelease.outputs.artifacts) }}
       fail-fast: true
     steps:
       - name: Download artifact
@@ -112,7 +112,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{needs.createrelease.outputs.upload_url}}
+          upload_url: ${{ needs.createrelease.outputs.upload_url }}
           asset_path: '${{ matrix.name }}.zip'
           asset_name: '${{ matrix.name }}.zip'
           asset_content_type: application/zip
