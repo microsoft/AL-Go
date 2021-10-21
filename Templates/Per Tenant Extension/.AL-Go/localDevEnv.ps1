@@ -48,9 +48,10 @@ $dockerService = Get-Service docker -ErrorAction SilentlyContinue
 if (-not $dockerService -or $dockerService.Status -ne "Running") {
     throw "Creating a local development enviroment requires you to have Docker installed and running."
 }
+
 if ($settings.keyVaultName) {
     if (-not (Get-Module -ListAvailable -Name 'Az.KeyVault')) {
-        throw "A keyvault name is defined in Settings, you need to have the Az.KeyVault PowerShell module installed or you can set the keyVaultName to an empty string in the user settings file ($($ENV:UserName).Settings.json)."
+        throw "A keyvault name is defined in Settings, you need to have the Az.KeyVault PowerShell module installed (use Install-Module az) or you can set the keyVaultName to an empty string in the user settings file ($($ENV:UserName).Settings.json)."
     }
 }
 
@@ -88,14 +89,22 @@ if (-not $credential) {
 if (-not $licenseFileUrl) {
     if ($settings.type -eq "AppSource App") {
         $description = "When developing AppSource Apps, your local development environment needs the developer licensefile with permissions to your AppSource app object IDs"
+        $default = ""
     }
     else {
-        $description = "When developing PTEs, your can optionally specify a developer licensefile with permissions to object IDs of your dependant apps"
+        $description = "When developing PTEs, you can optionally specify a developer licensefile with permissions to object IDs of your dependant apps"
+        $default = "none"
     }
+
     $licenseFileUrl = Enter-Value `
         -title "LicenseFileUrl" `
         -description $description `
-        -question "Local path or a secure download URL to license file "
+        -question "Local path or a secure download URL to license file " `
+        -default $default
+
+    if ($licenseFileUrl -eq "none") {
+        $licenseFileUrl = ""
+    }
 }
 
 CreateDevEnv `
