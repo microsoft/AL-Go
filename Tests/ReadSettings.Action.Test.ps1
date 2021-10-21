@@ -1,13 +1,13 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
-BeforeAll {
-    $actionName = "ReadSettings"
-    $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
-    $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
-}
-
 Describe "ReadSettings Action Tests" {
+    BeforeAll {
+        $actionName = "ReadSettings"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
+    }
+
     It 'Compile Action' {
         Invoke-Expression $actionScript
     }
@@ -16,7 +16,7 @@ Describe "ReadSettings Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-            "Settings" = "Settings in compressed Json format"
+            "SettingsJson" = "Settings in compressed Json format"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

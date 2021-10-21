@@ -1,13 +1,13 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
-BeforeAll {
-    $actionName = "Deploy"
-    $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
-    $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
-}
-
 Describe "Deploy Action Tests" {
+    BeforeAll {
+        $actionName = "Deploy"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
+    }
+
     It 'Compile Action' {
         Invoke-Expression $actionScript
     }
