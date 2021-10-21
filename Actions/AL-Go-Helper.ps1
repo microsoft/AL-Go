@@ -2,7 +2,9 @@ Param(
     [switch] $local
 )
 
-Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1')
+if (!$local) {
+    Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1')
+}
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
