@@ -129,12 +129,13 @@ function YamlTest {
     $yamlLines = $yaml.ToString().Replace("`r","").Split("`n")
     $actualYaml = @(Get-Content -path (Join-Path $scriptRoot "action.yaml"))
 
-    $yamlLines.Count | Should -be $actualYaml.Count
     $i = 0
     while ($i -lt $yamlLines.Count -and $i -lt $actualYaml.count) {
         $actualYaml[$i] | Should -BeLike $yamlLines[$i]
         $i++
     }
+
+    $yamlLines.Count | Should -be $actualYaml.Count
 }
 
 Export-ModuleMember -Function GetActionScript
