@@ -52,7 +52,8 @@ try {
         Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settings."$setting")"
     }
     $outSettingsJson = $outSettings | ConvertTo-Json -Compress
-    Write-Host "::set-output name=Settings::$outSettingsJson"
+    Write-Host "::set-output name=SettingsJson::$outSettingsJson"
+    Write-Host "set-output name=SettingsJson::$outSettingsJson"
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
 }
 catch {

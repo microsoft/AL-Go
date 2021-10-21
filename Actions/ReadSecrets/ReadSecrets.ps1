@@ -1,6 +1,6 @@
 Param(
     [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
-    [string] $settings = '{"keyVaultName": ""}',
+    [string] $settingsJson = '{"keyVaultName": ""}',
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
     [Parameter(HelpMessage = "Specifies if the values of secrets should be updated", Mandatory = $false)]
@@ -15,12 +15,13 @@ try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
-    $settings = $settings | ConvertFrom-Json | ConvertTo-HashTable
+    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     $outSettings = $settings
     $keyVaultName = $settings.KeyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-        $credentialsJson = Get-AzKeyVaultCredentials
-        if ($credentialsJson.PSObject.Properties.Name -eq "KeyVaultName") {
+        $credentialsJson = Get-AzKeyVaultCredentials | ConvertTo-HashTable
+        $credentialsJson.Keys | ForEach-Object { MaskValueInLog -value $credentialsJson."$_" }
+        if ($credentialsJson.ContainsKey("KeyVaultName")) {
             $keyVaultName = $credentialsJson.KeyVaultName
         }
     }

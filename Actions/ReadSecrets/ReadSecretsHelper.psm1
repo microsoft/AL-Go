@@ -12,6 +12,7 @@ function MaskValueInLog {
     )
 
     Write-Host "::add-mask::$value"
+    Write-Host "::add-mask::$($value.Replace('&', '\u0026'))"
 }
 
 function GetGithubSecret {
@@ -112,7 +113,6 @@ function GetKeyVaultSecret {
     if ($keyVaultSecret) {
         $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
         MaskValueInLog -value $value
-        MaskValueInLog -value $value.Replace('&', '\u0026')
         return $value
     }
 

@@ -22,15 +22,16 @@ jobs:
 
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
+        id: readsettings
         with:
           get: KeyVaultName,GhTokenWorkflowSecretName,TemplateUrl,TemplateBranch
 
       - name: Read secrets
         uses: microsoft/AL-Go/ReadSecrets@main
         env:
-          secrets: ${{ toJson(secrets) }}
+          secrets: ${{toJson(secrets)}}
         with:
-          keyVaultName: ${{ env.KEYVAULTNAME }}
+          settingsJson: ${{steps.readsettings.outputs.SettingsJson}}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
       - name: Update AL-Go system files

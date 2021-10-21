@@ -1,7 +1,7 @@
 name: PowerShell script
 author: Freddy Kristiansen
 inputs:
-  settings:
+  settingsJson:
     description: Settings from template repository in compressed Json format
     required: false
     default: '{"keyVaultName": ""}'
@@ -15,7 +15,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settings '${{ inputs.settings }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y')
+    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settingsJson }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

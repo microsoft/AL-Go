@@ -6,9 +6,9 @@ Param(
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
-    [string] $settings = '{"AppBuild":"", "AppRevision":""}',
+    [string] $settingsJson = '{"AppBuild":"", "AppRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
-    [string] $secrets = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":""}'
+    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":""}'
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,27 +31,19 @@ try {
     $workflowName = $env:GITHUB_WORKFLOW
     $containerName = GetContainerName($project)
 
-    if ([int]$appBuild -eq -1 -and [int]$appRevision -eq -1 -and $licenseFileUrl -eq "" -and $codeSignCertificateUrl -eq "" -and $CodeSignCertificatePw -eq "" -and $KeyVaultCertificateUrl -eq "" -and $KeyVaultCertificatePw -eq "" -and $KeyVaultClientId -eq "") {
-
-        Write-Host "use settings and secrets"
-        
-        $settings = $settings | ConvertFrom-Json | ConvertTo-HashTable
-        $appBuild = $settings.appBuild
-        $appRevision = $settings.appRevision
-
-        $secrets = $secrets | ConvertFrom-Json | ConvertTo-HashTable
-        'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePw','KeyVaultCertificateUrl','KeyVaultCertificatePw','KeyVaultClientId' | ForEach-Object {
-            if ($secrets.ContainsKey($_)) {
-                $value = $secrets."$_"
-            }
-            else {
-                $value = ""
-            }
-            Set-Variable -Name $_ -Value $value
+    Write-Host "use settings and secrets"
+    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $appBuild = $settings.appBuild
+    $appRevision = $settings.appRevision
+    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePw','KeyVaultCertificateUrl','KeyVaultCertificatePw','KeyVaultClientId' | ForEach-Object {
+        if ($secrets.ContainsKey($_)) {
+            $value = $secrets."$_"
         }
-    }
-    else {
-        $settings = ReadSettings -baseFolder $baseFolder -workflowName $workflowName
+        else {
+            $value = ""
+        }
+        Set-Variable -Name $_ -Value $value
     }
 
     $bcContainerHelperConfig.TelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"

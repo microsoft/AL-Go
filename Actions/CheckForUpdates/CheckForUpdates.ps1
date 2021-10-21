@@ -4,7 +4,7 @@ Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
-    [string] $settings = '{"templateUrl": "", "templateBranch": ""}',
+    [string] $settingsJson = '{"templateUrl": "", "templateBranch": ""}',
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Branch in template repository to use for the update (default is the default branch)", Mandatory = $false)]
@@ -29,7 +29,7 @@ try {
     }
 
     if ($templateUrl -eq "" -and $templateBranch -eq "") {
-        $settings = $settings | ConvertFrom-Json | ConvertTo-HashTable
+        $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
         $templateUrl = $settings.templateUrl
         $templateBranch = $settings.templateBranch
     }

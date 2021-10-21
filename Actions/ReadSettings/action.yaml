@@ -22,9 +22,9 @@ inputs:
     required: false
     default: ''
 outputs:
-  Settings:
+  SettingsJson:
     description: Settings in compressed Json format
-    value: ${{ steps.readsettings.outputs.Settings }}
+    value: ${{ steps.readsettings.outputs.SettingsJson }}
 runs:
   using: composite
   steps:

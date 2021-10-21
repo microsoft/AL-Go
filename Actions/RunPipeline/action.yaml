@@ -13,18 +13,18 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  settings:
+  settingsJson:
     description: Settings from repository in compressed Json format
     required: false
     default: '{"AppBuild":0,"AppRevision":0}'
-  secrets:
+  secretsJson:
     description: Secrets from repository in compressed Json format
     required: false
     default: '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePw":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePw":"","KeyVaultClientId":""}'
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settings '${{ inputs.settings }}' -secrets '${{ inputs.secrets }}'
+    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}'
       shell: PowerShell
 branding:
   icon: terminal

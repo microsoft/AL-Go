@@ -29,13 +29,14 @@ jobs:
 
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
+        id: readsettings
 
       - name: Read secrets
         uses: microsoft/AL-Go/ReadSecrets@main
         env:
           secrets: ${{toJson(secrets)}}
         with:
-          settings: ${{needs.Settings.outputs.Settings}}
+          settingsJson: ${{steps.readsettings.outputs.SettingsJson}}
           secrets: 'adminCenterApiCredentials'
 
       - name: Check AdminCenterApiCredentials / Initiate Device Login (open to see code)

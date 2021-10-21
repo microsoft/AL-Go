@@ -68,6 +68,19 @@ function invoke-hub {
     if ($lastexitcode) { throw "hub $command error" }
 }
 
+function ConvertTo-HashTable {
+    [CmdletBinding()]
+    Param(
+        [parameter(ValueFromPipeline)]
+        [PSCustomObject] $object
+    )
+    $ht = @{}
+    if ($object) {
+        $object.PSObject.Properties | Foreach { $ht[$_.Name] = $_.Value }
+    }
+    $ht
+}
+
 function OutputError {
     Param(
         [string] $message
