@@ -1,21 +1,21 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
-$actionName = "RunPipeline"
-$scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
-$actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
+$global:actionName = "RunPipeline"
+$global:scriptRoot = Join-Path $PSScriptRoot "..\Actions\$global:actionName" -Resolve
+$global:actionScript = GetActionScript -scriptRoot $global:scriptRoot -scriptName "$global:actionName.ps1"
 
-Describe "$actionName Action Tests" {
+Describe "$global:actionName Action Tests" {
     It 'Compile Action' {
-        Invoke-Expression $actionScript
+        Invoke-Expression $global:actionScript
     }
 
     It 'Test action.yaml matches script' {
         $permissions = [ordered]@{
         }
-        $outputs = @{
+        $outputs = [ordered]@{
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $global:scriptRoot -actionName $global:actionName -actionScript $global:actionScript -permissions $permissions -outputs $outputs
     }
 
     # Call action
