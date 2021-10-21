@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ YamlTests ]
+    branches: [ main ]
   pull_request:
-    branches: [ YamlTests ]
+    branches: [ main ]
   workflow_dispatch:
 
 defaults:
