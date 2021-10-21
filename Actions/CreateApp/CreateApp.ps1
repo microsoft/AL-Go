@@ -6,7 +6,7 @@ Param(
     [ValidateSet("PTE", "AppSource App" , "Test App")]
     [Parameter(HelpMessage = "Type of app to add (Per Tenant Extension, AppSource App, Test App)", Mandatory = $true)]
     [string] $type,
-    [Parameter(HelpMessage = "App Name", Mandatory = $true)]
+    [Parameter(HelpMessage = "App xx Name", Mandatory = $true)]
     [string] $name,
     [Parameter(HelpMessage = "Publisher", Mandatory = $true)]
     [string] $publisher,

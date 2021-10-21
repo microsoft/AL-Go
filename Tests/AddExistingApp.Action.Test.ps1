@@ -1,13 +1,13 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
-Describe "$actionName Action Tests" {
-    BeforeAll {
-        $actionName = "AddExistingApp"
-        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
-        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
-    }
+BeforeAll {
+    $actionName = "AddExistingApp"
+    $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+    $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
+}
 
+Describe "$actionName Action Tests" {
     It 'Compile Action' {
         Invoke-Expression $actionScript
     }
