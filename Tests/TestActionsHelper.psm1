@@ -20,34 +20,43 @@ function iReplace {
     $string
 }
 
+function GetActionScript {
+    Param(
+        [string] $scriptRoot,
+        [string] $scriptName
+    )
+
+    $scriptPath = Join-Path $ScriptRoot $scriptName -Resolve
+    $actionname = [System.IO.Path]::GetFileNameWithoutExtension($scriptPath)
+
+    $actionScript = Get-Content -raw -path $scriptPath
+    $actionScript = "function $actionName {`n$actionScript`n}"
+
+    # replace AL-Go-Helper.ps1 with Mock-AL-Go-Helper.ps1
+    $alGoHelperInclude = '. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")'
+    $testAlGoHelperScript = Join-Path $PSScriptRoot "Mock-AL-Go-Helper.ps1"
+    $testAlGoHelperInclude = ". '$testAlGoHelperScript'"
+    $actionScript = iReplace -string $actionScript -source $alGoHelperInclude -replace $testAlGoHelperInclude
+
+    # resolve psscriptroot references
+    $actionScript = iReplace -string $actionScript -source '$psscriptroot' -replace "'$scriptRoot'"
+    $actionScript
+}
+
 function YamlTest {
     Param(
-        [string] $scriptPath,
+        [string] $scriptRoot,
+        [string] $actionName,
+        [string] $actionScript,
         $permissions = @{},
         $outputs = @{}
     )
 
-    $scriptPath = Join-Path $PSScriptRoot $scriptPath -Resolve
-    $scriptRoot = [System.IO.Path]::GetDirectoryName($scriptPath)
-
-    $filename = [System.IO.Path]::GetFileName($scriptPath)
-    $actionname = [System.IO.Path]::GetFileNameWithoutExtension($scriptPath)
-
-    $yamlPath = Join-Path $scriptRoot "action.yaml"
-    
-    $actionScript = "function myAction {`n[CmdletBinding()]`nParam()`n}`n"
-    Invoke-Expression $actionScript
-    $emptyCmd = get-command myAction
+    $emptyActionScript = "function emptyAction {`n[CmdletBinding()]`nParam()`n}`n"
+    Invoke-Expression $emptyActionScript
+    $emptyCmd = get-command emptyAction
     $systemParameters = @($emptyCmd.Parameters.Keys.GetEnumerator() | ForEach-Object { $_ })
-    
-    $actionScript = Get-Content -raw -path $scriptPath
-    $actionScript = "function $actionName {`n$actionScript`n}"
 
-    $alGoHelperInclude = '. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")'
-    $testAlGoHelperScript = Join-Path $PSScriptRoot "Mock-AL-Go-Helper.ps1"
-    $testAlGoHelperInclude = ". '$testAlGoHelperScript'"
-    $newScript = iReplace -string $actionScript -source $alGoHelperInclude -replace $testAlGoHelperInclude
-    $actionScript = iReplace -string $newScript -source '$psscriptroot' -replace "'$scriptRoot'"
     Invoke-Expression $actionScript
     
     $yaml = [System.Text.StringBuilder]::new()
@@ -108,7 +117,7 @@ function YamlTest {
     $yaml.AppendLine("runs:") | Out-Null
     $yaml.AppendLine("  using: composite") | Out-Null
     $yaml.AppendLine("  steps:") | Out-Null
-    $yaml.AppendLine("    - run: `${{ github.action_path }}/$([System.IO.Path]::GetFileName($scriptPath))$parameterString") | Out-Null
+    $yaml.AppendLine("    - run: `${{ github.action_path }}/$actionName.ps1$parameterString") | Out-Null
     if ($outputs -and $outputs.Count -gt 0) {
         $yaml.AppendLine("      id: $($actionname.ToLowerInvariant())") | Out-Null
     }
@@ -118,7 +127,7 @@ function YamlTest {
     $yaml.Append("  color: blue") | Out-Null
     
     $yamlLines = $yaml.ToString().Replace("`r","").Split("`n")
-    $actualYaml = @(Get-Content -path $yamlPath)
+    $actualYaml = @(Get-Content -path (Join-Path $scriptRoot "action.yaml"))
 
     $yamlLines.Count | Should -be $actualYaml.Count
     $i = 0
@@ -126,8 +135,7 @@ function YamlTest {
         $actualYaml[$i] | Should -BeLike $yamlLines[$i]
         $i++
     }
-
-    $actionScript
 }
 
+Export-ModuleMember -Function GetActionScript
 Export-ModuleMember -Function YamlTest
