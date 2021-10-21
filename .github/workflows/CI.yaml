@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [ YamlTests ]
+  pull_request:
+    branches: [ YamlTests ]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: PowerShell
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: |
+          . ".\Tests\runtests.ps1"
