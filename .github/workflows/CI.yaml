@@ -20,7 +20,12 @@ jobs:
 
       - name: Run tests
         run: |
-          Get-ChildItem -Path "Tests\*.Test.ps1" | ForEach-Object {
-            Invoke-Pester $_.FullName -Passthru
-          }
+          Invoke-Pester @(Get-ChildItem -Path "Tests\*.Test.ps1") -OutputFile "TestResults.xml" -OutputFormat JUnitXml
 
+      - name: Publish test results
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v1
+        with:
+          check_name: 'Test Report'
+          report_paths: 'TestResults.xml'
+          github_token: ${{ github.token }}
