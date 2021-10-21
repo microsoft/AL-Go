@@ -12,7 +12,7 @@ defaults:
     shell: PowerShell
 
 jobs:
-  build:
+  Test:
     runs-on: windows-latest
 
     steps:
