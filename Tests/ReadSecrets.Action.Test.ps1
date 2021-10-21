@@ -7,7 +7,7 @@ BeforeAll {
     $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
 }
 
-Describe "$actionName Action Tests" {
+Describe "ReadSecrets Action Tests" {
     It 'Compile Action' {
         Invoke-Expression $actionScript
     }

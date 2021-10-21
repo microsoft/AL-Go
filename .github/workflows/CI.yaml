@@ -29,3 +29,6 @@ jobs:
           check_name: 'Test Report'
           report_paths: 'TestResults.xml'
           github_token: ${{ github.token }}
+          fail_on_failure: true
+          require_tests: true
+
