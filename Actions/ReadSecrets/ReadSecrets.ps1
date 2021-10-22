@@ -42,7 +42,6 @@ try {
         if ($secretSplit.Count -gt 1) {
             $secret = $secretSplit[1]
         }
-        Write-Host "Secret $envVar = $secret"
 
         if ($secret) {
             $value = GetSecret -secret $secret -keyVaultName $keyVaultName
