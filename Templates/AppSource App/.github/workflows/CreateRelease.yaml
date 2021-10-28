@@ -79,6 +79,12 @@ jobs:
           Write-Host "::set-output name=artifacts::$artifactsJson"
           Write-Host "set-output name=artifacts::$artifactsJson"
 
+      - name: Prepare release notes
+        id: createreleasenotes
+        uses: microsoft/AL-Go/CreateReleaseNotes@main
+        with:
+          tag_name: '${{github.event.inputs.tag}}'
+
       - name: Create release
         uses: actions/create-release@v1
         id: createrelease
@@ -89,7 +95,7 @@ jobs:
           prerelease: ${{github.event.inputs.prerelease=='Y'}}
           release_name: '${{github.event.inputs.name}}'
           tag_name: '${{github.event.inputs.tag}}'
-          body_path: README.md
+          body: ${{steps.createreleasenotes.outputs.releaseNotes}}
 
   UploadArtifacts:
     runs-on: windows-latest

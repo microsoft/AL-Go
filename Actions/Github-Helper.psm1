@@ -12,52 +12,52 @@ function Get-dependencies {
     Write-Host "Getting all the artifacts from probing paths"
     $downloadedList = @()
     $probingPathsJson | 
-        ForEach-Object {
-            $dependency = $_
-            Write-Host "Getting releases from $($dependency.repo)"
-            $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
-            $repository# remove
-            if ($dependency.release_status -eq "latestBuild") {
+    ForEach-Object {
+        $dependency = $_
+        Write-Host "Getting releases from $($dependency.repo)"
+        $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
+        $repository# remove
+        if ($dependency.release_status -eq "latestBuild") {
 
-                # TODO it should check the branch and limit to a certain branch
-                $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository 
-                if ($dependency.version -ne "latest") {
-                    $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
-                }    
+            # TODO it should check the branch and limit to a certain branch
+            $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository 
+            if ($dependency.version -ne "latest") {
+                $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
+            }    
                 
-                $artifact = $artifacts | Select-Object -First 1
-                if (!($artifact)) {
-                    throw "Could not find any artifacts that matches the criteria."
-                }
-
-                DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
+            $artifact = $artifacts | Select-Object -First 1
+            if (!($artifact)) {
+                throw "Could not find any artifacts that matches the criteria."
             }
-            else {
 
-                $releases = GetReleases -api_url $api_url -token $dependency.authTokenSecret -repository $repository
-                if ($dependency.version -ne "latest") {
-                    $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
-                }
-
-                switch ($dependency.release_status) {
-                    "release" { $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft ) } | Select-Object -First 1 }
-                    "prerelease" { $release = $releases | Where-Object { ($_.prerelease ) } | Select-Object -First 1 }
-                    "draft" { $release = $releases | Where-Object { ($_.draft ) } | Select-Object -First 1 }
-                    Default { throw "Invalid release status '$($dependency.release_status)' is encountered." }
-                }
-
-                if (!($release)) {
-                    throw "Could not find a release that matches the criteria."
-                }
-                
-                $projects = $dependency.projects
-                if ([string]::IsNullOrEmpty($dependency.projects)) {
-                    $projects = "*"
-                }
-
-                $downloadedList += DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release
-            }
+            DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
         }
+        else {
+
+            $releases = GetReleases -api_url $api_url -token $dependency.authTokenSecret -repository $repository
+            if ($dependency.version -ne "latest") {
+                $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
+            }
+
+            switch ($dependency.release_status) {
+                "release" { $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft ) } | Select-Object -First 1 }
+                "prerelease" { $release = $releases | Where-Object { ($_.prerelease ) } | Select-Object -First 1 }
+                "draft" { $release = $releases | Where-Object { ($_.draft ) } | Select-Object -First 1 }
+                Default { throw "Invalid release status '$($dependency.release_status)' is encountered." }
+            }
+
+            if (!($release)) {
+                throw "Could not find a release that matches the criteria."
+            }
+                
+            $projects = $dependency.projects
+            if ([string]::IsNullOrEmpty($dependency.projects)) {
+                $projects = "*"
+            }
+
+            $downloadedList += DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release
+        }
+    }
     
     return $downloadedList;
 }
@@ -84,6 +84,39 @@ function GetHeader {
     }
 
     return $headers
+}
+
+function GetReleaseNotes {
+    Param(
+        [string] $token,
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [string] $tag_name,
+        [string] $previous_tag_name
+    )
+    
+    Write-Host "Generating release note $api_url/repos/$repository/releases/generate-notes"
+
+    $postParams = @{
+        tag_name = $tag_name;
+    } 
+    
+    if (-not [string]::IsNullOrEmpty($previous_tag_name)) {
+        $postParams["previous_tag_name"] = $previous_tag_name
+    }
+
+    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" | ConvertFrom-Json
+}
+
+function GetLatestRelease {
+    Param(
+        [string] $token,
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [string] $repository = $ENV:GITHUB_REPOSITORY
+    )
+    
+    Write-Host "Getting the latest release from $api_url/repos/$repository/releases/latest"
+    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" | ConvertFrom-Json
 }
 
 function DownloadRelease {

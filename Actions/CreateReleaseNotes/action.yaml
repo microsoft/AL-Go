@@ -1,0 +1,33 @@
+name: PowerShell script
+author: Pooya Kharamesh
+permissions:
+  contents: write
+  pull-requests: write
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  workflowToken:
+    description: A GitHub token with permissions to modify workflows
+    required: false
+    default: ''
+  tag_name:
+    description: Tag name
+    required: true
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/CreateReleaseNotes.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -workflowToken '${{ inputs.workflowToken }}' -tag_name '${{ inputs.tag_name }}'
+      shell: PowerShell
+outputs:
+  ReleaseNotes:
+    description: Release note generated based on the changes
+    value: ${{steps.createreleasenotes.outputs.releaseNotes}}
+branding:
+  icon: terminal
+  color: blue
