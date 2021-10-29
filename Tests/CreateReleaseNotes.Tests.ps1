@@ -14,7 +14,7 @@ Describe 'CreateReleaseNotes Tests' {
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1 
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.0.5" -and $previous_tag_name -eq "1.0.0.0" }
 
-        $realseNotes | Should -Be "Mocked notes"
+        $releaseNotes | Should -Be "Mocked notes"
     }
 
     It 'Confirm right parameters are passed' {
@@ -26,7 +26,7 @@ Describe 'CreateReleaseNotes Tests' {
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1 
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.0.5" -and $previous_tag_name -eq "" }
 
-        $realseNotes | Should -Be "Mocked notes"
+        $releaseNotes | Should -Be "Mocked notes"
     }
 
     It 'Confirm when throws' {
@@ -37,6 +37,6 @@ Describe 'CreateReleaseNotes Tests' {
     
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1 
 
-        $realseNotes | Should -Be ""
+        $releaseNotes | Should -Be ""
     }
 }
