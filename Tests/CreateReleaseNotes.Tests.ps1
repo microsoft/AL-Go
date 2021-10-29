@@ -1,12 +1,12 @@
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $scriptPath = (Join-Path -path $here -ChildPath "..\Actions\CreateReleaseNotes\CreateReleaseNotes.ps1" -Resolve)
 Get-Module module | Remove-Module -Force
-Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
+Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
 
-Describe 'CreateReleaseNotes.ps1 Tests' {
+Describe 'CreateReleaseNotes Tests' {
     
-    It 'Confirm right functions are called' {
-        Mock GetLatestRelease { return @{tag_name = "1.0.0.0";} | ConvertTo-Json } 
+    It 'Confirms that right functions are called' {
+        Mock GetLatestRelease { return "{""tag_name"" : ""1.0.0.0""}" | ConvertFrom-Json } 
         Mock GetReleaseNotes  {return "Mocked notes"}
     
         . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5"
@@ -18,7 +18,7 @@ Describe 'CreateReleaseNotes.ps1 Tests' {
     }
 
     It 'Confirm right parameters are passed' {
-        Mock GetLatestRelease { return "{}" | ConvertTo-Json } 
+        Mock GetLatestRelease { return ConvertTo-Json @{} } 
         Mock GetReleaseNotes  {return "Mocked notes"}
     
         . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5"

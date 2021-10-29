@@ -12,7 +12,7 @@ try {
     . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
     Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
 
-    $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY | ConvertFrom-Json
+    $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY 
 
     $latestReleaseTag = ""
     if ([bool]($latestRelease.PSobject.Properties.name -match "tag_name")) {
