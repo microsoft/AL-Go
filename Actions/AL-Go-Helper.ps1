@@ -2,7 +2,9 @@ Param(
     [switch] $local
 )
 
-Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1')
+if (!$local) {
+    Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1')
+}
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
@@ -66,6 +68,19 @@ function invoke-hub {
     Write-Host -ForegroundColor Yellow "hub $command $remaining"
     hub $command $remaining
     if ($lastexitcode) { throw "hub $command error" }
+}
+
+function ConvertTo-HashTable {
+    [CmdletBinding()]
+    Param(
+        [parameter(ValueFromPipeline)]
+        [PSCustomObject] $object
+    )
+    $ht = @{}
+    if ($object) {
+        $object.PSObject.Properties | Foreach { $ht[$_.Name] = $_.Value }
+    }
+    $ht
 }
 
 function OutputError {

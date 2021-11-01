@@ -22,14 +22,14 @@ inputs:
     required: false
     default: ''
 outputs:
-  Settings:
+  SettingsJson:
     description: Settings in compressed Json format
-    value: ${{steps.getsettings.outputs.Settings}}
+    value: ${{ steps.readsettings.outputs.SettingsJson }}
 runs:
   using: composite
   steps:
     - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
-      id: getsettings
+      id: readsettings
       shell: PowerShell
 branding:
   icon: terminal

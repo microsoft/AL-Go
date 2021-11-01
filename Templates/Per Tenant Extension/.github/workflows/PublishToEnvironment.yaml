@@ -21,14 +21,14 @@ jobs:
   Environments:
     runs-on: windows-latest
     outputs:
-      environments: ${{steps.Environments.outputs.environments}}
-      environmentCount: ${{steps.Environments.outputs.environmentCount}}
+      environments: ${{ steps.Environments.outputs.environments }}
+      environmentCount: ${{ steps.Environments.outputs.environmentCount }}
     steps:
       - name: Environments
         id: Environments
         run: |
           $headers = @{ 
-            "Authorization" = "token ${{github.token}}"
+            "Authorization" = "token ${{ github.token }}"
             "Accept"        = "application/vnd.github.v3+json"
           }
           $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"

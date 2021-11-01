@@ -30,7 +30,7 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
-          keyVaultName: ${{ env.KEYVAULTNAME }}
+          settingsJson: ${{ env.Settings }}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
       - name: Update AL-Go system files

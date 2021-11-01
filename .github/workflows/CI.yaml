@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: PowerShell
+
+jobs:
+  Test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: |
+          Invoke-Pester @(Get-ChildItem -Path "Tests\*.Test.ps1") -OutputFile "TestResults.xml" -OutputFormat JUnitXml
+
+      - name: Publish test results
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v2
+        with:
+          check_name: 'Test Report'
+          report_paths: 'TestResults.xml'
+          github_token: ${{ github.token }}
+          fail_on_failure: true
+          require_tests: true
+

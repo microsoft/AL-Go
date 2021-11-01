@@ -1,25 +1,21 @@
 name: PowerShell script
 author: Freddy Kristiansen
 inputs:
-  settings:
+  settingsJson:
     description: Settings from template repository in compressed Json format
     required: false
     default: '{"keyVaultName": ""}'
-  keyVaultName:
-    description: Name of keyvault
-    required: true
   secrets:
     description: Comma separated list of Secrets to get
     required: true
   updateSettingsWithValues:
     description: Specifies if the values of secrets should be updated
     required: false
-    default: 'N'    
+    default: 'N'
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settings }}' -keyVaultName '${{ inputs.keyVaultName }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y')
-      id: readsecrets
+    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settingsJson }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

@@ -1,69 +1,30 @@
 name: PowerShell script
 author: Freddy Kristiansen
-permissions:
-  contents: write
-  pull-requests: write
 inputs:
   actor:
-    description: The GitHub actor running the script
+    description: The GitHub actor running the action
     required: false
     default: ${{ github.actor }}
   token:
-    description: The GitHub token running the script
+    description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
   project:
     description: Project folder
     required: false
     default: '.'
-  settings:
+  settingsJson:
     description: Settings from repository in compressed Json format
     required: false
     default: '{"AppBuild":0,"AppRevision":0}'
-  secrets:
+  secretsJson:
     description: Secrets from repository in compressed Json format
     required: false
     default: '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePw":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePw":"","KeyVaultClientId":""}'
-  insiderSasToken:
-    description: insider Sas token from https://aka.ms/collaborate
-    required: false
-    default: ''
-  licenseFileUrl:
-    description: Secure URL for license file
-    required: false
-    default: ''
-  CodeSignCertificateUrl:
-    description: Secure URL for code signing certificate
-    required: false
-    default: ''
-  CodeSignCertificatePw:
-    description: Password code signing certificate
-    required: false
-    default: ''
-  KeyVaultCertificateUrl:
-    description: Secure URL for KeyVault access certificate
-    required: false
-    default: ''
-  KeyVaultCertificatePw:
-    description: Password for KeyVault access certificate
-    required: false
-    default: ''
-  KeyVaultClientId:
-    description: Client ID for KeyVault access certificate
-    required: false
-    default: ''
-  appBuild:
-    description: Build part of app Version number
-    required: false
-    default: -1
-  appRevision:
-    description: Revision part of app Version number
-    required: false
-    default: -1
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settings }}'  -secretsJson '${{ inputs.secrets }}' -insiderSasToken '${{ inputs.insiderSasToken }}' -licenseFileUrl '${{ inputs.licenseFileUrl }}' -codeSignCertificateUrl '${{ inputs.codeSignCertificateUrl }}' -codeSignCertificatePw '${{ inputs.codeSignCertificatePw }}' -keyVaultCertificateUrl '${{ inputs.keyVaultCertificateUrl }}' -keyVaultCertificatePw '${{ inputs.keyVaultCertificatePw }}' -keyVaultClientId '${{ inputs.keyVaultClientId }}' -appBuild '${{ inputs.appBuild }}' -appRevision '${{ inputs.appRevision }}'
+    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}'
       shell: PowerShell
 branding:
   icon: terminal

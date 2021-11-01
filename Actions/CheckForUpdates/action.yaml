@@ -13,11 +13,7 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  update:
-    description: Set this input to Y in order to update AL-Go System Files if needed
-    required: false
-    default: N
-  settings:
+  settingsJson:
     description: Settings from template repository in compressed Json format
     required: false
     default: '{"templateUrl": "","templateBranch": ""}'
@@ -29,14 +25,18 @@ inputs:
     description: Branch in template repository to use for the update (default is the default branch)
     required: false
     default: ''
+  update:
+    description: Set this input to Y in order to update AL-Go System Files if needed
+    required: false
+    default: 'N'
   directCommit:
     description: Direct Commit (Y/N)
     required: false
-    default: N
+    default: 'N'
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -update ('${{ inputs.update }}' -eq 'Y') -settingsJson '${{ inputs.settings }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -settingsJson '${{ inputs.settingsJson }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

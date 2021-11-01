@@ -18,7 +18,7 @@ inputs:
   directCommit:
     description: Direct Commit (Y/N)
     required: false
-    default: N
+    default: 'N'
 runs:
   using: composite
   steps:

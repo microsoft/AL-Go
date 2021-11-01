@@ -1,7 +1,11 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "New Version Number (Major.Minor)", Mandatory = $true)]
     [string] $versionnumber,
+    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
 

@@ -15,18 +15,18 @@ inputs:
   environmentName:
     description: Name of the online environment
     required: true
-  reUseExistingEnvironment:
-    description: Reuse environment if it exists
-    required: false
-    default: 'N'
   adminCenterApiCredentials:
     description: Admin center API credentials
     required: false
     default: ''
+  reUseExistingEnvironment:
+    description: Reuse environment if it exists
+    required: false
+    default: 'N'
   directCommit:
     description: Direct Commit (Y/N)
     required: false
-    default: N
+    default: 'N'
 runs:
   using: composite
   steps:
