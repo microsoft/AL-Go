@@ -1,9 +1,30 @@
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$scriptPath = (Join-Path -path $here -ChildPath "..\Actions\CreateReleaseNotes\CreateReleaseNotes.ps1" -Resolve)
-Get-Module module | Remove-Module -Force
+$actionName = "CreateReleaseNotes"
+$scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+$scriptName = "$actionName.ps1"
+$scriptPath = Join-Path $PSScriptRoot $scriptName
+Get-Module Github-Helper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
+Get-Module TestActionsHelper | Remove-Module -Force
+Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
 Describe 'CreateReleaseNotes Tests' {
+    BeforeAll {
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+    }
+
+    It 'Compile Action' {
+        Invoke-Expression $actionScript
+    }
+
+    It 'Test action.yaml matches script' {
+        $permissions = [ordered]@{
+            "contents" = "write"
+            "pull-requests" = "write"
+        }
+        $outputs = [ordered]@{
+        }
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+    }
     
     It 'Confirms that right functions are called' {
         Mock GetLatestRelease { return "{""tag_name"" : ""1.0.0.0""}" | ConvertFrom-Json } 
