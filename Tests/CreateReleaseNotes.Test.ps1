@@ -8,7 +8,7 @@ Describe 'CreateReleaseNotes Tests' {
         $actionName = "CreateReleaseNotes"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
-        $scriptPath = Join-Path $PSScriptRoot $scriptName
+        $scriptPath = Join-Path $scriptRoot $scriptName
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
     }
 
