@@ -21,7 +21,7 @@ jobs:
       - name: Run tests
         run: |
           try {
-            $failedTests = Invoke-Pester @(Get-ChildItem -Path "Tests\*.Test.ps1") -OutputFile "TestResults.xml" -OutputFormat JUnitXml -PassThru
+            $failedTests = Invoke-Pester @(Get-ChildItem -Path "Tests\*.Test.ps1") -PassThru
             if ($TestResults.FailedCount -gt 0) {
               Write-Host "::Error::$($TestResults.FailedCount) tests are failing"
               exit 1
