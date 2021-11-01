@@ -5,7 +5,7 @@ Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
 Describe 'CreateReleaseNotes Tests' {
     BeforeAll {
-        $actionName = $MyInvocation.MyCommand.Name.Split('.')[0]
+        $actionName = "CreateReleaseNotes"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
         $scriptPath = Join-Path $PSScriptRoot $scriptName
