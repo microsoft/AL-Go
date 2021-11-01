@@ -4,5 +4,6 @@
     "perTenantExtensionRepo": "AL-Go-PTE",
     "appSourceAppRepo": "AL-Go-AppSource",
     "branch": "main",
-    "localFolder": "AL-Go"
+    "localFolder": "",
+    "baseFolder": "C:\\src\\github\\freddydk"
 }
