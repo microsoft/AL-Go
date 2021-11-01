@@ -10,7 +10,6 @@ on:
     paths-ignore:
       - 'README.md'
       - '.github/**'
-    branches: [ main ]
   workflow_dispatch:
 
 defaults:
