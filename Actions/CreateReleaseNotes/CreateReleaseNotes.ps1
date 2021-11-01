@@ -24,8 +24,8 @@ try {
     Write-Host "::set-output name=releaseNotes::$releaseNotes"
 }
 catch {
-    Write-Host "::Error:: Couldn't create release notes. Error was $($_.Exception.Message)"
-    Write-Host "You can modify the release note from the release page later."
+    OutputWarning -message "::Error:: Couldn't create release notes. Error was $($_.Exception.Message)"
+    OutputWarning -message "You can modify the release note from the release page later."
 
     $releaseNotes = ""
     Write-Host "::set-output name=releaseNotes::$releaseNotes"
