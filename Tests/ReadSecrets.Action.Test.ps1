@@ -5,7 +5,9 @@ Describe "ReadSecrets Action Tests" {
     BeforeAll {
         $actionName = "ReadSecrets"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
-        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
+        $scriptName = "$actionName.ps1"
+        $scriptPath = Join-Path $scriptRoot $scriptName
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
     }
 
     It 'Compile Action' {
