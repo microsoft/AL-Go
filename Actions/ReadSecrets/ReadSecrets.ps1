@@ -48,7 +48,7 @@ try {
             if ($value) {
                 Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
                 $outSecrets += @{ "$envVar" = $value }
-                Write-Host "Secret $envVar successfully read from GitHub Secret $secret"
+                Write-Host "$envVar successfully read from secret $secret"
                 $secretsCollection.Remove($_)
             }
         }
