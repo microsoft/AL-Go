@@ -1,7 +1,3 @@
-$actionName = "CreateReleaseNotes"
-$scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
-$scriptName = "$actionName.ps1"
-$scriptPath = Join-Path $PSScriptRoot $scriptName
 Get-Module Github-Helper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
 Get-Module TestActionsHelper | Remove-Module -Force
@@ -9,6 +5,10 @@ Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
 Describe 'CreateReleaseNotes Tests' {
     BeforeAll {
+        $actionName = $MyInvocation.MyCommand.Name.Split('.')[0]
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $scriptName = "$actionName.ps1"
+        $scriptPath = Join-Path $PSScriptRoot $scriptName
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
     }
 
