@@ -36,7 +36,7 @@ try {
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePw','KeyVaultCertificateUrl','KeyVaultCertificatePw','KeyVaultClientId' | ForEach-Object {
+    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId' | ForEach-Object {
         if ($secrets.ContainsKey($_)) {
             $value = $secrets."$_"
         }
@@ -79,16 +79,16 @@ try {
 
     # Check if insidersastoken is used (and defined)
 
-    if ($CodeSignCertificateUrl -and $CodeSignCertificatePw) {
+    if ($CodeSignCertificateUrl -and $CodeSignCertificatePassword) {
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
-            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePw -AsPlainText -Force
+            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
         }
     }
-    if ($KeyVaultCertificateUrl -and $KeyVaultCertificatePw -and $KeyVaultClientId) {
+    if ($KeyVaultCertificateUrl -and $KeyVaultCertificatePassword -and $KeyVaultClientId) {
         $runAlPipelineParams += @{ 
             "KeyVaultCertPfxFile" = $KeyVaultCertificateUrl
-            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePw -AsPlainText -Force
+            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword -AsPlainText -Force
             "keyVaultClientId" = $keyVaultClientId
         }
     }

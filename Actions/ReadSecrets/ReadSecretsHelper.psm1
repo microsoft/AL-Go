@@ -31,7 +31,6 @@ function GetGithubSecret {
         if ($value) {
             MaskValueInLog -value $value
             Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
-            Write-Host "Secret $envVar successfully read from GitHub Secret $secret"
             return $value
         }
     }
@@ -84,7 +83,7 @@ function ConnectAzureKeyVaultIfNeeded {
         Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential | Out-Null
         Set-AzContext -Subscription $subscriptionId -Tenant $tenantId | Out-Null
         $AzKeyvaultConnectionExists = $true
-        Write-Host "Successfuly connected to Azure Key Vault."
+        Write-Host "Successfully connected to Azure Key Vault."
     }
     catch {
         throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
@@ -125,14 +124,14 @@ function GetSecret {
         [string] $keyVaultName
     )
 
-    Write-Host "Try get the secret($secret) from the github environment."
+    Write-Host "Trying to get the secret($secret) from the github environment."
     $value = GetGithubSecret -secretName $secret
     if ($value) {
         Write-Host "Secret($secret) was retrieved from the github environment."
         return $value
     }
 
-    Write-Host "Try get the secret($secret) from Key Vault ($keyVaultName)."
+    Write-Host "Trying to get the secret($secret) from Key Vault ($keyVaultName)."
     $value = GetKeyVaultSecret -secretName $secret -keyVaultName $keyVaultName
     if ($value) {
         Write-Host "Secret($secret) was retrieved from the Key Vault."

@@ -32,12 +32,6 @@ function GetActionScript {
     $actionScript = Get-Content -raw -path $scriptPath
     $actionScript = "function $actionName {`n$actionScript`n}"
 
-    # replace AL-Go-Helper.ps1 with Mock-AL-Go-Helper.ps1
-    $alGoHelperInclude = '. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")'
-    $testAlGoHelperScript = Join-Path $PSScriptRoot "Mock-AL-Go-Helper.ps1"
-    $testAlGoHelperInclude = ". '$testAlGoHelperScript'"
-    $actionScript = iReplace -string $actionScript -source $alGoHelperInclude -replace $testAlGoHelperInclude
-
     # resolve psscriptroot references
     $actionScript = iReplace -string $actionScript -source '$psscriptroot' -replace "'$scriptRoot'"
     $actionScript

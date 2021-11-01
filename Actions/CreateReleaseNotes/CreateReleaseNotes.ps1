@@ -1,9 +1,14 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "A GitHub token with permissions to modify workflows", Mandatory = $false)]
     [string] $workflowToken,
+    [Parameter(HelpMessage = "Tag name", Mandatory = $true)]
     [string] $tag_name
-    )
+)
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $releaseNotes = ""
@@ -24,7 +29,7 @@ try {
     Write-Host "::set-output name=releaseNotes::$releaseNotes"
 }
 catch {
-    OutputWarning -message "::Error:: Couldn't create release notes. Error was $($_.Exception.Message)"
+    OutputWarning -message "Couldn't create release notes. Error was $($_.Exception.Message)"
     OutputWarning -message "You can modify the release note from the release page later."
 
     $releaseNotes = ""

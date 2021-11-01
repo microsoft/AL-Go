@@ -40,9 +40,21 @@ jobs:
       projectCount: ${{ steps.Projects.outputs.projectCount }}
       environments: ${{ steps.Environments.outputs.environments }}
       environmentCount: ${{ steps.Environments.outputs.environmentCount }}
+      githubRunner: ${{ steps.OutputSettings.outputs.githubRunner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go/ReadSettings@main
+        with:
+          get: githubRunner
+
+      - name: Output settings
+        id: OutputSettings
+        run: |
+          Write-Host "::set-output name=githubRunner::$env:githubRunner"
+          Write-Host "set-output name=githubRunner::$env:githubRunner"
 
       - name: Projects
         id: Projects
@@ -84,8 +96,8 @@ jobs:
           Write-Host "set-output name=environments::$environmentsJson"
           Write-Host "set-output name=environmentCount::$($environments.Count)"
   Build:
-    runs-on: windows-latest
     needs: [ Analyze ]
+    runs-on: ${{ needs.Analyze.outputs.githubRunner }}
     strategy:
       matrix:
         project: ${{ fromJson(needs.Analyze.outputs.projects) }}
