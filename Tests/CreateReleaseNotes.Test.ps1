@@ -22,6 +22,7 @@ Describe 'CreateReleaseNotes Tests' {
             "pull-requests" = "write"
         }
         $outputs = [ordered]@{
+            "ReleaseNotes" = "Release note generated based on the changes"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
