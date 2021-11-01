@@ -25,13 +25,5 @@ jobs:
           }
           catch {
             Write-Host "::Error::There are test failures"
+            exit 1
           }
-
-      - name: Publish test results
-        if: success() || failure()
-        uses: mikepenz/action-junit-report@v1
-        with:
-          check_name: 'Test Report'
-          report_paths: 'TestResults.xml'
-          github_token: ${{ github.token }}
-

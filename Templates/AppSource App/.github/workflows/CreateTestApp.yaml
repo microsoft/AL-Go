@@ -15,7 +15,7 @@ on:
         required: true
         default: '50000..99999'  
       directCommit:
-        description: Direct COMMIT (Y/N)
+        description: Direct  COMMIT (Y/N)
         required: false
         default: 'N'
 
