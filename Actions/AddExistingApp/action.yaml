@@ -16,7 +16,7 @@ inputs:
     description: Direct Download Url of .app or .zip file
     required: true
   directCommit:
-    description: Direct Commit (Y/N)
+    description: Direct  Commit (Y/N)
     required: false
     default: 'N'
 runs:
