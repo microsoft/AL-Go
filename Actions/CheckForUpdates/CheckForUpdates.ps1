@@ -28,10 +28,13 @@ try {
         exit
     }
 
+    $updateSettingsTemplate = $true
+    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+
     if ($templateUrl -eq "" -and $templateBranch -eq "") {
-        $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
         $templateUrl = $settings.templateUrl
         $templateBranch = $settings.templateBranch
+        $updateSettingsTemplate = $false
     }
 
     Set-Location $baseFolder
@@ -60,9 +63,17 @@ try {
         $templateInfo = $repoInfo.template_repository
     }
 
-    Write-Host "Using template from $($templateInfo.html_url)"
+    if ($updateSettingsTemplate -and $templateUrl -eq $settings.templateUrl -and $templateBranch -eq $settings.templateBranch) {
+        $updateSettingsTemplate = $false
+    }
 
     if ($templateBranch) { $templateBranch = "/$templateBranch" }
+
+    Write-Host "Using template from $($templateInfo.html_url)$templateBranch"
+
+    $headers = @{             
+        "Accept"        = "application/vnd.github.baptiste-preview+json"
+    }
     $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}','')
     $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
     Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
@@ -77,7 +88,6 @@ try {
         Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object {
             $checkfiles += @(@{ "dstPath" = Join-Path $_.Name ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
         }
-
     }
     $updateFiles = @()
 
@@ -129,7 +139,7 @@ try {
         }
     }
     else {
-        if (($updateFiles) -or ($removeFiles)) {
+        if ($updateSettingsTemplate -or ($updateFiles) -or ($removeFiles)) {
             try {
                 # URL for git commands
                 $tempRepo = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
@@ -160,6 +170,17 @@ try {
                 }
 
                 invoke-git status
+
+                $RepoSettingsFile = ".github\AL-Go-Settings.json"
+                if (Test-Path $RepoSettingsFile) {
+                    $repoSettings = Get-Content $repoSettingsFile | ConvertFrom-Json | ConvertTo-HashTable
+                }
+                else {
+                    $repoSettings = @{}
+                }
+                $repoSettings.templateUrl = $templateUrl
+                $repoSettings.templateBranch = $templateBranch
+                $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile
 
                 $updateFiles | ForEach-Object {
                     $path = [System.IO.Path]::GetDirectoryName($_.DstFile)

@@ -66,11 +66,11 @@ Set-StrictMode -Version 2.0
 try {
     . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper
-
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     $baseFolder = Get-Location
+
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     Write-Host "Reading $ALGoSettingsFile"
     $settingsJson = Get-Content $ALGoSettingsFile | ConvertFrom-Json
