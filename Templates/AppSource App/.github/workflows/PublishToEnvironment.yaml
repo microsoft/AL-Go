@@ -27,12 +27,13 @@ jobs:
       - name: Environments
         id: Environments
         run: |
+          $environmentName = '${{ github.event.inputs.environmentName }}'
           $headers = @{ 
             "Authorization" = "token ${{ github.token }}"
             "Accept"        = "application/vnd.github.v3+json"
           }
           $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-          $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+          $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { $_.Name -like $environmentName } | ForEach-Object { $_.Name })
           if ($environments.Count -eq 1) {
             $environmentsJSon = "[$($environments | ConvertTo-Json -compress)]"
           }
