@@ -67,9 +67,8 @@ try {
         $updateSettingsTemplate = $false
     }
 
-    if ($templateBranch) { $templateBranch = "/$templateBranch" }
-
-    Write-Host "Using template from $($templateInfo.html_url)$templateBranch"
+    $templateUrl = $templateInfo.html_url
+    Write-Host "Using template from $templateUrl@$templateBranch"
 
     $headers = @{             
         "Accept"        = "application/vnd.github.baptiste-preview+json"
