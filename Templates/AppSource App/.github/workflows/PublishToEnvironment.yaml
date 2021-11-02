@@ -18,7 +18,7 @@ defaults:
 
 jobs:
 
-  Environments:
+  Analyze:
     runs-on: windows-latest
     outputs:
       environments: ${{ steps.Environments.outputs.environments }}
@@ -39,23 +39,25 @@ jobs:
           else {
             $environmentsJSon = $environments | ConvertTo-Json -compress
           }
-          Write-Host "::set-output name=environments::$($environments | ConvertTo-Json -compress)"
+          Write-Host "::set-output name=environments::$environmentsJson"
           Write-Host "::set-output name=environmentCount::$($environments.Count)"
+          Write-Host "set-output name=environments::$environmentsJson"
+          Write-Host "set-output name=environmentCount::$($environments.Count)"
         
   Deploy:
     runs-on: windows-latest
-    needs: [ Environments ]
-    if: ${{ needs.Environments.outputs.environmentCount > 0 }}
+    needs: [ Analyze ]
+    if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
     strategy:
       matrix:
-        environment: ${{ fromJson(needs.Environments.outputs.environments) }}
+        environment: ${{ fromJson(needs.Analyze.outputs.environments) }}
       fail-fast: false
     name: Deploy to ${{ matrix.environment }}
     environment:
       name: ${{ matrix.environment }}
     steps:
       - name: Deploy
-        uses: microsoft/AL-Go/Deploy@main
+        uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           authContext: '${{ secrets.AuthContext }}'
         with:
