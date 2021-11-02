@@ -7,7 +7,8 @@ $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
-$BcContainerHelperPath = DownloadAndImportBcContainerHelper
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+
 if ($project  -eq ".") { $project = "" }
 
 try {

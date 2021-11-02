@@ -196,7 +196,8 @@ function Expand-7zipArchive {
 
 function DownloadAndImportBcContainerHelper {
     Param(
-        [string] $version = "dev"
+        [string] $version = "dev",
+        [string] $baseFolder = ""
     )
 
     Write-Host "Downloading BcContainerHelper $version version"
@@ -215,8 +216,17 @@ function DownloadAndImportBcContainerHelper {
     }
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
+
+    $params = @{ "ExportTelemetryFunctions" = $true }
+    if ($baseFolder) {
+        $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
+        if (-not (Test-Path $repoSettingsPath)) {
+            $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
+        }
+        $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
+    }
     $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
-    . $BcContainerHelperPath
+    . $BcContainerHelperPath @params
     $tempName
 }
 

@@ -57,6 +57,9 @@ jobs:
     environment:
       name: ${{ matrix.environment }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
         env:
