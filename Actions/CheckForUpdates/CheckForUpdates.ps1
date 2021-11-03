@@ -38,7 +38,7 @@ try {
     }
 
     Set-Location $baseFolder
-    $headers = @{             
+    $headers = @{
         "Accept"        = "application/vnd.github.baptiste-preview+json"
     }
     if ($templateUrl -ne "") {
