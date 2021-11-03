@@ -84,7 +84,7 @@ jobs:
             "Accept"        = "application/vnd.github.v3+json"
           }
           $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-          $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+          $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { $_.Name -notlike '* (Production)' } | ForEach-Object { $_.Name })
           if ($environments.Count -eq 1) {
             $environmentsJSon = "[$($environments | ConvertTo-Json -compress)]"
           }
@@ -202,10 +202,47 @@ jobs:
         with:
           path: '${{ github.workspace }}\artifacts'
 
+      - name: EnvName
+        id: envName
+        run: |
+          $envName = '${{ matrix.environment }}'.split(' ')[0]
+          Write-Host "::set-output name=envName::$envName"
+
+      - name: Read settings
+        uses: microsoft/AL-Go/ReadSettings@main
+
+      - name: Read secrets
+        uses: microsoft/AL-Go/ReadSecrets@main
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          settingsJson: ${{ env.Settings }}
+          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,AuthContext'
+
+      - name: AuthContext
+        id: authContext
+        run: |
+          $authContext = [System.Environment]::GetEnvironmentVariable('${{ steps.envName.outputs.envName }}-AuthContext')
+          if ($authContext) {
+            Write-Host "Using ${{ steps.envName.outputs.envName }}-AuthContext secret"
+          }
+          else {
+            $authContext = [System.Environment]::GetEnvironmentVariable('AuthContext')
+            if ($authContext) {
+              Write-Host "Using AuthContext secret"
+            }
+            else {
+              Write-Host "::Error::No AuthContext provided"
+              exit 1
+            }
+          }
+          Write-Host "::set-output name=authContext::$authContext"
+          Write-Host "set-output name=authContext::$authContext"
+
       - name: Deploy
         uses: microsoft/AL-Go/Deploy@main
         env:
-          authContext: '${{ secrets.AuthContext }}'
+          authContext: '${{ steps.authContext.outputs.authContext }}'
         with:
           type: 'CD'
           projects: '${{ secrets.Projects }}'
