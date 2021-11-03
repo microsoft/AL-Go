@@ -104,17 +104,28 @@ try {
     }
 
     $envName = $environmentName.Split(' ')[0]
-    $environment = Get-BcEnvironments -bcAuthContext $bcAuthContext | Where-Object { $_.Name -eq $envName }
-    if (-not ($environment)) {
+    Write-Host "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
+    $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
+    if ($response.Status -eq "DoesNotExist") {
         OutputError -message "Environment with name $envName does not exist in the current authorization context."
+        exit
+    }
+    if ($response.Status -ne "Ready") {
+        OutputError -message "Environment with name $envName is not ready (Status is $($response.Status))."
         exit
     }
 
     $apps | ForEach-Object {
         try {
-            if ($environment.type -eq "Sandbox") {
-                Write-Host "Publishing apps using development endpoint"
-                Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $_ -useDevEndpoint
+            if ($response.environmentType -eq 1) {
+                if ($bcAuthContext.ClientSecret) {
+                    Write-Host "Using S2S, publishing apps using automation API"
+                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $_
+                }
+                else {
+                    Write-Host "Publishing apps using development endpoint"
+                    Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $_ -useDevEndpoint
+                }
             }
             else {
                 if ($type -eq 'CD') {

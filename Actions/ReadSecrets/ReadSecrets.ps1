@@ -19,7 +19,7 @@ try {
     $outSettings = $settings
     $keyVaultName = $settings.KeyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-        $credentialsJson = Get-AzKeyVaultCredentials | ConvertTo-HashTable
+        $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
         $credentialsJson.Keys | ForEach-Object { MaskValueInLog -value $credentialsJson."$_" }
         if ($credentialsJson.ContainsKey("KeyVaultName")) {
             $keyVaultName = $credentialsJson.KeyVaultName
