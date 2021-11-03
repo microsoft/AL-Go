@@ -38,8 +38,7 @@ try {
     }
 
     Set-Location $baseFolder
-    $headers = @{             
-        "Authorization" = "token $token"
+    $headers = @{
         "Accept"        = "application/vnd.github.baptiste-preview+json"
     }
     if ($templateUrl -ne "") {
