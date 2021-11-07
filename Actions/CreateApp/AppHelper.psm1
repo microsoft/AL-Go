@@ -45,8 +45,8 @@ function UpdateManifest
     $appJson.Publisher = $publisher
     $appJson.Name = $name
     $appJson.Version = $version
-    $appJson.idRanges[0].from = $idrange[0]
-    $appJson.idRanges[0].to = $idrange[1]
+    $appJson.idRanges[0].from = [int]$idrange[0]
+    $appJson.idRanges[0].to = [int]$idrange[1]
     $appJson | ConvertTo-Json -depth 99 | Set-Content $appJsonFile
 }
 
