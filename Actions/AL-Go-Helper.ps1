@@ -373,7 +373,6 @@ function AnalyzeRepo {
         [hashTable] $settings,
         [string] $baseFolder,
         [string] $insiderSasToken,
-        [string] $licenseFileUrl,
         [switch] $doNotCheckArtifactSetting
     )
 
@@ -941,13 +940,6 @@ function CreateDevEnv {
         if ($kind -eq "local") {
             $params += @{
                 "insiderSasToken" = $insiderSasToken
-                "licenseFileUrl" = $LicenseFileUrl
-            }
-            if ($settings.type -eq "AppSource App" ) {
-                if ($licenseFileUrl -eq "") {
-                    OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-                    exit
-                }
             }
         }
         elseif ($kind -eq "cloud") {
@@ -956,17 +948,19 @@ function CreateDevEnv {
             }
         }
         $repo = AnalyzeRepo @params
-    
         if (-not $repo.appFolders) {
             exit
         }
-    
+
+        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
+            if ($licenseFileUrl -eq "") {
+                OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
+                exit
+            }
+        }
+
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
-    
-        if (-not $repo.appFolders) {
-            exit
-        }
     
         $buildArtifactFolder = Join-Path $baseFolder "output"
         if (Test-Path $buildArtifactFolder) {
