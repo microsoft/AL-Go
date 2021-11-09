@@ -55,7 +55,10 @@ function Get-dependencies {
                 $projects = "*"
             }
 
-            $downloadedList += DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release
+            $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release
+            if ($download) {
+                $downloadedList += $download
+            }
         }
     }
     
@@ -138,7 +141,6 @@ function DownloadRelease {
     $projects.Split(',') | ForEach-Object {
         $project = $_
         Write-Host "project '$project'"
-        $release.assets | ForEach-Object { Write-Host $_.name }
         
         $release.assets | Where-Object { $_.name -like "$project-Apps-*.zip" } | ForEach-Object {
             Write-Host "$api_url/repos/$repository/releases/assets/$($_.id)"

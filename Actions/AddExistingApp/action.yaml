@@ -12,6 +12,10 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
+  project:
+    description: Project name if the repository is setup for multiple projects
+    required: false
+    default: '.'
   url:
     description: Direct Download Url of .app or .zip file
     required: true
@@ -22,7 +26,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/AddExistingApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -url '${{ inputs.url }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/AddExistingApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -url '${{ inputs.url }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

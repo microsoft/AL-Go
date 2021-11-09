@@ -1,7 +1,6 @@
 {
     "type": "AppSource App",
     "country": "us",
-    "KeyVaultName": "",
     "AppSourceCopMandatoryAffixes": [
         "<affix>"
     ],

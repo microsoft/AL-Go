@@ -39,7 +39,7 @@ try {
 
     Set-Location $baseFolder
     $headers = @{
-        "Accept"        = "application/vnd.github.baptiste-preview+json"
+        "Accept" = "application/vnd.github.baptiste-preview+json"
     }
     if ($templateUrl -ne "") {
         try {
@@ -70,7 +70,7 @@ try {
     Write-Host "Using template from $templateUrl@$templateBranch"
 
     $headers = @{             
-        "Accept"        = "application/vnd.github.baptiste-preview+json"
+        "Accept" = "application/vnd.github.baptiste-preview+json"
     }
     $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}','')
     $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
@@ -98,7 +98,7 @@ try {
         Get-ChildItem -Path $srcFolder -Filter $_.pattern | ForEach-Object {
             $srcFile = $_.FullName
             $fileName = $_.Name
-            $srcContent = (Get-Content -Path $srcFile -Raw).Replace("`r", "").Replace("`n", "`r`n")
+            $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").Replace("`n", "`r`n")
             $name = $type
             if ($type -eq "workflow") {
                 $srcContent.Split("`n") | Where-Object { $_ -like "name:*" } | Select-Object -First 1 | ForEach-Object {
@@ -108,15 +108,15 @@ try {
             $dstFile = Join-Path $dstFolder $fileName
             if (Test-Path -Path $dstFile -PathType Leaf) {
                 # file exists, compare
-                $dstContent = (Get-Content -Path $dstFile -Raw).Replace("`r", "").Replace("`n", "`r`n")
+                $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").Replace("`n", "`r`n")
                 if ($dstContent -ne $srcContent) {
-                    Write-Host "Updated $name ($fileName) available"
+                    Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
                     $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $dstPath $filename }
                 }
             }
             else {
                 # new file
-                Write-Host "New $name ($fileName) available"
+                Write-Host "New $name ($(Join-Path $dstPath $filename)) available"
                 $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $dstPath $filename }
             }
         }
@@ -171,14 +171,14 @@ try {
 
                 $RepoSettingsFile = ".github\AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
-                    $repoSettings = Get-Content $repoSettingsFile | ConvertFrom-Json | ConvertTo-HashTable
+                    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
                 }
                 else {
                     $repoSettings = @{}
                 }
                 $repoSettings.templateUrl = $templateUrl
                 $repoSettings.templateBranch = $templateBranch
-                $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile
+                $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
 
                 $updateFiles | ForEach-Object {
                     $path = [System.IO.Path]::GetDirectoryName($_.DstFile)

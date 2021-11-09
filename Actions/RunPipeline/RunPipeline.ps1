@@ -50,7 +50,8 @@ try {
     $bcContainerHelperConfig.UseExtendedTelemetry = $true
 
     $repo = AnalyzeRepo -settings $settings -baseFolder $baseFolder -insiderSasToken $insiderSasToken
-    if (-not $repo.appFolders) {
+    if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
+        Write-Host "Repository is empty, exiting"
         exit
     }
 
@@ -101,7 +102,7 @@ try {
             $artifactsFolder = Join-Path $baseFolder "artifacts"
             New-Item $artifactsFolder -ItemType Directory | Out-Null
             DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder
-            $previousApps += @((Get-ChildItem -Path $artifactsFolder).FullName)
+            $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
         }
         else {
             OutputWarning -message "No previous release found"
@@ -149,6 +150,7 @@ try {
         }
     }
     
+    Write-Host "Invoke Run-AlPipeline"
     Run-AlPipeline @runAlPipelineParams `
         -pipelinename $workflowName `
         -containerName $containerName `

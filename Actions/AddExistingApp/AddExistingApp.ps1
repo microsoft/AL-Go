@@ -3,6 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
+    [string] $project = '.',
     [Parameter(HelpMessage = "Direct Download Url of .app or .zip file", Mandatory = $true)]
     [string] $url,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
@@ -68,12 +70,15 @@ try {
 
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $repoBaseFolder = Get-Location
+
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+
+    CheckAndCreateProjectFolder -project $project
     $baseFolder = Get-Location
 
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
-
     Write-Host "Reading $ALGoSettingsFile"
-    $settingsJson = Get-Content $ALGoSettingsFile | ConvertFrom-Json
+    $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
     $type = $settingsJson.Type
 
     $appNames = @()
@@ -82,7 +87,7 @@ try {
         "?Content_Types?.xml", "MediaIdListing.xml", "navigation.xml", "NavxManifest.xml", "DocComments.xml", "SymbolReference.json" | ForEach-Object {
             Remove-Item (Join-Path $appFolder $_) -Force -ErrorAction SilentlyContinue
         }
-        $appJson = Get-Content (Join-Path $appFolder "app.json") | ConvertFrom-Json
+        $appJson = Get-Content (Join-Path $appFolder "app.json") -Encoding UTF8 | ConvertFrom-Json
         $appNames += @($appJson.Name)
 
         $ranges = @()
@@ -119,7 +124,7 @@ try {
 
         if ($ttype -ne "Test App") {
             Get-ChildItem -Path $appFolder -Filter "*.al" -Recurse | ForEach-Object {
-                $alContent = (Get-Content -Path $_.FullName) -join "`n"
+                $alContent = (Get-Content -Path $_.FullName -Encoding UTF8) -join "`n"
                 if ($alContent -like "*codeunit*subtype*=*test*[test]*") {
                     $ttype = "Test App"
                 }
@@ -156,7 +161,7 @@ try {
             # Modify .AL-Go\settings.json
             try {
                 $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
-                $SettingsJson = Get-Content $settingsJsonFile | ConvertFrom-Json
+                $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
                 if ($ttype -eq "Test App") {
                     if ($SettingsJson.testFolders -notcontains $foldername) {
                         $SettingsJson.testFolders += @($folderName)
@@ -167,7 +172,7 @@ try {
                         $SettingsJson.appFolders += @($folderName)
                     }
                 }
-                $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile
+                $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
             }
             catch {
                 OutputError -message "$ALGoSettingsFile is wrongly formatted. Error is $($_.Exception.Message)"
@@ -179,11 +184,11 @@ try {
                 try {
                     $workspaceFileName = $_.Name
                     $workspaceFile = $_.FullName
-                    $workspace = Get-Content $workspaceFile | ConvertFrom-Json
+                    $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                     if (-not ($workspace.folders | Where-Object { $_.Path -eq $foldername })) {
                         $workspace.folders += @(@{ "path" = $foldername })
                     }
-                    $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile
+                    $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile -Encoding UTF8
                 }
                 catch {
                     OutputError "$workspaceFileName is wrongly formattet. Error is $($_.Exception.Message)"
@@ -191,7 +196,8 @@ try {
                 }
             }
         }
-    }        
+    }
+    Set-Location $repoBaseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Add existing apps ($($appNames -join ', '))" -branch $branch
 }
 catch {
