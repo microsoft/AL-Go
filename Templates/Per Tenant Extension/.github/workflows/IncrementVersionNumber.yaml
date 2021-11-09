@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   update:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
 
     steps:
       - name: Increment Version Number

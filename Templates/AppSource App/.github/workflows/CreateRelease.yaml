@@ -32,7 +32,7 @@ defaults:
 
 jobs:
   CreateRelease:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       upload_url: ${{ steps.createrelease.outputs.upload_url }}
@@ -98,7 +98,7 @@ jobs:
           body: ${{ steps.createreleasenotes.outputs.releaseNotes }}
 
   UploadArtifacts:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs: [ CreateRelease ]
     strategy:
       matrix: ${{ fromJson(needs.CreateRelease.outputs.artifacts) }}
