@@ -30,6 +30,8 @@ $runAlPipelineOverrides = @(
     "RemoveBcContainer"
 )
 
+$MicrosoftAppInsightsConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
+
 # Well known AppIds
 $systemAppId = "63ca2fa4-4f03-4f2b-a480-172fef340d3f"
 $baseAppId = "437dbf0e-84ff-417a-965d-ed2bb9650972"
@@ -335,8 +337,8 @@ function ReadSettings {
         "templateUrl"                            = ""
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
-        "MicrosoftTelemetryConnectionString"     = "InstrumentationKey=b503f4de-5674-4d35-8b3e-df9e815e9473;IngestionEndpoint=https://westus2-2.in.applicationinsights.azure.com/"
-        "PartnerTelemetryConnectionString"       = "InstrumentationKey=904e7f11-fb59-429e-b5a8-53e1a9143c08;IngestionEndpoint=https://westus2-2.in.applicationinsights.azure.com/"
+        "MicrosoftTelemetryConnectionString"     = $MicrosoftAppInsightsConnectionString
+        "TelemetryConnectionString"       = ""
         "UseExtendedTelemetry"                   = $false
     }
 
