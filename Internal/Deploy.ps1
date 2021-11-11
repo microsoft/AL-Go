@@ -40,7 +40,6 @@ try {
         "actionsRepo" = "microsoft/AL-Go-Actions"
         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
         "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
-
     }
     $originalBranch = "main"
 
@@ -178,6 +177,8 @@ try {
             "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                 $regex = "^(.*)$($config.githubOwner)/$($config."$_")(.*)$($config.branch)(.*)$"
                 $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
+                Write-Host $regex
+                Write-Host $replace
                 Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
                     $dstFile = $_.FullName
                     $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
