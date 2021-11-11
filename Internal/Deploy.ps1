@@ -133,7 +133,7 @@ try {
                 if (Test-Path $_) {
                     Set-Location $_
                     if (Test-Path ".git") {
-                        $status = $changes = git status --porcelain
+                        $status = git status --porcelain
                         if ($status) {
                             throw "Git repo $_ is not clean, please resolve manually"
                         }
@@ -165,6 +165,8 @@ try {
             $srcPath = $_.srcPath
             $dstPath = $_.dstPath
         
+            Write-Host -ForegroundColor Yellow "Collecting from $repo"
+
             Get-ChildItem -Path "$srcPath\*" | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
                 if ($_.PSIsContainer) {
                     Remove-Item $_ -Force -Recurse
@@ -174,23 +176,21 @@ try {
                 }
             }
 
-            "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
-                $regex = "^(.*)$($config.githubOwner)/$($config."$_")(.*)$($config.branch)(.*)$"
-                $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
-                Write-Host $regex
-                Write-Host $replace
-                Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
-                    $dstFile = $_.FullName
-                    $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
-                    $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
-                    if (!(Test-Path $srcFilePath)) {
-                        New-Item $srcFilePath -ItemType Directory | Out-Null
-                    }
-                    Write-Host "$dstFile -> $srcFile"
-                    $content = [string](Get-Content -Raw -path $dstFile)
-                    $lines = $content.Split("`n") | ForEach-Object { $_ -replace $regex, $replace }
-                    $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
+            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+                $dstFile = $_.FullName
+                $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
+                $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
+                if (!(Test-Path $srcFilePath)) {
+                    New-Item $srcFilePath -ItemType Directory | Out-Null
                 }
+                Write-Host "$dstFile -> $srcFile"
+                $lines = ([string](Get-Content -Raw -path $dstFile)).Split("`n")
+                "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+                    $regex = "^(.*)$($config.githubOwner)/$($config."$_")(.*)$($config.branch)(.*)$"
+                    $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
+                    $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+                }
+                $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
             }
         }
     }
@@ -200,6 +200,9 @@ try {
             $repo = $_.repo
             $srcPath = $_.srcPath
             $dstPath = $_.dstPath
+
+            Write-Host -ForegroundColor Yellow "Deploying to $repo"
+
             try {
                 invoke-git clone --quiet "https://github.com/$($config.githubOwner)/$repo.git"
                 Set-Location $repo
@@ -222,20 +225,20 @@ try {
                 invoke-git push -u origin $config.branch
             }
         
-            "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
-                $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($config.branch)`$3"
-                Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
-                    $srcFile = $_.FullName
-                    $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
-                    $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
-                    if (!(Test-Path $dstFilePath -PathType Container)) {
-                        New-Item $dstFilePath -ItemType Directory | Out-Null
-                    }
-                    $content = [string](Get-Content -Raw -path $srcFile)
-                    $lines = $content.Split("`n") | ForEach-Object { $_ -replace $regex, $replace }
-                    $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
+            Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+                $srcFile = $_.FullName
+                $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
+                $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
+                if (!(Test-Path $dstFilePath -PathType Container)) {
+                    New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
+                $lines = ([string](Get-Content -Raw -path $srcFile)).Split("`n")
+                "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+                    $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
+                    $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($config.branch)`$3"
+                    $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+                }
+                $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
         
             invoke-git add .
