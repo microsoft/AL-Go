@@ -24,15 +24,14 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          get: TemplateUrl,TemplateBranch
+          get: TemplateUrl
 
       - name: Check for updates to AL-Go system files
-        uses: microsoft/AL-Go/CheckForUpdates@main
+        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           templateUrl: ${{ env.TemplateUrl }}
-          templateBranch: ${{ env.TemplateBranch }}
   Analyze:
     runs-on: [ windows-latest ]
     outputs:
@@ -46,7 +45,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           get: githubRunner
 
@@ -113,12 +112,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           project: ${{ matrix.project }}
 
       - name: Read secrets
-        uses: microsoft/AL-Go/ReadSecrets@main
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -126,7 +125,7 @@ jobs:
           secrets: 'licenseFileUrl,insiderSasToken,CodeSignCertificateUrl,CodeSignCertificatePassword,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
 
       - name: Run pipeline
-        uses: microsoft/AL-Go/RunPipeline@main
+        uses: microsoft/AL-Go-Actions/RunPipeline@main
         with:
           Project: ${{ matrix.project }}
           settingsJson: ${{ env.Settings }}
@@ -180,7 +179,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        uses: microsoft/AL-Go/PipelineCleanup@main
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
         with:
           Project: ${{ matrix.project }}
   Deploy:
@@ -210,10 +209,10 @@ jobs:
           Write-Host "::set-output name=envName::$envName"
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
 
       - name: Read secrets
-        uses: microsoft/AL-Go/ReadSecrets@main
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -241,7 +240,7 @@ jobs:
           Write-Host "set-output name=authContext::$authContext"
 
       - name: Deploy
-        uses: microsoft/AL-Go/Deploy@main
+        uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           authContext: '${{ steps.authContext.outputs.authContext }}'
         with:

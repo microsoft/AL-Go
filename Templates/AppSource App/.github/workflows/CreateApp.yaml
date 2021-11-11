@@ -34,12 +34,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           get: type
 
       - name: Creating a new app
-        uses: microsoft/AL-Go/CreateApp@main
+        uses: microsoft/AL-Go-Actions/CreateApp@main
         with:
           project: ${{ github.event.inputs.project }}
           type: ${{ env.type }}

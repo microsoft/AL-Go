@@ -13,10 +13,6 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  settingsJson:
-    description: Settings from template repository in compressed Json format
-    required: false
-    default: '{"templateUrl": "","templateBranch": ""}'
   templateUrl:
     description: URL of the template repository (default is the template repository used to create the repository)
     required: false
@@ -36,7 +32,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -settingsJson '${{ inputs.settingsJson }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal
