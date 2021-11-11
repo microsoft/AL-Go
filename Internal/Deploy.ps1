@@ -36,7 +36,12 @@ Set-StrictMode -Version 2.0
 
 $oldPath = Get-Location
 try {
-    $originalOwnerAndRepo = "microsoft/AL-Go"
+    $originalOwnerAndRepo = @{
+        "actionsRepo" = "microsoft/AL-Go-Actions"
+        "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
+        "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
+
+    }
     $originalBranch = "main"
 
     Set-Location $PSScriptRoot
@@ -170,19 +175,21 @@ try {
                 }
             }
 
-            $regex = "^(.*)$($config.githubOwner)/$($config.actionsRepo)(.*)$($config.branch)(.*)$"
-            $replace = "`$1$originalOwnerAndRepo`$2$originalBranch`$3"
-            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
-                $dstFile = $_.FullName
-                $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
-                $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
-                if (!(Test-Path $srcFilePath)) {
-                    New-Item $srcFilePath -ItemType Directory | Out-Null
+            "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+                $regex = "^(.*)$($config.githubOwner)/$($config."$_")(.*)$($config.branch)(.*)$"
+                $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
+                Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+                    $dstFile = $_.FullName
+                    $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
+                    $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
+                    if (!(Test-Path $srcFilePath)) {
+                        New-Item $srcFilePath -ItemType Directory | Out-Null
+                    }
+                    Write-Host "$dstFile -> $srcFile"
+                    $content = [string](Get-Content -Raw -path $dstFile)
+                    $lines = $content.Split("`n") | ForEach-Object { $_ -replace $regex, $replace }
+                    $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
                 }
-                Write-Host "$dstFile -> $srcFile"
-                $content = [string](Get-Content -Raw -path $dstFile)
-                $lines = $content.Split("`n") | ForEach-Object { $_ -replace $regex, $replace }
-                $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
             }
         }
     }
@@ -214,18 +221,20 @@ try {
                 invoke-git push -u origin $config.branch
             }
         
-            $regex = "^(.*)$originalOwnerAndRepo(.*)$originalBranch(.*)$"
-            $replace = "`$1$($config.githubOwner)/$($config.actionsRepo)`$2$($config.branch)`$3"
-            Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
-                $srcFile = $_.FullName
-                $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
-                $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
-                if (!(Test-Path $dstFilePath -PathType Container)) {
-                    New-Item $dstFilePath -ItemType Directory | Out-Null
+            "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+                $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
+                $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($config.branch)`$3"
+                Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+                    $srcFile = $_.FullName
+                    $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
+                    $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
+                    if (!(Test-Path $dstFilePath -PathType Container)) {
+                        New-Item $dstFilePath -ItemType Directory | Out-Null
+                    }
+                    $content = [string](Get-Content -Raw -path $srcFile)
+                    $lines = $content.Split("`n") | ForEach-Object { $_ -replace $regex, $replace }
+                    $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
                 }
-                $content = [string](Get-Content -Raw -path $srcFile)
-                $lines = $content.Split("`n") | ForEach-Object { $_ -replace $regex, $replace }
-                $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
         
             invoke-git add .
