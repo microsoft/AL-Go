@@ -21,7 +21,7 @@ defaults:
 
 jobs:
   CreateEnvironment:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
 
     steps:
       - name: Checkout

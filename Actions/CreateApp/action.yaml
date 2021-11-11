@@ -12,8 +12,12 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
+  project:
+    description: Project name if the repository is setup for multiple projects
+    required: false
+    default: '.'
   type:
-    description: Type of app to add (Per Tenant Extension, AppSource App, Test App)
+    description: Type of app to add (PTE, AppSource App, Test App)
     required: true
   name:
     description: App Name
@@ -31,7 +35,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -type '${{ inputs.type }}' -name '${{ inputs.name }}' -publisher '${{ inputs.publisher }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -type '${{ inputs.type }}' -name '${{ inputs.name }}' -publisher '${{ inputs.publisher }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

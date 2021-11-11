@@ -28,7 +28,7 @@ try {
 
     try {
         Write-Host "Reading $ALGoSettingsFile"
-        $settingsJson = Get-Content $ALGoSettingsFile | ConvertFrom-Json
+        $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
         if ($settingsJson.PSObject.Properties.Name -eq "RepoVersion") {
             $oldVersion = [System.Version]"$($settingsJson.RepoVersion).0.0"
             if ($newVersion -le $oldVersion) {
@@ -42,7 +42,7 @@ try {
         }
         $modifyApps = (($settingsJson.PSObject.Properties.Name -eq "VersioningStrategy") -and (($settingsJson.VersioningStrategy -band 16) -eq 16))
         $settingsJson
-        $settingsJson | ConvertTo-Json -Depth 99 | Set-Content $ALGoSettingsFile
+        $settingsJson | ConvertTo-Json -Depth 99 | Set-Content $ALGoSettingsFile -Encoding UTF8
     }
     catch {
         OutputError "Settings file $ALGoSettingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
@@ -58,9 +58,9 @@ try {
                     $appJsonFile = Join-Path $_ "app.json"
                     if (Test-Path $appJsonFile) {
                         try {
-                            $appJson = Get-Content $appJsonFile | ConvertFrom-Json
+                            $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
                             $appJson.Version = "$($newVersion.Major).$($newVersion.Minor).0.0"
-                            $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile
+                            $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile -Encoding UTF8
                         }
                         catch {
                             throw "$appJsonFile is wrongly formatted."

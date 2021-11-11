@@ -3,6 +3,10 @@ name: Create a new app
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects
+        required: false
+        default: '.'
       name:
         description: Name
         required: true      
@@ -23,7 +27,7 @@ defaults:
 
 jobs:
   update:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
 
     steps:
       - name: Checkout
@@ -37,6 +41,7 @@ jobs:
       - name: Creating a new app
         uses: microsoft/AL-Go/CreateApp@main
         with:
+          project: ${{ github.event.inputs.project }}
           type: ${{ env.type }}
           name: ${{ github.event.inputs.name }}
           publisher: ${{ github.event.inputs.publisher }}

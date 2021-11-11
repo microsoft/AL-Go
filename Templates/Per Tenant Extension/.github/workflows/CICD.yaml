@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   CheckForUpdates:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -34,7 +34,7 @@ jobs:
           templateUrl: ${{ env.TemplateUrl }}
           templateBranch: ${{ env.TemplateBranch }}
   Analyze:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       projects: ${{ steps.Projects.outputs.projects }}
       projectCount: ${{ steps.Projects.outputs.projectCount }}
@@ -53,8 +53,9 @@ jobs:
       - name: Output settings
         id: OutputSettings
         run: |
-          Write-Host "::set-output name=githubRunner::$env:githubRunner"
-          Write-Host "set-output name=githubRunner::$env:githubRunner"
+          $gitHubRunner = "$env:githubRunner".Split(',') | ConvertTo-Json -compress
+          Write-Host "::set-output name=githubRunner::$githubRunner"
+          Write-Host "set-output name=githubRunner::$githubRunner"
 
       - name: Projects
         id: Projects
@@ -97,7 +98,7 @@ jobs:
           Write-Host "set-output name=environmentCount::$($environments.Count)"
   Build:
     needs: [ Analyze ]
-    runs-on: ${{ needs.Analyze.outputs.githubRunner }}
+    runs-on: ${{ fromJson(needs.Analyze.outputs.githubRunner) }}
     strategy:
       matrix:
         project: ${{ fromJson(needs.Analyze.outputs.projects) }}
@@ -183,7 +184,7 @@ jobs:
         with:
           Project: ${{ matrix.project }}
   Deploy:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs: [ Analyze, Build ]
     if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
     strategy:

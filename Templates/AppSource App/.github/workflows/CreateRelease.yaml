@@ -32,7 +32,7 @@ defaults:
 
 jobs:
   CreateRelease:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       upload_url: ${{ steps.createrelease.outputs.upload_url }}
@@ -63,11 +63,11 @@ jobs:
           $allArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts" | ConvertFrom-Json
           $artifactsVersion = $appVersion
           if ($appVersion -eq "latest") {
-            $artifact = $allArtifacts.artifacts | Where-Object { $_.name -like "*-Apps-*" } | Select-Object -First 1
-            $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('-Apps-')+6)
+            $artifact = $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-*" } | Select-Object -First 1
+            $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('Apps-')+5)
           }
           $include = @()
-          $allArtifacts.artifacts | Where-Object { $_.name -like "*-Apps-$($artifactsVersion)*" } | ForEach-Object {
+          $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-$($artifactsVersion)*" } | ForEach-Object {
             $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url } )
           }
           if ($include.Count -eq 0) {
@@ -98,7 +98,7 @@ jobs:
           body: ${{ steps.createreleasenotes.outputs.releaseNotes }}
 
   UploadArtifacts:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs: [ CreateRelease ]
     strategy:
       matrix: ${{ fromJson(needs.CreateRelease.outputs.artifacts) }}

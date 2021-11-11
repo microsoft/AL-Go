@@ -26,7 +26,7 @@ try {
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     Write-Host "Reading $ALGoSettingsFile"
-    $settingsJson = Get-Content $ALGoSettingsFile | ConvertFrom-Json
+    $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
 
     CreateDevEnv `
         -kind cloud `

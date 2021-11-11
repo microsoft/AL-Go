@@ -19,7 +19,7 @@ defaults:
 jobs:
 
   Analyze:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       environments: ${{ steps.Environments.outputs.environments }}
       environmentCount: ${{ steps.Environments.outputs.environmentCount }}
@@ -46,7 +46,7 @@ jobs:
           Write-Host "set-output name=environmentCount::$($environments.Count)"
         
   Deploy:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs: [ Analyze ]
     if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
     strategy:
