@@ -17,9 +17,20 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: windows-latest
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      correlationId: ${{ steps.init.outputs.correlationId }}  
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          workflowName : "DO0097"
 
   Environments:
     runs-on: windows-latest
+    needs : [ initialization ]
     outputs:
       environments: ${{ steps.Environments.outputs.environments }}
       environmentCount: ${{ steps.Environments.outputs.environmentCount }}
@@ -59,6 +70,7 @@ jobs:
         env:
           authContext: '${{secrets.AuthContext}}'
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           type: 'Publish'
           projects: '${{secrets.Projects}}'
           environmentName: ${{matrix.environment}}

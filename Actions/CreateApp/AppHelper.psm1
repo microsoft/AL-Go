@@ -2,7 +2,7 @@
 This module contains some useful functions for working with app manifests.
 #>
 
-. (Join-Path -path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\AL-Go-Helper.ps1" -Resolve)
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $alTemplatePath = Join-Path -Path $here -ChildPath "AppTemplate" 
 

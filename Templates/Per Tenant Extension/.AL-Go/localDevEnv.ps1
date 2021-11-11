@@ -18,7 +18,7 @@ $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
 $webClient = New-Object System.Net.WebClient
 $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
 $webClient.Encoding = [System.Text.Encoding]::UTF8
-$webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go/main/AL-Go-Helper.ps1', $ALGoHelperPath)
+$webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go/main/Helpers/AL-Go-Helper.ps1', $ALGoHelperPath)
 . $ALGoHelperPath -local
 
 $baseFolder = Join-Path $PSScriptRoot ".." -Resolve

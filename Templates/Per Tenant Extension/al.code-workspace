@@ -1,8 +1,13 @@
 {
-    "folders": [
-        {
-            "path": ".github\\AL-Go"
-        }
-    ],
-    "settings": {}
+    "folders":  [
+                    {
+                        "path":  ".github\\AL-Go"
+                    },
+                    {
+                        "path":  "PTE1"
+                    }
+                ],
+    "settings":  {
+
+                 }
 }

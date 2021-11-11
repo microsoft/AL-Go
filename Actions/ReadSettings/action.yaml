@@ -9,6 +9,10 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
+  parentCorrelationId:
+    description: Specifies the parent correlation Id for the Telemetry signal
+    required: false
+    default: ''    
   project:
     description: Project folder
     required: false
@@ -21,6 +25,7 @@ inputs:
     description: Specifies which properties to get from the settings file, default is all
     required: false
     default: ''
+
 outputs:
   SettingsJson:
     description: Settings in compressed Json format
@@ -28,7 +33,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
+    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}' -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0079'
       id: readsettings
       shell: PowerShell
 branding:

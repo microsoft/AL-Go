@@ -31,8 +31,20 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: windows-latest
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      correlationId: ${{ steps.init.outputs.correlationId }}  
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          workflowName : "DO0094"
+
   CreateRelease:
     runs-on: windows-latest
+    needs : [ initialization ]
     outputs:
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       upload_url: ${{ steps.createrelease.outputs.upload_url }}
@@ -43,11 +55,13 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           get: TemplateUrl,TemplateBranch
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go/CheckForUpdates@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           templateUrl: ${{ env.TemplateUrl }}
           templateBranch: ${{ env.TemplateBranch }}
 
@@ -83,6 +97,7 @@ jobs:
         id: createreleasenotes
         uses: microsoft/AL-Go/CreateReleaseNotes@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           tag_name: '${{github.event.inputs.tag}}'
 
       - name: Create release

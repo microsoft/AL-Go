@@ -16,12 +16,25 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: windows-latest
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      correlationId: ${{ steps.init.outputs.correlationId }}  
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          workflowName : "DO0096"
+
   update:
     runs-on: windows-latest
+    needs : [ initialization ]
 
     steps:
       - name: Increment Version Number
         uses: microsoft/AL-Go/IncrementVersionNumber@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           versionNumber: ${{ github.event.inputs.versionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}

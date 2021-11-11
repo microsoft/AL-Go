@@ -3,6 +3,10 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Specifies the parent correlation Id for the Telemetry signal", Mandatory = $false)]
+    [string] $parentCorrelationId,
+    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $false)]
+    [string] $telemetryEventId,    
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
     [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
@@ -12,11 +16,15 @@ Param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+Set-StrictMode -Version 2.0    
+
+. (Join-Path $PSScriptRoot "..\Helpers\AL-Go-Helper.ps1")
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
+
+$telemetryScope = CreateScope -eventId $telemetryEventId -parentCorrelationId $parentCorrelationId 
 
 try {
-    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
-
     if ($project  -eq ".") { $project = "" }
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
    
@@ -55,7 +63,19 @@ try {
     Write-Host "::set-output name=SettingsJson::$outSettingsJson"
     Write-Host "set-output name=SettingsJson::$outSettingsJson"
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+
+    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message $_.Exception.Message
+    TrackException -telemetryScope $telemetryScope -errorRecord $_
+    exit
+}
+finally {
+    # Cleanup
+    try {
+        Remove-Module BcContainerHelper
+        Remove-Item $bcContainerHelperPath -Recurse
+    }
+    catch {}
 }

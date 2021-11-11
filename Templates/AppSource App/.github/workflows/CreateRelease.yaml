@@ -31,8 +31,20 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: windows-latest
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      correlationId: ${{ steps.init.outputs.correlationId }}  
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          workflowName : "DO0094"
+
   CreateRelease:
     runs-on: windows-latest
+    needs : [ initialization ]
     outputs:
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       upload_url: ${{ steps.createrelease.outputs.upload_url }}

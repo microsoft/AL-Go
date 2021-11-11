@@ -1,4 +1,8 @@
 Param(
+    [Parameter(HelpMessage = "Specifies the parent correlation Id for the Telemetry signal", Mandatory = $false)]
+    [string] $parentCorrelationId,
+    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $false)]
+    [string] $telemetryEventId,
     [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"keyVaultName": ""}',
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
@@ -9,9 +13,13 @@ Param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
+. (Join-Path $PSScriptRoot "..\Helpers\AL-Go-Helper.ps1")
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
+
+$telemetryScope = CreateScope -eventId $telemetryEventId -parentCorrelationId $parentCorrelationId 
 
 try {
-    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
@@ -82,8 +90,19 @@ try {
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+
+    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message $_.Exception.Message
+    TrackException -telemetryScope $telemetryScope -errorRecord $_
     exit
+}
+finally {
+    # Cleanup
+    try {
+        Remove-Module BcContainerHelper
+        Remove-Item $bcContainerHelperPath -Recurse
+    }
+    catch {}
 }

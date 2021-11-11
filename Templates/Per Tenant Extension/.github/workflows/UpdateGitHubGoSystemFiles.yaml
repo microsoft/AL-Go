@@ -13,8 +13,20 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: windows-latest
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      correlationId: ${{ steps.init.outputs.correlationId }}  
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          workflowName : "DO0098"
+
   update:
     runs-on: windows-latest
+    needs : [ initialization ]
 
     steps:
       - name: Checkout
@@ -23,6 +35,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           get: KeyVaultName,GhTokenWorkflowSecretName,TemplateUrl,TemplateBranch
 
       - name: Read secrets
@@ -30,12 +43,14 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           settingsJson: ${{ env.Settings }}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
       - name: Update AL-Go system files
         uses: microsoft/AL-Go/CheckForUpdates@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           token: ${{ env.ghTokenWorkflow }}
           update: Y
           templateUrl: ${{ env.TemplateUrl }}

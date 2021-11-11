@@ -19,8 +19,20 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: windows-latest
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      correlationId: ${{ steps.init.outputs.correlationId }}  
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          workflowName : "DO0091"
+
   CheckForUpdates:
     runs-on: windows-latest
+    needs : [ initialization ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -28,15 +40,18 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           get: TemplateUrl,TemplateBranch
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go/CheckForUpdates@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           templateUrl: ${{ env.TemplateUrl }}
           templateBranch: ${{ env.TemplateBranch }}
   Analyze:
     runs-on: windows-latest
+    needs : [ initialization ]
     outputs:
       projects: ${{ steps.Projects.outputs.projects }}
       projectCount: ${{ steps.Projects.outputs.projectCount }}
@@ -104,6 +119,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           project: ${{ matrix.project }}
 
       - name: Read secrets
@@ -111,12 +127,14 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           settingsJson: ${{ env.Settings }}
           secrets: 'licenseFileUrl,insiderSasToken,CodeSignCertificateUrl,CodeSignCertificatePassword,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
 
       - name: Run pipeline
         uses: microsoft/AL-Go/RunPipeline@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           Project: ${{ matrix.project }}
           settingsJson: ${{ env.Settings }}
           SecretsJson: ${{ env.RepoSecrets }}
@@ -171,6 +189,7 @@ jobs:
         if: always()
         uses: microsoft/AL-Go/PipelineCleanup@main
         with:
+          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
           Project: ${{ matrix.project }}
   Deploy:
     runs-on: windows-latest

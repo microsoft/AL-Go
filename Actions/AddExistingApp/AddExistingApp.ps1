@@ -3,11 +3,21 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Specifies the parent correlation Id for the Telemetry signal", Mandatory = $false)]
+    [string] $parentCorrelationId,
+    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $false)]
+    [string] $telemetryEventId,
     [Parameter(HelpMessage = "Direct Download Url of .app or .zip file", Mandatory = $true)]
     [string] $url,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
+
+. (Join-Path $PSScriptRoot "..\Helpers\AL-Go-Helper.ps1")
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
+
+$telemetryScope = CreateScope -eventId $telemetryEventId -parentCorrelationId $parentCorrelationId 
 
 function getfiles {
     Param(
@@ -64,10 +74,6 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
 try {
-    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
-
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper
-
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     $baseFolder = Get-Location
@@ -193,9 +199,12 @@ try {
         }
     }        
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Add existing apps ($($appNames -join ', '))" -branch $branch
+
+    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message "Couldn't add existing app. Error was $($_.Exception.Message)"
+    TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
     # Cleanup

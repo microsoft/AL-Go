@@ -12,6 +12,10 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
+  parentCorrelationId:
+    description: Specifies the parent correlation Id for the Telemetry signal
+    required: false
+    default: '' 
   versionnumber:
     description: New Version Number (Major.Minor)
     required: true
@@ -22,7 +26,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0076'
       shell: PowerShell
 branding:
   icon: terminal

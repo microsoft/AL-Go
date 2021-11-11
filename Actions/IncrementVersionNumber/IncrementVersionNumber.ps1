@@ -3,6 +3,10 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Specifies the parent correlation Id for the Telemetry signal", Mandatory = $false)]
+    [string] $parentCorrelationId,
+    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $false)]
+    [string] $telemetryEventId,
     [Parameter(HelpMessage = "New Version Number (Major.Minor)", Mandatory = $true)]
     [string] $versionnumber,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
@@ -12,15 +16,19 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
+. (Join-Path $PSScriptRoot "..\Helpers\AL-Go-Helper.ps1")
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
+
+$telemetryScope = CreateScope -eventId $telemetryEventId -parentCorrelationId $parentCorrelationId 
+
 try {
-    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
     try {
         $newVersion = [System.Version]"$($versionnumber).0.0"
     }
     catch {
-        OutputError -message "Version number ($versionnumber) is wrongly formatted. Needs to be Major.Minor"
-        exit
+        throw "Version number ($versionnumber) is wrongly formatted. Needs to be Major.Minor"
     }
 
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
@@ -45,8 +53,7 @@ try {
         $settingsJson | ConvertTo-Json -Depth 99 | Set-Content $ALGoSettingsFile
     }
     catch {
-        OutputError "Settings file $ALGoSettingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
-        exit
+        throw "Settings file $ALGoSettingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
     }
 
     if ($modifyApps) {
@@ -71,7 +78,18 @@ try {
         }
     }
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New Version number $($newVersion.Major).$($newVersion.Minor)" -branch $branch
+
+    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message "Couldn't bump version number. Error was $($_.Exception.Message)"
+    TrackException -telemetryScope $telemetryScope -errorRecord $_
+}
+finally {
+    # Cleanup
+    try {
+        Remove-Module BcContainerHelper
+        Remove-Item $bcContainerHelperPath -Recurse
+    }
+    catch {}
 }

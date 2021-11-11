@@ -19,8 +19,20 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: windows-latest
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      correlationId: ${{ steps.init.outputs.correlationId }}  
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          workflowName : "DO0091"
+
   CheckForUpdates:
     runs-on: windows-latest
+    needs : [ initialization ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -37,6 +49,7 @@ jobs:
           templateBranch: ${{ env.TemplateBranch }}
   Analyze:
     runs-on: windows-latest
+    needs : [ initialization ]
     outputs:
       projects: ${{ steps.Projects.outputs.projects }}
       projectCount: ${{ steps.Projects.outputs.projectCount }}
