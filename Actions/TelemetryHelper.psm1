@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot "..\Helpers\AL-Go-Helper.ps1")
+. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 
 $signals = @{
     "DO0070" = "AL-Go action ran: AddExistingApp";                       

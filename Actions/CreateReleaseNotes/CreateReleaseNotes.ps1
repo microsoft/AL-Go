@@ -16,16 +16,16 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-. (Join-Path $PSScriptRoot "..\Helpers\AL-Go-Helper.ps1")
+. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
-import-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
 $telemetryScope = CreateScope -eventId $telemetryEventId -parentTelemetryScope $parentTelemetryScope
 
 $releaseNotes = ""
 
 try {
-    Import-Module (Join-Path $PSScriptRoot '..\Helpers\Github-Helper.psm1' -Resolve)
+    Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
 
     $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY 
 
