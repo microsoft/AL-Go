@@ -1,10 +1,11 @@
-$gitHubSecrets = $env:Secrets | ConvertFrom-Json
-$AzKeyvaultConnectionExists = $false
-function IsKeyVaultSet {
-    return  $gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
-}
+$script:gitHubSecrets = $env:Secrets | ConvertFrom-Json
+$script:keyvaultConnectionExists = $false
+$script:azureRm210 = $false
+$script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
 
-$IsAzKeyvaultSet = IsKeyVaultSet
+function IsKeyVaultSet {
+    return $script:isKeyvaultSet
+}
 
 function MaskValueInLog {
     Param(
@@ -26,12 +27,11 @@ function GetGithubSecret {
         $secret = $secretSplit[1]
     }
     
-    if ($gitHubSecrets.PSObject.Properties.Name -eq $secret) {
-        $value = $githubSecrets."$secret"
+    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
+        $value = $script:githubSecrets."$secret"
         if ($value) {
             MaskValueInLog -value $value
             Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
-            Write-Host "Secret $envVar successfully read from GitHub Secret $secret"
             return $value
         }
     }
@@ -39,13 +39,13 @@ function GetGithubSecret {
     return $null
 }
 	
-function Get-AzKeyVaultCredentials {
-    if (-not $IsAzKeyvaultSet) {
+function Get-KeyVaultCredentials {
+    if (-not $script:isKeyvaultSet) {
         throw "AZURE_CREDENTIALS is not set in your repo."
     }   
 
     try {
-        return $gitHuBSecrets.AZURE_CREDENTIALS | ConvertFrom-Json
+        return $script:gitHuBSecrets.AZURE_CREDENTIALS | ConvertFrom-Json
     }
     catch {
         throw "AZURE_CREDENTIALS are wrongly formatted."
@@ -55,14 +55,29 @@ function Get-AzKeyVaultCredentials {
 }
 
 function InstallKeyVaultModuleIfNeeded {
-    if (-not $IsAzKeyvaultSet) {
+    if (-not $script:isKeyvaultSet) {
         return
     }
 
     if (-not (Get-InstalledModule -Name 'Az.KeyVault' -erroraction 'silentlycontinue')) {
-        Write-Host "Installing and importing Az.KeyVault." 
-        Install-Module 'Az.KeyVault' -Force
-        Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+
+        $azureRmKeyVaultModule = Get-Module -name 'AzureRm.KeyVault' -ListAvailable | Select-Object -First 1
+        if ($azureRmKeyVaultModule) { Write-Host "AzureRm.KeyVault Module is available in version $($azureRmKeyVaultModule.Version)" }
+        $azureRmProfileModule = Get-Module -name 'AzureRm.Profile' -ListAvailable | Select-Object -First 1
+        if ($azureRmProfileModule) { Write-Host "AzureRm.Profile Module is available in version $($azureRmProfileModule.Version)" }
+        if ($azureRmKeyVaultModule -and $azureRmProfileModule -and "$($azureRmKeyVaultModule.Version)" -eq "2.1.0" -and "$($azureRmProfileModule.Version)" -eq "2.1.0") {
+            Write-Host "Using AzureRM version 2.1.0"
+            $script:azureRm210 = $true
+            $azureRmKeyVaultModule | Import-Module -WarningAction SilentlyContinue
+            $azureRmProfileModule | Import-Module -WarningAction SilentlyContinue
+            Disable-AzureRmDataCollection -WarningAction SilentlyContinue
+        }
+        else {
+            Write-Host "Installing and importing Az.KeyVault." 
+            Install-Module 'Az.KeyVault' -Force
+            Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+    
+        }
     }
 }
 
@@ -74,18 +89,24 @@ function ConnectAzureKeyVaultIfNeeded {
         [string] $clientSecret 
     )
     try {
-        if ($AzKeyvaultConnectionExists) {
+        if ($script:keyvaultConnectionExists) {
             return
         }
 
-        Clear-AzContext -Scope Process
-        Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         $credential = New-Object PSCredential -argumentList $clientId, (ConvertTo-SecureString $clientSecret -AsPlainText -Force)
-        Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential | Out-Null
-        Set-AzContext -Subscription $subscriptionId -Tenant $tenantId | Out-Null
-        $AzKeyvaultConnectionExists = $true
-        Write-Host "Successfuly connected to Azure Key Vault."
-    }
+        if ($script:azureRm210) {
+            Add-AzureRmAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
+            Set-AzureRmContext -SubscriptionId $subscriptionId -Tenant $tenantId -WarningAction SilentlyContinue | Out-Null
+        }
+        else {
+            Clear-AzContext -Scope Process
+            Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
+            Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential | Out-Null
+            Set-AzContext -Subscription $subscriptionId -Tenant $tenantId | Out-Null
+        }
+        $script:keyvaultConnectionExists = $true
+        Write-Host "Successfully connected to Azure Key Vault."
+}
     catch {
         throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
     }
@@ -97,19 +118,26 @@ function GetKeyVaultSecret {
         [string] $keyVaultName
     )
 
-    if (-not $IsAzKeyvaultSet) {
+    if (-not $script:isKeyvaultSet) {
         return $null
     }
         
-    if (-not $AzKeyvaultConnectionExists) {
+    if (-not $script:keyvaultConnectionExists) {
             
         InstallKeyVaultModuleIfNeeded
             
-        $credentialsJson = Get-AzKeyVaultCredentials
+        $credentialsJson = Get-KeyVaultCredentials
         ConnectAzureKeyVaultIfNeeded -subscriptionId $credentialsJson.subscriptionId -tenantId $credentialsJson.tenantId -clientId $credentialsJson.clientId -clientSecret $credentialsJson.clientSecret
     }
 
-    $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret 
+    $value = ""
+    if ($script:azureRm210) {
+        $keyVaultSecret = Get-AzureKeyVaultSecret -VaultName $keyVaultName -Name $secret -ErrorAction SilentlyContinue
+    }
+    else {
+        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret 
+    }
+
     if ($keyVaultSecret) {
         $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
         MaskValueInLog -value $value
@@ -125,18 +153,20 @@ function GetSecret {
         [string] $keyVaultName
     )
 
-    Write-Host "Try get the secret($secret) from the github environment."
+    Write-Host "Trying to get the secret($secret) from the github environment."
     $value = GetGithubSecret -secretName $secret
     if ($value) {
         Write-Host "Secret($secret) was retrieved from the github environment."
         return $value
     }
 
-    Write-Host "Try get the secret($secret) from Key Vault ($keyVaultName)."
-    $value = GetKeyVaultSecret -secretName $secret -keyVaultName $keyVaultName
-    if ($value) {
-        Write-Host "Secret($secret) was retrieved from the Key Vault."
-        return $value
+    if ($keyVaultName) {
+        Write-Host "Trying to get the secret($secret) from Key Vault ($keyVaultName)."
+        $value = GetKeyVaultSecret -secretName $secret -keyVaultName $keyVaultName
+        if ($value) {
+            Write-Host "Secret($secret) was retrieved from the Key Vault."
+            return $value
+        }
     }
 
     Write-Host  "Could not find secret $secret in Github secrets or Azure Key Vault."

@@ -7,8 +7,10 @@ Param(
     [string] $parentTelemetryScope, 
     [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $false)]
     [string] $telemetryEventId,    
+    [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
+    [string] $project = '.',
     [ValidateSet("PTE", "AppSource App" , "Test App")]
-    [Parameter(HelpMessage = "Type of app to add (Per Tenant Extension, AppSource App, Test App)", Mandatory = $true)]
+    [Parameter(HelpMessage = "Type of app to add (PTE, AppSource App, Test App)", Mandatory = $true)]
     [string] $type,
     [Parameter(HelpMessage = "App Name", Mandatory = $true)]
     [string] $name,
@@ -47,7 +49,13 @@ try {
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
 
+    $repoBaseFolder = Get-Location
+
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+
+    CheckAndCreateProjectFolder -project $project
     $baseFolder = Get-Location
+
     $orgfolderName = $name.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
     $folderName = GetUniqueFolderName -baseFolder $baseFolder -folderName $orgfolderName
     if ($folderName -ne $orgfolderName) {
@@ -57,7 +65,7 @@ try {
     # Modify .github\go\settings.json
     try {
         $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
-        $SettingsJson = Get-Content $settingsJsonFile | ConvertFrom-Json
+        $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
         if ($type -eq "Test App") {
             if ($SettingsJson.testFolders -notcontains $foldername) {
                 $SettingsJson.testFolders += @($folderName)
@@ -68,7 +76,7 @@ try {
                 $SettingsJson.appFolders += @($folderName)
             }
         }
-        $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile
+        $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
     }
     catch {
         throw "A malformed $ALGoSettingsFile is encountered. Error: $($_.Exception.Message)"
@@ -87,6 +95,8 @@ try {
     }
 
     Update-WorkSpaces -baseFolder $baseFolder -appName $folderName
+
+    Set-Location $repoBaseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch
 
     TrackTrace -telemetryScope $telemetryScope
@@ -94,7 +104,10 @@ try {
 }
 catch {
     OutputError -message "Adding a new app failed due to $($_.Exception.Message)"
+<<<<<<< HEAD
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+=======
+>>>>>>> 21f043cec1898188646c37dca69594fc2d39d5af
 }
 finally {
     # Cleanup
@@ -103,4 +116,8 @@ finally {
         Remove-Item $bcContainerHelperPath -Recurse
     }
     catch {}
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 21f043cec1898188646c37dca69594fc2d39d5af

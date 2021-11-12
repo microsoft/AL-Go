@@ -197,7 +197,7 @@ function Expand-7zipArchive {
 function DownloadAndImportBcContainerHelper {
     Param(
         [string] $version = "dev",
-        [switch] $exportTelemetryFunctions = $true
+        [string] $baseFolder = ""
     )
 
     Write-Host "Downloading BcContainerHelper $version version"
@@ -216,8 +216,17 @@ function DownloadAndImportBcContainerHelper {
     }
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
+
+    $params = @{ "ExportTelemetryFunctions" = $true }
+    if ($baseFolder) {
+        $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
+        if (-not (Test-Path $repoSettingsPath)) {
+            $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
+        }
+        $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
+    }
     $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
-    . $BcContainerHelperPath -ExportTelemetryFunctions:$exportTelemetryFunctions
+    . $BcContainerHelperPath @params
     $tempName
 }
 
@@ -335,9 +344,7 @@ function ReadSettings {
         "templateUrl"                            = ""
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
-        "MicrosoftTelemetryConnectionString"     = "InstrumentationKey=b503f4de-5674-4d35-8b3e-df9e815e9473;IngestionEndpoint=https://westus2-2.in.applicationinsights.azure.com/"
-        "PartnerTelemetryConnectionString"       = "InstrumentationKey=904e7f11-fb59-429e-b5a8-53e1a9143c08;IngestionEndpoint=https://westus2-2.in.applicationinsights.azure.com/"
-        "UseExtendedTelemetry"                   = $false
+        "githubRunner"                           = "windows-latest"
     }
 
     $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.setting.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
@@ -346,7 +353,7 @@ function ReadSettings {
         if (Test-Path $settingsPath) {
             try {
                 Write-Host "Reading $settingsFile"
-                $settingsJson = Get-Content $settingsPath | ConvertFrom-Json
+                $settingsJson = Get-Content $settingsPath -Encoding UTF8 | ConvertFrom-Json
        
                 # check settingsJson.version and do modifications if needed
          
@@ -366,7 +373,6 @@ function AnalyzeRepo {
         [hashTable] $settings,
         [string] $baseFolder,
         [string] $insiderSasToken,
-        [string] $licenseFileUrl,
         [switch] $doNotCheckArtifactSetting
     )
 
@@ -509,7 +515,7 @@ function AnalyzeRepo {
             else {
                 $dependencies.Add("$folderName", @())
                 try {
-                    $appJson = Get-Content $appJsonFile | ConvertFrom-Json
+                    $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
                     if ($appJson.PSObject.Properties.Name -eq 'Dependencies') {
                         $appJson.dependencies | ForEach-Object {
                             if ($_.PSObject.Properties.Name -eq "AppId") {
@@ -583,7 +589,6 @@ function AnalyzeRepo {
     }
     if (-not $settings.appFolders) {
         OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile"
-        exit
     }
 
     $settings
@@ -934,13 +939,6 @@ function CreateDevEnv {
         if ($kind -eq "local") {
             $params += @{
                 "insiderSasToken" = $insiderSasToken
-                "licenseFileUrl" = $LicenseFileUrl
-            }
-            if ($settings.type -eq "AppSource App" ) {
-                if ($licenseFileUrl -eq "") {
-                    OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-                    exit
-                }
             }
         }
         elseif ($kind -eq "cloud") {
@@ -949,17 +947,20 @@ function CreateDevEnv {
             }
         }
         $repo = AnalyzeRepo @params
-    
-        if (-not $repo.appFolders) {
+        if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
+            Write-Host "Repository is empty, exiting"
             exit
         }
-    
+
+        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
+            if ($licenseFileUrl -eq "") {
+                OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
+                exit
+            }
+        }
+
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
-    
-        if (-not $repo.appFolders) {
-            exit
-        }
     
         $buildArtifactFolder = Join-Path $baseFolder "output"
         if (Test-Path $buildArtifactFolder) {
@@ -1114,4 +1115,43 @@ function ConvertTo-HashTable() {
         $object.PSObject.Properties | Foreach { $ht[$_.Name] = $_.Value }
     }
     $ht
+}
+
+function CheckAndCreateProjectFolder {
+    Param(
+        [string] $project
+    )
+
+    if (-not $project) { $project -eq "." }
+    if ($project -ne ".") {
+        if (Test-Path $ALGoSettingsFile) {
+            Write-Host "Reading $ALGoSettingsFile"
+            $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
+            if ($settingsJson.appFolders.Count -eq 0 -and $settingsJson.testFolders.Count -eq 0) {
+                OutputWarning "Converting the repository to a multi-project repository as no other apps have been added previously."
+                New-Item $project -ItemType Directory | Out-Null
+                Move-Item -path $ALGoFolder -Destination $project
+                Set-Location $project
+            }
+            else {
+                throw "Repository is setup for a single project, cannot add a project. Move all appFolders, testFolders and the .AL-Go folder to a subdirectory in order to convert to a multi-project repository."
+            }
+        }
+        else {
+            if (!(Test-Path $project)) {
+                OutputWarning "Project folder doesn't exist, creating a new project folder and a default settings file with type PTE and country us. Please modify if needed."
+                New-Item -Path (Join-Path $project $ALGoFolder) -ItemType Directory | Out-Null
+                Set-Location $project
+                [ordered]@{
+                    "type" = "PTE"
+                    "country" = "us"
+                    "appFolders" = @()
+                    "testFolders" = @()
+                } | ConvertTo-Json | Set-Content $ALGoSettingsFile -Encoding UTF8
+            }
+            else {
+                Set-Location $project
+            }
+        }
+    }
 }

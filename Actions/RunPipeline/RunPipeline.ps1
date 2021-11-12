@@ -19,8 +19,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
 . (Join-Path $PSScriptRoot "..\Helpers\AL-Go-Helper.ps1")
-$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
-import-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACEimport-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
 
 $telemetryScope = CreateScope -eventId $telemetryEventId -parentTelemetryScope $parentTelemetryScope
 
@@ -41,7 +40,7 @@ try {
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePw','KeyVaultCertificateUrl','KeyVaultCertificatePw','KeyVaultClientId' | ForEach-Object {
+    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId' | ForEach-Object {
         if ($secrets.ContainsKey($_)) {
             $value = $secrets."$_"
         }
@@ -55,17 +54,17 @@ try {
     $bcContainerHelperConfig.TelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
     $bcContainerHelperConfig.UseExtendedTelemetry = $true
 
+    $repo = AnalyzeRepo -settings $settings -baseFolder $baseFolder -insiderSasToken $insiderSasToken
+    if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
+        Write-Host "Repository is empty, exiting"
+        exit
+    }
+
     if ($settings.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
             OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             exit
         }
-    }
-
-    $repo = AnalyzeRepo -settings $settings -baseFolder $baseFolder -insiderSasToken $insiderSasToken -licenseFileUrl $licenseFileUrl
-
-    if (-not $repo.appFolders) {
-        exit
     }
 
     $artifact = $repo.artifact
@@ -85,16 +84,16 @@ try {
 
     # Check if insidersastoken is used (and defined)
 
-    if ($CodeSignCertificateUrl -and $CodeSignCertificatePw) {
+    if ($CodeSignCertificateUrl -and $CodeSignCertificatePassword) {
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
-            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePw -AsPlainText -Force
+            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
         }
     }
-    if ($KeyVaultCertificateUrl -and $KeyVaultCertificatePw -and $KeyVaultClientId) {
+    if ($KeyVaultCertificateUrl -and $KeyVaultCertificatePassword -and $KeyVaultClientId) {
         $runAlPipelineParams += @{ 
             "KeyVaultCertPfxFile" = $KeyVaultCertificateUrl
-            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePw -AsPlainText -Force
+            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword -AsPlainText -Force
             "keyVaultClientId" = $keyVaultClientId
         }
     }
@@ -108,7 +107,7 @@ try {
             $artifactsFolder = Join-Path $baseFolder "artifacts"
             New-Item $artifactsFolder -ItemType Directory | Out-Null
             DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder
-            $previousApps += @((Get-ChildItem -Path $artifactsFolder).FullName)
+            $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
         }
         else {
             OutputWarning -message "No previous release found"
@@ -156,6 +155,7 @@ try {
         }
     }
     
+    Write-Host "Invoke Run-AlPipeline"
     Run-AlPipeline @runAlPipelineParams `
         -pipelinename $workflowName `
         -containerName $containerName `

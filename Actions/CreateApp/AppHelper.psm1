@@ -39,15 +39,15 @@ function UpdateManifest
 ) 
 {
     #Modify app.json
-    $appJson = Get-Content "$($alTemplatePath)\app.json" | ConvertFrom-Json
+    $appJson = Get-Content "$($alTemplatePath)\app.json" -Encoding UTF8 | ConvertFrom-Json
 
     $appJson.id = [Guid]::NewGuid().ToString()
     $appJson.Publisher = $publisher
     $appJson.Name = $name
     $appJson.Version = $version
-    $appJson.idRanges[0].from = $idrange[0]
-    $appJson.idRanges[0].to = $idrange[1]
-    $appJson | ConvertTo-Json -depth 99 | Set-Content $appJsonFile
+    $appJson.idRanges[0].from = [int]$idrange[0]
+    $appJson.idRanges[0].to = [int]$idrange[1]
+    $appJson | ConvertTo-Json -depth 99 | Set-Content $appJsonFile -Encoding UTF8
 }
 
 function UpdateALFile 
@@ -57,9 +57,9 @@ function UpdateALFile
     [string] $startId
 ) 
 {
-    $al = Get-Content -Raw -path "$($alTemplatePath)\$alFileName"
+    $al = Get-Content -Encoding UTF8 -Raw -path "$($alTemplatePath)\$alFileName"
     $al = $al.Replace('50100', $startId)
-    Set-Content -Path "$($destinationFolder)\$($alFileName)" -value $al
+    Set-Content -Path "$($destinationFolder)\$($alFileName)" -value $al -Encoding UTF8
 }
 
 <#
@@ -118,11 +118,11 @@ function Update-WorkSpaces
             try {
                 $workspaceFileName = $_.Name
                 $workspaceFile = $_.FullName
-                $workspace = Get-Content $workspaceFile | ConvertFrom-Json
+                $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
                     $workspace.folders += @(@{ "path" = $appName })
                 }
-                $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile
+                $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile -Encoding UTF8
             }
             catch {
                 Throw "Updating the workspace file $workspaceFileName failed due to: $($_.Exception.Message)"

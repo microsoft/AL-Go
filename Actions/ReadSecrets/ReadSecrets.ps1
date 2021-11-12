@@ -27,7 +27,7 @@ try {
     $outSettings = $settings
     $keyVaultName = $settings.KeyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-        $credentialsJson = Get-AzKeyVaultCredentials | ConvertTo-HashTable
+        $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
         $credentialsJson.Keys | ForEach-Object { MaskValueInLog -value $credentialsJson."$_" }
         if ($credentialsJson.ContainsKey("KeyVaultName")) {
             $keyVaultName = $credentialsJson.KeyVaultName
@@ -56,7 +56,7 @@ try {
             if ($value) {
                 Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
                 $outSecrets += @{ "$envVar" = $value }
-                Write-Host "Secret $envVar successfully read from GitHub Secret $secret"
+                Write-Host "$envVar successfully read from secret $secret"
                 $secretsCollection.Remove($_)
             }
         }

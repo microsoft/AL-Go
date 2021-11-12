@@ -4,5 +4,6 @@
     "perTenantExtensionRepo": "AL-Go-PTE",
     "appSourceAppRepo": "AL-Go-AppSource",
     "branch": "main",
-    "localFolder": "github\\microsoft"
+    "localFolder": "",
+    "baseFolder": "C:\\src\\github\\microsoft"
 }

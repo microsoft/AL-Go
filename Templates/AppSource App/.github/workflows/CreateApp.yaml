@@ -3,6 +3,10 @@ name: Create a new app
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects
+        required: false
+        default: '.'
       name:
         description: Name 
         required: true      
@@ -49,6 +53,7 @@ jobs:
         uses: microsoft/AL-Go/CreateApp@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
+          project: ${{ github.event.inputs.project }}
           type: ${{ env.type }}
           publisher: ${{ github.event.inputs.publisher }}
           name: ${{ github.event.inputs.name }}

@@ -3,6 +3,10 @@ name: Add existing app or test app
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects
+        required: false
+        default: '.'
       url:
         description: Direct Download Url of .app or .zip file
         required: true
@@ -32,6 +36,7 @@ jobs:
       - name: Add existing app
         uses: microsoft/AL-Go/AddExistingApp@main
         with:
+          project: ${{ github.event.inputs.project }}
           url: ${{ github.event.inputs.url }}
           directCommit: ${{ github.event.inputs.directCommit }}
 

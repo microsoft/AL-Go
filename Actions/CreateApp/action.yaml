@@ -16,8 +16,12 @@ inputs:
     description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: ''        
+  project:
+    description: Project name if the repository is setup for multiple projects
+    required: false
+    default: '.'
   type:
-    description: Type of app to add (Per Tenant Extension, AppSource App, Test App)
+    description: Type of app to add (PTE, AppSource App, Test App)
     required: true
   name:
     description: App Name
@@ -35,7 +39,11 @@ inputs:
 runs:
   using: composite
   steps:
+<<<<<<< HEAD
     - run: ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -type '${{ inputs.type }}' -name '${{ inputs.name }}' -publisher '${{ inputs.publisher }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0072'
+=======
+    - run: ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -type '${{ inputs.type }}' -name '${{ inputs.name }}' -publisher '${{ inputs.publisher }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+>>>>>>> 21f043cec1898188646c37dca69594fc2d39d5af
       shell: PowerShell
 branding:
   icon: terminal

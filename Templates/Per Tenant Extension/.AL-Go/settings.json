@@ -1,11 +1,8 @@
 {
-    "type":  "PTE",
-    "country":  "us",
-    "KeyVaultName":  "",
-    "appFolders":  [
-                       "PTE1"
-                   ],
-    "testFolders":  [
-
-                    ]
+    "type": "PTE",
+    "country": "us",
+    "appFolders": [
+    ],
+    "testFolders": [
+    ]
 }

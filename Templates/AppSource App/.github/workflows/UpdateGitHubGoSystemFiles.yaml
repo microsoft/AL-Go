@@ -3,6 +3,10 @@ name: Update AL-Go System Files
 on:
   workflow_dispatch:
     inputs:
+      templateUrl:
+        description: Template Repository URL (only if a change is needed)
+        required: false
+        default: ''
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
@@ -46,6 +50,17 @@ jobs:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           settingsJson: ${{ env.Settings }}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+
+      - name: Override TemplateUrl
+        run: |
+          $templateUrl = '${{ github.event.inputs.templateUrl }}'
+          if ($templateUrl) {
+            Write-Host "Using Template Url: $templateUrl"
+            $templateBranch = "$templateUrl@".Split('@')[1]
+            $templateUrl = "$templateUrl".Split('@')[0]
+            Add-Content -Path $env:GITHUB_ENV -Value "TemplateUrl=$templateUrl"
+            Add-Content -Path $env:GITHUB_ENV -Value "TemplateBranch=$templateBranch"
+          }
 
       - name: Update AL-Go system files
         uses: microsoft/AL-Go/CheckForUpdates@main
