@@ -20,12 +20,11 @@ jobs:
     runs-on: windows-latest
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
-      correlationId: ${{ steps.init.outputs.correlationId }}  
     steps:
       - id: init
         uses: microsoft/AL-Go/InitWorkflow@main
         with: 
-          workflowName : "DO0096"
+          eventId : "DO0096"
 
   update:
     runs-on: windows-latest
@@ -35,5 +34,18 @@ jobs:
       - name: Increment Version Number
         uses: microsoft/AL-Go/IncrementVersionNumber@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           versionNumber: ${{ github.event.inputs.versionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}
+            
+  postProcess :
+    runs-on: windows-latest
+    needs : [ initialization , update ]
+    steps:
+      - name: Finalizing the workflow
+        id : postProcess
+        uses: microsoft/AL-Go/workflowpostprocess@main
+        with: 
+          eventId : "DO0096"
+          telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}                   
+

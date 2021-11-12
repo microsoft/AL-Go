@@ -25,12 +25,11 @@ jobs:
     runs-on: windows-latest
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
-      correlationId: ${{ steps.init.outputs.correlationId }}  
     steps:
       - id: init
         uses: microsoft/AL-Go/InitWorkflow@main
         with: 
-          workflowName : "DO0092"
+          eventId : "DO0092"
 
   createApp :
     runs-on: windows-latest
@@ -42,7 +41,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
         with:
-          parentCorrelationId: ${{ needs.initialization.outputs.correlationId }}
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           get: type
 
       - name: Creating a new app
@@ -53,7 +52,7 @@ jobs:
           publisher: ${{ github.event.inputs.publisher }}
           idrange: ${{ github.event.inputs.idrange }}
           directCommit: ${{ github.event.inputs.directCommit }}
-          parentCorrelationId : ${{ needs.initialization.outputs.correlationId }}
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
 
   postProcess :
     runs-on: windows-latest
@@ -63,5 +62,5 @@ jobs:
         id : postProcess
         uses: microsoft/AL-Go/workflowpostprocess@main
         with: 
-          workflowName : "DO0092"
+          eventId : "DO0092"
           telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}

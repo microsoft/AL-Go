@@ -9,8 +9,8 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentCorrelationId:
-    description: Specifies the parent correlation Id for the Telemetry signal
+  parentTelemetryScope:
+    description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: ''    
   project:
@@ -33,7 +33,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}' -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0079'
+    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0079'
       id: readsettings
       shell: PowerShell
 branding:

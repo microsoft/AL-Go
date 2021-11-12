@@ -5,14 +5,14 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  parentCorrelationId:
-    description: Specifies the parent correlation Id for the Telemetry signal
+  parentTelemetryScope:
+    description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: '' 
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}' -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0077'
+    - run: ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0077'
       shell: PowerShell
 branding:
   icon: terminal

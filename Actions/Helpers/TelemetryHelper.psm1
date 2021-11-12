@@ -42,25 +42,24 @@ function SetTelemeteryConfiguration {
 function CreateScope {
     param (
         [string] $eventId,
-        [string] $parentCorrelationId,
+        [string] $parentTelemetryScope, 
         [hashtable] $parameters = @{}
     )
 
     SetTelemeteryConfiguration
     $signalName = $signals[$eventId] 
-
     if (-not $signalName) {
         throw "Invalid event id ($eventId) is enountered."
     }
 
-    $telemetryScope = InitTelemetryScope -name $signalName -eventId $eventId  -parameterValues @()  -includeParameters @()
-   
-   # todo it should be set it in the nav container helper
-    $telemetryScope["Emitted"] = $false
-
-    if ($parentCorrelationId) {
-        $telemetryScope["ParentId"] = $parentCorrelationId
+    if ($parentTelemetryScope) {
+        Write-Host "registering parent telemetery scope $parentTelemetryScope"
+        $telemetryScope = RegisterTelemetryScope $parentTelemetryScope
+        #AddTelemetryProperty -telemetryScope $telemetryScopeForeign -key "TestKeyForeign2" -value "TestValueForeign2"
     }
+
+    $telemetryScope = InitTelemetryScope -name $signalName -eventId $eventId  -parameterValues @()  -includeParameters @()
+    $telemetryScope["Emitted"] = $false
 
     return $telemetryScope
 }

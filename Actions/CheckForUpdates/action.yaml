@@ -13,8 +13,8 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentCorrelationId:
-    description: Specifies the parent correlation Id for the Telemetry signal
+  parentTelemetryScope:
+    description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: '' 
   settingsJson:
@@ -40,7 +40,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -settingsJson '${{ inputs.settingsJson }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0071'
+    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -settingsJson '${{ inputs.settingsJson }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0071'
       shell: PowerShell
 branding:
   icon: terminal

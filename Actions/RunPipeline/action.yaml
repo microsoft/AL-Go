@@ -9,8 +9,8 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentCorrelationId:
-    description: Specifies the parent correlation Id for the Telemetry signal
+  parentTelemetryScope:
+    description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: '' 
   project:
@@ -28,7 +28,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}' -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0080'
+    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0080'
       shell: PowerShell
 branding:
   icon: terminal

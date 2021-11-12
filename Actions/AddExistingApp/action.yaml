@@ -12,8 +12,8 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentCorrelationId:
-    description: Specifies the parent correlation Id for the Telemetry signal
+  parentTelemetryScope:
+    description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: ''       
   url:
@@ -26,7 +26,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/AddExistingApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -url '${{ inputs.url }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0070'
+    - run: ${{ github.action_path }}/AddExistingApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -url '${{ inputs.url }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0070'
       shell: PowerShell
 branding:
   icon: terminal

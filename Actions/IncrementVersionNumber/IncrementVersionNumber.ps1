@@ -3,8 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent correlation Id for the Telemetry signal", Mandatory = $false)]
-    [string] $parentCorrelationId,
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [string] $parentTelemetryScope, 
     [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $false)]
     [string] $telemetryEventId,
     [Parameter(HelpMessage = "New Version Number (Major.Minor)", Mandatory = $true)]
@@ -20,7 +20,7 @@ Set-StrictMode -Version 2.0
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
 import-module (Join-Path -path $PSScriptRoot -ChildPath "..\Helpers\TelemetryHelper.psm1" -Resolve)
 
-$telemetryScope = CreateScope -eventId $telemetryEventId -parentCorrelationId $parentCorrelationId 
+$telemetryScope = CreateScope -eventId $telemetryEventId -parentTelemetryScope $parentTelemetryScope
 
 try {
 

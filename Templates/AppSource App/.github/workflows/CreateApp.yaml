@@ -26,12 +26,11 @@ jobs:
     runs-on: windows-latest
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
-      correlationId: ${{ steps.init.outputs.correlationId }}  
     steps:
       - id: init
         uses: microsoft/AL-Go/InitWorkflow@main
         with: 
-          workflowName : "DO0092"
+          eventId : "DO0092"
 
   createApp:
     runs-on: windows-latest
@@ -49,6 +48,7 @@ jobs:
       - name: Creating a new app
         uses: microsoft/AL-Go/CreateApp@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           type: ${{ env.type }}
           publisher: ${{ github.event.inputs.publisher }}
           name: ${{ github.event.inputs.name }}
@@ -63,5 +63,5 @@ jobs:
         id : postProcess
         uses: microsoft/AL-Go/workflowpostprocess@main
         with: 
-          workflowName : "DO0092"
+          eventId : "DO0092"
           telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}

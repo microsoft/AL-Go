@@ -1,7 +1,7 @@
 name: PowerShell script
 author: Pooya Kharamesh
 inputs:
-  workflowName:
+  eventId:
       description: The name of the workflow
       required: false
   telemetryScope:
@@ -10,7 +10,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/PostProcess.ps1 -workflowName '${{ inputs.workflowName }}' -telemetryScopeJson '${{ inputs.telemetryScope }}'
+    - run: ${{ github.action_path }}/PostProcess.ps1 -eventId '${{ inputs.eventId }}' -telemetryScopeJson '${{ inputs.telemetryScope }}'
       shell: PowerShell
 branding:
   icon: terminal

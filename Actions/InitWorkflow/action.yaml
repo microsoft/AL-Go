@@ -1,15 +1,15 @@
 name: PowerShell script
 author: Pooya Kharamesh
 inputs:
-  workflowName:
-      description: The name of the workflow
+  eventId:
+      description: The event Id of the workflow
       required: false
 
 runs:
   using: composite
   steps:
     - id : initworkflow
-      run: ${{ github.action_path }}/InitWorkflow.ps1 -workflowName '${{ inputs.workflowName }}'
+      run: ${{ github.action_path }}/InitWorkflow.ps1 -eventId '${{ inputs.eventId }}'
       shell: PowerShell
 
 outputs:

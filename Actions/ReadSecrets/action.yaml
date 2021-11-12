@@ -12,14 +12,14 @@ inputs:
     description: Specifies if the values of secrets should be updated
     required: false
     default: 'N'
-  parentCorrelationId:
-    description: Specifies the parent correlation Id for the Telemetry signal
+  parentTelemetryScope:
+    description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: '' 
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settingsJson }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y') -parentCorrelationId '${{ inputs.parentCorrelationId }}' -telemetryEventId 'DO0078'
+    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settingsJson }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y') -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0078'
       shell: PowerShell
 branding:
   icon: terminal
