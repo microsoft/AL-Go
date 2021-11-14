@@ -64,6 +64,26 @@ jobs:
           }
           else {
             $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
+            Write-Host "Projects: $($projects -join ', ')"
+            if ($ENV:GITHUB_EVENT_NAME -ne "workflow_dispatch") {
+              $headers = @{             
+                "Authorization" = "token ${{ github.token }}"
+                "Accept" = "application/vnd.github.baptiste-preview+json"
+              }
+              if ($ENV:GITHUB_EVENT_NAME -eq "pull_request") {
+                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
+              }
+              else {
+                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.before }}...${{ github.event.after }}"
+              }
+              $response = Invoke-WebRequest -Headers $headers -UseBasicParsing -Method GET -Uri $url | ConvertFrom-Json
+              $filesChanged = @($response.files | ForEach-Object { $_.filename })
+              if ($filesChanged.Count -lt 250) {
+                $foldersChanged = @($filesChanged | ForEach-Object { $_.Split('/')[0] } | Select-Object -Unique)
+                $projects = @($projects | Where-Object { $foldersChanged -contains $_ })
+                Write-Host "Modified projects: $($projects -join ', ')"
+              }
+            }
           }
           if ($projects.Count -eq 1) {
             $projectsJSon = "[$($projects | ConvertTo-Json -compress)]"
