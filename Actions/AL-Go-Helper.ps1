@@ -345,6 +345,7 @@ function ReadSettings {
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
         "githubRunner"                           = "windows-latest"
+        "alwaysBuildAllProjects"                 = $false
     }
 
     $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.setting.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {

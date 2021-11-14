@@ -5,9 +5,7 @@ on:
     paths-ignore:
       - 'README.md'
       - '.github/**'
-    branches: 
-      - main
-      - 'releases/**'
+    branches: [ main ]
   pull_request:
     paths-ignore:
       - 'README.md'
@@ -49,7 +47,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          get: githubRunner
+          get: githubRunner,alwaysBuildAllProjects
 
       - name: Output settings
         id: OutputSettings
@@ -67,7 +65,7 @@ jobs:
           else {
             $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
             Write-Host "Projects: $($projects -join ', ')"
-            if ($ENV:GITHUB_EVENT_NAME -ne "workflow_dispatch") {
+            if (!($ENV:GITHUB_EVENT_NAME -eq "workflow_dispatch" -or "$ENV:alwaysBuildAllProjects" -eq "true")) {
               $headers = @{             
                 "Authorization" = "token ${{ github.token }}"
                 "Accept" = "application/vnd.github.baptiste-preview+json"
