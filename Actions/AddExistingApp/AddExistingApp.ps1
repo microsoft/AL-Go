@@ -76,11 +76,6 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
 try {
-<<<<<<< HEAD
-=======
-    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
-
->>>>>>> 21f043cec1898188646c37dca69594fc2d39d5af
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     $repoBaseFolder = Get-Location

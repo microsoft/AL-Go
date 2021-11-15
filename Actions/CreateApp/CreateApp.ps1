@@ -104,10 +104,7 @@ try {
 }
 catch {
     OutputError -message "Adding a new app failed due to $($_.Exception.Message)"
-<<<<<<< HEAD
     TrackException -telemetryScope $telemetryScope -errorRecord $_
-=======
->>>>>>> 21f043cec1898188646c37dca69594fc2d39d5af
 }
 finally {
     # Cleanup
@@ -116,8 +113,4 @@ finally {
         Remove-Item $bcContainerHelperPath -Recurse
     }
     catch {}
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 21f043cec1898188646c37dca69594fc2d39d5af

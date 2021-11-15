@@ -1,18 +1,4 @@
 {
-<<<<<<< HEAD
-    "folders":  [
-                    {
-                        "path":  ".github\\AL-Go"
-                    },
-                    {
-                        "path":  "PTE1"
-                    }
-                ],
-    "settings":  {
-
-                 }
-}
-=======
     "folders": [
         {
             "path": ".AL-Go"
@@ -20,4 +6,3 @@
     ],
     "settings": {}
 }
->>>>>>> 21f043cec1898188646c37dca69594fc2d39d5af
