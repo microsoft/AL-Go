@@ -32,7 +32,7 @@ defaults:
 
 jobs:
   initialization :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
@@ -42,7 +42,7 @@ jobs:
           eventId : "DO0094"
 
   CreateRelease:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ]
     outputs:
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
@@ -112,7 +112,7 @@ jobs:
           body: ${{ steps.createreleasenotes.outputs.releaseNotes }}
 
   UploadArtifacts:
-    runs-on: windows-latest 
+    runs-on: [ windows-latest ] 
     needs: [ CreateRelease ]
     strategy:
       matrix: ${{ fromJson(needs.CreateRelease.outputs.artifacts) }}
@@ -138,7 +138,7 @@ jobs:
           asset_content_type: application/zip
 
   postProcess :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization , CreateRelease, UploadArtifacts ]
     steps:
       - name: Finalizing the workflow

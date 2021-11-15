@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   initialization :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
@@ -30,7 +30,7 @@ jobs:
           eventId : "DO0091"
 
   CheckForUpdates:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ]
     steps:
       - name: Checkout
@@ -49,7 +49,7 @@ jobs:
           templateUrl: ${{ env.TemplateUrl }}
           templateBranch: ${{ env.TemplateBranch }}
   Analyze:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ]
     outputs:
       projects: ${{ steps.Projects.outputs.projects }}
@@ -203,7 +203,7 @@ jobs:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           Project: ${{ matrix.project }}
   Deploy:
-    runs-on: windows-latest 
+    runs-on: [ windows-latest ] 
     needs: [ Analyze, Build ]
     if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
     strategy:
@@ -271,7 +271,7 @@ jobs:
           artifacts: '${{ github.workspace }}\artifacts'
 
   postProcess :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ,  Analyze, Build , Deploy ]
     steps:
       - name: Finalizing the workflow

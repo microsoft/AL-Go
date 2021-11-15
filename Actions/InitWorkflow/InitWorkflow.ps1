@@ -1,5 +1,5 @@
 Param(
-    [Parameter(HelpMessage = "Name of workflow initiating the workflow", Mandatory = $false)]
+    [Parameter(HelpMessage = "The event id of the initiating workflow", Mandatory = $true)]
     [string] $eventId 
 )
 $ErrorActionPreference = "Stop"

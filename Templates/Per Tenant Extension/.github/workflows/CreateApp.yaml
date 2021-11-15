@@ -26,7 +26,7 @@ defaults:
     shell: PowerShell
 jobs:
   initialization :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
@@ -36,7 +36,7 @@ jobs:
           eventId : "DO0092"
 
   createApp :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ]
     steps:
       - name: Checkout
@@ -60,7 +60,7 @@ jobs:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
 
   postProcess :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization , createApp ]
     steps:
       - name: Finalizing the workflow

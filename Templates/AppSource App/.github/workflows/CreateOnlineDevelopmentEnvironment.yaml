@@ -21,7 +21,7 @@ defaults:
 
 jobs:
   initialization :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
@@ -31,7 +31,7 @@ jobs:
           eventId : "DO0093"
 
   CreateEnvironment:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ]
 
     steps:
@@ -77,7 +77,7 @@ jobs:
           adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }} 
 
   postProcess :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ,  CreateEnvironment ]
     steps:
       - name: Finalizing the workflow

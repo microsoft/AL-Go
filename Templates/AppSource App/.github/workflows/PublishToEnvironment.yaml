@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   initialization :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
@@ -28,7 +28,7 @@ jobs:
           eventId : "DO0097"
 
   Environments:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ]
 
     outputs:
@@ -57,7 +57,7 @@ jobs:
           Write-Host "set-output name=environmentCount::$($environments.Count)"
         
   Deploy:
-    runs-on: windows-latest 
+    runs-on: [ windows-latest ] 
     needs: [ Analyze ]
     if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
     strategy:
@@ -120,7 +120,7 @@ jobs:
           artifacts: ${{ github.event.inputs.appVersion }}
 
   postProcess :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization , Environments , Deploy ]
     steps:
       - name: Finalizing the workflow

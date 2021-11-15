@@ -29,7 +29,7 @@ defaults:
 
 jobs:
   initialization :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     outputs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
@@ -39,7 +39,7 @@ jobs:
           eventId : "DO0095"
 
   update:
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization ]
 
     steps:
@@ -55,7 +55,7 @@ jobs:
           directCommit: ${{ github.event.inputs.directCommit }}
 
   postProcess :
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     needs : [ initialization , update ]
     steps:
       - name: Finalizing the workflow
