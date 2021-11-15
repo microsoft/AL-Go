@@ -2,8 +2,8 @@ name: PowerShell script
 author: Pooya Kharamesh
 inputs:
   eventId:
-      description: The name of the workflow
-      required: false
+      description: The event id of the workflow
+      required: true
   telemetryScope:
       description: Telemetry scope generated during the workflow initialization
       required: false

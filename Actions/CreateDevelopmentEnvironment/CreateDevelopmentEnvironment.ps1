@@ -5,7 +5,7 @@ Param(
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScope, 
-    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $true)]
     [string] $telemetryEventId,     
     [Parameter(HelpMessage = "Name of the online environment", Mandatory = $true)]
     [string] $environmentName,

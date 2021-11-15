@@ -3,7 +3,7 @@ author: Pooya Kharamesh
 inputs:
   eventId:
       description: The event Id of the workflow
-      required: false
+      required: true
 
 runs:
   using: composite
