@@ -3,6 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
+    [string] $parentTelemetryScope, 
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
     [string] $project = '.',
     [ValidateSet("PTE", "AppSource App" , "Test App")]
@@ -21,10 +23,14 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-try {
-    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "AppHelper.psm1" -Resolve)
+. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
+$telemetryScope = CreateScope -eventId 'DO0072' -parentTelemetryScope $parentTelemetryScope
+
+try {
+    import-module (Join-Path -path $PSScriptRoot -ChildPath "AppHelper.psm1" -Resolve)
     Write-Host "Template type : $type"
 
     # Check parameters
@@ -90,9 +96,13 @@ try {
 
     Set-Location $repoBaseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch
+
+    TrackTrace -telemetryScope $telemetryScope
+
 }
 catch {
     OutputError -message "Adding a new app failed due to $($_.Exception.Message)"
+    TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
     # Cleanup

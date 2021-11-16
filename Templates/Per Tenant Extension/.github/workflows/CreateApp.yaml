@@ -24,11 +24,20 @@ on:
 defaults:
   run:
     shell: PowerShell
-
 jobs:
-  update:
+  initialization :
     runs-on: [ windows-latest ]
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          eventId : "DO0092"
 
+  createApp :
+    runs-on: [ windows-latest ]
+    needs : [ initialization ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -36,6 +45,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go/ReadSettings@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           get: type
 
       - name: Creating a new app
@@ -47,3 +57,15 @@ jobs:
           publisher: ${{ github.event.inputs.publisher }}
           idrange: ${{ github.event.inputs.idrange }}
           directCommit: ${{ github.event.inputs.directCommit }}
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
+
+  postProcess :
+    runs-on: [ windows-latest ]
+    needs : [ initialization , createApp ]
+    steps:
+      - name: Finalizing the workflow
+        id : postProcess
+        uses: microsoft/AL-Go/workflowpostprocess@main
+        with: 
+          eventId : "DO0092"
+          telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}

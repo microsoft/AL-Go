@@ -3,6 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
+    [string] $parentTelemetryScope, 
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
@@ -14,13 +16,14 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
+. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
+$BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE 
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+
+$telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScope $parentTelemetryScope
+
 try {
     $runAlPipelineParams = @{}
-
-    . (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
-
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
-
     $environment = 'GitHubActions'
     if ($project  -eq ".") { $project = "" }
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
@@ -45,9 +48,6 @@ try {
         }
         Set-Variable -Name $_ -Value $value
     }
-
-    $bcContainerHelperConfig.TelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
-    $bcContainerHelperConfig.UseExtendedTelemetry = $true
 
     $repo = AnalyzeRepo -settings $settings -baseFolder $baseFolder -insiderSasToken $insiderSasToken
     if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
@@ -191,9 +191,12 @@ try {
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
+
+        TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message $_.Exception.Message
+    TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
     # Cleanup

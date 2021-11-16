@@ -5,10 +5,13 @@ inputs:
     description: Project folder
     required: false
     default: '.'
+  parentTelemetryScope:
+    description: Specifies the parent telemetry scope for the Telemetry signal
+    required: true
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}'
+    - run: ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope }}'
       shell: PowerShell
 branding:
   icon: terminal

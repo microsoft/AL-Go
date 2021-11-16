@@ -1,0 +1,17 @@
+name: PowerShell script
+author: Pooya Kharamesh
+inputs:
+  eventId:
+      description: The event id of the workflow
+      required: true
+  telemetryScope:
+      description: Telemetry scope generated during the workflow initialization
+      required: false
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/PostProcess.ps1 -eventId '${{ inputs.eventId }}' -telemetryScopeJson '${{ inputs.telemetryScope }}'
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue
