@@ -35,8 +35,8 @@ function SetTelemeteryConfiguration {
     $settings = ReadSettings -baseFolder $baseFolder -userName $userName
     
     $bcContainerHelperConfig.MicrosoftTelemetryConnectionString = $settings["MicrosoftTelemetryConnectionString"] 
-    $bcContainerHelperConfig.TelemetryConnectionString = $settings["TelemetryConnectionString"] 
-    $bcContainerHelperConfig.UseExtendedTelemetry = $settings["UseExtendedTelemetry"]
+    $bcContainerHelperConfig.PartnerTelemetryConnectionString = $settings["PartnerTelemetryConnectionString"] 
+    $bcContainerHelperConfig.SendExtendedTelemetryToMicrosoft = $settings["SendExtendedTelemetryToMicrosoft"]
 }
 
 function CreateScope {

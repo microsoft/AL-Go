@@ -27,7 +27,7 @@ jobs:
         with: 
           eventId : "DO0097"
 
-  Environments:
+  Analyze:
     runs-on: [ windows-latest ]
     needs : [ initialization ]
     outputs:
