@@ -3,10 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
     [string] $parentTelemetryScope, 
-    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $true)]
-    [string] $telemetryEventId,    
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
     [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
@@ -22,7 +20,7 @@ Set-StrictMode -Version 2.0
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
 import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
-$telemetryScope = CreateScope -eventId $telemetryEventId -parentTelemetryScope $parentTelemetryScope
+$telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScope $parentTelemetryScope
 
 try {
     if ($project  -eq ".") { $project = "" }
@@ -59,6 +57,7 @@ try {
         $outSettings += @{ "$setting" = $settings."$setting" }
         Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settings."$setting")"
     }
+
     $outSettingsJson = $outSettings | ConvertTo-Json -Compress
     Write-Host "::set-output name=SettingsJson::$outSettingsJson"
     Write-Host "set-output name=SettingsJson::$outSettingsJson"
@@ -67,8 +66,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message $_.Exception.Message
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    OutputError -message $_.Exception.Message
     exit
 }
 finally {

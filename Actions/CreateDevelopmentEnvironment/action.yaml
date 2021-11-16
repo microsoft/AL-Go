@@ -14,8 +14,7 @@ inputs:
     default: ${{ github.token }}
   parentTelemetryScope:
     description: Specifies the parent telemetry scope for the Telemetry signal
-    required: false
-    default: '' 
+    required: true
   environmentName:
     description: Name of the online environment
     required: true
@@ -34,7 +33,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -environmentName '${{ inputs.environmentName }}' -adminCenterApiCredentials '${{ inputs.adminCenterApiCredentials }}' -reUseExistingEnvironment ('${{ inputs.reUseExistingEnvironment }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0073'
+    - run: ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope }}' -environmentName '${{ inputs.environmentName }}' -adminCenterApiCredentials '${{ inputs.adminCenterApiCredentials }}' -reUseExistingEnvironment ('${{ inputs.reUseExistingEnvironment }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

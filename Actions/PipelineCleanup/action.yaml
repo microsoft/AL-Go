@@ -7,12 +7,11 @@ inputs:
     default: '.'
   parentTelemetryScope:
     description: Specifies the parent telemetry scope for the Telemetry signal
-    required: false
-    default: '' 
+    required: true
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0077'
+    - run: ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope }}'
       shell: PowerShell
 branding:
   icon: terminal

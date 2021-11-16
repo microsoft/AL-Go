@@ -11,8 +11,7 @@ inputs:
     default: ${{ github.token }}
   parentTelemetryScope:
     description: Specifies the parent telemetry scope for the Telemetry signal
-    required: false
-    default: '' 
+    required: true
   project:
     description: Project folder
     required: false
@@ -28,7 +27,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0080'
+    - run: ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}'
       shell: PowerShell
 branding:
   icon: terminal

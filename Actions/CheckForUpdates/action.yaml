@@ -15,8 +15,7 @@ inputs:
     default: ${{ github.token }}
   parentTelemetryScope:
     description: Specifies the parent telemetry scope for the Telemetry signal
-    required: false
-    default: '' 
+    required: true
   settingsJson:
     description: Settings from template repository in compressed Json format
     required: false
@@ -40,7 +39,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -settingsJson '${{ inputs.settingsJson }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') -parentTelemetryScope '${{ inputs.parentTelemetryScope}}' -telemetryEventId 'DO0071'
+    - run: ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope }}' -settingsJson '${{ inputs.settingsJson }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

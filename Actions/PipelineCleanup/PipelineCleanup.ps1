@@ -1,10 +1,8 @@
 Param(
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScope, 
-    [Parameter(HelpMessage = "Specifies the event Id in the telemetry", Mandatory = $true)]
-    [string] $telemetryEventId,
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
-    [string] $project = "."
+    [string] $project = ".",
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
+    [string] $parentTelemetryScope
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,7 +11,7 @@ $ErrorActionPreference = "Stop"
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
 import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
-$telemetryScope = CreateScope -eventId $telemetryEventId -parentTelemetryScope $parentTelemetryScope
+$telemetryScope = CreateScope -eventId 'DO0077' -parentTelemetryScope $parentTelemetryScope
 
 if ($project  -eq ".") { $project = "" }
 
