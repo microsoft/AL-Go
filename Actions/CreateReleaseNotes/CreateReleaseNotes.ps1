@@ -17,11 +17,10 @@ $telemetryScope = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
-. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
-
 try {
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1")
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+        import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     
     $telemetryScope = CreateScope -eventId 'DO0074' -parentTelemetryScopeJson $parentTelemetryScopeJson
     
