@@ -66,7 +66,7 @@ jobs:
             $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('Apps-')+5)
           }
           $include = @()
-          $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-$($artifactsVersion)*" } | ForEach-Object {
+          $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-$($artifactsVersion)" } | ForEach-Object {
             $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url } )
           }
           if ($include.Count -eq 0) {
