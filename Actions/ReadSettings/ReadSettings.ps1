@@ -3,8 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
-    [string] $parentTelemetryScope, 
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
     [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
@@ -20,7 +20,7 @@ Set-StrictMode -Version 2.0
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
 import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
-$telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScope $parentTelemetryScope
+$telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
 try {
     if ($project  -eq ".") { $project = "" }

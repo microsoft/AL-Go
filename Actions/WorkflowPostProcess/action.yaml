@@ -10,7 +10,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/PostProcess.ps1 -eventId '${{ inputs.eventId }}' -telemetryScopeJson '${{ inputs.telemetryScope }}'
+    - run: ${{ github.action_path }}/WorkflowPostProcess.ps1 -eventId '${{ inputs.eventId }}' -telemetryScopeJson '${{ inputs.telemetryScope }}'
       shell: PowerShell
 branding:
   icon: terminal

@@ -6,8 +6,8 @@ Param(
     [string] $secrets = "",
     [Parameter(HelpMessage = "Specifies if the values of secrets should be updated", Mandatory = $false)]
     [bool] $updateSettingsWithValues = $false,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
-    [string] $parentTelemetryScope
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [string] $parentTelemetryScopeJson = '{}'
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,7 +16,7 @@ Set-StrictMode -Version 2.0
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
 import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
-$telemetryScope = CreateScope -eventId 'DO0078' -parentTelemetryScope $parentTelemetryScope
+$telemetryScope = CreateScope -eventId 'DO0078' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
 try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")

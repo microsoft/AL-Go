@@ -26,7 +26,7 @@ jobs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
       - id: init
-        uses: microsoft/AL-Go-Actions/InitWorkflow@main
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with: 
           eventId : "DO0093"
 
@@ -46,7 +46,7 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
-          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
           settingsJson: ${{ env.Settings }}
           secrets: 'adminCenterApiCredentials'
 
@@ -82,7 +82,7 @@ jobs:
     steps:
       - name: Finalizing the workflow
         id : postProcess
-        uses: microsoft/AL-Go-Actions/workflowpostprocess@main
+        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
           eventId : "DO0093"
           telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}  

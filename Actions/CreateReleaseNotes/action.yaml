@@ -12,9 +12,10 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScope:
+  parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the Telemetry signal
-    required: true
+    required: false
+    default: '{}'
   workflowToken:
     description: A GitHub token with permissions to modify workflows
     required: false
@@ -29,7 +30,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/CreateReleaseNotes.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope }}' -workflowToken '${{ inputs.workflowToken }}' -tag_name '${{ inputs.tag_name }}'
+    - run: ${{ github.action_path }}/CreateReleaseNotes.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -workflowToken '${{ inputs.workflowToken }}' -tag_name '${{ inputs.tag_name }}'
       id: createreleasenotes
       shell: PowerShell
 branding:

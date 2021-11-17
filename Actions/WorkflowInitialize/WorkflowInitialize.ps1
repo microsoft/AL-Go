@@ -11,18 +11,20 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     
     $telemetryScope = CreateScope -eventId $eventId
-
-    if (-not $telemetryScope.CorrelationId) {
-        $telemetryScope["CorrelationId"] = (New-Guid).ToString()
-    } 
-
-    $scopeJson = $telemetryScope | ConvertTo-Json -Compress
+    if ($telemetryScope) {
+        $scopeJson = $telemetryScope | ConvertTo-Json -Compress
+        $correlationId = ($telemetryScope.CorrelationId).ToString()
+    }
+    else {
+        $scopeJson = "{}"
+        $correlationId = [guid]::Empty.ToString()
+    }
     Write-Host "::set-output name=telemetryScope::$scopeJson"
     Write-Host "set-output name=telemetryScope::$scopeJson"
 
-    $correlationId = ($telemetryScope.CorrelationId).ToString()
     Write-Host "::set-output name=correlationId::$correlationId"
     Write-Host "set-output name=correlationId::$correlationId"
+
 }
 catch {
     OutputError -message $_.Exception.Message

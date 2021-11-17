@@ -22,40 +22,22 @@ $signals = @{
     "DO0098" = "AL-Go workflow ran: UpdateGitHubGoSystemFiles";    
 }
 
-function SetTelemeteryConfiguration {
-    
-    $userName = ""
-    if ($env:USERNAME) {
-        $userName = $env:USERNAME
-    }
-
-    $baseFolder = Join-Path $PSScriptRoot ".." -Resolve
-    $settings = ReadSettings -baseFolder $baseFolder -userName $userName
-    
-    $bcContainerHelperConfig.MicrosoftTelemetryConnectionString = $settings["MicrosoftTelemetryConnectionString"] 
-    $bcContainerHelperConfig.PartnerTelemetryConnectionString = $settings["PartnerTelemetryConnectionString"] 
-    $bcContainerHelperConfig.SendExtendedTelemetryToMicrosoft = $settings["SendExtendedTelemetryToMicrosoft"]
-}
-
 function CreateScope {
     param (
         [string] $eventId,
-        [string] $parentTelemetryScope, 
+        [string] $parentTelemetryScopeJson = '{}',
         [hashtable] $parameters = @{}
     )
 
-    SetTelemeteryConfiguration
     $signalName = $signals[$eventId] 
     if (-not $signalName) {
         throw "Invalid event id ($eventId) is enountered."
     }
 
-    if ($parentTelemetryScope) {
-        $telemetryScope = RegisterTelemetryScope $parentTelemetryScope
+    if ($parentTelemetryScopeJson -and $parentTelemetryScopeJson -ne "{}") {
+        $telemetryScope = RegisterTelemetryScope $parentTelemetryScopeJson
     }
 
     $telemetryScope = InitTelemetryScope -name $signalName -eventId $eventId  -parameterValues @()  -includeParameters @()
-    $telemetryScope["Emitted"] = $false
-
     return $telemetryScope
 }

@@ -3,8 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
-    [string] $parentTelemetryScope, 
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Branch in template repository to use for the update (default is the default branch)", Mandatory = $false)]
@@ -22,7 +22,7 @@ Set-StrictMode -Version 2.0
 $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
 import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
-$telemetryScope = CreateScope -eventId 'DO0071' -parentTelemetryScope $parentTelemetryScope
+$telemetryScope = CreateScope -eventId 'DO0071' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
 try {
     $baseFolder = $ENV:GITHUB_WORKSPACE

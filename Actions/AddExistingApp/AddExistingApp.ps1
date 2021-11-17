@@ -3,8 +3,8 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
-    [string] $parentTelemetryScope, 
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
     [string] $project = '.',
     [Parameter(HelpMessage = "Direct Download Url of .app or .zip file", Mandatory = $true)]
@@ -75,7 +75,7 @@ try {
     $repoBaseFolder = Get-Location
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScope $parentTelemetryScope 
+    $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScopeJson $parentTelemetryScopeJson 
 
     CheckAndCreateProjectFolder -project $project
     $baseFolder = Get-Location

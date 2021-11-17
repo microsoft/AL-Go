@@ -8,17 +8,17 @@ inputs:
 runs:
   using: composite
   steps:
-    - id : initworkflow
-      run: ${{ github.action_path }}/InitWorkflow.ps1 -eventId '${{ inputs.eventId }}'
+    - id : WorkflowInitialize
+      run: ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId '${{ inputs.eventId }}'
       shell: PowerShell
 
 outputs:
   correlationId:
     description: A correlation Id for the workflow
-    value: ${{ steps.initworkflow.outputs.correlationId }}
+    value: ${{ steps.WorkflowInitialize.outputs.correlationId }}
   telemetryScope:
     description: A telemetryScope that covers the workflow
-    value: ${{ steps.initworkflow.outputs.telemetryScope }}
+    value: ${{ steps.WorkflowInitialize.outputs.telemetryScope }}
 branding:
   icon: terminal
   color: blue
