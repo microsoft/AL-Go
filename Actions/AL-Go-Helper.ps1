@@ -865,7 +865,7 @@ function CreateDevEnv {
     }
 
     $runAlPipelineParams = @{}
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
     try {
         if ($caller -eq "local") {
             $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())

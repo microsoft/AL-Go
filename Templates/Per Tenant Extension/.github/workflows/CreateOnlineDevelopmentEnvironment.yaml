@@ -26,7 +26,7 @@ jobs:
       telemetryScope: ${{ steps.init.outputs.telemetryScope }}
     steps:
       - id: init
-        uses: microsoft/AL-Go/InitWorkflow@main
+        uses: microsoft/AL-Go-Actions/InitWorkflow@main
         with: 
           eventId : "DO0093"
 
@@ -85,7 +85,7 @@ jobs:
     steps:
       - name: Finalizing the workflow
         id : postProcess
-        uses: microsoft/AL-Go/workflowpostprocess@main
+        uses: microsoft/AL-Go-Actions/workflowpostprocess@main
         with: 
           eventId : "DO0093"
           telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}   

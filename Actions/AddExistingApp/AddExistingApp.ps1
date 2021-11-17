@@ -13,12 +13,6 @@ Param(
     [bool] $directCommit
 )
 
-. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
-$BcContainerHelperPath = DownloadAndImportBcContainerHelper 
-import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-
-$telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScope $parentTelemetryScope 
-
 function getfiles {
     Param(
         [string] $url
@@ -73,12 +67,15 @@ function expandfile {
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
+. (Join-Path $PSScriptRoot "..\AL-Go-Helper.ps1")
+
 try {
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     $repoBaseFolder = Get-Location
-
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScope $parentTelemetryScope 
 
     CheckAndCreateProjectFolder -project $project
     $baseFolder = Get-Location
