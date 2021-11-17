@@ -2,16 +2,8 @@ name: PowerShell script
 author: Pooya Kharamesh
 inputs:
   eventId:
-      description: The event Id of the workflow
-      required: true
-
-runs:
-  using: composite
-  steps:
-    - id : WorkflowInitialize
-      run: ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId '${{ inputs.eventId }}'
-      shell: PowerShell
-
+    description: The event id of the initiating workflow
+    required: true
 outputs:
   correlationId:
     description: A correlation Id for the workflow
@@ -19,6 +11,12 @@ outputs:
   telemetryScope:
     description: A telemetryScope that covers the workflow
     value: ${{ steps.WorkflowInitialize.outputs.telemetryScope }}
+runs:
+  using: composite
+  steps:
+    - run: ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId '${{ inputs.eventId }}'
+      id : WorkflowInitialize
+      shell: PowerShell
 branding:
   icon: terminal
   color: blue
