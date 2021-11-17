@@ -232,6 +232,20 @@ function DownloadAndImportBcContainerHelper {
     $tempName
 }
 
+function CleanupAfterBcContainerHelper {
+    Param(
+        [string] $bcContainerHelperPath
+    )
+
+    if ($bcContainerHelperPath) {
+        try {
+            Remove-Module BcContainerHelper
+            Remove-Item $bcContainerHelperPath -Recurse -Force
+        }
+        catch {}
+    }
+}
+
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
