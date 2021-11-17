@@ -5,8 +5,6 @@ Param(
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $true)]
     [string] $parentTelemetryScope, 
-    [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
-    [string] $settingsJson = '{"templateUrl": "", "templateBranch": ""}',
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Branch in template repository to use for the update (default is the default branch)", Mandatory = $false)]
@@ -34,14 +32,31 @@ try {
         exit
     }
 
-    $updateSettingsTemplate = $true
-    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
-
-    if ($templateUrl -eq "" -and $templateBranch -eq "") {
-        $templateUrl = $settings.templateUrl
-        $templateBranch = $settings.templateBranch
-        $updateSettingsTemplate = $false
+    # Support old calling convention
+    if (-not $templateUrl.Contains('@')) {
+        if ($templateBranch) {
+            $templateUrl += "@$templateBranch"
+        }
+        else {
+            $templateUrl += "@main"
+        }
     }
+
+    $RepoSettingsFile = ".github\AL-Go-Settings.json"
+    if (Test-Path $RepoSettingsFile) {
+        $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    else {
+        $repoSettings = @{}
+    }
+
+    $updateSettings = $true
+    if ($repoSettings.ContainsKey("TemplateUrl") -and $repoSettings.TemplateUrl -eq $templateUrl) {
+        $updateSettings = $false
+    }
+
+    $templateBranch = $templateUrl.Split('@')[1]
+    $templateUrl = $templateUrl.Split('@')[0]
 
     Set-Location $baseFolder
     $headers = @{
@@ -66,10 +81,6 @@ try {
             exit
         }
         $templateInfo = $repoInfo.template_repository
-    }
-
-    if ($updateSettingsTemplate -and $templateUrl -eq $settings.templateUrl -and $templateBranch -eq $settings.templateBranch) {
-        $updateSettingsTemplate = $false
     }
 
     $templateUrl = $templateInfo.html_url
@@ -143,7 +154,7 @@ try {
         }
     }
     else {
-        if ($updateSettingsTemplate -or ($updateFiles) -or ($removeFiles)) {
+        if ($updateSettings -or ($updateFiles) -or ($removeFiles)) {
             try {
                 # URL for git commands
                 $tempRepo = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
@@ -182,8 +193,7 @@ try {
                 else {
                     $repoSettings = @{}
                 }
-                $repoSettings.templateUrl = $templateUrl
-                $repoSettings.templateBranch = $templateBranch
+                $repoSettings.templateUrl = "$templateUrl@$templateBranch"
                 $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
 
                 $updateFiles | ForEach-Object {

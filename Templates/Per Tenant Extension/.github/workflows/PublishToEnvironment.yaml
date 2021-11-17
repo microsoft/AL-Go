@@ -77,10 +77,10 @@ jobs:
           Write-Host "::set-output name=envName::$envName"
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
 
       - name: Read secrets
-        uses: microsoft/AL-Go/ReadSecrets@main
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -108,7 +108,7 @@ jobs:
           Write-Host "set-output name=authContext::$authContext"
 
       - name: Deploy
-        uses: microsoft/AL-Go/Deploy@main
+        uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           authContext: '${{ steps.authContext.outputs.authContext }}'
         with:

@@ -34,7 +34,7 @@ jobs:
     needs : [ initialization ]
     steps:
       - name: Add existing app
-        uses: microsoft/AL-Go/AddExistingApp@main
+        uses: microsoft/AL-Go-Actions/AddExistingApp@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           project: ${{ github.event.inputs.project }}

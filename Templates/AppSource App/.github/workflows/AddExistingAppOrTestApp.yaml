@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Add existing app
-        uses: microsoft/AL-Go/AddExistingApp@main
+        uses: microsoft/AL-Go-Actions/AddExistingApp@main
         with:
           project: ${{ github.event.inputs.project }}
           url: ${{ github.event.inputs.url }}

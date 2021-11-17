@@ -348,6 +348,7 @@ function ReadSettings {
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
         "githubRunner"                           = "windows-latest"
+        "alwaysBuildAllProjects"                 = $false
         "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
         "PartnerTelemetryConnectionString"       = ""
         "SendExtendedTelemetryToMicrosoft"       = $false

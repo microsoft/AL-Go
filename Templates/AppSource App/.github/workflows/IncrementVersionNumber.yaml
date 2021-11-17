@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Increment Version Number
-        uses: microsoft/AL-Go/IncrementVersionNumber@main
+        uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           versionNumber: ${{ github.event.inputs.versionNumber }}

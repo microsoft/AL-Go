@@ -52,16 +52,15 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          get: TemplateUrl,TemplateBranch
+          get: TemplateUrl
 
       - name: Check for updates to AL-Go system files
-        uses: microsoft/AL-Go/CheckForUpdates@main
+        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           templateUrl: ${{ env.TemplateUrl }}
-          templateBranch: ${{ env.TemplateBranch }}
 
       - name: Analyze Artifacts
         id: analyzeartifacts
@@ -79,7 +78,7 @@ jobs:
             $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('Apps-')+5)
           }
           $include = @()
-          $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-$($artifactsVersion)*" } | ForEach-Object {
+          $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-$($artifactsVersion)" } | ForEach-Object {
             $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url } )
           }
           if ($include.Count -eq 0) {
@@ -93,7 +92,7 @@ jobs:
 
       - name: Prepare release notes
         id: createreleasenotes
-        uses: microsoft/AL-Go/CreateReleaseNotes@main
+        uses: microsoft/AL-Go-Actions/CreateReleaseNotes@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           tag_name: '${{github.event.inputs.tag}}'

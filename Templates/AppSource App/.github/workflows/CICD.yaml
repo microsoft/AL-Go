@@ -5,9 +5,7 @@ on:
     paths-ignore:
       - 'README.md'
       - '.github/**'
-    branches: 
-      - main
-      - 'releases/**'
+    branches: [ main ]
   pull_request:
     paths-ignore:
       - 'README.md'
@@ -37,17 +35,16 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
-          get: TemplateUrl,TemplateBranch
+          get: TemplateUrl
 
       - name: Check for updates to AL-Go system files
-        uses: microsoft/AL-Go/CheckForUpdates@main
+        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           templateUrl: ${{ env.TemplateUrl }}
-          templateBranch: ${{ env.TemplateBranch }}
   Analyze:
     runs-on: [ windows-latest ]
     needs : [ initialization ]
@@ -62,9 +59,9 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          get: githubRunner
+          get: githubRunner,alwaysBuildAllProjects
 
       - name: Output settings
         id: OutputSettings
@@ -81,6 +78,26 @@ jobs:
           }
           else {
             $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
+            Write-Host "Projects: $($projects -join ', ')"
+            if (!($ENV:GITHUB_EVENT_NAME -eq "workflow_dispatch" -or "$ENV:alwaysBuildAllProjects" -eq "true")) {
+              $headers = @{             
+                "Authorization" = "token ${{ github.token }}"
+                "Accept" = "application/vnd.github.baptiste-preview+json"
+              }
+              if ($ENV:GITHUB_EVENT_NAME -eq "pull_request") {
+                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
+              }
+              else {
+                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.before }}...${{ github.event.after }}"
+              }
+              $response = Invoke-WebRequest -Headers $headers -UseBasicParsing -Method GET -Uri $url | ConvertFrom-Json
+              $filesChanged = @($response.files | ForEach-Object { $_.filename })
+              if ($filesChanged.Count -lt 250) {
+                $foldersChanged = @($filesChanged | ForEach-Object { $_.Split('/')[0] } | Select-Object -Unique)
+                $projects = @($projects | Where-Object { $foldersChanged -contains $_ })
+                Write-Host "Modified projects: $($projects -join ', ')"
+              }
+            }
           }
           if ($projects.Count -eq 1) {
             $projectsJSon = "[$($projects | ConvertTo-Json -compress)]"
@@ -129,13 +146,13 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           project: ${{ matrix.project }}
 
       - name: Read secrets
-        uses: microsoft/AL-Go/ReadSecrets@main
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -144,7 +161,7 @@ jobs:
           secrets: 'licenseFileUrl,insiderSasToken,CodeSignCertificateUrl,CodeSignCertificatePassword,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
 
       - name: Run pipeline
-        uses: microsoft/AL-Go/RunPipeline@main
+        uses: microsoft/AL-Go-Actions/RunPipeline@main
         with:
           Project: ${{ matrix.project }}
           settingsJson: ${{ env.Settings }}
@@ -198,7 +215,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        uses: microsoft/AL-Go/PipelineCleanup@main
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
         with:
           parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           Project: ${{ matrix.project }}
@@ -229,10 +246,10 @@ jobs:
           Write-Host "::set-output name=envName::$envName"
 
       - name: Read settings
-        uses: microsoft/AL-Go/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
 
       - name: Read secrets
-        uses: microsoft/AL-Go/ReadSecrets@main
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -260,7 +277,7 @@ jobs:
           Write-Host "set-output name=authContext::$authContext"
 
       - name: Deploy
-        uses: microsoft/AL-Go/Deploy@main
+        uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           authContext: '${{ steps.authContext.outputs.authContext }}'
         with:
