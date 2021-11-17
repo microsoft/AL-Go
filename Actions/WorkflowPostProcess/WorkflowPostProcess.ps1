@@ -2,7 +2,7 @@ Param(
     [Parameter(HelpMessage = "The event Id of the initiating workflow", Mandatory = $true)]
     [string] $eventId,
     [Parameter(HelpMessage = "Telemetry scope generated during the workflow initialization", Mandatory = $true)]
-    $telemetryScopeJson
+    [string] $telemetryScopeJson
 )
 
 $ErrorActionPreference = "Stop"
