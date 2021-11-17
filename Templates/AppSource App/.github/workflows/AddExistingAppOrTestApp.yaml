@@ -19,8 +19,18 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: [ windows-latest ]
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          eventId : "DO0090"
   update:
     runs-on: [ windows-latest ]
+    needs : [ initialization ]
 
     steps:
       - name: Add existing app
@@ -29,3 +39,14 @@ jobs:
           project: ${{ github.event.inputs.project }}
           url: ${{ github.event.inputs.url }}
           directCommit: ${{ github.event.inputs.directCommit }}
+
+  postProcess :
+    runs-on: [ windows-latest ]
+    needs : [ initialization , update ]
+    steps:
+      - name: Finalizing the workflow
+        id : postProcess
+        uses: microsoft/AL-Go/workflowpostprocess@main
+        with: 
+          eventId : "DO0090"
+          telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}     

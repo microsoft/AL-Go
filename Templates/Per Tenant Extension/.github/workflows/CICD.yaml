@@ -17,8 +17,19 @@ defaults:
     shell: PowerShell
 
 jobs:
+  initialization :
+    runs-on: [ windows-latest ]
+    outputs:
+      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+    steps:
+      - id: init
+        uses: microsoft/AL-Go/InitWorkflow@main
+        with: 
+          eventId : "DO0091"
+
   CheckForUpdates:
     runs-on: [ windows-latest ]
+    needs : [ initialization ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -26,14 +37,17 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           get: TemplateUrl
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           templateUrl: ${{ env.TemplateUrl }}
   Analyze:
     runs-on: [ windows-latest ]
+    needs : [ initialization ]
     outputs:
       projects: ${{ steps.Projects.outputs.projects }}
       projectCount: ${{ steps.Projects.outputs.projectCount }}
@@ -134,6 +148,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           project: ${{ matrix.project }}
 
       - name: Read secrets
@@ -141,12 +156,14 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           settingsJson: ${{ env.Settings }}
           secrets: 'licenseFileUrl,insiderSasToken,CodeSignCertificateUrl,CodeSignCertificatePassword,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
 
       - name: Run pipeline
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           Project: ${{ matrix.project }}
           settingsJson: ${{ env.Settings }}
           SecretsJson: ${{ env.RepoSecrets }}
@@ -201,9 +218,10 @@ jobs:
         if: always()
         uses: microsoft/AL-Go-Actions/PipelineCleanup@main
         with:
+          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
           Project: ${{ matrix.project }}
   Deploy:
-    runs-on: [ windows-latest ]
+    runs-on: [ windows-latest ] 
     needs: [ Analyze, Build ]
     if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
     strategy:
@@ -268,3 +286,14 @@ jobs:
           projects: '${{ secrets.Projects }}'
           environmentName: ${{ matrix.environment }}
           artifacts: '${{ github.workspace }}\artifacts'
+
+  postProcess :
+    runs-on: [ windows-latest ]
+    needs : [ initialization ,  Analyze, Build , Deploy ]
+    steps:
+      - name: Finalizing the workflow
+        id : postProcess
+        uses: microsoft/AL-Go/workflowpostprocess@main
+        with: 
+          eventId : "DO0091"
+          telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}               

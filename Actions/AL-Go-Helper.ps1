@@ -48,6 +48,9 @@ $testLibrariesApps = @($systemApplicationTestLibraryAppId, $TestsTestLibrariesAp
 $testFrameworkApps = @($anyAppId, $libraryAssertAppId, $libraryVariableStorageAppId) + $testLibrariesApps
 $testRunnerApps = @($permissionsMockAppId, $testRunnerAppId) + $performanceToolkitApps + $testLibrariesApps + $testFrameworkApps
 
+
+$MicrosoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
+
 function invoke-git {
     Param(
         [parameter(mandatory = $true, position = 0)][string] $command,
@@ -346,6 +349,9 @@ function ReadSettings {
         "appDependencyProbingPaths"              = @()
         "githubRunner"                           = "windows-latest"
         "alwaysBuildAllProjects"                 = $false
+        "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
+        "PartnerTelemetryConnectionString"       = ""
+        "SendExtendedTelemetryToMicrosoft"       = $false
     }
 
     $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.setting.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
