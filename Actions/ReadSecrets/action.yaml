@@ -12,13 +12,14 @@ inputs:
     description: Specifies if the values of secrets should be updated
     required: false
     default: 'N'
-  parentTelemetryScope:
+  parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the Telemetry signal
-    required: true
+    required: false
+    default: '{}'
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settingsJson }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y') -parentTelemetryScope '${{ inputs.parentTelemetryScope }}'
+    - run: ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settingsJson }}' -secrets '${{ inputs.secrets }}' -updateSettingsWithValues ('${{ inputs.updateSettingsWithValues }}' -eq 'Y') -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}'
       shell: PowerShell
 branding:
   icon: terminal

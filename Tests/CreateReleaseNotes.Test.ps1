@@ -5,10 +5,13 @@ Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 Get-Module TelemetryHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '..\Actions\TelemetryHelper.psm1')
 
-. (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1")
-
 Describe 'CreateReleaseNotes Tests' {
     BeforeAll {
+        . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1")
+
+        function TrackTrace {}
+        function TrackException {}
+
         $actionName = "CreateReleaseNotes"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
@@ -35,9 +38,9 @@ Describe 'CreateReleaseNotes Tests' {
         Mock GetLatestRelease { return "{""tag_name"" : ""1.0.0.0""}" | ConvertFrom-Json } 
         Mock GetReleaseNotes  {return "Mocked notes"}
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScop  {}
+        Mock CreateScope  {}
 
-        . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScope "{}"
+        . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScopeJson "{}"
     
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1 
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.0.5" -and $previous_tag_name -eq "1.0.0.0" }
@@ -49,9 +52,9 @@ Describe 'CreateReleaseNotes Tests' {
         Mock GetLatestRelease { return ConvertTo-Json @{} } 
         Mock GetReleaseNotes  {return "Mocked notes"}
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScop  {}
+        Mock CreateScope  {}
 
-        . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScope "{}"
+        . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScopeJson "{}"
     
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1 
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.0.5" -and $previous_tag_name -eq "" }
@@ -63,9 +66,9 @@ Describe 'CreateReleaseNotes Tests' {
         Mock GetLatestRelease { throw "Exception" } 
         Mock GetReleaseNotes  {return "Mocked notes"}
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScop  {}
+        Mock CreateScope  {}
     
-        . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScope "{}"
+        . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScopeJson "{}"
     
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1 
 

@@ -20,19 +20,19 @@ defaults:
     shell: PowerShell
 
 jobs:
-  initialization :
+  initialization:
     runs-on: [ windows-latest ]
     outputs:
-      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
     steps:
       - id: init
-        uses: microsoft/AL-Go/InitWorkflow@main
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with: 
-          eventId : "DO0093"
+          eventId: "DO0093"
 
   CreateEnvironment:
     runs-on: [ windows-latest ]
-    needs : [ initialization ]
+    needs: [ initialization ]
 
     steps:
       - name: Checkout
@@ -41,14 +41,14 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
-          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
           settingsJson: ${{ env.Settings }}
           secrets: 'adminCenterApiCredentials'
 
@@ -62,30 +62,30 @@ jobs:
             Write-Host "AdminCenterApiCredentials not provided, initiating Device Code flow"
             $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
             $webClient = New-Object System.Net.WebClient
-            $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
             $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
-            . $ALGoHelperPath -local
-            DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+            . $ALGoHelperPath
+            $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
             MaskValueInLog -value $authContext.deviceCode
             Add-Content -Path $env:GITHUB_ENV -Value "adminCenterApiCredentials={""deviceCode"":""$($authContext.deviceCode)""}"
+            CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
           }
 
       - name: Create Development Environment
         uses: microsoft/AL-Go-Actions/CreateDevelopmentEnvironment@main
         with:
-          parentTelemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
           environmentName: ${{ github.event.inputs.environmentName }} 
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }} 
           adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }} 
 
-  postProcess :
+  postProcess:
     runs-on: [ windows-latest ]
-    needs : [ initialization ,  CreateEnvironment ]
+    needs: [ initialization,  CreateEnvironment ]
     steps:
       - name: Finalizing the workflow
-        id : postProcess
-        uses: microsoft/AL-Go/workflowpostprocess@main
+        id: postProcess
+        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
-          eventId : "DO0093"
-          telemetryScope : ${{ needs.initialization.outputs.telemetryScope }}   
+          eventId: "DO0093"
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}   

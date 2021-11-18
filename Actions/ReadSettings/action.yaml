@@ -9,9 +9,10 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScope:
+  parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the Telemetry signal
-    required: true
+    required: false
+    default: '{}'
   project:
     description: Project folder
     required: false
@@ -31,7 +32,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScope '${{ inputs.parentTelemetryScope }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
+    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
       id: readsettings
       shell: PowerShell
 branding:

@@ -5,7 +5,7 @@ Add an existing app to a AL-Go repository
 The GitHub actor running the action
 ### token (default github.token)
 The GitHub token running the action
-### parentTelemetryScope (required)
+### parentTelemetryScopeJson (required)
 Specifies the parent telemetry scope for the Telemetry signal
 ### project
 Project name if the repository is setup for multiple projects
