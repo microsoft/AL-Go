@@ -16,10 +16,12 @@ Set-StrictMode -Version 2.0
 $telemetryScope = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
-
+Write-Host "before try"
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1")
+    Write-Host "after AL include"
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+    Write-Host "after download"
         import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     
     $telemetryScope = CreateScope -eventId 'DO0074' -parentTelemetryScopeJson $parentTelemetryScopeJson
