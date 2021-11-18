@@ -4,13 +4,13 @@ inputs:
   eventId:
     description: The event Id of the initiating workflow
     required: true
-  telemetryScope:
+  telemetryScopeJson:
     description: Telemetry scope generated during the workflow initialization
     required: true
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/WorkflowPostProcess.ps1 -eventId '${{ inputs.eventId }}' -telemetryScopeJson '${{ inputs.telemetryScope }}'
+    - run: ${{ github.action_path }}/WorkflowPostProcess.ps1 -eventId '${{ inputs.eventId }}' -telemetryScopeJson '${{ inputs.telemetryScopeJson }}'
       shell: PowerShell
 branding:
   icon: terminal

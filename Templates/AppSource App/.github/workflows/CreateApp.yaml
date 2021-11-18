@@ -28,7 +28,7 @@ jobs:
   initialization:
     runs-on: [ windows-latest ]
     outputs:
-      telemetryScope: ${{ steps.init.outputs.telemetryScope }}
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
@@ -68,4 +68,4 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
           eventId: "DO0092"
-          telemetryScope: ${{ needs.initialization.outputs.telemetryScope }}
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
