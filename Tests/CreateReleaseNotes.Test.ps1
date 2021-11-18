@@ -35,7 +35,7 @@ Describe 'CreateReleaseNotes Tests' {
         Mock GetLatestRelease { return "{""tag_name"" : ""1.0.0.0""}" | ConvertFrom-Json } 
         Mock GetReleaseNotes  {return "Mocked notes"}
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScop  {}
+        Mock CreateScope  {}
 
         . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScopeJson "{}"
     
@@ -49,7 +49,7 @@ Describe 'CreateReleaseNotes Tests' {
         Mock GetLatestRelease { return ConvertTo-Json @{} } 
         Mock GetReleaseNotes  {return "Mocked notes"}
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScop  {}
+        Mock CreateScope  {}
 
         . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScopeJson "{}"
     
@@ -63,7 +63,7 @@ Describe 'CreateReleaseNotes Tests' {
         Mock GetLatestRelease { throw "Exception" } 
         Mock GetReleaseNotes  {return "Mocked notes"}
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScop  {}
+        Mock CreateScope  {}
     
         . $scriptPath -token "" -actor "" -workflowToken "" -tag_name "1.0.0.5" -parentTelemetryScopeJson "{}"
     

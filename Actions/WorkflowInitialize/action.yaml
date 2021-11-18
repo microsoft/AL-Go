@@ -15,7 +15,7 @@ runs:
   using: composite
   steps:
     - run: ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId '${{ inputs.eventId }}'
-      id : workflowinitialize
+      id: workflowinitialize
       shell: PowerShell
 branding:
   icon: terminal
