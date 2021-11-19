@@ -12,28 +12,28 @@ defaults:
     shell: PowerShell
 
 jobs:
-  SetupRepositories:
-    runs-on: [ windows-latest ]
-    outputs:
-      actionsRepo: ${{ steps.SetupRepositories.outputs.actionsRepo }}
-      perTenantExtentionRepo: ${{ steps.SetupRepositories.outputs.perTenantExtensionRepo }}
-      appSourceAppRepo: ${{ steps.SetupRepositories.outputs.appSourceAppRepo }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: SetupRepositories
-        id: SetupRepositories
-        run: e2eTests\SetupRepositories.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}'
-
   Test:
     runs-on: [ windows-latest ]
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Run tests
+      - name: Run basic tests
         run: Tests\RunTests.ps1
+
+  SetupRepositories:
+    runs-on: [ windows-latest ]
+    outputs:
+      actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
+      perTenantExtentionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
+      appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Repositories
+        id: setup
+        run: e2eTests\SetupRepositories.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}'
 
   TestAlGoPte:
     runs-on: [ windows-latest ]
