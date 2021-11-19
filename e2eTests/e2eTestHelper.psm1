@@ -237,7 +237,7 @@ function MergePRandPull {
 
 function RemoveRepository {
     Param(
-        [string] $repository
+        [string] $repository,
         [string] $path = ""
     )
 

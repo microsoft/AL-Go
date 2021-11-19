@@ -47,7 +47,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
-    needs: [ TestAlGoPte ]
+    needs: [ SetupRepositories, TestAlGoPte ]
     if: (needs.SetupRepositories.result == 'Success')
 
     steps:
