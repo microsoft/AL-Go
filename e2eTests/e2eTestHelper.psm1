@@ -19,6 +19,7 @@ function SetTokenAndRepository {
         invoke-git config --global user.email "$actor@users.noreply.github.com"
         invoke-git config --global user.name "$actor"
         invoke-git config --global hub.protocol https
+        invoke-git config --global core.autocrlf true
     }
 
     if ($token) {
@@ -171,14 +172,13 @@ function CreateAndCloneRepository {
     Set-Location $path
     if ($private) {
         Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
-        $serverUrl = invoke-gh repo create $repository --confirm --private
+        invoke-gh repo create $repository --confirm --private
     }
     else {
         Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
-        $serverUrl = invoke-gh repo create $repository --confirm --public
+        invoke-gh repo create $repository --confirm --public
     }
     Set-Location '*'
-    Write-Host $serverUrl
 
     $templateUrl = "$template/archive/refs/heads/$branch.zip"
     $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
@@ -192,7 +192,10 @@ function CreateAndCloneRepository {
 
     invoke-git add *
     invoke-git commit -m 'init'
-    invoke-git push $serverUrl
+    if ($actor -and $token) {
+        invoke-git remote set-url origin "https://$($actor):$token@github.com/$repository.git"
+    }
+    invoke-git push
 
     $path
     Start-Sleep -seconds $delay

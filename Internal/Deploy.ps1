@@ -43,6 +43,7 @@ try {
         invoke-git config --global user.email "$actor@users.noreply.github.com"
         invoke-git config --global user.name "$actor"
         invoke-git config --global hub.protocol https
+        invoke-git config --global core.autocrlf true
     }
 
     if ($token) {
