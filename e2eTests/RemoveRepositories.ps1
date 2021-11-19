@@ -7,11 +7,6 @@
     
 )
 
-$githubOwner = "freddydk"
-$actionsRepo = "$repoBaseName-Actions"
-$perTenantExtensionRepo = "$repoBaseName-PTE"
-$appSourceAppRepo = "$repoBaseName-AppSource"
-
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
