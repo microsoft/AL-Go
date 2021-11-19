@@ -56,6 +56,26 @@ function Get-PlainText {
     }
 }
 
+function Add-PropertiesToJsonFile {
+    Param(
+        [string] $jsonFile,
+        [hashTable] $properties
+    )
+
+    Write-Host -ForegroundColor Yellow "`nAdd Properties to $([System.IO.Path]::GetFileName($jsonFile))"
+    Write-Host "Properties"
+    $properties | Out-Host
+
+    $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+    $properties.Keys | ForEach-Object {
+        $json."$_" = $properties."$_"
+    }
+    $json | ConvertTo-Json | Set-Content $jsonFile -Encoding UTF8
+
+    CommitAndPush -commitMessage "Update $([System.IO.Path]::GetFileName($jsonFile))"
+}
+
+
 function DisplayTokenAndRepository {
     Write-Host "Token: $token"
     Write-Host "Rrepo: $repository"

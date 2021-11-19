@@ -1,10 +1,10 @@
 ﻿Param(
     [switch] $gitHub,
     [string] $actor = "",
-    [string] $token = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText),
-    [string] $template = 'https://github.com/microsoft/al-go-pte',
-    [string] $adminCenterApiCredentials = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText),
-    [string] $licenseFileUrl = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText)
+    [string] $token = "",
+    [string] $template = "",
+    [string] $adminCenterApiCredentials = "",
+    [string] $licenseFileUrl = ""
 )
 
 $ErrorActionPreference = "stop"
@@ -23,13 +23,20 @@ _______       _              _           _____                                  
 
 $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
 $repository = "freddydk/$repoName"
-$sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
-$sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/testapps.zip"
+$sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/apps.zip"
+$sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/testapps.zip"
 $branch = "main"
 
 try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
     Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
+
+    if (!$github) {
+        if (!$token) {  $token = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText }
+        if (!$template) { $template = 'https://github.com/freddydk/al-go-appSource' }
+        if (!$adminCenterApiCredentials) { $adminCenterApiCredentials = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText }
+        if (!$licenseFileUrl) { $licenseFileUrl = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText }
+    }
 
     if ($adminCenterApiCredentials) {
         $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
@@ -43,11 +50,15 @@ try {
 
     $path = CreateAndCloneRepository -template $template -branch $branch
 
-    Run-AddExistingAppOrTestApp -url $sampleApp1 -wait -branch $branch | Out-Null
+    SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
+
+    Add-PropertiesToJsonFile -jsonFile ".AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_" ) }
+
+    Run-AddExistingAppOrTestApp -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
+
+    Run-AddExistingAppOrTestApp -url $sampleTestApp1 -wait -branch $branch | Out-Null
 
     MergePRandPull -branch $branch
-
-    Run-AddExistingAppOrTestApp -url $sampleTestApp1 -directCommit -wait -branch $branch | Out-Null
 
     $run = Run-CICD -wait -branch $branch
 
@@ -122,7 +133,12 @@ try {
 catch {
     Write-Host $_.Exception.Message
     Write-Host "::Error::$($_.Exception.Message)"
-    $host.SetShouldExit(1)
+    if ($github) {
+        $host.SetShouldExit(1)
+    }
+    else {
+        Read-Host "Press ENTER to continue (and delete repository)"
+    }
 }
 finally {
     try {    

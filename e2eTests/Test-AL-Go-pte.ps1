@@ -1,9 +1,9 @@
 ﻿Param(
-    [switch] $github,
+    [switch] $github = "",
     [string] $actor = "",
-    [string] $token = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText),
-    [string] $template = 'https://github.com/microsoft/al-go-pte',
-    [string] $adminCenterApiCredentials = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText)
+    [string] $token = "",
+    [string] $template = "",
+    [string] $adminCenterApiCredentials = ""
 )
 
 $ErrorActionPreference = "stop"
@@ -32,6 +32,12 @@ try {
 
     if ($adminCenterApiCredentials) {
         $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
+    }
+
+    if (!$github) {
+        if (!$token) {  $token = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText }
+        if (!$template) { $template = 'https://github.com/freddydk/al-go-pte' }
+        if (!$adminCenterApiCredentials) { $adminCenterApiCredentials = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText }
     }
 
     SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
@@ -119,6 +125,9 @@ catch {
     Write-Host "::Error::$($_.Exception.Message)"
     if ($github) {
         $host.SetShouldExit(1)
+    }
+    else {
+        Read-Host "Press ENTER to continue (and delete repository)"
     }
 }
 finally {
