@@ -18,7 +18,7 @@ jobs:
       orgpatset: ${{ steps.checksecrets.outputs.orgpatset}}
       licensefileurlset: ${{ steps.checksecrets.outputs.licensefileurlset}}
 
-    Steps:
+    steps:
       - uses: actions/checkout@v2
 
       - name: Run basic tests
