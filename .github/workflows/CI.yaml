@@ -14,7 +14,8 @@ defaults:
 jobs:
   Test:
     runs-on: [ windows-latest ]
-    outputs: ${{ steps.runfulltests.outputs.runFullTests}}
+    outputs:
+      runfulltests: ${{ steps.runfulltests.outputs.runFullTests}}
 
     steps:
       - uses: actions/checkout@v2
