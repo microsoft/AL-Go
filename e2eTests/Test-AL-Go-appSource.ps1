@@ -3,7 +3,7 @@
     [string] $token = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText),
     [string] $template = 'https://github.com/microsoft/al-go-pte',
     [string] $adminCenterApiCredentials = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText),
-    [string] $licenseFileUrl = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText),
+    [string] $licenseFileUrl = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText)
 )
 
 $ErrorActionPreference = "stop"

@@ -17,7 +17,6 @@ jobs:
     outputs:
       orgpatset: ${{ steps.checksecrets.outputs.orgpatset}}
       licensefileurlset: ${{ steps.checksecrets.outputs.licensefileurlset}}
-
     steps:
       - uses: actions/checkout@v2
 
@@ -42,7 +41,6 @@ jobs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
       appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
-
     steps:
       - uses: actions/checkout@v2
 
@@ -54,7 +52,6 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
     if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
-
     steps:
       - uses: actions/checkout@v2
 
@@ -65,7 +62,6 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
     if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
-
     steps:
       - uses: actions/checkout@v2
 
@@ -76,7 +72,6 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories, TestAlGoPte, TestAlGoAppSource ]
     if: always() && ('${{ needs.SetupRepositories.result }}' == 'Success') && ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
-
     steps:
       - uses: actions/checkout@v2
 
