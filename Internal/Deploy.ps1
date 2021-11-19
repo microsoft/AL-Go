@@ -231,7 +231,6 @@ try {
                     invoke-git checkout -b $config.branch
                     invoke-git commit --allow-empty -m 'init'
                     invoke-git branch -M $config.branch
-                    invoke-git remote add origin $serverUrl
                     invoke-git push -u origin $config.branch
                 }
             }
@@ -242,7 +241,6 @@ try {
                 invoke-git checkout -b $config.branch
                 invoke-git commit --allow-empty -m 'init'
                 invoke-git branch -M $config.branch
-                invoke-git remote add origin $serverUrl
                 invoke-git push -u origin $config.branch
             }
         
