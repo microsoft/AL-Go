@@ -25,7 +25,7 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
-      perTenantExtentionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
+      perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
       appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
 
     steps:
@@ -48,7 +48,7 @@ jobs:
   RemoveRepositories:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories, TestAlGoPte ]
-    if: (needs.SetupRepositories.result == 'Success')
+    if: always() && (needs.SetupRepositories.result == 'Success')
 
     steps:
       - uses: actions/checkout@v2
