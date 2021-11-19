@@ -220,7 +220,8 @@ try {
             Write-Host -ForegroundColor Yellow "Deploying to $repo"
 
             try {
-                invoke-git clone --quiet "https://github.com/$($config.githubOwner)/$repo.git"
+                $serverUrl = "https://github.com/$($config.githubOwner)/$repo"
+                invoke-git clone --quiet $serverUrl
                 Set-Location $repo
                 try {
                     invoke-git checkout $config.branch
@@ -238,7 +239,7 @@ try {
                 Set-Location $repo
                 invoke-git checkout -b $config.branch
                 invoke-git commit --allow-empty -m 'init'
-                invoke-git push -u origin $config.branch
+                invoke-git push -u origin $config.branch $serverUrl
             }
         
             Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
@@ -259,7 +260,7 @@ try {
         
             invoke-git add .
             invoke-git commit --allow-empty -m "checkout"
-            invoke-git push
+            invoke-git push $serverUrl
         }
     }
 }

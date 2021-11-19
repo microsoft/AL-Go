@@ -191,7 +191,7 @@ function CreateAndCloneRepository {
     Remove-Item -Path $zipFileName -Force
 
     invoke-git add *
-    invoke-git commit -m 'initial'
+    invoke-git commit -m 'init'
     invoke-git push $serverUrl
 
     $path
