@@ -196,7 +196,7 @@ function CreateAndCloneRepository {
     if ($actor -and $token) {
         invoke-git remote set-url origin "https://$($actor):$token@github.com/$repository.git"
     }
-    invoke-git push
+    invoke-git push --set-upstream origin $branch
 
     $path
     Start-Sleep -seconds $delay
