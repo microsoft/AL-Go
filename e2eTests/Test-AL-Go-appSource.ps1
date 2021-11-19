@@ -68,11 +68,11 @@ try {
     
     Run-CreateRelease -appVersion '1.0.2.0' -name '1.0' -tag '1.0' -wait -branch $branch | Out-Null
 
-    Run-CreateApp -name "My App" -publisher "My Publisher" -idrange "55000..56000" -directCommit -wait -branch $branch | Out-Null
+    Run-CreateApp -name "My App" -publisher "My Publisher" -idrange "75055000..75056000" -directCommit -wait -branch $branch | Out-Null
 
     # Test-AppJson -path "My App\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-    Run-CreateTestApp -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
+    Run-CreateTestApp -name "My TestApp" -publisher "My Publisher" -idrange "75058000..75059000" -directCommit -wait -branch $branch | Out-Null
 
     # Test-AppJson -path "My TestApp\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
