@@ -15,25 +15,29 @@ jobs:
   Test:
     runs-on: [ windows-latest ]
     outputs:
-      runfulltests: ${{ steps.runfulltests.outputs.runFullTests}}
+      orgpatset: ${{ steps.checksecrets.outputs.orgpatset}}
+      licensefileurlset: ${{ steps.checksecrets.outputs.licensefileurlset}}
 
-    steps:
+    Steps:
       - uses: actions/checkout@v2
 
       - name: Run basic tests
         run: Tests\RunTests.ps1
       
-      - name: Determine if full tests should run
-        id: runfulltests
+      - name: Check secrets
+        id: checksecrets
         run: |
-          $runfulltests = @('Yes','No')['${{ Secrets.OrgPAT }}' -eq '']
-          Write-Host "::set-output name=runfulltests::$runfulltests"
-          Write-Host "set-output name=runfulltests::$runfulltests"
+          $orgpatset = @('Yes','No')['${{ Secrets.OrgPAT }}' -eq '']
+          Write-Host "::set-output name=orgpatset::$orgpatset"
+          Write-Host "set-output name=orgpatset::$orgpatset"
+          $licensefileurlset = @('Yes','No')['${{ Secrets.LicenseFileUrl }}' -eq '']
+          Write-Host "::set-output name=licensefileurlset::$licensefileurlset"
+          Write-Host "set-output name=licensefileurlset::$licensefileurlset"
 
   SetupRepositories:
     runs-on: [ windows-latest ]
     needs: [ Test ]
-    if: ('${{ needs.Test.outputs.runfulltests }}' == 'Yes')
+    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
@@ -49,18 +53,29 @@ jobs:
   TestAlGoPte:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
-    if: ('${{ needs.Test.outputs.runfulltests }}' == 'Yes')
+    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
 
     steps:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-pte.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.AdminCenterApiCredentials }}'
+        run: e2eTests\Test-AL-Go-pte.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials ''
+
+  TestAlGoAppSource:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories ]
+    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go-appSource.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}'
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
-    needs: [ Test, SetupRepositories, TestAlGoPte ]
-    if: always() && ('${{ needs.SetupRepositories.result }}' == 'Success') && ('${{ needs.Test.outputs.runfulltests }}' == 'Yes')
+    needs: [ Test, SetupRepositories, TestAlGoPte, TestAlGoAppSource ]
+    if: always() && ('${{ needs.SetupRepositories.result }}' == 'Success') && ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
 
     steps:
       - uses: actions/checkout@v2

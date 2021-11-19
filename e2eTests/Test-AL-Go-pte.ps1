@@ -8,18 +8,6 @@
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
-Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
-Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
-
-if ($adminCenterApiCredentials) {
-    $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
-}
-
-$reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-$repository = "freddydk/$repoName"
-
-SetTokenAndRepository -actor $actor -token $token -repository $repository
-
 Write-Host -ForegroundColor Yellow @'
   _______       _              _           _____                   _          _                       _       _       
  |__   __|     | |       /\   | |         / ____|                 | |        | |                     | |     | |      
@@ -31,18 +19,29 @@ Write-Host -ForegroundColor Yellow @'
                                                             |_|                                |_|                    
 '@
 
-$pteSampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
-$pteSampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/testapps.zip"
+$reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+$repository = "freddydk/$repoName"
+$sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
+$sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/testapps.zip"
 $branch = "main"
 
-$path = CreateAndCloneRepository -template $template -branch $branch
-
 try {
-    Run-AddExistingAppOrTestApp -url $pteSampleApp1 -wait -branch $branch | Out-Null
+    Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
+    Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
+
+    if ($adminCenterApiCredentials) {
+        $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
+    }
+
+    SetTokenAndRepository -actor $actor -token $token -repository $repository
+    
+    $path = CreateAndCloneRepository -template $template -branch $branch
+
+    Run-AddExistingAppOrTestApp -url $sampleApp1 -wait -branch $branch | Out-Null
 
     MergePRandPull -branch $branch
 
-    Run-AddExistingAppOrTestApp -url $pteSampleTestApp1 -directCommit -wait -branch $branch | Out-Null
+    Run-AddExistingAppOrTestApp -url $sampleTestApp1 -directCommit -wait -branch $branch | Out-Null
 
     $run = Run-CICD -wait -branch $branch
 
