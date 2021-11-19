@@ -237,18 +237,23 @@ function MergePRandPull {
 
 function RemoveRepository {
     Param(
-        [string] $path
+        [string] $repository
+        [string] $path = ""
     )
 
-    Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
-    invoke-gh repo delete $repository --confirm | Out-Host
-
-    if (-not $path.StartsWith("$([System.IO.Path]::GetTempPath())",[StringComparison]::InvariantCultureIgnoreCase)) {
-        throw "Path is not temppath"
+    if ($repository) {
+        Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
+        invoke-gh repo delete $repository --confirm | Out-Host
     }
-    else {
-        Set-Location ([System.IO.Path]::GetTempPath())
-        Remove-Item $path -Recurse -Force
+
+    if ($path) {
+        if (-not $path.StartsWith("$([System.IO.Path]::GetTempPath())",[StringComparison]::InvariantCultureIgnoreCase)) {
+            throw "Path is not temppath"
+        }
+        else {
+            Set-Location ([System.IO.Path]::GetTempPath())
+            Remove-Item $path -Recurse -Force
+        }
     }
 }
 

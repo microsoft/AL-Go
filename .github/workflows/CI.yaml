@@ -23,6 +23,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: SetupRepositories
+        id: SetupRepositories
         run: e2eTests\SetupRepositories.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}'
 
   Test:

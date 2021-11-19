@@ -113,7 +113,7 @@ catch {
 }
 finally {
     try {    
-        #RemoveRepository -token $token -repository $repository -path $path
+        RemoveRepository -repository $repository -path $path
         $params = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable
         $authContext = New-BcAuthContext @params
         Remove-BcEnvironment -bcAuthContext $authContext -environment $reponame -doNotWait
