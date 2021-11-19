@@ -110,6 +110,8 @@ try {
 }
 catch {
     Write-Host $_.Exception.Message
+    Write-Host "::Error::$($_.Exception.Message)"
+    $host.SetShouldExit(1)
 }
 finally {
     try {    
