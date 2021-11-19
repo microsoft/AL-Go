@@ -10,7 +10,7 @@ outputs:
     value: ${{ steps.workflowinitialize.outputs.correlationId }}
   telemetryScope:
     description: A telemetryScope that covers the workflow
-    value: ${{ steps.workflowinitialize.outputs.telemetryScope }}
+    value: ${{ steps.workflowinitialize.outputs.telemetryScopeJson }}
 runs:
   using: composite
   steps:

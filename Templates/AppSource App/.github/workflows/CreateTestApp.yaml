@@ -31,7 +31,7 @@ jobs:
   initialization:
     runs-on: [ windows-latest ]
     outputs:
-      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
@@ -46,7 +46,7 @@ jobs:
       - name: Creating a new test app
         uses: microsoft/AL-Go-Actions/CreateApp@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
           project: ${{ github.event.inputs.project }}
           type: 'Test App'
           publisher: ${{ github.event.inputs.publisher }}
@@ -63,4 +63,4 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
           eventId: "DO0095"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}            
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}            

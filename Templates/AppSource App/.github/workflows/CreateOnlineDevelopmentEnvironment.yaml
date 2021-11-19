@@ -23,7 +23,7 @@ jobs:
   initialization:
     runs-on: [ windows-latest ]
     outputs:
-      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
@@ -41,14 +41,14 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
           secrets: 'adminCenterApiCredentials'
 
@@ -74,7 +74,7 @@ jobs:
       - name: Create Development Environment
         uses: microsoft/AL-Go-Actions/CreateDevelopmentEnvironment@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
           environmentName: ${{ github.event.inputs.environmentName }} 
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }} 
           adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }} 
@@ -88,4 +88,4 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
           eventId: "DO0093"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}   
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}   
