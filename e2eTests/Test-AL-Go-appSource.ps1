@@ -62,7 +62,7 @@ try {
 
     $run = Run-CICD -wait -branch $branch
 
-    Test-NumberOfRuns -expectedNumberOfRuns 4
+    Test-NumberOfRuns -expectedNumberOfRuns 5
 
     Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 2 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
     
