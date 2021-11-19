@@ -192,6 +192,7 @@ function CreateAndCloneRepository {
 
     invoke-git add *
     invoke-git commit -m 'init'
+    invoke-git branch -M $branch
     if ($actor -and $token) {
         invoke-git remote set-url origin "https://$($actor):$token@github.com/$repository.git"
     }
