@@ -12,6 +12,19 @@ defaults:
     shell: PowerShell
 
 jobs:
+  SetupRepositories:
+    runs-on: [ windows-latest ]
+    outputs:
+      actionsRepo: ${{ steps.SetupRepositories.outputs.actionsRepo }}
+      perTenantExtentionRepo: ${{ steps.SetupRepositories.outputs.perTenantExtensionRepo }}
+      appSourceAppRepo: ${{ steps.SetupRepositories.outputs.appSourceAppRepo }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: SetupRepositories
+        run: e2eTests\SetupRepositories.ps1
+
   Test:
     runs-on: [ windows-latest ]
 
@@ -20,3 +33,13 @@ jobs:
 
       - name: Run tests
         run: Tests\RunTests.ps1
+
+  TestAlGoPte:
+    runs-on: [ windows-latest ]
+    needs: [ SetupRepositories ]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go-pte.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.AdminCenterApiCredentials }}'

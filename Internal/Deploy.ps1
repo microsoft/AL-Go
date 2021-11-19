@@ -1,6 +1,9 @@
 ﻿Param(
     [string] $configName = "",
-    [switch] $collect
+    [switch] $collect,
+    [string] $actor,
+    [string] $token,
+    [switch] $confirm
 )
 
 function invoke-git {
@@ -36,6 +39,17 @@ Set-StrictMode -Version 2.0
 
 $oldPath = Get-Location
 try {
+    if ($actor) {
+        invoke-git config --global user.email "$actor@users.noreply.github.com"
+        invoke-git config --global user.name "$actor"
+        invoke-git config --global hub.protocol https
+    }
+
+    if ($token) {
+        $ENV:GITHUB_TOKEN = $token
+        gh auth login --with-token
+    }
+
     $originalOwnerAndRepo = @{
         "actionsRepo" = "microsoft/AL-Go-Actions"
         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
@@ -124,7 +138,9 @@ try {
         Write-Host "Run the collect.ps1 to collect your modifications in these work repos and copy back"
         Write-Host
     }
-    Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
+    if (-not $confirm) {
+        Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
+    }
 
     if (!$collect) {
         if (Test-Path $baseFolder) {
