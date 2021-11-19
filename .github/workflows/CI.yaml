@@ -44,3 +44,14 @@ jobs:
 
       - name: Run tests
         run: e2eTests\Test-AL-Go-pte.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.AdminCenterApiCredentials }}'
+
+  RemoveRepositories:
+    runs-on: [ windows-latest ]
+    needs: [ TestAlGoPte ]
+    if: (needs.SetupRepositories.result == 'Success')
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Remove Repositories
+        run: e2eTests\RemoveRepositories.ps1 -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
