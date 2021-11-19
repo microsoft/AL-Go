@@ -263,8 +263,8 @@ function RemoveRepository {
 
 function RemoveAllTmpRepositories {
 
-    @(gh repo list) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_".startswith('freddydk/tmp') } | ForEach-Object {
-        invoke-gh repo delete $_ --confirm | Out-Host
+    @(gh repo list --limit 100) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_".startswith('freddydk/tmp') } | ForEach-Object {
+        invoke-gh repo delete "https://github.com/$_" --confirm | Out-Host
     }
 }
 

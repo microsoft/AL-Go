@@ -11,7 +11,9 @@ Set-StrictMode -Version 2.0
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-$adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
+if ($adminCenterApiCredentials) {
+    $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
+}
 
 $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
 $repository = "freddydk/$repoName"
@@ -58,9 +60,13 @@ try {
 
     # Test-AppJson -path "My TestApp\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-    SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentialsSecret
-
-    Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
+    if ($adminCenterApiCredentials) {
+        SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentialsSecret
+        Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
+    }
+    else {
+        Write-Host "::Warning::No AdminCenterApiCredentials, skipping online dev environment creation"
+    }
 
     Run-IncrementVersionNumber -versionNumber 2.0 -wait -branch $branch | Out-Null
 

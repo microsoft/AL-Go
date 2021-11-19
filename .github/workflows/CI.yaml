@@ -23,6 +23,7 @@ jobs:
 
   SetupRepositories:
     runs-on: [ windows-latest ]
+    if: ${{ Secrets.OgrPAT }}
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
@@ -38,6 +39,7 @@ jobs:
   TestAlGoPte:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories ]
+    if: ${{ Secrets.OgrPAT }}
 
     steps:
       - uses: actions/checkout@v2
