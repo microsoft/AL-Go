@@ -231,6 +231,9 @@ try {
                     invoke-git checkout -b $config.branch
                     invoke-git commit --allow-empty -m 'init'
                     invoke-git branch -M $config.branch
+                    if ($actor -and $token) {
+                        invoke-git remote set-url origin "https://$actor:$token@github.com/$($config.githubOwner)/$repo.git"
+                    }
                     invoke-git push -u origin $config.branch
                 }
             }
@@ -241,6 +244,9 @@ try {
                 invoke-git checkout -b $config.branch
                 invoke-git commit --allow-empty -m 'init'
                 invoke-git branch -M $config.branch
+                if ($actor -and $token) {
+                    invoke-git remote set-url origin "https://$actor:$token@github.com/$($config.githubOwner)/$repo.git"
+                }
                 invoke-git push -u origin $config.branch
             }
         
