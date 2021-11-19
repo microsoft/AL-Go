@@ -242,6 +242,7 @@ try {
                 Write-Host "gh repo create $($config.githubOwner)/$repo --public --confirm"
                 start-process -FilePath "gh" -ArgumentList @("repo","create","$($config.githubOwner)/$repo","--public","--confirm") -Wait
                 Set-Location $repo
+                Start-Sleep -Seconds 10
                 invoke-git checkout -b $config.branch
                 invoke-git commit --allow-empty -m 'init'
                 invoke-git branch -M $config.branch
