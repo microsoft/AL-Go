@@ -8,23 +8,25 @@ function SetTokenAndRepository {
     Param(
         [string] $actor,
         [string] $token,
-        [string] $repository
+        [string] $repository,
+        [switch] $github
     )
 
     $script:actor = $actor
     $script:token = $token
     $script:repository = $repository
 
-    if ($actor) {
+    if ($github) {
         invoke-git config --global user.email "$actor@users.noreply.github.com"
         invoke-git config --global user.name "$actor"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
-    }
 
-    if ($token) {
         $ENV:GITHUB_TOKEN = $token
         gh auth login --with-token
+    }
+    else {
+        $token | gh auth login --with-token
     }
 }
 

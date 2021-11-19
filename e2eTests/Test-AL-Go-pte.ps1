@@ -1,4 +1,5 @@
 ﻿Param(
+    [switch] $github,
     [string] $actor = "",
     [string] $token = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText),
     [string] $template = 'https://github.com/microsoft/al-go-pte',
@@ -33,7 +34,7 @@ try {
         $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
     }
 
-    SetTokenAndRepository -actor $actor -token $token -repository $repository
+    SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
     
     $path = CreateAndCloneRepository -template $template -branch $branch
 
@@ -116,7 +117,9 @@ try {
 catch {
     Write-Host $_.Exception.Message
     Write-Host "::Error::$($_.Exception.Message)"
-    $host.SetShouldExit(1)
+    if ($github) {
+        $host.SetShouldExit(1)
+    }
 }
 finally {
     try {    

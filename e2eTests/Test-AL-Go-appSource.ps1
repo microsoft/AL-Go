@@ -1,4 +1,5 @@
 ﻿Param(
+    [switch] $gitHub,
     [string] $actor = "",
     [string] $token = ((Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText),
     [string] $template = 'https://github.com/microsoft/al-go-pte',
@@ -38,7 +39,7 @@ try {
         throw "License file secret not set"
     }
 
-    SetTokenAndRepository -actor $actor -token $token -repository $repository
+    SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
 
     $path = CreateAndCloneRepository -template $template -branch $branch
 
