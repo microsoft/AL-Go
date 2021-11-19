@@ -129,6 +129,7 @@ try {
 
     # Test localdevenv
 
+    RemoveRepository -repository $repository -path $path
 }
 catch {
     Write-Host $_.Exception.Message
@@ -136,13 +137,9 @@ catch {
     if ($github) {
         $host.SetShouldExit(1)
     }
-    else {
-        Read-Host "Press ENTER to continue (and delete repository)"
-    }
 }
 finally {
     try {    
-        RemoveRepository -repository $repository -path $path
         $params = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable
         $authContext = New-BcAuthContext @params
         Remove-BcEnvironment -bcAuthContext $authContext -environment $reponame -doNotWait
