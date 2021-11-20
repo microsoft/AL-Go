@@ -220,7 +220,6 @@ function CreateAndCloneRepository {
     }
     invoke-git push --set-upstream origin $branch
 
-    $path
     Start-Sleep -seconds $delay
 }
 

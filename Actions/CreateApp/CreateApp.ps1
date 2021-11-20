@@ -58,7 +58,7 @@ try {
         OutputWarning -message "$orgFolderName already exists as a folder in the repo, using $folderName instead"
     }
 
-    # Modify .github\go\settings.json
+    # Modify .AL-Go\settings.json
     try {
         $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json

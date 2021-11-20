@@ -44,7 +44,8 @@ try {
 
     SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
     
-    $path = CreateAndCloneRepository -template $template -branch $branch
+    CreateAndCloneRepository -template $template -branch $branch
+    $repoPath = (Get-Location).Path
 
     if ($multiProject) {
         $projectParam = @{ "project" = "P1" }
@@ -132,7 +133,7 @@ try {
 
     # Test localdevenv
 
-    RemoveRepository -repository $repository -path $path
+    RemoveRepository -repository $repository -path $repoPath
 }
 catch {
     Write-Host $_.Exception.Message

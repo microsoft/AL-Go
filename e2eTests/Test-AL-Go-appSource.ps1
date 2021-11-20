@@ -51,7 +51,8 @@ try {
 
     SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
 
-    $repoPath = CreateAndCloneRepository -template $template -branch $branch
+    CreateAndCloneRepository -template $template -branch $branch
+    $repoPath = (Get-Location).Path
 
     SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
 
