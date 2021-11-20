@@ -1,5 +1,6 @@
 ﻿function Run-IncrementVersionNumber {
     Param(
+        [string] $project,
         [string] $versionNumber,
         [switch] $directCommit,
         [switch] $wait,
@@ -8,6 +9,7 @@
 
     $workflowName = 'Increment Version Number'
     $parameters = @{
+        "project" = $project
         "versionNumber" = $versionNumber
         "directCommit" = @("Y","N")[!$directCommit]
     }
