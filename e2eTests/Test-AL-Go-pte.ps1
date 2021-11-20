@@ -91,7 +91,7 @@ try {
         Write-Host "::Warning::No AdminCenterApiCredentials, skipping online dev environment creation"
     }
 
-    Run-IncrementVersionNumber -versionNumber 2.0 -wait -branch $branch | Out-Null
+    Run-IncrementVersionNumber @projectParam -versionNumber 2.0 -wait -branch $branch | Out-Null
 
     MergePRandPull -branch $branch
 
@@ -107,6 +107,11 @@ try {
 
     CommitAndPush -commitMessage "Version strategy change"
 
+    if ($multiProject) {
+        $projectParam = @{
+            "project" = "*"
+        }
+    }
     Run-IncrementVersionNumber -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
 
     Pull -branch $branch
