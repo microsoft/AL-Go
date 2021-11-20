@@ -3,7 +3,8 @@
     [string] $actor = "",
     [string] $token = "",
     [string] $template = "",
-    [string] $adminCenterApiCredentials = ""
+    [string] $adminCenterApiCredentials = "",
+    [switch] $multiProject
 )
 
 $ErrorActionPreference = "stop"
@@ -25,6 +26,7 @@ $repository = "freddydk/$repoName"
 $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
 $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/testapps.zip"
 $branch = "main"
+$projectParam = @{}
 
 try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
@@ -44,11 +46,16 @@ try {
     
     $path = CreateAndCloneRepository -template $template -branch $branch
 
-    Run-AddExistingAppOrTestApp -url $sampleApp1 -wait -branch $branch | Out-Null
+    if ($multiProject) {
+        $projectParam = @{ "project" = "P1" }
+        $projectFolder = 'P1\'
+    }
+
+    Run-AddExistingAppOrTestApp @projectParam -url $sampleApp1 -wait -branch $branch | Out-Null
 
     MergePRandPull -branch $branch
 
-    Run-AddExistingAppOrTestApp -url $sampleTestApp1 -directCommit -wait -branch $branch | Out-Null
+    Run-AddExistingAppOrTestApp @projectParam -url $sampleTestApp1 -directCommit -wait -branch $branch | Out-Null
 
     $run = Run-CICD -wait -branch $branch
 
@@ -58,15 +65,21 @@ try {
     
     Run-CreateRelease -appVersion '1.0.2.0' -name '1.0' -tag '1.0' -wait -branch $branch | Out-Null
 
-    Run-CreateApp -name "My App" -publisher "My Publisher" -idrange "55000..56000" -directCommit -wait -branch $branch | Out-Null
+    if ($multiProject) {
+        $projectParam = @{ "project" = "P2" }
+        $projectFolder = 'P2\'
+    }
+
+    Run-CreateApp @projectParam -name "My App" -publisher "My Publisher" -idrange "55000..56000" -directCommit -wait -branch $branch | Out-Null
 
     # Test-AppJson -path "My App\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-    Run-CreateTestApp -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
+    Run-CreateTestApp @projectParam -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
 
     # Test-AppJson -path "My TestApp\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-    if ($adminCenterApiCredentials) {
+
+    if ($adminCenterApiCredentials -and -not $multiProject) {
         SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentialsSecret
         Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
     }

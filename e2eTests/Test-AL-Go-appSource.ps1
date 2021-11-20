@@ -4,7 +4,8 @@
     [string] $token = "",
     [string] $template = "",
     [string] $adminCenterApiCredentials = "",
-    [string] $licenseFileUrl = ""
+    [string] $licenseFileUrl = "",
+    [switch] $multiProject
 )
 
 $ErrorActionPreference = "stop"
@@ -26,6 +27,8 @@ $repository = "freddydk/$repoName"
 $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/apps.zip"
 $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/testapps.zip"
 $branch = "main"
+$projectParam = @{}
+$projectFolder = ""
 
 try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
@@ -52,11 +55,16 @@ try {
 
     SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
 
-    Add-PropertiesToJsonFile -jsonFile ".AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
+    if ($multiProject) {
+        $projectParam = @{ "project" = "P1" }
+        $projectFolder = 'P1\'
+    }
 
-    Run-AddExistingAppOrTestApp -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
+    Run-AddExistingAppOrTestApp @projectParam -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
+    
+    Add-PropertiesToJsonFile -jsonFile "$($projectFolder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
 
-    Run-AddExistingAppOrTestApp -url $sampleTestApp1 -wait -branch $branch | Out-Null
+    Run-AddExistingAppOrTestApp @projectParam -url $sampleTestApp1 -wait -branch $branch | Out-Null
 
     MergePRandPull -branch $branch
 
@@ -68,12 +76,17 @@ try {
     
     Run-CreateRelease -appVersion '1.0.3.0' -name '1.0' -tag '1.0' -wait -branch $branch | Out-Null
 
-    Run-CreateApp -name "My App" -publisher "My Publisher" -idrange "75055000..75056000" -directCommit -wait -branch $branch | Out-Null
+    if ($multiProject) {
+        $projectParam = @{ "project" = "P2" }
+        $projectFolder = 'P2\'
+    }
+
+    Run-CreateApp @projectParam -name "My App" -publisher "My Publisher" -idrange "75055000..75056000" -directCommit -wait -branch $branch | Out-Null
 
     Pull -branch $branch
 
     Copy-Item -path "Default App Name\logo\helloworld256x240.png" -Destination "My App\helloworld256x240.png"
-    Add-PropertiesToJsonFile -jsonFile "My App\app.json" -properties @{
+    Add-PropertiesToJsonFile -jsonFile "$($projectFolder)My App\app.json" -properties @{
         "brief" = "Hello World for AppSource"
         "description" = "Hello World sample app for AppSource"
         "logo" = "helloworld256x240.png"
@@ -87,11 +100,11 @@ try {
 
     # Test-AppJson -path "My App\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-    Run-CreateTestApp -name "My TestApp" -publisher "My Publisher" -idrange "75058000..75059000" -directCommit -wait -branch $branch | Out-Null
+    Run-CreateTestApp @projectParam -name "My TestApp" -publisher "My Publisher" -idrange "75058000..75059000" -directCommit -wait -branch $branch | Out-Null
 
     # Test-AppJson -path "My TestApp\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-    if ($adminCenterApiCredentials) {
+    if ($adminCenterApiCredentials -and -not $multiProject) {
         SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentialsSecret
         Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
     }

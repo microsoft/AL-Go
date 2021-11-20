@@ -58,6 +58,16 @@ jobs:
       - name: Run tests
         run: e2eTests\Test-AL-Go-pte.ps1 -github -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}'
 
+  TestAlGoPteMultiProject:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories ]
+    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go-pte.ps1 -github -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -multiProject
+
   TestAlGoAppSource:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
@@ -67,6 +77,16 @@ jobs:
 
       - name: Run tests
         run: e2eTests\Test-AL-Go-appSource.ps1 -github -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}'
+
+  TestAlGoAppSourceMultiProject:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories ]
+    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go-appSource.ps1 -github -actor '${{ github.actor }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
