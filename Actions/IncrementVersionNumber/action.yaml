@@ -30,7 +30,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal
