@@ -52,7 +52,7 @@ try {
 
     SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
 
-    Add-PropertiesToJsonFile -jsonFile ".AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_" ) }
+    Add-PropertiesToJsonFile -jsonFile ".AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
 
     Run-AddExistingAppOrTestApp -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
 
@@ -66,9 +66,24 @@ try {
 
     Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 2 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
     
-    Run-CreateRelease -appVersion '1.0.2.0' -name '1.0' -tag '1.0' -wait -branch $branch | Out-Null
+    Run-CreateRelease -appVersion '1.0.3.0' -name '1.0' -tag '1.0' -wait -branch $branch | Out-Null
 
     Run-CreateApp -name "My App" -publisher "My Publisher" -idrange "75055000..75056000" -directCommit -wait -branch $branch | Out-Null
+
+    Pull -branch $branch
+
+    Copy-Item -path "Default App Name\logo\helloworld256x240.png" -Destination "My App\helloworld256x240.png"
+    Add-PropertiesToJsonFile -jsonFile "My App\app.json" -properties @{
+        "brief" = "Hello World for AppSource"
+        "description" = "Hello World sample app for AppSource"
+        "logo" = "helloworld256x240.png"
+        "url" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
+        "EULA" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
+        "privacyStatement" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
+        "help" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
+        "contextSensitiveHelpUrl" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
+        "features" = @( "TranslationFile" )
+    }
 
     # Test-AppJson -path "My App\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
