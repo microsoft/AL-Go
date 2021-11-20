@@ -274,7 +274,7 @@ function RemoveRepository {
 
     if ($path) {
         if (-not $path.StartsWith("$([System.IO.Path]::GetTempPath())",[StringComparison]::InvariantCultureIgnoreCase)) {
-            throw "Path is not temppath"
+            throw "$path is not temppath"
         }
         else {
             Set-Location ([System.IO.Path]::GetTempPath())

@@ -90,7 +90,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
-    needs: [ Test, SetupRepositories, TestAlGoPte, TestAlGoAppSource ]
+    needs: [ Test, SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject ]
     if: always() && ('${{ needs.SetupRepositories.result }}' == 'Success') && ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
     steps:
       - uses: actions/checkout@v2

@@ -51,7 +51,7 @@ try {
 
     SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
 
-    $path = CreateAndCloneRepository -template $template -branch $branch
+    $repoPath = CreateAndCloneRepository -template $template -branch $branch
 
     SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
 
@@ -61,6 +61,8 @@ try {
     }
 
     Run-AddExistingAppOrTestApp @projectParam -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
+
+    Pull -branch $branch
     
     Add-PropertiesToJsonFile -jsonFile "$($projectFolder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
 
@@ -157,7 +159,7 @@ try {
 
     # Test localdevenv
 
-    RemoveRepository -repository $repository -path $path
+    RemoveRepository -repository $repository -path $repoPath
 }
 catch {
     Write-Host $_.Exception.Message

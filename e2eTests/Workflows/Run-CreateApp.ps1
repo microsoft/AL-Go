@@ -11,6 +11,7 @@
 
     $workflowName = 'Create a new app'
     $parameters = @{
+        "project" = $project
         "name" = $name
         "publisher" = $publisher
         "idrange" = $idrange
