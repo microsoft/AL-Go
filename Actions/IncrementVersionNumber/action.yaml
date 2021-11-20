@@ -16,6 +16,10 @@ inputs:
     description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: '{}'
+  project:
+    description: Projects name if the repository is setup for multiple projects (* for all projects)
+    required: false
+    default: '.'
   versionnumber:
     description: New Version Number (Major.Minor)
     required: true

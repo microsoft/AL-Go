@@ -1,8 +1,0 @@
-{
-    "githubOwner": "freddydk",
-    "actionsRepo": "myAL-Go-Actions",
-    "perTenantExtensionRepo": "myAL-Go-PTE",
-    "appSourceAppRepo": "myAL-Go-AppSource",
-    "branch": "main",
-    "localFolder": "myAL-Go"
-}

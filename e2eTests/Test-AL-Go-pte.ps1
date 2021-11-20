@@ -1,6 +1,6 @@
 ﻿Param(
     [switch] $github = "",
-    [string] $actor = "",
+    [string] $githubOwner = "",
     [string] $token = "",
     [string] $template = "",
     [string] $adminCenterApiCredentials = "",
@@ -42,7 +42,7 @@ try {
         if (!$adminCenterApiCredentials) { $adminCenterApiCredentials = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText }
     }
 
-    SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
     
     CreateAndCloneRepository -template $template -branch $branch
     $repoPath = (Get-Location).Path

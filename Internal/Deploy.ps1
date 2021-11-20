@@ -1,9 +1,9 @@
 ﻿Param(
     [string] $configName = "",
     [switch] $collect,
-    [string] $actor,
+    [string] $githubOwner,
     [string] $token,
-    [switch] $confirm
+    [switch] $github
 )
 
 function invoke-git {
@@ -39,14 +39,15 @@ Set-StrictMode -Version 2.0
 
 $oldPath = Get-Location
 try {
-    if ($actor) {
-        invoke-git config --global user.email "$actor@users.noreply.github.com"
-        invoke-git config --global user.name "$actor"
+
+    if ($github) {
+        if (!$githubOwner -or !$token) { throw "When running deploy in a workflow, you need to set githubOwner and token" }
+
+        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
+        invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
-    }
 
-    if ($token) {
         $ENV:GITHUB_TOKEN = $token
         gh auth login --with-token
     }
@@ -139,7 +140,7 @@ try {
         Write-Host "Run the collect.ps1 to collect your modifications in these work repos and copy back"
         Write-Host
     }
-    if (-not $confirm) {
+    if (-not $github) {
         Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
     }
 
@@ -232,8 +233,8 @@ try {
                     invoke-git checkout -b $config.branch
                     invoke-git commit --allow-empty -m 'init'
                     invoke-git branch -M $config.branch
-                    if ($actor -and $token) {
-                        invoke-git remote set-url origin "https://$($actor):$token@github.com/$($config.githubOwner)/$repo.git"
+                    if ($githubOwner -and $token) {
+                        invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
                     }
                     invoke-git push -u origin $config.branch
                 }
@@ -246,8 +247,8 @@ try {
                 invoke-git checkout -b $config.branch
                 invoke-git commit --allow-empty -m 'init'
                 invoke-git branch -M $config.branch
-                if ($actor -and $token) {
-                    invoke-git remote set-url origin "https://$($actor):$token@github.com/$($config.githubOwner)/$repo.git"
+                if ($githubOwner -and $token) {
+                    invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
                 }
                 invoke-git push -u origin $config.branch
             }

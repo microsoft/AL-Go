@@ -1,6 +1,6 @@
 ﻿Param(
     [switch] $gitHub,
-    [string] $actor = "",
+    [string] $githubOwner = "",
     [string] $token = "",
     [string] $template = "",
     [string] $adminCenterApiCredentials = "",
@@ -49,7 +49,7 @@ try {
         throw "License file secret not set"
     }
 
-    SetTokenAndRepository -actor $actor -token $token -repository $repository -github:$github
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     CreateAndCloneRepository -template $template -branch $branch
     $repoPath = (Get-Location).Path

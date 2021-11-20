@@ -1,4 +1,4 @@
-﻿$actor = "actor"
+﻿$githubOwner = "githubOwner"
 $token = "token"
 $repository = "repo"
 
@@ -6,19 +6,19 @@ $delay = 10
 
 function SetTokenAndRepository {
     Param(
-        [string] $actor,
+        [string] $githubOwner,
         [string] $token,
         [string] $repository,
         [switch] $github
     )
 
-    $script:actor = $actor
+    $script:githubOwner = $githubOwner
     $script:token = $token
     $script:repository = $repository
 
     if ($github) {
-        invoke-git config --global user.email "$actor@users.noreply.github.com"
-        invoke-git config --global user.name "$actor"
+        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
+        invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
 
@@ -215,8 +215,8 @@ function CreateAndCloneRepository {
     invoke-git add *
     invoke-git commit -m 'init'
     invoke-git branch -M $branch
-    if ($actor -and $token) {
-        invoke-git remote set-url origin "https://$($actor):$token@github.com/$repository.git"
+    if ($githubOwner -and $token) {
+        invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
 

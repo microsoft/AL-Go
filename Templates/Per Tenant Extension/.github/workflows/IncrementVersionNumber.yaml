@@ -3,6 +3,10 @@ name: Increment Version Number
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects (* for all projects)
+        required: false
+        default: '.'
       versionNumber:
         description: New Version Number (Major.Minor)
         required: true
@@ -35,6 +39,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
           parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          project: ${{ github.event.inputs.project }}
           versionNumber: ${{ github.event.inputs.versionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}
   
