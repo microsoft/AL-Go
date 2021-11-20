@@ -27,8 +27,18 @@ $repository = "$githubOwner/$repoName"
 $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/apps.zip"
 $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/testapps.zip"
 $branch = "main"
-$projectParam = @{}
-$projectFolder = ""
+$project1Param = @{}
+$project1Folder = ""
+$project2Param = @{}
+$project2Folder = ""
+$allProjectsParam = @{}
+if ($multiProject) {
+    $project1Param = @{ "project" = "P1" }
+    $project1Folder = 'P1\'
+    $project2Param = @{ "project" = "P2" }
+    $project2Folder = 'P2\'
+    $allProjectsParam = @{ "project" = "*" }
+}
 
 try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
@@ -59,18 +69,13 @@ try {
 
     SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
 
-    if ($multiProject) {
-        $projectParam = @{ "project" = "P1" }
-        $projectFolder = 'P1\'
-    }
-
-    Run-AddExistingAppOrTestApp @projectParam -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
+    Run-AddExistingAppOrTestApp @project1Param -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
 
     Pull -branch $branch
     
-    Add-PropertiesToJsonFile -jsonFile "$($projectFolder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
+    Add-PropertiesToJsonFile -jsonFile "$($project1Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
 
-    Run-AddExistingAppOrTestApp @projectParam -url $sampleTestApp1 -wait -branch $branch | Out-Null
+    Run-AddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch | Out-Null
 
     MergePRandPull -branch $branch
 
@@ -82,17 +87,16 @@ try {
     
     Run-CreateRelease -appVersion '1.0.3.0' -name '1.0' -tag '1.0' -wait -branch $branch | Out-Null
 
-    if ($multiProject) {
-        $projectParam = @{ "project" = "P2" }
-        $projectFolder = 'P2\'
-    }
-
-    Run-CreateApp @projectParam -name "My App" -publisher "My Publisher" -idrange "75055000..75056000" -directCommit -wait -branch $branch | Out-Null
+    Run-CreateApp @project2Param -name "My App" -publisher "My Publisher" -idrange "75055000..75056000" -directCommit -wait -branch $branch | Out-Null
 
     Pull -branch $branch
 
-    Copy-Item -path "Default App Name\logo\helloworld256x240.png" -Destination "My App\helloworld256x240.png"
-    Add-PropertiesToJsonFile -jsonFile "$($projectFolder)My App\app.json" -properties @{
+    if ($multiProject) {
+        Add-PropertiesToJsonFile -jsonFile "$($project2Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "cus" ) }
+    }
+
+    Copy-Item -path "$($project1Folder)Default App Name\logo\helloworld256x240.png" -Destination "$($project2Folder)My App\helloworld256x240.png"
+    Add-PropertiesToJsonFile -jsonFile "$($project2Folder)My App\app.json" -properties @{
         "brief" = "Hello World for AppSource"
         "description" = "Hello World sample app for AppSource"
         "logo" = "helloworld256x240.png"
@@ -106,7 +110,7 @@ try {
 
     # Test-AppJson -path "My App\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-    Run-CreateTestApp @projectParam -name "My TestApp" -publisher "My Publisher" -idrange "75058000..75059000" -directCommit -wait -branch $branch | Out-Null
+    Run-CreateTestApp @project2Param -name "My TestApp" -publisher "My Publisher" -idrange "75058000..75059000" -directCommit -wait -branch $branch | Out-Null
 
     # Test-AppJson -path "My TestApp\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
@@ -118,7 +122,7 @@ try {
         Write-Host "::Warning::No AdminCenterApiCredentials, skipping online dev environment creation"
     }
 
-    Run-IncrementVersionNumber @projectParam -versionNumber 2.0 -wait -branch $branch | Out-Null
+    Run-IncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
 
     MergePRandPull -branch $branch
 
@@ -126,24 +130,19 @@ try {
 
     Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 3 -expectedNumberOfTestApps 2 -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0.' -appVersion ''
 
-    $repoSettings = Get-Content ".AL-Go\settings.json" -Encoding UTF8 | ConvertFrom-Json
+    $repoSettings = Get-Content ".github\.AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
     $reposettings | Add-Member -NotePropertyName 'versioningStrategy' -NotePropertyValue 16
-    $repoSettings | ConvertTo-Json | Set-Content ".AL-Go\settings.json" -Encoding UTF8
-    Remove-Item -Path ".AL-Go\*.ps1" -Force
+    $repoSettings | ConvertTo-Json | Set-Content ".github\.AL-Go-Settings.json" -Encoding UTF8
+    Remove-Item -Path "$($project1Folder).AL-Go\*.ps1" -Force
     Remove-Item -Path ".github\workflows\CreateRelease.yaml" -Force
 
     CommitAndPush -commitMessage "Version strategy change"
 
-    if ($multiProject) {
-        $projectParam = @{
-            "project" = "*"
-        }
-    }
-    Run-IncrementVersionNumber @projectParam -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
+    Run-IncrementVersionNumber @allProjectsParam -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
 
     Pull -branch $branch
 
-    if (Test-Path ".AL-Go\*.ps1") { throw "Local PowerShell scripts in the .AL-Go folder should have been removed" }
+    if (Test-Path "$($project1Folder).AL-Go\*.ps1") { throw "Local PowerShell scripts in the .AL-Go folder should have been removed" }
     if (Test-Path ".gitub\workflows\CreateRelease.yaml") { throw "CreateRelease.yaml should have been removed" }
 
     $run = Run-CICD -wait -branch $branch
@@ -155,7 +154,7 @@ try {
     Run-UpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
     MergePRandPull -branch $branch
 
-    if (!(Test-Path ".AL-Go\*.ps1")) { throw "Local PowerShell scripts in the .AL-Go folder was not updated by Update AL-Go System Files" }
+    if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scripts in the .AL-Go folder was not updated by Update AL-Go System Files" }
     if (!(Test-Path ".github\workflows\CreateRelease.yaml")) { throw "CreateRelease.yaml was not updated by Update AL-Go System Files" }
 
     Run-CreateRelease -appVersion latest -name "v3.0" -tag "v3.0" -wait -branch $branch | Out-Null
