@@ -23,7 +23,7 @@ _______       _              _           _____                                  
 '@
 
 $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-$repository = "freddydk/$repoName"
+$repository = "$githubOwner/$repoName"
 $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/apps.zip"
 $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/testapps.zip"
 $branch = "main"
@@ -34,7 +34,10 @@ try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
     Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-    if (!$github) {
+    if ($github) {
+        $template = "https://github.com/$githubOwner/$template"
+    }
+    else {
         if (!$token) {  $token = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText }
         if (!$template) { $template = 'https://github.com/freddydk/al-go-appSource' }
         if (!$adminCenterApiCredentials) { $adminCenterApiCredentials = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText }

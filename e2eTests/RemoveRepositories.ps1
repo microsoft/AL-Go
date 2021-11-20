@@ -15,6 +15,6 @@ Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameCheckin
 
 SetTokenAndRepository -githubOwner $githubOwner -token $token -repository ''
 
-RemoveRepository -repository $actionsRepo
-RemoveRepository -repository $perTenantExtensionRepo
-RemoveRepository -repository $AppSourceAppRepo
+RemoveRepository -repository "https://github.com/$githubOwner/$actionsRepo"
+RemoveRepository -repository "https://github.com/$githubOwner/$perTenantExtensionRepo"
+RemoveRepository -repository "https://github.com/$githubOwner/$AppSourceAppRepo"
