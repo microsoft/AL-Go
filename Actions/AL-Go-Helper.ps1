@@ -1172,7 +1172,7 @@ function CheckAndCreateProjectFolder {
             $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
             if ($settingsJson.appFolders.Count -eq 0 -and $settingsJson.testFolders.Count -eq 0) {
                 OutputWarning "Converting the repository to a multi-project repository as no other apps have been added previously."
-                Copy-Item $ALGoSettingsFile -Destination ".github\defaultsettings.json"
+                Copy-Item $ALGoSettingsFile -Destination ".github\settings.json"
                 New-Item $project -ItemType Directory | Out-Null
                 Move-Item -path $ALGoFolder -Destination $project
                 Set-Location $project
@@ -1185,8 +1185,8 @@ function CheckAndCreateProjectFolder {
             if (!(Test-Path $project)) {
                 New-Item -Path (Join-Path $project $ALGoFolder) -ItemType Directory | Out-Null
                 Set-Location $project
-                if (Test-Path ".github\defaultsettings.json") {
-                    Copy-Item -Path "..\.github\defaultsettings.json" -Destination $ALGoSettingsFile
+                if (Test-Path ".github\settings.json") {
+                    Copy-Item -Path "..\.github\settings.json" -Destination $ALGoSettingsFile
                 }
                 else {
                     OutputWarning "Project folder doesn't exist, creating a new project folder and a default settings file with type PTE and country us. Please modify if needed."
