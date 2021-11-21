@@ -1187,7 +1187,7 @@ function CheckAndCreateProjectFolder {
             if (!(Test-Path $project)) {
                 New-Item -Path (Join-Path $project $ALGoFolder) -ItemType Directory | Out-Null
                 Set-Location $project
-                if (Test-Path ".github\AL-Go-Settings.json") {
+                if (Test-Path "..\.github\AL-Go-Settings.json") {
                     Copy-Item -Path "..\.github\AL-Go-Settings.json" -Destination $ALGoSettingsFile
                 }
                 else {
