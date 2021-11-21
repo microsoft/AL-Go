@@ -29,7 +29,8 @@ function Test-ArtifactsFromRun {
         [string] $appVersion = ""
     )
 
-    Write-Host "Download build artifacts from run $runid to $folder"
+    Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
+    Write-Host "Download build artifacts to $folder"
     gh run download $runid --dir $folder
 
     $actualNumberOfApps = @(Get-ChildItem -Path "$folder\*-Apps-$repoVersion*\*$appVersion*.app").Count

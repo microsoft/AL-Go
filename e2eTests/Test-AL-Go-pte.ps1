@@ -31,12 +31,14 @@ $project1Folder = ""
 $project2Param = @{}
 $project2Folder = ""
 $allProjectsParam = @{}
+$repoSettingsFile = ".AL-Go\Settings.json"
 if ($multiProject) {
     $project1Param = @{ "project" = "P1" }
     $project1Folder = 'P1\'
     $project2Param = @{ "project" = "P2" }
     $project2Folder = 'P2\'
     $allProjectsParam = @{ "project" = "*" }
+    $repoSettingsFile = ".github\.AL-Go-Settings.json"
 }
 
 try {
@@ -83,7 +85,6 @@ try {
 
     # Test-AppJson -path "My TestApp\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
 
-
     if ($adminCenterApiCredentials -and -not $multiProject) {
         SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentialsSecret
         Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
@@ -91,6 +92,8 @@ try {
     else {
         Write-Host "::Warning::No AdminCenterApiCredentials, skipping online dev environment creation"
     }
+
+    Pull -branch $branch
 
     Run-IncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
 
@@ -100,9 +103,9 @@ try {
 
     Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 3 -expectedNumberOfTestApps 2 -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0.' -appVersion ''
 
-    $repoSettings = Get-Content ".github\.AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
+    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
     $reposettings | Add-Member -NotePropertyName 'versioningStrategy' -NotePropertyValue 16
-    $repoSettings | ConvertTo-Json | Set-Content ".github\.AL-Go-Settings.json" -Encoding UTF8
+    $repoSettings | ConvertTo-Json | Set-Content $repoSettingsFile -Encoding UTF8
     Remove-Item -Path "$($project1Folder).AL-Go\*.ps1" -Force
     Remove-Item -Path ".github\workflows\CreateRelease.yaml" -Force
 

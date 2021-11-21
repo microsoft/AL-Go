@@ -20,6 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Rate Limits
+        run: |
+          ((Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
+
       - name: Run basic tests
         run: Tests\RunTests.ps1
       
@@ -44,6 +48,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Rate Limits
+        run: |
+          ((Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
+
       - name: Setup Repositories
         id: setup
         run: e2eTests\SetupRepositories.ps1 -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}'
@@ -55,6 +63,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Rate Limits
+        run: |
+          ((Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
+
       - name: Run tests
         run: e2eTests\Test-AL-Go-pte.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}'
 
@@ -64,6 +76,10 @@ jobs:
     if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
     steps:
       - uses: actions/checkout@v2
+
+      - name: Rate Limits
+        run: |
+          ((Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
 
       - name: Run tests
         run: e2eTests\Test-AL-Go-pte.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -multiProject
@@ -75,6 +91,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Rate Limits
+        run: |
+          ((Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
+
       - name: Run tests
         run: e2eTests\Test-AL-Go-appSource.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}'
 
@@ -85,6 +105,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Rate Limits
+        run: |
+          ((Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
+
       - name: Run tests
         run: e2eTests\Test-AL-Go-appSource.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject
 
@@ -94,6 +118,10 @@ jobs:
     if: always() && ('${{ needs.SetupRepositories.result }}' == 'Success') && ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
     steps:
       - uses: actions/checkout@v2
+
+      - name: Rate Limits
+        run: |
+          ((Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
 
       - name: Remove Repositories
         run: e2eTests\RemoveRepositories.ps1 -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
