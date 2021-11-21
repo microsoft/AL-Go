@@ -49,10 +49,9 @@ try {
 
     $projects | ForEach-Object {
         $project = $_
-        Get-Item -Path "$project\.AL-Go\Settings.json" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
         try {
-            Write-Host "Reading $ALGoSettingsFile"
-            $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
+            Write-Host "Reading $project\$ALGoSettingsFile"
+            $settingsJson = Get-Content "$project\$ALGoSettingsFile" -Encoding UTF8 | ConvertFrom-Json
             if ($settingsJson.PSObject.Properties.Name -eq "RepoVersion") {
                 $oldVersion = [System.Version]"$($settingsJson.RepoVersion).0.0"
                 if ($newVersion -le $oldVersion) {
@@ -66,10 +65,10 @@ try {
             }
             $modifyApps = (($settingsJson.PSObject.Properties.Name -eq "VersioningStrategy") -and (($settingsJson.VersioningStrategy -band 16) -eq 16))
             $settingsJson
-            $settingsJson | ConvertTo-Json -Depth 99 | Set-Content $ALGoSettingsFile -Encoding UTF8
+            $settingsJson | ConvertTo-Json -Depth 99 | Set-Content "$project\$ALGoSettingsFile" -Encoding UTF8
         }
         catch {
-            throw "Settings file $ALGoSettingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
+            throw "Settings file $project\$ALGoSettingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
         }
 
         if ($modifyApps) {
