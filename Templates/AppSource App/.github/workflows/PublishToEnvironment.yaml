@@ -20,7 +20,7 @@ jobs:
   initialization:
     runs-on: [ windows-latest ]
     outputs:
-      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
@@ -112,7 +112,7 @@ jobs:
         env:
           authContext: '${{ steps.authContext.outputs.authContext }}'
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
           type: 'Publish'
           projects: '${{ secrets.Projects }}'
           environmentName: ${{ matrix.environment }}
@@ -127,5 +127,5 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
           eventId: "DO0097"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}  
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}  
 

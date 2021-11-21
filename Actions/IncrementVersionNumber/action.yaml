@@ -16,6 +16,10 @@ inputs:
     description: Specifies the parent telemetry scope for the Telemetry signal
     required: false
     default: '{}'
+  project:
+    description: Project name if the repository is setup for multiple projects (* for all projects)
+    required: false
+    default: '.'
   versionnumber:
     description: New Version Number (Major.Minor)
     required: true
@@ -26,7 +30,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
       shell: PowerShell
 branding:
   icon: terminal

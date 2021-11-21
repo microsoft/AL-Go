@@ -23,8 +23,8 @@ try {
         $scopeJson = "{}"
         $correlationId = [guid]::Empty.ToString()
     }
-    Write-Host "::set-output name=telemetryScope::$scopeJson"
-    Write-Host "set-output name=telemetryScope::$scopeJson"
+    Write-Host "::set-output name=telemetryScopeJson::$scopeJson"
+    Write-Host "set-output name=telemetryScopeJson::$scopeJson"
 
     Write-Host "::set-output name=correlationId::$correlationId"
     Write-Host "set-output name=correlationId::$correlationId"

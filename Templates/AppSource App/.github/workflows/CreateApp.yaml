@@ -28,7 +28,7 @@ jobs:
   initialization:
     runs-on: [ windows-latest ]
     outputs:
-      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
@@ -45,7 +45,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
           get: type
 
       - name: Creating a new app
@@ -57,7 +57,7 @@ jobs:
           publisher: ${{ github.event.inputs.publisher }}
           idrange: ${{ github.event.inputs.idrange }}
           directCommit: ${{ github.event.inputs.directCommit }}
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
 
   postProcess:
     runs-on: [ windows-latest ]
@@ -68,4 +68,4 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
           eventId: "DO0092"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}

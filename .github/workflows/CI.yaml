@@ -14,9 +14,83 @@ defaults:
 jobs:
   Test:
     runs-on: [ windows-latest ]
+    outputs:
+      orgpatset: ${{ steps.checksecrets.outputs.orgpatset}}
+      licensefileurlset: ${{ steps.checksecrets.outputs.licensefileurlset}}
+    steps:
+      - uses: actions/checkout@v2
 
+      - name: Run basic tests
+        run: Tests\RunTests.ps1
+      
+      - name: Check secrets
+        id: checksecrets
+        run: |
+          $orgpatset = @('Yes','No')['${{ Secrets.OrgPAT }}' -eq '']
+          Write-Host "::set-output name=orgpatset::$orgpatset"
+          Write-Host "set-output name=orgpatset::$orgpatset"
+
+  SetupRepositories:
+    runs-on: [ windows-latest ]
+    needs: [ Test ]
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
+    outputs:
+      actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
+      perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
+      appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Repositories
+        id: setup
+        run: e2eTests\SetupRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}'
+
+  TestAlGoPte:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories ]
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
     steps:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: Tests\RunTests.ps1
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}'
+
+  TestAlGoPteMultiProject:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories ]
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -multiProject
+
+  TestAlGoAppSource:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories ]
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp
+
+  TestAlGoAppSourceMultiProject:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories ]
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
+
+  RemoveRepositories:
+    runs-on: [ windows-latest ]
+    needs: [ Test, SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject ]
+    if: always() && (${{ needs.SetupRepositories.result == 'Success' }}) && (${{ needs.Test.outputs.orgpatset == 'Yes' }})
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Remove Repositories
+        run: e2eTests\RemoveRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

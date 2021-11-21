@@ -1,6 +1,9 @@
 ﻿Param(
     [string] $configName = "",
-    [switch] $collect
+    [switch] $collect,
+    [string] $githubOwner,
+    [string] $token,
+    [switch] $github
 )
 
 function invoke-git {
@@ -36,6 +39,19 @@ Set-StrictMode -Version 2.0
 
 $oldPath = Get-Location
 try {
+
+    if ($github) {
+        if (!$githubOwner -or !$token) { throw "When running deploy in a workflow, you need to set githubOwner and token" }
+
+        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
+        invoke-git config --global user.name "$githubOwner"
+        invoke-git config --global hub.protocol https
+        invoke-git config --global core.autocrlf true
+
+        $ENV:GITHUB_TOKEN = $token
+        gh auth login --with-token
+    }
+
     $originalOwnerAndRepo = @{
         "actionsRepo" = "microsoft/AL-Go-Actions"
         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
@@ -124,7 +140,9 @@ try {
         Write-Host "Run the collect.ps1 to collect your modifications in these work repos and copy back"
         Write-Host
     }
-    Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
+    if (-not $github) {
+        Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
+    }
 
     if (!$collect) {
         if (Test-Path $baseFolder) {
@@ -204,7 +222,8 @@ try {
             Write-Host -ForegroundColor Yellow "Deploying to $repo"
 
             try {
-                invoke-git clone --quiet "https://github.com/$($config.githubOwner)/$repo.git"
+                $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
+                invoke-git clone --quiet $serverUrl
                 Set-Location $repo
                 try {
                     invoke-git checkout $config.branch
@@ -213,6 +232,10 @@ try {
                 catch {
                     invoke-git checkout -b $config.branch
                     invoke-git commit --allow-empty -m 'init'
+                    invoke-git branch -M $config.branch
+                    if ($githubOwner -and $token) {
+                        invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
+                    }
                     invoke-git push -u origin $config.branch
                 }
             }
@@ -220,8 +243,13 @@ try {
                 Write-Host "gh repo create $($config.githubOwner)/$repo --public --confirm"
                 start-process -FilePath "gh" -ArgumentList @("repo","create","$($config.githubOwner)/$repo","--public","--confirm") -Wait
                 Set-Location $repo
+                Start-Sleep -Seconds 10
                 invoke-git checkout -b $config.branch
                 invoke-git commit --allow-empty -m 'init'
+                invoke-git branch -M $config.branch
+                if ($githubOwner -and $token) {
+                    invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
+                }
                 invoke-git push -u origin $config.branch
             }
         
@@ -243,7 +271,7 @@ try {
         
             invoke-git add .
             invoke-git commit --allow-empty -m "checkout"
-            invoke-git push
+            invoke-git push $serverUrl
         }
     }
 }

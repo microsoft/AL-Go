@@ -3,6 +3,10 @@ name: Increment Version Number
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects (* for all projects)
+        required: false
+        default: '.'
       versionNumber:
         description: New Version Number (Major.Minor)
         required: true
@@ -19,7 +23,7 @@ jobs:
   initialization:
     runs-on: [ windows-latest ]
     outputs:
-      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
@@ -34,7 +38,8 @@ jobs:
       - name: Increment Version Number
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          project: ${{ github.event.inputs.project }}
           versionNumber: ${{ github.event.inputs.versionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}
   
@@ -47,4 +52,4 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with: 
           eventId: "DO0096"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}                   
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}                   
