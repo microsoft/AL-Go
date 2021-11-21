@@ -42,14 +42,16 @@ function Test-ArtifactsFromRun {
         throw "Expected number of test apps was $expectedNumberOfTestApps. Actual number of test apps is $actualNumberOfTestApps"
     }
     if ($expectedNumberOfTests) {
-        [xml]$testResults = Get-Content (Get-Item "$folder\*-TestResults\TestResults.xml").FullName -encoding UTF8
         $actualNumberOfTests = 0
         $actualNumberOfErrors = 0
         $actualNumberOfFailures = 0
-        @($testresults.testsuites.testsuite) | ForEach-Object {
-            $actualNumberOfTests += $_.tests
-            $actualNumberOfErrors += $_.Errors
-            $actualNumberOfFailures += $_.Failures
+        Get-Item "$folder\*-TestResults\TestResults.xml" | ForEach-Object {
+            [xml]$testResults = Get-Content $_.FullName -encoding UTF8
+            @($testresults.testsuites.testsuite) | ForEach-Object {
+                $actualNumberOfTests += $_.tests
+                $actualNumberOfErrors += $_.Errors
+                $actualNumberOfFailures += $_.Failures
+            }
         }
 
         if ($actualNumberOfTests -ne $expectedNumberOfTests) {
