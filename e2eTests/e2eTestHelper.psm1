@@ -100,6 +100,9 @@ function RunWorkflow {
       "Authorization" = "token $token"
     }
 
+    Write-Host "Rate limits:"
+    ((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate | Out-Host
+
     $url = "https://api.github.com/repos/$repository/actions/workflows"
     $workflows = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json).workflows
     $workflow = $workflows | Where-Object { $_.Name -eq $name }
@@ -116,7 +119,7 @@ function RunWorkflow {
 
     Write-Host -NoNewline "Queuing."
     do {
-        Start-Sleep -Seconds 1
+        Start-Sleep -Seconds 10
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $run = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id } | Select-Object -First 1
         Write-Host -NoNewline "."
@@ -127,7 +130,7 @@ function RunWorkflow {
     if ($wait) {
         $status = ""
         do {
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 30
             $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
             $run = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
             if ($run.status -ne $status) {
