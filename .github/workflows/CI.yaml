@@ -29,14 +29,11 @@ jobs:
           $orgpatset = @('Yes','No')['${{ Secrets.OrgPAT }}' -eq '']
           Write-Host "::set-output name=orgpatset::$orgpatset"
           Write-Host "set-output name=orgpatset::$orgpatset"
-          $licensefileurlset = @('Yes','No')['${{ Secrets.LicenseFileUrl }}' -eq '']
-          Write-Host "::set-output name=licensefileurlset::$licensefileurlset"
-          Write-Host "set-output name=licensefileurlset::$licensefileurlset"
 
   SetupRepositories:
     runs-on: [ windows-latest ]
     needs: [ Test ]
-    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
@@ -51,7 +48,7 @@ jobs:
   TestAlGoPte:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
-    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
     steps:
       - uses: actions/checkout@v2
 
@@ -61,7 +58,7 @@ jobs:
   TestAlGoPteMultiProject:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
-    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
     steps:
       - uses: actions/checkout@v2
 
@@ -71,7 +68,7 @@ jobs:
   TestAlGoAppSource:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
-    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
     steps:
       - uses: actions/checkout@v2
 
@@ -81,7 +78,7 @@ jobs:
   TestAlGoAppSourceMultiProject:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories ]
-    if: ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    if: ${{ needs.Test.outputs.orgpatset == 'Yes' }}
     steps:
       - uses: actions/checkout@v2
 
@@ -91,7 +88,7 @@ jobs:
   RemoveRepositories:
     runs-on: [ windows-latest ]
     needs: [ Test, SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject ]
-    if: always() && ('${{ needs.SetupRepositories.result }}' == 'Success') && ('${{ needs.Test.outputs.orgpatset }}' == 'Yes')
+    if: always() && (${{ needs.SetupRepositories.result == 'Success' }}) && (${{ needs.Test.outputs.orgpatset == 'Yes' }})
     steps:
       - uses: actions/checkout@v2
 
