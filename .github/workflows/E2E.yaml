@@ -1,4 +1,4 @@
-name: CI
+name: End to end
 
 on:
   workflow_dispatch:
