@@ -1,5 +1,5 @@
 ﻿Param(
-    [switch] $github = "",
+    [switch] $github,
     [string] $githubOwner = "",
     [string] $token = "",
     [string] $template = "",

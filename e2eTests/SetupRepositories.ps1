@@ -1,4 +1,5 @@
 ﻿Param(
+    [switch] $github,
     [string] $githubOwner,
     [string] $token
 )
@@ -25,7 +26,7 @@ $settings = [ordered]@{
 $settingsFile = Join-Path $settings.baseFolder "$repoBaseName.json"
 $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
 
-. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github
+. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github:$github
 
 Write-Host "::set-output name=actionsRepo::$actionsRepo"
 Write-Host "::set-output name=perTenantExtensionRepo::$perTenantExtensionRepo"
