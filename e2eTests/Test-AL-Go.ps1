@@ -50,7 +50,7 @@ try {
         $project2Param = @{ "project" = "P2" }
         $project2Folder = 'P2\'
         $allProjectsParam = @{ "project" = "*" }
-        $repoSettingsFile = ".github\.AL-Go-Settings.json"
+        $repoSettingsFile = ".github\AL-Go-Settings.json"
     }
     else {
         $project1Param = @{}
