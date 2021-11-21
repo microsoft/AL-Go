@@ -1,0 +1,71 @@
+name: Create a new app
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects
+        required: false
+        default: '.'
+      name:
+        description: Name
+        required: true      
+      publisher:
+        description: Publisher
+        required: true
+      idrange:
+        description: ID range (from..to)
+        required: true
+      directCommit:
+        description: Direct COMMIT (Y/N)
+        required: false
+        default: "N"
+
+defaults:
+  run:
+    shell: PowerShell
+jobs:
+  initialization:
+    runs-on: [ windows-latest ]
+    outputs:
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScope }}
+    steps:
+      - id: init
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
+        with: 
+          eventId: "DO0092"
+
+  createApp:
+    runs-on: [ windows-latest ]
+    needs: [ initialization ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+          get: type
+
+      - name: Creating a new app
+        uses: microsoft/AL-Go-Actions/CreateApp@main
+        with:
+          project: ${{ github.event.inputs.project }}
+          type: ${{ env.type }}
+          name: ${{ github.event.inputs.name }}
+          publisher: ${{ github.event.inputs.publisher }}
+          idrange: ${{ github.event.inputs.idrange }}
+          directCommit: ${{ github.event.inputs.directCommit }}
+          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}
+
+  postProcess:
+    runs-on: [ windows-latest ]
+    needs: [ initialization, createApp ]
+    steps:
+      - name: Finalizing the workflow
+        id: postProcess
+        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        with: 
+          eventId: "DO0092"
+          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScope }}

@@ -1,0 +1,16 @@
+﻿{
+    "folders":  [
+                    {
+                        "path":  ".AL-Go"
+                    },
+                    {
+                        "path":  "My App"
+                    },
+                    {
+                        "path":  "My App.Test"
+                    }
+                ],
+    "settings":  {
+
+                 }
+}

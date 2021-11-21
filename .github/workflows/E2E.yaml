@@ -57,6 +57,24 @@ jobs:
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
 
+  TestAlGoUpdatePteV0:
+    runs-on: [ windows-latest ]
+    needs: [SetupRepositories ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go-Update.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'testpte-v0'
+
+  TestAlGoUpdateAppSourceV0:
+    runs-on: [ windows-latest ]
+    needs: [SetupRepositories ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go-Update.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -path 'testappsource-v0'
+
   RemoveRepositories:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject ]

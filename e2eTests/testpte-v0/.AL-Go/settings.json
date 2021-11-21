@@ -1,0 +1,11 @@
+﻿{
+    "type":  "PTE",
+    "country":  "us",
+    "templateUrl":  "https://github.com/microsoft/AL-Go-PTE@main",
+    "appFolders":  [
+                       "My App"
+                   ],
+    "testFolders":  [
+                        "My App.Test"
+                    ]
+}

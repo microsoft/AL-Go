@@ -71,8 +71,10 @@ try {
     # Login
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
+
+
     # Create repo
-    CreateAndCloneRepository -template $template -branch $branch
+    CreateRepository -template $template -branch $branch
     $repoPath = (Get-Location).Path
 
     # Add Existing App
@@ -193,6 +195,8 @@ try {
     Run-CreateRelease -appVersion latest -name "v3.0" -tag "v3.0" -wait -branch $branch | Out-Null
     $runs++
 
+    # TODO: Test workspace
+    
     # TODO: Test Release
     
     # TODO: Test Release notes
