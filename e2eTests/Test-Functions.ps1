@@ -63,3 +63,20 @@ function Test-ArtifactsFromRun {
         }
     }
 }
+
+function Test-PropertiesInJsonFile {
+    Param(
+        [string] $jsonFile,
+        [Hashtable] $properties
+    )
+
+    $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+    $properties.Keys | ForEach-Object {
+        $expected = $properties."$_"
+        $actual = Invoke-Expression "`$json.$_"
+        if ($actual -ne $expected) {
+            Write-Host "$_ is $actual. Expected $expected"
+        }
+    }
+
+}

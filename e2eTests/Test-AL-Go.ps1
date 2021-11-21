@@ -33,7 +33,7 @@ try {
         if (!$licenseFileUrl) {
             throw "License file secret must be set"
         }
-        $idRange = "75055000..75056000"
+        $idRange = @{ "from" = 75055000; "to" = 75056000 }
     }
     else {
         $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
@@ -42,7 +42,7 @@ try {
         if ($licenseFileUrl) {
             throw "License file secret should not be set"
         }
-        $idRange = "55000..56000"
+        $idRange = @{ "from" = 55000; "to" = 56000 }
     }
     if ($multiProject) {
         $project1Param = @{ "project" = "P1" }
@@ -105,7 +105,7 @@ try {
     $runs++
 
     # Create New App
-    Run-CreateApp @project2Param -name "My App" -publisher "My Publisher" -idrange $idRange -directCommit -wait -branch $branch | Out-Null
+    Run-CreateApp @project2Param -name "My App" -publisher "My Publisher" -idrange "$($idRange.from)..$($idRange.to)" -directCommit -wait -branch $branch | Out-Null
     $runs++
     if ($appSourceApp) {
         Pull -branch $branch
@@ -127,12 +127,12 @@ try {
         }
         $runs++
     }
-    # Test-AppJson -path "My App\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
+    Test-PropertiesInJsonFile -path "$($project2folder)My App\app.json" -properties @{ "name" = "My App"; "publisher" = "My Publisher"; 'idRanges[0].from' = $idRange.from; "idRanges[0].to" = $idRange.to; 'idRanges.Count' = 1 }
 
     # Create New Test App
     Run-CreateTestApp @project2Param -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
     $runs++
-    # Test-AppJson -path "My TestApp\app.json" -properties @{ "name" = "My ApP"; "publisher" = "My Publisher" }
+    Test-PropertiesInJsonFile -path "$($project2folder)My TestApp\app.json" -properties @{ "name" = "My TestApp"; "publisher" = "My Publisher"; 'idRanges[0].from' = 58000; "idRanges[0].to" = 59000; 'idRanges.Count' = 1 }
 
     # Create Online Development Environment
     if ($adminCenterApiCredentials -and -not $multiProject) {
@@ -193,11 +193,11 @@ try {
     Run-CreateRelease -appVersion latest -name "v3.0" -tag "v3.0" -wait -branch $branch | Out-Null
     $runs++
 
-    # Test Release
+    # TODO: Test Release
     
-    # Test Release notes
+    # TODO: Test Release notes
 
-    # Check that environment was created and that launch.json was updated
+    # TODO: Check that environment was created and that launch.json was updated
 
     # Test localdevenv
     Test-NumberOfRuns -expectedNumberOfRuns $runs
