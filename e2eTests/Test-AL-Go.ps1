@@ -50,7 +50,7 @@ try {
         $project2Param = @{ "project" = "P2" }
         $project2Folder = 'P2\'
         $allProjectsParam = @{ "project" = "*" }
-        $repoSettingsFile = ".github\AL-Go-Settings.json"
+        $projectSettingsFiles = @("P1\.AL-Go\Settings.json", "P2\.AL-Go\Settings.json")
     }
     else {
         $project1Param = @{}
@@ -58,7 +58,7 @@ try {
         $project2Param = @{}
         $project2Folder = ""
         $allProjectsParam = @{}
-        $repoSettingsFile = ".AL-Go\Settings.json"
+        $projectSettingsFiles = @(".AL-Go\Settings.json")
     }
 
     $template = "https://github.com/$githubOwner/$template"
@@ -160,9 +160,11 @@ try {
     Test-NumberOfRuns -expectedNumberOfRuns $runs
 
     # Modify versioning strategy
-    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-    $reposettings | Add-Member -NotePropertyName 'versioningStrategy' -NotePropertyValue 16
-    $repoSettings | ConvertTo-Json | Set-Content $repoSettingsFile -Encoding UTF8
+    $projectSettingsFiles | ForEach-Object {
+        $repoSettings = Get-Content $_ -Encoding UTF8 | ConvertFrom-Json
+        $reposettings | Add-Member -NotePropertyName 'versioningStrategy' -NotePropertyValue 16
+        $repoSettings | ConvertTo-Json | Set-Content $_ -Encoding UTF8
+    }
     Remove-Item -Path "$($project1Folder).AL-Go\*.ps1" -Force
     Remove-Item -Path ".github\workflows\CreateRelease.yaml" -Force
     CommitAndPush -commitMessage "Version strategy change"
