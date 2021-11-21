@@ -55,7 +55,7 @@ function Test-ArtifactsFromRun {
         }
 
         if ($actualNumberOfTests -ne $expectedNumberOfTests) {
-            throw "Expected number of tests was $expectedNumberOfTest. Actual number of tests is $actualNumberOfTests"
+            throw "Expected number of tests was $expectedNumberOfTests. Actual number of tests is $actualNumberOfTests"
         }
 
         if ($actualNumberOfErrors -ne 0 -or $actualNumberOfFailures -ne 0) {
