@@ -32,7 +32,7 @@ jobs:
                   "actionsRepo" = "AL-Go-Actions"
                   "perTenantExtensionRepo" = "AL-Go-PTE"
                   "appSourceAppRepo" = "AL-Go-AppSource"
-                  "branch" = ${{ github.event.inputs.branch }}
+                  "branch" ='${{ github.event.inputs.branch }}'
                   "localFolder" = ""
                   "baseFolder" = [System.IO.Path]::GetTempPath()
               }
