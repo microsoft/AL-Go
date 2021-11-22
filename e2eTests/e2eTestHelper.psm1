@@ -236,6 +236,7 @@ function CreateRepository {
         invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
+    Start-Sleep -seconds 10
 }
 
 function Pull {
