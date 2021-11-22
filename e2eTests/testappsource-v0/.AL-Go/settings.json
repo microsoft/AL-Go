@@ -1,0 +1,14 @@
+﻿{
+    "type":  "AppSource App",
+    "country":  "us",
+    "templateUrl":  "https://github.com/microsoft/AL-Go-AppSource@main",
+    "AppSourceCopMandatoryAffixes":  [
+                                         "cus"
+                                     ],
+    "appFolders":  [
+                       "My App"
+                   ],
+    "testFolders":  [
+                        "My App.Test"
+                    ]
+}

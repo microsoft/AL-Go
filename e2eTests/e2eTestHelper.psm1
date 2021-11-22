@@ -2,8 +2,6 @@
 $token = "token"
 $repository = "repo"
 
-$delay = 10
-
 function SetTokenAndRepository {
     Param(
         [string] $githubOwner,
@@ -191,9 +189,10 @@ function invoke-git {
     if ($lastexitcode) { throw "git $command error" }
 }
 
-function CreateAndCloneRepository {
+function CreateRepository {
     Param(
         [string] $template,
+        [string] $templatePath,
         [switch] $private,
         [string] $branch = "main"
     )
@@ -210,27 +209,34 @@ function CreateAndCloneRepository {
         Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
         invoke-gh repo create $repository --confirm --public
     }
+    Start-Sleep -seconds 10
     Set-Location '*'
 
-    $templateUrl = "$template/archive/refs/heads/$branch.zip"
-    $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
-    [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
-    
-    $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
-    Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
-    Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
-    Remove-Item -Path $tempRepoPath -Force -Recurse
-    Remove-Item -Path $zipFileName -Force
+    if ($template) {
+        $templateUrl = "$template/archive/refs/heads/$branch.zip"
+        $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
+        [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
+        
+        $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
+        Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
+        Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
+        Remove-Item -Path $tempRepoPath -Force -Recurse
+        Remove-Item -Path $zipFileName -Force
+    }
+    if ($templatePath) {
+        Write-Host "$(Join-Path $templatePath '*')"
+
+        Copy-Item (Join-Path $templatePath '*') -Destination . -Recurse -Force
+    }
 
     invoke-git add *
-    invoke-git commit -m 'init'
+    invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner -and $token) {
         invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
-
-    Start-Sleep -seconds $delay
+    Start-Sleep -seconds 10
 }
 
 function Pull {
@@ -248,7 +254,7 @@ function CommitAndPush {
     )
 
     invoke-git add *
-    invoke-git commit -m "$commitMessage"
+    invoke-git commit --allow-empty -m "$commitMessage"
     invoke-git push $serverUrl | Out-Host
 }
 

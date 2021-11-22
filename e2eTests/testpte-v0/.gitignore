@@ -1,0 +1,6 @@
+*.app
+*.flf
+TestResults.xml
+rad.json
+.output
+cache_*
