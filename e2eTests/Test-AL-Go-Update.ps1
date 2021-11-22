@@ -68,7 +68,7 @@ try {
     # Run CI/CD and wait
     $run = Run-CICD -wait -branch $branch
     $runs++
-    Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0.' -appVersion ''
     
     Test-NumberOfRuns -expectedNumberOfRuns $runs
     

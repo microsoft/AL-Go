@@ -109,8 +109,8 @@ try {
     # Create New App
     Run-CreateApp @project2Param -name "My App" -publisher "My Publisher" -idrange "$($idRange.from)..$($idRange.to)" -directCommit -wait -branch $branch | Out-Null
     $runs++
+    Pull -branch $branch
     if ($appSourceApp) {
-        Pull -branch $branch
         if ($multiProject) {
             Add-PropertiesToJsonFile -jsonFile "$($project2Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "cus" ) }
             $runs++
@@ -134,6 +134,7 @@ try {
     # Create New Test App
     Run-CreateTestApp @project2Param -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
     $runs++
+    Pull -branch $branch
     Test-PropertiesInJsonFile -jsonFile "$($project2folder)My TestApp\app.json" -properties @{ "name" = "My TestApp"; "publisher" = "My Publisher"; 'idRanges[0].from' = 58000; "idRanges[0].to" = 59000; 'idRanges.Count' = 1 }
 
     # Create Online Development Environment

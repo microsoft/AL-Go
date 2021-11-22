@@ -2,8 +2,6 @@
 $token = "token"
 $repository = "repo"
 
-$delay = 10
-
 function SetTokenAndRepository {
     Param(
         [string] $githubOwner,
@@ -211,6 +209,7 @@ function CreateRepository {
         Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
         invoke-gh repo create $repository --confirm --public
     }
+    Start-Sleep -seconds 10
     Set-Location '*'
 
     if ($template) {
@@ -237,8 +236,6 @@ function CreateRepository {
         invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
-
-   Start-Sleep -seconds $delay
 }
 
 function Pull {
