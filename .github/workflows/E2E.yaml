@@ -1,4 +1,4 @@
-name: End to end
+name: End to end tests
 
 on:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -multiProject -private
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -multiProject
 
   TestAlGoAppSource:
     runs-on: [ windows-latest ]
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -private
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp
 
   TestAlGoAppSourceMultiProject:
     runs-on: [ windows-latest ]
