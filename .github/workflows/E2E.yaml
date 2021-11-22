@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Update.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'testpte-v0'
+        run: e2eTests\Test-AL-Go-Update.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -path 'testpte-v0'
 
   TestAlGoUpdateAppSourceV0:
     runs-on: [ windows-latest ]
@@ -77,7 +77,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
-    needs: [ SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject ]
+    needs: [ SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoUpdatePteV0, TestAlGoUpdateAppSourceV0 ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v2
