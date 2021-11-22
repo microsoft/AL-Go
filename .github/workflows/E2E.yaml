@@ -1,6 +1,9 @@
 name: End to end tests
 
 on:
+  push:
+    branches:
+      - microsoft/main
   workflow_dispatch:
 
 defaults:
