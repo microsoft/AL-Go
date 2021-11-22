@@ -3,7 +3,7 @@ name: End to end tests
 on:
   push:
     branches:
-      - microsoft/main
+      - freddydk/main
   workflow_dispatch:
 
 defaults:
