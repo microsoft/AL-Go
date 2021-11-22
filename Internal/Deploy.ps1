@@ -224,6 +224,7 @@ try {
             try {
                 $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
                 invoke-git clone --quiet $serverUrl
+                $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
                 Set-Location $repo
                 try {
                     invoke-git checkout $config.branch
@@ -234,7 +235,7 @@ try {
                     invoke-git commit --allow-empty -m 'init'
                     invoke-git branch -M $config.branch
                     if ($githubOwner -and $token) {
-                        invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
+                        invoke-git remote set-url origin $serverUrl
                     }
                     invoke-git push -u origin $config.branch
                 }
@@ -248,7 +249,7 @@ try {
                 invoke-git commit --allow-empty -m 'init'
                 invoke-git branch -M $config.branch
                 if ($githubOwner -and $token) {
-                    invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
+                    invoke-git remote set-url origin $serverUrl
                 }
                 invoke-git push -u origin $config.branch
             }
