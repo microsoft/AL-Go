@@ -6,7 +6,8 @@
     [string] $adminCenterApiCredentials = "",
     [string] $licenseFileUrl = "",
     [switch] $multiProject,
-    [switch] $appSourceApp
+    [switch] $appSourceApp,
+    [switch] $private
 )
 
 $ErrorActionPreference = "stop"
@@ -85,7 +86,7 @@ try {
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $template -branch $branch -private:$appSourceApp
+    CreateRepository -template $template -branch $branch -private:$private
     $repoPath = (Get-Location).Path
 
     # Add Existing App
