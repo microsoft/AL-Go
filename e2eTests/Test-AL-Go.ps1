@@ -33,6 +33,9 @@ try {
         if (!$licenseFileUrl) {
             throw "License file secret must be set"
         }
+        if ($adminCenterApiCredentials) {
+            throw "adminCenterApiCredentials should not be set"
+        }
         $idRange = @{ "from" = 75055000; "to" = 75056000 }
     }
     else {
@@ -41,6 +44,16 @@ try {
         if (!$template) { $template = 'al-go-pte' }
         if ($licenseFileUrl) {
             throw "License file secret should not be set"
+        }
+        if ($multiProject) {
+            if ($adminCenterApiCredentials) {
+                throw "adminCenterApiCredentials should not be set"
+            }
+        }
+        else {
+            if (-not $adminCenterApiCredentials) {
+                throw "adminCenterApiCredentials should be set"
+            }
         }
         $idRange = @{ "from" = 55000; "to" = 56000 }
     }
@@ -71,10 +84,8 @@ try {
     # Login
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
-
-
     # Create repo
-    CreateRepository -template $template -branch $branch
+    CreateRepository -template $template -branch $branch -private:$appSourceApp
     $repoPath = (Get-Location).Path
 
     # Add Existing App
@@ -142,9 +153,6 @@ try {
         SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentialsSecret
         Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
         $runs++
-    }
-    else {
-        Write-Host "::Warning::No AdminCenterApiCredentials, skipping online dev environment creation"
     }
 
     # Increment version number on one project
