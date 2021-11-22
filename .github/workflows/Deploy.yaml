@@ -22,7 +22,7 @@ jobs:
         run: |
           try {
             $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
-            $token = ${{ Secrets.OrgPAT }}
+            $token = '${{ Secrets.OrgPAT }}'
             if (!$token) {
               throw "No OrgPAT secret found"
             }
@@ -43,4 +43,5 @@ jobs:
           }
           catch {
             Write-Host "::Error::Error deploying repositories. The error was $($_.Exception.Message)"
+            exit 1
           }
