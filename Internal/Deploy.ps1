@@ -95,6 +95,11 @@ try {
         $baseFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) $config.localFolder
     }
 
+    $copyToMain = $false
+    if ($config.PSObject.Properties.Name -eq "copyToMain") {
+        $copyToMain = $config.copyToMain
+    }
+
     if ($collect) {
         if (Test-Path $baseFolder) {
             $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
@@ -171,9 +176,9 @@ try {
     }
 
     $repos = @(
-        @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath            }
-        @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath }
-        @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath       }
+        @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath;            "branch" = $config.branch }
+        @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = $config.branch }
+        @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = $config.branch }
     )
 
     if ($collect) {
@@ -213,31 +218,49 @@ try {
         }
     }
     else {
-        $repos | ForEach-Object {
+        $additionalRepos = @()
+        if ($copyToMain -and $config.branch -ne "main") {
+            Write-Host "Copy template repositories to main branch"
+            $additionalRepos = @(
+                @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "main" }
+                @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = "main" }
+                @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath;            "branch" = "main" }
+            )
+        }
+
+        $repos+$additionalRepos | ForEach-Object {
             Set-Location $baseFolder
             $repo = $_.repo
             $srcPath = $_.srcPath
             $dstPath = $_.dstPath
+            $branch = $_.branch
 
             Write-Host -ForegroundColor Yellow "Deploying to $repo"
 
             try {
-                $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
+                if ($github) {
+                    $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
+                }
+                else {
+                    $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
+                }
+                if (Test-Path $repo) {
+                    Remove-Item $repo -Recurse -Force
+                }
                 invoke-git clone --quiet $serverUrl
-                $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
                 Set-Location $repo
                 try {
-                    invoke-git checkout $config.branch
+                    invoke-git checkout $branch
                     Get-ChildItem -Path .\* -Exclude ".git" | Remove-Item -Force -Recurse
                 }
                 catch {
-                    invoke-git checkout -b $config.branch
+                    invoke-git checkout -b $branch
                     invoke-git commit --allow-empty -m 'init'
-                    invoke-git branch -M $config.branch
-                    if ($githubOwner -and $token) {
+                    invoke-git branch -M $branch
+                    if ($github) {
                         invoke-git remote set-url origin $serverUrl
                     }
-                    invoke-git push -u origin $config.branch
+                    invoke-git push -u origin $branch
                 }
             }
             catch {
@@ -245,13 +268,13 @@ try {
                 start-process -FilePath "gh" -ArgumentList @("repo","create","$($config.githubOwner)/$repo","--public","--confirm") -Wait
                 Set-Location $repo
                 Start-Sleep -Seconds 10
-                invoke-git checkout -b $config.branch
+                invoke-git checkout -b $branch
                 invoke-git commit --allow-empty -m 'init'
-                invoke-git branch -M $config.branch
-                if ($githubOwner -and $token) {
+                invoke-git branch -M $branch
+                if ($github) {
                     invoke-git remote set-url origin $serverUrl
                 }
-                invoke-git push -u origin $config.branch
+                invoke-git push -u origin $branch
             }
         
             Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
