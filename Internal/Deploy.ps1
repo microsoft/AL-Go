@@ -243,6 +243,9 @@ try {
                 else {
                     $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
                 }
+                if (Test-Path $repo) {
+                    Remove-Item $repo -Recurse -Force
+                }
                 invoke-git clone --quiet $serverUrl
                 Set-Location $repo
                 try {
