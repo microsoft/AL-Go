@@ -13,6 +13,16 @@ defaults:
     shell: PowerShell
 
 jobs:
+  Check:
+    runs-on: [ windows-latest ]
+    steps:
+      - name: Check secrets
+        run: |
+          if ('${{ Secrets.OrgxPAT }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token"
+            exit 1
+          }
+
   Deploy:
     runs-on: [ windows-latest ]
     steps:

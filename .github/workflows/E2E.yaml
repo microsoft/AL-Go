@@ -11,8 +11,35 @@ defaults:
     shell: PowerShell
 
 jobs:
+  Check:
+    runs-on: [ windows-latest ]
+    steps:
+      - name: Check secrets
+        run: |
+          $err = $false
+          if ('${{ Secrets.OrgPAT }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token"
+            $err = $true
+          }
+          if ('${{ Secrets.githubOwner }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called githubOwner containing a the name of the owner of temp repositories"
+            $err = $true
+          }
+          if ('${{ Secrets.adminCenterApiCredentials }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called adminCenterApiCredentials containing API access credentials for BC Admin Center"
+            $err = $true
+          }
+          if ('${{ Secrets.licenseFileUrl }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called licenseFileUrl containing a secure Url to a build license file"
+            $err = $true
+          }
+          if ($err) {
+            exit 1
+          }
+
   SetupRepositories:
     runs-on: [ windows-latest ]
+    needs: [ Check ]
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
