@@ -236,9 +236,13 @@ try {
             Write-Host -ForegroundColor Yellow "Deploying to $repo"
 
             try {
-                $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
+                if ($github) {
+                    $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
+                }
+                else {
+                    $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
+                }
                 invoke-git clone --quiet $serverUrl
-                $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
                 Set-Location $repo
                 try {
                     invoke-git checkout $branch
@@ -248,7 +252,7 @@ try {
                     invoke-git checkout -b $branch
                     invoke-git commit --allow-empty -m 'init'
                     invoke-git branch -M $branch
-                    if ($githubOwner -and $token) {
+                    if ($github) {
                         invoke-git remote set-url origin $serverUrl
                     }
                     invoke-git push -u origin $branch
@@ -262,7 +266,7 @@ try {
                 invoke-git checkout -b $branch
                 invoke-git commit --allow-empty -m 'init'
                 invoke-git branch -M $branch
-                if ($githubOwner -and $token) {
+                if ($github) {
                     invoke-git remote set-url origin $serverUrl
                 }
                 invoke-git push -u origin $branch
