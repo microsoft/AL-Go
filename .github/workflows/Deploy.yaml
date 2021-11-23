@@ -18,13 +18,14 @@ jobs:
     steps:
       - name: Check secrets
         run: |
-          if ('${{ Secrets.OrgxPAT }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token"
+          if ('${{ Secrets.OrgPAT }}' -eq '') {
+            Write-Host "::Error::In order to run deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token"
             exit 1
           }
 
   Deploy:
     runs-on: [ windows-latest ]
+    needs: [ Check ]
     steps:
       - uses: actions/checkout@v2
 
