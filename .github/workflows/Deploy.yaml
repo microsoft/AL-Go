@@ -7,6 +7,10 @@ on:
         description: Branch to deploy to (default is main)
         required: false
         default: 'main'
+      copyToMain:
+        description: Additionally deploy templates to main branch (No for insider and hotfix)
+        required: false
+        default: 'Yes'
 
 defaults:
   run:
@@ -43,7 +47,8 @@ jobs:
                   "actionsRepo" = "AL-Go-Actions"
                   "perTenantExtensionRepo" = "AL-Go-PTE"
                   "appSourceAppRepo" = "AL-Go-AppSource"
-                  "branch" ='${{ github.event.inputs.branch }}'
+                  "branch" = '${{ github.event.inputs.branch }}'
+                  "copyToMain" = ('${{ github.event.inputs.branch }}' -eq 'Yes')
                   "localFolder" = ""
                   "baseFolder" = [System.IO.Path]::GetTempPath()
               }
