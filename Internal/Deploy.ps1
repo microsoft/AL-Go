@@ -218,15 +218,16 @@ try {
         }
     }
     else {
+        $additionalRepos = @()
         if ($copyToMain -and $config.branch -ne "main") {
             Write-Host "Copy template repositories to main branch"
-            $repos = +@(
+            $additionalRepos = @(
                 @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "main" }
                 @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = "main" }
             )
         }
 
-        $repos | ForEach-Object {
+        $repos+$additionalRepos | ForEach-Object {
             Set-Location $baseFolder
             $repo = $_.repo
             $srcPath = $_.srcPath
