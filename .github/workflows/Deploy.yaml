@@ -48,7 +48,7 @@ jobs:
                   "perTenantExtensionRepo" = "AL-Go-PTE"
                   "appSourceAppRepo" = "AL-Go-AppSource"
                   "branch" = '${{ github.event.inputs.branch }}'
-                  "copyToMain" = ('${{ github.event.inputs.branch }}' -eq 'Yes')
+                  "copyToMain" = ('${{ github.event.inputs.copyToMain }}' -eq 'Yes')
                   "localFolder" = ""
                   "baseFolder" = [System.IO.Path]::GetTempPath()
               }

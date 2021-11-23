@@ -219,6 +219,7 @@ try {
     }
     else {
         if ($copyToMain -and $config.branch -ne "main") {
+            Write-Host "Copy template repositories to main branch"
             $repos = +@(
                 @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "main" }
                 @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = "main" }
