@@ -3,6 +3,7 @@
     [switch] $collect,
     [string] $githubOwner,
     [string] $token,
+    [string] $srcBranch,
     [switch] $github
 )
 
@@ -60,7 +61,7 @@ try {
     $originalBranch = "main"
 
     Set-Location $PSScriptRoot
-    $baseRepoPath = git rev-parse --show-toplevel
+    $baseRepoPath = invoke-git rev-parse --show-toplevel
     Write-Host "Base repo path: $baseRepoPath"
     $user = gh api user | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
@@ -74,16 +75,21 @@ try {
 
     Set-Location $baseRepoPath
 
+    if ($srcBranch) {
+        invoke-git checkout $srcBranch
+    }
+    else {
+        $srcBranch = invoke-git branch --show-current
+        Write-Host "Source branch: $srcBranch"
+    }
     if ($collect) {
-        $status = git status --porcelain=v1 | Where-Object { $_.SubString(3) -notlike "Internal/*" }
+        $status = invoke-git status --porcelain=v1 | Where-Object { $_.SubString(3) -notlike "Internal/*" }
         if ($status) {
             throw "Destination repo is not clean, cannot collect changes into dirty repo"
         }
     }
-    $srcBranch = git branch --show-current
-    Write-Host "Source branch: $srcBranch"
 
-    $srcUrl = git config --get remote.origin.url
+    $srcUrl = invoke-git config --get remote.origin.url
     if ($srcUrl.EndsWith('.git')) { $srcUrl = $srcUrl.Substring(0,$srcUrl.Length-4) }
     $uri = [Uri]::new($srcUrl)
     $srcOwnerAndRepo = $uri.LocalPath.Trim('/')
@@ -100,25 +106,32 @@ try {
         $copyToMain = $config.copyToMain
     }
 
-    if ($collect) {
-        if (Test-Path $baseFolder) {
-            $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
-                Set-Location $baseFolder
-                if (Test-Path $_) {
-                    Set-Location $_
-                    $expectedUrl = "https://github.com/$($config.githubOwner)/$_.git"
-                    $actualUrl = git config --get remote.origin.url
-                    if ($expectedUrl -ne $actualUrl) {
-                        throw "unexpected git repo - was $actualUrl, expected $expectedUrl"
+    if (!(Test-Path $baseFolder)) {
+        New-Item $baseFolder -ItemType Directory | Out-Null
+    }
+    Set-Location $baseFolder
+
+    $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
+        if (Test-Path $_) {
+            Set-Location $_
+            if ($collect) {
+                $expectedUrl = "https://github.com/$($config.githubOwner)/$_.git"
+                $actualUrl = invoke-git config --get remote.origin.url
+                if ($expectedUrl -ne $actualUrl) {
+                    throw "unexpected git repo - was $actualUrl, expected $expectedUrl"
+                }
+            }
+            else {
+                if (Test-Path ".git") {
+                    $status = invoke-git status --porcelain
+                    if ($status) {
+                        throw "Git repo $_ is not clean, please resolve manually"
                     }
                 }
             }
-        }
-        else {
-            throw "$baseFolder is not found!"
+            Set-Location $baseFolder
         }
     }
-    Set-Location $baseFolder
 
     $actionsRepoPath = Join-Path $baseFolder $config.actionsRepo
     $appSourceAppRepoPath = Join-Path $baseFolder $config.appSourceAppRepo
@@ -149,29 +162,17 @@ try {
         Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
     }
 
-    if (!$collect) {
-        if (Test-Path $baseFolder) {
-            $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
-                Set-Location $baseFolder
-                if (Test-Path $_) {
-                    Set-Location $_
-                    if (Test-Path ".git") {
-                        $status = git status --porcelain
-                        if ($status) {
-                            throw "Git repo $_ is not clean, please resolve manually"
-                        }
-                    }
-                }
-            }
-            Set-Location $baseFolder
-            $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
-                if (Test-Path $_) {
-                    Remove-Item $_ -Force -Recurse
-                }
+    $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
+        if ($collect) {
+            if (!(Test-Path $_)) {
+                $serverUrl = "https://github.com/$($config.githubOwner)/$_.git"
+                invoke-git clone --quiet $serverUrl
             }
         }
         else {
-            New-Item $baseFolder -ItemType Directory | Out-Null
+            if (Test-Path $_) {
+                Remove-Item $_ -Force -Recurse
+            }
         }
     }
 
