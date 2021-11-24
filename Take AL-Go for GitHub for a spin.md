@@ -4,6 +4,6 @@
 
 1.	Navigate to https://github.com/microsoft/AL-Go-PTE and click **Use this template**
 
-![Use this template)(images/1a.jpg)
+![Use this template)(/images/1a.jpg)
 
 
