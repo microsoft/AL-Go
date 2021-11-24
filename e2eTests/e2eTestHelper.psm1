@@ -173,7 +173,7 @@ function invoke-gh {
     $ErrorActionPreference = "SilentlyContinue"
     gh $command $remaining
     $ErrorActionPreference = "Stop"
-    if ($lastexitcode) { throw "git $command error" }
+    if ($lastexitcode) { throw "gh $command error" }
 }
 
 function invoke-git {
@@ -254,7 +254,7 @@ function CommitAndPush {
     )
 
     invoke-git add *
-    invoke-git commit --allow-empty -m "$commitMessage"
+    invoke-git commit --allow-empty -m "'$commitMessage'"
     invoke-git push $serverUrl | Out-Host
 }
 

@@ -214,14 +214,14 @@ try {
 
                 $message = "Updated AL-Go System Files"
 
-                invoke-git commit -m "$message"
+                invoke-git commit -m "'$message'"
 
                 if ($directcommit) {
                     invoke-git push $url
                 }
                 else {
                     invoke-git push -u $url $branch
-                    invoke-hub pull-request -h $branch -m "$message"
+                    invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
                 }
             }
             catch {

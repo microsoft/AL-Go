@@ -3,7 +3,9 @@
     [switch] $collect,
     [string] $githubOwner,
     [string] $token,
-    [switch] $github
+    [string] $algoBranch,
+    [switch] $github,
+    [switch] $directCommit
 )
 
 function invoke-git {
@@ -34,6 +36,19 @@ function invoke-git {
     }
 }
 
+function invoke-gh {
+    Param(
+        [parameter(mandatory = $true, position = 0)][string] $command,
+        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+    )
+
+    Write-Host -ForegroundColor Yellow "gh $command $remaining"
+    $ErrorActionPreference = "SilentlyContinue"
+    gh $command $remaining
+    $ErrorActionPreference = "Stop"
+    if ($lastexitcode) { throw "gh $command error" }
+}
+
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
@@ -60,7 +75,7 @@ try {
     $originalBranch = "main"
 
     Set-Location $PSScriptRoot
-    $baseRepoPath = git rev-parse --show-toplevel
+    $baseRepoPath = invoke-git rev-parse --show-toplevel
     Write-Host "Base repo path: $baseRepoPath"
     $user = gh api user | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
@@ -74,16 +89,21 @@ try {
 
     Set-Location $baseRepoPath
 
+    if ($algoBranch) {
+        invoke-git checkout $algoBranch
+    }
+    else {
+        $algoBranch = invoke-git branch --show-current
+        Write-Host "Source branch: $algoBranch"
+    }
     if ($collect) {
-        $status = git status --porcelain=v1 | Where-Object { $_.SubString(3) -notlike "Internal/*" }
+        $status = invoke-git status --porcelain=v1 | Where-Object { $_.SubString(3) -notlike "Internal/*" }
         if ($status) {
             throw "Destination repo is not clean, cannot collect changes into dirty repo"
         }
     }
-    $srcBranch = git branch --show-current
-    Write-Host "Source branch: $srcBranch"
 
-    $srcUrl = git config --get remote.origin.url
+    $srcUrl = invoke-git config --get remote.origin.url
     if ($srcUrl.EndsWith('.git')) { $srcUrl = $srcUrl.Substring(0,$srcUrl.Length-4) }
     $uri = [Uri]::new($srcUrl)
     $srcOwnerAndRepo = $uri.LocalPath.Trim('/')
@@ -100,25 +120,32 @@ try {
         $copyToMain = $config.copyToMain
     }
 
-    if ($collect) {
-        if (Test-Path $baseFolder) {
-            $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
-                Set-Location $baseFolder
-                if (Test-Path $_) {
-                    Set-Location $_
-                    $expectedUrl = "https://github.com/$($config.githubOwner)/$_.git"
-                    $actualUrl = git config --get remote.origin.url
-                    if ($expectedUrl -ne $actualUrl) {
-                        throw "unexpected git repo - was $actualUrl, expected $expectedUrl"
+    if (!(Test-Path $baseFolder)) {
+        New-Item $baseFolder -ItemType Directory | Out-Null
+    }
+    Set-Location $baseFolder
+
+    $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
+        if (Test-Path $_) {
+            Set-Location $_
+            if ($collect) {
+                $expectedUrl = "https://github.com/$($config.githubOwner)/$_.git"
+                $actualUrl = invoke-git config --get remote.origin.url
+                if ($expectedUrl -ne $actualUrl) {
+                    throw "unexpected git repo - was $actualUrl, expected $expectedUrl"
+                }
+            }
+            else {
+                if (Test-Path ".git") {
+                    $status = invoke-git status --porcelain
+                    if ($status) {
+                        throw "Git repo $_ is not clean, please resolve manually"
                     }
                 }
             }
-        }
-        else {
-            throw "$baseFolder is not found!"
+            Set-Location $baseFolder
         }
     }
-    Set-Location $baseFolder
 
     $actionsRepoPath = Join-Path $baseFolder $config.actionsRepo
     $appSourceAppRepoPath = Join-Path $baseFolder $config.appSourceAppRepo
@@ -131,11 +158,11 @@ try {
         Write-Host "https://github.com/$($config.githubOwner)/$($config.perTenantExtensionRepo)   (folder $perTenantExtensionRepoPath)"
         Write-Host "https://github.com/$($config.githubOwner)/$($config.appSourceAppRepo)   (folder $appSourceAppRepoPath)"
         Write-Host
-        Write-Host "To the $srcBranch branch from $srcOwnerAndRepo (folder $baseRepoPath)"
+        Write-Host "To the $algoBranch branch from $srcOwnerAndRepo (folder $baseRepoPath)"
         Write-Host
     }
     else {
-        Write-Host "This script will deploy the $srcBranch branch from $srcOwnerAndRepo (folder $baseRepoPath) to work repos"
+        Write-Host "This script will deploy the $algoBranch branch from $srcOwnerAndRepo (folder $baseRepoPath) to work repos"
         Write-Host
         Write-Host "Destination is the $($config.branch) branch in the followingrepositories:"
         Write-Host "https://github.com/$($config.githubOwner)/$($config.actionsRepo)  (folder $actionsRepoPath)"
@@ -149,29 +176,22 @@ try {
         Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
     }
 
-    if (!$collect) {
-        if (Test-Path $baseFolder) {
-            $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
+    $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
+        if ($collect) {
+            if (Test-Path $_) {
+                Set-Location $_
+                invoke-git pull
                 Set-Location $baseFolder
-                if (Test-Path $_) {
-                    Set-Location $_
-                    if (Test-Path ".git") {
-                        $status = git status --porcelain
-                        if ($status) {
-                            throw "Git repo $_ is not clean, please resolve manually"
-                        }
-                    }
-                }
             }
-            Set-Location $baseFolder
-            $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
-                if (Test-Path $_) {
-                    Remove-Item $_ -Force -Recurse
-                }
+            else {
+                $serverUrl = "https://github.com/$($config.githubOwner)/$_.git"
+                invoke-git clone --quiet $serverUrl
             }
         }
         else {
-            New-Item $baseFolder -ItemType Directory | Out-Null
+            if (Test-Path $_) {
+                Remove-Item $_ -Force -Recurse
+            }
         }
     }
 
@@ -182,6 +202,12 @@ try {
     )
 
     if ($collect) {
+        $baseRepoBranch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
+        if ($baseRepoBranch) {
+            Set-Location $baseRepoPath
+            invoke-git checkout -b $baseRepoBranch
+        }
+
         $repos | ForEach-Object {
             Set-Location $baseFolder
             $repo = $_.repo
@@ -215,6 +241,26 @@ try {
                 }
                 $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
             }
+        }
+        Set-Location $baseRepoPath
+
+        if ($github) {
+            $serverUrl = "https://$($user.login):$token@github.com/$($srcOwnerAndRepo).git"
+        }
+        else {
+            $serverUrl = "https://github.com/$($srcOwnerAndRepo).git"
+        }
+
+        $commitMessage = "Collect changes from $($config.githubOwner)/*@$($config.branch)"
+        invoke-git add *
+        invoke-git commit --allow-empty -m "'$commitMessage'"
+        if ($baseRepoBranch) {
+            invoke-git push -u $serverUrl $baseRepoBranch
+            invoke-gh pr create --fill --head $baseRepoBranch --repo $srcOwnerAndRepo
+            invoke-git checkout $algoBranch
+        }
+        else {
+            invoke-git push $serverUrl
         }
     }
     else {
@@ -294,7 +340,7 @@ try {
             }
         
             invoke-git add .
-            invoke-git commit --allow-empty -m "checkout"
+            invoke-git commit --allow-empty -m 'checkout'
             invoke-git push $serverUrl
         }
     }

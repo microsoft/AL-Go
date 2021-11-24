@@ -62,15 +62,17 @@ function invoke-git {
     if ($lastexitcode) { throw "git $command error" }
 }
 
-function invoke-hub {
+function invoke-gh {
     Param(
         [parameter(mandatory = $true, position = 0)][string] $command,
         [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
     )
 
-    Write-Host -ForegroundColor Yellow "hub $command $remaining"
-    hub $command $remaining
-    if ($lastexitcode) { throw "hub $command error" }
+    Write-Host -ForegroundColor Yellow "gh $command $remaining"
+    $ErrorActionPreference = "SilentlyContinue"
+    gh $command $remaining
+    $ErrorActionPreference = "Stop"
+    if ($lastexitcode) { throw "gh $command error" }
 }
 
 function ConvertTo-HashTable {
@@ -705,13 +707,13 @@ function CommitFromNewFolder {
     )
 
     invoke-git add *
-    invoke-git commit -m "$commitMessage"
     if ($commitMessage.Length -gt 250) {
         $commitMessage = "$($commitMessage.Substring(0,250))...)"
     }
+    invoke-git commit -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
-        invoke-hub pull-request -h $branch -m "$commitMessage"
+        invoke-gh pr create --fill --head $baseRepoBranch --repo $env:GITHUB_REPOSITORY
     }
     else {
         invoke-git push $serverUrl
