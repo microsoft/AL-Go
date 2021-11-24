@@ -2,8 +2,6 @@ Param(
     [switch] $local
 )
 
-
-
 $gitHubHelperPath = Join-Path $PSScriptRoot 'Github-Helper.psm1'
 if (Test-Path $gitHubHelperPath) {
     Import-Module $gitHubHelperPath
