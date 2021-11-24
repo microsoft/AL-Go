@@ -257,6 +257,7 @@ try {
         if ($baseRepoBranch) {
             invoke-git push -u $serverUrl $baseRepoBranch
             invoke-gh pr create --fill --head $baseRepoBranch --repo $srcOwnerAndRepo
+            invoke-git checkout $algoBranch
         }
         else {
             invoke-git push $serverUrl
