@@ -710,7 +710,7 @@ function CommitFromNewFolder {
     if ($commitMessage.Length -gt 250) {
         $commitMessage = "$($commitMessage.Substring(0,250))...)"
     }
-    invoke-git commit -m "$commitMessage"
+    invoke-git commit -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
         invoke-gh pr create --fill --head $baseRepoBranch

@@ -258,7 +258,7 @@ try {
         Write-Host (Get-Location).Path
 
         invoke-git add *
-        invoke-git commit --allow-empty -m "$commitMessage"
+        invoke-git commit --allow-empty -m "'$commitMessage'"
         if ($baseRepoBranch) {
             invoke-git push -u $serverUrl $baseRepoBranch
             invoke-gh pr create --fill --head $baseRepoBranch
@@ -344,7 +344,7 @@ try {
             }
         
             invoke-git add .
-            invoke-git commit --allow-empty -m "checkout"
+            invoke-git commit --allow-empty -m 'checkout'
             invoke-git push $serverUrl
         }
     }

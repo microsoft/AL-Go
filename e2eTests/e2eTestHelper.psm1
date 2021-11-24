@@ -254,7 +254,7 @@ function CommitAndPush {
     )
 
     invoke-git add *
-    invoke-git commit --allow-empty -m "$commitMessage"
+    invoke-git commit --allow-empty -m "'$commitMessage'"
     invoke-git push $serverUrl | Out-Host
 }
 
