@@ -251,18 +251,12 @@ try {
             $serverUrl = "https://github.com/$($srcOwnerAndRepo).git"
         }
 
-        Write-Host $serverUrl
-
         $commitMessage = "Collect changes from $($config.githubOwner)/*@$($config.branch)"
-        Write-Host $commitMessage
-        Write-Host (Get-Location).Path
-
         invoke-git add *
         invoke-git commit --allow-empty -m "'$commitMessage'"
         if ($baseRepoBranch) {
             invoke-git push -u $serverUrl $baseRepoBranch
-            invoke-git config --local --unset "remote.origin.gh-resolved"            
-            invoke-gh pr create --fill --head $baseRepoBranch
+            invoke-gh pr create --fill --head $baseRepoBranch --repo $srcOwnerAndRepo
         }
         else {
             invoke-git push $serverUrl
