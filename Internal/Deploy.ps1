@@ -3,8 +3,9 @@
     [switch] $collect,
     [string] $githubOwner,
     [string] $token,
-    [string] $srcBranch,
-    [switch] $github
+    [string] $algoBranch,
+    [switch] $github,
+    [switch] $directCommit
 )
 
 function invoke-git {
@@ -33,6 +34,19 @@ function invoke-git {
             Remove-Item $path
         }
     }
+}
+
+function invoke-gh {
+    Param(
+        [parameter(mandatory = $true, position = 0)][string] $command,
+        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+    )
+
+    Write-Host -ForegroundColor Yellow "gh $command $remaining"
+    $ErrorActionPreference = "SilentlyContinue"
+    gh $command $remaining
+    $ErrorActionPreference = "Stop"
+    if ($lastexitcode) { throw "gh $command error" }
 }
 
 $ErrorActionPreference = "stop"
@@ -75,12 +89,12 @@ try {
 
     Set-Location $baseRepoPath
 
-    if ($srcBranch) {
-        invoke-git checkout $srcBranch
+    if ($algoBranch) {
+        invoke-git checkout $algoBranch
     }
     else {
-        $srcBranch = invoke-git branch --show-current
-        Write-Host "Source branch: $srcBranch"
+        $algoBranch = invoke-git branch --show-current
+        Write-Host "Source branch: $algoBranch"
     }
     if ($collect) {
         $status = invoke-git status --porcelain=v1 | Where-Object { $_.SubString(3) -notlike "Internal/*" }
@@ -144,11 +158,11 @@ try {
         Write-Host "https://github.com/$($config.githubOwner)/$($config.perTenantExtensionRepo)   (folder $perTenantExtensionRepoPath)"
         Write-Host "https://github.com/$($config.githubOwner)/$($config.appSourceAppRepo)   (folder $appSourceAppRepoPath)"
         Write-Host
-        Write-Host "To the $srcBranch branch from $srcOwnerAndRepo (folder $baseRepoPath)"
+        Write-Host "To the $algoBranch branch from $srcOwnerAndRepo (folder $baseRepoPath)"
         Write-Host
     }
     else {
-        Write-Host "This script will deploy the $srcBranch branch from $srcOwnerAndRepo (folder $baseRepoPath) to work repos"
+        Write-Host "This script will deploy the $algoBranch branch from $srcOwnerAndRepo (folder $baseRepoPath) to work repos"
         Write-Host
         Write-Host "Destination is the $($config.branch) branch in the followingrepositories:"
         Write-Host "https://github.com/$($config.githubOwner)/$($config.actionsRepo)  (folder $actionsRepoPath)"
@@ -188,6 +202,12 @@ try {
     )
 
     if ($collect) {
+        $baseRepoBranch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
+        if ($baseRepoBranch) {
+            Set-Location $baseRepoPath
+            invoke-git checkout -b $baseRepoBranch
+        }
+
         $repos | ForEach-Object {
             Set-Location $baseFolder
             $repo = $_.repo
@@ -221,6 +241,25 @@ try {
                 }
                 $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
             }
+        }
+        Set-Location $baseRepoPath
+
+        if ($github) {
+            $serverUrl = "https://$($user.login):$token@github.com/$($srcOwnerAndRepo).git"
+        }
+        else {
+            $serverUrl = "https://github.com/$($srcOwnerAndRepo).git"
+        }
+
+        $commitMessage = "Collect changes from https://github.com/$($config.githubOwner)/*@$($config.branch)"
+        invoke-git add *
+        invoke-git commit -m "$commitMessage"
+        if ($baseRepoBranch) {
+            invoke-git push -u $serverUrl $baseRepoBranch
+            invoke-gh pr create --fill --head $baseRepoBranch
+        }
+        else {
+            invoke-git push $serverUrl
         }
     }
     else {

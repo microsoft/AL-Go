@@ -173,7 +173,7 @@ function invoke-gh {
     $ErrorActionPreference = "SilentlyContinue"
     gh $command $remaining
     $ErrorActionPreference = "Stop"
-    if ($lastexitcode) { throw "git $command error" }
+    if ($lastexitcode) { throw "gh $command error" }
 }
 
 function invoke-git {

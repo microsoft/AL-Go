@@ -221,7 +221,7 @@ try {
                 }
                 else {
                     invoke-git push -u $url $branch
-                    invoke-hub pull-request -h $branch -m "$message"
+                    invoke-gh pr create --fill --head $branch
                 }
             }
             catch {
