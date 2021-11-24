@@ -1,5 +1,5 @@
 ﻿Param(
-    [string] $configName = ""
+    [string] $configName = "",
     [string] $githubOwner,
     [string] $token,
     [string] $srcBranch,
