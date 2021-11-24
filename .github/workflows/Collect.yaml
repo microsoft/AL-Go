@@ -17,7 +17,7 @@ defaults:
     shell: PowerShell
 
 jobs:
-  Deploy:
+  Collect:
     runs-on: [ windows-latest ]
     steps:
       - uses: actions/checkout@v2
