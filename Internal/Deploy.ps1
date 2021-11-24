@@ -261,6 +261,7 @@ try {
         invoke-git commit --allow-empty -m "'$commitMessage'"
         if ($baseRepoBranch) {
             invoke-git push -u $serverUrl $baseRepoBranch
+            invoke-git config --local --unset "remote.origin.gh-resolved"            
             invoke-gh pr create --fill --head $baseRepoBranch
         }
         else {
