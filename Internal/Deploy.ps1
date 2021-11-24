@@ -251,9 +251,14 @@ try {
             $serverUrl = "https://github.com/$($srcOwnerAndRepo).git"
         }
 
-        $commitMessage = "Collect changes from https://github.com/$($config.githubOwner)/*@$($config.branch)"
+        Write-Host $serverUrl
+
+        $commitMessage = "Collect changes from $($config.githubOwner)/*@$($config.branch)"
+        Write-Host $commitMessage
+        Write-Host (Get-Location).Path
+
         invoke-git add *
-        invoke-git commit -m "$commitMessage"
+        invoke-git commit --allow-empty -m "$commitMessage"
         if ($baseRepoBranch) {
             invoke-git push -u $serverUrl $baseRepoBranch
             invoke-gh pr create --fill --head $baseRepoBranch
