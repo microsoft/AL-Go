@@ -22,6 +22,6 @@ Ensure that all tests run and create a Pull Request against https://github.com/m
 > **Note**: You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your local fork of the AL-Go repository** you publish to the 3 repositories.
 
 > **Note**: You can also collect from a different branch in the 3 public repositories by specifying a branch name under **Branch to collect** from when running the **Collect** workflow. The branch you specify in **Use workflow from** indicates which branch in in **your local fork of the AL-Go repository** you want to submit the changes against.
-
+---
 > **Not recommended**: You can also run the deploy and collect actions locally by running the Deploy and Collect scripts in the Internal folder with a .json file as a parameter specifying which repositories to deploy to and collect from. The fredddk.json file in the internal folder is a sample of this.
 
