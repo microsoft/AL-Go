@@ -164,7 +164,10 @@ try {
 
     $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
         if ($collect) {
-            if (!(Test-Path $_)) {
+            if (Test-Path $_) {
+                invoke-git pull
+            }
+            else {
                 $serverUrl = "https://github.com/$($config.githubOwner)/$_.git"
                 invoke-git clone --quiet $serverUrl
             }
