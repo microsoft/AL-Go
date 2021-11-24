@@ -165,7 +165,9 @@ try {
     $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
         if ($collect) {
             if (Test-Path $_) {
+                Set-Location $_
                 invoke-git pull
+                Set-Location $baseFolder
             }
             else {
                 $serverUrl = "https://github.com/$($config.githubOwner)/$_.git"
