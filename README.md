@@ -6,6 +6,14 @@ Usage scenarios:
 1. [Add a test app to an existing project](Scenarios/2.md)
 1. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/3.md)
 1. [Create a release of your application](Scenarios/4.md)
+1. [Register a customer production environment for Manual Deployment](Scenarios/5.md)
+1. [Update AL-Go system files](Scenarios/6.md)
+1. [Use Azure KeyVault for secrets with AL-Go](Scenarios/7.md)
+1. [Create Online Development Environment from VS Code](Scenarios/8.md)
+1. [Create Online Development Environment from GitHub](Scenarios/9.md)
+1. [Setup CI/CD for an existing per tenant extension (BingMaps)](Scenarios/10.md)
+1. [Setup CI/CD for an existing AppSource App](Scenarios/11.md)
+1. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/12.md)
 
 # This project
 This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
