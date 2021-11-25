@@ -5,6 +5,7 @@ Usage scenarios:
 1. [Create a new per tenant extension (like AL Go) and start developing in VS Code](Scenarios/1.md)
 1. [Add a test app to an existing project](Scenarios/2.md)
 1. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/3.md)
+1. [Create a release of your application](Scenarios/4.md)
 
 # This project
 This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
