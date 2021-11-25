@@ -1,8 +1,9 @@
 # AL-Go for GitHub
 What is AL-Go for GitHub?
 
-Usage scenarios
-- [Create a new per tenant extension (like AL Go) and start developing in VS Code](Scenarios/1.md)
+Usage scenarios:
+1. [Create a new per tenant extension (like AL Go) and start developing in VS Code](Scenarios/1.md)
+
 
 
 # This project
