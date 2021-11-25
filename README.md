@@ -1,4 +1,11 @@
 # AL-Go for GitHub
+What is AL-Go for GitHub?
+
+Usage scenarios
+- [Create a new per tenant extension (like AL Go) and start developing in VS Code](Scenarios/1.md)
+
+
+# This project
 This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
 
 - https://github.com/microsoft/AL-Go-PTE is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
@@ -7,9 +14,9 @@ This project in the main source repository for AL-Go for GitHub. This project is
 and last, but not least a repository with the GitHub actions used by the templates.
 - https://github.com/microsoft/AL-Go-Actions is the GitHub repository containing the GitHub Actions used by the templates above.
 
-## Contributing
+# Contributing
 
-Please read [this document](Contributing.md) to understand how to contribute to AL-Go for GitHub.
+Please read [this document](Scenarios/Contributing.md) to understand how to contribute to AL-Go for GitHub.
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
