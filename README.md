@@ -1,24 +1,33 @@
-# AL-Go
-## [Actions](Actions)
-Actions for AL-Go
-## [Templates](Templates)
-Templates for AL-Go
+# AL-Go for GitHub
+What is AL-Go for GitHub?
 
+Usage scenarios:
+1. [Create a new per tenant extension (like AL Go) and start developing in VS Code](Scenarios/1.md)
+1. [Add a test app to an existing project](Scenarios/2.md)
+1. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/3.md)
+1. [Create a release of your application](Scenarios/4.md)
+1. [Register a customer production environment for Manual Deployment](Scenarios/5.md)
+1. [Update AL-Go system files](Scenarios/6.md)
+1. [Use Azure KeyVault for secrets with AL-Go](Scenarios/7.md)
+1. [Create Online Development Environment from VS Code](Scenarios/8.md)
+1. [Create Online Development Environment from GitHub](Scenarios/9.md)
+1. [Setup CI/CD for an existing per tenant extension (BingMaps)](Scenarios/10.md)
+1. [Setup CI/CD for an existing AppSource App](Scenarios/11.md)
+1. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/12.md)
 
+**Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
+# This project
+This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
 
-# Project
+- https://github.com/microsoft/AL-Go-PTE is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
+- https://github.com/microsoft/AL-Go-AppSource is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+and last, but not least a repository with the GitHub actions used by the templates.
+- https://github.com/microsoft/AL-Go-Actions is the GitHub repository containing the GitHub Actions used by the templates above.
 
-As the maintainer of this project, please make a few updates:
+# Contributing
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
-
-## Contributing
+Please read [this document](Scenarios/Contributing.md) to understand how to contribute to AL-Go for GitHub.
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
