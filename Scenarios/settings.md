@@ -1,5 +1,11 @@
 
 # Settings
+The behavior of AL-Go for GitHub is very much controlled by the settings file.
+
+## Where is the settings file
+TODO: describe load mechanism
+
+## Basic settings
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | type | | PTE |
@@ -25,7 +31,7 @@
 | templateUrl | | |
 | appDependencyProbingPaths | | [ ] |
 
-# Advanced settings
+## Advanced settings
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | appDependencies | | [ ] |
@@ -42,7 +48,7 @@
 | githubRunner | Specifies which github runner will be used for the pipeline, which is the most time consuming task. Currently, you cannot change which runner is used for all the house-keeping tasks. These will always be run on the github hosted runner: windows-latest | windows-latest |
 | alwaysBuildAllProjects | This setting only makes sense if the repository is setup for multiple projects.<br />Standard behavior of the CI/CD workflow is to only build the projects, in which files have changes when running the workflow due to a push or a pull request | false |
 
-# Expert settings (rarely used)
+## Expert settings (rarely used)
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | installTestRunner | Determines wheather the test runner will be installed in the pipeline. If there are testFolders in the project, this setting will be true. | |
@@ -54,3 +60,5 @@
 | doNotBuildTests | This setting forces the pipeline to NOT build and run the tests in testFolders | false |
 | doNotRunTests | This setting forces the pipeline to NOT run the tests in testFolders. Tests are still being built and published | false |
 | memoryLimit | Specifies the memory limit for the build container. By default, this is left to BcContainerHelper to handle and will currently be set to 8G | |
+
+TODO: Describe other expert modifications possible.

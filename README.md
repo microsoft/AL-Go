@@ -15,6 +15,7 @@ Usage scenarios:
 1. [Setup CI/CD for an existing AppSource App](Scenarios/11.md)
 1. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/12.md)
 
+**Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 # This project
 This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
 
