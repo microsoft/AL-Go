@@ -40,13 +40,17 @@ try {
 
     if ($getSettings -contains 'appBuild' -or $getSettings -contains 'appRevision') {
         switch ($settings.versioningStrategy -band 15) {
-            0 { # Use RUNID
+            0 { # Use RUN_NUMBER and RUN_ATTEMPT
                 $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
-                $settings.appRevision = 0
+                $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
             }
-            1 { # USE DATETIME
-                $settings.appBuild = [Int32]([DateTime]::Now.ToString('yyyyMMdd'))
-                $settings.appRevision = [Int32]([DateTime]::Now.ToString('hhmmss'))
+            1 { # Use RUN_ID and RUN_ATTEMPT
+                $settings.appBuild = [Int32]($ENV:GITHUB_RUN_ID)
+                $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
+            }
+            2 { # USE DATETIME
+                $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
+                $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('hhmmss'))
             }
             default {
                 OutputError -message "Unknown version strategy $versionStrategy"
