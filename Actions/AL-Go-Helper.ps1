@@ -574,7 +574,14 @@ function AnalyzeRepo {
                             else {
                                 $id = $_.Id
                             }
-                            $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
+                            if ($id -eq $applicationAppId) {
+                                if ([Version]$_.Version -gt [Version]$settings.applicationDependency) {
+                                    $settings.applicationDependency = $appDep
+                                }
+                            }
+                            else {
+                                $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
+                            }
                         }
                     }
                     if ($appJson.PSObject.Properties.Name -eq 'Application') {
@@ -591,12 +598,15 @@ function AnalyzeRepo {
         }
     }
 
+    if ([Version]$settings.applicationDependency -gt [Version]$version) {
+        throw "Application dependency is set to $($settings.applicationDependency), which isn't compatible with the artifact version $version"
+    }
+
     # unpack all dependencies and update app- and test dependencies from dependency apps
     $settings.appDependencies + $settings.testDependencies | ForEach-Object {
         $dep = $_
         if ($dep -is [string]) {
-            
-
+            # TODO: handle pre-settings
         }
     }
 
