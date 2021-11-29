@@ -22,6 +22,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: CheckUser
+        run: |
+          if ("$ENV:GITHUB_REPOSITORY" -eq "microsoft/AL-Go" -and "$ENV:GITHUB_ACTOR" -eq "freddydk") {
+            Write-Host "::Error::You cannot run deploy and collect in the microsoft/AL-Go repo"
+            exit 1
+          }
+
       - name: Collect
         run: |
           $ErrorActionPreference = "Stop"

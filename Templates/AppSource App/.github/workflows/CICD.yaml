@@ -168,14 +168,6 @@ jobs:
           settingsJson: ${{ env.Settings }}
           SecretsJson: ${{ env.RepoSecrets }}
 
-      - name: Publish test results
-        if: success() || failure()
-        uses: mikepenz/action-junit-report@v1
-        with:
-          check_name: 'Test Report ${{ matrix.project }}'
-          report_paths: '${{ matrix.project }}/TestResults*.xml'
-          github_token: ${{ github.token }}
-
       - name: Calculate Artifact names
         id: calculateArtifactNames
         if: success() || failure()
