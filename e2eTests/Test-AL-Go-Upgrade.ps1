@@ -61,6 +61,9 @@ try {
     $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
     $settings.appFolders += "My App"
     $settings.testFolders += "My App.Test"
+    if ($appSourceApp) {
+        $settings.AppSourceCopMandatoryAffixes = @("cust")
+    }
     $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
     Add-Content -path (Join-Path $repoPath '.AL-Go\localdevenv.ps1') -Encoding UTF8 -Value "`n`n# Dummy comment" |
     CommitAndPush -commitMessage "Update settings.json"
