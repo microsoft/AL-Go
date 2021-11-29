@@ -50,6 +50,28 @@ jobs:
       - name: Setup Repositories
         id: setup
         run: e2eTests\SetupRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}'
+  
+  CalculateReleases:
+    runs-on: [ windows-latest ]
+    needs: [ Check, SetupRepositories ]
+    outputs:
+      releases: ${{ steps.calculatereleases.outputs.releases }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: CalculateReleases
+        id: calculateReleases
+        run: |
+          $releases = @(gh release list --repo $ENV:GITHUB_REPOSITORY | ForEach-Object { $_.split("`t")[0] })
+          Write-Host "Releases: $($releases -join ', ')"
+          if ($releases.Count -eq 1) {
+            $releasesJSon = "[$($releases | ConvertTo-Json -compress)]"
+          }
+          else {
+            $releasesJSon = $releases | ConvertTo-Json -compress
+          }
+          Write-Host "::set-output name=releases::$releasesJson"
+          Write-Host "::set-output name=releasesCount::$($releases.Count)"
 
   TestAlGoPte:
     runs-on: [ windows-latest ]
@@ -87,27 +109,35 @@ jobs:
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
 
-  TestAlGoUpdatePteV0:
+  TestAlGoPteUpgrade:
     runs-on: [ windows-latest ]
-    needs: [SetupRepositories ]
+    needs: [SetupRepositories, CalculateReleases ]
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
+      fail-fast: false
     steps:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Update.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -path 'testpte-v0'
+        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -release '${{ matrix.release }}' -path 'pte'
 
-  TestAlGoUpdateAppSourceV0:
+  TestAlGoAppSourceAppUpgrade:
     runs-on: [ windows-latest ]
-    needs: [SetupRepositories ]
+    needs: [SetupRepositories, CalculateReleases ]
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
+      fail-fast: false
     steps:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Update.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -path 'testappsource-v0'
+        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -path 'appsourceapp'
 
-  RemoveRepositories:
+   RemoveRepositories:
     runs-on: [ windows-latest ]
-    needs: [ SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoUpdatePteV0, TestAlGoUpdateAppSourceV0 ]
+    needs: [ SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoPteUpgrade, TestAlGoAppSourceUpgrade ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v2
