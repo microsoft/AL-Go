@@ -62,7 +62,8 @@ jobs:
       - name: CalculateReleases
         id: calculateReleases
         run: |
-          Import-Module "e2eTests\e2eTestHelper.psm1" -DisableNameChecking
+          $modulePath = (Get-Item ".\e2eTests\e2eTestHelper.psm1").FullName
+          Import-Module $modulePath -DisableNameChecking
           SetTokenAndRepository -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -repository "$ENV:GITHUB_REPOSITORY" -github
           $releases = @(gh release list --repo $ENV:GITHUB_REPOSITORY | ForEach-Object { $_.split("`t")[0] })
           Write-Host "Releases: $($releases -join ', ')"
