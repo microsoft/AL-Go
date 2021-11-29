@@ -192,6 +192,7 @@ function invoke-git {
 function CreateRepository {
     Param(
         [string] $template,
+        [string] $templateBranch = "main",
         [string] $templatePath,
         [switch] $private,
         [string] $branch = "main"

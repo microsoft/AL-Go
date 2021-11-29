@@ -4,8 +4,10 @@
     [string] $token = "",
     [string] $path = "",
     [string] $template = "",
+    [string] $release = "",
     [string] $licenseFileUrl = "",
-    [switch] $appSourceApp
+    [switch] $appSourceApp,
+    [switch] $private
 )
 
 $ErrorActionPreference = "stop"
@@ -19,7 +21,13 @@ try {
         if (!$token) {  $token = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText }
         $githubOwner = "freddydk"
         if (!$licenseFileUrl -and $appSourceApp) { $licenseFileUrl = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText }
-        $path = "testpte-v0"
+        $release = "v0.1"
+        if ($appSourceApp) {
+            $path = "appsourceapp"
+        }
+        else {
+            $path = "pte"
+        }
     }
 
     $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
@@ -45,8 +53,21 @@ try {
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -templatePath (Join-Path $PSScriptRoot $path) -branch $branch
+    CreateRepository -template $template -templateBranch $release -templatePath (Join-Path $PSScriptRoot $path) -branch $branch -private:$private
     $repoPath = (Get-Location).Path
+
+    # Add AppFolders and TestFolders
+    $settingsFile = Join-Path $repoPath '.AL-Go\settings.json'
+    $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+    $settings.appFolders += "My App"
+    $settings.testFolders += "My App.Test"
+    if ($appSourceApp) {
+        $settings.AppSourceCopMandatoryAffixes = @("cust")
+    }
+    $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+    Add-Content -path (Join-Path $repoPath '.AL-Go\localdevenv.ps1') -Encoding UTF8 -Value "`n`n# Dummy comment" |
+    CommitAndPush -commitMessage "Update settings.json"
+    $runs++
 
     # Add Existing App
     if ($appSourceApp) {
