@@ -124,19 +124,6 @@ jobs:
       - name: Run tests
         run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -release '${{ matrix.release }}' -path 'pte'
 
-  TestAlGoAppSourceUpgrade:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories, CalculateReleases ]
-    strategy:
-      matrix:
-        project: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
-
    RemoveRepositories:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoPteUpgrade, TestAlGoAppSourceUpgrade ]
