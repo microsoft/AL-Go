@@ -72,6 +72,8 @@ jobs:
           }
           Write-Host "::set-output name=releases::$releasesJson"
           Write-Host "::set-output name=releasesCount::$($releases.Count)"
+          Write-Host "set-output name=releases::$releasesJson"
+          Write-Host "set-output name=releasesCount::$($releases.Count)"
 
   TestAlGoPte:
     runs-on: [ windows-latest ]
