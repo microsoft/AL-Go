@@ -53,7 +53,7 @@ jobs:
   
   CalculateReleases:
     runs-on: [ windows-latest ]
-    needs: [ Check, SetupRepositories ]
+    needs: [ Check ]
     outputs:
       releases: ${{ steps.calculatereleases.outputs.releases }}
     steps:
