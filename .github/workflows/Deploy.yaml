@@ -24,7 +24,7 @@ jobs:
 
       - name: CheckUser
         run: |
-          if ("$ENV:GITHUB_REPOSITORY" -eq "freddydk/AL-Go" -and "$ENV:GITHUB_ACTOR" -eq "freddydk") {
+          if ("$ENV:GITHUB_REPOSITORY" -eq "microsoft/AL-Go" -and "$ENV:GITHUB_ACTOR" -eq "freddydk") {
             Write-Host "::Error::You cannot run deploy and collect in the microsoft/AL-Go repo"
             exit 1
           }
