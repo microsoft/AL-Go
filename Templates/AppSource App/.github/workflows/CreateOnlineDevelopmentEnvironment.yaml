@@ -80,6 +80,7 @@ jobs:
           adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }} 
 
   postProcess:
+    if: always()
     runs-on: [ windows-latest ]
     needs: [ initialization,  CreateEnvironment ]
     steps:

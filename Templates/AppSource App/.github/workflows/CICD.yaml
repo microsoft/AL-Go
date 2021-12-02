@@ -280,6 +280,7 @@ jobs:
           artifacts: '${{ github.workspace }}\artifacts'
 
   postProcess:
+    if: always()
     runs-on: [ windows-latest ]
     needs: [ initialization,  Analyze, Build, Deploy ]
     steps:

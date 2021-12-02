@@ -55,6 +55,7 @@ jobs:
           directCommit: ${{ github.event.inputs.directCommit }}
 
   postProcess:
+    if: always()
     runs-on: [ windows-latest ]
     needs: [ initialization, update ]
     steps:
