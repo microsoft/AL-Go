@@ -1,13 +1,8 @@
 {
-    "folders":  [
-                    {
-                        "path":  ".AL-Go"
-                    },
-                    {
-                        "path":  "PTE1"
-                    }
-                ],
-    "settings":  {
-
-                 }
+    "folders": [
+        {
+            "path": ".AL-Go"
+        }
+    ],
+    "settings": {}
 }
