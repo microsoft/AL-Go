@@ -30,15 +30,16 @@ try {
     $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY 
 
     $latestReleaseTag = ""
-    if ([bool]($latestRelease.PSobject.Properties.name -match "tag_name")) {
+    if ($latestRelease -and ([bool]($latestRelease.PSobject.Properties.name -match "tag_name"))){
         $latestReleaseTag = $latestRelease.tag_name
     }
 
-    $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag
+    $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag | ConvertFrom-Json
+    $releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
 
     Write-Host "::set-output name=releaseNotes::$releaseNotes"
     Write-Host "set-output name=releaseNotes::$releaseNotes"
-    
+
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
