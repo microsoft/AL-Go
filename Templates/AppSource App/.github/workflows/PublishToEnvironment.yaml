@@ -119,6 +119,7 @@ jobs:
           artifacts: ${{ github.event.inputs.appVersion }}
 
   postProcess:
+    if: always()
     runs-on: [ windows-latest ]
     needs: [ initialization, Environments, Deploy ]
     steps:

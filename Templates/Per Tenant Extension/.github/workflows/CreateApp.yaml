@@ -60,6 +60,7 @@ jobs:
           parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
 
   postProcess:
+    if: always()
     runs-on: [ windows-latest ]
     needs: [ initialization, createApp ]
     steps:

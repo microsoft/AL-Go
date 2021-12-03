@@ -137,6 +137,7 @@ jobs:
           asset_content_type: application/zip
 
   postProcess:
+    if: always()
     runs-on: [ windows-latest ]
     needs: [ initialization, CreateRelease, UploadArtifacts ]
     steps:
