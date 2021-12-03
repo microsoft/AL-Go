@@ -2,21 +2,22 @@
 The behavior of AL-Go for GitHub is very much controlled by the settings in the settings file.
 
 ## Where is the settings file located
-An AL-Go repository can consist of a single project (with multiple apps) or multiple projects (each with multiple apps). Multiple projects in a single repository are comparable to multiple repositories, they are built, deployed and tested seperately. All apps in each project (single or multiple) are built together in the same pipeline, published and tested together. If a repository is multiple projects, each project is stored in a seperate folder in the root of the repository.
+An AL-Go repository can consist of a single project (with multiple apps) or multiple projects (each with multiple apps). Multiple projects in a single repository are comparable to multiple repositories; they are built, deployed, and tested separately. All apps in each project (single or multiple) are built together in the same pipeline, published and tested together. If a repository is multiple projects, each project is stored in a separate folder in the root of the repository.
 
 When running a workflow or a local script, the settings are applied by reading one or more settings files. Last applied settings file wins. The following lists the settings files and their location:
 
 **.github\\AL-Go-settings.json** is the repository settings file. This settings file contains settings that are relevant for all projects in the repository. If a settings in the repository settings file is found in a subsequent settings file, it will be overridden by the new value.
 
-**Special note:** The repository settings file can also contains BcContainerHelper settings, which will be applied when loading BcContainerHelper in a workflow.
+**Special note:** The repository settings file can also contains `BcContainerHelper` settings, which will be applied when loading `BcContainerHelper` in a workflow.
 
-**.AL-Go\\settings.json** is the project settings file. If the reposiory is a single project, the .AL-Go folder is in the root folder of the repository. If the repository is multiple projects, there will be a .AL-Go folder in each project folder.
+**.AL-Go\\settings.json** is the project settings file. If the repository is a single project, the .AL-Go folder is in the root folder of the repository. If the repository contains multiple projects, there will be a .AL-Go folder in each project folder.
 
-**.AL-Go\\\<workflow\>.settings.json** is the workflow specific settings file. This option is rarely used, but if you have special settings, which should only be used for one specific workflow, these settings can be added to a settings file with the name of the workflow followed by .settings.json.
+**.AL-Go\\\<workflow\>.settings.json** is the workflow-specific settings file. This option is rarely used, but if you have special settings, which should only be used for one specific workflow, these settings can be added to a settings file with the name of the workflow followed by `.settings.json`.
 
-**.AL-Go\\\<username\>.settings.json** is the user specific settings file. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by .settings.json.
+**.AL-Go\\\<username\>.settings.json** is the user-specific settings file. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
 
 ## Basic settings
+
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | type | Specifies the type of project. Allowed values are **PTE** or **AppSource App**. This value comes with the default repository. | PTE |
@@ -29,6 +30,7 @@ When running a workflow or a local script, the settings are applied by reading o
 | appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version<br />**release_status** = release/prerelease/draft<br />**projects** = projects<br />**authtoken** = Auth token<br />**TODO:** complete documentation and add to tests | [ ] |
 
 ## Advanced settings
+
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | artifact | Determines the artifacts used for building and testing the app.<br />This setting can either be an absolute pointer to Business Central artifacts (https://... - rarely used) or it can be a search specification for artifacts (\<storageaccount\>/\<type\>/\<version\>/\<country\>/\<select\>/\<sastoken\>).<br />If not specified, the artifacts used will be the latest sandbox artifacts from the country specified in the country setting. | |
@@ -55,6 +57,7 @@ When running a workflow or a local script, the settings are applied by reading o
 | alwaysBuildAllProjects | This setting only makes sense if the repository is setup for multiple projects.<br />Standard behavior of the CI/CD workflow is to only build the projects, in which files have changes when running the workflow due to a push or a pull request | false |
 
 ## Expert settings (rarely used)
+
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | repoName | the name of the repository | name of GitHub repository |
