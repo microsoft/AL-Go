@@ -108,7 +108,7 @@ function GetReleaseNotes {
         $postParams["previous_tag_name"] = $previous_tag_name
     }
 
-    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" | ConvertFrom-Json
+    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" 
 }
 
 function GetLatestRelease {
@@ -119,7 +119,12 @@ function GetLatestRelease {
     )
     
     Write-Host "Getting the latest release from $api_url/repos/$repository/releases/latest"
-    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" | ConvertFrom-Json
+    try {
+        Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" | ConvertFrom-Json
+    }
+    catch {
+        return $null
+    }
 }
 
 function DownloadRelease {
