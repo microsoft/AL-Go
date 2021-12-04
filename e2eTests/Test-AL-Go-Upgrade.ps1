@@ -10,6 +10,32 @@
     [switch] $private
 )
 
+#  ______           _ ___                _    _    _                           _         _           _                                    _       
+# |  ____|         | |__ \              | |  | |  | |                         | |       | |         | |                                  (_)      
+# | |__   _ __   __| |  ) |___ _ __   __| |  | |  | |_ __   __ _ _ __ __ _  __| | ___   | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___  
+# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | |  | | '_ \ / _` | '__/ _` |/ _` |/ _ \  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \ 
+# | |____| | | | (_| |/ /_  __/ | | | (_| |  | |__| | |_) | (_| | | | (_| | (_| |  __/  | |_  __\__ \ |_   \__ \ (__  __/ | | | (_| | |  | | (_) |
+# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \____/| .__/ \__, |_|  \__,_|\__,_|\___|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/ 
+#                                                   | |     __/ |                                                                                 
+#                                                   |_|    |___/                                                                                  
+#
+# This scenario runs for every previously released version of GitHub Go - both for PTEs and AppSource Apps
+# The scenario tests that we do not break existing CI/CD workflows and that existing repositories can upgrade to newest version
+#
+#  1. Login
+#  2. Create a new repository based on the selected template and the selected version
+#  3. If (AppSource App) Create a licensefileurl secret
+#  4. Run CI/CD workflow
+#  5.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+#  6. Create the GHTOKENWORKFLOW secret
+#  7. Run the "Update AL-Go System Files" workflow as a Pull Request
+#  8.  Test that a Pull Request was created and merge the Pull Request
+#  9. Run CI/CD workflow
+# 10.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+# 11.  Test number of workflows ran is correct
+# 12. Cleanup
+#
+
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 

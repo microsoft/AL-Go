@@ -10,6 +10,47 @@
     [switch] $private
 )
 
+#  ______           _ ___                _    _           _                                    _       
+# |  ____|         | |__ \              | |  | |         | |                                  (_)      
+# | |__   _ __   __| |  ) |___ _ __   __| |  | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___  
+# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \ 
+# | |____| | | | (_| |/ /_  __/ | | | (_| |  | |_  __\__ \ |_   \__ \ (__  __/ | | | (_| | |  | | (_) |
+# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/ 
+#
+# This scenario runs for both PTE template and AppSource App template and as single project and multi project repositories
+#                                                                                                      
+#  1. Login to GitHub
+#  2. Create a new repository based on the selected template
+#  3. If (AppSource App) Create a licensefileurl secret
+#  4. Run the "Add an existing app" workflow and add an app as a Pull Request
+#  5.  Test that a Pull Request was created and merge the Pull Request
+#  6. Run the "CI/CD" workflow
+#  7.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+#  8. Run the "Create Release" workflow to create a version 1.0 release
+#  9. Run the "Create a new App" workflow to add a new app (adjust necessary properties if multiproject or appsource app)
+# 10.  Test that app.json exists and properties in app.json are as expected
+# 11. Run the "Create a new Test App" workflow to add a new test app
+# 12.  Test that app.json exists and properties in app.json are as expected
+# 13. Run the "Create Online Development Environment" if requested
+# 14. Run the "Increment version number" workflow for one project (not changing apps) as a Pull Request
+# 15.  Test that a Pull Request was created and merge the Pull Request
+# 16. Run the CI/CD workflow
+# 17.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+# 18. Modify repository versioning strategy and remove some scripts + a .yaml file
+# 19. Run the CI/CD workflow
+# 20.  Test that artifacts created from CI/CD are correct and of the right version (also apps version numbers should be updated)
+# 21. Create the GHTOKENWORKFLOW secret
+# 22. Run the "Update AL-Go System Files" workflow as a Pull Request
+# 23.  Test that a Pull Request was created and merge the Pull Request
+# 24.  Test that the previously deleted files are now updated
+# 25. Run the "Create Release" workflow
+#
+# TODO: some more tests to do here
+#
+# 26.  Test that the number of workflows ran is correct.
+# 27. Cleanup repositories
+#
+  
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
