@@ -26,6 +26,12 @@ try {
     
     $telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
+    # Pull docker image in the background
+    $genericImageName = Get-BestGenericImageName
+    Start-Job -ScriptBlock {
+        docker pull --quiet $genericImageName
+    } -ArgumentList $genericImageName | Out-Null
+
     $runAlPipelineParams = @{}
     $environment = 'GitHubActions'
     if ($project  -eq ".") { $project = "" }
