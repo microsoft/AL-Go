@@ -123,8 +123,11 @@ try {
     }
 
     $additionalCountries = @()
-    
+
     $imageName = ""
+    if ($repo.gitHubRunner -ne "windows-latest") {
+        $imageName = $repo.cacheImageName
+    }
     $authContext = $null
     $environmentName = ""
     $CreateRuntimePackages = $false
@@ -189,6 +192,7 @@ try {
         -enableAppSourceCop:$repo.enableAppSourceCop `
         -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
         -enableUICop:$repo.enableUICop `
+        -customCodeCops:$repo.customCodeCops `
         -azureDevOps:($environment -eq 'AzureDevOps') `
         -gitLab:($environment -eq 'GitLab') `
         -gitHubActions:($environment -eq 'GitHubActions') `

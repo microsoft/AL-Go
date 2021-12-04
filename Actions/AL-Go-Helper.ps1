@@ -376,13 +376,14 @@ function ReadSettings {
         "testFolders"                            = @()
         "installApps"                            = @()
         "installTestApps"                        = @()
-        "applicationDependency"                  = "19.0.0.0"
+        "applicationDependency"                  = "18.0.0.0"
         "installTestRunner"                      = $false
         "installTestFramework"                   = $false
         "installTestLibraries"                   = $false
         "installPerformanceToolkit"              = $false
         "enableCodeCop"                          = $false
         "enableUICop"                            = $false
+        "customCodeCops"                         = @()
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
         "appSourceCopMandatoryAffixes"           = @()
@@ -391,6 +392,7 @@ function ReadSettings {
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
         "githubRunner"                           = "windows-latest"
+        "cacheImageName"                         = "my"
         "alwaysBuildAllProjects"                 = $false
         "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
         "PartnerTelemetryConnectionString"       = ""
@@ -606,7 +608,7 @@ function AnalyzeRepo {
     $settings.appDependencies + $settings.testDependencies | ForEach-Object {
         $dep = $_
         if ($dep -is [string]) {
-            # TODO: handle pre-settings
+            # TODO: handle pre-settings - documentation pending
         }
     }
 
@@ -1144,6 +1146,7 @@ function CreateDevEnv {
             -enableAppSourceCop:$repo.enableAppSourceCop `
             -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
             -enableUICop:$repo.enableUICop `
+            -customCodeCops:$repo.customCodeCops `
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
