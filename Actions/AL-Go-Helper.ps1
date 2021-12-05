@@ -369,7 +369,7 @@ function ReadSettings {
         "keyVaultClientIdSecretName"             = ""
         "codeSignCertificateUrlSecretName"       = "CodeSignCertificateUrl"
         "codeSignCertificatePasswordSecretName"  = "CodeSignCertificatePassword"
-        "supportedCountries"                     = @()
+        "additionalCountries"                    = @()
         "appDependencies"                        = @()
         "appFolders"                             = @()
         "testDependencies"                       = @()
@@ -495,11 +495,11 @@ function AnalyzeRepo {
             $version = $artifactUrl.Split('/')[4]
         }
     
-        if ($settings.supportedCountries -or $country -ne $settings.country) {
+        if ($settings.additionalCountries -or $country -ne $settings.country) {
             if ($country -ne $settings.country) {
                 OutputWarning -message "artifact definition in $ALGoSettingsFile uses a different country ($country) than the country definition ($($settings.country))"
             }
-            Write-Host "Checking Country and SupportedCountries"
+            Write-Host "Checking Country and additionalCountries"
             # AT is the latest published language - use this to determine available country codes (combined with mapping)
             $ver = [Version]$version
             Write-Host "https://$storageAccount/$artifactType/$version/$country"
@@ -513,9 +513,9 @@ function AnalyzeRepo {
             if ($allowedCountries -notcontains $settings.country) {
                 throw "Country ($($settings.country)), specified in $ALGoSettingsFile is not a valid country code."
             }
-            $illegalCountries = $settings.supportedCountries | Where-Object { $allowedCountries -notcontains $_ }
+            $illegalCountries = $settings.additionalCountries | Where-Object { $allowedCountries -notcontains $_ }
             if ($illegalCountries) {
-                throw "SupportedCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
+                throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
             }
         }
         else {
@@ -1152,7 +1152,6 @@ function CreateDevEnv {
             -gitHubActions:($caller -eq 'GitHubActions') `
             -failOn 'error' `
             -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
-            -AppSourceCopSupportedCountries @() `
             -doNotRunTests `
             -useDevEndpoint `
             -keepContainer

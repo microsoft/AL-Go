@@ -122,7 +122,7 @@ try {
         exit
     }
 
-    $additionalCountries = $repo.supportedCountries
+    $additionalCountries = $repo.additionalCountries
 
     $imageName = ""
     if ($repo.gitHubRunner -ne "windows-latest") {
@@ -198,7 +198,6 @@ try {
         -gitHubActions:($environment -eq 'GitHubActions') `
         -failOn 'error' `
         -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
-        -AppSourceCopSupportedCountries $repo.supportedCountries `
         -additionalCountries $additionalCountries `
         -buildArtifactFolder $buildArtifactFolder `
         -CreateRuntimePackages:$CreateRuntimePackages `
