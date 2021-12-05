@@ -22,6 +22,7 @@ $signals = @{
     "DO0098" = "AL-Go workflow ran: UpdateGitHubGoSystemFiles"
     "DO0099" = "AL-Go workflow ran: NextMajor"
     "DO0100" = "AL-Go workflow ran: NextMinor"
+    "DO0101" = "AL-Go workflow ran: Current"
 }
 
 function CreateScope {

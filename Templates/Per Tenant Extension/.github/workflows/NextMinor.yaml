@@ -1,0 +1,157 @@
+name: Test Next Minor
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: PowerShell
+
+jobs:
+  Initialization:
+    runs-on: [ windows-latest ]
+    outputs:
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+    steps:
+      - id: init
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
+        with:
+          eventId: "DO0100"
+
+  Analyze:
+    runs-on: [ windows-latest ]
+    needs: [ Initialization ]
+    outputs:
+      projects: ${{ steps.Projects.outputs.projects }}
+      projectCount: ${{ steps.Projects.outputs.projectCount }}
+      githubRunner: ${{ steps.OutputSettings.outputs.githubRunner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          get: githubRunner,alwaysBuildAllProjects
+
+      - name: Output settings
+        id: OutputSettings
+        run: |
+          $gitHubRunner = "$env:githubRunner".Split(',') | ConvertTo-Json -compress
+          Write-Host "::set-output name=githubRunner::$githubRunner"
+          Write-Host "set-output name=githubRunner::$githubRunner"
+
+      - name: Projects
+        id: Projects
+        run: |
+          if (Test-Path ".AL-Go" -PathType Container) {
+            $projects = @(".")
+          }
+          else {
+            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
+            Write-Host "Projects: $($projects -join ', ')"
+            if (!($ENV:GITHUB_EVENT_NAME -eq "workflow_dispatch" -or "$ENV:alwaysBuildAllProjects" -eq "true")) {
+              $headers = @{             
+                "Authorization" = "token ${{ github.token }}"
+                "Accept" = "application/vnd.github.baptiste-preview+json"
+              }
+              if ($ENV:GITHUB_EVENT_NAME -eq "pull_request") {
+                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
+              }
+              else {
+                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.before }}...${{ github.event.after }}"
+              }
+              $response = Invoke-WebRequest -Headers $headers -UseBasicParsing -Method GET -Uri $url | ConvertFrom-Json
+              $filesChanged = @($response.files | ForEach-Object { $_.filename })
+              if ($filesChanged.Count -lt 250) {
+                $foldersChanged = @($filesChanged | ForEach-Object { $_.Split('/')[0] } | Select-Object -Unique)
+                $projects = @($projects | Where-Object { $foldersChanged -contains $_ })
+                Write-Host "Modified projects: $($projects -join ', ')"
+              }
+            }
+          }
+          if ($projects.Count -eq 1) {
+            $projectsJSon = "[$($projects | ConvertTo-Json -compress)]"
+          }
+          else {
+            $projectsJSon = $projects | ConvertTo-Json -compress
+          }
+          Write-Host "::set-output name=projects::$projectsJson"
+          Write-Host "::set-output name=projectCount::$($projects.Count)"
+          Write-Host "set-output name=projects::$projectsJson"
+          Write-Host "set-output name=projectCount::$($projects.Count)"
+
+  Build:
+    needs: [ Analyze ]
+    runs-on: ${{ fromJson(needs.Analyze.outputs.githubRunner) }}
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.Analyze.outputs.projects) }}
+      fail-fast: false
+    name: Build ${{ matrix.project }}
+    outputs:
+      TestResultsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestResultsArtifactsName }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          project: ${{ matrix.project }}
+
+      - name: Read secrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          settingsJson: ${{ env.Settings }}
+          secrets: 'licenseFileUrl,insiderSasToken,CodeSignCertificateUrl,CodeSignCertificatePassword,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
+
+      - name: Run pipeline
+        uses: microsoft/AL-Go-Actions/RunPipeline@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          Project: ${{ matrix.project }}
+          settingsJson: ${{ env.Settings }}
+          SecretsJson: ${{ env.RepoSecrets }}
+
+      - name: Calculate Artifact names
+        id: calculateArtifactNames
+        if: success() || failure()
+        run: |
+          $settings = '${{ env.Settings }}' | ConvertFrom-Json
+          $project = '${{ matrix.project }}'
+          if ($project -eq ".") { $project = $settings.RepoName }
+          $TestResultsArtifactsName = "$project-TestResults"
+          Write-Host "::set-output name=TestResultsArtifactsName::$TestResultsArtifactsName"
+          Add-Content -Path $env:GITHUB_ENV -Value "TestResultsArtifactsName=$TestResultsArtifactsName"
+
+      - name: Publish artifacts - test results
+        uses: actions/upload-artifact@v2
+        if: success() || failure()
+        with:
+          name: ${{ env.testResultsArtifactsName }}
+          path: '${{ matrix.project }}/TestResults.xml'
+          if-no-files-found: ignore
+
+      - name: Cleanup
+        if: always()
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          Project: ${{ matrix.project }}
+
+  PostProcess:
+    if: always()
+    runs-on: [ windows-latest ]
+    needs: [ Initialization,  Analyze, Build ]
+    steps:
+      - name: Finalizing the workflow
+        id: PostProcess
+        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        with:
+          eventId: "DO0100"
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
