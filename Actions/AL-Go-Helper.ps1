@@ -399,7 +399,7 @@ function ReadSettings {
         "SendExtendedTelemetryToMicrosoft"       = $false
     }
 
-    $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.setting.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
+    $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
         $settingsFile = $_
         $settingsPath = Join-Path $baseFolder $settingsFile
         if (Test-Path $settingsPath) {
