@@ -26,8 +26,17 @@ When running a workflow or a local script, the settings are applied by reading o
 | appFolders | appFolders should be an array of folders (relative to project root), which contains apps for this project. Apps in these folders are sorted based on dependencies and built and published in that order. | [ ] |
 | testFolders | testFolders should be an array of folders (relative to project root), which contains test apps for this project. Apps in these folders are sorted based on dependencies and built, published and tests are run in that order. | [ ] |
 | appSourceCopMandatoryAffixes | This setting is only used if the type is AppSource App. The value is an array of affixes, which is used for running AppSource Cop. | [ ] |
-| templateUrl | Defines the URL of the template repository used to create this project and is used for checking and downloading updates to AL-Go System files. ||
 | appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version<br />**release_status** = release/prerelease/draft<br />**projects** = projects<br />**authtoken** = Auth token<br />**TODO:** complete documentation and add to tests | [ ] |
+
+## Basic Repository settings
+The repository settings are only read from the repository settings file (.github\AL-Go-Settings.json)
+
+| Name | Description |
+| :-- | :-- |
+| templateUrl | Defines the URL of the template repository used to create this project and is used for checking and downloading updates to AL-Go System files. |
+| nextMajorSchedule | CRON schedule for when NextMajor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: https://crontab.guru |
+| nextMinorSchedule | CRON schedule for when NextMinor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: https://crontab.guru |
+| currentSchedule | CRON schedule for when Current workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: https://crontab.guru |
 
 ## Advanced settings
 
