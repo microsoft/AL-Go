@@ -21,7 +21,7 @@ function getfiles {
     $path = Join-Path $env:TEMP "$([Guid]::NewGuid().ToString()).app"
     Download-File -sourceUrl $url -destinationFile $path
     if (!(Test-Path -Path $path)) {
-        throw "could'nt download the file."
+        throw "could not download the file."
     }
 
     expandfile -path $path
