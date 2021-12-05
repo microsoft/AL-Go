@@ -12,7 +12,7 @@ When running a workflow or a local script, the settings are applied by reading o
 
 **.AL-Go\\settings.json** is the project settings file. If the repository is a single project, the .AL-Go folder is in the root folder of the repository. If the repository contains multiple projects, there will be a .AL-Go folder in each project folder.
 
-**.AL-Go\\\<workflow\>.settings.json** is the workflow-specific settings file. This option is rarely used, but if you have special settings, which should only be used for one specific workflow, these settings can be added to a settings file with the name of the workflow followed by `.settings.json`.
+**.AL-Go\\\<workflow\>.settings.json** is the workflow-specific settings file. This option is used for the Current, NextMinor and NextMajor workflows to determine artifacts and build numbers when running these workflows.
 
 **.AL-Go\\\<username\>.settings.json** is the user-specific settings file. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
 
