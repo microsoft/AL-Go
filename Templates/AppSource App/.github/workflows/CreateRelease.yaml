@@ -31,19 +31,19 @@ defaults:
     shell: PowerShell
 
 jobs:
-  initialization:
+  Initialization:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
-        with: 
+        with:
           eventId: "DO0094"
 
   CreateRelease:
     runs-on: [ windows-latest ]
-    needs: [ initialization ]
+    needs: [ Initialization ]
     outputs:
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       upload_url: ${{ steps.createrelease.outputs.upload_url }}
@@ -54,13 +54,13 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           get: TemplateUrl
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           templateUrl: ${{ env.TemplateUrl }}
 
       - name: Analyze Artifacts
@@ -95,7 +95,7 @@ jobs:
         id: createreleasenotes
         uses: microsoft/AL-Go-Actions/CreateReleaseNotes@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           tag_name: '${{github.event.inputs.tag}}'
 
       - name: Create release
@@ -136,14 +136,14 @@ jobs:
           asset_name: '${{ matrix.name }}.zip'
           asset_content_type: application/zip
 
-  postProcess:
+  PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ initialization, CreateRelease, UploadArtifacts ]
+    needs: [ Initialization, CreateRelease, UploadArtifacts ]
     steps:
       - name: Finalizing the workflow
-        id: postProcess
+        id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
-        with: 
+        with:
           eventId: "DO0094"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}  
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

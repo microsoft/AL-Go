@@ -17,19 +17,19 @@ defaults:
     shell: PowerShell
 
 jobs:
-  initialization:
+  Initialization:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
-        with: 
+        with:
           eventId: "DO0097"
 
   Analyze:
     runs-on: [ windows-latest ]
-    needs: [ initialization ]
+    needs: [ Initialization ]
     outputs:
       environments: ${{ steps.Environments.outputs.environments }}
       environmentCount: ${{ steps.Environments.outputs.environmentCount }}
@@ -112,21 +112,20 @@ jobs:
         env:
           authContext: '${{ steps.authContext.outputs.authContext }}'
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           type: 'Publish'
           projects: '${{ secrets.Projects }}'
           environmentName: ${{ matrix.environment }}
           artifacts: ${{ github.event.inputs.appVersion }}
 
-  postProcess:
+  PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ initialization, Environments, Deploy ]
+    needs: [ Initialization, Environments, Deploy ]
     steps:
       - name: Finalizing the workflow
-        id: postProcess
+        id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
-        with: 
+        with:
           eventId: "DO0097"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}  
-
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
