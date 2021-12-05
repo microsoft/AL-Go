@@ -493,6 +493,7 @@ function AnalyzeRepo {
                 throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
             }
             $version = $artifactUrl.Split('/')[4]
+            $storageAccount = $artifactUrl.Split('/')[2]
         }
     
         if ($settings.additionalCountries -or $country -ne $settings.country) {
