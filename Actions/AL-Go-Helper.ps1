@@ -507,7 +507,10 @@ function AnalyzeRepo {
             $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
             Write-Host "Latest AT artifacts $atArtifactUrl"
             $latestATversion = $atArtifactUrl.Split('/')[4]
-            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { $_.Split('?')[0].Split('/')[5] }
+            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
+                $countryArtifactUrl = $_.Split('?')[0] # remove sas token
+                $countryArtifactUrl.Split('/')[5] # get country
+            }
             Write-Host "Countries with artifacts $($countries -join ',')"
             $allowedCountries = $bcContainerHelperConfig.mapCountryCode.PSObject.Properties.Name + $countries | Select-Object -Unique
             Write-Host "Allowed Country codes $($allowedCountries -join ',')"
