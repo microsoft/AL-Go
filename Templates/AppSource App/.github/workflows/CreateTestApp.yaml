@@ -28,25 +28,25 @@ defaults:
     shell: PowerShell
 
 jobs:
-  initialization:
+  Initialization:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
-        with: 
+        with:
           eventId: "DO0095"
 
-  update:
+  Update:
     runs-on: [ windows-latest ]
-    needs: [ initialization ]
+    needs: [ Initialization ]
 
     steps:
       - name: Creating a new test app
         uses: microsoft/AL-Go-Actions/CreateApp@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           project: ${{ github.event.inputs.project }}
           type: 'Test App'
           publisher: ${{ github.event.inputs.publisher }}
@@ -54,14 +54,14 @@ jobs:
           idrange: ${{ github.event.inputs.idrange }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
-  postProcess:
+  PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ initialization, update ]
+    needs: [ Initialization, Update ]
     steps:
       - name: Finalizing the workflow
-        id: postProcess
+        id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
-        with: 
+        with:
           eventId: "DO0095"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}            
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

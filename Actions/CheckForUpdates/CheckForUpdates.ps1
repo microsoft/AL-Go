@@ -116,6 +116,7 @@ try {
         Get-ChildItem -Path $srcFolder -Filter $_.pattern | ForEach-Object {
             $srcFile = $_.FullName
             $fileName = $_.Name
+            $baseName = $_.BaseName
             $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").Replace("`n", "`r`n")
             $name = $type
             if ($type -eq "workflow") {
@@ -123,19 +124,27 @@ try {
                     if ($_ -match '^name:([^#]*)(#.*$|$)') { $name = "workflow '$($Matches[1].Trim())'" }
                 }
             }
+
+            $workflowScheduleKey = "$($baseName)Schedule"
+            if ($repoSettings.ContainsKey($workflowScheduleKey)) {
+                $srcPattern = "on:`r`n  workflow_dispatch:`r`n"
+                $replacePattern = "on:`r`n  schedule:`r`n  - cron: '$($repoSettings."$workflowScheduleKey")'`r`n  workflow_dispatch:`r`n"
+                $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
+            }
+                
             $dstFile = Join-Path $dstFolder $fileName
             if (Test-Path -Path $dstFile -PathType Leaf) {
                 # file exists, compare
                 $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").Replace("`n", "`r`n")
                 if ($dstContent -ne $srcContent) {
                     Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
-                    $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $dstPath $filename }
+                    $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }
             else {
                 # new file
                 Write-Host "New $name ($(Join-Path $dstPath $filename)) available"
-                $updateFiles += @{ "SrcFile" = "$srcFile"; "DstFile" = Join-Path $dstPath $filename }
+                $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
             }
         }
     }
@@ -203,7 +212,7 @@ try {
                         New-Item -Path $path -ItemType Directory | Out-Null
                     }
                     Write-Host "Update $($_.DstFile)"
-                    Copy-Item -Path $_.SrcFile -Destination $_.DstFile -Force
+                    Set-Content -Path $_.DstFile -Encoding UTF8 -Value $_.Content
                 }
                 $removeFiles | ForEach-Object {
                     Write-Host "Remove $_"
