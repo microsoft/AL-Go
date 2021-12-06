@@ -1,5 +1,14 @@
 # AL-Go for GitHub
-What is AL-Go for GitHub?
+AL-Go for GitHub is a set of GitHub templates and actions, which can be used to setup and maintain professional DevOps processes for your Business Central AL projects.
+
+The goal is that people who have created their GitHub repositories based on the AL-Go templates, can maintain these repositories and stay current just by running a workflow, which updates their repositories. This includes necessary changes to scripts and workflows to cope with new features and functions in Business Central.
+
+The template repositories to use as starting point are:
+- https://github.com/microsoft/AL-Go-PTE is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
+- https://github.com/microsoft/AL-Go-AppSource is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
+
+
+The below usage scenarios takes you through how to get started and how to perform the most common tasks.
 
 Usage scenarios:
 1. [Create a new per tenant extension (like AL Go) and start developing in VS Code](Scenarios/1.md)
@@ -22,8 +31,6 @@ This project in the main source repository for AL-Go for GitHub. This project is
 
 - https://github.com/microsoft/AL-Go-PTE is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
 - https://github.com/microsoft/AL-Go-AppSource is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
-
-and last, but not least a repository with the GitHub actions used by the templates.
 - https://github.com/microsoft/AL-Go-Actions is the GitHub repository containing the GitHub Actions used by the templates above.
 
 # Contributing
