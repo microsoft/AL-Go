@@ -15,11 +15,11 @@ The `appDependencyProbingPaths` key in the settings expects a json array with th
 
 `            `""version"": ""<latest, specific version>"",
 
-`            `""release\_status"": ""<release, prerelease, draft>"", 
+`            `""release_status"": ""<release, prerelease, draft>"", 
 
 `            `""authTokenSecret"": ""<Secret Name>"",
 
-`            `""projects"" = ""\*"" 
+`            `""projects"" = ""*"" 
 
 `        `}
 
@@ -36,7 +36,7 @@ The `appDependencyProbingPaths` key in the settings expects a json array with th
 
 **“authTokenSecret”** If the foreign repository is private, to download the artifacts an access token is needed. In this case a secret should be added to GitHub secrets or Azure Key vault and the name of the secret should be provided in the settings.
 
-**“projects”** specifies the project in a multi project repo**. “\*”** means all projects.
+**“projects”** specifies the project in a multi project repository. “\*” means all projects.
 
 ---
 [back](/README.md)
