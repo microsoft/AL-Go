@@ -20,6 +20,10 @@ function getfiles {
 
     $path = Join-Path $env:TEMP "$([Guid]::NewGuid().ToString()).app"
     Download-File -sourceUrl $url -destinationFile $path
+    if (!(Test-Path -Path $path)) {
+        throw "could not download the file."
+    }
+
     expandfile -path $path
     Remove-Item $path -Force -ErrorAction SilentlyContinue
 }
@@ -33,6 +37,12 @@ function expandfile {
         # .zip file
         $destinationPath = Join-Path $env:TEMP "$([Guid]::NewGuid().ToString())"
         Expand-7zipArchive -path $path -destinationPath $destinationPath
+    
+        $directoryInfo = Get-ChildItem $destinationPath | Measure-Object
+        if ($directoryInfo.count -eq 0) {
+            throw "The file is empty or malformed."
+        }      
+
         $appFolders = @()
         if (Test-Path (Join-Path $destinationPath 'app.json')) {
             $appFolders += @($destinationPath)
@@ -60,7 +70,7 @@ function expandfile {
         $destinationPath        
     }
     else {
-        Write-Host "Unknown file $path"
+        throw "The provided url cannot be extracted. The url might be wrong or the file is malformed."
     }
 }
 

@@ -402,6 +402,7 @@ function ReadSettings {
     $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
         $settingsFile = $_
         $settingsPath = Join-Path $baseFolder $settingsFile
+        Write-Host "Checking $settingsFile"
         if (Test-Path $settingsPath) {
             try {
                 Write-Host "Reading $settingsFile"

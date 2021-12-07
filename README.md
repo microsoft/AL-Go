@@ -24,6 +24,7 @@ Usage scenarios:
 1. [Set up CI/CD for an existing AppSource App](Scenarios/11.md)
 1. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/12.md)
 1. [Set up your own GitHub runner to increase build performance](Scenarios/13.md)
+1. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
 
 **Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 # This project
