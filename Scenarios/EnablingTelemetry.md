@@ -1,12 +1,16 @@
-# Enabling telemetry 
+# 15. Enabling telemetry 
 
 If you want to enable partner telemetry add your Application Insights connection string to the AL-GO settings file. the settings structure is:
 
-"PartnerTelemetryConnectionString" = "<connection string to your Application Insights>"
+```
+"PartnerTelemetryConnectionString":  "<connection string to your Application Insights>"
+```
 
 You can also decide to send extended telelmetry to Microsoft. This would be helpful to investigate an issue. To enable the extended telemetry add the following property to the AL-GO settings file:
 
-SendExtendedTelemetryToMicrosoft = "true"
+```
+"SendExtendedTelemetryToMicrosoft" : true
+```
 
 Each workflow starts with initialization task and ends with a postprocess task. During the initialization an operation Id(Guid) is generated and added to all the tasks in the workflow as ParentID. This property can be used to see all the signals sent for a workflow. The postprocess task sends the signal and duration of a workflow. Additionally, each task has its own signal and operationId. This could be used to investigate a task. 
 
