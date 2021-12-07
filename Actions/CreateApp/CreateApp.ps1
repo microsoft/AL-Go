@@ -75,7 +75,7 @@ try {
         $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
     }
     catch {
-        throw "A malformed $ALGoSettingsFile is encountered. Error: $($_.Exception.Message)"
+        throw "A malformed $ALGoSettingsFile is encountered.$([environment]::Newline) $($_.Exception.Message)"
     }
 
     $appVersion = "1.0.0.0"
@@ -99,7 +99,7 @@ try {
 
 }
 catch {
-    OutputError -message "Adding a new app failed due to $($_.Exception.Message)"
+    OutputError -message "Adding a new app failed.$([environment]::Newline) $($_.Exception.Message)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

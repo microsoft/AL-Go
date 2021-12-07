@@ -187,11 +187,11 @@ try {
                         $SettingsJson.appFolders += @($folderName)
                     }
                 }
+
                 $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
             }
             catch {
-                OutputError -message "$ALGoSettingsFile is wrongly formatted. Error is $($_.Exception.Message)"
-                exit
+                throw "$ALGoSettingsFile is malformed. Error: $($_.Exception.Message)"
             }
 
             # Modify workspace
@@ -206,8 +206,7 @@ try {
                     $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile -Encoding UTF8
                 }
                 catch {
-                    OutputError "$workspaceFileName is wrongly formattet. Error is $($_.Exception.Message)"
-                    exit
+                   throw "$workspaceFileName is malformed.$([environment]::Newline) $($_.Exception.Message)"
                 }
             }
         }
@@ -218,7 +217,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Couldn't add existing app. Error was $($_.Exception.Message)"
+    OutputError -message "Couldn't add an existing app.$([environment]::Newline) $($_.Exception.Message)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

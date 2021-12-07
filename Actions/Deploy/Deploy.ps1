@@ -148,7 +148,7 @@ try {
             }
         }
         catch {
-            OutputError -message "Error deploying to $environmentName. Error was $($_.Exception.Message)"
+            OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
             exit
         }
     }

@@ -23,7 +23,7 @@ function Confirm-IdRanges([string] $templateType, [string]$idrange ) {
     $idEnd = [int] $ids[1]
     
     if ($ids.Count -ne 2 -or ($idStart) -lt $validStart -or $idStart -gt $idEnd -or $idEnd -lt $validStart -or $idEnd -gt $validEnd -or $idStart -gt $idEnd) { 
-        throw "IdRange should be formattet as fromId..toId, and the Id range must be in $($validRange[0]) and $($validRange[1])"
+        throw "IdRange should be formatted as fromId..toId, and the Id range must be in $($validRange[0]) and $($validRange[1])"
     }
 
     return $ids
@@ -75,7 +75,7 @@ function New-SampleApp
     [string[]] $idrange
 ) 
 {
-    Write-Host "Creating a new sample app. Path: $destinationPath"
+    Write-Host "Creating a new sample app in: $destinationPath"
     New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
     New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force | Out-Null
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
@@ -98,7 +98,7 @@ function New-SampleTestApp
     [string[]] $idrange
 ) 
 {
-    Write-Host "Creating a new test app. Path: $destinationPath"
+    Write-Host "Creating a new test app in: $destinationPath"
     New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
     New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force | Out-Null
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
@@ -125,7 +125,7 @@ function Update-WorkSpaces
                 $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile -Encoding UTF8
             }
             catch {
-                Throw "Updating the workspace file $workspaceFileName failed due to: $($_.Exception.Message)"
+                throw "Updating the workspace file $workspaceFileName failed.$([environment]::Newline) $($_.Exception.Message)"
             }
         }
 }

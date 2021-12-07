@@ -46,7 +46,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Couldn't create development environment. Error was $($_.Exception.Message)"
+    OutputError -message "Couldn't create development environment.$([environment]::Newline) $($_.Exception.Message)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
