@@ -11,19 +11,19 @@ The template repositories to use as starting point are:
 The below usage scenarios takes you through how to get started and how to perform the most common tasks.
 
 Usage scenarios:
-1. [Create a new per-tenant extension (like AL Go) and start developing in VS Code](Scenarios/1.md)
-1. [Add a test app to an existing project](Scenarios/2.md)
-1. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/3.md)
-1. [Create a release of your application](Scenarios/4.md)
-1. [Register a customer production environment for Manual Deployment](Scenarios/5.md)
-1. [Update AL-Go system files](Scenarios/6.md)
-1. [Use Azure KeyVault for secrets with AL-Go](Scenarios/7.md)
-1. [Create Online Development Environment from VS Code](Scenarios/8.md)
-1. [Create Online Development Environment from GitHub](Scenarios/9.md)
-1. [Set up CI/CD for an existing per tenant extension (BingMaps)](Scenarios/10.md)
-1. [Set up CI/CD for an existing AppSource App](Scenarios/11.md)
-1. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/12.md)
-1. [Set up your own GitHub runner to increase build performance](Scenarios/13.md)
+1. [Create a new per-tenant extension (like AL Go) and start developing in VS Code](Scenarios/GetStarted.md)
+1. [Add a test app to an existing project](Scenarios/AddATestApp.md)
+1. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/RegisterSandboxEnvironment.md)
+1. [Create a release of your application](Scenarios/CreateRelease.md)
+1. [Register a customer production environment for Manual Deployment](Scenarios/RegisterProductionEnvironment.md)
+1. [Update AL-Go system files](Scenarios/UpdateAlGoSystemFiles.md)
+1. [Use Azure KeyVault for secrets with AL-Go](Scenarios/UseAzureKeyVault.md)
+1. [Create Online Development Environment from VS Code](Scenarios/CreateOnlineDevEnv.md)
+1. [Create Online Development Environment from GitHub](Scenarios/CreateOnlineDevEnv2.md)
+1. [Set up CI/CD for an existing per tenant extension (BingMaps)](Scenarios/SetupCiCdForExistingPTE.md)
+1. [Set up CI/CD for an existing AppSource App](Scenarios/SetupCiCdForExistingAppSourceApp.md)
+1. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/EnableKeyVaultForAppSourceApp.md)
+1. [Set up your own GitHub runner to increase build performance](Scenarios/SelfHostedGitHubRunner.md)
 1. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
 
 **Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
