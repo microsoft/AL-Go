@@ -121,7 +121,7 @@ jobs:
   PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ Initialization, Environments, Deploy ]
+    needs: [ Initialization, Analyze, Deploy ]
     steps:
       - name: Finalizing the workflow
         id: PostProcess
