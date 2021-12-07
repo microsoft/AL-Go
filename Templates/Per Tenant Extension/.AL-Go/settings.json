@@ -1,7 +1,6 @@
 {
     "type": "PTE",
     "country": "us",
-    "templateUrl": "https://github.com/microsoft/AL-Go-PTE@main",
     "appFolders": [
     ],
     "testFolders": [
