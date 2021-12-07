@@ -215,7 +215,7 @@ jobs:
   Deploy:
     runs-on: [ windows-latest ] 
     needs: [ Analyze, Build ]
-    if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
+    if: ${{ github.event_name != 'pull request' && needs.Analyze.outputs.environmentCount > 0 }}
     strategy:
       matrix:
         environment: ${{ fromJson(needs.Analyze.outputs.environments) }}
