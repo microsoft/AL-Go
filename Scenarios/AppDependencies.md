@@ -5,7 +5,7 @@ If your app has a dependency to another application on a different GitHub reposi
 The `appDependencyProbingPaths` key in the settings expects a json array with the following structure:
 
 ```json
-"appDependencyProbingPaths" = [
+"appDependencyProbingPaths":  [
         {
             "repo": "https://github.com/<Owner>/<repository name>",
             "version": "<latest, specific version>",
