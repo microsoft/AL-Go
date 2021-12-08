@@ -229,7 +229,7 @@ try {
     $runs++
     Pull -branch $branch
     if (Test-Path "$($project1Folder).AL-Go\*.ps1") { throw "Local PowerShell scripts in the .AL-Go folder should have been removed" }
-    if (Test-Path ".gitub\workflows\CreateRelease.yaml") { throw "CreateRelease.yaml should have been removed" }
+    if (Test-Path ".github\workflows\CreateRelease.yaml") { throw "CreateRelease.yaml should have been removed" }
     $run = Run-CICD -wait -branch $branch
     $runs++
     Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 3 -expectedNumberOfTestApps 2 -expectedNumberOfTests 2 -folder 'artifacts3' -repoVersion '3.0.' -appVersion '3.0'
