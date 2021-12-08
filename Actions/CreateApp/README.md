@@ -5,8 +5,7 @@ Create a new app and add it to your AL-Go repository
 The GitHub actor running the action
 ### token (default github.token)
 The GitHub token running the action
-
-### parentTelemetryScopeJson (required)
+### parentTelemetryScopeJson (default {})
 Specifies the parent telemetry scope for the telemetry signal
 ### type (required)
 Type of app to add (Per Tenant Extension, AppSource App, Test App)

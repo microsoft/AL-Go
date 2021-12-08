@@ -7,5 +7,5 @@ Name of keyvault
 Comma separated list of Secrets to get
 ### updateSettingsWithValues
 Specifies if the values of secrets should be updated
-### parentTelemetryScopeJson (required)
+### parentTelemetryScopeJson (default {})
 Specifies the parent telemetry scope for the telemetry signal

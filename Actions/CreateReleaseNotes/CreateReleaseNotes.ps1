@@ -3,7 +3,7 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $true)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "A GitHub token with permissions to modify workflows", Mandatory = $false)]
     [string] $workflowToken,

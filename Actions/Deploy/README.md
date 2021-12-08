@@ -5,7 +5,7 @@ Deploy App to online environment
 The GitHub actor running the action
 ### token (default github.token)
 The GitHub token running the action
-### parentTelemetryScopeJson (required)
+### parentTelemetryScopeJson (default {})
 Specifies the parent telemetry scope for the telemetry signal
 ### workflow (required)
 Name of workflow initiating the deployment (CI | Create Release)
