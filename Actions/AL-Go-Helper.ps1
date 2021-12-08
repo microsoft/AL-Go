@@ -369,20 +369,21 @@ function ReadSettings {
         "keyVaultClientIdSecretName"             = ""
         "codeSignCertificateUrlSecretName"       = "CodeSignCertificateUrl"
         "codeSignCertificatePasswordSecretName"  = "CodeSignCertificatePassword"
-        "supportedCountries"                     = @()
+        "additionalCountries"                    = @()
         "appDependencies"                        = @()
         "appFolders"                             = @()
         "testDependencies"                       = @()
         "testFolders"                            = @()
         "installApps"                            = @()
         "installTestApps"                        = @()
-        "applicationDependency"                  = "19.0.0.0"
+        "applicationDependency"                  = "18.0.0.0"
         "installTestRunner"                      = $false
         "installTestFramework"                   = $false
         "installTestLibraries"                   = $false
         "installPerformanceToolkit"              = $false
         "enableCodeCop"                          = $false
         "enableUICop"                            = $false
+        "customCodeCops"                         = @()
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
         "appSourceCopMandatoryAffixes"           = @()
@@ -391,15 +392,17 @@ function ReadSettings {
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
         "githubRunner"                           = "windows-latest"
+        "cacheImageName"                         = "my"
         "alwaysBuildAllProjects"                 = $false
         "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
         "PartnerTelemetryConnectionString"       = ""
         "SendExtendedTelemetryToMicrosoft"       = $false
     }
 
-    $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.setting.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
+    $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
         $settingsFile = $_
         $settingsPath = Join-Path $baseFolder $settingsFile
+        Write-Host "Checking $settingsFile"
         if (Test-Path $settingsPath) {
             try {
                 Write-Host "Reading $settingsFile"
@@ -491,29 +494,33 @@ function AnalyzeRepo {
                 throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
             }
             $version = $artifactUrl.Split('/')[4]
+            $storageAccount = $artifactUrl.Split('/')[2]
         }
     
-        if ($settings.supportedCountries -or $country -ne $settings.country) {
+        if ($settings.additionalCountries -or $country -ne $settings.country) {
             if ($country -ne $settings.country) {
                 OutputWarning -message "artifact definition in $ALGoSettingsFile uses a different country ($country) than the country definition ($($settings.country))"
             }
-            Write-Host "Checking Country and SupportedCountries"
+            Write-Host "Checking Country and additionalCountries"
             # AT is the latest published language - use this to determine available country codes (combined with mapping)
             $ver = [Version]$version
             Write-Host "https://$storageAccount/$artifactType/$version/$country"
             $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
             Write-Host "Latest AT artifacts $atArtifactUrl"
             $latestATversion = $atArtifactUrl.Split('/')[4]
-            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { $_.Split('/')[5] }
+            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
+                $countryArtifactUrl = $_.Split('?')[0] # remove sas token
+                $countryArtifactUrl.Split('/')[5] # get country
+            }
             Write-Host "Countries with artifacts $($countries -join ',')"
             $allowedCountries = $bcContainerHelperConfig.mapCountryCode.PSObject.Properties.Name + $countries | Select-Object -Unique
             Write-Host "Allowed Country codes $($allowedCountries -join ',')"
             if ($allowedCountries -notcontains $settings.country) {
                 throw "Country ($($settings.country)), specified in $ALGoSettingsFile is not a valid country code."
             }
-            $illegalCountries = $settings.supportedCountries | Where-Object { $allowedCountries -notcontains $_ }
+            $illegalCountries = $settings.additionalCountries | Where-Object { $allowedCountries -notcontains $_ }
             if ($illegalCountries) {
-                throw "SupportedCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
+                throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
             }
         }
         else {
@@ -606,7 +613,7 @@ function AnalyzeRepo {
     $settings.appDependencies + $settings.testDependencies | ForEach-Object {
         $dep = $_
         if ($dep -is [string]) {
-            # TODO: handle pre-settings
+            # TODO: handle pre-settings - documentation pending
         }
     }
 
@@ -1144,12 +1151,12 @@ function CreateDevEnv {
             -enableAppSourceCop:$repo.enableAppSourceCop `
             -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
             -enableUICop:$repo.enableUICop `
+            -customCodeCops:$repo.customCodeCops `
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
             -failOn 'error' `
             -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
-            -AppSourceCopSupportedCountries @() `
             -doNotRunTests `
             -useDevEndpoint `
             -keepContainer

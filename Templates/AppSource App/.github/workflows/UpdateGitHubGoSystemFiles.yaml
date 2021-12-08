@@ -17,19 +17,19 @@ defaults:
     shell: PowerShell
 
 jobs:
-  initialization:
+  Initialization:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
-        with: 
+        with:
           eventId: "DO0098"
 
-  update:
+  Update:
     runs-on: [ windows-latest ]
-    needs: [ initialization ]
+    needs: [ Initialization ]
 
     steps:
       - name: Checkout
@@ -38,7 +38,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           get: KeyVaultName,GhTokenWorkflowSecretName,TemplateUrl
 
       - name: Read secrets
@@ -46,7 +46,7 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
@@ -61,20 +61,20 @@ jobs:
       - name: Update AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           token: ${{ env.ghTokenWorkflow }}
-          update: Y
+          Update: Y
           templateUrl: ${{ env.TemplateUrl }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
-  postProcess:
+  PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ initialization, update ]
+    needs: [ Initialization, Update ]
     steps:
       - name: Finalizing the workflow
-        id: postProcess
+        id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
-        with: 
+        with:
           eventId: "DO0098"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}  
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

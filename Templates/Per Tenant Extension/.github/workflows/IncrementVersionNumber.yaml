@@ -20,37 +20,38 @@ defaults:
     shell: PowerShell
 
 jobs:
-  initialization:
+  Initialization:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
-        with: 
+        with:
           eventId: "DO0096"
 
-  update:
+  Update:
     runs-on: [ windows-latest ]
-    needs: [ initialization ]
+    needs: [ Initialization ]
 
     steps:
       - name: Increment Version Number
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
-          parentTelemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           project: ${{ github.event.inputs.project }}
           versionNumber: ${{ github.event.inputs.versionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}
   
-  postProcess:
+  PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ initialization, update ]
+    needs: [ Initialization, Update ]
     steps:
       - name: Finalizing the workflow
-        id: postProcess
+        id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
-        with: 
+        with:
           eventId: "DO0096"
-          telemetryScopeJson: ${{ needs.initialization.outputs.telemetryScopeJson }}                   
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+
