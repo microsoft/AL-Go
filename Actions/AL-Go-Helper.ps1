@@ -399,12 +399,10 @@ function ReadSettings {
         "SendExtendedTelemetryToMicrosoft"       = $false
     }
 
-    $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
-    if (-not (Test-Path $repoSettingsPath)) {
-        $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
+    if (!(Test-Path ".github" -PathType Container)) {
+        $RepoSettingsFile = "..\$RepoSettingsFile"
     }
-
-    $RepoSettingsPath, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
+    $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
         $settingsFile = $_
         $settingsPath = Join-Path $baseFolder $settingsFile
         Write-Host "Checking $settingsFile"
