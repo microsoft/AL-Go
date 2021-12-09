@@ -3,7 +3,7 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
     [string] $project = '.',
@@ -55,7 +55,7 @@ try {
     $orgfolderName = $name.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
     $folderName = GetUniqueFolderName -baseFolder $baseFolder -folderName $orgfolderName
     if ($folderName -ne $orgfolderName) {
-        OutputWarning -message "$orgFolderName already exists as a folder in the repo, using $folderName instead"
+        OutputWarning -message "Folder $orgFolderName already exists in the repo, folder name $folderName will be used instead."
     }
 
     # Modify .AL-Go\settings.json
@@ -75,7 +75,7 @@ try {
         $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
     }
     catch {
-        throw "A malformed $ALGoSettingsFile is encountered. Error: $($_.Exception.Message)"
+        throw "A malformed $ALGoSettingsFile is encountered.$([environment]::Newline) $($_.Exception.Message)"
     }
 
     $appVersion = "1.0.0.0"
@@ -99,7 +99,7 @@ try {
 
 }
 catch {
-    OutputError -message "Adding a new app failed due to $($_.Exception.Message)"
+    OutputError -message "Adding a new app failed.$([environment]::Newline) $($_.Exception.Message)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

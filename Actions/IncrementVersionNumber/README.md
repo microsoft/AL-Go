@@ -5,7 +5,9 @@ Increment version number in AL-Go repository
 The GitHub actor running the action
 ### token (default github.token)
 The GitHub token running the action
+### parentTelemetryScopeJson (default {})
+Specifies the parent telemetry scope for the telemetry signal
 ### versionnumber (required)
-New Version Number (Major.Minor)
+New version number (Major.Minor)
 ### directCommit (default N)
-Direct Commit (Y/N)
+Direct commit (Y/N)

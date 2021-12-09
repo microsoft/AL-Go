@@ -3,7 +3,7 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Name of the online environment", Mandatory = $true)]
     [string] $environmentName,
@@ -41,12 +41,12 @@ try {
         -baseFolder $repoBaseFolder `
         -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
 
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Create Development Environment $environmentName" -branch $branch
+    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Create a development environment $environmentName" -branch $branch
 
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Couldn't create development environment. Error was $($_.Exception.Message)"
+    OutputError -message "Creating a development environment failed.$([environment]::Newline) $($_.Exception.Message)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

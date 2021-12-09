@@ -13,7 +13,7 @@ inputs:
     required: false
     default: 'N'
   parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the Telemetry signal
+    description: Specifies the parent telemetry scope for the telemetry signal
     required: false
     default: '{}'
 runs:

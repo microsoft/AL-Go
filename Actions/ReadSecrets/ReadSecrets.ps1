@@ -6,7 +6,7 @@ Param(
     [string] $secrets = "",
     [Parameter(HelpMessage = "Specifies if the values of secrets should be updated", Mandatory = $false)]
     [bool] $updateSettingsWithValues = $false,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}'
 )
 

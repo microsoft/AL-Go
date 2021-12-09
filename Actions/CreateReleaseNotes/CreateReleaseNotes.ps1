@@ -3,7 +3,7 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "A GitHub token with permissions to modify workflows", Mandatory = $false)]
     [string] $workflowToken,
@@ -43,7 +43,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputWarning -message "Couldn't create release notes. Error was $($_.Exception.Message)"
+    OutputWarning -message "Couldn't create a release notes. $([environment]::Newline) $($_.Exception.Message)"
     OutputWarning -message "You can modify the release note from the release page later."
 
     $releaseNotes = ""

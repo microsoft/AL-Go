@@ -10,7 +10,7 @@ inputs:
     required: false
     default: ${{ github.token }}
   parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the Telemetry signal
+    description: Specifies the parent telemetry scope for the telemetry signal
     required: false
     default: '{}'
   project:

@@ -3,13 +3,13 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
     [string] $project = '.',
-    [Parameter(HelpMessage = "New Version Number (Major.Minor)", Mandatory = $true)]
+    [Parameter(HelpMessage = "New version number (Major.Minor)", Mandatory = $true)]
     [string] $versionnumber,
-    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Direct commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
 
@@ -30,7 +30,7 @@ try {
         $newVersion = [System.Version]"$($versionnumber).0.0"
     }
     catch {
-        throw "Version number ($versionnumber) is wrongly formatted. Needs to be Major.Minor"
+        throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor>"
     }
 
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
@@ -50,13 +50,12 @@ try {
     $projects | ForEach-Object {
         $project = $_
         try {
-            Write-Host "Reading $project\$ALGoSettingsFile"
+            Write-Host "Reading settings from $project\$ALGoSettingsFile"
             $settingsJson = Get-Content "$project\$ALGoSettingsFile" -Encoding UTF8 | ConvertFrom-Json
             if ($settingsJson.PSObject.Properties.Name -eq "RepoVersion") {
                 $oldVersion = [System.Version]"$($settingsJson.RepoVersion).0.0"
                 if ($newVersion -le $oldVersion) {
-                    OutputError -message "New version number ($($newVersion.Major).$($newVersion.Minor)) needs to be larger than old version number ($($oldVersion.Major).$($oldVersion.Minor))"
-                    exit
+                    throw "The new version number ($($newVersion.Major).$($newVersion.Minor)) must be larger than the old version number ($($oldVersion.Major).$($oldVersion.Minor))"
                 }
                 $settingsJson.RepoVersion = "$($newVersion.Major).$($newVersion.Minor)"
             }
@@ -68,11 +67,11 @@ try {
             $settingsJson | ConvertTo-Json -Depth 99 | Set-Content "$project\$ALGoSettingsFile" -Encoding UTF8
         }
         catch {
-            throw "Settings file $project\$ALGoSettingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
+            throw "Settings file $project\$ALGoSettingsFile is malformed.$([environment]::Newline) $($_.Exception.Message)."
         }
 
         if ($modifyApps) {
-            Write-Host "Versioning strategy $($settingsJson.VersioningStrategy) means that the version number in apps will also be changed."
+            Write-Host "Versioning strategy $($settingsJson.VersioningStrategy) is set. The version number in the apps will be changed."
             'appFolders', 'testFolders' | ForEach-Object {
                 if ($SettingsJson.PSObject.Properties.Name -eq $_) {
                     $settingsJson."$_" | ForEach-Object {
@@ -85,7 +84,7 @@ try {
                                 $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile -Encoding UTF8
                             }
                             catch {
-                                throw "$appJsonFile is wrongly formatted."
+                                throw "Application manifest file($appJsonFile) is malformed."
                             }
                         }
                     }
@@ -98,7 +97,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Couldn't bump version number. Error was $($_.Exception.Message)"
+    OutputError -message "Increasing the version number failed. $([environment]::Newline) $($_.Exception.Message)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

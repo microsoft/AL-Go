@@ -3,7 +3,7 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
@@ -29,8 +29,7 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0071' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     if ($update -and -not $token) {
-        OutputError "You need to add a secret called GHTOKENWORKFLOW containing a personal access token with permissions to modify Workflows. This is done by opening https://github.com/settings/tokens, Generate a new token and check the workflow scope."
-        exit
+        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GHTOKENWORKFLOW containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
     }
 
     # Support old calling convention
@@ -63,24 +62,25 @@ try {
     $headers = @{
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
+
     if ($templateUrl -ne "") {
         try {
-            $templateUrl = $templateUrl -replace "https://www.github.com/","https://api.github.com/repos/" -replace "https://github.com/","https://api.github.com/repos/"
+            $templateUrl = $templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/"
             Write-Host "Api url $templateUrl"
             $templateInfo = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $templateUrl | ConvertFrom-Json
         }
         catch {
-            OutputError -message "Error reading template repository. Error was $($_.Exception.Message)"
-            exit
+            throw "Could not retrieve the template repository. Error: $($_.Exception.Message)"
         }
     }
     else {
         Write-Host "Api url $($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)"
         $repoInfo = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)" | ConvertFrom-Json
         if (!($repoInfo.PSObject.Properties.Name -eq "template_repository")) {
-            OutputWarning -message "This repository wasn't built on a template repository, or the template repository has been deleted. You have to specify a template repository URL manually."
+            OutputWarning -message "This repository wasn't built on a template repository, or the template repository is deleted. You must specify a template repository in the AL-Go settings file."
             exit
         }
+
         $templateInfo = $repoInfo.template_repository
     }
 
@@ -149,18 +149,13 @@ try {
         }
     }
     $removeFiles = @()
-#    $dstFolder = Join-Path $ENV:GITHUB_WORKSPACE ".github\workflows"
-#    $pathLength = "$ENV:GITHUB_WORKSPACE".Length
-#    'ci.yaml','cd.yaml','registercustomerenvironment.yaml','ReleaseWorkflowTemplate.yaml.txt','ReleaseTo*-*-*-*-*-*-*.yaml' | ForEach-Object {
-#        $removeFiles += @(Get-Item (Join-Path $dstFolder $_) -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($pathLength) })
-#    }
 
     if (-not $update) {
         if (($updateFiles) -or ($removeFiles)) {
-            OutputWarning -message "Updated AL-Go System Files are available for your repository, please run the Update AL-Go System Files workflow"
+            OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
         }
         else {
-            Write-Host "No updated AL-Go System Files are available"
+            Write-Host "Your repository runs on the latest version of AL-Go System."
         }
     }
     else {
@@ -235,17 +230,15 @@ try {
             }
             catch {
                 if ($directCommit) {
-                    OutputError -message "Error updating AL-Go System Files. The personal access token defined in the secret called GH_WORKFLOW_TOKEN might have expired or it doesn't have permission to update workflows?"
-                    exit
+                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GH_WORKFLOW_TOKEN, is not expired and it has permission to update workflows."
                 }
                 else {
-                    OutputError -message "Error creating PR for updating AL-Go System Files. The personal access token defined in the secret called GH_WORKFLOW_TOKEN might have expired or it doesn't have permission to update workflows?"
-                    exit
+                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GH_WORKFLOW_TOKEN, is not expired and it has permission to update workflows."
                 }
             }
         }
         else {
-            OutputWarning "No updated AL-Go System Files are available"
+            OutputWarning "Your repository runs on the latest version of AL-Go System."
         }
     }
 

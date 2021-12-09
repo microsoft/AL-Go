@@ -3,7 +3,7 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the Telemetry signal", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Projects to deploy (default is all)", Mandatory = $false)]
     [string] $projects = "*",
@@ -39,16 +39,14 @@ try {
         if (Test-Path $artifacts -PathType Container) {
             $apps = @((Get-ChildItem -Path $artifacts -Filter "*-Apps-*") | ForEach-Object { $_.FullName })
             if (!($apps)) {
-                OutputError -message "No artifacts present in $artifacts"
-                exit
+                throw "There is no artifacts present in $artifacts."
             }
         }
         elseif (Test-Path $artifacts) {
             $apps = $artifacts
         }
         else {
-            OutputError -message "Unable to use artifact $artifacts"
-            exit
+            throw "Artifact $artifacts was not found. Make sure that the artifact files exist and files are not corrupted."
         }
     }
     elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
@@ -64,15 +62,13 @@ try {
             $release = $releases | Select-Object -First 1
         }
         if (!($release)) {
-            OutputError -message "Unable to locate $artifacts release"
-            exit
+            throw "Unable to locate $artifacts release"
         }
         New-Item $baseFolder -ItemType Directory | Out-Null
         DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder
         $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
         if (!$apps) {
-            OutputError -message "Unable to download $artifacts release"
-            exit
+            throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
         }
     }
     else {
@@ -91,23 +87,20 @@ try {
         }
         $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
         if (!($apps)) {
-            OutputError -message "Unable to download artifact $project-Apps-$artifacts"
-            exit
+            throw "Unable to download artifact $project-Apps-$artifacts"
         }
     }
 
     Set-Location $baseFolder
     if (-not ($ENV:AUTHCONTEXT)) {
-        OutputError -message "You need to create an environment secret called AUTHCONTEXT containing authentication information for the environment $environmentName"
-        exit
+        throw "An environment secret for environment($environmentName) called AUTHCONTEXT containing authentication information for the environment was not found.You must create an environment secret."
     }
 
     try {
         $authContextParams = $ENV:AUTHCONTEXT | ConvertFrom-Json | ConvertTo-HashTable
         $bcAuthContext = New-BcAuthContext @authContextParams
     } catch {
-        OutputError -message "Error trying to authenticate. Error was $($_.exception.message)"
-        exit
+        throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
     }
 
     $envName = $environmentName.Split(' ')[0]
@@ -148,7 +141,7 @@ try {
             }
         }
         catch {
-            OutputError -message "Error deploying to $environmentName. Error was $($_.Exception.Message)"
+            OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
             exit
         }
     }

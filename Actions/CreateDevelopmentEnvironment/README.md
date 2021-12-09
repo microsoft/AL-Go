@@ -5,6 +5,8 @@ Create an online development environment
 The GitHub actor running the action
 ### token (default github.token)
 The GitHub token running the action
+### parentTelemetryScopeJson (default {})
+Specifies the parent telemetry scope for the telemetry signal
 ### environmentName (required)
 Name of the online environment to create
 ### adminCenterApiCredentials (required)
