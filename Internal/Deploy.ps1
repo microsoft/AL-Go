@@ -311,7 +311,9 @@ try {
             }
             catch {
                 Write-Host "gh repo create $($config.githubOwner)/$repo --public --confirm"
-                start-process -FilePath "gh" -ArgumentList @("repo","create","$($config.githubOwner)/$repo","--public","--confirm") -Wait
+                #start-process -FilePath "gh" -ArgumentList @("repo","create","$($config.githubOwner)/$repo","--public","--confirm") -Wait
+                $ownerRepo = "$($config.githubOwner)/$repo"
+                invoke-gh repo create $ownerRepo --public --confirm
                 Start-Sleep -Seconds 10
                 Set-Location $repo
                 invoke-git checkout -b $branch
