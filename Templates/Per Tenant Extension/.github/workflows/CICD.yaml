@@ -49,86 +49,24 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
     outputs:
-      projects: ${{ steps.Projects.outputs.projects }}
-      projectCount: ${{ steps.Projects.outputs.projectCount }}
-      environments: ${{ steps.Environments.outputs.environments }}
-      environmentCount: ${{ steps.Environments.outputs.environmentCount }}
-      githubRunner: ${{ steps.OutputSettings.outputs.githubRunner }}
+      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
+      projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
+      projectCount: ${{ steps.ReadSettings.outputs.ProjectCount }}
+      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
+      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
+      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          get: githubRunner,alwaysBuildAllProjects
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          getProjects: 'Y'
+          getEnvironments: '*'
 
-      - name: Output settings
-        id: OutputSettings
-        run: |
-          $gitHubRunner = "$env:githubRunner".Split(',') | ConvertTo-Json -compress
-          Write-Host "::set-output name=githubRunner::$githubRunner"
-          Write-Host "set-output name=githubRunner::$githubRunner"
-
-      - name: Projects
-        id: Projects
-        run: |
-          if (Test-Path ".AL-Go" -PathType Container) {
-            $projects = @(".")
-          }
-          else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
-            Write-Host "Projects: $($projects -join ', ')"
-            if (!($ENV:GITHUB_EVENT_NAME -eq "workflow_dispatch" -or "$ENV:alwaysBuildAllProjects" -eq "true")) {
-              $headers = @{             
-                "Authorization" = "token ${{ github.token }}"
-                "Accept" = "application/vnd.github.baptiste-preview+json"
-              }
-              if ($ENV:GITHUB_EVENT_NAME -eq "pull_request") {
-                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
-              }
-              else {
-                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.before }}...${{ github.event.after }}"
-              }
-              $response = Invoke-WebRequest -Headers $headers -UseBasicParsing -Method GET -Uri $url | ConvertFrom-Json
-              $filesChanged = @($response.files | ForEach-Object { $_.filename })
-              if ($filesChanged.Count -lt 250) {
-                $foldersChanged = @($filesChanged | ForEach-Object { $_.Split('/')[0] } | Select-Object -Unique)
-                $projects = @($projects | Where-Object { $foldersChanged -contains $_ })
-                Write-Host "Modified projects: $($projects -join ', ')"
-              }
-            }
-          }
-          if ($projects.Count -eq 1) {
-            $projectsJSon = "[$($projects | ConvertTo-Json -compress)]"
-          }
-          else {
-            $projectsJSon = $projects | ConvertTo-Json -compress
-          }
-          Write-Host "::set-output name=projects::$projectsJson"
-          Write-Host "::set-output name=projectCount::$($projects.Count)"
-          Write-Host "set-output name=projects::$projectsJson"
-          Write-Host "set-output name=projectCount::$($projects.Count)"
-
-      - name: Environments
-        id: Environments
-        run: |
-          $headers = @{ 
-            "Authorization" = "token ${{ github.token }}"
-            "Accept"        = "application/vnd.github.v3+json"
-          }
-          $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-          $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { $_.Name -notlike '* (Production)' } | ForEach-Object { $_.Name })
-          if ($environments.Count -eq 1) {
-            $environmentsJSon = "[$($environments | ConvertTo-Json -compress)]"
-          }
-          else {
-            $environmentsJSon = $environments | ConvertTo-Json -compress
-          }
-          Write-Host "::set-output name=environments::$environmentsJson"
-          Write-Host "::set-output name=environmentCount::$($environments.Count)"
-          Write-Host "set-output name=environments::$environmentsJson"
-          Write-Host "set-output name=environmentCount::$($environments.Count)"
   Build:
     needs: [ Analyze ]
     runs-on: ${{ fromJson(needs.Analyze.outputs.githubRunner) }}
@@ -223,6 +161,7 @@ jobs:
     name: Deploy to ${{ matrix.environment }}
     environment:
       name: ${{ matrix.environment }}
+      url: 'https://www.google.com'
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -290,3 +229,4 @@ jobs:
         with:
           eventId: "DO0091"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+
