@@ -1,6 +1,8 @@
 name: Test Next Major
 
 on:
+  schedule:
+  - cron: '0 1 * * 1,3,5'
   workflow_dispatch:
 
 defaults:
@@ -22,64 +24,20 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
     outputs:
-      projects: ${{ steps.Projects.outputs.projects }}
-      projectCount: ${{ steps.Projects.outputs.projectCount }}
-      githubRunner: ${{ steps.OutputSettings.outputs.githubRunner }}
+      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
+      projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
+      projectCount: ${{ steps.ReadSettings.outputs.ProjectCount }}
+      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          get: githubRunner,alwaysBuildAllProjects
-
-      - name: Output settings
-        id: OutputSettings
-        run: |
-          $gitHubRunner = "$env:githubRunner".Split(',') | ConvertTo-Json -compress
-          Write-Host "::set-output name=githubRunner::$githubRunner"
-          Write-Host "set-output name=githubRunner::$githubRunner"
-
-      - name: Projects
-        id: Projects
-        run: |
-          if (Test-Path ".AL-Go" -PathType Container) {
-            $projects = @(".")
-          }
-          else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
-            Write-Host "Projects: $($projects -join ', ')"
-            if (!($ENV:GITHUB_EVENT_NAME -eq "workflow_dispatch" -or "$ENV:alwaysBuildAllProjects" -eq "true")) {
-              $headers = @{             
-                "Authorization" = "token ${{ github.token }}"
-                "Accept" = "application/vnd.github.baptiste-preview+json"
-              }
-              if ($ENV:GITHUB_EVENT_NAME -eq "pull_request") {
-                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
-              }
-              else {
-                $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/${{ github.event.before }}...${{ github.event.after }}"
-              }
-              $response = Invoke-WebRequest -Headers $headers -UseBasicParsing -Method GET -Uri $url | ConvertFrom-Json
-              $filesChanged = @($response.files | ForEach-Object { $_.filename })
-              if ($filesChanged.Count -lt 250) {
-                $foldersChanged = @($filesChanged | ForEach-Object { $_.Split('/')[0] } | Select-Object -Unique)
-                $projects = @($projects | Where-Object { $foldersChanged -contains $_ })
-                Write-Host "Modified projects: $($projects -join ', ')"
-              }
-            }
-          }
-          if ($projects.Count -eq 1) {
-            $projectsJSon = "[$($projects | ConvertTo-Json -compress)]"
-          }
-          else {
-            $projectsJSon = $projects | ConvertTo-Json -compress
-          }
-          Write-Host "::set-output name=projects::$projectsJson"
-          Write-Host "::set-output name=projectCount::$($projects.Count)"
-          Write-Host "set-output name=projects::$projectsJson"
-          Write-Host "set-output name=projectCount::$($projects.Count)"
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          getProjects: 'Y'
 
   Build:
     needs: [ Analyze ]
@@ -155,3 +113,4 @@ jobs:
         with:
           eventId: "DO0099"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+
