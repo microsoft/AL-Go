@@ -127,6 +127,7 @@ try {
     $imageName = ""
     if ($repo.gitHubRunner -ne "windows-latest") {
         $imageName = $repo.cacheImageName
+        Flush-ContainerHelperCache -keepdays 3
     }
     $authContext = $null
     $environmentName = ""
