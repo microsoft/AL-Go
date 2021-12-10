@@ -89,12 +89,21 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScopeJson $parentTelemetryScopeJson 
 
+    $type = "PTE"
+    Write-Host "Reading $RepoSettingsFile"
+    $settingsJson = Get-Content $RepoSettingsFile -Encoding UTF8 | ConvertFrom-Json
+    if ($settingsJson.PSObject.Properties.Name -eq "type") {
+        $type = $settingsJson.Type
+    }
+
     CheckAndCreateProjectFolder -project $project
     $baseFolder = Get-Location
 
     Write-Host "Reading $ALGoSettingsFile"
     $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-    $type = $settingsJson.Type
+    if ($settingsJson.PSObject.Properties.Name -eq "type") {
+        $type = $settingsJson.Type
+    }
 
     $appNames = @()
     getfiles -url $url | ForEach-Object {

@@ -21,6 +21,18 @@ inputs:
     description: Indicates whether this is called from a release pipeline
     required: false
     default: 'N'
+  getprojects:
+    description: Indicates whether you want to retrieve the list of project list as well
+    required: false
+    default: 'N'
+  getenvironments:
+    description: Specifies the pattern of the environments you want to retreive (or empty for no environments)
+    required: false
+    default: ''
+  includeProduction:
+    description: Specifies whether you want to include production environments
+    required: false
+    default: 'N'
   get:
     description: Specifies which properties to get from the settings file, default is all
     required: false
@@ -29,10 +41,25 @@ outputs:
   SettingsJson:
     description: Settings in compressed Json format
     value: ${{ steps.readsettings.outputs.SettingsJson }}
+  GitHubRunnerJson:
+    description: GitHubRunner in compressed Json format
+    value: ${{ steps.readsettings.outputs.GitHubRunnerJson }}
+  ProjectsJson:
+    description: Projects in compressed Json format
+    value: ${{ steps.readsettings.outputs.ProjectsJson }}
+  ProjectCount:
+    description: Number of projects in array
+    value: ${{ steps.readsettings.outputs.ProjectCount }}
+  EnvironmentsJson:
+    description: Environments in compressed Json format
+    value: ${{ steps.readsettings.outputs.EnvironmentsJson }}
+  EnvironmentCount:
+    description: Number of environments in array
+    value: ${{ steps.readsettings.outputs.EnvironmentCount }}
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -release '${{ inputs.release }}' -get '${{ inputs.get }}'
+    - run: ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -getprojects ('${{ inputs.getprojects }}' -eq 'Y') -getenvironments '${{ inputs.getenvironments }}' -includeProduction ('${{ inputs.includeProduction }}' -eq 'Y') -release ('${{ inputs.release }}' -eq 'Y') -get '${{ inputs.get }}'
       id: readsettings
       shell: PowerShell
 branding:

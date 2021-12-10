@@ -31,30 +31,21 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
     outputs:
-      environments: ${{ steps.Environments.outputs.environments }}
-      environmentCount: ${{ steps.Environments.outputs.environmentCount }}
+      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
+      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
+      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
     steps:
-      - name: Environments
-        id: Environments
-        run: |
-          $environmentName = '${{ github.event.inputs.environmentName }}'
-          $headers = @{ 
-            "Authorization" = "token ${{ github.token }}"
-            "Accept"        = "application/vnd.github.v3+json"
-          }
-          $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-          $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { $_.Name -like $environmentName -or $_.Name -like "$environmentName (Production)" } | ForEach-Object { $_.Name })
-          if ($environments.Count -eq 1) {
-            $environmentsJSon = "[$($environments | ConvertTo-Json -compress)]"
-          }
-          else {
-            $environmentsJSon = $environments | ConvertTo-Json -compress
-          }
-          Write-Host "::set-output name=environments::$environmentsJson"
-          Write-Host "::set-output name=environmentCount::$($environments.Count)"
-          Write-Host "set-output name=environments::$environmentsJson"
-          Write-Host "set-output name=environmentCount::$($environments.Count)"
-        
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        id: ReadSettings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          getEnvironments: '${{ github.event.inputs.environmentName }}'
+          includeProduction: 'Y'
+
   Deploy:
     runs-on: [ windows-latest ] 
     needs: [ Analyze ]
@@ -129,3 +120,4 @@ jobs:
         with:
           eventId: "DO0097"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+

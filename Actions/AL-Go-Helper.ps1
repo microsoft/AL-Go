@@ -201,7 +201,7 @@ function Expand-7zipArchive {
 
 function DownloadAndImportBcContainerHelper {
     Param(
-        [string] $version = "0.0",
+        [string] $version = "latest",
         [string] $baseFolder = ""
     )
 
@@ -399,7 +399,13 @@ function ReadSettings {
         "SendExtendedTelemetryToMicrosoft"       = $false
     }
 
-    $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
+    $gitHubFolder = ".github"
+    if (!(Test-Path (Join-Path $baseFolder $gitHubFolder) -PathType Container)) {
+        $RepoSettingsFile = "..\$RepoSettingsFile"
+        $gitHubFolder = "..\$gitHubFolder"
+    }
+    $workflowName = $workflowName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+    $RepoSettingsFile, $ALGoSettingsFile, (Join-Path $gitHubFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
         $settingsFile = $_
         $settingsPath = Join-Path $baseFolder $settingsFile
         Write-Host "Checking $settingsFile"
@@ -1191,9 +1197,6 @@ function CheckAndCreateProjectFolder {
             $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
             if ($settingsJson.appFolders.Count -eq 0 -and $settingsJson.testFolders.Count -eq 0) {
                 OutputWarning "Converting the repository to a multi-project repository as no other apps have been added previously."
-                if (!(Test-Path "AL-Go-Settings.json")) {
-                    Copy-Item $ALGoSettingsFile -Destination ".github\AL-Go-Settings.json"
-                }
                 New-Item $project -ItemType Directory | Out-Null
                 Move-Item -path $ALGoFolder -Destination $project
                 Set-Location $project
@@ -1206,18 +1209,12 @@ function CheckAndCreateProjectFolder {
             if (!(Test-Path $project)) {
                 New-Item -Path (Join-Path $project $ALGoFolder) -ItemType Directory | Out-Null
                 Set-Location $project
-                if (Test-Path "..\.github\AL-Go-Settings.json") {
-                    Copy-Item -Path "..\.github\AL-Go-Settings.json" -Destination $ALGoSettingsFile
-                }
-                else {
-                    OutputWarning "Project folder doesn't exist, creating a new project folder and a default settings file with type PTE and country us. Please modify if needed."
-                    [ordered]@{
-                        "type" = "PTE"
-                        "country" = "us"
-                        "appFolders" = @()
-                        "testFolders" = @()
-                    } | ConvertTo-Json | Set-Content $ALGoSettingsFile -Encoding UTF8
-                }
+                OutputWarning "Project folder doesn't exist, creating a new project folder and a default settings file with country us. Please modify if needed."
+                [ordered]@{
+                    "country" = "us"
+                    "appFolders" = @()
+                    "testFolders" = @()
+                } | ConvertTo-Json | Set-Content $ALGoSettingsFile -Encoding UTF8
             }
             else {
                 Set-Location $project
