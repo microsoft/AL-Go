@@ -26,11 +26,11 @@ inputs:
     required: false
     default: 'N'
   getenvironments:
-    description: Specify the pattern of the environments you want to retreive (or empty for no environments)
+    description: Specifies the pattern of the environments you want to retreive (or empty for no environments)
     required: false
     default: ''
   includeProduction:
-    description: Specify whether you want to include production environments
+    description: Specifies whether you want to include production environments
     required: false
     default: 'N'
   get:
