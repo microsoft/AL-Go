@@ -201,7 +201,7 @@ function Expand-7zipArchive {
 
 function DownloadAndImportBcContainerHelper {
     Param(
-        [string] $version = "0.0",
+        [string] $version = "latest",
         [string] $baseFolder = ""
     )
 
