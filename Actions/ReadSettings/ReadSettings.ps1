@@ -128,6 +128,7 @@ try {
             "Accept"        = "application/vnd.github.v3+json"
         }
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+        Write-Host "$url $token"
         $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { 
             if ($includeProduction) {
                 $_.Name -like $getEnvironments -or $_.Name -like "$getEnvironments (Production)"
