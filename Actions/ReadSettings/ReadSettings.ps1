@@ -147,7 +147,7 @@ try {
         else {
             $environmentsJSon = $environments | ConvertTo-Json -compress
         }
-    Write-Host "::set-output name=EnvironmentsJson::$environmentsJson"
+        Write-Host "::set-output name=EnvironmentsJson::$environmentsJson"
         Write-Host "set-output name=EnvironmentsJson::$environmentsJson"
         Write-Host "::set-output name=EnvironmentCount::$($environments.Count)"
         Write-Host "set-output name=EnvironmentCount::$($environments.Count)"
