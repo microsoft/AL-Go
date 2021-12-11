@@ -161,6 +161,7 @@ try {
     else {
         if ($updateSettings -or ($updateFiles) -or ($removeFiles)) {
             try {
+
                 # URL for git commands
                 $tempRepo = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
                 New-Item $tempRepo -ItemType Directory | Out-Null

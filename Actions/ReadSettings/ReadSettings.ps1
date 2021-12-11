@@ -128,22 +128,26 @@ try {
             "Accept"        = "application/vnd.github.v3+json"
         }
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-        Write-Host "$url $token"
-        $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { 
-            if ($includeProduction) {
-                $_.Name -like $getEnvironments -or $_.Name -like "$getEnvironments (Production)"
-            }
-            else {
-                $_.Name -like $getEnvironments -and $_.Name -notlike '* (Production)'
-            }
-        } | ForEach-Object { $_.Name })
+        try {
+            $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { 
+                if ($includeProduction) {
+                    $_.Name -like $getEnvironments -or $_.Name -like "$getEnvironments (Production)"
+                }
+                else {
+                    $_.Name -like $getEnvironments -and $_.Name -notlike '* (Production)'
+                }
+            } | ForEach-Object { $_.Name })
+        }
+        catch {
+            $environments = @()
+        }
         if ($environments.Count -eq 1) {
             $environmentsJSon = "[$($environments | ConvertTo-Json -compress)]"
         }
         else {
             $environmentsJSon = $environments | ConvertTo-Json -compress
         }
-        Write-Host "::set-output name=EnvironmentsJson::$environmentsJson"
+    Write-Host "::set-output name=EnvironmentsJson::$environmentsJson"
         Write-Host "set-output name=EnvironmentsJson::$environmentsJson"
         Write-Host "::set-output name=EnvironmentCount::$($environments.Count)"
         Write-Host "set-output name=EnvironmentCount::$($environments.Count)"
