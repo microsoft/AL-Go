@@ -29,7 +29,7 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0071' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     if ($update -and -not $token) {
-        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GHTOKENWORKFLOW containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
+        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
     }
 
     # Support old calling convention
@@ -117,7 +117,7 @@ try {
             $srcFile = $_.FullName
             $fileName = $_.Name
             $baseName = $_.BaseName
-            $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").Replace("`n", "`r`n")
+            $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
             $name = $type
             if ($type -eq "workflow") {
                 $srcContent.Split("`n") | Where-Object { $_ -like "name:*" } | Select-Object -First 1 | ForEach-Object {
@@ -135,7 +135,7 @@ try {
             $dstFile = Join-Path $dstFolder $fileName
             if (Test-Path -Path $dstFile -PathType Leaf) {
                 # file exists, compare
-                $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").Replace("`n", "`r`n")
+                $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
                 if ($dstContent -ne $srcContent) {
                     Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
                     $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
@@ -216,24 +216,30 @@ try {
 
                 invoke-git add *
 
-                $message = "Updated AL-Go System Files"
+                $status = invoke-git status --porcelain=v1
+                if ($status) {
+                    $message = "Updated AL-Go System Files"
 
-                invoke-git commit -m "'$message'"
+                    invoke-git commit -m "'$message'"
 
-                if ($directcommit) {
-                    invoke-git push $url
+                    if ($directcommit) {
+                        invoke-git push $url
+                    }
+                    else {
+                        invoke-git push -u $url $branch
+                        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
+                    }
                 }
                 else {
-                    invoke-git push -u $url $branch
-                    invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
+                    Write-Host "No changes detected in files"
                 }
             }
             catch {
                 if ($directCommit) {
-                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GH_WORKFLOW_TOKEN, is not expired and it has permission to update workflows."
+                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows."
                 }
                 else {
-                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GH_WORKFLOW_TOKEN, is not expired and it has permission to update workflows."
+                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows."
                 }
             }
         }

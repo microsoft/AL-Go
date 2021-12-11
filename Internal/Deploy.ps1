@@ -274,7 +274,7 @@ try {
             )
         }
 
-        $repos+$additionalRepos | ForEach-Object {
+        $additionalRepos + $repos | ForEach-Object {
             Set-Location $baseFolder
             $repo = $_.repo
             $srcPath = $_.srcPath
