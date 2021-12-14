@@ -114,7 +114,6 @@ jobs:
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
 
-
   TestAlGoPteUpgrade:
     runs-on: [ windows-latest ]
     needs: [SetupRepositories, CalculateReleases ]
@@ -126,7 +125,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -release '${{ matrix.release }}' -path 'pte'
+        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -release '${{ matrix.release }}' -path 'pte'
 
   TestAlGoAppSourceUpgrade:
     runs-on: [ windows-latest ]
@@ -139,7 +138,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
+        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
 
   RemoveRepositories:
     runs-on: [ windows-latest ]

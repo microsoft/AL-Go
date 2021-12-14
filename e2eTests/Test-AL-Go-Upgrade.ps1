@@ -3,7 +3,6 @@
     [string] $githubOwner = "",
     [string] $token = "",
     [string] $path = "",
-    [string] $template = "",
     [string] $release = "",
     [string] $licenseFileUrl = "",
     [switch] $appSourceApp,
@@ -61,18 +60,18 @@ try {
     $branch = "main"
 
     if ($appSourceApp) {
-        if (!$template) { $template = 'al-go-appSource' }
+        $template = 'al-go-appSource'
         if (!$licenseFileUrl) {
             throw "License file secret must be set"
         }
     }
     else {
-        if (!$template) { $template = 'al-go-pte' }
+        $template = 'al-go-pte'
         if ($licenseFileUrl) {
             throw "License file secret should not be set"
         }
     }
-    $template = "https://github.com/$githubOwner/$template"
+    $template = "https://github.com/microsoft/$template"
     $runs = 0
 
     # Login
