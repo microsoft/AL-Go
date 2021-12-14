@@ -21,11 +21,29 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
+      projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
+      projectCount: ${{ steps.ReadSettings.outputs.ProjectCount }}
+      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
+      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
+      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
     steps:
-      - id: init
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Initialize the workflow
+        id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with:
           eventId: "DO0091"
+
+      - name: Read settings
+        id: ReadSettings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          getProjects: 'Y'
+          getEnvironments: '*'
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
@@ -45,34 +63,13 @@ jobs:
         with:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           templateUrl: ${{ env.TemplateUrl }}
-  Analyze:
-    runs-on: [ windows-latest ]
-    needs: [ Initialization ]
-    outputs:
-      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
-      projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
-      projectCount: ${{ steps.ReadSettings.outputs.ProjectCount }}
-      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
-      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
-      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Read settings
-        id: ReadSettings
-        uses: microsoft/AL-Go-Actions/ReadSettings@main
-        with:
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          getProjects: 'Y'
-          getEnvironments: '*'
 
   Build:
-    needs: [ Analyze ]
-    runs-on: ${{ fromJson(needs.Analyze.outputs.githubRunner) }}
+    needs: [ Initialization ]
+    runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
     strategy:
       matrix:
-        project: ${{ fromJson(needs.Analyze.outputs.projects) }}
+        project: ${{ fromJson(needs.Initialization.outputs.projects) }}
       fail-fast: false
     name: Build ${{ matrix.project }}
     outputs:
@@ -152,11 +149,11 @@ jobs:
           Project: ${{ matrix.project }}
   Deploy:
     runs-on: [ windows-latest ] 
-    needs: [ Analyze, Build ]
-    if: ${{ github.event_name != 'pull request' && needs.Analyze.outputs.environmentCount > 0 }}
+    needs: [ Initialization, Build ]
+    if: ${{ github.event_name != 'pull request' && needs.Initialization.outputs.environmentCount > 0 }}
     strategy:
       matrix:
-        environment: ${{ fromJson(needs.Analyze.outputs.environments) }}
+        environment: ${{ fromJson(needs.Initialization.outputs.environments) }}
       fail-fast: false
     name: Deploy to ${{ matrix.environment }}
     environment:
@@ -220,9 +217,12 @@ jobs:
   PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ Initialization,  Analyze, Build, Deploy ]
+    needs: [ Initialization,  Build, Deploy ]
     steps:
-      - name: Finalizing the workflow
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with:

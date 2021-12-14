@@ -12,16 +12,6 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-    steps:
-      - id: init
-        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
-        with:
-          eventId: "DO0100"
-
-  Analyze:
-    runs-on: [ windows-latest ]
-    needs: [ Initialization ]
-    outputs:
       settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
       projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
       projectCount: ${{ steps.ReadSettings.outputs.ProjectCount }}
@@ -30,19 +20,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Initialize the workflow
+        id: init
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
+        with:
+          eventId: "DO0101"
+
       - name: Read settings
         id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           getProjects: 'Y'
 
   Build:
-    needs: [ Analyze ]
-    runs-on: ${{ fromJson(needs.Analyze.outputs.githubRunner) }}
+    needs: [ Initialization ]
+    runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
     strategy:
       matrix:
-        project: ${{ fromJson(needs.Analyze.outputs.projects) }}
+        project: ${{ fromJson(needs.Initialization.outputs.projects) }}
       fail-fast: false
     name: Build ${{ matrix.project }}
     outputs:
@@ -103,12 +99,15 @@ jobs:
   PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ Initialization,  Analyze, Build ]
+    needs: [ Initialization, Build ]
     steps:
-      - name: Finalizing the workflow
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with:
-          eventId: "DO0100"
+          eventId: "DO0101"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 

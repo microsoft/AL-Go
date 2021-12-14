@@ -3,8 +3,8 @@
     [string] $githubOwner = "",
     [string] $token = "",
     [string] $path = "",
-    [string] $template = "",
     [string] $release = "",
+    [string] $template = "",
     [string] $licenseFileUrl = "",
     [switch] $appSourceApp,
     [switch] $private
@@ -61,13 +61,13 @@ try {
     $branch = "main"
 
     if ($appSourceApp) {
-        if (!$template) { $template = 'al-go-appSource' }
+        $orgTemplate = 'https://github.com/microsoft/al-go-appSource'
         if (!$licenseFileUrl) {
             throw "License file secret must be set"
         }
     }
     else {
-        if (!$template) { $template = 'al-go-pte' }
+        $orgTemplate = 'https://github.com/microsoft/al-go-pte'
         if ($licenseFileUrl) {
             throw "License file secret should not be set"
         }
@@ -79,7 +79,7 @@ try {
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $template -templateBranch $release -templatePath (Join-Path $PSScriptRoot $path) -branch $branch -private:$private
+    CreateRepository -template $orgTemplate -templateBranch $release -templatePath (Join-Path $PSScriptRoot $path) -branch $branch -private:$private
     $repoPath = (Get-Location).Path
 
     # Add AppFolders and TestFolders

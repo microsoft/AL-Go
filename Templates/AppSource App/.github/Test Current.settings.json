@@ -1,6 +1,5 @@
 {
     "artifact":  "////latest",
     "cacheImageName":  "",
-    "appBuild":  2147483647,
-    "appRevision":  2147483647
+    "versioningStrategy":  15
 }
