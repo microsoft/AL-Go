@@ -201,65 +201,56 @@ function Expand-7zipArchive {
 
 function DownloadAndImportBcContainerHelper {
     Param(
-        [string] $version = "latest",
+        [string] $BcContainerHelperVersion = "",
         [string] $baseFolder = ""
     )
 
-    $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
-    $webclient = New-Object System.Net.WebClient
-    if ($version -eq "0.0") {
-        Write-Host "Downloading BcContainerHelper developer version"
-        $webclient.DownloadFile("https://github.com/microsoft/navcontainerhelper/archive/dev.zip", "$tempName.zip")
-    }
-    else {
-        Write-Host "Downloading BcContainerHelper $version version"
-        try {
-            $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($version).zip", "$tempName.zip")
-        }
-        catch {
-            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($version).zip", "$tempName.zip")        
-        }
-    }
-    Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
-    Remove-Item -Path "$tempName.zip"
-    
     $params = @{ "ExportTelemetryFunctions" = $true }
     if ($baseFolder) {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
         if (-not (Test-Path $repoSettingsPath)) {
             $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
         }
-        $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
-    }
-    $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
-    $NewVersion = Get-Content (Get-Item -Path (Join-Path $tempName "*\Version.txt")).FullName
-    $module = Get-Module BcContainerHelper
-    if ($module) {
-        $ExistingVersion = Get-Content (Get-Item -Path (Join-Path (Split-Path $module.Path -Parent) "Version.txt")).FullName
-        $trackTraceFunction = get-command TrackTrace -ErrorAction SilentlyContinue
-        if (-not $trackTraceFunction) {
-            OutputWarning "BcContainerHelper version $ExistingVersion was already imported without -ExportTelemetryFunctions. This version of AL-Go for GitHub requires the -ExportTelemetryFunctions switch to be used. If you experience issues, please uninstall all versions of BcContainerHelper from your build agent."
-        }
-        else {
-            if ($NewVersion -eq $ExistingVersion) {
-                Write-Host "BcContainerHelper version $newVersion is already installed/imported"
-            }
-            else {
-                if ($version -eq "0.0") {
-                    OutputWarning "BcContainerHelper version $ExistingVersion is already installed/imported. This version of AL-Go for GitHub expects the development version. If you experience issues, please uninstall all versions of BcContainerHelper from your build agent."
+        if (Test-Path $repoSettingsPath) {
+            if (-not $BcContainerHelperVersion) {
+                $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+                if ($repoSettings.ContainsKey("BcContainerHelperVersion")) {
+                    $BcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
                 }
                 else {
-                    OutputWarning "BcContainerHelper version $ExistingVersion is already installed/imported. This version of AL-Go for GitHub expects $newVersion. If you experience issues, please uninstall all versions of BcContainerHelper from your build agent."
+                    $BcContainerHelperVersion = "latest"
                 }
             }
-            Remove-Item $tempName -Recurse -Force
-            $tempName = ""
+            $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
         }
     }
-    else {
-       . $BcContainerHelperPath @params
+
+    $tempName = ""
+    if ($bcContainerHelperVersion -ne "none") {
+        $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+        $webclient = New-Object System.Net.WebClient
+        if ($BcContainerHelperVersion -eq "dev") {
+            Write-Host "Downloading BcContainerHelper developer version"
+            $webclient.DownloadFile("https://github.com/microsoft/navcontainerhelper/archive/dev.zip", "$tempName.zip")
+        }
+        else {
+            Write-Host "Downloading BcContainerHelper $BcContainerHelperVersion version"
+            try {
+                $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")
+            }
+            catch {
+                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")        
+            }
+        }
+        Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
+        Remove-Item -Path "$tempName.zip"
+
+        $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
+
+        . $BcContainerHelperPath @params
+
+        $tempName
     }
-    $tempName
 }
 
 function CleanupAfterBcContainerHelper {
