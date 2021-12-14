@@ -120,7 +120,7 @@ jobs:
     needs: [SetupRepositories, CalculateReleases ]
     strategy:
       matrix:
-        project: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
+        release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
@@ -133,7 +133,7 @@ jobs:
     needs: [SetupRepositories, CalculateReleases ]
     strategy:
       matrix:
-        project: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
+        release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v2

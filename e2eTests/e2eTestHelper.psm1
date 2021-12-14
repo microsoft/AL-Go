@@ -216,18 +216,18 @@ function CreateRepository {
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
     if ($private) {
-        Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
+        Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template@$templateBranch)"
         invoke-gh repo create $repository --private --clone
     }
     else {
-        Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
+        Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template@$templateBranch)"
         invoke-gh repo create $repository --public --clone
     }
     Start-Sleep -seconds 10
     Set-Location '*'
 
     if ($template) {
-        $templateUrl = "$template/archive/refs/heads/$branch.zip"
+        $templateUrl = "$template/archive/refs/heads/$templateBranch.zip"
         $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
         [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
         
@@ -298,7 +298,7 @@ function RemoveRepository {
 
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
-        invoke-gh repo delete $repository --confirm | Out-Host
+#        invoke-gh repo delete $repository --confirm | Out-Host
     }
 
     if ($path) {
