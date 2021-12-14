@@ -25,7 +25,7 @@ Usage scenarios:
 12. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/EnableKeyVaultForAppSourceApp.md)
 13. [Set up your own GitHub runner to increase build performance](Scenarios/SelfHostedGitHubRunner.md)
 14. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
-15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnableTelemetry.md)
+15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 
 **Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 # This project
