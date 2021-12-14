@@ -225,8 +225,16 @@ function DownloadAndImportBcContainerHelper {
         }
     }
 
-    $tempName = ""
-    if ($bcContainerHelperVersion -ne "none") {
+    if ($bcContainerHelperVersion -eq "none") {
+        $tempName = ""
+        $module = Get-Module BcContainerHelper
+        if (-not $module) {
+            OutputError "When setting BcContainerHelperVersion to none, you need to ensure that BcContainerHelper is installed on the build agent"
+        }
+
+        $BcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
+    }
+    else {
         $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
         $webclient = New-Object System.Net.WebClient
         if ($BcContainerHelperVersion -eq "dev") {
@@ -246,11 +254,9 @@ function DownloadAndImportBcContainerHelper {
         Remove-Item -Path "$tempName.zip"
 
         $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
-
-        . $BcContainerHelperPath @params
-
-        $tempName
     }
+    . $BcContainerHelperPath @params
+    $tempName
 }
 
 function CleanupAfterBcContainerHelper {
