@@ -217,12 +217,12 @@ function DownloadAndImportBcContainerHelper {
                 if ($repoSettings.ContainsKey("BcContainerHelperVersion")) {
                     $BcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
                 }
-                else {
-                    $BcContainerHelperVersion = "latest"
-                }
             }
             $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
         }
+    }
+    if (-not $BcContainerHelperVersion) {
+        $BcContainerHelperVersion = "latest"
     }
 
     if ($bcContainerHelperVersion -eq "none") {
