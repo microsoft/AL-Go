@@ -298,7 +298,7 @@ function RemoveRepository {
 
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
-#        invoke-gh repo delete $repository --confirm | Out-Host
+        invoke-gh repo delete $repository --confirm | Out-Host
     }
 
     if ($path) {
