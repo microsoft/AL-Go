@@ -261,6 +261,7 @@ function DownloadAndImportBcContainerHelper {
     }
     $tempName
 }
+
 function CleanupAfterBcContainerHelper {
     Param(
         [string] $bcContainerHelperPath

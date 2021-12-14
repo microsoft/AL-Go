@@ -36,7 +36,11 @@ jobs:
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
-      - id: init
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Initialize the workflow
+        id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with:
           eventId: "DO0094"
@@ -141,7 +145,7 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Initialization, CreateRelease, UploadArtifacts ]
     steps:
-      - name: Finalizing the workflow
+      - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with:
