@@ -133,25 +133,38 @@ function RunWorkflow {
     $runid = $run.id
     Write-Host "Run URL: https://github.com/$repository/actions/runs/$runid"
     if ($wait) {
-        $status = ""
-        do {
-            Start-Sleep -Seconds 30
-            $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
-            $run = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
-            if ($run.status -ne $status) {
-                if ($status) { Write-Host }
-                $status = $run.status
-                Write-Host -NoNewline "$status"
-            }
-            Write-Host -NoNewline "."
-        } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
-        Write-Host
-        Write-Host $run.conclusion
-        if ($run.conclusion -ne "Success") {
-            throw "Workflow $name failed, url = $($run.html_url)"
-        }
+        WaitWorkflow -runid $run.id
     }
     $run
+}
+
+function WaitWorkflow {
+    Param(
+        [string] $runid
+    )
+
+    $headers = @{ 
+        "Accept" = "application/vnd.github.v3+json"
+        "Authorization" = "token $token"
+    }
+
+    $status = ""
+    do {
+        Start-Sleep -Seconds 30
+        $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
+        $run = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
+        if ($run.status -ne $status) {
+            if ($status) { Write-Host }
+            $status = $run.status
+            Write-Host -NoNewline "$status"
+        }
+        Write-Host -NoNewline "."
+    } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
+    Write-Host
+    Write-Host $run.conclusion
+    if ($run.conclusion -ne "Success") {
+        throw "Workflow $name failed, url = $($run.html_url)"
+    }
 }
 
 function SetRepositorySecret {
@@ -308,5 +321,8 @@ function RemoveRepository {
 . (Join-Path $PSScriptRoot "Workflows\Run-IncrementVersionNumber.ps1")
 . (Join-Path $PSScriptRoot "Workflows\Run-PublishToEnvironment.ps1")
 . (Join-Path $PSScriptRoot "Workflows\Run-UpdateAlGoSystemFiles.ps1")
+. (Join-Path $PSScriptRoot "Workflows\Run-TestCurrent.ps1")
+. (Join-Path $PSScriptRoot "Workflows\Run-TestNextMinor.ps1")
+. (Join-Path $PSScriptRoot "Workflows\Run-TestNextMajor.ps1")
 
 . (Join-Path $PSScriptRoot "Test-Functions.ps1")

@@ -5,6 +5,7 @@
     [string] $template = "",
     [string] $adminCenterApiCredentials = "",
     [string] $licenseFileUrl = "",
+    [string] $insiderSasToken = "",
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private
@@ -44,11 +45,14 @@
 # 23.  Test that a Pull Request was created and merge the Pull Request
 # 24.  Test that the previously deleted files are now updated
 # 25. Run the "Create Release" workflow
+# 26. Run the Test Current Workflow
+# 27. Run the Test Next Minor Workflow
+# 28. Run the Test Next Major Workflow
 #
 # TODO: some more tests to do here
 #
-# 26.  Test that the number of workflows ran is correct.
-# 27. Cleanup repositories
+# 29.  Test that the number of workflows ran is correct.
+# 30. Cleanup repositories
 #
   
 $ErrorActionPreference = "stop"
@@ -63,6 +67,7 @@ try {
         $githubOwner = "freddydk"
         if (!$adminCenterApiCredentials) { $adminCenterApiCredentials = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText }
         if (!$licenseFileUrl) { $licenseFileUrl = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText }
+        if (!$insiderSasToken) { $insiderSasToken = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "insiderSasToken").SecretValue | Get-PlainText }
     }
 
     $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
@@ -248,6 +253,12 @@ try {
     Run-CreateRelease -appVersion latest -name "v3.0" -tag "v3.0" -wait -branch $branch | Out-Null
     $runs++
 
+    # Launch Current, NextMinor and NextMajor builds
+    $runTestCurrent = Run-TestCurrent -branch $branch
+    SetRepositorySecret -name 'INSIDERSASTOKEN' -value (ConvertTo-SecureString -String $insiderSasToken -AsPlainText -Force)
+    $runTestNextMinor = Run-TestNextMinor -branch $branch
+    $runTestNextMajor = Run-TestNextMajor -branch $branch
+
     # TODO: Test workspace
     
     # TODO: Test Release
@@ -257,6 +268,16 @@ try {
     # TODO: Check that environment was created and that launch.json was updated
 
     # Test localdevenv
+
+    WaitWorkflow -runid $runTestNextMajor.id
+    $runs++
+
+    WaitWorkflow -runid $runTestNextMinor.id
+    $runs++
+
+    WaitWorkflow -runid $runTestCurrent.id
+    $runs++
+
     Test-NumberOfRuns -expectedNumberOfRuns $runs
     
     RemoveRepository -repository $repository -path $repoPath
