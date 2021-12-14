@@ -44,6 +44,10 @@ try {
         $getSettings = @($settings.Keys)
     }
 
+    if ($settings.appBuild -eq [int32]::MaxValue -and $settings.appRevision -eq [int32]::MaxValue) {
+        $settings.versioningStrategy = 15
+    }
+
     if ($getSettings -contains 'appBuild' -or $getSettings -contains 'appRevision') {
         switch ($settings.versioningStrategy -band 15) {
             0 { # Use RUN_NUMBER and RUN_ATTEMPT
@@ -57,6 +61,10 @@ try {
             2 { # USE DATETIME
                 $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
                 $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('hhmmss'))
+            }
+            15 { # Use maxValue
+                $settings.appBuild = [Int32]::MaxValue
+                $settings.appRevision = [Int32]::MaxValue
             }
             default {
                 OutputError -message "Unknown version strategy $versionStrategy"
