@@ -84,8 +84,9 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
-    $repoBaseFolder = Get-Location
+    $repoBaseFolder = (Get-Location).path
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScopeJson $parentTelemetryScopeJson 
 
@@ -97,7 +98,7 @@ try {
     }
 
     CheckAndCreateProjectFolder -project $project
-    $baseFolder = Get-Location
+    $baseFolder = (Get-Location).path
 
     Write-Host "Reading $ALGoSettingsFile"
     $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json

@@ -21,9 +21,12 @@ $telemetryScope = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper 
+    $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
+    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $repoBaseFolder = (Get-Location).path
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
     
     try {
@@ -33,8 +36,6 @@ try {
         throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor>"
     }
 
-    $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
-    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     if (!$project) { $project = '.' }
 
     if ($project -ne '.') {
