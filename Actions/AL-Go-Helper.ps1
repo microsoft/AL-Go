@@ -391,6 +391,7 @@ function ReadSettings {
         "appDependencyProbingPaths"              = @()
         "githubRunner"                           = "windows-latest"
         "cacheImageName"                         = "my"
+        "cacheKeepDays"                          = 3
         "alwaysBuildAllProjects"                 = $false
         "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
         "PartnerTelemetryConnectionString"       = ""
