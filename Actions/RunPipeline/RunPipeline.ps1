@@ -193,11 +193,12 @@ try {
         -enableAppSourceCop:$repo.enableAppSourceCop `
         -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
         -enableUICop:$repo.enableUICop `
-        -customCodeCops:$repo.customCodeCops `
+        -customCodeCops $repo.customCodeCops `
         -azureDevOps:($environment -eq 'AzureDevOps') `
         -gitLab:($environment -eq 'GitLab') `
         -gitHubActions:($environment -eq 'GitHubActions') `
-        -failOn 'error' `
+        -failOn $repo.failOn `
+        -rulesetFile $repo.rulesetFile `
         -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
         -buildArtifactFolder $buildArtifactFolder `

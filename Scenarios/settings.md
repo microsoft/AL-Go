@@ -57,9 +57,13 @@ The repository settings are only read from the repository settings file (.github
 | enableCodeCop | If enableCodeCop is set to true, the CI/CD workflow will enable the CodeCop analyzer when building. | false |
 | enableUICop | If enableUICop is set to true, the CI/CD workflow will enable the UICop analyzer when building. | false |
 | customCodeCops | CustomCodeCops is an array of paths or URLs to custom Code Cop DLLs you want to enable when building. | [ ] |
+| failOn | Specifies what the pipeline will fail on. Allowed values are none, warning and error | error |
+| rulesetFile | Filename of the custom ruleset file | |
 | keyVaultCertificateUrlSecretName<br />keyVaultCertificatePasswordSecretName<br />keyVaultClientIdSecretName | If you want to enable KeyVault access for your AppSource App, you need to provide 3 secrets as GitHub Secrets or in the Azure KeyVault. The names of those secrets (**NOT the secrets themselves**) should be specified in the settings file with these 3 settings. Default is to not have KeyVault access from your AppSource App. Read [this](EnableKeyVaultForAppSourceApp.md) for more information. | |
 | codeSignCertificateUrlSecretName<br />codeSignCertificatePasswordSecretName | When developing AppSource Apps, your app needs to be code signed and you need to add secrets to GitHub secrets or Azure KeyVault, specifying the secure URL from which your codesigning certificate pfx file can be downloaded and the password for this certificate. These settings specifies the names (**NOT the secrets themselves**) of the code signing certificate url and password. Default is to look for secrets called CodeSignCertificateUrl and CodeSignCertificatePassword. Read [this](SetupCiCdForExistingAppSourceApp.md) for more information. | CodeSignCertificateUrl<br />CodeSignCertificatePassword |
 | alwaysBuildAllProjects | This setting only makes sense if the repository is setup for multiple projects.<br />Standard behavior of the CI/CD workflow is to only build the projects, in which files have changes when running the workflow due to a push or a pull request | false |
+| cacheImageName | When using self-hosted runners, cacheImageName specifies the prefix for the docker image created for increased performance | my |
+| cacheKeepDays | When using self-hosted runners, cacheKeepDays specifies the number of days docker image are cached before cleaned up when running the next pipeline | 3 |
 
 ## Expert settings (rarely used)
 

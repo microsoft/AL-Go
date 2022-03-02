@@ -382,6 +382,8 @@ function ReadSettings {
         "enableCodeCop"                          = $false
         "enableUICop"                            = $false
         "customCodeCops"                         = @()
+        "failOn"                                 = "error"
+        "rulesetFile"                            = ""
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
         "appSourceCopMandatoryAffixes"           = @()
@@ -1156,11 +1158,12 @@ function CreateDevEnv {
             -enableAppSourceCop:$repo.enableAppSourceCop `
             -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
             -enableUICop:$repo.enableUICop `
-            -customCodeCops:$repo.customCodeCops `
+            -customCodeCops $repo.customCodeCops `
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
-            -failOn 'error' `
+            -failOn $repo.failOn `
+            -rulesetFile $repo.rulesetFile `
             -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
             -doNotRunTests `
             -useDevEndpoint `
