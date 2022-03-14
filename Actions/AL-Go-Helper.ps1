@@ -367,6 +367,7 @@ function ReadSettings {
         "keyVaultClientIdSecretName"             = ""
         "codeSignCertificateUrlSecretName"       = "CodeSignCertificateUrl"
         "codeSignCertificatePasswordSecretName"  = "CodeSignCertificatePassword"
+        "storageContextSecretName"               = "StorageContext"
         "additionalCountries"                    = @()
         "appDependencies"                        = @()
         "appFolders"                             = @()
@@ -374,6 +375,8 @@ function ReadSettings {
         "testFolders"                            = @()
         "installApps"                            = @()
         "installTestApps"                        = @()
+        "installOnlyReferencedApps"              = $true
+        "skipUpgrade"                            = $false
         "applicationDependency"                  = "18.0.0.0"
         "installTestRunner"                      = $false
         "installTestFramework"                   = $false
@@ -1146,6 +1149,7 @@ function CreateDevEnv {
             -licenseFile $LicenseFileUrl `
             -installApps $installApps `
             -installTestApps $installTestApps `
+            -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
             -appFolders $repo.appFolders `
             -testFolders $repo.testFolders `
             -testResultsFile $testResultsFile `
@@ -1158,7 +1162,7 @@ function CreateDevEnv {
             -enableAppSourceCop:$repo.enableAppSourceCop `
             -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
             -enableUICop:$repo.enableUICop `
-            -customCodeCops $repo.customCodeCops `
+            -customCodeCops:$repo.customCodeCops `
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
