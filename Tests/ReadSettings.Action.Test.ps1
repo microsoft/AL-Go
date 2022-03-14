@@ -19,6 +19,11 @@ Describe "ReadSettings Action Tests" {
         }
         $outputs = [ordered]@{
             "SettingsJson" = "Settings in compressed Json format"
+            "GitHubRunnerJson" = "GitHubRunner in compressed Json format"
+            "ProjectsJson" = "Projects in compressed Json format"
+            "ProjectCount" = "Number of projects in array"
+            "EnvironmentsJson" = "Environments in compressed Json format"
+            "EnvironmentCount" = "Number of environments in array"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
