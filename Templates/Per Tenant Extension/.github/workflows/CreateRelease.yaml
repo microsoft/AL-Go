@@ -121,6 +121,20 @@ jobs:
       matrix: ${{ fromJson(needs.CreateRelease.outputs.artifacts) }}
       fail-fast: true
     steps:
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+
+      - name: Read secrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          settingsJson: ${{ env.Settings }}
+          secrets: 'StorageContext'
+
       - name: Download artifact
         run: |
           Write-Host "Downloading artifact ${{ matrix.name}}"
@@ -139,6 +153,71 @@ jobs:
           asset_path: '${{ matrix.name }}.zip'
           asset_name: '${{ matrix.name }}.zip'
           asset_content_type: application/zip
+
+      - name: Publish To Storage
+        id: PublishToStorage
+        run: |
+          if ($ENV:StorageContext) {
+              try {
+                  if (get-command New-AzureStorageContext -ErrorAction SilentlyContinue) {
+                      Write-Host "Using Azure.Storage PowerShell module"
+                      Disable-AzureDataCollection
+                  }
+                  else {
+                      if (!(get-command New-AzStorageContext -ErrorAction SilentlyContinue)) {
+                          OutputError -message "When publishing to storage account, the build agent needs to have either the Azure.Storage or the Az.Storage PowerShell module installed."
+                          exit
+                      }
+                      Write-Host "Using Az.Storage PowerShell module"
+                      Set-Alias -Name New-AzureStorageContext -Value New-AzStorageContext
+                      Set-Alias -Name Get-AzureStorageContainer -Value Get-AzStorageContainer
+                      Set-Alias -Name Set-AzureStorageBlobContent -Value Set-AzStorageBlobContent
+                  }
+
+                  $storageContext = $ENV:StorageContext
+
+                  $storageAccount = $StorageContext | ConvertFrom-Json
+                  if ($storageAccount.PSObject.Properties.Name -eq "sastoken") {
+                      $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
+                  }
+                  else {
+                      $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
+                  }
+
+                  $name = '${{ matrix.name }}'
+                  $type = ""
+                  if ($name -like '*-Apps-*') {
+                      $idx = $name.indexOf('-Apps-')
+                      $version = $name.SubString($idx+6)
+                      $projectName = $name.SubString(0,$idx) -replace "[^a-z0-9]", "-"
+                      $type = 'Apps'
+                  }
+                  elseif ($name -like '*-TestApps-*') {
+                      $idx = $name.indexOf('-TestApps-')
+                      $version = $name.SubString($idx+10)
+                      $projectName = $name.SubString(0,$idx) -replace "[^a-z0-9]", "-"
+                      $type = 'TestApps'
+                  }
+
+                  $storageContainerName = $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).ToLowerInvariant()
+                  Get-AzureStorageContainer -Context $storageContext -name $storageContainerName | Out-Null
+                  $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
+                  Write-Host "Storage Context OK"
+
+                  if ($type) {
+                      $version, "latest" | ForEach-Object {
+                          $blob = $storageBlobName.replace('{project}',$projectName).replace('{version}',$_).replace('{type}',$type).ToLowerInvariant()
+                          Write-Host "Publishing $blob to $storageContainerName"
+                          Set-AzureStorageBlobContent -Context $storageContext -Container $storageContainerName -File '${{ matrix.name }}.zip' -blob $blob -Force
+                      }
+                  }
+              }
+              catch {
+                Write-Host $_.Exception.Message
+                  Write-Host "::Error::StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, ContainerName, BlobName and sastoken or storageAccountKey, which points to an existing container in a storage account."
+                  exit 1
+              }
+          }
 
   PostProcess:
     if: always()

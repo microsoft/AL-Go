@@ -10,7 +10,7 @@ Param(
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"AppBuild":"", "AppRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
-    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":""}'
+    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":"","StorageContext":""}'
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,7 +48,7 @@ try {
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId' | ForEach-Object {
+    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId','StorageContext' | ForEach-Object {
         if ($secrets.ContainsKey($_)) {
             $value = $secrets."$_"
         }
@@ -71,6 +71,46 @@ try {
         }
     }
 
+    if ($storageContext) {
+        if ($project) {
+            $projectName = $project -replace "[^a-z0-9]", "-"
+        }
+        else {
+            $projectName = $repo.repoName -replace "[^a-z0-9]", "-"
+        }
+        try {
+            if (get-command New-AzureStorageContext -ErrorAction SilentlyContinue) {
+                Write-Host "Using Azure.Storage PowerShell module"
+            }
+            else {
+                if (!(get-command New-AzStorageContext -ErrorAction SilentlyContinue)) {
+                    OutputError -message "When publishing to storage account, the build agent needs to have either the Azure.Storage or the Az.Storage PowerShell module installed."
+                    exit
+                }
+                Write-Host "Using Az.Storage PowerShell module"
+                Set-Alias -Name New-AzureStorageContext -Value New-AzStorageContext
+                Set-Alias -Name Get-AzureStorageContainer -Value Get-AzStorageContainer
+                Set-Alias -Name Set-AzureStorageBlobContent -Value Set-AzStorageBlobContent
+            }
+
+            $storageAccount = $storageContext | ConvertFrom-Json | ConvertTo-HashTable
+            if ($storageAccount.ContainsKey('sastoken')) {
+                $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
+            }
+            else {
+                $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
+            }
+            $storageContainerName =  $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).ToLowerInvariant()
+            Get-AzureStorageContainer -Context $storageContext -name $storageContainerName | Out-Null
+            $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
+            Write-Host "Storage Context OK"
+        }
+        catch {
+            OutputError -message "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey, which points to an existing container in a storage account."
+            exit
+        }
+    }
+
     $artifact = $repo.artifact
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
@@ -79,7 +119,10 @@ try {
 
     if ($settings.appDependencyProbingPaths) {
         Write-Host "Downloading dependencies ..."
-        $installApps += Get-dependencies -probingPathsJson $settings.appDependencyProbingPaths -token $token
+        $installApps += Get-dependencies -probingPathsJson $settings.appDependencyProbingPaths -token $token -mask "-Apps-"
+        Get-dependencies -probingPathsJson $settings.appDependencyProbingPaths -token $token -mask "-TestApps-" | ForEach-Object {
+            $installTestApps += "($_)"
+        }
     }
     
     # Analyze app.json version dependencies before launching pipeline
@@ -102,24 +145,29 @@ try {
         }
     }
 
-    try {
-        $previousApps = @()
-        $releasesJson = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-        $latestRelease = $releasesJson | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
-        if ($latestRelease) {
-            Write-Host "Using $($latestRelease.name) as previous release"
-            $artifactsFolder = Join-Path $baseFolder "artifacts"
-            New-Item $artifactsFolder -ItemType Directory | Out-Null
-            DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder
-            $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
-        }
-        else {
-            OutputWarning -message "No previous release found"
-        }
+    $previousApps = @()
+    if ($repo.skipUpgrade) {
+        OutputWarning -message "Skipping upgrade tests"
     }
-    catch {
-        OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
-        exit
+    else {
+        try {
+            $releasesJson = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
+            $latestRelease = $releasesJson | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+            if ($latestRelease) {
+                Write-Host "Using $($latestRelease.name) as previous release"
+                $artifactsFolder = Join-Path $baseFolder "artifacts"
+                New-Item $artifactsFolder -ItemType Directory | Out-Null
+                DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder
+                $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
+            }
+            else {
+                OutputWarning -message "No previous release found"
+            }
+        }
+        catch {
+            OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
+            exit
+        }
     }
 
     $additionalCountries = $repo.additionalCountries
@@ -178,6 +226,7 @@ try {
         -licenseFile $LicenseFileUrl `
         -installApps $installApps `
         -installTestApps $installTestApps `
+        -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
         -testFolders $repo.testFolders `
@@ -193,7 +242,7 @@ try {
         -enableAppSourceCop:$repo.enableAppSourceCop `
         -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
         -enableUICop:$repo.enableUICop `
-        -customCodeCops $repo.customCodeCops `
+        -customCodeCops:$repo.customCodeCops `
         -azureDevOps:($environment -eq 'AzureDevOps') `
         -gitLab:($environment -eq 'GitLab') `
         -gitHubActions:($environment -eq 'GitHubActions') `
@@ -206,7 +255,32 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
-        TrackTrace -telemetryScope $telemetryScope
+    if ($storageContext) {
+        Write-Host "Publishing to $storageContainerName in $($storageAccount.StorageAccountName)"
+        "Apps","TestApps" | ForEach-Object {
+            $type = $_
+            $artfolder = Join-Path $buildArtifactFolder $type
+            if (Test-Path "$artfolder\*") {
+                $versions = @("$($repo.repoVersion).$appBuild.$appRevision-preview","preview")
+                $tempFile = Join-Path $ENV:TEMP "$([Guid]::newguid().ToString()).zip"
+                try {
+                    Write-Host "Compressing"
+                    Compress-Archive -Path $artfolder -DestinationPath $tempFile -Force
+                    $versions | ForEach-Object {
+                        $version = $_
+                        $blob = $storageBlobName.replace('{project}',$projectName).replace('{version}',$version).replace('{type}',$type).ToLowerInvariant()
+                        Write-Host "Publishing $blob"
+                        Set-AzureStorageBlobContent -Context $storageContext -Container $storageContainerName -File $tempFile -blob $blob -Force | Out-Null
+                    }
+                }
+                finally {
+                    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+
+    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message $_.Exception.Message
