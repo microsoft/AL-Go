@@ -220,7 +220,7 @@ try {
                 if ($status) {
                     $message = "Updated AL-Go System Files"
 
-                    invoke-git commit -m "'$message'"
+                    invoke-git commit --allow-empty -m "'$message'"
 
                     if ($directcommit) {
                         invoke-git push $url

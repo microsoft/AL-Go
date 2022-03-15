@@ -615,8 +615,10 @@ function AnalyzeRepo {
         }
     }
 
-    if ([Version]$settings.applicationDependency -gt [Version]$version) {
-        throw "Application dependency is set to $($settings.applicationDependency), which isn't compatible with the artifact version $version"
+    if (!$doNotCheckArtifactSetting) {
+        if ([Version]$settings.applicationDependency -gt [Version]$version) {
+            throw "Application dependency is set to $($settings.applicationDependency), which isn't compatible with the artifact version $version"
+        }
     }
 
     # unpack all dependencies and update app- and test dependencies from dependency apps
@@ -737,7 +739,7 @@ function CommitFromNewFolder {
     if ($commitMessage.Length -gt 250) {
         $commitMessage = "$($commitMessage.Substring(0,250))...)"
     }
-    invoke-git commit -m "'$commitMessage'"
+    invoke-git commit --allow-empty -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
         invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
@@ -909,6 +911,7 @@ function CreateDevEnv {
         [Parameter(Mandatory=$true)]
         [string] $baseFolder,
         [string] $userName = $env:Username,
+        [string] $bcContainerHelperPath = "",
 
         [Parameter(ParameterSetName='cloud')]
         [Hashtable] $bcAuthContext = $null,
@@ -935,7 +938,10 @@ function CreateDevEnv {
     }
 
     $runAlPipelineParams = @{}
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+    $loadBcContainerHelper = ($bcContainerHelperPath -eq "")
+    if ($loadBcContainerHelper) {
+        $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+    }
     try {
         if ($caller -eq "local") {
             $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -1174,7 +1180,9 @@ function CreateDevEnv {
             -keepContainer
     }
     finally {
-        CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+        if ($loadBcContainerHelper) {
+            CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+        }
     }
 }
 
