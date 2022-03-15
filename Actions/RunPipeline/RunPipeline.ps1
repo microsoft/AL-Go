@@ -100,14 +100,16 @@ try {
             else {
                 $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
             }
-            $storageContainerName =  $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).ToLowerInvariant()
-            Get-AzureStorageContainer -Context $storageContext -name $storageContainerName | Out-Null
-            $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
             Write-Host "Storage Context OK"
+            $storageContainerName =  $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).ToLowerInvariant()
+            $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
+            Write-Host "Storage Container Name is $storageContainerName"
+            Write-Host "Storage Blob Name is $storageBlobName"
+            Get-AzureStorageContainer -Context $storageContext -name $storageContainerName | Out-Null
         }
         catch {
-            OutputError -message "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey, which points to an existing container in a storage account."
-            exit
+            OutputWarning -message "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey, which points to an existing container in a storage account."
+            $storageContext = $null
         }
     }
 
