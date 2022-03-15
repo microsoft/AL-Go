@@ -1,8 +1,10 @@
 function Get-dependencies {
     Param(
         $probingPathsJson,
+        $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE "dependencies")
+        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE "dependencies"),
+        [string] $mask = "-Apps-"
     )
 
     if (!(Test-Path $saveToPath)) {
@@ -11,16 +13,30 @@ function Get-dependencies {
 
     Write-Host "Getting all the artifacts from probing paths"
     $downloadedList = @()
-    $probingPathsJson | 
-    ForEach-Object {
+    $probingPathsJson | ForEach-Object {
         $dependency = $_
+        if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
+            throw "AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which you have a dependency"
+        }
+        if (-not ($dependency.PsObject.Properties.name -eq "AuthTokenSecret")) {
+            $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
+        }
+        if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
+            $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
+        }
+        if (-not ($dependency.PsObject.Properties.name -eq "Projects")) {
+            $dependency | Add-Member -name "Projects" -MemberType NoteProperty -Value "*"
+        }
+        if (-not ($dependency.PsObject.Properties.name -eq "release_status")) {
+            $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "latestBuild"
+        }
+
         Write-Host "Getting releases from $($dependency.repo)"
         $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
-        $repository# remove
         if ($dependency.release_status -eq "latestBuild") {
 
             # TODO it should check the branch and limit to a certain branch
-            $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository 
+            $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask $mask
             if ($dependency.version -ne "latest") {
                 $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
             }    
@@ -30,7 +46,7 @@ function Get-dependencies {
                 throw "Could not find any artifacts that matches the criteria."
             }
 
-            DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
+            $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
         }
         else {
 
@@ -55,10 +71,10 @@ function Get-dependencies {
                 $projects = "*"
             }
 
-            $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release
-            if ($download) {
-                $downloadedList += $download
-            }
+            $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
+        }
+        if ($download) {
+            $downloadedList += $download
         }
     }
     
@@ -134,6 +150,7 @@ function DownloadRelease {
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $path,
+        [string] $mask = "-Apps-",
         $release
     )
 
@@ -147,7 +164,7 @@ function DownloadRelease {
         $project = $_
         Write-Host "project '$project'"
         
-        $release.assets | Where-Object { $_.name -like "$project-Apps-*.zip" } | ForEach-Object {
+        $release.assets | Where-Object { $_.name -like "$project$mask*.zip" } | ForEach-Object {
             Write-Host "$api_url/repos/$repository/releases/assets/$($_.id)"
             $filename = Join-Path $path $_.name
             Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$api_url/repos/$repository/releases/assets/$($_.id)" -OutFile $filename 
@@ -160,22 +177,13 @@ function GetArtifacts {
     Param(
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [string] $mask = "-Apps-"
     )
 
     Write-Host "Analyzing artifacts"
     $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/actions/artifacts" | ConvertFrom-Json
-    $artifacts.artifacts | Where-Object { $_.name -like "*-Apps-*" }
-}
-
-function GetArtifact {
-    Param(
-        [string] $token,
-        $artifactsUrl
-    )
-    Write-Host "Analyzing artifact ($artifactsUrl)"
-    $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri $artifactsUrl | ConvertFrom-Json
-    $artifacts.artifacts | Where-Object { $_.name -like "*-Apps-*" }
+    $artifacts.artifacts | Where-Object { $_.name -like "*$($mask)*" }
 }
 
 function DownloadArtifact {
@@ -190,5 +198,7 @@ function DownloadArtifact {
         "Authorization" = "token $token"
         "Accept"        = "application/vnd.github.v3+json"
     }
-    Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $artifact.archive_download_url -OutFile (Join-Path $path "$($artifact.Name).zip")
+    $outFile = Join-Path $path "$($artifact.Name).zip"
+    Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
+    $outFile
 }    

@@ -1,9 +1,6 @@
 name: End to end tests
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 defaults:

@@ -38,6 +38,10 @@ The script will also modify launch.json to have a "Cloud Sandbox (<name>)" confi
 
 '@
 
+if (Test-Path (Join-Path $PSScriptRoot "NewBcContainer.ps1")) {
+    Write-Host -ForegroundColor Red "WARNING: The project has a NewBcContainer override defined. Typically, this means that you cannot run a cloud development environment"
+}
+
 $settings = ReadSettings -baseFolder $baseFolder -userName $env:USERNAME
 
 Write-Host

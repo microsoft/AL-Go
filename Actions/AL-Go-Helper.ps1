@@ -367,6 +367,7 @@ function ReadSettings {
         "keyVaultClientIdSecretName"             = ""
         "codeSignCertificateUrlSecretName"       = "CodeSignCertificateUrl"
         "codeSignCertificatePasswordSecretName"  = "CodeSignCertificatePassword"
+        "storageContextSecretName"               = "StorageContext"
         "additionalCountries"                    = @()
         "appDependencies"                        = @()
         "appFolders"                             = @()
@@ -374,6 +375,8 @@ function ReadSettings {
         "testFolders"                            = @()
         "installApps"                            = @()
         "installTestApps"                        = @()
+        "installOnlyReferencedApps"              = $true
+        "skipUpgrade"                            = $false
         "applicationDependency"                  = "18.0.0.0"
         "installTestRunner"                      = $false
         "installTestFramework"                   = $false
@@ -382,6 +385,8 @@ function ReadSettings {
         "enableCodeCop"                          = $false
         "enableUICop"                            = $false
         "customCodeCops"                         = @()
+        "failOn"                                 = "error"
+        "rulesetFile"                            = ""
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
         "appSourceCopMandatoryAffixes"           = @()
@@ -1144,6 +1149,7 @@ function CreateDevEnv {
             -licenseFile $LicenseFileUrl `
             -installApps $installApps `
             -installTestApps $installTestApps `
+            -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
             -appFolders $repo.appFolders `
             -testFolders $repo.testFolders `
             -testResultsFile $testResultsFile `
@@ -1160,7 +1166,8 @@ function CreateDevEnv {
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
-            -failOn 'error' `
+            -failOn $repo.failOn `
+            -rulesetFile $repo.rulesetFile `
             -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
             -doNotRunTests `
             -useDevEndpoint `

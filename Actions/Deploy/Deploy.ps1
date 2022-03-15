@@ -73,7 +73,7 @@ try {
     }
     else {
         New-Item $baseFolder -ItemType Directory | Out-Null
-        $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
+        $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "*-Apps-*"
         $artifactsVersion = $artifacts
         if ($artifacts -eq "latest") {
             $artifact = $allArtifacts | Where-Object { $_.name -like "*-Apps-*" } | Select-Object -First 1
