@@ -40,6 +40,7 @@ try {
         -environmentName $environmentName `
         -reUseExistingEnvironment:$reUseExistingEnvironment `
         -baseFolder $repoBaseFolder `
+        -bcContainerHelperPath $bcContainerHelperPath `
         -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
 
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Create a development environment $environmentName" -branch $branch
