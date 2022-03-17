@@ -1039,6 +1039,12 @@ function CreateDevEnv {
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
     
+        if (($repo.versioningStrategy -band 16) -eq 16) {
+            $runAlPipelineParams += @{
+                "appVersion" = $repo.repoVersion
+            }
+        }
+
         $buildArtifactFolder = Join-Path $baseFolder "output"
         if (Test-Path $buildArtifactFolder) {
             Get-ChildItem -Path $buildArtifactFolder -Include * -File | ForEach-Object { $_.Delete()}
