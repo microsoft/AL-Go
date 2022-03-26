@@ -64,7 +64,7 @@ try {
         exit
     }
 
-    if ($settings.type -eq "AppSource App" ) {
+    if ($repo.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
             OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             exit
@@ -119,10 +119,10 @@ try {
     $doNotBuildTests = $repo.doNotBuildTests
     $doNotRunTests = $repo.doNotRunTests
 
-    if ($settings.appDependencyProbingPaths) {
+    if ($repo.appDependencyProbingPaths) {
         Write-Host "Downloading dependencies ..."
-        $installApps += Get-dependencies -probingPathsJson $settings.appDependencyProbingPaths -token $token -mask "-Apps-"
-        Get-dependencies -probingPathsJson $settings.appDependencyProbingPaths -token $token -mask "-TestApps-" | ForEach-Object {
+        $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-Apps-"
+        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-TestApps-" | ForEach-Object {
             $installTestApps += "($_)"
         }
     }
@@ -183,7 +183,15 @@ try {
     $environmentName = ""
     $CreateRuntimePackages = $false
 
-    if (($repo.versioningStrategy -band 16) -eq 16) {
+    if ($repo.versioningStrategy -eq -1) {
+        $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+        $runAlPipelineParams += @{
+            "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+        }
+        $appBuild = $artifactVersion.Build
+        $appRevision = $artifactVersion.Revision
+    }
+    elseif (($repo.versioningStrategy -band 16) -eq 16) {
         $runAlPipelineParams += @{
             "appVersion" = $repo.repoVersion
         }
