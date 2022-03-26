@@ -9,9 +9,9 @@ Param(
     [string] $project = ".",
     [Parameter(HelpMessage = "Indicates whether you want to retrieve the list of project list as well", Mandatory = $false)]
     [bool] $getprojects,
-    [Parameter(HelpMessage = "Specify the pattern of the environments you want to retreive (or empty for no environments)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (or empty for no environments)", Mandatory = $false)]
     [string] $getenvironments = "",
-    [Parameter(HelpMessage = "Specify whether you want to include production environments", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies whether you want to include production environments", Mandatory = $false)]
     [bool] $includeProduction,
     [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
     [bool] $release,

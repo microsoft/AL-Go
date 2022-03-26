@@ -4,8 +4,6 @@ Param(
     [string] $settingsJson = '{"keyVaultName": ""}',
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
-    [Parameter(HelpMessage = "Specifies if the values of secrets should be updated", Mandatory = $false)]
-    [bool] $updateSettingsWithValues = $false,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}'
 )
@@ -65,27 +63,25 @@ try {
         }
     }
 
-    if ($updateSettingsWithValues) {
-        $outSettings.appDependencyProbingPaths | 
-        ForEach-Object {
-            if ($($_.authTokenSecret)) {
+    if ($outSettings.ContainsKey('appDependencyProbingPaths')) {
+        $outSettings.appDependencyProbingPaths | ForEach-Object {
+            if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
                 $_.authTokenSecret = GetSecret -secret $_.authTokenSecret -keyVaultName $keyVaultName
-            }
-        } 
+            } 
+        }
     }
-
 
     if ($secretsCollection) {
         Write-Host "The following secrets was not found: $(($secretsCollection | ForEach-Object { 
-        $secretSplit = @($_.Split('='))
-        if ($secretSplit.Count -eq 1) {
-            $secretSplit[0]
-        }
-        else {
-            "$($secretSplit[0]) (Secret $($secretSplit[1]))"
-        }
-        $outSecrets += @{ ""$($secretSplit[0])"" = """" }
-    }) -join ', ')"
+            $secretSplit = @($_.Split('='))
+            if ($secretSplit.Count -eq 1) {
+                $secretSplit[0]
+            }
+            else {
+                "$($secretSplit[0]) (Secret $($secretSplit[1]))"
+            }
+            $outSecrets += @{ ""$($secretSplit[0])"" = """" }
+        }) -join ', ')"
     }
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
