@@ -14,9 +14,9 @@
 1. On github.com, open **Settings** in your project and select **Secrets**. Choose the New repository secret button and create a secret called GHTOKENWORKFLOW and paste the personal access token in the value field and choose **Add secret**.
 ![PAT](/Scenarios/images/6e.png)
 1. On github.com, under **Actions** in your project, select the **Update AL-Go system files** workflow and choose **Run workflow**. Leave the **Template Repository URL** blank and choose **Run workflow**.
-![update](/Scenarios/images/6e.png)
+![update](/Scenarios/images/6f.png)
 1. Inspect the pull request and see that it indeed reverts your change to the `LocalDevEnv.ps1` file.
-![update](/Scenarios/images/6e.png)
+![update](/Scenarios/images/6g.png)
 1. By default, this workflow will apply any updates to the **workflow files (in .github\workflows)** or **system scripts (in .AL-Go)** from the template repository used to spin up the repository. If you want to change branch or template Url, you can specify the `templateUrl@branch` when you run the workflow.
 ---
 [back](/README.md)
