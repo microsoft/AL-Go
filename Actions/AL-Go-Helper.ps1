@@ -1035,7 +1035,7 @@ function CreateDevEnv {
             exit
         }
 
-        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
+        if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
             if ($licenseFileUrl -eq "") {
                 OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
                 exit
@@ -1044,7 +1044,22 @@ function CreateDevEnv {
 
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
-    
+
+        if ($repo.versioningStrategy -eq -1) {
+            if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
+            $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+            $runAlPipelineParams += @{
+                "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+                "appBuild" = "$($artifactVersion.Build)"
+                "appRevision" = "$($artifactVersion.Revision)"
+            }
+        }
+        elseif (($repo.versioningStrategy -band 16) -eq 16) {
+            $runAlPipelineParams += @{
+                "appVersion" = $repo.repoVersion
+            }
+        }
+
         $buildArtifactFolder = Join-Path $baseFolder "output"
         if (Test-Path $buildArtifactFolder) {
             Get-ChildItem -Path $buildArtifactFolder -Include * -File | ForEach-Object { $_.Delete()}
@@ -1117,7 +1132,7 @@ function CreateDevEnv {
                 $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
             }
             else {
-                $countryCode = $settings.country
+                $countryCode = $repo.country
                 New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
                 do {
                     Start-Sleep -Seconds 10

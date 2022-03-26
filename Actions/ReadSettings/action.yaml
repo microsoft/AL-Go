@@ -17,6 +17,10 @@ inputs:
     description: Project folder
     required: false
     default: '.'
+  release:
+    description: Indicates whether this is called from a release pipeline
+    required: false
+    default: 'N'
   getprojects:
     description: Indicates whether you want to retrieve the list of project list as well
     required: false
@@ -27,10 +31,6 @@ inputs:
     default: ''
   includeProduction:
     description: Specifies whether you want to include production environments
-    required: false
-    default: 'N'
-  release:
-    description: Indicates whether this is called from a release pipeline
     required: false
     default: 'N'
   get:
