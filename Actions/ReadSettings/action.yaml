@@ -25,12 +25,12 @@ inputs:
     description: Specifies the pattern of the environments you want to retreive (or empty for no environments)
     required: false
     default: ''
-  release:
-    description: Indicates whether this is called from a release pipeline
-    required: false
-    default: 'N'
   includeProduction:
     description: Specifies whether you want to include production environments
+    required: false
+    default: 'N'
+  release:
+    description: Indicates whether this is called from a release pipeline
     required: false
     default: 'N'
   get:
