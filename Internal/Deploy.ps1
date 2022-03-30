@@ -331,10 +331,14 @@ try {
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
+                $useBranch = $config.branch
+                if ($_.Name -eq "AL-Go-Settings.json") {
+                    $useBranch = $branch
+                }
                 $lines = ([string](Get-Content -Raw -path $srcFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                    $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($config.branch)`$3"
+                    $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($useBranch)`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
                 $lines -join "`n" | Set-Content $dstFile -Force -NoNewline

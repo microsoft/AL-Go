@@ -35,7 +35,8 @@ function UpdateManifest
     [string] $name,
     [string] $publisher,
     [string] $version,
-    [string[]] $idrange
+    [string[]] $idrange,
+    [switch] $AddTestDependencies
 ) 
 {
     #Modify app.json
@@ -47,6 +48,23 @@ function UpdateManifest
     $appJson.Version = $version
     $appJson.idRanges[0].from = [int]$idrange[0]
     $appJson.idRanges[0].to = [int]$idrange[1]
+    if ($AddTestDependencies) {
+        $appJson.dependencies += @(
+            @{
+                "id" = "dd0be2ea-f733-4d65-bb34-a28f4624fb14"
+                "publisher" = "Microsoft"
+                "name" = "Library Assert"
+                "version" = $appJson.Application
+            },
+            @{
+                "id" = "e7320ebb-08b3-4406-b1ec-b4927d3e280b"
+                "publisher" = "Microsoft"
+                "name" = "Any"
+                "version" = $appJson.Application
+            }
+        )
+
+    }
     $appJson | ConvertTo-Json -depth 99 | Set-Content $appJsonFile -Encoding UTF8
 }
 
@@ -103,7 +121,7 @@ function New-SampleTestApp
     New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force | Out-Null
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
 
-    UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
+    UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version -AddTestDependencies
     UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.Test.al" -startId $idrange[0]
 }
 

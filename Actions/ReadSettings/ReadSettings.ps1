@@ -48,27 +48,29 @@ try {
         $settings.versioningStrategy = 15
     }
 
-    if ($getSettings -contains 'appBuild' -or $getSettings -contains 'appRevision') {
-        switch ($settings.versioningStrategy -band 15) {
-            0 { # Use RUN_NUMBER and RUN_ATTEMPT
-                $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
-                $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
-            }
-            1 { # Use RUN_ID and RUN_ATTEMPT
-                $settings.appBuild = [Int32]($ENV:GITHUB_RUN_ID)
-                $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
-            }
-            2 { # USE DATETIME
-                $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
-                $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('hhmmss'))
-            }
-            15 { # Use maxValue
-                $settings.appBuild = [Int32]::MaxValue
-                $settings.appRevision = [Int32]::MaxValue
-            }
-            default {
-                OutputError -message "Unknown version strategy $versionStrategy"
-                exit
+    if ($settings.versioningstrategy -ne -1) {
+        if ($getSettings -contains 'appBuild' -or $getSettings -contains 'appRevision') {
+            switch ($settings.versioningStrategy -band 15) {
+                0 { # Use RUN_NUMBER and RUN_ATTEMPT
+                    $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
+                    $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
+                }
+                1 { # Use RUN_ID and RUN_ATTEMPT
+                    $settings.appBuild = [Int32]($ENV:GITHUB_RUN_ID)
+                    $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
+                }
+                2 { # USE DATETIME
+                    $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
+                    $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('hhmmss'))
+                }
+                15 { # Use maxValue
+                    $settings.appBuild = [Int32]::MaxValue
+                    $settings.appRevision = [Int32]::MaxValue
+                }
+                default {
+                    OutputError -message "Unknown version strategy $versionStrategy"
+                    exit
+                }
             }
         }
     }
@@ -90,12 +92,8 @@ try {
     Write-Host "set-output name=GitHubRunnerJson::$githubRunner"
 
     if ($getprojects) {
-        if (Test-Path ".AL-Go" -PathType Container) {
-            $projects = @(".")
-        }
-        else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
-            Write-Host "All Projects: $($projects -join ', ')"
+        $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
+        if ($projects) {
             if (($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push") -and !$settings.alwaysBuildAllProjects) {
                 $headers = @{             
                     "Authorization" = "token $token"
@@ -117,6 +115,10 @@ try {
                 }
             }
         }
+        if (Test-Path ".AL-Go" -PathType Container) {
+            $projects += @(".")
+        }
+        Write-Host "All Projects: $($projects -join ', ')"
         if ($projects.Count -eq 1) {
             $projectsJSon = "[$($projects | ConvertTo-Json -compress)]"
         }
@@ -137,7 +139,7 @@ try {
         }
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
         try {
-            $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { 
+            $environments = @($settings.Environments)+@((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { 
                 if ($includeProduction) {
                     $_.Name -like $getEnvironments -or $_.Name -like "$getEnvironments (Production)"
                 }

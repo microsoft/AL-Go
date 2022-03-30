@@ -63,17 +63,19 @@ try {
     try {
         $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
-        if ($type -eq "Test App") {
-            if ($SettingsJson.testFolders -notcontains $foldername) {
-                $SettingsJson.testFolders += @($folderName)
+        if (@($settingsJson.appFolders)+@($settingsJson.testFolders)) {
+            if ($type -eq "Test App") {
+                if ($SettingsJson.testFolders -notcontains $foldername) {
+                    $SettingsJson.testFolders += @($folderName)
+                }
             }
-        }
-        else {
-            if ($SettingsJson.appFolders -notcontains $foldername) {
-                $SettingsJson.appFolders += @($folderName)
+            else {
+                if ($SettingsJson.appFolders -notcontains $foldername) {
+                    $SettingsJson.appFolders += @($folderName)
+                }
             }
+            $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
         }
-        $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
     }
     catch {
         throw "A malformed $ALGoSettingsFile is encountered.$([environment]::Newline) $($_.Exception.Message)"
@@ -85,7 +87,7 @@ try {
     }
 
     if ($type -eq "Test App") {
-        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids 
+        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids
     }
     else {
         New-SampleApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids 

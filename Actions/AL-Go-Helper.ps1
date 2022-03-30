@@ -401,6 +401,7 @@ function ReadSettings {
         "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
         "PartnerTelemetryConnectionString"       = ""
         "SendExtendedTelemetryToMicrosoft"       = $false
+        "Environments"                           = @()
     }
 
     $gitHubFolder = ".github"
@@ -543,6 +544,32 @@ function AnalyzeRepo {
         }
     }
     
+    if (-not (@($settings.appFolders)+@($settings.testFolders))) {
+        Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path -Path (Join-Path $_.FullName "app.json") } | ForEach-Object {
+            $folder = $_
+            $appJson = Get-Content (Join-Path $folder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
+            $isTestApp = $false
+            if ($appJson.PSObject.Properties.Name -eq "dependencies") {
+                $appJson.dependencies | ForEach-Object {
+                    if ($_.PSObject.Properties.Name -eq "AppId") {
+                        $id = $_.AppId
+                    }
+                    else {
+                        $id = $_.Id
+                    }
+                    if ($testRunnerApps.Contains($id)) { 
+                        $isTestApp = $true
+                    }
+                }
+            }
+            if ($isTestApp) {
+                $settings.testFolders += @($_.Name)
+            }
+            else {
+                $settings.appFolders += @($_.Name)
+            }
+        }
+    }
     Write-Host "Checking appFolders and testFolders"
     $dependencies = [ordered]@{}
     $true, $false | ForEach-Object {
@@ -576,7 +603,7 @@ function AnalyzeRepo {
                     $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName })
                 }
                 else {
-                    $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName })
+                    $settings.testFolders = @($settings.testFolders | Where-Object { $_ -ne $folderName })
                 }
             }
             else {
@@ -1035,7 +1062,7 @@ function CreateDevEnv {
             exit
         }
 
-        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
+        if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
             if ($licenseFileUrl -eq "") {
                 OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
                 exit
@@ -1044,7 +1071,22 @@ function CreateDevEnv {
 
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
-    
+
+        if ($repo.versioningStrategy -eq -1) {
+            if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
+            $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+            $runAlPipelineParams += @{
+                "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+                "appBuild" = "$($artifactVersion.Build)"
+                "appRevision" = "$($artifactVersion.Revision)"
+            }
+        }
+        elseif (($repo.versioningStrategy -band 16) -eq 16) {
+            $runAlPipelineParams += @{
+                "appVersion" = $repo.repoVersion
+            }
+        }
+
         $buildArtifactFolder = Join-Path $baseFolder "output"
         if (Test-Path $buildArtifactFolder) {
             Get-ChildItem -Path $buildArtifactFolder -Include * -File | ForEach-Object { $_.Delete()}
@@ -1117,7 +1159,7 @@ function CreateDevEnv {
                 $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
             }
             else {
-                $countryCode = $settings.country
+                $countryCode = $repo.country
                 New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
                 do {
                     Start-Sleep -Seconds 10
