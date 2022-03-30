@@ -139,7 +139,7 @@ try {
         }
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
         try {
-            $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { 
+            $environments = @($settings.Environments)+@((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | Where-Object { 
                 if ($includeProduction) {
                     $_.Name -like $getEnvironments -or $_.Name -like "$getEnvironments (Production)"
                 }

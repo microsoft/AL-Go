@@ -73,21 +73,21 @@ try {
 
         if ($modifyApps) {
             Write-Host "Versioning strategy $($settingsJson.VersioningStrategy) is set. The version number in the apps will be changed."
-            'appFolders', 'testFolders' | ForEach-Object {
-                if ($SettingsJson.PSObject.Properties.Name -eq $_) {
-                    $settingsJson."$_" | ForEach-Object {
-                        Write-Host "Modifying app.json in folder $project\$_"
-                        $appJsonFile = Join-Path "$project\$_" "app.json"
-                        if (Test-Path $appJsonFile) {
-                            try {
-                                $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
-                                $appJson.Version = "$($newVersion.Major).$($newVersion.Minor).0.0"
-                                $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile -Encoding UTF8
-                            }
-                            catch {
-                                throw "Application manifest file($appJsonFile) is malformed."
-                            }
-                        }
+            $folders = @('appFolders', 'testFolders' | ForEach-Object { if ($SettingsJson.PSObject.Properties.Name -eq $_) { $settingsJson."$_" } })
+            if (-not ($folders)) {
+                $folders = Get-ChildItem -Path $project -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'app.json') } | ForEach-Object { $_.Name }
+            }
+            $folders | ForEach-Object {
+                Write-Host "Modifying app.json in folder $project\$_"
+                $appJsonFile = Join-Path "$project\$_" "app.json"
+                if (Test-Path $appJsonFile) {
+                    try {
+                        $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
+                        $appJson.Version = "$($newVersion.Major).$($newVersion.Minor).0.0"
+                        $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile -Encoding UTF8
+                    }
+                    catch {
+                        throw "Application manifest file($appJsonFile) is malformed."
                     }
                 }
             }
