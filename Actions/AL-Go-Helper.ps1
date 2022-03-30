@@ -401,6 +401,7 @@ function ReadSettings {
         "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
         "PartnerTelemetryConnectionString"       = ""
         "SendExtendedTelemetryToMicrosoft"       = $false
+        "Environments"                           = @()
     }
 
     $gitHubFolder = ".github"
@@ -543,6 +544,32 @@ function AnalyzeRepo {
         }
     }
     
+    if (-not (@($settings.appFolders)+@($settings.testFolders))) {
+        Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path -Path (Join-Path $_.FullName "app.json") } | ForEach-Object {
+            $folder = $_
+            $appJson = Get-Content (Join-Path $folder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
+            $isTestApp = $false
+            if ($appJson.PSObject.Properties.Name -eq "dependencies") {
+                $appJson.dependencies | ForEach-Object {
+                    if ($_.PSObject.Properties.Name -eq "AppId") {
+                        $id = $_.AppId
+                    }
+                    else {
+                        $id = $_.Id
+                    }
+                    if ($testRunnerApps.Contains($id)) { 
+                        $isTestApp = $true
+                    }
+                }
+            }
+            if ($isTestApp) {
+                $settings.testFolders += @($_.Name)
+            }
+            else {
+                $settings.appFolders += @($_.Name)
+            }
+        }
+    }
     Write-Host "Checking appFolders and testFolders"
     $dependencies = [ordered]@{}
     $true, $false | ForEach-Object {
@@ -576,7 +603,7 @@ function AnalyzeRepo {
                     $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName })
                 }
                 else {
-                    $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName })
+                    $settings.testFolders = @($settings.testFolders | Where-Object { $_ -ne $folderName })
                 }
             }
             else {
