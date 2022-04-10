@@ -56,6 +56,8 @@ try {
         $updateSettings = $false
     }
 
+    AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
+
     $templateBranch = $templateUrl.Split('@')[1]
     $templateUrl = $templateUrl.Split('@')[0]
 
@@ -153,9 +155,11 @@ try {
     if (-not $update) {
         if (($updateFiles) -or ($removeFiles)) {
             OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $true
         }
         else {
             Write-Host "Your repository runs on the latest version of AL-Go System."
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $false
         }
     }
     else {
