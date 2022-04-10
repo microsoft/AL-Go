@@ -1,9 +1,11 @@
-# NOTE:
-### This is an old version of the CI/CD Workshop
-### The recommended way of doing CI/CD today for AppSource apps or PTEs is to use [AL-Go for GitHub](https://github.com/microsoft/AL-Go/README.md)
-### You will find usage scenarios in the AL-Go repo
+# NOTE: This is an old version of the CI/CD Workshop
+The recommended way of doing CI/CD today for AppSource apps or PTEs is to use [AL-Go for GitHub](https://github.com/microsoft/AL-Go/README.md)
 
-# Azure DevOps - CI/CD Workshop
+You will find usage scenarios in the AL-Go repo
+
+Below you will find the original HOL, which no longer is being maintained.
+
+# Azure DevOps / GitHub - CI/CD Workshop
 ![Title image](Docs/image-0.png)
 
 This workshop will help you setup a project on Azure DevOps, including Continuous Integration, Continuous Deployment and requirements for the developer to submit Pull Requests when checking in.
