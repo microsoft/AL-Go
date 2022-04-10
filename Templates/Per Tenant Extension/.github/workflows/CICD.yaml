@@ -121,6 +121,7 @@ jobs:
 
       - name: Publish artifacts - apps
         uses: actions/upload-artifact@v2
+        if: github.event_name != 'pull_request'
         with:
           name: ${{ env.appsArtifactsName }}
           path: '${{ matrix.project }}/output/Apps/'
@@ -128,6 +129,7 @@ jobs:
 
       - name: Publish artifacts - test apps
         uses: actions/upload-artifact@v2
+        if: github.event_name != 'pull_request'
         with:
           name: ${{ env.testAppsArtifactsName }}
           path: '${{ matrix.project }}/output/TestApps/'

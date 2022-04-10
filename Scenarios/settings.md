@@ -26,7 +26,7 @@ When running a workflow or a local script, the settings are applied by reading o
 | appFolders | appFolders should be an array of folders (relative to project root), which contains apps for this project. Apps in these folders are sorted based on dependencies and built and published in that order. | [ ] |
 | testFolders | testFolders should be an array of folders (relative to project root), which contains test apps for this project. Apps in these folders are sorted based on dependencies and built, published and tests are run in that order. | [ ] |
 | appSourceCopMandatoryAffixes | This setting is only used if the type is AppSource App. The value is an array of affixes, which is used for running AppSource Cop. | [ ] |
-| appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version<br />**release_status** = release/prerelease/draft<br />**projects** = projects<br />**authtoken** = Auth token<br />**TODO:** complete documentation and add to tests | [ ] |
+| appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version (default latest)<br />**release_status** = latestBuild/release/prerelease/draft (default latestBuild)<br />**projects** = projects (default * = all)<br />**AuthTokenSecret** = Name of secret containing auth token (default none)<br /> | [ ] |
 
 ## Basic Repository settings
 The repository settings are only read from the repository settings file (.github\AL-Go-Settings.json)
@@ -111,7 +111,19 @@ This functionality is also available in AL-Go for GitHub, by adding a file to th
 
 ## BcContainerHelper settings
 
-TODO: Repo settings file can contain BcContainerHelper settings.
+The repo settings file (.github\\AL-Go-Settings.json) can contain BcContainerHelper settings. Some BcContainerHelper settings are machine specific (folders and like), and should not be set in the repo settings file.
+
+Settings, which might be relevant to set in the settings file includes
+
+| Setting | Description | Default |
+| :-- | :-- | :-- |
+| baseUrl | The Base Url for the online Business Central Web Client. This should be changed when targetting embed apps. | https://businesscentral.dynamics.com |
+| apiBaseUrl | The Base Url for the online Business Central API endpoint. This should be changed when targetting embed apps. | https://api.businesscentral.dynamics.com |
+| PartnerTelemetryConnectionString | The Telemetry Connection String for partner telemetry for DevOps telemetry. | |
+| SendExtendedTelemetryToMicrosoft | Set this value to true if you agree to emit extended DevOps telemetry to Microsoft. | false |
+| ObjectIdForInternalUse | BcContainerHelper will use this Object ID for internal purposes. Change if the default Object ID is in use. | 88123 |
+| TreatWarningsAsErrors | A list of AL warning codes, which should be treated as errors | [ ] |
+| DefaultNewContainerParameters | A list of parameters to be added to all container creations in this repo | { } |
 
 ## Your own version of AL-Go for GitHub
 
