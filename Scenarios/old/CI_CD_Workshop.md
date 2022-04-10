@@ -3,7 +3,7 @@ The recommended way of doing CI/CD today for AppSource apps or PTEs is to use [A
 
 You will find usage scenarios in the AL-Go repo
 
-Below you will find the original HOL, which no longer is being maintained.
+Below you will find the original HOL, which no longer is being maintained. You can also download the old HOL as a .pdf [here](https://bcdocker.blob.core.windows.net/public/cicd%20workshop.pdf).
 
 # Azure DevOps / GitHub - CI/CD Workshop
 ![Title image](Docs/image-0.png)
