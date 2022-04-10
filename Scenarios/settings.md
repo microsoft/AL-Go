@@ -111,8 +111,8 @@ This functionality is also available in AL-Go for GitHub, by adding a file to th
 
 ## BcContainerHelper settings
 
-The repo settings file (.github\\AL-Go-Settings.json) can contain BcContainerHelper settings.
-Some BcContainerHelper settings are machine specific (folders and like), and should not be set in the repo settings file.
+The repo settings file (.github\\AL-Go-Settings.json) can contain BcContainerHelper settings. Some BcContainerHelper settings are machine specific (folders and like), and should not be set in the repo settings file.
+
 Settings, which might be relevant to set in the settings file includes
 
 | Setting | Description | Default |
