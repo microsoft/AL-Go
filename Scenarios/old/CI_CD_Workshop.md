@@ -1,7 +1,5 @@
 # NOTE: This is an old version of the CI/CD Workshop
-The recommended way of doing CI/CD today for AppSource apps or PTEs is to use [AL-Go for GitHub](https://github.com/microsoft/AL-Go#readme)
-
-You will find usage scenarios in the AL-Go repo
+The recommended way of doing CI/CD today for AppSource apps or PTEs is to use [AL-Go for GitHub](https://github.com/microsoft/AL-Go#readme). You will find usage scenarios in the AL-Go repo.
 
 Below you will find the original HOL, which no longer is being maintained. You can also download the old HOL as a .pdf [here](https://bcdocker.blob.core.windows.net/public/cicd%20workshop.pdf).
 
