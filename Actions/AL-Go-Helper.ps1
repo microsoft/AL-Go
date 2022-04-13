@@ -757,7 +757,7 @@ function CloneIntoNewFolder {
 
 function CommitFromNewFolder {
     Param(
-        [string] $severUrl,
+        [string] $serverUrl,
         [string] $commitMessage,
         [string] $branch
     )
