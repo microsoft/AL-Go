@@ -237,6 +237,7 @@ try {
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
+        -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
         -testFolders $repo.testFolders `

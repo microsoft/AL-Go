@@ -86,8 +86,19 @@ jobs:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           project: ${{ matrix.project }}
 
+      - name: Read secrets (PR)
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        if: github.event_name == 'pull_request'
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          settingsJson: ${{ env.Settings }}
+          secrets: 'licenseFileUrl,insiderSasToken,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
+
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        if: github.event_name != 'pull_request'
         env:
           secrets: ${{ toJson(secrets) }}
         with:
