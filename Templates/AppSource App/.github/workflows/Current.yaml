@@ -43,6 +43,7 @@ jobs:
     name: Build ${{ matrix.project }}
     outputs:
       TestResultsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestResultsArtifactsName }}
+      BuildOutputArtifactsName: ${{ steps.calculateArtifactNames.outputs.BuildOutputArtifactsName }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -80,6 +81,17 @@ jobs:
           $TestResultsArtifactsName = "$project-TestResults"
           Write-Host "::set-output name=TestResultsArtifactsName::$TestResultsArtifactsName"
           Add-Content -Path $env:GITHUB_ENV -Value "TestResultsArtifactsName=$TestResultsArtifactsName"
+          $BuildOutputArtifactsName = "$project-BuildOutput"
+          Write-Host "::set-output name=BuildOutputArtifactsName::$BuildOutputArtifactsName"
+          Add-Content -Path $env:GITHUB_ENV -Value "BuildOutputArtifactsName=$BuildOutputArtifactsName"
+
+      - name: Publish artifacts - build output
+        uses: actions/upload-artifact@v2
+        if: success() || failure()
+        with:
+          name: ${{ env.buildOutputArtifactsName }}
+          path: '${{ matrix.project }}/BuildOutput.txt'
+          if-no-files-found: ignore
 
       - name: Publish artifacts - test results
         uses: actions/upload-artifact@v2
