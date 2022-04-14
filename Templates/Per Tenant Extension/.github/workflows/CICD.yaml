@@ -76,6 +76,7 @@ jobs:
       AppsArtifactsName: ${{ steps.calculateArtifactNames.outputs.AppsArtifactsName }}
       TestAppsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestAppsArtifactsName }}
       TestResultsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestResultsArtifactsName }}
+      BuildOutputArtifactsName: ${{ steps.calculateArtifactNames.outputs.BuildOutputArtifactsName }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -124,7 +125,8 @@ jobs:
           $AppsArtifactsName = "$project-Apps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
           $TestAppsArtifactsName = "$project-TestApps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
           $TestResultsArtifactsName = "$project-TestResults"
-          'AppsArtifactsName','TestAppsArtifactsName','TestResultsArtifactsName' | ForEach-Object {
+          $BuildOutputArtifactsName = "$project-BuildOutput"
+          'AppsArtifactsName','TestAppsArtifactsName','TestResultsArtifactsName','BuildOutputArtifactsName' | ForEach-Object {
             $value = (Get-Variable -Name $_).Value
             Write-Host "::set-output name=$_::$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$_=$value"
@@ -144,6 +146,14 @@ jobs:
         with:
           name: ${{ env.testAppsArtifactsName }}
           path: '${{ matrix.project }}/output/TestApps/'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - build output
+        uses: actions/upload-artifact@v2
+        if: success() || failure()
+        with:
+          name: ${{ env.buildOutputArtifactsName }}
+          path: '${{ matrix.project }}/BuildOutput.txt'
           if-no-files-found: ignore
 
       - name: Publish artifacts - test results

@@ -196,7 +196,7 @@ try {
                 invoke-git status
 
                 $templateUrl = "$templateUrl@$templateBranch"
-                $RepoSettingsFile = "C:\src\github\BusinessCentralApps\BingMaps.PTE\.github\AL-Go-Settings.json"
+                $RepoSettingsFile = ".github\AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
                     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
                 }
@@ -246,10 +246,10 @@ try {
             }
             catch {
                 if ($directCommit) {
-                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows."
+                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
                 }
                 else {
-                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows."
+                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
                 }
             }
         }
