@@ -376,6 +376,7 @@ function ReadSettings {
         "installApps"                            = @()
         "installTestApps"                        = @()
         "installOnlyReferencedApps"              = $true
+        "generateDependencyArtifact"             = $false
         "skipUpgrade"                            = $false
         "applicationDependency"                  = "18.0.0.0"
         "updateDependencies"                     = $false
@@ -649,6 +650,7 @@ function AnalyzeRepo {
             if ($illegalCountries) {
                 throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
             }
+            $artifactUrl = $artifactUrl.Replace($artifactUrl.Split('/')[4],$atArtifactUrl.Split('/')[4])
         }
         else {
             Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"

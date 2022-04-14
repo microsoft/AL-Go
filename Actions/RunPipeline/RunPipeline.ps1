@@ -239,6 +239,7 @@ try {
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
+        -generateDependencyArtifact:$repo.generateDependencyArtifact `
         -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
