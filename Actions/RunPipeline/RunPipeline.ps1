@@ -206,7 +206,9 @@ try {
     if (Test-Path $testResultsFiles) {
         Remove-Item $testResultsFiles -Force
     }
-    
+
+    $buildOutputFile = Join-Path $baseFolder "BuildOutput.txt"
+
     "containerName=$containerName" | Add-Content $ENV:GITHUB_ENV
 
     Set-Location $baseFolder
@@ -237,11 +239,14 @@ try {
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
+        -generateDependencyArtifact:$repo.generateDependencyArtifact `
+        -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
         -testFolders $repo.testFolders `
         -doNotBuildTests:$doNotBuildTests `
         -doNotRunTests:$doNotRunTests `
+        -buildOutputFile $buildOutputFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
         -installTestRunner:$repo.installTestRunner `

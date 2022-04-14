@@ -76,6 +76,7 @@ jobs:
       AppsArtifactsName: ${{ steps.calculateArtifactNames.outputs.AppsArtifactsName }}
       TestAppsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestAppsArtifactsName }}
       TestResultsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestResultsArtifactsName }}
+      BuildOutputArtifactsName: ${{ steps.calculateArtifactNames.outputs.BuildOutputArtifactsName }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -86,8 +87,19 @@ jobs:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           project: ${{ matrix.project }}
 
+      - name: Read secrets (PR)
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        if: github.event_name == 'pull_request'
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          settingsJson: ${{ env.Settings }}
+          secrets: 'licenseFileUrl,insiderSasToken,KeyVaultCertificateUrl,KeyVaultCertificatePassword,KeyVaultClientId'
+
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        if: github.event_name != 'pull_request'
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -110,13 +122,11 @@ jobs:
           $settings = '${{ env.Settings }}' | ConvertFrom-Json
           $project = '${{ matrix.project }}'
           if ($project -eq ".") { $project = $settings.RepoName }
-          $AppsArtifactsName = "$project-Apps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
-          $TestAppsArtifactsName = "$project-TestApps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
-          $TestResultsArtifactsName = "$project-TestResults"
-          'AppsArtifactsName','TestAppsArtifactsName','TestResultsArtifactsName' | ForEach-Object {
-            $value = (Get-Variable -Name $_).Value
-            Write-Host "::set-output name=$_::$value"
-            Add-Content -Path $env:GITHUB_ENV -Value "$_=$value"
+          'Apps','Dependencies','TestApps','TestResults','BuildOutput' | ForEach-Object {
+            $name = "$($_)ArtifactsName"
+            $value = "$project-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+            Write-Host "::set-output name=$name::$value"
+            Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }
 
       - name: Publish artifacts - apps
@@ -127,12 +137,28 @@ jobs:
           path: '${{ matrix.project }}/output/Apps/'
           if-no-files-found: ignore
 
+      - name: Publish artifacts - dependencies
+        uses: actions/upload-artifact@v2
+        if: github.event_name != 'pull_request'
+        with:
+          name: ${{ env.dependenciesArtifactsName }}
+          path: '${{ matrix.project }}/output/Dependencies/'
+          if-no-files-found: ignore
+
       - name: Publish artifacts - test apps
         uses: actions/upload-artifact@v2
         if: github.event_name != 'pull_request'
         with:
           name: ${{ env.testAppsArtifactsName }}
           path: '${{ matrix.project }}/output/TestApps/'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - build output
+        uses: actions/upload-artifact@v2
+        if: success() || failure()
+        with:
+          name: ${{ env.buildOutputArtifactsName }}
+          path: '${{ matrix.project }}/BuildOutput.txt'
           if-no-files-found: ignore
 
       - name: Publish artifacts - test results
