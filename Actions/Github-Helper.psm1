@@ -28,14 +28,17 @@ function Get-dependencies {
             $dependency | Add-Member -name "Projects" -MemberType NoteProperty -Value "*"
         }
         if (-not ($dependency.PsObject.Properties.name -eq "release_status")) {
-            $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "latestBuild"
+            $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
         }
 
-        Write-Host "Getting releases from $($dependency.repo)"
+        # TODO better error messages
+
         $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
         if ($dependency.release_status -eq "latestBuild") {
 
             # TODO it should check the branch and limit to a certain branch
+
+            Write-Host "Getting artifacts from $($dependency.repo)"
             $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask $mask
             if ($dependency.version -ne "latest") {
                 $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
@@ -50,6 +53,7 @@ function Get-dependencies {
         }
         else {
 
+            Write-Host "Getting releases from $($dependency.repo)"
             $releases = GetReleases -api_url $api_url -token $dependency.authTokenSecret -repository $repository
             if ($dependency.version -ne "latest") {
                 $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
