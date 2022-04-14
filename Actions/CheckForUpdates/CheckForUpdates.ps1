@@ -56,6 +56,8 @@ try {
         $updateSettings = $false
     }
 
+    AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
+
     $templateBranch = $templateUrl.Split('@')[1]
     $templateUrl = $templateUrl.Split('@')[0]
 
@@ -153,9 +155,11 @@ try {
     if (-not $update) {
         if (($updateFiles) -or ($removeFiles)) {
             OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $true
         }
         else {
             Write-Host "Your repository runs on the latest version of AL-Go System."
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $false
         }
     }
     else {
@@ -191,14 +195,20 @@ try {
 
                 invoke-git status
 
-                $RepoSettingsFile = ".github\AL-Go-Settings.json"
+                $templateUrl = "$templateUrl@$templateBranch"
+                $RepoSettingsFile = "C:\src\github\BusinessCentralApps\BingMaps.PTE\.github\AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
-                    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+                    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
                 }
                 else {
-                    $repoSettings = @{}
+                    $repoSettings = [PSCustomObject]@{}
                 }
-                $repoSettings.templateUrl = "$templateUrl@$templateBranch"
+                if ($repoSettings.PSObject.Properties.Name -eq "templateUrl") {
+                    $repoSettings.templateUrl = $templateUrl
+                }
+                else {
+                    $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
+                }
                 $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
 
                 $updateFiles | ForEach-Object {

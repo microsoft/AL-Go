@@ -378,6 +378,7 @@ function ReadSettings {
         "installOnlyReferencedApps"              = $true
         "skipUpgrade"                            = $false
         "applicationDependency"                  = "18.0.0.0"
+        "updateDependencies"                     = $false
         "installTestRunner"                      = $false
         "installTestFramework"                   = $false
         "installTestLibraries"                   = $false
@@ -482,68 +483,6 @@ function AnalyzeRepo {
         }
     }
 
-    if (!$doNotCheckArtifactSetting) {
-        Write-Host "Checking artifact setting"
-        if ($artifact -like "https://*") {
-            $artifactUrl = $artifact
-            $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
-            $artifactType = ("$artifactUrl////".Split('/')[3])
-            $version = ("$artifactUrl////".Split('/')[4])
-            $country = ("$artifactUrl////".Split('/')[5])
-            $sasToken = "$($artifactUrl)?".Split('?')[1]
-        }
-        else {
-            $segments = "$artifact/////".Split('/')
-            $storageAccount = $segments[0];
-            $artifactType = $segments[1]; if ($artifactType -eq "") { $artifactType = 'Sandbox' }
-            $version = $segments[2]
-            $country = $segments[3]; if ($country -eq "") { $country = $settings.country }
-            $select = $segments[4]; if ($select -eq "") { $select = "latest" }
-            $sasToken = $segments[5]
-            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -sasToken $sasToken | Select-Object -First 1
-            if (-not $artifactUrl) {
-                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
-            }
-            $version = $artifactUrl.Split('/')[4]
-            $storageAccount = $artifactUrl.Split('/')[2]
-        }
-    
-        if ($settings.additionalCountries -or $country -ne $settings.country) {
-            if ($country -ne $settings.country) {
-                OutputWarning -message "artifact definition in $ALGoSettingsFile uses a different country ($country) than the country definition ($($settings.country))"
-            }
-            Write-Host "Checking Country and additionalCountries"
-            # AT is the latest published language - use this to determine available country codes (combined with mapping)
-            $ver = [Version]$version
-            Write-Host "https://$storageAccount/$artifactType/$version/$country"
-            $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
-            Write-Host "Latest AT artifacts $atArtifactUrl"
-            $latestATversion = $atArtifactUrl.Split('/')[4]
-            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
-                $countryArtifactUrl = $_.Split('?')[0] # remove sas token
-                $countryArtifactUrl.Split('/')[5] # get country
-            }
-            Write-Host "Countries with artifacts $($countries -join ',')"
-            $allowedCountries = $bcContainerHelperConfig.mapCountryCode.PSObject.Properties.Name + $countries | Select-Object -Unique
-            Write-Host "Allowed Country codes $($allowedCountries -join ',')"
-            if ($allowedCountries -notcontains $settings.country) {
-                throw "Country ($($settings.country)), specified in $ALGoSettingsFile is not a valid country code."
-            }
-            $illegalCountries = $settings.additionalCountries | Where-Object { $allowedCountries -notcontains $_ }
-            if ($illegalCountries) {
-                throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
-            }
-        }
-        else {
-            Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"
-            $folders = Download-Artifacts -artifactUrl $artifactUrl -includePlatform -ErrorAction SilentlyContinue
-            if (-not ($folders)) {
-                throw "Unable to download artifacts from $($artifactUrl.Split('?')[0]), please check $ALGoSettingsFile."
-            }
-            $settings.artifact = $artifactUrl
-        }
-    }
-    
     if (-not (@($settings.appFolders)+@($settings.testFolders))) {
         Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path -Path (Join-Path $_.FullName "app.json") } | ForEach-Object {
             $folder = $_
@@ -570,6 +509,7 @@ function AnalyzeRepo {
             }
         }
     }
+
     Write-Host "Checking appFolders and testFolders"
     $dependencies = [ordered]@{}
     $true, $false | ForEach-Object {
@@ -641,8 +581,84 @@ function AnalyzeRepo {
             }
         }
     }
+    Write-Host "Application Dependency $($settings.applicationDependency)"
 
     if (!$doNotCheckArtifactSetting) {
+        Write-Host "Checking artifact setting"
+        if ($artifact -eq "" -and $settings.updateDependencies) {
+            $artifact = Get-BCArtifactUrl -country $settings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$settings.applicationDependency } | Select-Object -First 1
+            if (-not $artifact) {
+                if ($insiderSasToken) {
+                    $artifact = Get-BCArtifactUrl -storageAccount bcinsider -country $settings.country -select all -sasToken $insiderSasToken | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$settings.applicationDependency } | Select-Object -First 1
+                    if (-not $artifact) {
+                        throw "No artifacts found for application dependency $($settings.applicationDependency)."
+                    }
+                }
+                else {
+                    throw "No artifacts found for application dependency $($settings.applicationDependency). If you are targetting an insider version, you need to create a secret called InsiderSasToken, containing the Insider SAS Token from https://aka.ms/collaborate"
+                }
+            }
+        }
+        
+        if ($artifact -like "https://*") {
+            $artifactUrl = $artifact
+            $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
+            $artifactType = ("$artifactUrl////".Split('/')[3])
+            $version = ("$artifactUrl////".Split('/')[4])
+            $country = ("$artifactUrl////".Split('/')[5])
+            $sasToken = "$($artifactUrl)?".Split('?')[1]
+        }
+        else {
+            $segments = "$artifact/////".Split('/')
+            $storageAccount = $segments[0];
+            $artifactType = $segments[1]; if ($artifactType -eq "") { $artifactType = 'Sandbox' }
+            $version = $segments[2]
+            $country = $segments[3]; if ($country -eq "") { $country = $settings.country }
+            $select = $segments[4]; if ($select -eq "") { $select = "latest" }
+            $sasToken = $segments[5]
+            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -sasToken $sasToken | Select-Object -First 1
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+            }
+            $version = $artifactUrl.Split('/')[4]
+            $storageAccount = $artifactUrl.Split('/')[2]
+        }
+    
+        if ($settings.additionalCountries -or $country -ne $settings.country) {
+            if ($country -ne $settings.country) {
+                OutputWarning -message "artifact definition in $ALGoSettingsFile uses a different country ($country) than the country definition ($($settings.country))"
+            }
+            Write-Host "Checking Country and additionalCountries"
+            # AT is the latest published language - use this to determine available country codes (combined with mapping)
+            $ver = [Version]$version
+            Write-Host "https://$storageAccount/$artifactType/$version/$country"
+            $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
+            Write-Host "Latest AT artifacts $atArtifactUrl"
+            $latestATversion = $atArtifactUrl.Split('/')[4]
+            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
+                $countryArtifactUrl = $_.Split('?')[0] # remove sas token
+                $countryArtifactUrl.Split('/')[5] # get country
+            }
+            Write-Host "Countries with artifacts $($countries -join ',')"
+            $allowedCountries = $bcContainerHelperConfig.mapCountryCode.PSObject.Properties.Name + $countries | Select-Object -Unique
+            Write-Host "Allowed Country codes $($allowedCountries -join ',')"
+            if ($allowedCountries -notcontains $settings.country) {
+                throw "Country ($($settings.country)), specified in $ALGoSettingsFile is not a valid country code."
+            }
+            $illegalCountries = $settings.additionalCountries | Where-Object { $allowedCountries -notcontains $_ }
+            if ($illegalCountries) {
+                throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
+            }
+        }
+        else {
+            Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"
+            $folders = Download-Artifacts -artifactUrl $artifactUrl -includePlatform -ErrorAction SilentlyContinue
+            if (-not ($folders)) {
+                throw "Unable to download artifacts from $($artifactUrl.Split('?')[0]), please check $ALGoSettingsFile."
+            }
+        }
+        $settings.artifact = $artifactUrl
+
         if ([Version]$settings.applicationDependency -gt [Version]$version) {
             throw "Application dependency is set to $($settings.applicationDependency), which isn't compatible with the artifact version $version"
         }
@@ -757,7 +773,7 @@ function CloneIntoNewFolder {
 
 function CommitFromNewFolder {
     Param(
-        [string] $severUrl,
+        [string] $serverUrl,
         [string] $commitMessage,
         [string] $branch
     )
