@@ -44,7 +44,7 @@ try {
         $getSettings = @($settings.Keys)
     }
 
-    if ($settings.appBuild -eq [int32]::MaxValue -and $settings.appRevision -eq [int32]::MaxValue) {
+    if ($settings.appBuild -eq [int32]::MaxValue) {
         $settings.versioningStrategy = 15
     }
 
@@ -65,7 +65,7 @@ try {
                 }
                 15 { # Use maxValue
                     $settings.appBuild = [Int32]::MaxValue
-                    $settings.appRevision = [Int32]::MaxValue
+                    $settings.appRevision = 0
                 }
                 default {
                     OutputError -message "Unknown version strategy $versionStrategy"

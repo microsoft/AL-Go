@@ -123,10 +123,11 @@ jobs:
           $project = '${{ matrix.project }}'
           if ($project -eq ".") { $project = $settings.RepoName }
           $AppsArtifactsName = "$project-Apps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+          $DependenciesArtifactsName = "$project-Dependencies-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
           $TestAppsArtifactsName = "$project-TestApps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
           $TestResultsArtifactsName = "$project-TestResults"
           $BuildOutputArtifactsName = "$project-BuildOutput"
-          'AppsArtifactsName','TestAppsArtifactsName','TestResultsArtifactsName','BuildOutputArtifactsName' | ForEach-Object {
+          'AppsArtifactsName','DependenciesArtifactsName','TestAppsArtifactsName','TestResultsArtifactsName','BuildOutputArtifactsName' | ForEach-Object {
             $value = (Get-Variable -Name $_).Value
             Write-Host "::set-output name=$_::$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$_=$value"
@@ -138,6 +139,14 @@ jobs:
         with:
           name: ${{ env.appsArtifactsName }}
           path: '${{ matrix.project }}/output/Apps/'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - dependencies
+        uses: actions/upload-artifact@v2
+        if: github.event_name != 'pull_request'
+        with:
+          name: ${{ env.dependenciesArtifactsName }}
+          path: '${{ matrix.project }}/output/Dependencies/'
           if-no-files-found: ignore
 
       - name: Publish artifacts - test apps
