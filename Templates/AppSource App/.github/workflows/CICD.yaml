@@ -122,15 +122,11 @@ jobs:
           $settings = '${{ env.Settings }}' | ConvertFrom-Json
           $project = '${{ matrix.project }}'
           if ($project -eq ".") { $project = $settings.RepoName }
-          $AppsArtifactsName = "$project-Apps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
-          $DependenciesArtifactsName = "$project-Dependencies-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
-          $TestAppsArtifactsName = "$project-TestApps-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
-          $TestResultsArtifactsName = "$project-TestResults"
-          $BuildOutputArtifactsName = "$project-BuildOutput"
-          'AppsArtifactsName','DependenciesArtifactsName','TestAppsArtifactsName','TestResultsArtifactsName','BuildOutputArtifactsName' | ForEach-Object {
-            $value = (Get-Variable -Name $_).Value
-            Write-Host "::set-output name=$_::$value"
-            Add-Content -Path $env:GITHUB_ENV -Value "$_=$value"
+          'Apps','Dependencies','TestApps','TestResults','BuildOutput' | ForEach-Object {
+            $name = "$($_)ArtifactsName"
+            $value = "$project-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+            Write-Host "::set-output name=$name::$value"
+            Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }
 
       - name: Publish artifacts - apps
