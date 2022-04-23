@@ -1,7 +1,7 @@
 *.app
 *.flf
 TestResults.xml
-BuildOutput.txt
+BuildOutput.xml
 rad.json
 .output
 .alcache/
