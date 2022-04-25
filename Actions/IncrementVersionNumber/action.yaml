@@ -30,7 +30,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y')
+    - run: try { ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -versionnumber '${{ inputs.versionnumber }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
       shell: PowerShell
 branding:
   icon: terminal
