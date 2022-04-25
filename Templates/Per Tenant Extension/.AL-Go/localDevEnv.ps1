@@ -8,12 +8,28 @@ Param(
     [string] $auth = "",
     [pscredential] $credential = $null,
     [string] $licenseFileUrl = "",
-    [string] $insiderSasToken = ""
+    [string] $insiderSasToken = "",
+    [switch] $fromVSCode
 )
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
+$pshost = Get-Host
+if ($pshost.Name -eq "Visual Studio Code Host") {
+    $pslink = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk"
+    if (!(Test-Path $pslink)) {
+        $pslink = "powershell.exe"
+    }
+    $credstr = ""
+    if ($credential) {
+        $credstr = " -credential (New-Object PSCredential '$($credential.UserName)', ('$($credential.Password | ConvertFrom-SecureString)' | ConvertTo-SecureString))"
+    }
+    Start-Process -Verb runas $pslink @("-Command ""$($MyInvocation.InvocationName)"" -fromVSCode -containerName '$containerName' -auth '$auth' -licenseFileUrl '$licenseFileUrl' -insiderSasToken '$insiderSasToken'$credstr")
+    return
+}
+
+try {
 $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
 $webClient = New-Object System.Net.WebClient
 $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
@@ -36,6 +52,10 @@ Write-Host -ForegroundColor Yellow @'
 
 Write-Host @'
 This script will create a docker based local development environment for your project.
+
+NOTE: You need to have Docker installed, configured and be able to create Business Central containers for this to work.
+If this fails, you can setup a cloud based development environment by running cloudDevEnv.ps1
+
 All apps and test apps will be compiled and published to the environment in the development scope.
 The script will also modify launch.json to have a Local Sandbox configuration point to your environment.
 
@@ -116,3 +136,9 @@ CreateDevEnv `
     -credential $credential `
     -LicenseFileUrl $licenseFileUrl `
     -InsiderSasToken $insiderSasToken
+}
+finally {
+    if ($fromVSCode) {
+        Read-Host "Press ENTER to close this window"
+    }
+}
