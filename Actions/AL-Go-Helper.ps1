@@ -1047,7 +1047,7 @@ function CreateDevEnv {
                 elseif ($kind -eq "cloud") {
                     $adminCenterApiCredentialsSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.AdminCenterApiCredentialsSecretName
                     if ($adminCenterApiCredentialsSecret) { $AdminCenterApiCredentials = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable }
-                    $legalParameters = @("RefreshToken","CliendId","ClientSecret","deviceCode")
+                    $legalParameters = @("RefreshToken","CliendId","ClientSecret","deviceCode","tenantId")
                     $adminCenterApiCredentials.Keys | ForEach-Object {
                         if (-not ($legalParameters -contains $_)) {
                             throw "$_ is an illegal property in adminCenterApiCredentials setting"
@@ -1076,8 +1076,7 @@ function CreateDevEnv {
         }
         $repo = AnalyzeRepo @params
         if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
-            Write-Host "Repository is empty, exiting"
-            exit
+            Write-Host "Repository is empty"
         }
 
         if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
