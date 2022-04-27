@@ -211,7 +211,7 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           settingsJson: ${{ env.Settings }}
-          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,AuthContext'
+          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
       - name: AuthContext
         id: authContext
@@ -221,13 +221,19 @@ jobs:
             Write-Host "Using ${{ steps.envName.outputs.envName }}-AuthContext secret"
           }
           else {
-            $authContext = [System.Environment]::GetEnvironmentVariable('AuthContext')
+            $authContext = [System.Environment]::GetEnvironmentVariable('${{ steps.envName.outputs.envName }}_AuthContext')
             if ($authContext) {
-              Write-Host "Using AuthContext secret"
+              Write-Host "Using ${{ steps.envName.outputs.envName }}_AuthContext secret"
             }
             else {
-              Write-Host "::Error::No AuthContext provided"
-              exit 1
+              $authContext = [System.Environment]::GetEnvironmentVariable('AuthContext')
+              if ($authContext) {
+                Write-Host "Using AuthContext secret"
+              }
+              else {
+                Write-Host "::Error::No AuthContext provided"
+                exit 1
+              }
             }
           }
           Write-Host "::set-output name=authContext::$authContext"
