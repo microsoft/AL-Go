@@ -242,6 +242,12 @@ function CreateRepository {
 
         Copy-Item (Join-Path $templatePath '*') -Destination . -Recurse -Force
     }
+    if ($private) {
+        $repoSettingsFile = ".github\AL-Go-Settings.json"
+        $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
+        $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
+    }
 
     invoke-git add *
     invoke-git commit --allow-empty -m 'init'
