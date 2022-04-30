@@ -12,6 +12,9 @@ on:
         required: false
         default: 'N'
 
+permissions:
+  contents: read
+
 defaults:
   run:
     shell: PowerShell
