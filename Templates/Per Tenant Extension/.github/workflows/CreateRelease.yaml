@@ -24,6 +24,9 @@ on:
         required: false
         default: 'N'
 
+permissions:
+  contents: write
+
 concurrency: release
 
 defaults:

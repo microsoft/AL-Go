@@ -23,6 +23,10 @@ on:
         required: false
         default: 'N'
 
+permissions:
+  contents: write
+  pull-requests: write
+
 defaults:
   run:
     shell: PowerShell
