@@ -21,7 +21,7 @@ inputs:
     required: false
     default: '.'
   versionnumber:
-    description: New Version Number (Major.Minor)
+    description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
     required: true
   directCommit:
     description: Direct Commit (Y/N)
