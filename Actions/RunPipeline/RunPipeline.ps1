@@ -154,7 +154,13 @@ try {
     else {
         try {
             $releasesJson = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-            $latestRelease = $releasesJson | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+            if ($env:GITHUB_REF_NAME -like 'release/*') {
+                # For CI/CD in a release branch use that release as previous build
+                $latestRelease = $releasesJson | Where-Object { $_.tag_name -eq "$env:GITHUB_REF_NAME".SubString(8) } | Select-Object -First 1
+            }
+            else {
+                $latestRelease = $releasesJson | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+            }
             if ($latestRelease) {
                 Write-Host "Using $($latestRelease.name) as previous release"
                 $artifactsFolder = Join-Path $baseFolder "artifacts"
