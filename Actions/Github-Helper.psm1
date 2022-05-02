@@ -87,6 +87,77 @@ function Get-dependencies {
     return $downloadedList;
 }
 
+function SemVerObjToSemVerStr {
+    Param(
+        $semVerObj
+    )
+
+    try {
+        $str = "$($semVerObj.Prefix)$($semVerObj.Major).$($semVerObj.Minor).$($semVerObj.Patch)"
+        for ($i=0; $i -lt 5; $i++) {
+            $seg = $semVerObj."Addt$i"
+            if ($seg -eq 'zzz') { break }
+            if ($i -eq 0) { $str += "-$($seg)" } else { $str += ".$($seg)" }
+        }
+        $str
+    }
+    catch {
+        throw "'$SemVerObj' cannot be recognized as a semantic version object (internal error)"
+    }
+}
+
+function SemVerStrToSemVerObj {
+    Param(
+        [string] $semVerStr
+    )
+
+    $obj = New-Object PSCustomObject
+    try {
+        $prefix = ''
+        $verstr = $semVerStr
+        if ($semVerStr -like 'v*') {
+            $prefix = 'v'
+            $verStr = $semVerStr.Substring(1)
+        }
+        $version = [System.Version]"$($verStr.split('-')[0])"
+        if ($version.Revision -ne -1) { throw "not semver" }
+        $obj | Add-Member -MemberType NoteProperty -Name "Prefix" -Value $prefix
+        $obj | Add-Member -MemberType NoteProperty -Name "Major" -Value ([int]$version.Major)
+        $obj | Add-Member -MemberType NoteProperty -Name "Minor" -Value ([int]$version.Minor)
+        $obj | Add-Member -MemberType NoteProperty -Name "Patch" -Value ([int]$version.Build)
+        0..4 | ForEach-Object {
+            $obj | Add-Member -MemberType NoteProperty -Name "Addt$_" -Value 'zzz'
+        }
+        $idx = $verStr.IndexOf('-')
+        if ($idx -gt 0) {
+            $segments = $verStr.SubString($idx+1).Split('.')
+            if ($segments.Count -ge 5) {
+                throw "max. 5 segments"
+            }
+            0..($segments.Count-1) | ForEach-Object {
+                $result = 0
+                if ([int]::TryParse($segments[$_], [ref] $result)) {
+                    $obj."Addt$_" = [int]$result
+                }
+                else {
+                    if ($segments[$_] -ge 'zzz') {
+                        throw "Unsupported segment"
+                    }
+                    $obj."Addt$_" = $segments[$_]
+                }
+            }
+        }
+        $newStr = SemVerObjToSemVerStr -semVerObj $obj
+        if ($newStr -cne $semVerStr) {
+            throw "Not equal"
+        }
+    }
+    catch {
+        throw "'$semVerStr' cannot be recognized as a semantic version string (https://semver.org)"
+    }
+    $obj
+}
+
 function GetReleases {
     Param(
         [string] $token,
@@ -95,7 +166,28 @@ function GetReleases {
     )
 
     Write-Host "Analyzing releases $api_url/repos/$repository/releases"
-    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json
+    $releases = @(Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json)
+    if ($releases.Count -gt 1) {
+        # Sort by SemVer tag
+        try {
+            $sortedReleases = $releases.tag_name | 
+                ForEach-Object { SemVerStrToSemVerObj -semVerStr $_ } | 
+                Sort-Object -Property Major,Minor,Patch,Addt0,Addt1,Addt2,Addt3,Addt4 -Descending | 
+                ForEach-Object { SemVerObjToSemVerStr -semVerObj $_ } | ForEach-Object {
+                    $tag_name = $_
+                    $releases | Where-Object { $_.tag_name -eq $tag_name }
+                }
+            $sortedReleases
+        }
+        catch {
+            Write-Host -ForegroundColor red "Some of the release tags cannot be recognized as a semantic version string (https://semver.org)"
+            Write-Host -ForegroundColor red "Using default GitHub sorting for releases"
+            $releases
+        }
+    }
+    else {
+        $releases
+    }
 }
 
 function GetHeader {

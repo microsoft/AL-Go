@@ -28,6 +28,8 @@ try {
 
     Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
 
+    SemVerStrToSemVerObj -semVerStr $tag_name | Out-Null
+
     $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY 
 
     $latestReleaseTag = ""
@@ -44,7 +46,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputWarning -message "Couldn't create a release notes. $([environment]::Newline) $($_.Exception.Message)"
+    OutputWarning -message "Couldn't create release notes. $([environment]::Newline) $($_.Exception.Message)"
     OutputWarning -message "You can modify the release note from the release page later."
 
     $releaseNotes = ""

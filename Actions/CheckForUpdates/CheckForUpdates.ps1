@@ -42,6 +42,9 @@ try {
             $templateUrl += "@main"
         }
     }
+    if ($templateUrl -notlike "https://*") {
+        $templateUrl = "https://github.com/$templateUrl"
+    }
 
     $RepoSettingsFile = ".github\AL-Go-Settings.json"
     if (Test-Path $RepoSettingsFile) {
@@ -52,8 +55,13 @@ try {
     }
 
     $updateSettings = $true
-    if ($repoSettings.ContainsKey("TemplateUrl") -and $repoSettings.TemplateUrl -eq $templateUrl) {
-        $updateSettings = $false
+    if ($repoSettings.ContainsKey("TemplateUrl")) {
+        if ($templateUrl.StartsWith('@')) {
+            $templateUrl = "$($repoSettings.TemplateUrl.Split('@')[0])$templateUrl"
+        }
+        if ($repoSettings.TemplateUrl -eq $templateUrl) {
+            $updateSettings = $false
+        }
     }
 
     AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl

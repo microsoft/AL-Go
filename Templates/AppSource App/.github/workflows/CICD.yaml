@@ -6,7 +6,7 @@ on:
     paths-ignore:
       - 'README.md'
       - '.github/**'
-    branches: [ main ]
+    branches: [ main, release/*, feature/* ]
   pull_request:
     paths-ignore:
       - 'README.md'
@@ -127,14 +127,14 @@ jobs:
           if ($project -eq ".") { $project = $settings.RepoName }
           'Apps','Dependencies','TestApps','TestResults','BuildOutput' | ForEach-Object {
             $name = "$($_)ArtifactsName"
-            $value = "$project-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+            $value = "$project-$("$ENV:GITHUB_REF_NAME".Replace('/','_'))-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
             Write-Host "::set-output name=$name::$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }
 
       - name: Publish artifacts - apps
         uses: actions/upload-artifact@v2
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || startswith(github.ref_name, 'release/'))
         with:
           name: ${{ env.appsArtifactsName }}
           path: '${{ matrix.project }}/output/Apps/'
@@ -142,7 +142,7 @@ jobs:
 
       - name: Publish artifacts - dependencies
         uses: actions/upload-artifact@v2
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || startswith(github.ref_name, 'release/'))
         with:
           name: ${{ env.dependenciesArtifactsName }}
           path: '${{ matrix.project }}/output/Dependencies/'
@@ -150,7 +150,7 @@ jobs:
 
       - name: Publish artifacts - test apps
         uses: actions/upload-artifact@v2
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || startswith(github.ref_name, 'release/'))
         with:
           name: ${{ env.testAppsArtifactsName }}
           path: '${{ matrix.project }}/output/TestApps/'
@@ -182,7 +182,7 @@ jobs:
   Deploy:
     runs-on: [ windows-latest ] 
     needs: [ Initialization, Build ]
-    if: ${{ github.event_name != 'pull request' && needs.Initialization.outputs.environmentCount > 0 }}
+    if: ${{ github.event_name != 'pull_request' && github.ref_name == 'main' && needs.Initialization.outputs.environmentCount > 0 }}
     strategy:
       matrix:
         environment: ${{ fromJson(needs.Initialization.outputs.environments) }}
@@ -266,4 +266,3 @@ jobs:
         with:
           eventId: "DO0091"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-
