@@ -146,10 +146,10 @@ try {
         }
         $environments = @($environments+@($settings.Environments) | Where-Object { 
             if ($includeProduction) {
-                $_ -like $getEnvironments -or $_ -like "$getEnvironments (Production)"
+                $_ -like $getEnvironments -or $_ -like "$getEnvironments *"
             }
             else {
-                $_ -like $getEnvironments -and $_ -notlike '* (Production)'
+                $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
             }
         })
         if ($environments.Count -eq 1) {
