@@ -7,7 +7,7 @@
 ![localdevenv](/Scenarios/images/6b.png)
 1. Now there is a difference. AL-Go doesn’t support that anybody changes the AL-Go system files and will warn about these changes. The CI/CD pipeline, which kicked off when pushing the change, tells me about this.
 ![summary](/Scenarios/images/6c.png)
-1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHWORKFLOWTOKEN containing a Personal Access Token with permissions to modify workflows
+1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHTOKENWORKFLOW containing a Personal Access Token with permissions to modify workflows
 1. In a browser, navigate to [New personal access token](https://github.com/settings/tokens/new) and create a new **personal access token**. Name it, set the expiration date and check the **workflow option** in the list of **scopes**.
 ![newPAT](/Scenarios/images/6d.png)
 1. Generate the token and **copy it to the clipboard**. You won’t be able to see the token again.
