@@ -14,12 +14,21 @@ Set-StrictMode -Version 2.0
 
 $pshost = Get-Host
 if ($pshost.Name -eq "Visual Studio Code Host") {
-    $pslink = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk"
-    if (!(Test-Path $pslink)) {
-        $pslink = "powershell.exe"
+    if ($MyInvocation.InvocationName -eq '.' -or $MyInvocation.Line -eq '') {
+        $scriptName = Join-Path $PSScriptRoot $MyInvocation.MyCommand
     }
-    Start-Process -Verb runas $pslink @("-Command ""$($MyInvocation.InvocationName)"" -fromVSCode -environmentName '$environmentName' -reuseExistingEnvironment `$$reuseExistingEnvironment")
-    return
+    else {
+        $scriptName = $MyInvocation.InvocationName
+    }
+    if (Test-Path -Path $scriptName -PathType Leaf) {
+        $scriptName = (Get-Item -path $scriptName).FullName
+        $pslink = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk"
+        if (!(Test-Path $pslink)) {
+            $pslink = "powershell.exe"
+        }
+        Start-Process -Verb runas $pslink @("-Command ""$scriptName"" -fromVSCode -environmentName '$environmentName' -reuseExistingEnvironment `$$reuseExistingEnvironment")
+        return
+    }
 }
 
 try {
