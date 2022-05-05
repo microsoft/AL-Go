@@ -8,9 +8,8 @@ on:
         required: false
         default: 'current'
       environmentName:
-        description: Environment to receive the new version (* for all)
-        required: false
-        default: '*'
+        description: Environment mask to receive the new version (* for all, PROD* for all environments starting with PROD)
+        required: true
 
 permissions:
   contents: read
