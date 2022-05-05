@@ -146,7 +146,7 @@ try {
         }
         $environments = @($environments+@($settings.Environments) | Where-Object { 
             if ($includeProduction) {
-                $_ -like $getEnvironments -or $_ -like "$getEnvironments *"
+                $_ -like $getEnvironments -or $_ -like "$getEnvironments (PROD)" -or $_ -like "$getEnvironments (Production)" -or $_ -like "$getEnvironments (FAT)" -or $_ -like "$getEnvironments (Final Acceptance Test)"
             }
             else {
                 $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
