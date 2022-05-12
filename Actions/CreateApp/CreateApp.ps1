@@ -23,6 +23,7 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
+$bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
