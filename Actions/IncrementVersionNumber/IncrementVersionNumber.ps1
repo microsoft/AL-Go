@@ -93,7 +93,7 @@ try {
             if (Test-Path $appJsonFile) {
                 try {
                     $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
-                    $oldVersion = $appJson.Version
+                    $oldVersion = [System.Version]$appJson.Version
                     if ($useRepoVersion) {
                         $appVersion = $repoVersion
                     }
