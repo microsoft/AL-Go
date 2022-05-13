@@ -46,7 +46,12 @@ try {
     if ($project -ne '.') {
         $projects = @(Get-Item -Path "$project\.AL-Go\Settings.json" | ForEach-Object { ($_.FullName.Substring((Get-Location).Path.Length).Split('\'))[1] })
         if ($projects.Count -eq 0) {
-            throw "Project folder $project not found"
+            if ($project -eq '*') {
+                $projects = @( '.' )
+            }
+            else {
+                throw "Project folder $project not found"
+            }
         }
     }
     else {
