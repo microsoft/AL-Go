@@ -391,6 +391,8 @@ function ReadSettings {
         "rulesetFile"                            = ""
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
+        "doNotPublishApps"                       = $false
+        "doNotSignApps"                          = $false
         "appSourceCopMandatoryAffixes"           = @()
         "memoryLimit"                            = ""
         "templateUrl"                            = ""
@@ -424,6 +426,16 @@ function ReadSettings {
                 # check settingsJson.version and do modifications if needed
          
                 MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+
+                if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
+                    $settingsJson.ConditionalSettings | ForEach-Object {
+                        $conditionalSetting = $_
+                        if ($conditionalSetting.branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }) {
+                            Write-Host "Applying conditional settings for $ENV:GITHUB_REF_NAME"
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+                        }
+                    }
+                }
             }
             catch {
                 throw "Settings file $settingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
@@ -1206,6 +1218,17 @@ function CreateDevEnv {
             }
         }
         
+        "installTestRunner",
+        "installTestFramework",
+        "installTestLibraries",
+        "installPerformanceToolkit",
+        "enableCodeCop",
+        "enableAppSourceCop",
+        "enablePerTenantExtensionCop",
+        "enableUICop" | ForEach-Object {
+            if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+        }
+
         Run-AlPipeline @runAlPipelineParams `
             -pipelinename $workflowName `
             -imageName "" `
@@ -1219,15 +1242,7 @@ function CreateDevEnv {
             -testFolders $repo.testFolders `
             -testResultsFile $testResultsFile `
             -testResultsFormat 'JUnit' `
-            -installTestRunner:$repo.installTestRunner `
-            -installTestFramework:$repo.installTestFramework `
-            -installTestLibraries:$repo.installTestLibraries `
-            -installPerformanceToolkit:$repo.installPerformanceToolkit `
-            -enableCodeCop:$repo.enableCodeCop `
-            -enableAppSourceCop:$repo.enableAppSourceCop `
-            -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
-            -enableUICop:$repo.enableUICop `
-            -customCodeCops:$repo.customCodeCops `
+            -customCodeCops $repo.customCodeCops `
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `

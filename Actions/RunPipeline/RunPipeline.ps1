@@ -34,7 +34,6 @@ try {
     } -ArgumentList $genericImageName | Out-Null
 
     $runAlPipelineParams = @{}
-    $environment = 'GitHubActions'
     if ($project  -eq ".") { $project = "" }
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
     $sharedFolder = ""
@@ -117,8 +116,6 @@ try {
     $artifact = $repo.artifact
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
-    $doNotBuildTests = $repo.doNotBuildTests
-    $doNotRunTests = $repo.doNotRunTests
 
     if ($repo.appDependencyProbingPaths) {
         Write-Host "Downloading dependencies ..."
@@ -134,7 +131,7 @@ try {
 
     # Check if insidersastoken is used (and defined)
 
-    if ($CodeSignCertificateUrl -and $CodeSignCertificatePassword) {
+    if (!$repo.doNotSignApps -and $CodeSignCertificateUrl -and $CodeSignCertificatePassword) {
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
             "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
@@ -230,6 +227,20 @@ try {
         }
     }
     
+    "doNotBuildTests",
+    "doNotRunTests",
+    "doNotPublishApps",
+    "installTestRunner",
+    "installTestFramework",
+    "installTestLibraries",
+    "installPerformanceToolkit",
+    "enableCodeCop",
+    "enableAppSourceCop",
+    "enablePerTenantExtensionCop",
+    "enableUICop" | ForEach-Object {
+        if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+    }
+
     Write-Host "Invoke Run-AlPipeline"
     Run-AlPipeline @runAlPipelineParams `
         -pipelinename $workflowName `
@@ -251,23 +262,11 @@ try {
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
         -testFolders $repo.testFolders `
-        -doNotBuildTests:$doNotBuildTests `
-        -doNotRunTests:$doNotRunTests `
         -buildOutputFile $buildOutputFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
-        -installTestRunner:$repo.installTestRunner `
-        -installTestFramework:$repo.installTestFramework `
-        -installTestLibraries:$repo.installTestLibraries `
-        -installPerformanceToolkit:$repo.installPerformanceToolkit `
-        -enableCodeCop:$repo.enableCodeCop `
-        -enableAppSourceCop:$repo.enableAppSourceCop `
-        -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
-        -enableUICop:$repo.enableUICop `
-        -customCodeCops:$repo.customCodeCops `
-        -azureDevOps:($environment -eq 'AzureDevOps') `
-        -gitLab:($environment -eq 'GitLab') `
-        -gitHubActions:($environment -eq 'GitHubActions') `
+        -customCodeCops $repo.customCodeCops `
+        -gitHubActions `
         -failOn $repo.failOn `
         -rulesetFile $repo.rulesetFile `
         -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
