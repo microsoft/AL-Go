@@ -229,6 +229,7 @@ try {
     
     "doNotBuildTests",
     "doNotRunTests",
+    "doNotRunBcptTests",
     "doNotPublishApps",
     "installTestRunner",
     "installTestFramework",
@@ -262,6 +263,7 @@ try {
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
         -testFolders $repo.testFolders `
+        -bcptTestFolders $repo.bcptTestFolders `
         -buildOutputFile $buildOutputFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
@@ -271,10 +273,12 @@ try {
         -rulesetFile $repo.rulesetFile `
         -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
+        -obsoleteTagMinAllowedMajorMinor $repo.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
-        -uninstallRemovedApps
+        -uninstallRemovedApps `
+        -RemoveBcContainer { Param([Hashtable]$parameters) Remove-BcContainerSession -containerName $parameters.ContainerName -killPsSessionProcess; Remove-BcContainer @parameters }
 
     if ($storageContext) {
         Write-Host "Publishing to $storageContainerName in $($storageAccount.StorageAccountName)"
