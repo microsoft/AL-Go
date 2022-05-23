@@ -46,6 +46,7 @@ jobs:
     name: Build ${{ matrix.project }}
     outputs:
       TestResultsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestResultsArtifactsName }}
+      BcptTestResultsArtifactsName: ${{ steps.calculateArtifactNames.outputs.BcptTestResultsArtifactsName }}
       BuildOutputArtifactsName: ${{ steps.calculateArtifactNames.outputs.BuildOutputArtifactsName }}
     steps:
       - name: Checkout
@@ -81,7 +82,7 @@ jobs:
           $settings = '${{ env.Settings }}' | ConvertFrom-Json
           $project = '${{ matrix.project }}'
           if ($project -eq ".") { $project = $settings.RepoName }
-          'TestResults','BuildOutput' | ForEach-Object {
+          'TestResults','BcptTestResults','BuildOutput' | ForEach-Object {
             $name = "$($_)ArtifactsName"
             $value = "$project-$_-NextMajor-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
             Write-Host "::set-output name=$name::$value"
@@ -90,7 +91,7 @@ jobs:
 
       - name: Publish artifacts - build output
         uses: actions/upload-artifact@v2
-        if: success() || failure()
+        if: (success() || failure()) && (hashFiles(format('{0}/BuildOutput.txt',matrix.project)) != '')
         with:
           name: ${{ env.buildOutputArtifactsName }}
           path: '${{ matrix.project }}/BuildOutput.txt'
@@ -98,10 +99,18 @@ jobs:
 
       - name: Publish artifacts - test results
         uses: actions/upload-artifact@v2
-        if: success() || failure()
+        if: (success() || failure()) && (hashFiles(format('{0}/TestResults.xml',matrix.project)) != '')
         with:
           name: ${{ env.testResultsArtifactsName }}
           path: '${{ matrix.project }}/TestResults.xml'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - bcpt test results
+        uses: actions/upload-artifact@v2
+        if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',matrix.project)) != '')
+        with:
+          name: ${{ env.bcptTestResultsArtifactsName }}
+          path: '${{ matrix.project }}/bcptTestResults.json'
           if-no-files-found: ignore
 
       - name: Cleanup
