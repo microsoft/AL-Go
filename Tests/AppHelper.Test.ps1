@@ -4,7 +4,6 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 Get-Module AppHelper | Remove-Module -Force
 Import-Module (Join-Path -path $here -ChildPath "..\Actions\CreateApp\AppHelper.psm1" -Resolve)
 . (Join-Path -path $here -ChildPath "..\Actions\AL-Go-Helper.ps1" -Resolve)
-$bcContainerHelperPath = DownloadAndImportBcContainerHelper -bcContainerHelperVersion 'latest'
 
 Describe 'AppHelper.psm1 Tests' {
     It 'Confirm-IdRanges validates a valid PTE range' {
@@ -90,5 +89,3 @@ Describe 'AppHelper.psm1 Tests' {
         "$($TestDrive)\TestPTE\.vscode\launch.json" | Should -Exist
     }
 }
-
-CleanupAfterBcContainerHelper $bcContainerHelperPath

@@ -166,7 +166,8 @@ function New-SamplePerformanceTestApp
 
     $tempFolder = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
     try {
-        Download-File -sourceUrl 'https://github.com/microsoft/ALAppExtensions/archive/refs/heads/main.zip' -destinationFile "$tempFolder.zip"
+        $webClient = New-Object [System.Net.WebClient]
+        $webClient.DownloadFile('https://github.com/microsoft/ALAppExtensions/archive/refs/heads/main.zip', "$tempFolder.zip")
         Expand-7zipArchive -Path "$tempFolder.zip" -DestinationPath $tempFolder
         $bcptSampleTestFolder = Join-Path $tempFolder 'ALAppExtensions-main\Other\Tests\BCPT-SampleTests'
         if (Test-Path $bcptSampleTestFolder -PathType Container) {
