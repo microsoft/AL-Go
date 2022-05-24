@@ -35,7 +35,7 @@ inputs:
   sampleCode:
     description: Include Sample Code (Y/N)
     required: false
-    default: 'Y'
+    default: 'N'
   directCommit:
     description: Direct Commit (Y/N)
     required: false

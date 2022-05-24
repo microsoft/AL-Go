@@ -3,6 +3,7 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Reloading the module
 Get-Module AppHelper | Remove-Module -Force
 Import-Module (Join-Path -path $here -ChildPath "..\Actions\CreateApp\AppHelper.psm1" -Resolve)
+. (Join-Path -path $here -ChildPath "..\Actions\AL-Go-Helper.ps1" -Resolve)
 
 Describe 'AppHelper.psm1 Tests' {
     It 'Confirm-IdRanges validates a valid PTE range' {
@@ -70,7 +71,7 @@ Describe 'AppHelper.psm1 Tests' {
     }
 
     It 'Should create a new performance test app by calling New-SamplePerformanceTestApp' {
-        New-SamplePerformanceTestApp -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120" -sampleCode $true
+        New-SamplePerformanceTestApp -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50200" -sampleCode $true
 
         "$($TestDrive)\TestPTE" | Should -Exist
         "$($TestDrive)\TestPTE\app.json" | Should -Exist
@@ -80,10 +81,10 @@ Describe 'AppHelper.psm1 Tests' {
         $appJson.publisher | Should -be "TestPublisher"
         $appJson.version | Should -be "1.0.0.0"
         $appJson.idRanges[0].from | Should -be "50101"
-        $appJson.idRanges[0].to | Should -be "50120"
+        $appJson.idRanges[0].to | Should -be "50200"
 
-        "$($TestDrive)\TestPTE\HelloWorld.Test.al" | Should -Exist
-        "$($TestDrive)\TestPTE\HelloWorld.Test.al" | Should -FileContentMatch "codeunit 50101"
+        "$($TestDrive)\TestPTE\src\BCPTCreatePOWithNLines.Codeunit.al" | Should -Exist
+        "$($TestDrive)\TestPTE\src\TestCodeunitsWithParams.Enum.al" | Should -FileContentMatch "enumextension 50101"
 
         "$($TestDrive)\TestPTE\.vscode\launch.json" | Should -Exist
     }
