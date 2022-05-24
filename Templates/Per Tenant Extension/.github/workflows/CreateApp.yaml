@@ -16,6 +16,10 @@ on:
       idrange:
         description: ID range (from..to)
         required: true
+      sampleCode:
+        description: Include Sample code (Y/N)
+        required: false
+        default: 'Y'
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
@@ -60,13 +64,14 @@ jobs:
       - name: Creating a new app
         uses: microsoft/AL-Go-Actions/CreateApp@main
         with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           project: ${{ github.event.inputs.project }}
           type: ${{ env.type }}
           name: ${{ github.event.inputs.name }}
           publisher: ${{ github.event.inputs.publisher }}
           idrange: ${{ github.event.inputs.idrange }}
+          sampleCode: ${{ github.event.inputs.sampleCode }}
           directCommit: ${{ github.event.inputs.directCommit }}
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
   PostProcess:
     if: always()

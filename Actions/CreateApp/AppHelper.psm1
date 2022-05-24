@@ -8,9 +8,10 @@ $alTemplatePath = Join-Path -Path $here -ChildPath "AppTemplate"
 
 
 $validRanges = @{
-    "PTE"           = "50000..99999";
-    "AppSource App" = "100000..$([int32]::MaxValue)";
-    "Test App"      = "50000..$([int32]::MaxValue)" ;
+    "PTE"                  = "50000..99999";
+    "AppSource App"        = "100000..$([int32]::MaxValue)";
+    "Test App"             = "50000..$([int32]::MaxValue)" ;
+    "Performance Test App" = "50000..$([int32]::MaxValue)" ;
 };
 
 function Confirm-IdRanges([string] $templateType, [string]$idrange ) {  
@@ -31,6 +32,7 @@ function Confirm-IdRanges([string] $templateType, [string]$idrange ) {
 
 function UpdateManifest
 (
+    [string] $sourceFolder = $alTemplatePath,
     [string] $appJsonFile,
     [string] $name,
     [string] $publisher,
@@ -40,7 +42,7 @@ function UpdateManifest
 ) 
 {
     #Modify app.json
-    $appJson = Get-Content "$($alTemplatePath)\app.json" -Encoding UTF8 | ConvertFrom-Json
+    $appJson = Get-Content (Join-Path $sourceFolder "app.json") -Encoding UTF8 | ConvertFrom-Json
 
     $appJson.id = [Guid]::NewGuid().ToString()
     $appJson.Publisher = $publisher
@@ -70,14 +72,20 @@ function UpdateManifest
 
 function UpdateALFile 
 (
+    [string] $sourceFolder = $alTemplatePath,
     [string] $destinationFolder,
     [string] $alFileName,
-    [string] $startId
+    [int] $fromId = 50100,
+    [int] $toId = 50100,
+    [int] $startId
 ) 
 {
-    $al = Get-Content -Encoding UTF8 -Raw -path "$($alTemplatePath)\$alFileName"
-    $al = $al.Replace('50100', $startId)
-    Set-Content -Path "$($destinationFolder)\$($alFileName)" -value $al -Encoding UTF8
+    $al = Get-Content -Encoding UTF8 -Raw -path (Join-Path $sourceFolder $alFileName)
+    $fromId..$toId | ForEach-Object {
+        $al = $al.Replace("$_", $startId)
+        $startId++
+    }
+    Set-Content -Path (Join-Path $destinationFolder $alFileName) -value $al -Encoding UTF8
 }
 
 <#
@@ -90,7 +98,8 @@ function New-SampleApp
     [string] $name,
     [string] $publisher,
     [string] $version,
-    [string[]] $idrange
+    [string[]] $idrange,
+    [bool] $sampleCode
 ) 
 {
     Write-Host "Creating a new sample app in: $destinationPath"
@@ -99,7 +108,12 @@ function New-SampleApp
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
 
     UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
-    UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.al" -startId $idrange[0]
+    if ($sampleCode) {
+        UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.al" -startId $idrange[0]
+    }
+    else {
+        Remove-Item -path "$($destinationPath)\Helloworld.al" -Force
+    }
 }
 
 
@@ -113,7 +127,8 @@ function New-SampleTestApp
     [string] $name,
     [string] $publisher,
     [string] $version,
-    [string[]] $idrange
+    [string[]] $idrange,
+    [bool] $sampleCode
 ) 
 {
     Write-Host "Creating a new test app in: $destinationPath"
@@ -122,7 +137,66 @@ function New-SampleTestApp
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
 
     UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version -AddTestDependencies
-    UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.Test.al" -startId $idrange[0]
+    if ($sampleCode) {
+        UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.Test.al" -startId $idrange[0]
+    }
+    else {
+        Remove-Item -path "$($destinationPath)\Helloworld.Test.al" -Force
+    }
+}
+
+# <#
+# .SYNOPSIS
+# Creates a performance test app.
+# #>
+function New-SamplePerformanceTestApp
+(
+    [string] $destinationPath,
+    [string] $name,
+    [string] $publisher,
+    [string] $version,
+    [string[]] $idrange,
+    [bool] $sampleCode
+) 
+{
+    Write-Host "Creating a new performance test app in: $destinationPath"
+    New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
+    New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force | Out-Null
+    Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
+
+    $tempFolder = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+    try {
+        Download-File -sourceUrl 'https://github.com/microsoft/ALAppExtensions/archive/refs/heads/main.zip' -destinationFile "$tempFolder.zip"
+        Expand-7zipArchive -Path "$tempFolder.zip" -DestinationPath $tempFolder
+        $bcptSampleTestFolder = Join-Path $tempFolder 'ALAppExtensions-main\Other\Tests\BCPT-SampleTests'
+        if (Test-Path $bcptSampleTestFolder -PathType Container) {
+            Write-Host $bcptSampleTestFolder
+            Copy-Item -Path "$bcptSampleTestFolder\*" -Destination $destinationPath -Recurse -Force
+        }
+        else {
+            throw "Unable to locate BCPT-SampleTests on https://github.com/microsoft/ALAppExtensions, please file an issue on https://github.com/microsoft/AL-Go/issues"
+        }
+    }
+    finally {
+        if (Test-Path "$tempFolder.zip" -PathType Leaf) {
+            Remove-Item -path "$tempFolder.zip"
+        }
+        if (Test-Path $tempFolder -PathType Container) {
+            Remove-Item $tempFolder -Recurse -Force
+        }
+    }
+    
+    UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
+
+    if ($sampleCode) {
+        Get-ChildItem -Path "$($destinationPath)\src\*.al" -Recurse | ForEach-Object {
+            Write-Host $_.FullName
+            UpdateALFile -sourceFolder $_.DirectoryName -destinationFolder $_.DirectoryName -alFileName $_.name -fromId 149100 -toId 149200 -startId $idrange[0]
+        }
+    }
+    else {
+        Remove-Item -path "$($destinationPath)\src\*.al" -Force
+    }
 }
 
 function Update-WorkSpaces 
@@ -150,5 +224,6 @@ function Update-WorkSpaces
 
 Export-ModuleMember -Function New-SampleApp
 Export-ModuleMember -Function New-SampleTestApp
+Export-ModuleMember -Function New-SamplePerformanceTestApp
 Export-ModuleMember -Function Confirm-IdRanges
 Export-ModuleMember -Function Update-WorkSpaces

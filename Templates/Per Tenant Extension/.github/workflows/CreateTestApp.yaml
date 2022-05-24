@@ -18,6 +18,10 @@ on:
         description: ID range
         required: true
         default: '50000..99999'  
+      sampleCode:
+        description: Include Sample code (Y/N)
+        required: false
+        default: 'Y'
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
@@ -60,6 +64,7 @@ jobs:
           publisher: ${{ github.event.inputs.publisher }}
           name: ${{ github.event.inputs.name }}
           idrange: ${{ github.event.inputs.idrange }}
+          sampleCode: ${{ github.event.inputs.sampleCode }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
   PostProcess:
