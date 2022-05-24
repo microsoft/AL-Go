@@ -7,7 +7,7 @@ Param(
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
     [string] $project = '.',
-    [ValidateSet("PTE", "AppSource App" , "Test App")]
+    [ValidateSet("PTE", "AppSource App" , "Test App", "Performance Test App")]
     [Parameter(HelpMessage = "Type of app to add (PTE, AppSource App, Test App)", Mandatory = $true)]
     [string] $type,
     [Parameter(HelpMessage = "App Name", Mandatory = $true)]
@@ -16,6 +16,8 @@ Param(
     [string] $publisher,
     [Parameter(HelpMessage = "ID range", Mandatory = $true)]
     [string] $idrange,
+    [Parameter(HelpMessage = "Include Sample Code (Y/N)", Mandatory = $false)]
+    [bool] $sampleCode,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
@@ -65,7 +67,12 @@ try {
         $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
         if (@($settingsJson.appFolders)+@($settingsJson.testFolders)) {
-            if ($type -eq "Test App") {
+            if ($type -eq "Performance Test App") {
+                if ($SettingsJson.bcptTestFolders -notcontains $foldername) {
+                    $SettingsJson.bcptTestFolders += @($folderName)
+                }
+            }
+            elseif ($type -eq "Test App") {
                 if ($SettingsJson.testFolders -notcontains $foldername) {
                     $SettingsJson.testFolders += @($folderName)
                 }
@@ -87,11 +94,14 @@ try {
         $appVersion = "$($settingsJson.AppVersion).0.0"
     }
 
-    if ($type -eq "Test App") {
-        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids
+    if ($type -eq "Performance Test App") {
+        New-SamplePerformanceTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids
+    }
+    elseif ($type -eq "Test App") {
+        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids
     }
     else {
-        New-SampleApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids 
+        New-SampleApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids 
     }
 
     Update-WorkSpaces -baseFolder $baseFolder -appName $folderName
