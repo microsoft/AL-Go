@@ -17,7 +17,7 @@ Param(
     [Parameter(HelpMessage = "ID range", Mandatory = $true)]
     [string] $idrange,
     [Parameter(HelpMessage = "Include Sample Code (Y/N)", Mandatory = $false)]
-    [bool] $sampleCode,
+    [bool] $sampleCode = $true,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
