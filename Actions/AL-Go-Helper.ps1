@@ -214,12 +214,17 @@ function DownloadAndImportBcContainerHelper {
         if (Test-Path $repoSettingsPath) {
             if (-not $BcContainerHelperVersion) {
                 $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-                if ($repoSettings.ContainsKey("templateUrl")) {
-                    $githubHost = 'https://github.com'
-                    if ($repoSettings.templateUrl -like "$($githubHost)/freddydk/AL-Go-*@main") {
+                $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
+                if ($ap -and $ap.Count -gt 4) {
+                    $branch = $ap[$ap.Count-2]
+                    $owner = $ap[$ap.Count-4]
+                    if ($owner -eq "freddydk") {
                         $bcContainerHelperVersion = "dev"
                     }
-                    elseif ($repoSettings.templateUrl -like "$($githubHost)/microsoft/AL-Go-*@preview") {
+                    elseif ($owner -eq "businesscentralapps") {
+                        $bcContainerHelperVersion = "preview"
+                    }
+                    elseif ($owner -eq "microsoft" -and $branch -eq "preview") {
                         $bcContainerHelperVersion = "preview"
                     }
                 }
