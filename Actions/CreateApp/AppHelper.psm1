@@ -48,6 +48,14 @@ function UpdateManifest
     $appJson.Publisher = $publisher
     $appJson.Name = $name
     $appJson.Version = $version
+    $appJson.Logo = ""
+    $appJson.url = ""
+    $appJson.EULA = ""
+    $appJson.privacyStatement = ""
+    $appJson.help = ""
+    "contextSensitiveHelpUrl" | ForEach-Object {
+        if ($appJson.PSObject.Properties.Name -eq $_) { $appJson.PSObject.Properties.Remove($_) }
+    }
     $appJson.idRanges[0].from = [int]$idrange[0]
     $appJson.idRanges[0].to = [int]$idrange[1]
     if ($AddTestDependencies) {
@@ -156,47 +164,27 @@ function New-SamplePerformanceTestApp
     [string] $publisher,
     [string] $version,
     [string[]] $idrange,
-    [bool] $sampleCode
+    [bool] $sampleCode,
+    [bool] $sampleSuite,
+    [string] $appSourceFolder
 ) 
 {
     Write-Host "Creating a new performance test app in: $destinationPath"
     New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
     New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force | Out-Null
+    New-Item  -Path "$($destinationPath)\src" -ItemType Directory -Force | Out-Null
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
 
-    $tempFolder = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
-    try {
-        $webClient = New-Object System.Net.WebClient
-        $webClient.DownloadFile('https://github.com/microsoft/ALAppExtensions/archive/refs/heads/main.zip', "$tempFolder.zip")
-        Expand-7zipArchive -Path "$tempFolder.zip" -DestinationPath $tempFolder
-        $bcptSampleTestFolder = Join-Path $tempFolder 'ALAppExtensions-main\Other\Tests\BCPT-SampleTests'
-        if (Test-Path $bcptSampleTestFolder -PathType Container) {
-            Write-Host $bcptSampleTestFolder
-            Copy-Item -Path "$bcptSampleTestFolder\*" -Destination $destinationPath -Recurse -Force
-        }
-        else {
-            throw "Unable to locate BCPT-SampleTests on https://github.com/microsoft/ALAppExtensions, please file an issue on https://github.com/microsoft/AL-Go/issues"
-        }
-    }
-    finally {
-        if (Test-Path "$tempFolder.zip" -PathType Leaf) {
-            Remove-Item -path "$tempFolder.zip"
-        }
-        if (Test-Path $tempFolder -PathType Container) {
-            Remove-Item $tempFolder -Recurse -Force
-        }
-    }
-    
-    UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
+    UpdateManifest -sourceFolder $appSourceFolder -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
 
     if ($sampleCode) {
-        Get-ChildItem -Path "$($destinationPath)\src\*.al" -Recurse | ForEach-Object {
-            Write-Host $_.FullName
-            UpdateALFile -sourceFolder $_.DirectoryName -destinationFolder $_.DirectoryName -alFileName $_.name -fromId 149100 -toId 149200 -startId $idrange[0]
+        Get-ChildItem -Path "$appSourceFolder\src" -Recurse -Filter "*.al" | ForEach-Object {
+            Write-Host $_.Name
+            UpdateALFile -sourceFolder $_.DirectoryName -destinationFolder "$($destinationPath)\src" -alFileName $_.name -fromId 149100 -toId 149200 -startId $idrange[0]
         }
     }
-    else {
-        Remove-Item -path "$($destinationPath)\src\*.al" -Force
+    if ($sampleSuite) {
+        UpdateALFile -sourceFolder $alTemplatePath -destinationFolder $destinationPath -alFileName bcptSuite.json -fromId 149100 -toId 149200 -startId $idrange[0]
     }
 }
 
