@@ -347,7 +347,7 @@ try {
                 $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
             if (Test-Path -Path '.\.github' -PathType Container) {
-                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination ".\github\RELEASENOTES.copy.md" -Force
+                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination ".\.github\RELEASENOTES.copy.md" -Force
             }
             
             invoke-git add .
