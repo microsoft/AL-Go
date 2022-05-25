@@ -1,4 +1,4 @@
-name: Create a new app
+name: Create a new performance test app
 
 on:
   workflow_dispatch:
@@ -9,21 +9,27 @@ on:
         default: '.'
       name:
         description: Name
-        required: true      
+        required: true
+        default: '<YourAppName>.PerformanceTest'         
       publisher:
         description: Publisher
         required: true
       idrange:
-        description: ID range (from..to)
+        description: ID range
         required: true
+        default: '50000..99999'  
       sampleCode:
         description: Include Sample code (Y/N)
+        required: false
+        default: 'Y'
+      sampleSuite:
+        description: Include Sample BCPT Suite (Y/N)
         required: false
         default: 'Y'
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
-        default: "N"
+        default: 'N'
 
 permissions:
   contents: write
@@ -46,37 +52,30 @@ jobs:
         id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with:
-          eventId: "DO0092"
+          eventId: "DO0102"
 
-  CreateApp:
+  Update:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Read settings
-        uses: microsoft/AL-Go-Actions/ReadSettings@main
-        with:
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          get: type
-
-      - name: Creating a new app
+      - name: Creating a new test app
         uses: microsoft/AL-Go-Actions/CreateApp@main
         with:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           project: ${{ github.event.inputs.project }}
-          type: ${{ env.type }}
-          name: ${{ github.event.inputs.name }}
+          type: 'Performance Test App'
           publisher: ${{ github.event.inputs.publisher }}
+          name: ${{ github.event.inputs.name }}
           idrange: ${{ github.event.inputs.idrange }}
           sampleCode: ${{ github.event.inputs.sampleCode }}
+          sampleSuite: ${{ github.event.inputs.sampleSuite }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
   PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ Initialization, CreateApp ]
+    needs: [ Initialization, Update ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -85,5 +84,5 @@ jobs:
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with:
-          eventId: "DO0092"
+          eventId: "DO0102"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

@@ -32,6 +32,14 @@ inputs:
   idrange:
     description: ID range
     required: true
+  sampleCode:
+    description: Include Sample Code (Y/N)
+    required: false
+    default: 'N'
+  sampleSuite:
+    description: Include Sample BCPT Suite (Y/N)
+    required: false
+    default: 'N'
   directCommit:
     description: Direct Commit (Y/N)
     required: false
@@ -39,7 +47,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -type '${{ inputs.type }}' -name '${{ inputs.name }}' -publisher '${{ inputs.publisher }}' -idrange '${{ inputs.idrange }}' -directCommit ('${{ inputs.directCommit }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+    - run: try { ${{ github.action_path }}/CreateApp.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -type '${{ inputs.type }}' -name '${{ inputs.name }}' -publisher '${{ inputs.publisher }}' -idrange '${{ inputs.idrange }}' -sampleCode ('${{ inputs.sampleCode }}' -eq 'Y') -sampleSuite ('${{ inputs.sampleSuite }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
       shell: PowerShell
 branding:
   icon: terminal

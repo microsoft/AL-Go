@@ -23,6 +23,7 @@ $signals = @{
     "DO0099" = "AL-Go workflow ran: NextMajor"
     "DO0100" = "AL-Go workflow ran: NextMinor"
     "DO0101" = "AL-Go workflow ran: Current"
+    "DO0102" = "AL-Go workflow ran: CreatePerformanceTestApp"
 }
 
 function CreateScope {

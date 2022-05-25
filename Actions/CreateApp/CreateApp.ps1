@@ -7,7 +7,7 @@ Param(
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
     [string] $project = '.',
-    [ValidateSet("PTE", "AppSource App" , "Test App")]
+    [ValidateSet("PTE", "AppSource App" , "Test App", "Performance Test App")]
     [Parameter(HelpMessage = "Type of app to add (PTE, AppSource App, Test App)", Mandatory = $true)]
     [string] $type,
     [Parameter(HelpMessage = "App Name", Mandatory = $true)]
@@ -16,6 +16,10 @@ Param(
     [string] $publisher,
     [Parameter(HelpMessage = "ID range", Mandatory = $true)]
     [string] $idrange,
+    [Parameter(HelpMessage = "Include Sample Code (Y/N)", Mandatory = $false)]
+    [bool] $sampleCode,
+    [Parameter(HelpMessage = "Include Sample BCPT Suite (Y/N)", Mandatory = $false)]
+    [bool] $sampleSuite,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
@@ -24,6 +28,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
+$tmpFolder = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
@@ -54,6 +59,28 @@ try {
     CheckAndCreateProjectFolder -project $project
     $baseFolder = (Get-Location).Path
 
+    if ($type -eq "Performance Test App") {
+        try {
+            $settings = ReadSettings -baseFolder $baseFolder -repoName $env:GITHUB_REPOSITORY -workflowName $env:GITHUB_WORKFLOW
+            $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -doNotIssueWarnings
+            $folders = Download-Artifacts -artifactUrl $settings.artifact -includePlatform
+            $sampleApp = Join-Path $folders[0] "Applications.*\Microsoft_Performance Toolkit Samples_*.app"
+            if (Test-Path $sampleApp) {
+                $sampleApp = (Get-Item -Path $sampleApp).FullName
+            }
+            else {
+                $sampleApp = Join-Path $folders[1] "Applications\testframework\performancetoolkit\Microsoft_Performance Toolkit Samples.app"
+            }
+            if (!(Test-Path -Path $sampleApp)) {
+                throw "Could not locate sample app for the Business Central version"
+            }
+            Extract-AppFileToFolder -appFilename $sampleApp -generateAppJson -appFolder $tmpFolder
+        }
+        catch {
+            throw "Unable to create performance test app. Error was $($_.Exception.Message)"
+        }
+    }
+
     $orgfolderName = $name.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
     $folderName = GetUniqueFolderName -baseFolder $baseFolder -folderName $orgfolderName
     if ($folderName -ne $orgfolderName) {
@@ -65,7 +92,12 @@ try {
         $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
         if (@($settingsJson.appFolders)+@($settingsJson.testFolders)) {
-            if ($type -eq "Test App") {
+            if ($type -eq "Performance Test App") {
+                if ($SettingsJson.bcptTestFolders -notcontains $foldername) {
+                    $SettingsJson.bcptTestFolders += @($folderName)
+                }
+            }
+            elseif ($type -eq "Test App") {
                 if ($SettingsJson.testFolders -notcontains $foldername) {
                     $SettingsJson.testFolders += @($folderName)
                 }
@@ -87,11 +119,14 @@ try {
         $appVersion = "$($settingsJson.AppVersion).0.0"
     }
 
-    if ($type -eq "Test App") {
-        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids
+    if ($type -eq "Performance Test App") {
+        New-SamplePerformanceTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -sampleSuite $sampleSuite -idrange $ids -appSourceFolder $tmpFolder
+    }
+    elseif ($type -eq "Test App") {
+        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids
     }
     else {
-        New-SampleApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -idrange $ids 
+        New-SampleApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids 
     }
 
     Update-WorkSpaces -baseFolder $baseFolder -appName $folderName
@@ -108,4 +143,7 @@ catch {
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+    if (Test-Path $tmpFolder) {
+        Remove-Item $tmpFolder -Recurse -Force
+    }
 }
