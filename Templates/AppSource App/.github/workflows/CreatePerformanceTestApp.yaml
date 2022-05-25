@@ -22,6 +22,10 @@ on:
         description: Include Sample code (Y/N)
         required: false
         default: 'Y'
+      sampleSuite:
+        description: Include Sample BCPT Suite (Y/N)
+        required: false
+        default: 'Y'
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
@@ -65,6 +69,7 @@ jobs:
           name: ${{ github.event.inputs.name }}
           idrange: ${{ github.event.inputs.idrange }}
           sampleCode: ${{ github.event.inputs.sampleCode }}
+          sampleSuite: ${{ github.event.inputs.sampleSuite }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
   PostProcess:
