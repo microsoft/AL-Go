@@ -5,6 +5,10 @@
 
 ### All workflows
 - During initialize, all AL-Go settings files are now checked for validity and reported correctly
+- During initialize, the version number of AL-Go for GitHub is printed in large letters (incl. preview or dev.)
+
+### Update AL-Go System Files Workflow
+- Include release notes of new version in the description of the PR (and in the workflow output)
 
 ### CI/CD workflow
 - Apps are not signed when the workflow is running as a Pull Request validation
@@ -44,7 +48,7 @@
 ### All workflows
 - Add requested permissions to avoid dependency on user/org defaults being too permissive
 
-### Check For Updates Workflow
+### Update AL-Go System Files Workflow
 - Default host to https://github.com/ (you can enter **myaccount/AL-Go-PTE@main** to change template)
 - Support for "just" changing branch (ex. **\@Preview**) to shift to the preview version
 
