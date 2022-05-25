@@ -69,23 +69,4 @@ Describe 'AppHelper.psm1 Tests' {
 
         "$($TestDrive)\TestPTE\.vscode\launch.json" | Should -Exist
     }
-
-    It 'Should create a new performance test app by calling New-SamplePerformanceTestApp' {
-        New-SamplePerformanceTestApp -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50200" -sampleCode $true
-
-        "$($TestDrive)\TestPTE" | Should -Exist
-        "$($TestDrive)\TestPTE\app.json" | Should -Exist
-        
-        $appJson = Get-Content -Path "$($TestDrive)\TestPTE\app.json" | ConvertFrom-Json
-        $appJson.name | Should -be "TestPTE"
-        $appJson.publisher | Should -be "TestPublisher"
-        $appJson.version | Should -be "1.0.0.0"
-        $appJson.idRanges[0].from | Should -be "50101"
-        $appJson.idRanges[0].to | Should -be "50200"
-
-        "$($TestDrive)\TestPTE\src\BCPTCreatePOWithNLines.Codeunit.al" | Should -Exist
-        "$($TestDrive)\TestPTE\src\TestCodeunitsWithParams.Enum.al" | Should -FileContentMatch "enumextension 50101"
-
-        "$($TestDrive)\TestPTE\.vscode\launch.json" | Should -Exist
-    }
 }
