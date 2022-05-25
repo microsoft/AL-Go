@@ -225,7 +225,7 @@ try {
                 }
             }
 
-            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer -and $_.name -notlike '*.copy.md' } | ForEach-Object {
                 $dstFile = $_.FullName
                 $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
                 $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
@@ -346,7 +346,10 @@ try {
                 }
                 $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
-        
+            if (Test-Path -Path '.\.github' -PathType Container) {
+                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination ".\.github\RELEASENOTES.copy.md" -Force
+            }
+            
             invoke-git add .
             invoke-git commit --allow-empty -m 'checkout'
             invoke-git push $serverUrl
