@@ -7,6 +7,9 @@
 - During initialize, all AL-Go settings files are now checked for validity and reported correctly
 - During initialize, the version number of AL-Go for GitHub is printed in large letters (incl. preview or dev.)
 
+### New workflow: Create new Performance Test App
+- Create BCPT Test app and add to bcptTestFolders to run bcpt Tests in workflows (set doNotRunBcptTests in workflow settings for workflows where you do NOT want this)
+
 ### Update AL-Go System Files Workflow
 - Include release notes of new version in the description of the PR (and in the workflow output)
 
@@ -38,7 +41,7 @@
         }
     ]
 ```
-- Default **BcContainerHelperVersion** is now based on templateUrl - preview AL-Go selects preview bcContainerHelper
+- Default **BcContainerHelperVersion** is now based on AL-Go version. Preview AL-Go selects preview bcContainerHelper, normal selects latest.
 - New Setting: **bcptTestFolders** contains folders with BCPT tests, which will run in all build workflows
 - New Setting: set **doNotRunBcptTest** to true (in workflow specific settings file?) to avoid running BCPT tests
 - New Setting: set **obsoleteTagMinAllowedMajorMinor** to enable appsource cop to validate your app against future changes (AS0105). This setting will become auto-calculated in Test Current, Test Next Minor and Test Next Major later.
