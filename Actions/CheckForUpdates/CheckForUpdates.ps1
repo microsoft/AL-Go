@@ -18,6 +18,7 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
+$bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
@@ -42,6 +43,9 @@ try {
             $templateUrl += "@main"
         }
     }
+    if ($templateUrl -notlike "https://*") {
+        $templateUrl = "https://github.com/$templateUrl"
+    }
 
     $RepoSettingsFile = ".github\AL-Go-Settings.json"
     if (Test-Path $RepoSettingsFile) {
@@ -52,9 +56,16 @@ try {
     }
 
     $updateSettings = $true
-    if ($repoSettings.ContainsKey("TemplateUrl") -and $repoSettings.TemplateUrl -eq $templateUrl) {
-        $updateSettings = $false
+    if ($repoSettings.ContainsKey("TemplateUrl")) {
+        if ($templateUrl.StartsWith('@')) {
+            $templateUrl = "$($repoSettings.TemplateUrl.Split('@')[0])$templateUrl"
+        }
+        if ($repoSettings.TemplateUrl -eq $templateUrl) {
+            $updateSettings = $false
+        }
     }
+
+    AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
 
     $templateBranch = $templateUrl.Split('@')[1]
     $templateUrl = $templateUrl.Split('@')[0]
@@ -96,7 +107,10 @@ try {
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     
-    $checkfiles = @(@{ "dstPath" = ".github\workflows"; "srcPath" = ".github\workflows"; "pattern" = "*"; "type" = "workflow" })
+    $checkfiles = @(
+        @{ "dstPath" = ".github\workflows"; "srcPath" = ".github\workflows"; "pattern" = "*"; "type" = "workflow" },
+        @{ "dstPath" = ".github"; "srcPath" = ".github"; "pattern" = "*.copy.md"; "type" = "releasenotes" }
+    )
     if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
         $checkfiles += @(@{ "dstPath" = ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
     }
@@ -131,6 +145,19 @@ try {
                 $replacePattern = "on:`r`n  schedule:`r`n  - cron: '$($repoSettings."$workflowScheduleKey")'`r`n  workflow_dispatch:`r`n"
                 $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
             }
+            
+            if ($baseName -ne "UpdateGitHubGoSystemFiles") {
+                if ($repoSettings.ContainsKey("runs-on")) {
+                    $srcPattern = "runs-on: [ windows-latest ]`r`n"
+                    $replacePattern = "runs-on: [ $($repoSettings."runs-on") ]`r`n"
+                    $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
+                    if (!($repoSettings.ContainsKey("gitHubRunner"))) {
+                        $srcPattern = "runs-on: `${{ fromJson(needs.Initialization.outputs.githubRunner) }}`r`n"
+                        $replacePattern = "runs-on: [ $($repoSettings."runs-on") ]`r`n"
+                        $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
+                    }
+                }
+            }
                 
             $dstFile = Join-Path $dstFolder $fileName
             if (Test-Path -Path $dstFile -PathType Leaf) {
@@ -153,9 +180,11 @@ try {
     if (-not $update) {
         if (($updateFiles) -or ($removeFiles)) {
             OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $true
         }
         else {
             Write-Host "Your repository runs on the latest version of AL-Go System."
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $false
         }
     }
     else {
@@ -191,23 +220,52 @@ try {
 
                 invoke-git status
 
+                $templateUrl = "$templateUrl@$templateBranch"
                 $RepoSettingsFile = ".github\AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
-                    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+                    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
                 }
                 else {
-                    $repoSettings = @{}
+                    $repoSettings = [PSCustomObject]@{}
                 }
-                $repoSettings.templateUrl = "$templateUrl@$templateBranch"
+                if ($repoSettings.PSObject.Properties.Name -eq "templateUrl") {
+                    $repoSettings.templateUrl = $templateUrl
+                }
+                else {
+                    $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
+                }
                 $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
 
+                $releaseNotes = ""
                 $updateFiles | ForEach-Object {
                     $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
                     if (-not (Test-Path -path $path -PathType Container)) {
                         New-Item -Path $path -ItemType Directory | Out-Null
                     }
+                    if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
+                        $oldReleaseNotes = (Get-Content -Path $_.DstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+                        while ($oldReleaseNotes) {
+                            $releaseNotes = $_.Content
+                            if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
+                                $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
+                                $oldReleaseNotes = ""
+                            }
+                            else {
+                                $idx = $oldReleaseNotes.IndexOf("`r`n## ")
+                                if ($idx -gt 0) {
+                                    $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
+                                }
+                                else {
+                                    $oldReleaseNotes = ""
+                                }
+                            }
+                        }
+                    }
                     Write-Host "Update $($_.DstFile)"
                     Set-Content -Path $_.DstFile -Encoding UTF8 -Value $_.Content
+                }
+                if ($releaseNotes -eq "") {
+                    $releaseNotes = "No release notes available!"
                 }
                 $removeFiles | ForEach-Object {
                     Write-Host "Remove $_"
@@ -215,6 +273,9 @@ try {
                 }
 
                 invoke-git add *
+
+                Write-Host "ReleaseNotes:"
+                Write-Host $releaseNotes
 
                 $status = invoke-git status --porcelain=v1
                 if ($status) {
@@ -227,7 +288,7 @@ try {
                     }
                     else {
                         invoke-git push -u $url $branch
-                        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
+                        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --body "$releaseNotes"
                     }
                 }
                 else {
@@ -236,10 +297,10 @@ try {
             }
             catch {
                 if ($directCommit) {
-                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows."
+                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
                 }
                 else {
-                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows."
+                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
                 }
             }
         }

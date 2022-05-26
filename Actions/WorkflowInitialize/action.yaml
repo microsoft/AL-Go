@@ -14,7 +14,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId '${{ inputs.eventId }}'
+    - run: try { ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId '${{ inputs.eventId }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
       id: workflowinitialize
       shell: PowerShell
 branding:

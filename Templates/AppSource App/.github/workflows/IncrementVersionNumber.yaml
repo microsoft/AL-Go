@@ -8,12 +8,16 @@ on:
         required: false
         default: '.'
       versionNumber:
-        description: New Version Number (Major.Minor)
+        description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
         required: true
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
         default: 'N'
+
+permissions:
+  contents: write
+  pull-requests: write
 
 defaults:
   run:

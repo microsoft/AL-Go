@@ -7,7 +7,7 @@ Param(
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
     [string] $project = '.',
-    [Parameter(HelpMessage = "New version number (Major.Minor)", Mandatory = $true)]
+    [Parameter(HelpMessage = "Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.", Mandatory = $true)]
     [string] $versionnumber,
     [Parameter(HelpMessage = "Direct commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
@@ -16,6 +16,7 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
+$bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
@@ -29,11 +30,15 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
     
+    $addToVersionNumber = "$versionnumber".StartsWith('+')
+    if ($addToVersionNumber) {
+        $versionnumber = $versionnumber.Substring(1)
+    }
     try {
         $newVersion = [System.Version]"$($versionnumber).0.0"
     }
     catch {
-        throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor>"
+        throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
     }
 
     if (!$project) { $project = '.' }
@@ -41,7 +46,12 @@ try {
     if ($project -ne '.') {
         $projects = @(Get-Item -Path "$project\.AL-Go\Settings.json" | ForEach-Object { ($_.FullName.Substring((Get-Location).Path.Length).Split('\'))[1] })
         if ($projects.Count -eq 0) {
-            throw "Project folder $project not found"
+            if ($project -eq '*') {
+                $projects = @( '.' )
+            }
+            else {
+                throw "Project folder $project not found"
+            }
         }
     }
     else {
@@ -55,15 +65,23 @@ try {
             $settingsJson = Get-Content "$project\$ALGoSettingsFile" -Encoding UTF8 | ConvertFrom-Json
             if ($settingsJson.PSObject.Properties.Name -eq "RepoVersion") {
                 $oldVersion = [System.Version]"$($settingsJson.RepoVersion).0.0"
-                if ($newVersion -le $oldVersion) {
+                if ((!$addToVersionNumber) -and $newVersion -le $oldVersion) {
                     throw "The new version number ($($newVersion.Major).$($newVersion.Minor)) must be larger than the old version number ($($oldVersion.Major).$($oldVersion.Minor))"
                 }
-                $settingsJson.RepoVersion = "$($newVersion.Major).$($newVersion.Minor)"
+                $repoVersion = $newVersion
+                if ($addToVersionNumber) {
+                    $repoVersion = [System.Version]"$($newVersion.Major+$oldVersion.Major).$($newVersion.Minor+$oldVersion.Minor).0.0"
+                }
+                $settingsJson.RepoVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
             }
             else {
-                Add-Member -InputObject $settingsJson -NotePropertyName "RepoVersion" -NotePropertyValue "$($newVersion.Major).$($newVersion.Minor)"
+                $repoVersion = $newVersion
+                if ($addToVersionNumber) {
+                    $repoVersion = [System.Version]"$($newVersion.Major+1).$($newVersion.Minor).0.0"
+                }
+                Add-Member -InputObject $settingsJson -NotePropertyName "RepoVersion" -NotePropertyValue "$($repoVersion.Major).$($repoVersion.Minor)"
             }
-            $modifyApps = (($settingsJson.PSObject.Properties.Name -eq "VersioningStrategy") -and (($settingsJson.VersioningStrategy -band 16) -eq 16))
+            $useRepoVersion = (($settingsJson.PSObject.Properties.Name -eq "VersioningStrategy") -and (($settingsJson.VersioningStrategy -band 16) -eq 16))
             $settingsJson
             $settingsJson | ConvertTo-Json -Depth 99 | Set-Content "$project\$ALGoSettingsFile" -Encoding UTF8
         }
@@ -71,24 +89,31 @@ try {
             throw "Settings file $project\$ALGoSettingsFile is malformed.$([environment]::Newline) $($_.Exception.Message)."
         }
 
-        if ($modifyApps) {
-            Write-Host "Versioning strategy $($settingsJson.VersioningStrategy) is set. The version number in the apps will be changed."
-            'appFolders', 'testFolders' | ForEach-Object {
-                if ($SettingsJson.PSObject.Properties.Name -eq $_) {
-                    $settingsJson."$_" | ForEach-Object {
-                        Write-Host "Modifying app.json in folder $project\$_"
-                        $appJsonFile = Join-Path "$project\$_" "app.json"
-                        if (Test-Path $appJsonFile) {
-                            try {
-                                $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
-                                $appJson.Version = "$($newVersion.Major).$($newVersion.Minor).0.0"
-                                $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile -Encoding UTF8
-                            }
-                            catch {
-                                throw "Application manifest file($appJsonFile) is malformed."
-                            }
-                        }
+        $folders = @('appFolders', 'testFolders' | ForEach-Object { if ($SettingsJson.PSObject.Properties.Name -eq $_) { $settingsJson."$_" } })
+        if (-not ($folders)) {
+            $folders = Get-ChildItem -Path $project -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'app.json') } | ForEach-Object { $_.Name }
+        }
+        $folders | ForEach-Object {
+            Write-Host "Modifying app.json in folder $project\$_"
+            $appJsonFile = Join-Path "$project\$_" "app.json"
+            if (Test-Path $appJsonFile) {
+                try {
+                    $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
+                    $oldVersion = [System.Version]$appJson.Version
+                    if ($useRepoVersion) {
+                        $appVersion = $repoVersion
                     }
+                    elseif ($addToVersionNumber) {
+                        $appVersion = [System.Version]"$($newVersion.Major+$oldVersion.Major).$($newVersion.Minor+$oldVersion.Minor).0.0"
+                    }
+                    else {
+                        $appVersion = $newVersion
+                    }
+                    $appJson.Version = "$appVersion"
+                    $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile -Encoding UTF8
+                }
+                catch {
+                    throw "Application manifest file($appJsonFile) is malformed."
                 }
             }
         }

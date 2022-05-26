@@ -77,6 +77,7 @@ function expandfile {
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
+$bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
@@ -187,18 +188,19 @@ try {
             try {
                 $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
                 $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
-                if ($ttype -eq "Test App") {
-                    if ($SettingsJson.testFolders -notcontains $foldername) {
-                        $SettingsJson.testFolders += @($folderName)
+                if (@($settingsJson.appFolders)+@($settingsJson.testFolders)) {
+                    if ($ttype -eq "Test App") {
+                        if ($SettingsJson.testFolders -notcontains $foldername) {
+                            $SettingsJson.testFolders += @($folderName)
+                        }
                     }
-                }
-                else {
-                    if ($SettingsJson.appFolders -notcontains $foldername) {
-                        $SettingsJson.appFolders += @($folderName)
+                    else {
+                        if ($SettingsJson.appFolders -notcontains $foldername) {
+                            $SettingsJson.appFolders += @($folderName)
+                        }
                     }
+                    $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
                 }
-
-                $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
             }
             catch {
                 throw "$ALGoSettingsFile is malformed. Error: $($_.Exception.Message)"

@@ -23,13 +23,13 @@ $signals = @{
     "DO0099" = "AL-Go workflow ran: NextMajor"
     "DO0100" = "AL-Go workflow ran: NextMinor"
     "DO0101" = "AL-Go workflow ran: Current"
+    "DO0102" = "AL-Go workflow ran: CreatePerformanceTestApp"
 }
 
 function CreateScope {
     param (
         [string] $eventId,
-        [string] $parentTelemetryScopeJson = '{}',
-        [hashtable] $parameters = @{}
+        [string] $parentTelemetryScopeJson = '{}'
     )
 
     $signalName = $signals[$eventId] 
@@ -42,5 +42,15 @@ function CreateScope {
     }
 
     $telemetryScope = InitTelemetryScope -name $signalName -eventId $eventId  -parameterValues @()  -includeParameters @()
+
     return $telemetryScope
+}
+
+function GetHash {
+    param(
+        [string] $str
+    )
+
+    $stream = [IO.MemoryStream]::new([Text.Encoding]::UTF8.GetBytes($str))
+    (Get-FileHash -InputStream $stream -Algorithm SHA256).Hash
 }

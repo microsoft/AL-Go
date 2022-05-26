@@ -45,7 +45,7 @@ function Test-ArtifactsFromRun {
         $actualNumberOfTests = 0
         $actualNumberOfErrors = 0
         $actualNumberOfFailures = 0
-        Get-Item "$folder\*-TestResults\TestResults.xml" | ForEach-Object {
+        Get-Item "$folder\*-TestResults*\TestResults.xml" | ForEach-Object {
             [xml]$testResults = Get-Content $_.FullName -encoding UTF8
             @($testresults.testsuites.testsuite) | ForEach-Object {
                 $actualNumberOfTests += $_.tests

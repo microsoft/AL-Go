@@ -1,0 +1,53 @@
+{
+    "code": "10UserTest",
+    "description": "10 User Test",
+    "durationInMinutes": 5,
+    "defaultMinimumUserDelayInMilliSeconds": 120,
+    "oneDayCorrespondsToInMinutes": 10,
+    "tag": "10UserTest",
+    "bcptSuiteLines": [
+        {
+            "codeunitID": 149107,
+            "numberOfSessions": 1,
+            "description": "BCPT Detail Trial Bal. Report",
+            "minimumUserDelay": 100,
+            "maximumUserDelay": 1000,
+            "delayBetweenIterations": 10,
+            "delayType": "Fixed",
+            "runInForeground": false
+        },
+        {
+            "codeunitID": 149103,
+            "numberOfSessions": 1,
+            "description": "BCPT Create PO with N Lines",
+            "minimumUserDelay": 100,
+            "maximumUserDelay": 1000,
+            "delayBetweenIterations": 5,
+            "delayType": "Fixed",
+            "runInForeground": false,
+            "parameters": "Lines=10"
+        },
+        {
+            "codeunitID": 149105,
+            "numberOfSessions": 1,
+            "description": "BCPT Create SQ with N Lines",
+            "minimumUserDelay": 100,
+            "maximumUserDelay": 1000,
+            "delayBetweenIterations": 5,
+            "delayType": "Fixed",
+            "runInForeground": false,
+            "parameters": "Lines=10"
+        },
+        {
+            "codeunitID": 149104,
+            "numberOfSessions": 1,
+            "description": "BCPT Create SO with N Lines",
+            "minimumUserDelay": 100,
+            "maximumUserDelay": 1000,
+            "delayBetweenIterations": 5,
+            "delayType": "Fixed",
+            "runInForeground": false,
+            "parameters": "Lines=10"
+        }
+    ]
+}

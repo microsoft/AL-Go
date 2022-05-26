@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: Branch to deploy to (default is main)
+        description: Branch to deploy to (default is main) - (NOTE Use preview when deploying preview releases on microsoft/al-go)
         required: false
         default: 'main'
       copyToMain:
-        description: Additionally deploy templates to main branch? (Y/N) - (NOTE Only use Yes when deploying ordinary releases on microsoft/al-go)
+        description: Additionally deploy templates to main+preview branch? (Y/N) - (NOTE Only use Yes when deploying ordinary releases on microsoft/al-go)
         required: false
         default: 'N'
 

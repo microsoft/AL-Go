@@ -8,9 +8,12 @@ on:
         required: false
         default: 'current'
       environmentName:
-        description: Environment to receive the new version (* for all)
-        required: false
-        default: '*'
+        description: Environment mask to receive the new version (* for all, PROD* for all environments starting with PROD)
+        required: true
+
+permissions:
+  contents: read
+  actions: read
 
 defaults:
   run:
@@ -80,27 +83,42 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           settingsJson: ${{ env.Settings }}
-          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,AuthContext'
+          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName'
 
       - name: AuthContext
         id: authContext
         run: |
-          $authContext = [System.Environment]::GetEnvironmentVariable('${{ steps.envName.outputs.envName }}-AuthContext')
-          if ($authContext) {
-            Write-Host "Using ${{ steps.envName.outputs.envName }}-AuthContext secret"
+          $envName = '${{ steps.envName.outputs.envName }}'
+          $authContext = $null
+          "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
+            if (!($authContext)) {
+              $authContext = [System.Environment]::GetEnvironmentVariable($_)
+              if ($authContext) {
+                Write-Host "Using $_ secret"
+              }
+            }            
           }
-          else {
-            $authContext = [System.Environment]::GetEnvironmentVariable('AuthContext')
-            if ($authContext) {
-              Write-Host "Using AuthContext secret"
-            }
-            else {
-              Write-Host "::Error::No AuthContext provided"
-              exit 1
-            }
+          if (!($authContext)) {
+            Write-Host "::Error::No AuthContext provided"
+            exit 1
           }
+          $environmentName = $null
+          "$($envName)-EnvironmentName", "$($envName)_EnvironmentName", "EnvironmentName" | ForEach-Object {
+            if (!($EnvironmentName)) {
+              $EnvironmentName = [System.Environment]::GetEnvironmentVariable($_)
+              if ($EnvironmentName) {
+                Write-Host "Using $_ secret"
+              }
+            }            
+          }
+          if (!($environmentName)) {
+            $environmentName = '${{ steps.envName.outputs.envName }}'
+          }
+          $environmentName = ($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()
           Write-Host "::set-output name=authContext::$authContext"
           Write-Host "set-output name=authContext::$authContext"
+          Write-Host "::set-output name=environmentName::$environmentName"
+          Write-Host "set-output name=environmentName::$environmentName"
 
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
@@ -110,7 +128,7 @@ jobs:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           type: 'Publish'
           projects: '${{ secrets.Projects }}'
-          environmentName: ${{ matrix.environment }}
+          environmentName: '${{ steps.authContext.outputs.environmentName }}'
           artifacts: ${{ github.event.inputs.appVersion }}
 
   PostProcess:

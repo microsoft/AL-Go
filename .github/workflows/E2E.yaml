@@ -75,6 +75,24 @@ jobs:
           Write-Host "set-output name=releases::$releasesJson"
           Write-Host "set-output name=releasesCount::$($releases.Count)"
 
+  TestAlGoPtePrivate:
+    runs-on: [ windows-latest ]
+    needs: [ SetupRepositories ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -private
+
+  TestAlGoAppSourcePrivate:
+    runs-on: [ windows-latest ]
+    needs: [SetupRepositories ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -private
+
   TestAlGoPte:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories ]
@@ -139,7 +157,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
-    needs: [ SetupRepositories, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoPteUpgrade, TestAlGoAppSourceUpgrade ]
+    needs: [ SetupRepositories, TestAlGoPtePrivate, TestAlGoAppSourcePrivate, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoPteUpgrade, TestAlGoAppSourceUpgrade ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v2

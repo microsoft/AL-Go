@@ -3,6 +3,7 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Reloading the module
 Get-Module AppHelper | Remove-Module -Force
 Import-Module (Join-Path -path $here -ChildPath "..\Actions\CreateApp\AppHelper.psm1" -Resolve)
+. (Join-Path -path $here -ChildPath "..\Actions\AL-Go-Helper.ps1" -Resolve)
 
 Describe 'AppHelper.psm1 Tests' {
     It 'Confirm-IdRanges validates a valid PTE range' {
@@ -32,7 +33,7 @@ Describe 'AppHelper.psm1 Tests' {
     }
 
     It 'Should create a new app by calling New-SampleApp' {
-        New-SampleApp -destinationPath "$($TestDrive)\SampleApp" -name "SampleApp" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120"
+        New-SampleApp -destinationPath "$($TestDrive)\SampleApp" -name "SampleApp" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120" -sampleCode $true
 
         "$($TestDrive)\SampleApp" | Should -Exist
         "$($TestDrive)\SampleApp\app.json" | Should -Exist
@@ -50,8 +51,8 @@ Describe 'AppHelper.psm1 Tests' {
         "$($TestDrive)\SampleApp\.vscode\launch.json" | Should -Exist
     }
 
-    It 'Should create a new test app by calling New-SampleTest' {
-        New-SampleTestApp -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120"
+    It 'Should create a new test app by calling New-SampleTestApp' {
+        New-SampleTestApp -destinationPath "$($TestDrive)\TestPTE" -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120" -sampleCode $true
 
         "$($TestDrive)\TestPTE" | Should -Exist
         "$($TestDrive)\TestPTE\app.json" | Should -Exist

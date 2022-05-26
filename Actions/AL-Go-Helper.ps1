@@ -83,7 +83,7 @@ function ConvertTo-HashTable {
     )
     $ht = @{}
     if ($object) {
-        $object.PSObject.Properties | Foreach { $ht[$_.Name] = $_.Value }
+        $object.PSObject.Properties | ForEach-Object { $ht[$_.Name] = $_.Value }
     }
     $ht
 }
@@ -214,7 +214,21 @@ function DownloadAndImportBcContainerHelper {
         if (Test-Path $repoSettingsPath) {
             if (-not $BcContainerHelperVersion) {
                 $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-                if ($repoSettings.ContainsKey("BcContainerHelperVersion")) {
+                $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
+                if ($ap -and $ap.Count -gt 4) {
+                    $branch = $ap[$ap.Count-2]
+                    $owner = $ap[$ap.Count-4]
+                    if ($owner -eq "freddydk") {
+                        $bcContainerHelperVersion = "dev"
+                    }
+                    elseif ($owner -eq "businesscentralapps") {
+                        $bcContainerHelperVersion = "preview"
+                    }
+                    elseif ($owner -eq "microsoft" -and $branch -eq "preview") {
+                        $bcContainerHelperVersion = "preview"
+                    }
+                }
+                if ($bcContainerHelperVersion -eq "" -and $repoSettings.ContainsKey("BcContainerHelperVersion")) {
                     $BcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
                 }
             }
@@ -319,7 +333,7 @@ function MergeCustomObjectIntoOrderedDictionary {
                         $srcElmType = $srcElm.GetType().Name
                         if ($srcElmType -eq "PSCustomObject") {
                             $ht = [ordered]@{}
-                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture "iv-iv" | Foreach { $ht[$_.Name] = $_.Value }
+                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture "iv-iv" | ForEach-Object { $ht[$_.Name] = $_.Value }
                             $dst."$prop" += @($ht)
                         }
                         else {
@@ -373,11 +387,14 @@ function ReadSettings {
         "appFolders"                             = @()
         "testDependencies"                       = @()
         "testFolders"                            = @()
+        "bcptTestFolders"                        = @()
         "installApps"                            = @()
         "installTestApps"                        = @()
         "installOnlyReferencedApps"              = $true
+        "generateDependencyArtifact"             = $false
         "skipUpgrade"                            = $false
         "applicationDependency"                  = "18.0.0.0"
+        "updateDependencies"                     = $false
         "installTestRunner"                      = $false
         "installTestFramework"                   = $false
         "installTestLibraries"                   = $false
@@ -389,7 +406,11 @@ function ReadSettings {
         "rulesetFile"                            = ""
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
+        "doNotRunBcptTests"                      = $false
+        "doNotPublishApps"                       = $false
+        "doNotSignApps"                          = $false
         "appSourceCopMandatoryAffixes"           = @()
+        "obsoleteTagMinAllowedMajorMinor"        = ""
         "memoryLimit"                            = ""
         "templateUrl"                            = ""
         "templateBranch"                         = ""
@@ -401,6 +422,7 @@ function ReadSettings {
         "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
         "PartnerTelemetryConnectionString"       = ""
         "SendExtendedTelemetryToMicrosoft"       = $false
+        "Environments"                           = @()
     }
 
     $gitHubFolder = ".github"
@@ -421,6 +443,16 @@ function ReadSettings {
                 # check settingsJson.version and do modifications if needed
          
                 MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+
+                if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
+                    $settingsJson.ConditionalSettings | ForEach-Object {
+                        $conditionalSetting = $_
+                        if ($conditionalSetting.branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }) {
+                            Write-Host "Applying conditional settings for $ENV:GITHUB_REF_NAME"
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+                        }
+                    }
+                }
             }
             catch {
                 throw "Settings file $settingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
@@ -436,7 +468,8 @@ function AnalyzeRepo {
         [hashTable] $settings,
         [string] $baseFolder,
         [string] $insiderSasToken,
-        [switch] $doNotCheckArtifactSetting
+        [switch] $doNotCheckArtifactSetting,
+        [switch] $doNotIssueWarnings
     )
 
     if (!$runningLocal) {
@@ -445,7 +478,6 @@ function AnalyzeRepo {
 
     # Check applicationDependency
     [Version]$settings.applicationDependency | Out-null
-
 
     Write-Host "Checking type"
     if ($settings.type -eq "PTE") {
@@ -481,79 +513,60 @@ function AnalyzeRepo {
         }
     }
 
-    if (!$doNotCheckArtifactSetting) {
-        Write-Host "Checking artifact setting"
-        if ($artifact -like "https://*") {
-            $artifactUrl = $artifact
-            $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
-            $artifactType = ("$artifactUrl////".Split('/')[3])
-            $version = ("$artifactUrl////".Split('/')[4])
-            $country = ("$artifactUrl////".Split('/')[5])
-            $sasToken = "$($artifactUrl)?".Split('?')[1]
-        }
-        else {
-            $segments = "$artifact/////".Split('/')
-            $storageAccount = $segments[0];
-            $artifactType = $segments[1]; if ($artifactType -eq "") { $artifactType = 'Sandbox' }
-            $version = $segments[2]
-            $country = $segments[3]; if ($country -eq "") { $country = $settings.country }
-            $select = $segments[4]; if ($select -eq "") { $select = "latest" }
-            $sasToken = $segments[5]
-            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -sasToken $sasToken | Select-Object -First 1
-            if (-not $artifactUrl) {
-                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+    if (-not (@($settings.appFolders)+@($settings.testFolders)+@($settings.bcptTestFolders))) {
+        Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path -Path (Join-Path $_.FullName "app.json") } | ForEach-Object {
+            $folder = $_
+            $appJson = Get-Content (Join-Path $folder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
+            $isTestApp = $false
+            $isBcptTestApp = $false
+            if ($appJson.PSObject.Properties.Name -eq "dependencies") {
+                $appJson.dependencies | ForEach-Object {
+                    if ($_.PSObject.Properties.Name -eq "AppId") {
+                        $id = $_.AppId
+                    }
+                    else {
+                        $id = $_.Id
+                    }
+                    if ($performanceToolkitApps.Contains($id)) { 
+                        $isBcptTestApp = $true
+                    }
+                    elseif ($testRunnerApps.Contains($id)) { 
+                        $isTestApp = $true
+                    }
+                }
             }
-            $version = $artifactUrl.Split('/')[4]
-            $storageAccount = $artifactUrl.Split('/')[2]
-        }
-    
-        if ($settings.additionalCountries -or $country -ne $settings.country) {
-            if ($country -ne $settings.country) {
-                OutputWarning -message "artifact definition in $ALGoSettingsFile uses a different country ($country) than the country definition ($($settings.country))"
+            if ($isBcptTestApp) {
+                $settings.bcptTestFolders += @($_.Name)
             }
-            Write-Host "Checking Country and additionalCountries"
-            # AT is the latest published language - use this to determine available country codes (combined with mapping)
-            $ver = [Version]$version
-            Write-Host "https://$storageAccount/$artifactType/$version/$country"
-            $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
-            Write-Host "Latest AT artifacts $atArtifactUrl"
-            $latestATversion = $atArtifactUrl.Split('/')[4]
-            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
-                $countryArtifactUrl = $_.Split('?')[0] # remove sas token
-                $countryArtifactUrl.Split('/')[5] # get country
+            elseif ($isTestApp) {
+                $settings.testFolders += @($_.Name)
             }
-            Write-Host "Countries with artifacts $($countries -join ',')"
-            $allowedCountries = $bcContainerHelperConfig.mapCountryCode.PSObject.Properties.Name + $countries | Select-Object -Unique
-            Write-Host "Allowed Country codes $($allowedCountries -join ',')"
-            if ($allowedCountries -notcontains $settings.country) {
-                throw "Country ($($settings.country)), specified in $ALGoSettingsFile is not a valid country code."
+            else {
+                $settings.appFolders += @($_.Name)
             }
-            $illegalCountries = $settings.additionalCountries | Where-Object { $allowedCountries -notcontains $_ }
-            if ($illegalCountries) {
-                throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
-            }
-        }
-        else {
-            Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"
-            $folders = Download-Artifacts -artifactUrl $artifactUrl -includePlatform -ErrorAction SilentlyContinue
-            if (-not ($folders)) {
-                throw "Unable to download artifacts from $($artifactUrl.Split('?')[0]), please check $ALGoSettingsFile."
-            }
-            $settings.artifact = $artifactUrl
         }
     }
-    
+
     Write-Host "Checking appFolders and testFolders"
     $dependencies = [ordered]@{}
-    $true, $false | ForEach-Object {
-        $appFolder = $_
+    1..3 | ForEach-Object {
+        $appFolder = $_ -eq 1
+        $testFolder = $_ -eq 2
+        $bcptTestFolder = $_ -eq 3
         if ($appFolder) {
             $folders = @($settings.appFolders)
             $descr = "App folder"
         }
-        else {
+        elseif ($testFolder) {
             $folders = @($settings.testFolders)
             $descr = "Test folder"
+        }
+        elseif ($bcptTestFolder) {
+            $folders = @($settings.bcptTestFolders)
+            $descr = "Bcpt Test folder"
+        }
+        else {
+            throw "Internal error"
         }
         $folders | ForEach-Object {
             $folderName = $_
@@ -562,21 +575,29 @@ function AnalyzeRepo {
             }
             $folder = Join-Path $baseFolder $folderName
             $appJsonFile = Join-Path $folder "app.json"
+            $bcptSuiteFile = Join-Path $folder "bcptSuite.json"
             $removeFolder = $false
             if (-not (Test-Path $folder -PathType Container)) {
-                OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not exist."
+                if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not exist" }
                 $removeFolder = $true
             }
             elseif (-not (Test-Path $appJsonFile -PathType Leaf)) {
-                OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not contain the source code for an app (no app.json file)."
+                if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not contain the source code for an app (no app.json file)" }
+                $removeFolder = $true
+            }
+            elseif ($bcptTestFolder -and (-not (Test-Path $bcptSuiteFile -PathType Leaf))) {
+                if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not contain a BCPT Suite (bcptSuite.json)" }
                 $removeFolder = $true
             }
             if ($removeFolder) {
                 if ($appFolder) {
                     $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName })
                 }
-                else {
-                    $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName })
+                elseif ($testFolder) {
+                    $settings.testFolders = @($settings.testFolders | Where-Object { $_ -ne $folderName })
+                }
+                elseif ($bcptTestFolder) {
+                    $settings.bcptTestFolders = @($settings.bcptTestFolders | Where-Object { $_ -ne $folderName })
                 }
             }
             else {
@@ -614,8 +635,85 @@ function AnalyzeRepo {
             }
         }
     }
+    Write-Host "Application Dependency $($settings.applicationDependency)"
 
     if (!$doNotCheckArtifactSetting) {
+        Write-Host "Checking artifact setting"
+        if ($artifact -eq "" -and $settings.updateDependencies) {
+            $artifact = Get-BCArtifactUrl -country $settings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$settings.applicationDependency } | Select-Object -First 1
+            if (-not $artifact) {
+                if ($insiderSasToken) {
+                    $artifact = Get-BCArtifactUrl -storageAccount bcinsider -country $settings.country -select all -sasToken $insiderSasToken | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$settings.applicationDependency } | Select-Object -First 1
+                    if (-not $artifact) {
+                        throw "No artifacts found for application dependency $($settings.applicationDependency)."
+                    }
+                }
+                else {
+                    throw "No artifacts found for application dependency $($settings.applicationDependency). If you are targetting an insider version, you need to create a secret called InsiderSasToken, containing the Insider SAS Token from https://aka.ms/collaborate"
+                }
+            }
+        }
+        
+        if ($artifact -like "https://*") {
+            $artifactUrl = $artifact
+            $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
+            $artifactType = ("$artifactUrl////".Split('/')[3])
+            $version = ("$artifactUrl////".Split('/')[4])
+            $country = ("$artifactUrl////".Split('/')[5])
+            $sasToken = "$($artifactUrl)?".Split('?')[1]
+        }
+        else {
+            $segments = "$artifact/////".Split('/')
+            $storageAccount = $segments[0];
+            $artifactType = $segments[1]; if ($artifactType -eq "") { $artifactType = 'Sandbox' }
+            $version = $segments[2]
+            $country = $segments[3]; if ($country -eq "") { $country = $settings.country }
+            $select = $segments[4]; if ($select -eq "") { $select = "latest" }
+            $sasToken = $segments[5]
+            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -sasToken $sasToken | Select-Object -First 1
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+            }
+            $version = $artifactUrl.Split('/')[4]
+            $storageAccount = $artifactUrl.Split('/')[2]
+        }
+    
+        if ($settings.additionalCountries -or $country -ne $settings.country) {
+            if ($country -ne $settings.country -and !$doNotIssueWarnings) {
+                OutputWarning -message "artifact definition in $ALGoSettingsFile uses a different country ($country) than the country definition ($($settings.country))"
+            }
+            Write-Host "Checking Country and additionalCountries"
+            # AT is the latest published language - use this to determine available country codes (combined with mapping)
+            $ver = [Version]$version
+            Write-Host "https://$storageAccount/$artifactType/$version/$country"
+            $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
+            Write-Host "Latest AT artifacts $atArtifactUrl"
+            $latestATversion = $atArtifactUrl.Split('/')[4]
+            $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
+                $countryArtifactUrl = $_.Split('?')[0] # remove sas token
+                $countryArtifactUrl.Split('/')[5] # get country
+            }
+            Write-Host "Countries with artifacts $($countries -join ',')"
+            $allowedCountries = $bcContainerHelperConfig.mapCountryCode.PSObject.Properties.Name + $countries | Select-Object -Unique
+            Write-Host "Allowed Country codes $($allowedCountries -join ',')"
+            if ($allowedCountries -notcontains $settings.country) {
+                throw "Country ($($settings.country)), specified in $ALGoSettingsFile is not a valid country code."
+            }
+            $illegalCountries = $settings.additionalCountries | Where-Object { $allowedCountries -notcontains $_ }
+            if ($illegalCountries) {
+                throw "additionalCountries contains one or more invalid country codes ($($illegalCountries -join ",")) in $ALGoSettingsFile."
+            }
+            $artifactUrl = $artifactUrl.Replace($artifactUrl.Split('/')[4],$atArtifactUrl.Split('/')[4])
+        }
+        else {
+            Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"
+            $folders = Download-Artifacts -artifactUrl $artifactUrl -includePlatform -ErrorAction SilentlyContinue
+            if (-not ($folders)) {
+                throw "Unable to download artifacts from $($artifactUrl.Split('?')[0]), please check $ALGoSettingsFile."
+            }
+        }
+        $settings.artifact = $artifactUrl
+
         if ([Version]$settings.applicationDependency -gt [Version]$version) {
             throw "Application dependency is set to $($settings.applicationDependency), which isn't compatible with the artifact version $version"
         }
@@ -651,6 +749,7 @@ function AnalyzeRepo {
 
     Write-Host "Analyzing Test App Dependencies"
     if ($settings.testFolders) { $settings.installTestRunner = $true }
+    if ($settings.bcptTestFolders) { $settings.installPerformanceToolkit = $true }
 
     $settings.appDependencies + $settings.testDependencies | ForEach-Object {
         $dep = $_
@@ -662,12 +761,16 @@ function AnalyzeRepo {
         }
     }
 
-    if (-not $settings.testFolders) {
-        OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile"
-        $doNotRunTests = $true
+    if (!$settings.doNotRunBcptTests -and -not $settings.bcptTestFolders) {
+        if (!$doNotIssueWarnings) { OutputWarning -message "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
+        $settings.doNotRunBcptTests = $true
+    }
+    if (!$settings.doNotRunTests -and -not $settings.testFolders) {
+        if (!$doNotIssueWarnings) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+        $settings.doNotRunTests = $true
     }
     if (-not $settings.appFolders) {
-        OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile"
+        if (!$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
     }
 
     $settings
@@ -730,7 +833,7 @@ function CloneIntoNewFolder {
 
 function CommitFromNewFolder {
     Param(
-        [string] $severUrl,
+        [string] $serverUrl,
         [string] $commitMessage,
         [string] $branch
     )
@@ -1002,7 +1105,7 @@ function CreateDevEnv {
                 elseif ($kind -eq "cloud") {
                     $adminCenterApiCredentialsSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.AdminCenterApiCredentialsSecretName
                     if ($adminCenterApiCredentialsSecret) { $AdminCenterApiCredentials = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable }
-                    $legalParameters = @("RefreshToken","CliendId","ClientSecret","deviceCode")
+                    $legalParameters = @("RefreshToken","CliendId","ClientSecret","deviceCode","tenantId")
                     $adminCenterApiCredentials.Keys | ForEach-Object {
                         if (-not ($legalParameters -contains $_)) {
                             throw "$_ is an illegal property in adminCenterApiCredentials setting"
@@ -1031,11 +1134,10 @@ function CreateDevEnv {
         }
         $repo = AnalyzeRepo @params
         if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
-            Write-Host "Repository is empty, exiting"
-            exit
+            Write-Host "Repository is empty"
         }
 
-        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
+        if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
             if ($licenseFileUrl -eq "") {
                 OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
                 exit
@@ -1044,7 +1146,22 @@ function CreateDevEnv {
 
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
-    
+
+        if ($repo.versioningStrategy -eq -1) {
+            if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
+            $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+            $runAlPipelineParams += @{
+                "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+                "appBuild" = "$($artifactVersion.Build)"
+                "appRevision" = "$($artifactVersion.Revision)"
+            }
+        }
+        elseif (($repo.versioningStrategy -band 16) -eq 16) {
+            $runAlPipelineParams += @{
+                "appVersion" = $repo.repoVersion
+            }
+        }
+
         $buildArtifactFolder = Join-Path $baseFolder "output"
         if (Test-Path $buildArtifactFolder) {
             Get-ChildItem -Path $buildArtifactFolder -Include * -File | ForEach-Object { $_.Delete()}
@@ -1117,7 +1234,7 @@ function CreateDevEnv {
                 $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
             }
             else {
-                $countryCode = $settings.country
+                $countryCode = $repo.country
                 New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
                 do {
                     Start-Sleep -Seconds 10
@@ -1147,6 +1264,17 @@ function CreateDevEnv {
             }
         }
         
+        "installTestRunner",
+        "installTestFramework",
+        "installTestLibraries",
+        "installPerformanceToolkit",
+        "enableCodeCop",
+        "enableAppSourceCop",
+        "enablePerTenantExtensionCop",
+        "enableUICop" | ForEach-Object {
+            if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+        }
+
         Run-AlPipeline @runAlPipelineParams `
             -pipelinename $workflowName `
             -imageName "" `
@@ -1160,22 +1288,16 @@ function CreateDevEnv {
             -testFolders $repo.testFolders `
             -testResultsFile $testResultsFile `
             -testResultsFormat 'JUnit' `
-            -installTestRunner:$repo.installTestRunner `
-            -installTestFramework:$repo.installTestFramework `
-            -installTestLibraries:$repo.installTestLibraries `
-            -installPerformanceToolkit:$repo.installPerformanceToolkit `
-            -enableCodeCop:$repo.enableCodeCop `
-            -enableAppSourceCop:$repo.enableAppSourceCop `
-            -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
-            -enableUICop:$repo.enableUICop `
-            -customCodeCops:$repo.customCodeCops `
+            -customCodeCops $repo.customCodeCops `
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
             -failOn $repo.failOn `
             -rulesetFile $repo.rulesetFile `
             -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
+            -obsoleteTagMinAllowedMajorMinor $repo.obsoleteTagMinAllowedMajorMinor `
             -doNotRunTests `
+            -doNotRunBcptTests `
             -useDevEndpoint `
             -keepContainer
     }
@@ -1194,7 +1316,7 @@ function ConvertTo-HashTable() {
     )
     $ht = @{}
     if ($object) {
-        $object.PSObject.Properties | Foreach { $ht[$_.Name] = $_.Value }
+        $object.PSObject.Properties | ForEach-Object { $ht[$_.Name] = $_.Value }
     }
     $ht
 }

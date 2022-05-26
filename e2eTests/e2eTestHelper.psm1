@@ -242,6 +242,22 @@ function CreateRepository {
 
         Copy-Item (Join-Path $templatePath '*') -Destination . -Recurse -Force
     }
+    $repoSettingsFile = ".github\AL-Go-Settings.json"
+    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
+    $repoSettings | Add-Member -MemberType NoteProperty -Name "bcContainerHelperVersion" -Value "dev"
+    if ($private) {
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value "self-hosted"
+        Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" } | ForEach-Object {
+            Write-Host $_.FullName
+            $content = (Get-Content -Path $_.FullName -Encoding UTF8 -Raw -Force).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+            $srcPattern = "runs-on: [ windows-latest ]`r`n"
+            $replacePattern = "runs-on: [ self-hosted ]`r`n"
+            $content = $content.Replace($srcPattern, $replacePattern)
+            Set-Content -Path $_.FullName -Encoding UTF8 -Value $content
+        }
+    }
+    $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
 
     invoke-git add *
     invoke-git commit --allow-empty -m 'init'

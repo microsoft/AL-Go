@@ -16,6 +16,7 @@ Param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
+$bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
@@ -33,7 +34,6 @@ try {
     } -ArgumentList $genericImageName | Out-Null
 
     $runAlPipelineParams = @{}
-    $environment = 'GitHubActions'
     if ($project  -eq ".") { $project = "" }
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
     $sharedFolder = ""
@@ -64,7 +64,7 @@ try {
         exit
     }
 
-    if ($settings.type -eq "AppSource App" ) {
+    if ($repo.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
             OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             exit
@@ -116,13 +116,11 @@ try {
     $artifact = $repo.artifact
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
-    $doNotBuildTests = $repo.doNotBuildTests
-    $doNotRunTests = $repo.doNotRunTests
 
-    if ($settings.appDependencyProbingPaths) {
+    if ($repo.appDependencyProbingPaths) {
         Write-Host "Downloading dependencies ..."
-        $installApps += Get-dependencies -probingPathsJson $settings.appDependencyProbingPaths -token $token -mask "-Apps-"
-        Get-dependencies -probingPathsJson $settings.appDependencyProbingPaths -token $token -mask "-TestApps-" | ForEach-Object {
+        $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-Apps-"
+        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-TestApps-" | ForEach-Object {
             $installTestApps += "($_)"
         }
     }
@@ -133,7 +131,7 @@ try {
 
     # Check if insidersastoken is used (and defined)
 
-    if ($CodeSignCertificateUrl -and $CodeSignCertificatePassword) {
+    if (!$repo.doNotSignApps -and $CodeSignCertificateUrl -and $CodeSignCertificatePassword) {
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
             "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
@@ -154,7 +152,13 @@ try {
     else {
         try {
             $releasesJson = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-            $latestRelease = $releasesJson | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+            if ($env:GITHUB_REF_NAME -like 'release/*') {
+                # For CI/CD in a release branch use that release as previous build
+                $latestRelease = $releasesJson | Where-Object { $_.tag_name -eq "$env:GITHUB_REF_NAME".SubString(8) } | Select-Object -First 1
+            }
+            else {
+                $latestRelease = $releasesJson | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+            }
             if ($latestRelease) {
                 Write-Host "Using $($latestRelease.name) as previous release"
                 $artifactsFolder = Join-Path $baseFolder "artifacts"
@@ -183,7 +187,15 @@ try {
     $environmentName = ""
     $CreateRuntimePackages = $false
 
-    if (($repo.versioningStrategy -band 16) -eq 16) {
+    if ($repo.versioningStrategy -eq -1) {
+        $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+        $runAlPipelineParams += @{
+            "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+        }
+        $appBuild = $artifactVersion.Build
+        $appRevision = $artifactVersion.Revision
+    }
+    elseif (($repo.versioningStrategy -band 16) -eq 16) {
         $runAlPipelineParams += @{
             "appVersion" = $repo.repoVersion
         }
@@ -198,7 +210,9 @@ try {
     if (Test-Path $testResultsFiles) {
         Remove-Item $testResultsFiles -Force
     }
-    
+
+    $buildOutputFile = Join-Path $baseFolder "BuildOutput.txt"
+
     "containerName=$containerName" | Add-Content $ENV:GITHUB_ENV
 
     Set-Location $baseFolder
@@ -213,6 +227,21 @@ try {
         }
     }
     
+    "doNotBuildTests",
+    "doNotRunTests",
+    "doNotRunBcptTests",
+    "doNotPublishApps",
+    "installTestRunner",
+    "installTestFramework",
+    "installTestLibraries",
+    "installPerformanceToolkit",
+    "enableCodeCop",
+    "enableAppSourceCop",
+    "enablePerTenantExtensionCop",
+    "enableUICop" | ForEach-Object {
+        if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+    }
+
     Write-Host "Invoke Run-AlPipeline"
     Run-AlPipeline @runAlPipelineParams `
         -pipelinename $workflowName `
@@ -229,33 +258,27 @@ try {
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
+        -generateDependencyArtifact:$repo.generateDependencyArtifact `
+        -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
         -appFolders $repo.appFolders `
         -testFolders $repo.testFolders `
-        -doNotBuildTests:$doNotBuildTests `
-        -doNotRunTests:$doNotRunTests `
+        -bcptTestFolders $repo.bcptTestFolders `
+        -buildOutputFile $buildOutputFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
-        -installTestRunner:$repo.installTestRunner `
-        -installTestFramework:$repo.installTestFramework `
-        -installTestLibraries:$repo.installTestLibraries `
-        -installPerformanceToolkit:$repo.installPerformanceToolkit `
-        -enableCodeCop:$repo.enableCodeCop `
-        -enableAppSourceCop:$repo.enableAppSourceCop `
-        -enablePerTenantExtensionCop:$repo.enablePerTenantExtensionCop `
-        -enableUICop:$repo.enableUICop `
-        -customCodeCops:$repo.customCodeCops `
-        -azureDevOps:($environment -eq 'AzureDevOps') `
-        -gitLab:($environment -eq 'GitLab') `
-        -gitHubActions:($environment -eq 'GitHubActions') `
+        -customCodeCops $repo.customCodeCops `
+        -gitHubActions `
         -failOn $repo.failOn `
         -rulesetFile $repo.rulesetFile `
         -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
+        -obsoleteTagMinAllowedMajorMinor $repo.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
-        -uninstallRemovedApps
+        -uninstallRemovedApps `
+        -RemoveBcContainer { Param([Hashtable]$parameters) Remove-BcContainerSession -containerName $parameters.ContainerName -killPsSessionProcess; Remove-BcContainer @parameters }
 
     if ($storageContext) {
         Write-Host "Publishing to $storageContainerName in $($storageAccount.StorageAccountName)"

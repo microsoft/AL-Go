@@ -225,7 +225,7 @@ try {
                 }
             }
 
-            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer -and $_.name -notlike '*.copy.md' } | ForEach-Object {
                 $dstFile = $_.FullName
                 $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
                 $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
@@ -271,6 +271,9 @@ try {
                 @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "main" }
                 @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = "main" }
                 @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath;            "branch" = "main" }
+                @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "preview" }
+                @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = "preview" }
+                @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath;            "branch" = "preview" }
             )
         }
 
@@ -331,15 +334,22 @@ try {
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
+                $useBranch = $config.branch
+                if ($_.Name -eq "AL-Go-Settings.json") {
+                    $useBranch = $branch
+                }
                 $lines = ([string](Get-Content -Raw -path $srcFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                    $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($config.branch)`$3"
+                    $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($useBranch)`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
                 $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
-        
+            if (Test-Path -Path '.\.github' -PathType Container) {
+                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination ".\.github\RELEASENOTES.copy.md" -Force
+            }
+            
             invoke-git add .
             invoke-git commit --allow-empty -m 'checkout'
             invoke-git push $serverUrl

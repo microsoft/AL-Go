@@ -15,6 +15,7 @@ function Get-dependencies {
     $downloadedList = @()
     $probingPathsJson | ForEach-Object {
         $dependency = $_
+
         if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
             throw "AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which you have a dependency"
         }
@@ -28,28 +29,33 @@ function Get-dependencies {
             $dependency | Add-Member -name "Projects" -MemberType NoteProperty -Value "*"
         }
         if (-not ($dependency.PsObject.Properties.name -eq "release_status")) {
-            $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "latestBuild"
+            $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
         }
 
-        Write-Host "Getting releases from $($dependency.repo)"
+        # TODO better error messages
+
         $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
         if ($dependency.release_status -eq "latestBuild") {
 
             # TODO it should check the branch and limit to a certain branch
+
+            Write-Host "Getting artifacts from $($dependency.repo)"
             $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask $mask
             if ($dependency.version -ne "latest") {
                 $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
             }    
                 
             $artifact = $artifacts | Select-Object -First 1
-            if (!($artifact)) {
-                throw "Could not find any artifacts that matches the criteria."
+            if ($artifact) {
+                $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
             }
-
-            $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
+            else {
+                Write-Host -ForegroundColor Red "Could not find any artifacts that matches '*$mask*'"
+            }
         }
         else {
 
+            Write-Host "Getting releases from $($dependency.repo)"
             $releases = GetReleases -api_url $api_url -token $dependency.authTokenSecret -repository $repository
             if ($dependency.version -ne "latest") {
                 $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
@@ -81,6 +87,77 @@ function Get-dependencies {
     return $downloadedList;
 }
 
+function SemVerObjToSemVerStr {
+    Param(
+        $semVerObj
+    )
+
+    try {
+        $str = "$($semVerObj.Prefix)$($semVerObj.Major).$($semVerObj.Minor).$($semVerObj.Patch)"
+        for ($i=0; $i -lt 5; $i++) {
+            $seg = $semVerObj."Addt$i"
+            if ($seg -eq 'zzz') { break }
+            if ($i -eq 0) { $str += "-$($seg)" } else { $str += ".$($seg)" }
+        }
+        $str
+    }
+    catch {
+        throw "'$SemVerObj' cannot be recognized as a semantic version object (internal error)"
+    }
+}
+
+function SemVerStrToSemVerObj {
+    Param(
+        [string] $semVerStr
+    )
+
+    $obj = New-Object PSCustomObject
+    try {
+        $prefix = ''
+        $verstr = $semVerStr
+        if ($semVerStr -like 'v*') {
+            $prefix = 'v'
+            $verStr = $semVerStr.Substring(1)
+        }
+        $version = [System.Version]"$($verStr.split('-')[0])"
+        if ($version.Revision -ne -1) { throw "not semver" }
+        $obj | Add-Member -MemberType NoteProperty -Name "Prefix" -Value $prefix
+        $obj | Add-Member -MemberType NoteProperty -Name "Major" -Value ([int]$version.Major)
+        $obj | Add-Member -MemberType NoteProperty -Name "Minor" -Value ([int]$version.Minor)
+        $obj | Add-Member -MemberType NoteProperty -Name "Patch" -Value ([int]$version.Build)
+        0..4 | ForEach-Object {
+            $obj | Add-Member -MemberType NoteProperty -Name "Addt$_" -Value 'zzz'
+        }
+        $idx = $verStr.IndexOf('-')
+        if ($idx -gt 0) {
+            $segments = $verStr.SubString($idx+1).Split('.')
+            if ($segments.Count -ge 5) {
+                throw "max. 5 segments"
+            }
+            0..($segments.Count-1) | ForEach-Object {
+                $result = 0
+                if ([int]::TryParse($segments[$_], [ref] $result)) {
+                    $obj."Addt$_" = [int]$result
+                }
+                else {
+                    if ($segments[$_] -ge 'zzz') {
+                        throw "Unsupported segment"
+                    }
+                    $obj."Addt$_" = $segments[$_]
+                }
+            }
+        }
+        $newStr = SemVerObjToSemVerStr -semVerObj $obj
+        if ($newStr -cne $semVerStr) {
+            throw "Not equal"
+        }
+    }
+    catch {
+        throw "'$semVerStr' cannot be recognized as a semantic version string (https://semver.org)"
+    }
+    $obj
+}
+
 function GetReleases {
     Param(
         [string] $token,
@@ -89,7 +166,28 @@ function GetReleases {
     )
 
     Write-Host "Analyzing releases $api_url/repos/$repository/releases"
-    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json
+    $releases = @(Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json)
+    if ($releases.Count -gt 1) {
+        # Sort by SemVer tag
+        try {
+            $sortedReleases = $releases.tag_name | 
+                ForEach-Object { SemVerStrToSemVerObj -semVerStr $_ } | 
+                Sort-Object -Property Major,Minor,Patch,Addt0,Addt1,Addt2,Addt3,Addt4 -Descending | 
+                ForEach-Object { SemVerObjToSemVerStr -semVerObj $_ } | ForEach-Object {
+                    $tag_name = $_
+                    $releases | Where-Object { $_.tag_name -eq $tag_name }
+                }
+            $sortedReleases
+        }
+        catch {
+            Write-Host -ForegroundColor red "Some of the release tags cannot be recognized as a semantic version string (https://semver.org)"
+            Write-Host -ForegroundColor red "Using default GitHub sorting for releases"
+            $releases
+        }
+    }
+    else {
+        $releases
+    }
 }
 
 function GetHeader {

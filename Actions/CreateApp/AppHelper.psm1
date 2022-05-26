@@ -8,9 +8,10 @@ $alTemplatePath = Join-Path -Path $here -ChildPath "AppTemplate"
 
 
 $validRanges = @{
-    "PTE"           = "50000..99999";
-    "AppSource App" = "100000..$([int32]::MaxValue)";
-    "Test App"      = "50000..$([int32]::MaxValue)" ;
+    "PTE"                  = "50000..99999";
+    "AppSource App"        = "100000..$([int32]::MaxValue)";
+    "Test App"             = "50000..$([int32]::MaxValue)" ;
+    "Performance Test App" = "50000..$([int32]::MaxValue)" ;
 };
 
 function Confirm-IdRanges([string] $templateType, [string]$idrange ) {  
@@ -31,35 +32,68 @@ function Confirm-IdRanges([string] $templateType, [string]$idrange ) {
 
 function UpdateManifest
 (
+    [string] $sourceFolder = $alTemplatePath,
     [string] $appJsonFile,
     [string] $name,
     [string] $publisher,
     [string] $version,
-    [string[]] $idrange
+    [string[]] $idrange,
+    [switch] $AddTestDependencies
 ) 
 {
     #Modify app.json
-    $appJson = Get-Content "$($alTemplatePath)\app.json" -Encoding UTF8 | ConvertFrom-Json
+    $appJson = Get-Content (Join-Path $sourceFolder "app.json") -Encoding UTF8 | ConvertFrom-Json
 
     $appJson.id = [Guid]::NewGuid().ToString()
     $appJson.Publisher = $publisher
     $appJson.Name = $name
     $appJson.Version = $version
+    $appJson.Logo = ""
+    $appJson.url = ""
+    $appJson.EULA = ""
+    $appJson.privacyStatement = ""
+    $appJson.help = ""
+    "contextSensitiveHelpUrl" | ForEach-Object {
+        if ($appJson.PSObject.Properties.Name -eq $_) { $appJson.PSObject.Properties.Remove($_) }
+    }
     $appJson.idRanges[0].from = [int]$idrange[0]
     $appJson.idRanges[0].to = [int]$idrange[1]
+    if ($AddTestDependencies) {
+        $appJson.dependencies += @(
+            @{
+                "id" = "dd0be2ea-f733-4d65-bb34-a28f4624fb14"
+                "publisher" = "Microsoft"
+                "name" = "Library Assert"
+                "version" = $appJson.Application
+            },
+            @{
+                "id" = "e7320ebb-08b3-4406-b1ec-b4927d3e280b"
+                "publisher" = "Microsoft"
+                "name" = "Any"
+                "version" = $appJson.Application
+            }
+        )
+
+    }
     $appJson | ConvertTo-Json -depth 99 | Set-Content $appJsonFile -Encoding UTF8
 }
 
 function UpdateALFile 
 (
+    [string] $sourceFolder = $alTemplatePath,
     [string] $destinationFolder,
     [string] $alFileName,
-    [string] $startId
+    [int] $fromId = 50100,
+    [int] $toId = 50100,
+    [int] $startId
 ) 
 {
-    $al = Get-Content -Encoding UTF8 -Raw -path "$($alTemplatePath)\$alFileName"
-    $al = $al.Replace('50100', $startId)
-    Set-Content -Path "$($destinationFolder)\$($alFileName)" -value $al -Encoding UTF8
+    $al = Get-Content -Encoding UTF8 -Raw -path (Join-Path $sourceFolder $alFileName)
+    $fromId..$toId | ForEach-Object {
+        $al = $al.Replace("$_", $startId)
+        $startId++
+    }
+    Set-Content -Path (Join-Path $destinationFolder $alFileName) -value $al -Encoding UTF8
 }
 
 <#
@@ -72,7 +106,8 @@ function New-SampleApp
     [string] $name,
     [string] $publisher,
     [string] $version,
-    [string[]] $idrange
+    [string[]] $idrange,
+    [bool] $sampleCode
 ) 
 {
     Write-Host "Creating a new sample app in: $destinationPath"
@@ -81,7 +116,12 @@ function New-SampleApp
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
 
     UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
-    UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.al" -startId $idrange[0]
+    if ($sampleCode) {
+        UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.al" -startId $idrange[0]
+    }
+    else {
+        Remove-Item -path "$($destinationPath)\Helloworld.al" -Force
+    }
 }
 
 
@@ -95,7 +135,8 @@ function New-SampleTestApp
     [string] $name,
     [string] $publisher,
     [string] $version,
-    [string[]] $idrange
+    [string[]] $idrange,
+    [bool] $sampleCode
 ) 
 {
     Write-Host "Creating a new test app in: $destinationPath"
@@ -103,8 +144,48 @@ function New-SampleTestApp
     New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force | Out-Null
     Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
 
-    UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
-    UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.Test.al" -startId $idrange[0]
+    UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version -AddTestDependencies
+    if ($sampleCode) {
+        UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.Test.al" -startId $idrange[0]
+    }
+    else {
+        Remove-Item -path "$($destinationPath)\Helloworld.Test.al" -Force
+    }
+}
+
+# <#
+# .SYNOPSIS
+# Creates a performance test app.
+# #>
+function New-SamplePerformanceTestApp
+(
+    [string] $destinationPath,
+    [string] $name,
+    [string] $publisher,
+    [string] $version,
+    [string[]] $idrange,
+    [bool] $sampleCode,
+    [bool] $sampleSuite,
+    [string] $appSourceFolder
+) 
+{
+    Write-Host "Creating a new performance test app in: $destinationPath"
+    New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
+    New-Item  -Path "$($destinationPath)\.vscode" -ItemType Directory -Force | Out-Null
+    New-Item  -Path "$($destinationPath)\src" -ItemType Directory -Force | Out-Null
+    Copy-Item -path "$($alTemplatePath)\.vscode\launch.json" -Destination "$($destinationPath)\.vscode\launch.json"
+
+    UpdateManifest -sourceFolder $appSourceFolder -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
+
+    if ($sampleCode) {
+        Get-ChildItem -Path "$appSourceFolder\src" -Recurse -Filter "*.al" | ForEach-Object {
+            Write-Host $_.Name
+            UpdateALFile -sourceFolder $_.DirectoryName -destinationFolder "$($destinationPath)\src" -alFileName $_.name -fromId 149100 -toId 149200 -startId $idrange[0]
+        }
+    }
+    if ($sampleSuite) {
+        UpdateALFile -sourceFolder $alTemplatePath -destinationFolder $destinationPath -alFileName bcptSuite.json -fromId 149100 -toId 149200 -startId $idrange[0]
+    }
 }
 
 function Update-WorkSpaces 
@@ -132,5 +213,6 @@ function Update-WorkSpaces
 
 Export-ModuleMember -Function New-SampleApp
 Export-ModuleMember -Function New-SampleTestApp
+Export-ModuleMember -Function New-SamplePerformanceTestApp
 Export-ModuleMember -Function Confirm-IdRanges
 Export-ModuleMember -Function Update-WorkSpaces

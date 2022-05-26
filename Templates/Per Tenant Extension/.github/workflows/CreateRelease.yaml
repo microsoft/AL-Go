@@ -12,17 +12,34 @@ on:
         required: true
         default: ''
       tag:
-        description: Tag of this release
+        description: Tag of this release (needs to be semantic version string https://semver.org)
         required: true
         default: ''
-      draft:
-        description: Draft (Y/N)
-        required: false
-        default: 'N'
       prerelease:
         description: Prerelease (Y/N)
         required: false
         default: 'N'
+      draft:
+        description: Draft (Y/N)
+        required: false
+        default: 'N'
+      createReleaseBranch:
+        description: Create Release Branch (Y/N)
+        required: false
+        default: 'N'
+      updateVersionNumber:
+        description: New Version Number in main branch. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
+        required: false
+        default: ''
+      directCommit:
+        description: Direct COMMIT (Y/N)
+        required: false
+        default: 'N'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
 
 concurrency: release
 
@@ -219,10 +236,38 @@ jobs:
               }
           }
 
+  CreateReleaseBranch:
+    if: ${{ github.event.inputs.createReleaseBranch=='Y' }}
+    runs-on: [ windows-latest ]
+    needs: [ Initialization, CreateRelease, UploadArtifacts ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Create Release Branch
+        run: |
+          git checkout -b release/${{ github.event.inputs.tag }}
+          git config user.name ${{ github.actor}}
+          git config user.email ${{ github.actor}}@users.noreply.github.com
+          git commit --allow-empty -m "Release branch ${{ github.event.inputs.tag }}"
+          git push origin release/${{ github.event.inputs.tag }}
+
+  UpdateVersionNumber:
+    if: ${{ github.event.inputs.updateVersionNumber!='' }}
+    runs-on: [ windows-latest ]
+    needs: [ Initialization, CreateRelease, UploadArtifacts ]
+    steps:
+      - name: Update Version Number
+        uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          versionNumber: ${{ github.event.inputs.updateVersionNumber }}
+          directCommit: ${{ github.event.inputs.directCommit }}
+
   PostProcess:
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ Initialization, CreateRelease, UploadArtifacts ]
+    needs: [ Initialization, CreateRelease, UploadArtifacts, CreateReleaseBranch, UpdateVersionNumber ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
