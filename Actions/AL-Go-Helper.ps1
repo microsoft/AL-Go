@@ -1000,6 +1000,21 @@ function Enter-Value {
     $answer
 }
 
+function OptionallyConvertFromBase64 {
+    Param(
+        [string] $value
+    )
+
+    if ($value.StartsWith('::') -and $value.EndsWith('::')) {
+        if ($value.Length -eq 4) {
+            ""
+        }
+        else {
+            [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($value.Substring(2, $value.Length-4)))
+        }
+    }
+}
+
 function GetContainerName([string] $project) {
     "bc$($project -replace "\W")$env:GITHUB_RUN_ID"
 }
