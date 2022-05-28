@@ -1,4 +1,4 @@
-## Preview
+## v1,5
 
 ### Issues
 - Issue #100 - Add more resilience to localDevEnv.ps1 and cloudDevEnv.ps1
