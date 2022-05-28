@@ -10,7 +10,7 @@ Param(
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"AppBuild":"", "AppRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
-    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":"","StorageContext":""}'
+    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":"","StorageContext":"","ApplicationInsightsConnectionString":""}'
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,7 +48,7 @@ try {
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId','StorageContext' | ForEach-Object {
+    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId','StorageContext','ApplicationInsightsConnectionString' | ForEach-Object {
         if ($secrets.ContainsKey($_)) {
             $value = $secrets."$_"
         }
@@ -137,6 +137,12 @@ try {
             "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
         }
     }
+    if ($applicationInsightsConnectionString) {
+        $runAlPipelineParams += @{ 
+            "applicationInsightsConnectionString" = $applicationInsightsConnectionString
+        }
+    }
+
     if ($KeyVaultCertificateUrl -and $KeyVaultCertificatePassword -and $KeyVaultClientId) {
         $runAlPipelineParams += @{ 
             "KeyVaultCertPfxFile" = $KeyVaultCertificateUrl
