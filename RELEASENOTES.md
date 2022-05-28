@@ -2,6 +2,7 @@
 
 ### Issues
 - Issue #100 - Add more resilience to localDevEnv.ps1 and cloudDevEnv.ps1
+- Issue #131 - Special characters are not allowed in secrets
 
 ### All workflows
 - During initialize, all AL-Go settings files are now checked for validity and reported correctly
@@ -15,6 +16,7 @@
 
 ### CI/CD workflow
 - Apps are not signed when the workflow is running as a Pull Request validation
+- if a secret called applicationInsightsConnectionString exists, then the value of that will be used as ApplicationInsightsConnectionString for the app
 
 ### Increment Version Number Workflow
 - Bugfix: increment all apps using f.ex. +0.1 would fail.
