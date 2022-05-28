@@ -376,6 +376,7 @@ function ReadSettings {
         "insiderSasTokenSecretName"              = "InsiderSasToken"
         "ghTokenWorkflowSecretName"              = "GhTokenWorkflow"
         "adminCenterApiCredentialsSecretName"    = "AdminCenterApiCredentials"
+        "applicationInsightsConnectionStringSecretName" = "ApplicationInsightsConnectionString"
         "keyVaultCertificateUrlSecretName"       = ""
         "keyVaultCertificatePasswordSecretName"  = ""
         "keyVaultClientIdSecretName"             = ""
@@ -1099,6 +1100,15 @@ function CreateDevEnv {
                     if ($insiderSasTokenSecret) { $insiderSasToken = $insiderSasTokenSecret.SecretValue | Get-PlainText }
 
                     # do not add codesign cert.
+
+                    if ($settings.applicationInsightsConnectionStringSecretName) {
+                        $applicationInsightsConnectionStringSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.applicationInsightsConnectionStringSecretName
+                        if ($applicationInsightsConnectionStringSecret) {
+                            $runAlPipelineParams += @{ 
+                                "applicationInsightsConnectionString" = $applicationInsightsConnectionStringSecret.SecretValue | Get-PlainText
+                            }
+                        }
+                    }
                     
                     if ($settings.KeyVaultCertificateUrlSecretName) {
                         $KeyVaultCertificateUrlSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.KeyVaultCertificateUrlSecretName
