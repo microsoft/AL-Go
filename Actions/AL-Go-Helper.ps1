@@ -416,6 +416,7 @@ function ReadSettings {
         "templateUrl"                            = ""
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
+        "runs-on"                                = "windows-latest"
         "githubRunner"                           = "windows-latest"
         "cacheImageName"                         = "my"
         "cacheKeepDays"                          = 3
