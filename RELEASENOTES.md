@@ -1,3 +1,11 @@
+## preview
+
+### Update AL-Go System Files Workflow
+- workflow now displays the currently used template URL when selecting the Run Workflow action
+
+### CI/CD and Publish To New Environment
+- base functionality for selecting a specific GitHub runner for an environment
+
 ## v1.5
 
 ### Issues
