@@ -157,12 +157,12 @@ try {
                 $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
             }
         })
-        if ($environments.Count -eq 1) {
-            $environmentsJSon = "[$($environments | ConvertTo-Json -compress)]"
+
+        $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
+        $environments | ForEach-Object { 
+            $json.matrix.include += @{ "environment" = $_; "os" = $settings."runs-on" }
         }
-        else {
-            $environmentsJSon = $environments | ConvertTo-Json -compress
-        }
+        $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
         Write-Host "::set-output name=EnvironmentsJson::$environmentsJson"
         Write-Host "set-output name=EnvironmentsJson::$environmentsJson"
         Write-Host "::set-output name=EnvironmentCount::$($environments.Count)"
