@@ -118,7 +118,12 @@ try {
             }
         }
     }
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New Version number $($newVersion.Major).$($newVersion.Minor)" -branch $branch
+    if ($addToVersionNumber) {
+        CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Increment Version number by $($newVersion.Major).$($newVersion.Minor)" -branch $branch
+    }
+    else {
+        CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New Version number $($newVersion.Major).$($newVersion.Minor)" -branch $branch
+    }
 
     TrackTrace -telemetryScope $telemetryScope
 }

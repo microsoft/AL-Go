@@ -82,13 +82,13 @@ try {
         }
         $projects.Split(',') | ForEach-Object {
             $project = $_
-            $allArtifacts | Where-Object { $_.name -like "$project-Apps-$artifactsVersion" } | ForEach-Object {
+            $allArtifacts | Where-Object { $_.name -like "$($project.Replace('\','_'))-Apps-$artifactsVersion" } | ForEach-Object {
                 DownloadArtifact -token $token -artifact $_ -path $baseFolder
             }
         }
         $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
         if (!($apps)) {
-            throw "Unable to download artifact $project-Apps-$artifacts"
+            throw "Unable to download artifact $($project.Replace('\','_'))-Apps-$artifacts"
         }
     }
 
