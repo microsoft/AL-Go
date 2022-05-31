@@ -97,7 +97,7 @@ try {
     Write-Host "set-output name=GitHubRunnerJson::$githubRunner"
 
     if ($getprojects) {
-        $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.Name })
+        $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.FullName.Substring((get-location).path.length+1) })
         if ($projects) {
             if (($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push") -and !$settings.alwaysBuildAllProjects) {
                 $headers = @{             
@@ -114,8 +114,12 @@ try {
                 $response = Invoke-WebRequest -Headers $headers -UseBasicParsing -Method GET -Uri $url | ConvertFrom-Json
                 $filesChanged = @($response.files | ForEach-Object { $_.filename })
                 if ($filesChanged.Count -lt 250) {
-                    $foldersChanged = @($filesChanged | ForEach-Object { $_.Split('/')[0] } | Select-Object -Unique)
-                    $projects = @($projects | Where-Object { $foldersChanged -contains $_ })
+                    Write-Host "Modified files:"
+                    $filesChanged | Out-Host
+                    $projects = @($projects | Where-Object {
+                        $project = $_.Replace('\','/')
+                        $filesChanged | Where-Object { $_ -like "$project/*" }
+                    })
                     Write-Host "Modified projects: $($projects -join ', ')"
                 }
             }
@@ -160,7 +164,12 @@ try {
 
         $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
         $environments | ForEach-Object { 
-            $json.matrix.include += @{ "environment" = $_; "os" = $settings."runs-on" }
+            $environmentGitHubRunnerKey = "$($_.Split(' ')[0])_GitHubRunner"
+            $os = $settings."runs-on"
+            if (([HashTable]$settings).ContainsKey($environmentGitHubRunnerKey)) {
+                $os = $settings."$environmentGitHubRunnerKey"
+            }
+            $json.matrix.include += @{ "environment" = $_; "os" = $os }
         }
         $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
         Write-Host "::set-output name=EnvironmentsJson::$environmentsJson"

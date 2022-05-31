@@ -128,7 +128,7 @@ jobs:
           if ($project -eq ".") { $project = $settings.RepoName }
           'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput' | ForEach-Object {
             $name = "$($_)ArtifactsName"
-            $value = "$project-$("$ENV:GITHUB_REF_NAME".Replace('/','_'))-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+            $value = "$($project.Replace('\','_'))-$("$ENV:GITHUB_REF_NAME".Replace('/','_'))-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
             Write-Host "::set-output name=$name::$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }
