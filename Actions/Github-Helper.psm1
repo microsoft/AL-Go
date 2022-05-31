@@ -15,7 +15,6 @@ function Get-dependencies {
     $downloadedList = @()
     $probingPathsJson | ForEach-Object {
         $dependency = $_
-
         if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
             throw "AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which you have a dependency"
         }
@@ -254,12 +253,16 @@ function DownloadRelease {
 
     if ($projects -eq "") { $projects = "*" }
     Write-Host "Downloading release $($release.Name)"
+    if ([string]::IsNullOrEmpty($token)) {
+        $authstatus = (invoke-gh auth status --show-token) -join " "
+        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+    }
     $headers = @{ 
-        "Authorization" = "token $token"
         "Accept"        = "application/octet-stream"
+        "Authorization" = "token $token"
     }
     $projects.Split(',') | ForEach-Object {
-        $project = $_
+        $project = $_.Replace('\','_')
         Write-Host "project '$project'"
         
         $release.assets | Where-Object { $_.name -like "$project$mask*.zip" } | ForEach-Object {
@@ -292,6 +295,10 @@ function DownloadArtifact {
     )
 
     Write-Host "Downloading artifact $($artifact.Name)"
+    if ([string]::IsNullOrEmpty($token)) {
+        $authstatus = (invoke-gh auth status --show-token) -join " "
+        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+    }
     $headers = @{ 
         "Authorization" = "token $token"
         "Accept"        = "application/vnd.github.v3+json"
