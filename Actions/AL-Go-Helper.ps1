@@ -51,30 +51,6 @@ $testRunnerApps = @($permissionsMockAppId, $testRunnerAppId) + $performanceToolk
 
 $MicrosoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 
-function invoke-git {
-    Param(
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
-    )
-
-    Write-Host -ForegroundColor Yellow "git $command $remaining"
-    git $command $remaining
-    if ($lastexitcode) { throw "git $command error" }
-}
-
-function invoke-gh {
-    Param(
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
-    )
-
-    Write-Host -ForegroundColor Yellow "gh $command $remaining"
-    $ErrorActionPreference = "SilentlyContinue"
-    gh $command $remaining
-    $ErrorActionPreference = "Stop"
-    if ($lastexitcode) { throw "gh $command error" }
-}
-
 function ConvertTo-HashTable {
     [CmdletBinding()]
     Param(
@@ -210,6 +186,9 @@ function DownloadAndImportBcContainerHelper {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
         if (-not (Test-Path $repoSettingsPath)) {
             $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
+            if (-not (Test-Path $repoSettingsPath)) {
+                $repoSettingsPath = Join-Path $baseFolder "..\..\$repoSettingsFile"
+            }
         }
         if (Test-Path $repoSettingsPath) {
             if (-not $BcContainerHelperVersion) {
@@ -416,7 +395,8 @@ function ReadSettings {
         "templateUrl"                            = ""
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
-        "githubRunner"                           = "windows-latest"
+        "runs-on"                                = "windows-latest"
+        "githubRunner"                           = ""
         "cacheImageName"                         = "my"
         "cacheKeepDays"                          = 3
         "alwaysBuildAllProjects"                 = $false
@@ -461,6 +441,9 @@ function ReadSettings {
         }
     }
 
+    if ($settings.githubRunner -eq "") {
+        $settings.githubRunner = $settings."runs-on"
+    }
     $settings
 }
 
@@ -1172,6 +1155,23 @@ function CreateDevEnv {
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
 
+        $buildArtifactFolder = Join-Path $baseFolder "output"
+        if (Test-Path $buildArtifactFolder) {
+            Get-ChildItem -Path $buildArtifactFolder -Include * -File | ForEach-Object { $_.Delete()}
+        }
+        else {
+            New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+        }
+
+        if ($repo.appDependencyProbingPaths) {
+            Write-Host "Downloading dependencies ..."
+            $repo.appDependencyProbingPaths = @($repo.appDependencyProbingPaths | ForEach-Object { New-Object -Type PSObject -Property $_ } )
+            $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "-Apps-" -saveToPath $buildArtifactFolder -api_url 'https://api.github.com' -token ""
+            Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "-TestApps-" -saveToPath $buildArtifactFolder -api_url 'https://api.github.com' -token "" | ForEach-Object {
+                $installTestApps += "($_)"
+            }
+        }
+    
         if ($repo.versioningStrategy -eq -1) {
             if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
             $artifactVersion = [Version]$repo.artifact.Split('/')[4]
@@ -1187,14 +1187,6 @@ function CreateDevEnv {
             }
         }
 
-        $buildArtifactFolder = Join-Path $baseFolder "output"
-        if (Test-Path $buildArtifactFolder) {
-            Get-ChildItem -Path $buildArtifactFolder -Include * -File | ForEach-Object { $_.Delete()}
-        }
-        else {
-            New-Item $buildArtifactFolder -ItemType Directory | Out-Null
-        }
-    
         $allTestResults = "testresults*.xml"
         $testResultsFile = Join-Path $baseFolder "TestResults.xml"
         $testResultsFiles = Join-Path $baseFolder $allTestResults

@@ -1,3 +1,19 @@
+## preview
+
+### Issues
+- Issue #143 Commit Message for "Increment Version Number" workflow
+
+### All workflows
+- Support 2 folder levels projects (apps\w1, apps\dk etc.)
+- Better error messages for if an error occurs within an action
+
+### Update AL-Go System Files Workflow
+- workflow now displays the currently used template URL when selecting the Run Workflow action
+
+### CI/CD and Publish To New Environment
+- base functionality for selecting a specific GitHub runner for an environment
+- Better detection of changed projects
+
 ## v1.5
 
 ### Issues

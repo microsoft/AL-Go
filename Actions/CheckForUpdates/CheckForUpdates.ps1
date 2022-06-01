@@ -151,11 +151,6 @@ try {
                     $srcPattern = "runs-on: [ windows-latest ]`r`n"
                     $replacePattern = "runs-on: [ $($repoSettings."runs-on") ]`r`n"
                     $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
-                    if (!($repoSettings.ContainsKey("gitHubRunner"))) {
-                        $srcPattern = "runs-on: `${{ fromJson(needs.Initialization.outputs.githubRunner) }}`r`n"
-                        $replacePattern = "runs-on: [ $($repoSettings."runs-on") ]`r`n"
-                        $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
-                    }
                 }
             }
                 
@@ -312,7 +307,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message $_.Exception.Message
+    OutputError -message "CheckForUpdates action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
