@@ -270,7 +270,7 @@ function MergePRandPull {
         [string] $branch = "main"
     )
 
-    $phs = @(invoke-gh pr list --repo $repository)
+    $phs = @(invoke-gh -returnValue pr list --repo $repository)
     if ($phs.Count -eq 0) {
         throw "No Pull Request was created"
     }
