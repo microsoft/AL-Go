@@ -86,6 +86,103 @@ function Get-dependencies {
     return $downloadedList;
 }
 
+function CmdDo {
+    Param(
+        [string] $command = "",
+        [string] $arguments = "",
+        [switch] $silent,
+        [switch] $returnValue
+    )
+
+    $oldNoColor = "$env:NO_COLOR"
+    $env:NO_COLOR = "Y"
+    $oldEncoding = [Console]::OutputEncoding
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    try {
+        $result = $true
+        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfo.FileName = $command
+        $pinfo.RedirectStandardError = $true
+        $pinfo.RedirectStandardOutput = $true
+        $pinfo.WorkingDirectory = Get-Location
+        $pinfo.UseShellExecute = $false
+        $pinfo.Arguments = $arguments
+        $p = New-Object System.Diagnostics.Process
+        $p.StartInfo = $pinfo
+        $p.Start() | Out-Null
+    
+        $outtask = $p.StandardOutput.ReadToEndAsync()
+        $errtask = $p.StandardError.ReadToEndAsync()
+        $p.WaitForExit();
+
+        $message = $outtask.Result
+        $err = $errtask.Result
+
+        if ("$err" -ne "") {
+            $message += "$err"
+        }
+        
+        $message = $message.Trim()
+
+        if ($p.ExitCode -eq 0) {
+            if (!$silent) {
+                Write-Host $message
+            }
+            if ($returnValue) {
+                $message.Replace("`r","").Split("`n")
+            }
+        }
+        else {
+            $message += "`n`nExitCode: "+$p.ExitCode + "`nCommandline: $command $arguments"
+            throw $message
+        }
+    }
+    finally {
+    #    [Console]::OutputEncoding = $oldEncoding
+        $env:NO_COLOR = $oldNoColor
+    }
+}
+
+function invoke-gh {
+    Param(
+        [switch] $silent,
+        [switch] $returnValue,
+        [parameter(mandatory = $true, position = 0)][string] $command,
+        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+    )
+
+    $arguments = "$command "
+    $remaining | ForEach-Object {
+        if ("$_".IndexOf(" ") -ge 0 -or "$_".IndexOf('"') -ge 0) {
+            $arguments += """$($_.Replace('"','\"'))"" "
+        }
+        else {
+            $arguments += "$_ "
+        }
+    }
+    cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue
+}
+
+function invoke-git {
+    Param(
+        [switch] $silent,
+        [switch] $returnValue,
+        [parameter(mandatory = $true, position = 0)][string] $command,
+        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+    )
+
+    $arguments = "$command "
+    $remaining | ForEach-Object {
+        if ("$_".IndexOf(" ") -ge 0 -or "$_".IndexOf('"') -ge 0) {
+            $arguments += """$($_.Replace('"','\"'))"" "
+        }
+        else {
+            $arguments += "$_ "
+        }
+    }
+    cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue
+}
+
 function SemVerObjToSemVerStr {
     Param(
         $semVerObj

@@ -119,9 +119,6 @@ function New-SampleApp
     if ($sampleCode) {
         UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.al" -startId $idrange[0]
     }
-    else {
-        Remove-Item -path "$($destinationPath)\Helloworld.al" -Force
-    }
 }
 
 
@@ -147,9 +144,6 @@ function New-SampleTestApp
     UpdateManifest -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version -AddTestDependencies
     if ($sampleCode) {
         UpdateALFile -destinationFolder $destinationPath -alFileName "HelloWorld.Test.al" -startId $idrange[0]
-    }
-    else {
-        Remove-Item -path "$($destinationPath)\Helloworld.Test.al" -Force
     }
 }
 
