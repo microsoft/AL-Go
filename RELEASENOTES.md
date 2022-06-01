@@ -13,6 +13,7 @@
 ### CI/CD and Publish To New Environment
 - base functionality for selecting a specific GitHub runner for an environment
 - Better detection of changed projects
+- appDependencyProbingPaths did not support multiple projects in the same repository for latestBuild dependencies
 
 ## v1.5
 

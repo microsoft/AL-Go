@@ -8,46 +8,8 @@
     [switch] $directCommit
 )
 
-function invoke-git {
-    Param(
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
-    )
-
-    Write-Host -ForegroundColor Yellow "git $command $remaining"
-    $path = [System.IO.Path]::GetTempFileName()
-    try {
-        $prev = $ErrorActionPreference
-        $ErrorActionPreference = 'Continue'
-        Invoke-Expression "git $command $remaining 2> $path"
-        $ErrorActionPreference = $prev
-        if ($lastexitcode -ne 0) { 
-            Write-Host -ForegroundColor Red "Error"
-            Write-Error (Get-Content $path -raw)
-        }
-        else {
-            Write-Host -ForegroundColor Green (Get-Content $path | Select-Object -First 1)
-        }
-    }
-    finally {
-        if (Test-Path $path) {
-            Remove-Item $path
-        }
-    }
-}
-
-function invoke-gh {
-    Param(
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
-    )
-
-    Write-Host -ForegroundColor Yellow "gh $command $remaining"
-    $ErrorActionPreference = "SilentlyContinue"
-    gh $command $remaining
-    $ErrorActionPreference = "Stop"
-    if ($lastexitcode) { throw "gh $command error" }
-}
+$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\GitHub-Helper.psm1" -Resolve
+Import-Module $gitHubHelperPath -DisableNameChecking
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
@@ -75,7 +37,7 @@ try {
     $originalBranch = "main"
 
     Set-Location $PSScriptRoot
-    $baseRepoPath = invoke-git rev-parse --show-toplevel
+    $baseRepoPath = invoke-git -returnValue rev-parse --show-toplevel
     Write-Host "Base repo path: $baseRepoPath"
     $user = gh api user | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
@@ -93,17 +55,17 @@ try {
         invoke-git checkout $algoBranch
     }
     else {
-        $algoBranch = invoke-git branch --show-current
+        $algoBranch = invoke-git -returnValue branch --show-current
         Write-Host "Source branch: $algoBranch"
     }
     if ($collect) {
-        $status = invoke-git status --porcelain=v1 | Where-Object { $_.SubString(3) -notlike "Internal/*" }
+        $status = invoke-git -returnValue status --porcelain=v1 | Where-Object { ($_) -and ($_.SubString(3) -notlike "Internal/*") }
         if ($status) {
             throw "Destination repo is not clean, cannot collect changes into dirty repo"
         }
     }
 
-    $srcUrl = invoke-git config --get remote.origin.url
+    $srcUrl = invoke-git -returnValue config --get remote.origin.url
     if ($srcUrl.EndsWith('.git')) { $srcUrl = $srcUrl.Substring(0,$srcUrl.Length-4) }
     $uri = [Uri]::new($srcUrl)
     $srcOwnerAndRepo = $uri.LocalPath.Trim('/')
@@ -130,14 +92,14 @@ try {
             Set-Location $_
             if ($collect) {
                 $expectedUrl = "https://github.com/$($config.githubOwner)/$_.git"
-                $actualUrl = invoke-git config --get remote.origin.url
+                $actualUrl = invoke-git -returnValue config --get remote.origin.url
                 if ($expectedUrl -ne $actualUrl) {
                     throw "unexpected git repo - was $actualUrl, expected $expectedUrl"
                 }
             }
             else {
                 if (Test-Path ".git") {
-                    $status = invoke-git status --porcelain
+                    $status = invoke-git -returnValue status --porcelain
                     if ($status) {
                         throw "Git repo $_ is not clean, please resolve manually"
                     }
