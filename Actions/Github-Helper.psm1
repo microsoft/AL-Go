@@ -385,9 +385,16 @@ function GetArtifacts {
         [string] $mask = "*-Apps-*"
     )
 
+    $result = @()
+
+    $page = 1
     Write-Host "Analyzing artifacts"
-    $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/actions/artifacts" | ConvertFrom-Json
-    $artifacts.artifacts | Where-Object { $_.name -like $mask }
+    do {
+        $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/actions/artifacts?page=$page" | ConvertFrom-Json
+        $page++
+        $result += @($artifacts.artifacts | Where-Object { $_.name -like $mask })
+    } while ($artifacts.artifacts)
+    $result
 }
 
 function DownloadArtifact {
