@@ -1,7 +1,7 @@
 ## preview
 
 ### Issues
-- Issue #143 Commit Message for "Increment Version Number" workflow
+- Issue #143 Commit Message for **Increment Version Number** workflow
 
 ### All workflows
 - Support 2 folder levels projects (apps\w1, apps\dk etc.)
