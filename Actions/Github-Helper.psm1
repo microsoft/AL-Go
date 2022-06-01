@@ -351,7 +351,7 @@ function DownloadRelease {
     if ($projects -eq "") { $projects = "*" }
     Write-Host "Downloading release $($release.Name)"
     if ([string]::IsNullOrEmpty($token)) {
-        $authstatus = (invoke-gh auth status --show-token) -join " "
+        $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
         $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
     }
     $headers = @{ 
@@ -393,7 +393,7 @@ function DownloadArtifact {
 
     Write-Host "Downloading artifact $($artifact.Name)"
     if ([string]::IsNullOrEmpty($token)) {
-        $authstatus = (invoke-gh auth status --show-token) -join " "
+        $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
         $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
     }
     $headers = @{ 
