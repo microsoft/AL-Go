@@ -90,6 +90,9 @@ CreateDevEnv `
     -reuseExistingEnvironment:$reuseExistingEnvironment `
     -baseFolder $baseFolder
 }
+catch {
+    Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"
+}
 finally {
     if ($fromVSCode) {
         Read-Host "Press ENTER to close this window"

@@ -76,7 +76,7 @@ function InstallKeyVaultModuleIfNeeded {
     $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -erroraction 'silentlycontinue'
     if ($AzKeyVaultModule) {
         Write-Host "Using Az.KeyVault version $($AzKeyVaultModule.Version)"
-        Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+        Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue
     }
     else {
         $azureRmKeyVaultModule = Get-Module -name 'AzureRm.KeyVault' -ListAvailable | Select-Object -First 1
