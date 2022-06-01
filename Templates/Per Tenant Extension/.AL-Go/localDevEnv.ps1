@@ -39,12 +39,19 @@ if ($pshost.Name -eq "Visual Studio Code Host") {
 }
 
 try {
-$ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
 $webClient = New-Object System.Net.WebClient
 $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
 $webClient.Encoding = [System.Text.Encoding]::UTF8
+Write-Host "Downloading GitHub Helper module"
+$GitHubHelperPath = "$([System.IO.Path]::GetTempFileName()).psm1"
+$webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/Github-Helper.psm1', $GitHubHelperPath)
 Write-Host "Downloading AL-Go Helper script"
+$ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
 $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
+
+$GitHubHelperPath = "C:\src\github\freddydk\AL-Go-Actions\Github-Helper.psm1"
+$ALGoHelperPath = "C:\src\github\freddydk\AL-Go-Actions\AL-Go-Helper.ps1"
+Import-Module $GitHubHelperPath
 . $ALGoHelperPath -local
 
 $baseFolder = Join-Path $PSScriptRoot ".." -Resolve
@@ -146,6 +153,9 @@ CreateDevEnv `
     -credential $credential `
     -LicenseFileUrl $licenseFileUrl `
     -InsiderSasToken $insiderSasToken
+}
+catch {
+    Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"
 }
 finally {
     if ($fromVSCode) {
