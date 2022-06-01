@@ -138,7 +138,7 @@ try {
 
 }
 catch {
-    OutputError -message "Adding a new app failed.$([environment]::Newline) $($_.Exception.Message)"
+    OutputError -message "CreateApp action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

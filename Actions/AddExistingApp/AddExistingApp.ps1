@@ -229,7 +229,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Couldn't add an existing app.$([environment]::Newline) $($_.Exception.Message)"
+    OutputError -message "AddExistingApp acion failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
