@@ -31,25 +31,36 @@ function Get-dependencies {
             $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
         }
 
-        # TODO better error messages
+        $projects = $dependency.projects
+        if ([string]::IsNullOrEmpty($dependency.projects)) {
+            $projects = "*"
+        }
 
         $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
         if ($dependency.release_status -eq "latestBuild") {
 
             # TODO it should check the branch and limit to a certain branch
 
-            Write-Host "Getting artifacts from $($dependency.repo)"
-            $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask $mask
-            if ($dependency.version -ne "latest") {
-                $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
-            }    
-                
-            $artifact = $artifacts | Select-Object -First 1
-            if ($artifact) {
-                $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
-            }
-            else {
-                Write-Host -ForegroundColor Red "Could not find any artifacts that matches '*$mask*'"
+            $projects.Split(',') | ForEach-Object {
+                $project = $_.Replace('\','_')
+                Write-Host "project '$project'"
+        
+                Write-Host "Getting artifacts from $($dependency.repo)"
+                $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask "$project*$mask*"
+                if ($dependency.version -ne "latest") {
+                    $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
+                }    
+
+                $artifact = $artifacts | Select-Object -First 1
+                if ($artifact) {
+                    $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
+                    if ($download) {
+                        $downloadedList += $download
+                    }
+                }
+                else {
+                    Write-Host -ForegroundColor Red "Could not find any artifacts that matches '$project*$mask*'"
+                }
             }
         }
         else {
@@ -71,15 +82,10 @@ function Get-dependencies {
                 throw "Could not find a release that matches the criteria."
             }
                 
-            $projects = $dependency.projects
-            if ([string]::IsNullOrEmpty($dependency.projects)) {
-                $projects = "*"
-            }
-
             $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
-        }
-        if ($download) {
-            $downloadedList += $download
+            if ($download) {
+                $downloadedList += $download
+            }
         }
     }
     
@@ -362,7 +368,7 @@ function DownloadRelease {
         $project = $_.Replace('\','_')
         Write-Host "project '$project'"
         
-        $release.assets | Where-Object { $_.name -like "$project$mask*.zip" } | ForEach-Object {
+        $release.assets | Where-Object { $_.name -like "$project*$mask*.zip" } | ForEach-Object {
             Write-Host "$api_url/repos/$repository/releases/assets/$($_.id)"
             $filename = Join-Path $path $_.name
             Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$api_url/repos/$repository/releases/assets/$($_.id)" -OutFile $filename 
@@ -376,12 +382,12 @@ function GetArtifacts {
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string] $mask = "-Apps-"
+        [string] $mask = "*-Apps-*"
     )
 
     Write-Host "Analyzing artifacts"
     $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/actions/artifacts" | ConvertFrom-Json
-    $artifacts.artifacts | Where-Object { $_.name -like "*$($mask)*" }
+    $artifacts.artifacts | Where-Object { $_.name -like $mask }
 }
 
 function DownloadArtifact {
