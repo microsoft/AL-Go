@@ -5,6 +5,7 @@
 
 ### All workflows
 - Support 2 folder levels projects (apps\w1, apps\dk etc.)
+- Better error messages for if an error occurs within an action
 
 ### Update AL-Go System Files Workflow
 - workflow now displays the currently used template URL when selecting the Run Workflow action
