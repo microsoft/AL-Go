@@ -59,7 +59,7 @@ try {
         Write-Host "Source branch: $algoBranch"
     }
     if ($collect) {
-        $status = invoke-git -returnValue status --porcelain=v1 | Where-Object { $_.SubString(3) -notlike "Internal/*" }
+        $status = invoke-git -returnValue status --porcelain=v1 | Where-Object { ($_) -and ($_.SubString(3) -notlike "Internal/*") }
         if ($status) {
             throw "Destination repo is not clean, cannot collect changes into dirty repo"
         }
