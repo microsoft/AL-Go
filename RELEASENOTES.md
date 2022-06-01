@@ -10,10 +10,17 @@
 ### Update AL-Go System Files Workflow
 - workflow now displays the currently used template URL when selecting the Run Workflow action
 
-### CI/CD and Publish To New Environment
-- base functionality for selecting a specific GitHub runner for an environment
+### CI/CD workflow
 - Better detection of changed projects
 - appDependencyProbingPaths did not support multiple projects in the same repository for latestBuild dependencies
+- appDependencyProbingPaths with release=latestBuild only considered the last 30 artifacts
+- Use mutex around ReadSecrets to ensure that multiple agents on the same host doesn't clash
+
+### CI/CD and Publish To New Environment
+- base functionality for selecting a specific GitHub runner for an environment
+
+### localDevEnv.ps1 and cloudDevEnv.ps1
+- Display clear error message if something goes wrong
 
 ## v1.5
 
