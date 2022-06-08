@@ -27,6 +27,8 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
+    Import-Module (Join-Path $PSScriptRoot ".\RunPipelineHelper.psm1")
+
     # Pull docker image in the background
     $genericImageName = Get-BestGenericImageName
     Start-Job -ScriptBlock {
@@ -50,7 +52,7 @@ try {
     $appRevision = $settings.appRevision
     'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId','StorageContext','ApplicationInsightsConnectionString' | ForEach-Object {
         if ($secrets.ContainsKey($_)) {
-            $value = $secrets."$_"
+            $value = Convert-FromBase64 -value $secrets."$_"
         }
         else {
             $value = ""

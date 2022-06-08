@@ -2,7 +2,6 @@ $script:gitHubSecrets = $env:Secrets | ConvertFrom-Json
 $script:keyvaultConnectionExists = $false
 $script:azureRm210 = $false
 $script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
-$script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
 function IsKeyVaultSet {
     return $script:isKeyvaultSet
@@ -10,24 +9,10 @@ function IsKeyVaultSet {
 
 function MaskValueInLog {
     Param(
-        [string] $key,
         [string] $value
     )
 
     Write-Host "::add-mask::$value"
-
-    $val2 = ""
-    $value.ToCharArray() | ForEach-Object {
-        $chint = [int]$_
-        if ($chint -lt 32 -or $chint -gt 126 ) {
-            throw "Secret $key contains characters, which are not supported in secrets in AL-Go for GitHub. This exception is thrown to avoid that the secret is revealed in the log."
-        }
-        else {
-            $val2 += $script:escchars[$chint-32]
-        }
-    }
-
-    Write-Host "::add-mask::$val2"
 }
 
 function GetGithubSecret {
@@ -44,7 +29,8 @@ function GetGithubSecret {
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
         $value = $script:githubSecrets."$secret"
         if ($value) {
-            MaskValueInLog -key $secret -value $value
+            $value = Convert-ToBase64 -value $value
+            MaskValueInLog -value $value
             Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
             return $value
         }
@@ -157,7 +143,8 @@ function GetKeyVaultSecret {
 
     if ($keyVaultSecret) {
         $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
-        MaskValueInLog -key $secret -value $value
+        $value = Convert-ToBase64 -value $value
+        MaskValueInLog -value $value
         return $value
     }
 
@@ -188,4 +175,12 @@ function GetSecret {
 
     Write-Host  "Could not find secret $secret in Github secrets or Azure Key Vault."
     return $null
+}
+
+function Convert-ToBase64 {
+    param (
+        [string] $value
+    )
+    $encodedValue = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
+    return $encodedValue
 }
