@@ -14,13 +14,25 @@ $telemetryScope = $null
 $bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
-
+$buildMutexName = "AL-Go-ReadSecrets"
+$buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0078' -parentTelemetryScopeJson $parentTelemetryScopeJson
+
+    try {
+        if (!$buildMutex.WaitOne(1000)) {
+            Write-Host "Waiting for other process executing ReadSecrets"
+            $buildMutex.WaitOne() | Out-Null
+            Write-Host "Other process completed ReadSecrets"
+        }
+    }
+    catch [System.Threading.AbandonedMutexException] {
+       Write-Host "Other process terminated abnormally"
+    }
 
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
@@ -94,10 +106,11 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message $_.Exception.Message
+    OutputError -message "ReadSecrets action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
     exit
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+    $buildMutex.ReleaseMutex()
 }

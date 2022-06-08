@@ -118,12 +118,17 @@ try {
             }
         }
     }
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New Version number $($newVersion.Major).$($newVersion.Minor)" -branch $branch
+    if ($addToVersionNumber) {
+        CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Increment Version number by $($newVersion.Major).$($newVersion.Minor)" -branch $branch
+    }
+    else {
+        CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New Version number $($newVersion.Major).$($newVersion.Minor)" -branch $branch
+    }
 
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Increasing the version number failed. $([environment]::Newline) $($_.Exception.Message)"
+    OutputError -message "IncrementVersionNumber action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

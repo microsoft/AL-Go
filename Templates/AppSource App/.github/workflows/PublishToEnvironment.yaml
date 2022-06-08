@@ -54,13 +54,10 @@ jobs:
           includeProduction: 'Y'
 
   Deploy:
-    runs-on: [ windows-latest ] 
     needs: [ Analyze ]
     if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
-    strategy:
-      matrix:
-        environment: ${{ fromJson(needs.Analyze.outputs.environments) }}
-      fail-fast: false
+    strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
+    runs-on: ${{ matrix.os }}
     name: Deploy to ${{ matrix.environment }}
     environment:
       name: ${{ matrix.environment }}

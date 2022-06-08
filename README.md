@@ -26,7 +26,6 @@ Usage scenarios:
 13. [Set up your own GitHub runner to increase build performance](Scenarios/SelfHostedGitHubRunner.md)
 14. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
 15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
-16. [Branching strategies and some of the best practices](Scenarios/BranchingStrategy.md)
 
 **Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 # This project
@@ -51,6 +50,17 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+## See also
+
+- [Developing Extensions in AL](../developer/devenv-dev-overview.md)
+- [AL-Go for GitHub](https://freddysblog.com/2022/04/26/al-go-for-github/)
+- [Migrating to AL-Go for GitHub](https://freddysblog.com/2022/04/27/migrating-to-al-go-for-github/)
+- [Structuring your AL-Go for GitHub repositories](https://freddysblog.com/2022/04/28/structuring-your-github-repositories/)
+- [Preview of future AL-Go for GitHub functionality](https://freddysblog.com/2022/05/02/al-go-for-github-preview-bits/)
+- [Branching strategies for your AL-Go for GitHub repo](https://freddysblog.com/2022/05/03/branching-strategies-for-your-al-go-for-github-repo/)
+- [Deployment strategies and AL-Go for GitHub](https://freddysblog.com/2022/05/06/deployment-strategies-and-al-go-for-github/)
+- [Secrets in AL-Go for GitHub](https://freddysblog.com/2022/05/14/secrets-in-al-go-for-github/)
 
 ## Trademarks
 

@@ -84,7 +84,7 @@ jobs:
           if ($project -eq ".") { $project = $settings.RepoName }
           'TestResults','BcptTestResults','BuildOutput' | ForEach-Object {
             $name = "$($_)ArtifactsName"
-            $value = "$project-$_-NextMinor-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
+            $value = "$($project.Replace('\','_'))-$_-NextMinor-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
             Write-Host "::set-output name=$name::$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }

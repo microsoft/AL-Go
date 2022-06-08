@@ -15,7 +15,6 @@ function Get-dependencies {
     $downloadedList = @()
     $probingPathsJson | ForEach-Object {
         $dependency = $_
-
         if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
             throw "AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which you have a dependency"
         }
@@ -32,25 +31,36 @@ function Get-dependencies {
             $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
         }
 
-        # TODO better error messages
+        $projects = $dependency.projects
+        if ([string]::IsNullOrEmpty($dependency.projects)) {
+            $projects = "*"
+        }
 
         $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
         if ($dependency.release_status -eq "latestBuild") {
 
             # TODO it should check the branch and limit to a certain branch
 
-            Write-Host "Getting artifacts from $($dependency.repo)"
-            $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask $mask
-            if ($dependency.version -ne "latest") {
-                $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
-            }    
-                
-            $artifact = $artifacts | Select-Object -First 1
-            if ($artifact) {
-                $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
-            }
-            else {
-                Write-Host -ForegroundColor Red "Could not find any artifacts that matches '*$mask*'"
+            $projects.Split(',') | ForEach-Object {
+                $project = $_.Replace('\','_')
+                Write-Host "project '$project'"
+        
+                Write-Host "Getting artifacts from $($dependency.repo)"
+                $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask "$project*$mask*"
+                if ($dependency.version -ne "latest") {
+                    $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
+                }    
+
+                $artifact = $artifacts | Select-Object -First 1
+                if ($artifact) {
+                    $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
+                    if ($download) {
+                        $downloadedList += $download
+                    }
+                }
+                else {
+                    Write-Host -ForegroundColor Red "Could not find any artifacts that matches '$project*$mask*'"
+                }
             }
         }
         else {
@@ -72,19 +82,111 @@ function Get-dependencies {
                 throw "Could not find a release that matches the criteria."
             }
                 
-            $projects = $dependency.projects
-            if ([string]::IsNullOrEmpty($dependency.projects)) {
-                $projects = "*"
-            }
-
             $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
-        }
-        if ($download) {
-            $downloadedList += $download
+            if ($download) {
+                $downloadedList += $download
+            }
         }
     }
     
     return $downloadedList;
+}
+
+function CmdDo {
+    Param(
+        [string] $command = "",
+        [string] $arguments = "",
+        [switch] $silent,
+        [switch] $returnValue
+    )
+
+    $oldNoColor = "$env:NO_COLOR"
+    $env:NO_COLOR = "Y"
+    $oldEncoding = [Console]::OutputEncoding
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    try {
+        $result = $true
+        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfo.FileName = $command
+        $pinfo.RedirectStandardError = $true
+        $pinfo.RedirectStandardOutput = $true
+        $pinfo.WorkingDirectory = Get-Location
+        $pinfo.UseShellExecute = $false
+        $pinfo.Arguments = $arguments
+        $p = New-Object System.Diagnostics.Process
+        $p.StartInfo = $pinfo
+        $p.Start() | Out-Null
+    
+        $outtask = $p.StandardOutput.ReadToEndAsync()
+        $errtask = $p.StandardError.ReadToEndAsync()
+        $p.WaitForExit();
+
+        $message = $outtask.Result
+        $err = $errtask.Result
+
+        if ("$err" -ne "") {
+            $message += "$err"
+        }
+        
+        $message = $message.Trim()
+
+        if ($p.ExitCode -eq 0) {
+            if (!$silent) {
+                Write-Host $message
+            }
+            if ($returnValue) {
+                $message.Replace("`r","").Split("`n")
+            }
+        }
+        else {
+            $message += "`n`nExitCode: "+$p.ExitCode + "`nCommandline: $command $arguments"
+            throw $message
+        }
+    }
+    finally {
+    #    [Console]::OutputEncoding = $oldEncoding
+        $env:NO_COLOR = $oldNoColor
+    }
+}
+
+function invoke-gh {
+    Param(
+        [switch] $silent,
+        [switch] $returnValue,
+        [parameter(mandatory = $true, position = 0)][string] $command,
+        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+    )
+
+    $arguments = "$command "
+    $remaining | ForEach-Object {
+        if ("$_".IndexOf(" ") -ge 0 -or "$_".IndexOf('"') -ge 0) {
+            $arguments += """$($_.Replace('"','\"'))"" "
+        }
+        else {
+            $arguments += "$_ "
+        }
+    }
+    cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue
+}
+
+function invoke-git {
+    Param(
+        [switch] $silent,
+        [switch] $returnValue,
+        [parameter(mandatory = $true, position = 0)][string] $command,
+        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+    )
+
+    $arguments = "$command "
+    $remaining | ForEach-Object {
+        if ("$_".IndexOf(" ") -ge 0 -or "$_".IndexOf('"') -ge 0) {
+            $arguments += """$($_.Replace('"','\"'))"" "
+        }
+        else {
+            $arguments += "$_ "
+        }
+    }
+    cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue
 }
 
 function SemVerObjToSemVerStr {
@@ -254,15 +356,19 @@ function DownloadRelease {
 
     if ($projects -eq "") { $projects = "*" }
     Write-Host "Downloading release $($release.Name)"
+    if ([string]::IsNullOrEmpty($token)) {
+        $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
+        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+    }
     $headers = @{ 
-        "Authorization" = "token $token"
         "Accept"        = "application/octet-stream"
+        "Authorization" = "token $token"
     }
     $projects.Split(',') | ForEach-Object {
-        $project = $_
+        $project = $_.Replace('\','_')
         Write-Host "project '$project'"
         
-        $release.assets | Where-Object { $_.name -like "$project$mask*.zip" } | ForEach-Object {
+        $release.assets | Where-Object { $_.name -like "$project*$mask*.zip" } | ForEach-Object {
             Write-Host "$api_url/repos/$repository/releases/assets/$($_.id)"
             $filename = Join-Path $path $_.name
             Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$api_url/repos/$repository/releases/assets/$($_.id)" -OutFile $filename 
@@ -276,12 +382,19 @@ function GetArtifacts {
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string] $mask = "-Apps-"
+        [string] $mask = "*-Apps-*"
     )
 
+    $result = @()
+
+    $page = 1
     Write-Host "Analyzing artifacts"
-    $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/actions/artifacts" | ConvertFrom-Json
-    $artifacts.artifacts | Where-Object { $_.name -like "*$($mask)*" }
+    do {
+        $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/actions/artifacts?page=$page" | ConvertFrom-Json
+        $page++
+        $result += @($artifacts.artifacts | Where-Object { $_.name -like $mask })
+    } while ($artifacts.artifacts)
+    $result
 }
 
 function DownloadArtifact {
@@ -292,6 +405,10 @@ function DownloadArtifact {
     )
 
     Write-Host "Downloading artifact $($artifact.Name)"
+    if ([string]::IsNullOrEmpty($token)) {
+        $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
+        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+    }
     $headers = @{ 
         "Authorization" = "token $token"
         "Accept"        = "application/vnd.github.v3+json"

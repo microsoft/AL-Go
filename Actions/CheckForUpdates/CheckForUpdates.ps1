@@ -151,11 +151,6 @@ try {
                     $srcPattern = "runs-on: [ windows-latest ]`r`n"
                     $replacePattern = "runs-on: [ $($repoSettings."runs-on") ]`r`n"
                     $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
-                    if (!($repoSettings.ContainsKey("gitHubRunner"))) {
-                        $srcPattern = "runs-on: `${{ fromJson(needs.Initialization.outputs.githubRunner) }}`r`n"
-                        $replacePattern = "runs-on: [ $($repoSettings."runs-on") ]`r`n"
-                        $srcContent = $srcContent.Replace($srcPattern, $replacePattern)
-                    }
                 }
             }
                 
@@ -237,33 +232,36 @@ try {
                 $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
 
                 $releaseNotes = ""
-                $updateFiles | ForEach-Object {
-                    $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
-                    if (-not (Test-Path -path $path -PathType Container)) {
-                        New-Item -Path $path -ItemType Directory | Out-Null
-                    }
-                    if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                        $oldReleaseNotes = (Get-Content -Path $_.DstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
-                        while ($oldReleaseNotes) {
-                            $releaseNotes = $_.Content
-                            if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
-                                $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
-                                $oldReleaseNotes = ""
-                            }
-                            else {
-                                $idx = $oldReleaseNotes.IndexOf("`r`n## ")
-                                if ($idx -gt 0) {
-                                    $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
+                try {
+                    $updateFiles | ForEach-Object {
+                        $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
+                        if (-not (Test-Path -path $path -PathType Container)) {
+                            New-Item -Path $path -ItemType Directory | Out-Null
+                        }
+                        if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
+                            $oldReleaseNotes = (Get-Content -Path $_.DstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+                            while ($oldReleaseNotes) {
+                                $releaseNotes = $_.Content
+                                if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
+                                    $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
+                                    $oldReleaseNotes = ""
                                 }
                                 else {
-                                    $oldReleaseNotes = ""
+                                    $idx = $oldReleaseNotes.IndexOf("`r`n## ")
+                                    if ($idx -gt 0) {
+                                        $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
+                                    }
+                                    else {
+                                        $oldReleaseNotes = ""
+                                    }
                                 }
                             }
                         }
+                        Write-Host "Update $($_.DstFile)"
+                        Set-Content -Path $_.DstFile -Encoding UTF8 -Value $_.Content
                     }
-                    Write-Host "Update $($_.DstFile)"
-                    Set-Content -Path $_.DstFile -Encoding UTF8 -Value $_.Content
                 }
+                catch {}
                 if ($releaseNotes -eq "") {
                     $releaseNotes = "No release notes available!"
                 }
@@ -277,7 +275,7 @@ try {
                 Write-Host "ReleaseNotes:"
                 Write-Host $releaseNotes
 
-                $status = invoke-git status --porcelain=v1
+                $status = invoke-git -returnValue status --porcelain=v1
                 if ($status) {
                     $message = "Updated AL-Go System Files"
 
@@ -312,7 +310,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message $_.Exception.Message
+    OutputError -message "CheckForUpdates action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

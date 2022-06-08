@@ -2,6 +2,9 @@
 $token = "token"
 $repository = "repo"
 
+$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\GitHub-Helper.psm1" -Resolve
+Import-Module $gitHubHelperPath -DisableNameChecking
+
 function SetTokenAndRepository {
     Param(
         [string] $githubOwner,
@@ -176,32 +179,6 @@ function SetRepositorySecret {
     gh secret set $name -b ($value | Get-PlainText) --repo $repository
 }
 
-function invoke-gh {
-    Param(
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
-    )
-
-    Write-Host "gh $command $remaining"
-    $ErrorActionPreference = "SilentlyContinue"
-    gh $command $remaining
-    $ErrorActionPreference = "Stop"
-    if ($lastexitcode) { throw "gh $command error" }
-}
-
-function invoke-git {
-    Param(
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
-    )
-
-    Write-Host "git $command $remaining"
-    $ErrorActionPreference = "SilentlyContinue"
-    git $command $remaining
-    $ErrorActionPreference = "Stop"
-    if ($lastexitcode) { throw "git $command error" }
-}
-
 function CreateRepository {
     Param(
         [string] $template,
@@ -274,7 +251,7 @@ function Pull {
         [string] $branch = "main"
     )
 
-    invoke-git pull origin $branch | Out-Host
+    invoke-git pull origin $branch
 }
 
 function CommitAndPush {
@@ -285,7 +262,7 @@ function CommitAndPush {
 
     invoke-git add *
     invoke-git commit --allow-empty -m "'$commitMessage'"
-    invoke-git push $serverUrl | Out-Host
+    invoke-git push $serverUrl
 }
 
 function MergePRandPull {
@@ -293,7 +270,7 @@ function MergePRandPull {
         [string] $branch = "main"
     )
 
-    $phs = @(invoke-gh pr list --repo $repository)
+    $phs = @(invoke-gh -returnValue pr list --repo $repository)
     if ($phs.Count -eq 0) {
         throw "No Pull Request was created"
     }

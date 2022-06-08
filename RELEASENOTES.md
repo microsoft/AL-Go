@@ -1,7 +1,32 @@
-## Preview
+## preview
+
+### Issues
+- Issue #143 Commit Message for **Increment Version Number** workflow
+
+### All workflows
+- Support 2 folder levels projects (apps\w1, apps\dk etc.)
+- Better error messages for if an error occurs within an action
+
+### Update AL-Go System Files Workflow
+- workflow now displays the currently used template URL when selecting the Run Workflow action
+
+### CI/CD workflow
+- Better detection of changed projects
+- appDependencyProbingPaths did not support multiple projects in the same repository for latestBuild dependencies
+- appDependencyProbingPaths with release=latestBuild only considered the last 30 artifacts
+- Use mutex around ReadSecrets to ensure that multiple agents on the same host doesn't clash
+
+### CI/CD and Publish To New Environment
+- base functionality for selecting a specific GitHub runner for an environment
+
+### localDevEnv.ps1 and cloudDevEnv.ps1
+- Display clear error message if something goes wrong
+
+## v1.5
 
 ### Issues
 - Issue #100 - Add more resilience to localDevEnv.ps1 and cloudDevEnv.ps1
+- Issue #131 - Special characters are not allowed in secrets
 
 ### All workflows
 - During initialize, all AL-Go settings files are now checked for validity and reported correctly
@@ -15,6 +40,7 @@
 
 ### CI/CD workflow
 - Apps are not signed when the workflow is running as a Pull Request validation
+- if a secret called applicationInsightsConnectionString exists, then the value of that will be used as ApplicationInsightsConnectionString for the app
 
 ### Increment Version Number Workflow
 - Bugfix: increment all apps using f.ex. +0.1 would fail.
