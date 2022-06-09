@@ -1,71 +1,85 @@
+function InvokeWebRequest {
+    Param(
+        [Hashtable] $headers,
+        [string] $method,
+        [string] $body,
+        [string] $outFile,
+        [string] $uri
+    )
+
+    try {
+        $params = @{ "UseBasicParsing" = $true }
+        if ($headers) {
+            $params += @{ "headers" = $headers }
+        }
+        if ($method) {
+            $params += @{ "method" = $method }
+        }
+        if ($body) {
+            $params += @{ "body" = $body }
+        }
+        if ($outfile) {
+            $params += @{ "outfile" = $outfile }
+        }
+        Invoke-WebRequest  @params -Uri $uri
+    }
+    catch {
+        $errorRecord = $_
+        $exception = $_.Exception
+        $message = $exception.Message
+        try {
+            if ($errorRecord.ErrorDetails) {
+                $errorDetails = $errorRecord.ErrorDetails | ConvertFrom-Json 
+                $errorDetails.psObject.Properties.name | ForEach-Object {
+                    $message += " $($errorDetails."$_")"
+                }
+            }
+        }
+        catch {}
+        Write-Host "::Error::$message"
+        throw $message
+    }
+}
+
 function Get-dependencies {
     Param(
         $probingPathsJson,
-        $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE "dependencies"),
-        [string] $mask = "-Apps-"
+        [string] $mask = "Apps"
     )
 
     if (!(Test-Path $saveToPath)) {
         New-Item $saveToPath -ItemType Directory | Out-Null
     }
 
-    Write-Host "Getting all the artifacts from probing paths"
+    Write-Host "Downloading all $mask artifacts from probing paths"
     $downloadedList = @()
     $probingPathsJson | ForEach-Object {
         $dependency = $_
-        if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
-            throw "AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which you have a dependency"
-        }
-        if (-not ($dependency.PsObject.Properties.name -eq "AuthTokenSecret")) {
-            $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
-        }
-        if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
-            $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
-        }
-        if (-not ($dependency.PsObject.Properties.name -eq "Projects")) {
-            $dependency | Add-Member -name "Projects" -MemberType NoteProperty -Value "*"
-        }
-        if (-not ($dependency.PsObject.Properties.name -eq "release_status")) {
-            $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
-        }
-
         $projects = $dependency.projects
-        if ([string]::IsNullOrEmpty($dependency.projects)) {
-            $projects = "*"
-        }
-
         $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
         if ($dependency.release_status -eq "latestBuild") {
-
-            # TODO it should check the branch and limit to a certain branch
-
-            $projects.Split(',') | ForEach-Object {
-                $project = $_.Replace('\','_')
-                Write-Host "project '$project'"
-        
-                Write-Host "Getting artifacts from $($dependency.repo)"
-                $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask "$project*$mask*"
-                if ($dependency.version -ne "latest") {
-                    $artifacts = $artifacts | Where-Object { ($_.tag_name -eq $dependency.version) }
-                }    
-
-                $artifact = $artifacts | Select-Object -First 1
-                if ($artifact) {
-                    $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $artifact
+            $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask $mask -projects $projects -version $dependency.version -branch $dependency.branch
+            if ($artifacts) {
+                $artifacts | ForEach-Object {
+                    $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $_
                     if ($download) {
                         $downloadedList += $download
                     }
-                }
-                else {
-                    Write-Host -ForegroundColor Red "Could not find any artifacts that matches '$project*$mask*'"
+                    else {
+                        Write-Host -ForegroundColor Red "Unable to download artifact $_"
+                    }
                 }
             }
+            else {
+                Write-Host -ForegroundColor Red "Could not find any $mask artifacts for projects $projects, version $($dependency.version)"
+            }
+        }
+        elseif ($dependency.release_status -eq "include") {
+            # folders have been included
         }
         else {
-
-            Write-Host "Getting releases from $($dependency.repo)"
             $releases = GetReleases -api_url $api_url -token $dependency.authTokenSecret -repository $repository
             if ($dependency.version -ne "latest") {
                 $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
@@ -268,7 +282,7 @@ function GetReleases {
     )
 
     Write-Host "Analyzing releases $api_url/repos/$repository/releases"
-    $releases = @(Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json)
+    $releases = @(InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json)
     if ($releases.Count -gt 1) {
         # Sort by SemVer tag
         try {
@@ -295,7 +309,7 @@ function GetReleases {
 function GetHeader {
     param (
         [string] $token,
-        [string] $accept = "application/json"
+        [string] $accept = "application/vnd.github.v3+json"
     )
     $headers = @{ "Accept" = $accept }
     if (![string]::IsNullOrEmpty($token)) {
@@ -318,13 +332,13 @@ function GetReleaseNotes {
 
     $postParams = @{
         tag_name = $tag_name;
-    } 
-    
+    }
+
     if (-not [string]::IsNullOrEmpty($previous_tag_name)) {
         $postParams["previous_tag_name"] = $previous_tag_name
     }
 
-    Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" 
+    InvokeWebRequest -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" 
 }
 
 function GetLatestRelease {
@@ -336,7 +350,7 @@ function GetLatestRelease {
     
     Write-Host "Getting the latest release from $api_url/repos/$repository/releases/latest"
     try {
-        Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" | ConvertFrom-Json
+        InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" | ConvertFrom-Json
     }
     catch {
         return $null
@@ -350,12 +364,12 @@ function DownloadRelease {
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $path,
-        [string] $mask = "-Apps-",
+        [string] $mask = "Apps",
         $release
     )
 
     if ($projects -eq "") { $projects = "*" }
-    Write-Host "Downloading release $($release.Name)"
+    Write-Host "Downloading release $($release.Name), projects $projects, type $mask"
     if ([string]::IsNullOrEmpty($token)) {
         $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
         $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
@@ -368,32 +382,73 @@ function DownloadRelease {
         $project = $_.Replace('\','_')
         Write-Host "project '$project'"
         
-        $release.assets | Where-Object { $_.name -like "$project*$mask*.zip" } | ForEach-Object {
-            Write-Host "$api_url/repos/$repository/releases/assets/$($_.id)"
+        $release.assets | Where-Object { $_.name -like "$project*-$mask-*.zip" } | ForEach-Object {
+            $uri = "$api_url/repos/$repository/releases/assets/$($_.id)"
+            Write-Host $uri
             $filename = Join-Path $path $_.name
-            Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$api_url/repos/$repository/releases/assets/$($_.id)" -OutFile $filename 
+            InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename 
             return $filename
         }
     }
 }       
+
+function CheckRateLimit {
+    Param(
+        [string] $token
+    )
+
+    $headers = GetHeader -token $token
+    $rate = (InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json
+    $rate | ConvertTo-Json -Depth 99 | Out-Host
+    $rate = $rate.rate
+    $percent = [int]($rate.remaining*100/$rate.limit)
+    Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percent%)"
+    if ($percent -lt 10) {
+        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
+        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
+        Write-Host "Less than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
+        Start-Sleep -seconds $waitTime.TotalSeconds+1
+    }
+}
+
 
 function GetArtifacts {
     Param(
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string] $mask = "*-Apps-*"
+        [string] $mask = "Apps",
+        [string] $branch = "main",
+        [string] $projects,
+        [string] $version
     )
 
-    $result = @()
-
+    $headers = GetHeader -token $token
+    $allArtifacts = @()
+    $per_page = 100
     $page = 1
+    if ($version -eq 'latest') { $version = '*' }
     Write-Host "Analyzing artifacts"
     do {
-        $artifacts = Invoke-WebRequest -UseBasicParsing -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/actions/artifacts?page=$page" | ConvertFrom-Json
+        $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page)"
+        Write-Host $uri
+        $artifacts = InvokeWebRequest -UseBasicParsing -Headers $headers -Uri $uri | ConvertFrom-Json
         $page++
-        $result += @($artifacts.artifacts | Where-Object { $_.name -like $mask })
-    } while ($artifacts.artifacts)
+        $allArtifacts += @($artifacts.artifacts | Where-Object { $_.name -like "*-$branch-$mask-$version" })
+        $result = @()
+        $allArtifactsFound = $true
+        $projects.Split(',') | ForEach-Object {
+            $project = $_.Replace('\','_')
+            $projectArtifact = $allArtifacts | Where-Object { $_.name -like "$project-$branch-$mask-$version" } | Select-Object -First 1
+            if ($projectArtifact) {
+                $result += @($projectArtifact)
+            }
+            else {
+                $allArtifactsFound = $false
+                $result = @()
+            }
+        }
+    } while (!$allArtifactsFound -and $artifacts.total_count -gt $page*$per_page)
     $result
 }
 
@@ -405,6 +460,7 @@ function DownloadArtifact {
     )
 
     Write-Host "Downloading artifact $($artifact.Name)"
+    Write-Host $artifact.archive_download_url
     if ([string]::IsNullOrEmpty($token)) {
         $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
         $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
@@ -414,6 +470,6 @@ function DownloadArtifact {
         "Accept"        = "application/vnd.github.v3+json"
     }
     $outFile = Join-Path $path "$($artifact.Name).zip"
-    Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
+    InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
     $outFile
 }    

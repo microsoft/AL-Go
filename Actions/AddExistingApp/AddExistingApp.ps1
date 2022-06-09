@@ -59,10 +59,12 @@ function expandfile {
             Write-Host "done"
             $newFolder
         }
-        Get-ChildItem $destinationPath -include @("*.zip", "*.app") -Recurse | ForEach-Object {
-            expandfile $_.FullName
+        if (Test-Path $destinationPath) {
+            Get-ChildItem $destinationPath -include @("*.zip", "*.app") -Recurse | ForEach-Object {
+                expandfile $_.FullName
+            }
+            Remove-Item -Path $destinationPath -Force -Recurse -ErrorAction SilentlyContinue
         }
-        Remove-Item -Path $destinationPath -Force -Recurse -ErrorAction SilentlyContinue
     }
     elseif ([string]::new([char[]](Get-Content $path -Encoding byte -TotalCount 4)) -eq "NAVX") {
         $destinationPath = Join-Path $env:TEMP "$([Guid]::NewGuid().ToString())"
