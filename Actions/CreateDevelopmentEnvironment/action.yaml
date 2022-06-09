@@ -34,7 +34,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -environmentName '${{ inputs.environmentName }}' -adminCenterApiCredentials '${{ inputs.adminCenterApiCredentials }}' -reUseExistingEnvironment ('${{ inputs.reUseExistingEnvironment }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+    - run: try { ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -environmentName '${{ inputs.environmentName }}' -adminCenterApiCredentials '${{ inputs.adminCenterApiCredentials }}' -reUseExistingEnvironment ('${{ inputs.reUseExistingEnvironment }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
       shell: PowerShell
 branding:
   icon: terminal

@@ -35,7 +35,8 @@ try {
 
     $runAlPipelineParams = @{}
     if ($project  -eq ".") { $project = "" }
-    $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+    $baseFolder = $ENV:GITHUB_WORKSPACE
+    $projectPath = Join-Path $baseFolder $project
     $sharedFolder = ""
     if ($project) {
         $sharedFolder = $ENV:GITHUB_WORKSPACE
@@ -58,7 +59,7 @@ try {
         Set-Variable -Name $_ -Value $value
     }
 
-    $repo = AnalyzeRepo -settings $settings -baseFolder $baseFolder -insiderSasToken $insiderSasToken
+    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken
     if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
@@ -119,8 +120,8 @@ try {
 
     if ($repo.appDependencyProbingPaths) {
         Write-Host "Downloading dependencies ..."
-        $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-Apps-"
-        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-TestApps-" | ForEach-Object {
+        $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps"
+        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" | ForEach-Object {
             $installTestApps += "($_)"
         }
     }
@@ -207,21 +208,21 @@ try {
         }
     }
     
-    $buildArtifactFolder = Join-Path $baseFolder "output"
+    $buildArtifactFolder = Join-Path $projectPath "output"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
     $allTestResults = "testresults*.xml"
-    $testResultsFile = Join-Path $baseFolder "TestResults.xml"
-    $testResultsFiles = Join-Path $baseFolder $allTestResults
+    $testResultsFile = Join-Path $projectPath "TestResults.xml"
+    $testResultsFiles = Join-Path $projectPath $allTestResults
     if (Test-Path $testResultsFiles) {
         Remove-Item $testResultsFiles -Force
     }
 
-    $buildOutputFile = Join-Path $baseFolder "BuildOutput.txt"
+    $buildOutputFile = Join-Path $projectPath "BuildOutput.txt"
 
     "containerName=$containerName" | Add-Content $ENV:GITHUB_ENV
 
-    Set-Location $baseFolder
+    Set-Location $projectPath
     $runAlPipelineOverrides | ForEach-Object {
         $scriptName = $_
         $scriptPath = Join-Path $ALGoFolder "$ScriptName.ps1"
@@ -258,7 +259,7 @@ try {
         -artifact $artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
-        -baseFolder $baseFolder `
+        -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $LicenseFileUrl `
         -installApps $installApps `
