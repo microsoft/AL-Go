@@ -55,7 +55,7 @@ function Test-Json {
         }
     }
     catch {
-        Write-Host "::Error::$($_.Exception.Message)"
+        Write-Host "::Error::$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"
     }
 }
 
