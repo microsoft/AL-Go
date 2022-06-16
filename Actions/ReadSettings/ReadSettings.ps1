@@ -66,7 +66,7 @@ try {
                 }
                 2 { # USE DATETIME
                     $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
-                    $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('hhmmss'))
+                    $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
                 }
                 15 { # Use maxValue
                     $settings.appBuild = [Int32]::MaxValue

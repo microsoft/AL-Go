@@ -17,6 +17,8 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
+$containerBaseFolder = $null
+$projectPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
@@ -33,16 +35,29 @@ try {
         docker pull --quiet $genericImageName
     } -ArgumentList $genericImageName | Out-Null
 
+    $containerName = GetContainerName($project)
+
     $runAlPipelineParams = @{}
     if ($project  -eq ".") { $project = "" }
     $baseFolder = $ENV:GITHUB_WORKSPACE
+    if ($bcContainerHelperConfig.useVolumes -and $bcContainerHelperConfig.hostHelperFolder -eq "HostHelperFolder") {
+        $allVolumes = "{$(((docker volume ls --format "'{{.Name}}': '{{.Mountpoint}}'") -join ",").Replace('\','\\').Replace("'",'"'))}" | ConvertFrom-Json | ConvertTo-HashTable
+        $containerBaseFolder = Join-Path $allVolumes.hostHelperFolder $containerName
+        if (Test-Path $containerBaseFolder) {
+            Remove-Item -Path $containerBaseFolder -Recurse -Force
+        }
+        Write-Host "Creating temp folder"
+        New-Item -Path $containerBaseFolder -ItemType Directory | Out-Null
+        Copy-Item -Path $ENV:GITHUB_WORKSPACE -Destination $containerBaseFolder -Recurse -Force
+        $baseFolder = Join-Path $containerBaseFolder (Get-Item -Path $ENV:GITHUB_WORKSPACE).BaseName
+    }
+
     $projectPath = Join-Path $baseFolder $project
     $sharedFolder = ""
     if ($project) {
-        $sharedFolder = $ENV:GITHUB_WORKSPACE
+        $sharedFolder = $baseFolder
     }
     $workflowName = $env:GITHUB_WORKFLOW
-    $containerName = GetContainerName($project)
 
     Write-Host "use settings and secrets"
     $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
@@ -188,7 +203,9 @@ try {
     $imageName = ""
     if ($repo.gitHubRunner -ne "windows-latest") {
         $imageName = $repo.cacheImageName
-        Flush-ContainerHelperCache -keepdays $repo.cacheKeepDays
+        if ($imageName) {
+            Flush-ContainerHelperCache -keepdays $repo.cacheKeepDays
+        }
     }
     $authContext = $null
     $environmentName = ""
@@ -312,6 +329,17 @@ try {
         }
     }
 
+    if ($containerBaseFolder) {
+
+        Write-Host "Copy artifacts and build output back from build container"
+        $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+        Copy-Item -Path (Join-Path $projectPath "output") -Destination $destFolder -Recurse -Force
+        Copy-Item -Path (Join-Path $projectPath ".output") -Destination $destFolder -Recurse -Force
+        Copy-Item -Path (Join-Path $projectPath "testResults*.xml") -Destination $destFolder
+        Copy-Item -Path (Join-Path $projectPath "bcptTestResults*.json") -Destination $destFolder
+        Copy-Item -Path (Join-Path $projectPath "buildoutput.txt") -Destination $destFolder
+    }
+
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
@@ -320,4 +348,9 @@ catch {
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+    if ($containerBaseFolder -and (Test-Path $containerBaseFolder) -and $projectPath -and (Test-Path $projectPath)) {
+        Write-Host "Removing temp folder"
+        Remove-Item -Path (Join-Path $projectPath '*') -Recurse -Force
+        Write-Host "Done"
+    }
 }
