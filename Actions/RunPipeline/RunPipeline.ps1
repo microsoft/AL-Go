@@ -17,6 +17,8 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
+$containerBaseFolder = $null
+$projectPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
@@ -33,15 +35,29 @@ try {
         docker pull --quiet $genericImageName
     } -ArgumentList $genericImageName | Out-Null
 
+    $containerName = GetContainerName($project)
+
     $runAlPipelineParams = @{}
     if ($project  -eq ".") { $project = "" }
-    $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+    $baseFolder = $ENV:GITHUB_WORKSPACE
+    if ($bcContainerHelperConfig.useVolumes -and $bcContainerHelperConfig.hostHelperFolder -eq "HostHelperFolder") {
+        $allVolumes = "{$(((docker volume ls --format "'{{.Name}}': '{{.Mountpoint}}'") -join ",").Replace('\','\\').Replace("'",'"'))}" | ConvertFrom-Json | ConvertTo-HashTable
+        $containerBaseFolder = Join-Path $allVolumes.hostHelperFolder $containerName
+        if (Test-Path $containerBaseFolder) {
+            Remove-Item -Path $containerBaseFolder -Recurse -Force
+        }
+        Write-Host "Creating temp folder"
+        New-Item -Path $containerBaseFolder -ItemType Directory | Out-Null
+        Copy-Item -Path $ENV:GITHUB_WORKSPACE -Destination $containerBaseFolder -Recurse -Force
+        $baseFolder = Join-Path $containerBaseFolder (Get-Item -Path $ENV:GITHUB_WORKSPACE).BaseName
+    }
+
+    $projectPath = Join-Path $baseFolder $project
     $sharedFolder = ""
     if ($project) {
-        $sharedFolder = $ENV:GITHUB_WORKSPACE
+        $sharedFolder = $baseFolder
     }
     $workflowName = $env:GITHUB_WORKFLOW
-    $containerName = GetContainerName($project)
 
     Write-Host "use settings and secrets"
     $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
@@ -58,7 +74,7 @@ try {
         Set-Variable -Name $_ -Value $value
     }
 
-    $repo = AnalyzeRepo -settings $settings -baseFolder $baseFolder -insiderSasToken $insiderSasToken
+    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken
     if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
@@ -119,8 +135,8 @@ try {
 
     if ($repo.appDependencyProbingPaths) {
         Write-Host "Downloading dependencies ..."
-        $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-Apps-"
-        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -token $token -mask "-TestApps-" | ForEach-Object {
+        $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps"
+        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" | ForEach-Object {
             $installTestApps += "($_)"
         }
     }
@@ -187,7 +203,9 @@ try {
     $imageName = ""
     if ($repo.gitHubRunner -ne "windows-latest") {
         $imageName = $repo.cacheImageName
-        Flush-ContainerHelperCache -keepdays $repo.cacheKeepDays
+        if ($imageName) {
+            Flush-ContainerHelperCache -keepdays $repo.cacheKeepDays
+        }
     }
     $authContext = $null
     $environmentName = ""
@@ -207,21 +225,21 @@ try {
         }
     }
     
-    $buildArtifactFolder = Join-Path $baseFolder "output"
+    $buildArtifactFolder = Join-Path $projectPath "output"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
     $allTestResults = "testresults*.xml"
-    $testResultsFile = Join-Path $baseFolder "TestResults.xml"
-    $testResultsFiles = Join-Path $baseFolder $allTestResults
+    $testResultsFile = Join-Path $projectPath "TestResults.xml"
+    $testResultsFiles = Join-Path $projectPath $allTestResults
     if (Test-Path $testResultsFiles) {
         Remove-Item $testResultsFiles -Force
     }
 
-    $buildOutputFile = Join-Path $baseFolder "BuildOutput.txt"
+    $buildOutputFile = Join-Path $projectPath "BuildOutput.txt"
 
     "containerName=$containerName" | Add-Content $ENV:GITHUB_ENV
 
-    Set-Location $baseFolder
+    Set-Location $projectPath
     $runAlPipelineOverrides | ForEach-Object {
         $scriptName = $_
         $scriptPath = Join-Path $ALGoFolder "$ScriptName.ps1"
@@ -258,7 +276,7 @@ try {
         -artifact $artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
-        -baseFolder $baseFolder `
+        -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $LicenseFileUrl `
         -installApps $installApps `
@@ -311,6 +329,17 @@ try {
         }
     }
 
+    if ($containerBaseFolder) {
+
+        Write-Host "Copy artifacts and build output back from build container"
+        $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+        Copy-Item -Path (Join-Path $projectPath "output") -Destination $destFolder -Recurse -Force
+        Copy-Item -Path (Join-Path $projectPath ".output") -Destination $destFolder -Recurse -Force
+        Copy-Item -Path (Join-Path $projectPath "testResults*.xml") -Destination $destFolder
+        Copy-Item -Path (Join-Path $projectPath "bcptTestResults*.json") -Destination $destFolder
+        Copy-Item -Path (Join-Path $projectPath "buildoutput.txt") -Destination $destFolder
+    }
+
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
@@ -319,4 +348,9 @@ catch {
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+    if ($containerBaseFolder -and (Test-Path $containerBaseFolder) -and $projectPath -and (Test-Path $projectPath)) {
+        Write-Host "Removing temp folder"
+        Remove-Item -Path (Join-Path $projectPath '*') -Recurse -Force
+        Write-Host "Done"
+    }
 }

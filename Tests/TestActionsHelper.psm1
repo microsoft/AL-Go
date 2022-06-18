@@ -111,7 +111,7 @@ function YamlTest {
     $yaml.AppendLine("runs:") | Out-Null
     $yaml.AppendLine("  using: composite") | Out-Null
     $yaml.AppendLine("  steps:") | Out-Null
-    $yaml.AppendLine("    - run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message))""; exit 1 }") | Out-Null
+    $yaml.AppendLine("    - run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
     if ($outputs -and $outputs.Count -gt 0) {
         $yaml.AppendLine("      id: $($actionname.ToLowerInvariant())") | Out-Null
     }
