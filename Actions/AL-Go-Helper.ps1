@@ -408,9 +408,14 @@ function ReadSettings {
     $gitHubFolder = ".github"
     $repoSettingsPath = $RepoSettingsFile
     if (!(Test-Path (Join-Path $baseFolder $gitHubFolder) -PathType Container)) {
-        $RepoSettingsPath = "..\$RepoSettingsFile"
+        $RepoSettingsPath = "..\$RepoSettingsPath"
         $gitHubFolder = "..\$gitHubFolder"
+        if (!(Test-Path (Join-Path $baseFolder $RepoSettingsPath) -PathType Container)) {
+            $RepoSettingsPath = "..\$RepoSettingsPath"
+            $gitHubFolder = "..\$gitHubFolder"
+        }
     }
+
     $workflowName = $workflowName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
     $RepoSettingsPath, $ALGoSettingsFile, (Join-Path $gitHubFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
         $settingsFile = $_
