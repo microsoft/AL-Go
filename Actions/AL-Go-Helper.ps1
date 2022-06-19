@@ -184,9 +184,9 @@ function DownloadAndImportBcContainerHelper {
     $params = @{ "ExportTelemetryFunctions" = $true }
     if ($baseFolder) {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
-        if (-not (Test-Path $repoSettingsPath)) {
+        if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
             $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
-            if (-not (Test-Path $repoSettingsPath)) {
+            if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
                 $repoSettingsPath = Join-Path $baseFolder "..\..\$repoSettingsFile"
             }
         }
@@ -407,10 +407,10 @@ function ReadSettings {
     }
     $gitHubFolder = ".github"
     $repoSettingsPath = $RepoSettingsFile
-    if (!(Test-Path (Join-Path $baseFolder $gitHubFolder) -PathType Container)) {
+    if (-not (Test-Path (Join-Path $baseFolder $repoSettingsPath) -PathType Leaf)) {
         $RepoSettingsPath = "..\$RepoSettingsPath"
         $gitHubFolder = "..\$gitHubFolder"
-        if (!(Test-Path (Join-Path $baseFolder $RepoSettingsPath) -PathType Container)) {
+        if (-not (Test-Path (Join-Path $baseFolder $RepoSettingsPath) -PathType Leaf)) {
             $RepoSettingsPath = "..\$RepoSettingsPath"
             $gitHubFolder = "..\$gitHubFolder"
         }
