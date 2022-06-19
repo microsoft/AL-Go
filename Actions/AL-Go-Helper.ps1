@@ -825,6 +825,9 @@ function AnalyzeRepo {
             if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
                 $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
             }
+            if (-not ($dependency.PsObject.Properties.name -eq "Projects")) {
+                $dependency | Add-Member -name "Projects" -MemberType NoteProperty -Value "*"
+            }
             elseif ([String]::IsNullOrEmpty($dependency.Projects)) {
                 $dependency.Projects = '*'
             }
@@ -836,7 +839,12 @@ function AnalyzeRepo {
             }
             Write-Host "Dependency to projects '$($dependency.Projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
             if (-not ($dependency.PsObject.Properties.name -eq "AuthTokenSecret")) {
-                Write-Host "Using token as AuthTokenSecret"
+                if ($token) {
+                    Write-Host "Using token as AuthTokenSecret"
+                }
+                else {
+                    Write-Host "No token available, will attempt to invoke gh auth status --show-token to get access to repository"
+                }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
             }
             if (-not ($dependency.PsObject.Properties.name -eq "alwaysIncludeApps")) {
@@ -1262,6 +1270,24 @@ function CreateDevEnv {
             }
         }
         else {
+            if ($settings.Contains("appDependencyProbingPaths")) {
+                $settings.appDependencyProbingPaths | ForEach-Object {
+                    if ($_.Contains("AuthTokenSecret")) {
+                        $secretName = $_.authTokenSecret
+                        $_.Remove('authTokenSecret')
+                        if ($settings.keyVaultName) {
+                            $secret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $secretName
+                            if ($secret) { $_.authTokenSecret = $secret.SecretValue | Get-PlainText }
+                        }
+                        else {
+                            Write-Host "Attempting to retrieve an auth token using gh auth status"
+                            $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
+                            $_.authTokenSecret = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+                        }
+                    } 
+                }
+            }
+
             if (($settings.keyVaultName) -and -not ($bcAuthContext)) {
                 Write-Host "Reading Key Vault $($settings.keyVaultName)"
                 installModules -modules @('Az.KeyVault')
@@ -1356,7 +1382,14 @@ function CreateDevEnv {
 
         if ($repo.appDependencyProbingPaths) {
             Write-Host "Downloading dependencies ..."
-            $repo.appDependencyProbingPaths = @($repo.appDependencyProbingPaths | ForEach-Object { New-Object -Type PSObject -Property $_ } )
+            $repo.appDependencyProbingPaths = @($repo.appDependencyProbingPaths | ForEach-Object {
+                if ($_.GetType().Name -eq "PSCustomObject") {
+                    $_
+                } 
+                else { 
+                    New-Object -Type PSObject -Property $_
+                } 
+            })
             $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps" -saveToPath $buildArtifactFolder -api_url 'https://api.github.com'
             Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" -saveToPath $buildArtifactFolder -api_url 'https://api.github.com' | ForEach-Object {
                 $installTestApps += "($_)"
