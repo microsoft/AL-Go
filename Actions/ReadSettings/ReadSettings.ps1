@@ -66,7 +66,7 @@ try {
                 }
                 2 { # USE DATETIME
                     $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
-                    $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('hhmmss'))
+                    $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
                 }
                 15 { # Use maxValue
                     $settings.appBuild = [Int32]::MaxValue
@@ -97,8 +97,10 @@ try {
     Write-Host "set-output name=GitHubRunnerJson::$githubRunner"
 
     if ($getprojects) {
+        $buildProjects = @()
         $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.FullName.Substring((get-location).path.length+1) })
         if ($projects) {
+            Write-Host "All Projects: $($projects -join ', ')"
             if (($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push") -and !$settings.alwaysBuildAllProjects) {
                 $headers = @{             
                     "Authorization" = "token $token"
@@ -111,33 +113,45 @@ try {
                 else {
                     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.before)...$($ghEvent.after)"
                 }
-                $response = Invoke-WebRequest -Headers $headers -UseBasicParsing -Method GET -Uri $url | ConvertFrom-Json
+                $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
                 $filesChanged = @($response.files | ForEach-Object { $_.filename })
-                if ($filesChanged.Count -lt 250) {
+                if ($filesChanged.Count -ge 250) {
+                    Write-Host "More than 250 files modified, building all projects"
+                    $buildProjects = $projects
+                }
+                else {
                     Write-Host "Modified files:"
                     $filesChanged | Out-Host
-                    $projects = @($projects | Where-Object {
-                        $project = $_.Replace('\','/')
-                        $filesChanged | Where-Object { $_ -like "$project/*" }
+                    $buildProjects = @($projects | Where-Object {
+                        $project = $_
+                        $buildProject = $false
+                        $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
+                        $projectFolders | Out-Host
+                        $projectFolders | ForEach-Object {
+                            if ($filesChanged -like "$_/*") { $buildProject = $true }
+                        }
+                        $buildProject
                     })
-                    Write-Host "Modified projects: $($projects -join ', ')"
+                    Write-Host "Modified projects: $($buildProjects -join ', ')"
                 }
+            }
+            else {
+                $buildProjects = $projects
             }
         }
         if (Test-Path ".AL-Go" -PathType Container) {
-            $projects += @(".")
+            $buildProjects += @(".")
         }
-        Write-Host "All Projects: $($projects -join ', ')"
-        if ($projects.Count -eq 1) {
-            $projectsJSon = "[$($projects | ConvertTo-Json -compress)]"
+        if ($buildProjects.Count -eq 1) {
+            $projectsJSon = "[$($buildProjects | ConvertTo-Json -compress)]"
         }
         else {
-            $projectsJSon = $projects | ConvertTo-Json -compress
+            $projectsJSon = $buildProjects | ConvertTo-Json -compress
         }
         Write-Host "::set-output name=ProjectsJson::$projectsJson"
         Write-Host "set-output name=ProjectsJson::$projectsJson"
-        Write-Host "::set-output name=ProjectCount::$($projects.Count)"
-        Write-Host "set-output name=ProjectCount::$($projects.Count)"
+        Write-Host "::set-output name=ProjectCount::$($buildProjects.Count)"
+        Write-Host "set-output name=ProjectCount::$($buildProjects.Count)"
         Add-Content -Path $env:GITHUB_ENV -Value "Projects=$projectsJson"
     }
 
@@ -149,7 +163,7 @@ try {
                 "Accept"        = "application/vnd.github.v3+json"
             }
             $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-            $environments = @((Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+            $environments = @((InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
         }
         catch {
         }

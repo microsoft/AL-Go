@@ -62,7 +62,7 @@ try {
     if ($type -eq "Performance Test App") {
         try {
             $settings = ReadSettings -baseFolder $baseFolder -repoName $env:GITHUB_REPOSITORY -workflowName $env:GITHUB_WORKFLOW
-            $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -doNotIssueWarnings
+            $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $repoBaseFolder -project $project -doNotIssueWarnings
             $folders = Download-Artifacts -artifactUrl $settings.artifact -includePlatform
             $sampleApp = Join-Path $folders[0] "Applications.*\Microsoft_Performance Toolkit Samples_*.app"
             if (Test-Path $sampleApp) {
