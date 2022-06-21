@@ -32,6 +32,9 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0073' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
+    Import-Module (Join-Path $PSScriptRoot ".\CreateDevelopmentEnvironmentHelper.psm1")
+    $adminCenterApiCredentials = Convert-FromBase64 -value $adminCenterApiCredentials
+
     Write-Host "Reading $ALGoSettingsFile"
     $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
 
