@@ -174,7 +174,7 @@ jobs:
       - name: Publish To Storage
         id: PublishToStorage
         run: |
-          if ($ENV:StorageContext) {
+          if ($env:StorageContext) {
               try {
                   if (get-command New-AzureStorageContext -ErrorAction SilentlyContinue) {
                       Write-Host "Using Azure.Storage PowerShell module"
@@ -191,7 +191,7 @@ jobs:
                       Set-Alias -Name Set-AzureStorageBlobContent -Value Set-AzStorageBlobContent
                   }
 
-                  $storageContext = $ENV:StorageContext
+                  $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:StorageContext))
 
                   $storageAccount = $StorageContext | ConvertFrom-Json
                   if ($storageAccount.PSObject.Properties.Name -eq "sastoken") {

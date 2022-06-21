@@ -20,14 +20,16 @@ function MaskValueInLog {
     $value.ToCharArray() | ForEach-Object {
         $chint = [int]$_
         if ($chint -lt 32 -or $chint -gt 126 ) {
-            throw "Secret $key contains characters, which are not supported in secrets in AL-Go for GitHub. This exception is thrown to avoid that the secret is revealed in the log."
+            $val2 += $_
         }
         else {
-            $val2 += $script:escchars[$chint-32]
+           $val2 += $script:escchars[$chint-32]
         }
     }
 
     Write-Host "::add-mask::$val2"
+
+    Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value)))"
 }
 
 function GetGithubSecret {

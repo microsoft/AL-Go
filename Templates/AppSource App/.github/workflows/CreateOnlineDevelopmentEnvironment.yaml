@@ -62,7 +62,7 @@ jobs:
 
       - name: Check AdminCenterApiCredentials / Initiate Device Login (open to see code)
         run: |
-          $adminCenterApiCredentials = $env:adminCenterApiCredentials
+          $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:adminCenterApiCredentials))
           if ($adminCenterApiCredentials) {
             Write-Host "AdminCenterApiCredentials provided!"
           }
