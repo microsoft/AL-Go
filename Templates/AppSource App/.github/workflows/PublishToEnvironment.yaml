@@ -89,7 +89,7 @@ jobs:
           $authContext = $null
           "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
             if (!($authContext)) {
-              $authContext = [System.Environment]::GetEnvironmentVariable($_)
+              $authContext = [System.Text.Encoding]::Utf8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($_)))
               if ($authContext) {
                 Write-Host "Using $_ secret"
               }
@@ -102,7 +102,7 @@ jobs:
           $environmentName = $null
           "$($envName)-EnvironmentName", "$($envName)_EnvironmentName", "EnvironmentName" | ForEach-Object {
             if (!($EnvironmentName)) {
-              $EnvironmentName = [System.Environment]::GetEnvironmentVariable($_)
+              $EnvironmentName = [System.Text.Encoding]::Utf8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($_)))
               if ($EnvironmentName) {
                 Write-Host "Using $_ secret"
               }
