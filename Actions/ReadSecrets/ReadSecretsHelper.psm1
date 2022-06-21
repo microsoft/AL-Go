@@ -29,6 +29,7 @@ function GetGithubSecret {
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
         $value = $script:githubSecrets."$secret"
         if ($value) {
+            MaskValueInLog -value $value
             $value = Convert-ToBase64 -value $value
             MaskValueInLog -value $value
             Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
@@ -143,6 +144,7 @@ function GetKeyVaultSecret {
 
     if ($keyVaultSecret) {
         $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
+        MaskValueInLog -value $value
         $value = Convert-ToBase64 -value $value
         MaskValueInLog -value $value
         return $value
