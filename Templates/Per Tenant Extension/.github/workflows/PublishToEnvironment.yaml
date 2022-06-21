@@ -102,7 +102,7 @@ jobs:
           $environmentName = $null
           "$($envName)-EnvironmentName", "$($envName)_EnvironmentName", "EnvironmentName" | ForEach-Object {
             if (!($EnvironmentName)) {
-              $EnvironmentName = [System.Environment]::GetEnvironmentVariable($_)
+              $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($_)))
               if ($EnvironmentName) {
                 Write-Host "Using $_ secret"
               }
@@ -111,7 +111,7 @@ jobs:
           if (!($environmentName)) {
             $environmentName = '${{ steps.envName.outputs.envName }}'
           }
-          $environmentName = ($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()
+          $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
           Write-Host "::set-output name=authContext::$authContext"
           Write-Host "set-output name=authContext::$authContext"
           Write-Host "::set-output name=environmentName::$environmentName"
@@ -142,4 +142,3 @@ jobs:
         with:
           eventId: "DO0097"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-

@@ -66,7 +66,7 @@ try {
     $appRevision = $settings.appRevision
     'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId','StorageContext','ApplicationInsightsConnectionString' | ForEach-Object {
         if ($secrets.ContainsKey($_)) {
-            $value = $secrets."$_"
+            $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
         }
         else {
             $value = ""

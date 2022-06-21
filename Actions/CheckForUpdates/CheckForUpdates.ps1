@@ -30,8 +30,13 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0071' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    if ($update -and -not $token) {
-        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
+    if ($update) {
+        if (-not $token) {
+            throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
+        }
+        else {
+            $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
+        }
     }
 
     # Support old calling convention
