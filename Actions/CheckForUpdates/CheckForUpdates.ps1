@@ -30,6 +30,9 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0071' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
+    Import-Module (Join-Path $PSScriptRoot ".\CheckForUpdatesHelper.psm1")
+
+    $token = Convert-FromBase64 -value $token
     if ($update -and -not $token) {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
     }
