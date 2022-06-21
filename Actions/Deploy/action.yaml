@@ -30,7 +30,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/Deploy.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -projects '${{ inputs.projects }}' -environmentName '${{ inputs.environmentName }}' -artifacts '${{ inputs.artifacts }}' -type '${{ inputs.type }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+    - run: try { ${{ github.action_path }}/Deploy.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -projects '${{ inputs.projects }}' -environmentName '${{ inputs.environmentName }}' -artifacts '${{ inputs.artifacts }}' -type '${{ inputs.type }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
       shell: PowerShell
 branding:
   icon: terminal
