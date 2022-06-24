@@ -1237,6 +1237,7 @@ function CreateDevEnv {
         throw "Specified parameters doesn't match kind=$kind"
     }
 
+    $dependenciesFolder = Join-Path $baseFolder ".dependencies"
     $runAlPipelineParams = @{}
     $loadBcContainerHelper = ($bcContainerHelperPath -eq "")
     if ($loadBcContainerHelper) {
@@ -1383,16 +1384,16 @@ function CreateDevEnv {
         $installApps = $repo.installApps
         $installTestApps = $repo.installTestApps
 
-        $buildArtifactFolder = Join-Path $baseFolder "output"
-        if (Test-Path $buildArtifactFolder) {
-            Get-ChildItem -Path $buildArtifactFolder -Include * -File | ForEach-Object { $_.Delete()}
-        }
-        else {
-            New-Item $buildArtifactFolder -ItemType Directory | Out-Null
-        }
-
         if ($repo.appDependencyProbingPaths) {
             Write-Host "Downloading dependencies ..."
+
+            if (Test-Path $dependenciesFolder) {
+                Get-ChildItem -Path $dependenciesFolder -Include * -File | ForEach-Object { $_.Delete()}
+            }
+            else {
+                New-Item $dependenciesFolder -ItemType Directory | Out-Null
+            }
+
             $repo.appDependencyProbingPaths = @($repo.appDependencyProbingPaths | ForEach-Object {
                 if ($_.GetType().Name -eq "PSCustomObject") {
                     $_
@@ -1401,8 +1402,8 @@ function CreateDevEnv {
                     New-Object -Type PSObject -Property $_
                 } 
             })
-            $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps" -saveToPath $buildArtifactFolder -api_url 'https://api.github.com'
-            Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" -saveToPath $buildArtifactFolder -api_url 'https://api.github.com' | ForEach-Object {
+            $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps" -saveToPath $dependenciesFolder -api_url 'https://api.github.com'
+            Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
                 $installTestApps += "($_)"
             }
         }
@@ -1556,6 +1557,9 @@ function CreateDevEnv {
     finally {
         if ($loadBcContainerHelper) {
             CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+        }
+        if (Test-Path $dependenciesFolder) {
+            Get-ChildItem -Path $dependenciesFolder -Include * -File | ForEach-Object { $_.Delete()}
         }
     }
 }
