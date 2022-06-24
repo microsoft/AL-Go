@@ -1,9 +1,12 @@
 *.app
 *.flf
-TestResults.xml
+TestResults*.xml
+bcptTestResults*.json
 BuildOutput.txt
 rad.json
 .output
+.dependencies
+.buildartifacts
 .alcache/
 .altemplates/
 cache_*
