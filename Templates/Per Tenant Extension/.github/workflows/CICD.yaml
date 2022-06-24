@@ -138,7 +138,7 @@ jobs:
         if: github.event_name != 'pull_request' && (github.ref_name == 'main' || startswith(github.ref_name, 'release/'))
         with:
           name: ${{ env.appsArtifactsName }}
-          path: '${{ matrix.project }}/output/Apps/'
+          path: '${{ matrix.project }}/.buildartifacts/Apps/'
           if-no-files-found: ignore
 
       - name: Publish artifacts - dependencies
@@ -146,7 +146,7 @@ jobs:
         if: github.event_name != 'pull_request' && (github.ref_name == 'main' || startswith(github.ref_name, 'release/'))
         with:
           name: ${{ env.dependenciesArtifactsName }}
-          path: '${{ matrix.project }}/output/Dependencies/'
+          path: '${{ matrix.project }}/.buildartifacts/Dependencies/'
           if-no-files-found: ignore
 
       - name: Publish artifacts - test apps
@@ -154,7 +154,7 @@ jobs:
         if: github.event_name != 'pull_request' && (github.ref_name == 'main' || startswith(github.ref_name, 'release/'))
         with:
           name: ${{ env.testAppsArtifactsName }}
-          path: '${{ matrix.project }}/output/TestApps/'
+          path: '${{ matrix.project }}/.buildartifacts/TestApps/'
           if-no-files-found: ignore
 
       - name: Publish artifacts - build output

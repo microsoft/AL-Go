@@ -45,7 +45,7 @@ function Get-dependencies {
     Param(
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE "dependencies"),
+        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies"),
         [string] $mask = "Apps"
     )
 

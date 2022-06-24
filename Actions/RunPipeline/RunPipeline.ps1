@@ -225,7 +225,7 @@ try {
         }
     }
     
-    $buildArtifactFolder = Join-Path $projectPath "output"
+    $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
     $allTestResults = "testresults*.xml"
@@ -333,7 +333,7 @@ try {
 
         Write-Host "Copy artifacts and build output back from build container"
         $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
-        Copy-Item -Path (Join-Path $projectPath "output") -Destination $destFolder -Recurse -Force
+        Copy-Item -Path (Join-Path $projectPath ".buildartifacts") -Destination $destFolder -Recurse -Force
         Copy-Item -Path (Join-Path $projectPath ".output") -Destination $destFolder -Recurse -Force
         Copy-Item -Path (Join-Path $projectPath "testResults*.xml") -Destination $destFolder
         Copy-Item -Path (Join-Path $projectPath "bcptTestResults*.json") -Destination $destFolder
