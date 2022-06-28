@@ -6,11 +6,12 @@ on:
     paths-ignore:
       - 'README.md'
       - '.github/**'
-    branches: [ main, release/*, feature/* ]
+    branches: [ 'main', 'release/*', 'feature/*' ]
   pull_request:
     paths-ignore:
       - 'README.md'
       - '.github/**'
+    branches: [ 'main' ]
 
 permissions:
   contents: read
