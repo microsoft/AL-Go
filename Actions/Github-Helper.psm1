@@ -4,7 +4,8 @@ function InvokeWebRequest {
         [string] $method,
         [string] $body,
         [string] $outFile,
-        [string] $uri
+        [string] $uri,
+        [switch] $retry
     )
 
     try {
@@ -24,6 +25,14 @@ function InvokeWebRequest {
         Invoke-WebRequest  @params -Uri $uri
     }
     catch {
+        if ($retry) {
+            Start-Sleep -Seconds 60
+            try {
+                Invoke-WebRequest  @params -Uri $uri
+                return
+            }
+            catch {}
+        }
         $errorRecord = $_
         $exception = $_.Exception
         $message = $exception.Message
