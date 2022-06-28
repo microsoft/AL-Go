@@ -111,13 +111,16 @@ function RunWorkflow {
         Start-Sleep -seconds $waitTime.TotalSeconds+1
     }
 
+    Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
     $workflows = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json).workflows
     $workflow = $workflows | Where-Object { $_.Name -eq $name }
-    
+
+    Write-Host "Get Previous runs"
     $url = "https://api.github.com/repos/$repository/actions/runs"
     $previousrun = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id } | Select-Object -First 1
     
+    Write-Host "Run workflow"
     $url = "https://api.github.com/repos/$repository/actions/workflows/$($workflow.id)/dispatches"
     $body = @{
         "ref" = "refs/heads/$branch"
@@ -125,14 +128,13 @@ function RunWorkflow {
     }
     Invoke-WebRequest -UseBasicParsing -Method Post -Headers $headers -Uri $url -Body ($body | ConvertTo-Json) | Out-Null
 
-    Write-Host -NoNewline "Queuing."
+    Write-Host "Queuing"
     do {
         Start-Sleep -Seconds 10
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $run = (Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $url | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id } | Select-Object -First 1
-        Write-Host -NoNewline "."
+        Write-Host "."
     } until (($run) -and ((!$previousrun) -or ($run.id -ne $previousrun.id)))
-    Write-Host
     $runid = $run.id
     Write-Host "Run URL: https://github.com/$repository/actions/runs/$runid"
     if ($wait) {
