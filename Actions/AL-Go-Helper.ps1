@@ -13,6 +13,8 @@ Set-StrictMode -Version 2.0
 $ALGoFolder = ".AL-Go\"
 $ALGoSettingsFile = ".AL-Go\settings.json"
 $RepoSettingsFile = ".github\AL-Go-Settings.json"
+$defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
+$defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 
 $runAlPipelineOverrides = @(
