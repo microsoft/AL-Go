@@ -1,11 +1,26 @@
 ## preview
 
+Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
+
 ### Issues
 - Issue #143 Commit Message for **Increment Version Number** workflow
+- Issue #160 Create local DevEnv aith appDependencyProbingPaths
+- Issue #156 Versioningstrategy 2 doesn't use 24h format
+- Issue #155 Initial Add existing app fails with "Cannot find path"
+- Issue #152 Error when loading dependencies from releases
+- Issue #168 Regression in preview fixed
+
+### Settings
+- New Repo setting: CICDPushBranches can be specified as an array of branches, which triggers a CI/CD workflow on commit. Default is main', release/\*, feature/\*
+- New Repo setting: CICDPullRequestBranches can be specified as an array of branches, which triggers a CI/CD workflow on pull request. Default is main
+- New Repo setting: CICDSchedule can specify a CRONTab on when you want to run CI/CD on a schedule. Note that this will disable Push and Pull Request triggers unless specified specifically using CICDPushBranches or CICDPullRequestBranches
+- New Repo setting: UpdateGitHubGoSystemFilesSchedule can specify a CRONTab on when you want to Update AL-Go System Files. Note that when running on a schedule, update AL-Go system files will perfom a direct commit and not create a pull request.
 
 ### All workflows
 - Support 2 folder levels projects (apps\w1, apps\dk etc.)
 - Better error messages for if an error occurs within an action
+- Special characters are now supported in secrets
+- Initial support for agents running inside containers on a host
 
 ### Update AL-Go System Files Workflow
 - workflow now displays the currently used template URL when selecting the Run Workflow action
@@ -17,7 +32,7 @@
 - Use mutex around ReadSecrets to ensure that multiple agents on the same host doesn't clash
 
 ### CI/CD and Publish To New Environment
-- base functionality for selecting a specific GitHub runner for an environment
+- Base functionality for selecting a specific GitHub runner for an environment
 
 ### localDevEnv.ps1 and cloudDevEnv.ps1
 - Display clear error message if something goes wrong
