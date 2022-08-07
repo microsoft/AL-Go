@@ -12,7 +12,7 @@ on:
         required: true
         default: ''
       tag:
-        description: Tag of this release (needs to be semantic version string https://semver.org)
+        description: Tag of this release (needs to be semantic version string https://semver.org, ex. 1.0.0)
         required: true
         default: ''
       prerelease:
