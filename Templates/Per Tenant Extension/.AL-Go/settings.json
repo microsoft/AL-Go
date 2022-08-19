@@ -3,5 +3,7 @@
     "appFolders":  [
     ],
     "testFolders":  [
+    ],
+    "bcptTestFolders":  [
     ]
 }
