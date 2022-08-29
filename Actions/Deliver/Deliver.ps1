@@ -7,7 +7,7 @@ Param(
     [string] $parentTelemetryScopeJson = '{}',
     [Parameter(HelpMessage = "Projects to deliver (default is all)", Mandatory = $false)]
     [string] $projects = "*",
-    [Parameter(HelpMessage = "Delivery target (AppSource or StorageAccount)", Mandatory = $true)]
+    [Parameter(HelpMessage = "Delivery target (AppSource or Storage)", Mandatory = $true)]
     [ValidateSet('AppSource','Storage')]
     [string] $deliveryTarget,
     [Parameter(HelpMessage = "Artifacts to deliver", Mandatory = $true)]
