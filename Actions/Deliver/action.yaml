@@ -32,7 +32,7 @@ inputs:
     required: false
     default: 'Apps,TestApps'
   goLive:
-    description: Promote AppSource App to Go Live? (Y/N) 
+    description: Promote AppSource App to Go Live? (Y/N)
     required: false
     default: 'N'
 runs:
