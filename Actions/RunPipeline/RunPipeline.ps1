@@ -87,48 +87,6 @@ try {
         }
     }
 
-    if ($storageContext) {
-        if ($project) {
-            $projectName = $project -replace "[^a-z0-9]", "-"
-        }
-        else {
-            $projectName = $repo.repoName -replace "[^a-z0-9]", "-"
-        }
-        try {
-            if (get-command New-AzureStorageContext -ErrorAction SilentlyContinue) {
-                Write-Host "Using Azure.Storage PowerShell module"
-            }
-            else {
-                if (!(get-command New-AzStorageContext -ErrorAction SilentlyContinue)) {
-                    OutputError -message "When publishing to storage account, the build agent needs to have either the Azure.Storage or the Az.Storage PowerShell module installed."
-                    exit
-                }
-                Write-Host "Using Az.Storage PowerShell module"
-                Set-Alias -Name New-AzureStorageContext -Value New-AzStorageContext
-                Set-Alias -Name Get-AzureStorageContainer -Value Get-AzStorageContainer
-                Set-Alias -Name Set-AzureStorageBlobContent -Value Set-AzStorageBlobContent
-            }
-
-            $storageAccount = $storageContext | ConvertFrom-Json | ConvertTo-HashTable
-            if ($storageAccount.ContainsKey('sastoken')) {
-                $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
-            }
-            else {
-                $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
-            }
-            Write-Host "Storage Context OK"
-            $storageContainerName =  $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).ToLowerInvariant()
-            $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
-            Write-Host "Storage Container Name is $storageContainerName"
-            Write-Host "Storage Blob Name is $storageBlobName"
-            Get-AzureStorageContainer -Context $storageContext -name $storageContainerName | Out-Null
-        }
-        catch {
-            OutputWarning -message "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey, which points to an existing container in a storage account."
-            $storageContext = $null
-        }
-    }
-
     $artifact = $repo.artifact
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
@@ -303,31 +261,6 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps `
         -RemoveBcContainer { Param([Hashtable]$parameters) Remove-BcContainerSession -containerName $parameters.ContainerName -killPsSessionProcess; Remove-BcContainer @parameters }
-
-    if ($storageContext) {
-        Write-Host "Publishing to $storageContainerName in $($storageAccount.StorageAccountName)"
-        "Apps","TestApps" | ForEach-Object {
-            $type = $_
-            $artfolder = Join-Path $buildArtifactFolder $type
-            if (Test-Path "$artfolder\*") {
-                $versions = @("$($repo.repoVersion).$appBuild.$appRevision-preview","preview")
-                $tempFile = Join-Path $ENV:TEMP "$([Guid]::newguid().ToString()).zip"
-                try {
-                    Write-Host "Compressing"
-                    Compress-Archive -Path $artfolder -DestinationPath $tempFile -Force
-                    $versions | ForEach-Object {
-                        $version = $_
-                        $blob = $storageBlobName.replace('{project}',$projectName).replace('{version}',$version).replace('{type}',$type).ToLowerInvariant()
-                        Write-Host "Publishing $blob"
-                        Set-AzureStorageBlobContent -Context $storageContext -Container $storageContainerName -File $tempFile -blob $blob -Force | Out-Null
-                    }
-                }
-                finally {
-                    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-                }
-            }
-        }
-    }
 
     if ($containerBaseFolder) {
 

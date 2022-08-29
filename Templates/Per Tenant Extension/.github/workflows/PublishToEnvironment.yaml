@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       appVersion:
-        description: App version to deploy (current, prerelease, draft, latest or version number)
+        description: App version to deploy to environment(s) (current, prerelease, draft, latest or version number)
         required: false
         default: 'current'
       environmentName:

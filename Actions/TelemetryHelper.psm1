@@ -10,6 +10,7 @@ $signals = @{
     "DO0078" = "AL-Go action ran: ReadSecrets"
     "DO0079" = "AL-Go action ran: ReadSettings"
     "DO0080" = "AL-Go action ran: RunPipeline"
+    "DO0081" = "AL-Go action ran: Deliver"
 
     "DO0090" = "AL-Go workflow ran: AddExistingAppOrTestApp"
     "DO0091" = "AL-Go workflow ran: CiCd"
@@ -24,6 +25,7 @@ $signals = @{
     "DO0100" = "AL-Go workflow ran: NextMinor"
     "DO0101" = "AL-Go workflow ran: Current"
     "DO0102" = "AL-Go workflow ran: CreatePerformanceTestApp"
+    "DO0103" = "AL-Go workflow ran: PublishToAppSource"
 }
 
 function CreateScope {
