@@ -1,0 +1,92 @@
+name: Publish To AppSource
+
+on:
+  workflow_dispatch:
+    inputs:
+      appVersion:
+        description: App version to deliver to AppSource (current, prerelease, draft, latest or version number)
+        required: false
+        default: 'current'
+      GoLive:
+        description: Promote AppSource App to go live if it passes technical validation? (Y/N)
+        required: false
+        default: 'N'
+
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: PowerShell
+
+jobs:
+  Initialization:
+    runs-on: [ windows-latest ]
+    outputs:
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Initialize the workflow
+        id: init
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
+        with:
+          eventId: "DO0103"
+
+  Deliver:
+    needs: [ Initialization ]
+    runs-on: [ windows-latest ]
+    name: Deliver to AppSource
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+
+      - name: Read secrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          settingsJson: ${{ env.Settings }}
+          secrets: 'AppSourceContext'
+
+      - name: DeliveryContext
+        id: deliveryContext
+        run: |
+          $contextName = 'AppSourceContext'
+          $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($contextName)))
+          Write-Host "::set-output name=deliveryContext::$deliveryContext"
+          Write-Host "set-output name=deliveryContext::$deliveryContext"
+
+      - name: Deliver
+        uses: microsoft/AL-Go-Actions/Deliver@main
+        env:
+          deliveryContext: '${{ steps.deliveryContext.outputs.deliveryContext }}'
+        with:
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          type: 'Publish'
+          projects: '${{ secrets.Projects }}'
+          deliveryTarget: 'AppSource'
+          artifacts: ${{ github.event.inputs.appVersion }}
+          goLive: ${{ github.event.inputs.goLive }}
+
+  PostProcess:
+    if: always()
+    runs-on: [ windows-latest ]
+    needs: [ Initialization, Deliver ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Finalize the workflow
+        id: PostProcess
+        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        with:
+          eventId: "DO0103"
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

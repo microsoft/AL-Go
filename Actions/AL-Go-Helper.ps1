@@ -53,15 +53,23 @@ $testRunnerApps = @($permissionsMockAppId, $testRunnerAppId) + $performanceToolk
 
 $MicrosoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 
-function ConvertTo-HashTable {
+function ConvertTo-HashTable() {
     [CmdletBinding()]
     Param(
         [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object
+        [PSCustomObject] $object,
+        [switch] $recurse
     )
     $ht = @{}
     if ($object) {
-        $object.PSObject.Properties | ForEach-Object { $ht[$_.Name] = $_.Value }
+        $object.PSObject.Properties | ForEach-Object { 
+            if ($recurse -and ($_.Value -is [PSCustomObject])) {
+                $ht[$_.Name] = ConvertTo-HashTable $_.Value
+            }
+            else {
+                $ht[$_.Name] = $_.Value
+            }
+        }
     }
     $ht
 }
@@ -501,7 +509,7 @@ function AnalyzeRepo {
             $settings.Add('enableAppSourceCop', $false)
         }
     }
-    elseif ($settings.type -eq "AppSource App" ) {
+    elseif ($settings.type -eq "AppSource App") {
         if (!$settings.Contains('enablePerTenantExtensionCop')) {
             $settings.Add('enablePerTenantExtensionCop', $false)
         }
@@ -1564,19 +1572,6 @@ function CreateDevEnv {
             Get-ChildItem -Path $dependenciesFolder -Include * -File | ForEach-Object { $_.Delete()}
         }
     }
-}
-
-function ConvertTo-HashTable() {
-    [CmdletBinding()]
-    Param(
-        [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object
-    )
-    $ht = @{}
-    if ($object) {
-        $object.PSObject.Properties | ForEach-Object { $ht[$_.Name] = $_.Value }
-    }
-    $ht
 }
 
 function CheckAndCreateProjectFolder {

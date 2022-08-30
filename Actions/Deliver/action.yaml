@@ -1,0 +1,45 @@
+name: PowerShell script
+author: Freddy Kristiansen
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  parentTelemetryScopeJson:
+    description: Specifies the parent telemetry scope for the telemetry signal
+    required: false
+    default: '{}'
+  projects:
+    description: Projects to deliver (default is all)
+    required: false
+    default: '*'
+  deliveryTarget:
+    description: Delivery target (AppSource or Storage)
+    required: true
+  artifacts:
+    description: Artifacts to deliver
+    required: true
+  type:
+    description: Type of delivery (CD or Publish)
+    required: false
+    default: 'CD'
+  atypes:
+    description: Types of artifacts to deliver (Apps,TestApps)
+    required: false
+    default: 'Apps,TestApps'
+  goLive:
+    description: Promote AppSource App to Go Live? (Y/N)
+    required: false
+    default: 'N'
+runs:
+  using: composite
+  steps:
+    - run: try { ${{ github.action_path }}/Deliver.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -projects '${{ inputs.projects }}' -deliveryTarget '${{ inputs.deliveryTarget }}' -artifacts '${{ inputs.artifacts }}' -type '${{ inputs.type }}' -atypes '${{ inputs.atypes }}' -goLive ('${{ inputs.goLive }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      shell: PowerShell
+branding:
+  icon: terminal
+  color: blue
