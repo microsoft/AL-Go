@@ -5,11 +5,11 @@
 ![Run Workflow](/Scenarios/images/16a.png)
 1. When the workflow is done, navigate to **Pull Requests**, **inspect the PR** and **Merge the pull request**
 ![Pull Request](/Scenarios/images/16b.png)
-1. Under **Actions**, you will see that a Merge pull request CI workflow has been kicked off
+1. Under **Actions**, you will see that a Merge pull request **CI workflow** has been kicked off
 ![Workflows](/Scenarios/images/16c.png)
-1. If you wait for the workflow to complete, you will see that it completes and one of the build artifacts are the BCPT Test Results
+1. If you wait for the workflow to complete, you will see that it completes and one of the build artifacts are the **BCPT Test Results**
 ![Fail](/Scenarios/images/16d.png)
-1. Opening the BCPT Test Results and inspecting the results looks like this
+1. Opening the **BCPT Test Results** and inspecting the results looks like this
 ![Test failure](/Scenarios/images/16e.png)
 1. Currently there isn't a visual viewer of these results. The goal is to have a PowerBI dashboard, which can gather BCPT test results from multiple builds and compare.
 
