@@ -92,7 +92,7 @@ try {
     Write-Host "set-output name=SettingsJson::$outSettingsJson"
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
 
-    $gitHubRunner = $settings.githubRunner.Split(',') | ConvertTo-Json -compress
+    $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
     Write-Host "::set-output name=GitHubRunnerJson::$githubRunner"
     Write-Host "set-output name=GitHubRunnerJson::$githubRunner"
 
