@@ -56,8 +56,8 @@ jobs:
   Deploy:
     needs: [ Analyze ]
     if: ${{ needs.Analyze.outputs.environmentCount > 0 }}
-    strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
-    runs-on: ${{ matrix.os }}
+    strategy: ${{ fromJson(needs.Analyze.outputs.environments) }}
+    runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
     environment:
       name: ${{ matrix.environment }}
