@@ -9,6 +9,8 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue #155 Initial Add existing app fails with "Cannot find path"
 - Issue #152 Error when loading dependencies from releases
 - Issue #168 Regression in preview fixed
+- Issue #189 Warnings: Resource not accessible by integration
+- Issue #190 PublishToEnvironment is not working with AL-Go-PTE@preview
 
 ### AppSource Apps
 - New workflow: Publish to AppSource
