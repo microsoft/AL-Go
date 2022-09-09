@@ -28,9 +28,9 @@ inputs:
     required: false
     default: 'CD'
   atypes:
-    description: Types of artifacts to deliver (Apps,TestApps)
+    description: Types of artifacts to deliver (Apps,Dependencies,TestApps)
     required: false
-    default: 'Apps,TestApps'
+    default: 'Apps,Dependencies,TestApps'
   goLive:
     description: Promote AppSource App to Go Live? (Y/N)
     required: false

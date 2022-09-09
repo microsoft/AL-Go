@@ -15,8 +15,8 @@ Param(
     [Parameter(HelpMessage = "Type of delivery (CD or Publish)", Mandatory = $false)]
     [ValidateSet('CD','Publish')]
     [string] $type = "CD",
-    [Parameter(HelpMessage = "Types of artifacts to deliver (Apps,TestApps)", Mandatory = $false)]
-    [string] $atypes = "Apps,TestApps",
+    [Parameter(HelpMessage = "Types of artifacts to deliver (Apps,Dependencies,TestApps)", Mandatory = $false)]
+    [string] $atypes = "Apps,Dependencies,TestApps",
     [Parameter(HelpMessage = "Promote AppSource App to Go Live? (Y/N)", Mandatory = $false)]
     [bool] $goLive
 )
@@ -45,7 +45,7 @@ try {
         throw "No projects matches the pattern '$projects'"
     }
     if ($deliveryTarget -eq "AppSource") {
-        $atypes = "Apps"        
+        $atypes = "Apps,Dependencies"        
     }
     Write-Host "Projects:"
     $projectList | Out-Host
@@ -90,7 +90,7 @@ try {
                 throw "Unable to locate $artifacts release"
             }
             New-Item $baseFolder -ItemType Directory | Out-Null
-            $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder
+            $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder -mask "Apps"
             Write-Host "'$artifactFile'"
             if (!$artifactFile -or !(Test-Path $artifactFile)) {
                 throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."

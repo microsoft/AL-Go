@@ -38,12 +38,12 @@ try {
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE "artifacts"
 
     if ($artifacts -like "$($baseFolder)*") {
-        $apps
         if (Test-Path $artifacts -PathType Container) {
             $apps = @((Get-ChildItem -Path $artifacts -Filter "*-Apps-*") | ForEach-Object { $_.FullName })
             if (!($apps)) {
                 throw "There is no artifacts present in $artifacts."
             }
+            $apps += @((Get-ChildItem -Path $artifacts -Filter "*-Dependencies-*") | ForEach-Object { $_.FullName })
         }
         elseif (Test-Path $artifacts) {
             $apps = $artifacts
@@ -68,7 +68,8 @@ try {
             throw "Unable to locate $artifacts release"
         }
         New-Item $baseFolder -ItemType Directory | Out-Null
-        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder
+        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder -mask "Apps"
+        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder -mask "Dependencies"
         $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
         if (!$apps) {
             throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
@@ -76,7 +77,8 @@ try {
     }
     else {
         New-Item $baseFolder -ItemType Directory | Out-Null
-        $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $projects -Version $artifacts -branch "main"
+        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $projects -Version $artifacts -branch "main")
+        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $projects -Version $artifacts -branch "main")
         if ($allArtifacts) {
             $allArtifacts | ForEach-Object {
                 $appFile = DownloadArtifact -token $token -artifact $_ -path $baseFolder
@@ -115,35 +117,31 @@ try {
         exit
     }
 
-    $apps | ForEach-Object {
-        try {
-            if ($response.environmentType -eq 1) {
-                if ($bcAuthContext.ClientSecret) {
-                    Write-Host "Using S2S, publishing apps using automation API"
-                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $_
-                }
-                else {
-                    Write-Host "Publishing apps using development endpoint"
-                    Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $_ -useDevEndpoint
-                }
+    try {
+        if ($response.environmentType -eq 1) {
+            if ($bcAuthContext.ClientSecret) {
+                Write-Host "Using S2S, publishing apps using automation API"
+                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
             }
             else {
-                if ($type -eq 'CD') {
-                    Write-Host "Ignoring environment $environmentName, which is a production environment"
-                }
-                else {
-
-                    # Check for AppSource App - cannot be deployed
-
-                    Write-Host "Publishing apps using automation API"
-                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $_
-                }
+                Write-Host "Publishing apps using development endpoint"
+                Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint -checkAlreadyInstalled
             }
         }
-        catch {
-            OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
-            exit
+        else {
+            if ($type -eq 'CD') {
+                Write-Host "Ignoring environment $environmentName, which is a production environment"
+            }
+            else {
+                # Check for AppSource App - cannot be deployed
+                Write-Host "Publishing apps using automation API"
+                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
+            }
         }
+    }
+    catch {
+        OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
+        exit
     }
 
     TrackTrace -telemetryScope $telemetryScope
