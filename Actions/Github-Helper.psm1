@@ -5,7 +5,8 @@ function InvokeWebRequest {
         [string] $body,
         [string] $outFile,
         [string] $uri,
-        [switch] $retry
+        [switch] $retry,
+        [switch] $ignoreErrors
     )
 
     try {
@@ -45,8 +46,10 @@ function InvokeWebRequest {
             }
         }
         catch {}
-        Write-Host "::Error::$message"
-        throw $message
+        if (!$ignoreErrors.IsPresent) {
+            Write-Host "::Error::$message"
+            throw $message
+        }
     }
 }
 
@@ -359,7 +362,7 @@ function GetLatestRelease {
     
     Write-Host "Getting the latest release from $api_url/repos/$repository/releases/latest"
     try {
-        InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" | ConvertFrom-Json
+        InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" -ignoreErrors | ConvertFrom-Json
     }
     catch {
         return $null
@@ -391,7 +394,7 @@ function DownloadRelease {
         $project = $_.Replace('\','_')
         Write-Host "project '$project'"
         
-        $release.assets | Where-Object { $_.name -like "$project*-$mask-*.zip" } | ForEach-Object {
+        $release.assets | Where-Object { $_.name -like "$project-*-$mask-*.zip" -or $_.name -like "$project-$mask-*.zip" } | ForEach-Object {
             $uri = "$api_url/repos/$repository/releases/assets/$($_.id)"
             Write-Host $uri
             $filename = Join-Path $path $_.name
@@ -448,6 +451,8 @@ function GetArtifacts {
         $allArtifactsFound = $true
         $projects.Split(',') | ForEach-Object {
             $project = $_.Replace('\','_')
+            Write-Host "project '$project'"
+        
             $projectArtifact = $allArtifacts | Where-Object { $_.name -like "$project-$branch-$mask-$version" } | Select-Object -First 1
             if ($projectArtifact) {
                 $result += @($projectArtifact)

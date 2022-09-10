@@ -68,8 +68,7 @@ try {
         }
         $projectName = $project -replace "[^a-z0-9]", "-"
         Write-Host "Project '$project'"
-        $apps = @()
-        $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE "artifacts\$_"
+        $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE "artifacts"
 
         if ($artifacts -like "$($ENV:GITHUB_WORKSPACE)*") {
             # artifacts already present
@@ -148,10 +147,10 @@ try {
                 }
                 $storageAccount = $storageContext | ConvertFrom-Json | ConvertTo-HashTable
                 if ($storageAccount.ContainsKey('sastoken')) {
-                    $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
+                    $azStorageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
                 }
                 else {
-                    $storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
+                    $azStorageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
                 }
                 Write-Host "Storage Context OK"
             }
@@ -163,11 +162,11 @@ try {
             $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
             Write-Host "Storage Container Name is $storageContainerName"
             Write-Host "Storage Blob Name is $storageBlobName"
-            Get-AzureStorageContainer -Context $storageContext -name $storageContainerName | Out-Null
+            Get-AzureStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
             Write-Host "Delivering to $storageContainerName in $($storageAccount.StorageAccountName)"
             $atypes.Split(',') | ForEach-Object {
                 $atype = $_
-                $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$atype-*") -Directory)
+                $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-*-$atype-*") -Directory)
                 if ($artFolder.Count -eq 0) {
                     if ($atype -eq "Apps") {
                         throw "Error - unable to locate apps"
@@ -176,7 +175,7 @@ try {
                         Write-Host "WARNING: Unable to locate $atype"
                     }
                 }
-                if ($artFolder.Count -gt 1) {
+                elseif ($artFolder.Count -gt 1) {
                     $artFolder | Out-Host
                     throw "Internal error - multiple $atype folders located"
                 }
@@ -196,7 +195,7 @@ try {
                             $version = $_
                             $blob = $storageBlobName.replace('{project}',$projectName).replace('{version}',$version).replace('{type}',$atype).ToLowerInvariant()
                             Write-Host "Delivering $blob"
-                            Set-AzureStorageBlobContent -Context $storageContext -Container $storageContainerName -File $tempFile -blob $blob -Force | Out-Null
+                            Set-AzureStorageBlobContent -Context $azStorageContext -Container $storageContainerName -File $tempFile -blob $blob -Force | Out-Null
                         }
                     }
                     finally {

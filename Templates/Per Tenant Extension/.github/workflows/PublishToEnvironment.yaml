@@ -80,7 +80,7 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           settingsJson: ${{ env.Settings }}
-          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName'
+          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,Projects'
 
       - name: AuthContext
         id: authContext
@@ -112,10 +112,21 @@ jobs:
             $environmentName = '${{ steps.envName.outputs.envName }}'
           }
           $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
+
+          $projects = [System.Environment]::GetEnvironmentVariable("$($envName)-Projects")
+          if (-not $projects) {
+            $projects = [System.Environment]::GetEnvironmentVariable("$($envName)_Projects")
+            if (-not $projects) {
+              $projects = [System.Environment]::GetEnvironmentVariable('projects')
+            }
+          }
+
           Write-Host "::set-output name=authContext::$authContext"
           Write-Host "set-output name=authContext::$authContext"
           Write-Host "::set-output name=environmentName::$environmentName"
           Write-Host "set-output name=environmentName::$environmentName"
+          Write-Host "::set-output name=projects::$projects"
+          Write-Host "set-output name=projects::$projects"
 
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
@@ -124,7 +135,7 @@ jobs:
         with:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           type: 'Publish'
-          projects: '${{ secrets.Projects }}'
+          projects: '${{ steps.authContext.outputs.projects }}'
           environmentName: '${{ steps.authContext.outputs.environmentName }}'
           artifacts: ${{ github.event.inputs.appVersion }}
 

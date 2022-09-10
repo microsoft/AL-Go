@@ -157,16 +157,15 @@ try {
 
     if ($getenvironments) {
         $environments = @()
-        try { 
-            $headers = @{ 
-                "Authorization" = "token $token"
-                "Accept"        = "application/vnd.github.v3+json"
-            }
-            $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-            $environments = @((InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+        $headers = @{ 
+            "Authorization" = "token $token"
+            "Accept"        = "application/vnd.github.v3+json"
         }
-        catch {
-        }
+        $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+        try {
+            $environments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+        } 
+        catch {}
         $environments = @($environments+@($settings.Environments) | Where-Object { 
             if ($includeProduction) {
                 $_ -like $getEnvironments -or $_ -like "$getEnvironments (PROD)" -or $_ -like "$getEnvironments (Production)" -or $_ -like "$getEnvironments (FAT)" -or $_ -like "$getEnvironments (Final Acceptance Test)"
@@ -177,7 +176,7 @@ try {
         })
 
         $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
-        $environments | ForEach-Object { 
+        $environments | Select-Object -Unique | ForEach-Object { 
             $environmentGitHubRunnerKey = "$($_.Split(' ')[0])_GitHubRunner"
             $os = $settings."runs-on".Split(',').Trim()
             if (([HashTable]$settings).ContainsKey($environmentGitHubRunnerKey)) {
