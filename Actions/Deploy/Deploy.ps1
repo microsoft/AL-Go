@@ -39,11 +39,15 @@ try {
 
     if ($artifacts -like "$($baseFolder)*") {
         if (Test-Path $artifacts -PathType Container) {
-            $apps = @((Get-ChildItem -Path $artifacts -Filter "*-Apps-*") | ForEach-Object { $_.FullName })
-            if (!($apps)) {
-                throw "There is no artifacts present in $artifacts."
+            $projects.Split(',') | ForEach-Object {
+                $project = $_.Replace('\','_')
+                Write-Host "project '$project'"
+                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-*-Apps-*") | ForEach-Object { $_.FullName })
+                if (!($apps)) {
+                    throw "There is no artifacts present in $artifacts."
+                }
+                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-*-Dependencies-*") | ForEach-Object { $_.FullName })
             }
-            $apps += @((Get-ChildItem -Path $artifacts -Filter "*-Dependencies-*") | ForEach-Object { $_.FullName })
         }
         elseif (Test-Path $artifacts) {
             $apps = $artifacts
@@ -85,12 +89,16 @@ try {
                 if (!(Test-Path $appFile)) {
                     throw "Unable to download artifact $($_.name)"
                 }
+                $apps += @($appFile)
             }
         }
         else {
             throw "Could not find any Apps artifacts for projects $projects, version $artifacts"
         }
     }
+
+    Write-Host "Apps to deploy"
+    $apps | Out-Host
 
     Set-Location $baseFolder
     if (-not ($ENV:AUTHCONTEXT)) {
