@@ -67,7 +67,7 @@ jobs:
           if ($env:StorageContext) {
             $deliveryTargets += @("Storage")
           }
-          if ($env:type -eq "AppSource App") {
+          if ($env:type -eq "AppSource App" -and $env:AppSourceContinuousDelivery -eq "true") {
             if ($env:AppSourceContext) {
               $deliveryTargets += @("AppSource")
             }
@@ -226,7 +226,6 @@ jobs:
   Deploy:
     needs: [ Initialization, Build ]
     if: ${{ github.event_name != 'pull_request' && github.ref_name == 'main' && needs.Initialization.outputs.environmentCount > 0 }}
-    continue-on-error: true
     strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
@@ -256,7 +255,7 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           settingsJson: ${{ env.Settings }}
-          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName'
+          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,Projects'
 
       - name: AuthContext
         id: authContext
@@ -288,10 +287,21 @@ jobs:
             $environmentName = '${{ steps.envName.outputs.envName }}'
           }
           $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
+
+          $projects = [System.Environment]::GetEnvironmentVariable("$($envName)-Projects")
+          if (-not $projects) {
+            $projects = [System.Environment]::GetEnvironmentVariable("$($envName)_Projects")
+            if (-not $projects) {
+              $projects = [System.Environment]::GetEnvironmentVariable('projects')
+            }
+          }
+
           Write-Host "::set-output name=authContext::$authContext"
           Write-Host "set-output name=authContext::$authContext"
           Write-Host "::set-output name=environmentName::$environmentName"
           Write-Host "set-output name=environmentName::$environmentName"
+          Write-Host "::set-output name=projects::$projects"
+          Write-Host "set-output name=projects::$projects"
 
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
@@ -299,14 +309,13 @@ jobs:
           authContext: '${{ steps.authContext.outputs.authContext }}'
         with:
           type: 'CD'
-          projects: '${{ secrets.Projects }}'
+          projects: '${{ steps.authContext.outputs.projects }}'
           environmentName: '${{ steps.authContext.outputs.environmentName }}'
           artifacts: '${{ github.workspace }}\artifacts'
 
   Deliver:
     needs: [ Initialization, Build ]
     if: ${{ github.event_name != 'pull_request' && github.ref_name == 'main' && needs.Initialization.outputs.deliveryTargetCount > 0 }}
-    continue-on-error: true
     strategy:
       matrix:
         deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargets) }}
@@ -347,7 +356,7 @@ jobs:
           deliveryContext: '${{ steps.deliveryContext.outputs.deliveryContext }}'
         with:
           type: 'CD'
-          projects: '${{ secrets.Projects }}'
+          projects: '*'
           deliveryTarget: '${{ matrix.deliveryTarget }}'
           artifacts: '${{ github.workspace }}\artifacts'
 
