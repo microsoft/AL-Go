@@ -144,7 +144,6 @@ try {
                 $artifactsFolder = Join-Path $baseFolder "artifacts"
                 New-Item $artifactsFolder -ItemType Directory | Out-Null
                 DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"
-                DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Dependencies"
                 $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
             }
             else {
