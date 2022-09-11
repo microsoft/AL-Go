@@ -96,11 +96,11 @@ jobs:
           $allArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts" | ConvertFrom-Json
           $artifactsVersion = $appVersion
           if ($appVersion -eq "latest") {
-            $artifact = $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-*" } | Select-Object -First 1
-            $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('Apps-')+5)
+            $artifact = $allArtifacts.artifacts | Where-Object { $_.name -like "*-Apps-*" } | Select-Object -First 1
+            $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('-Apps-')+6)
           }
           $include = @()
-          $allArtifacts.artifacts | Where-Object { $_.name -like "*Apps-$($artifactsVersion)" } | ForEach-Object {
+          $allArtifacts.artifacts | Where-Object { $_.name -like "*-Apps-$($artifactsVersion)" -or $_.name -like "*-TestApps-$($artifactsVersion)" -or $_.name -like "*-Dependencies-$($artifactsVersion)" } | ForEach-Object {
             $atype = $_.name.SubString(0,$_.name.Length-$artifactsVersion.Length-1)
             $atype = $atype.SubString($atype.LastIndexOf('-')+1)
             $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url; "atype" = $atype } )

@@ -48,7 +48,7 @@ try {
         }
     }
     $projectArr = $projects.Split(',')
-    $projectList = $projectList | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } }
+    $projectList = @($projectList | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
 
     if ($projectList.Count -eq 0) {
         throw "No projects matches the pattern '$projects'"
