@@ -351,6 +351,7 @@ function ReadSettings {
     # Read Settings file
     $settings = [ordered]@{
         "type"                                   = "PTE"
+        "projects"                               = @()
         "country"                                = "us"
         "artifact"                               = ""
         "companyName"                            = ""

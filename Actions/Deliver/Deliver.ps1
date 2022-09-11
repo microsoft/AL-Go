@@ -37,10 +37,19 @@ try {
 
     if ($projects -eq '') { $projects = "*" }
 
-    $projectList = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { ($_.BaseName -like $projects) -and (Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container) } | ForEach-Object { $_.BaseName })
-    if (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE ".AL-Go") -PathType Container) {
-        $projectList += @(".")
+    $settings = ReadSettings -baseFolder $ENV:GITHUB_WORKSPACE -workflowName $env:GITHUB_WORKFLOW
+    if ($settings.Projects) {
+        $projectList = $settings.projects | Where-Object { $_ -like $projects }
     }
+    else {
+        $projectList = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+        if (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE ".AL-Go") -PathType Container) {
+            $projectList += @(".")
+        }
+    }
+    $projectArr = $projects.Split(',')
+    $projectList = @($projectList | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
+
     if ($projectList.Count -eq 0) {
         throw "No projects matches the pattern '$projects'"
     }
