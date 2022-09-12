@@ -49,6 +49,15 @@ try {
         $correlationId = [guid]::Empty.ToString()
     }
 
+    Write-Host "  __  __              _                            "
+    Write-Host " |  \/  |            | |                           "
+    Write-Host " | \  / |_   _    ___| |__   __ _ _ __   __ _  ___ "
+    Write-Host " | |\/| | | | |  / __| '_ \ / _` | '_ \ / _` |/ _ \"
+    Write-Host " | |  | | |_| | | (__| | | | (_| | | | | (_| |  __/"
+    Write-Host " |_|  |_|\__, |  \___|_| |_|\__,_|_| |_|\__, |\___|"
+    Write-Host "          __/ |                          __/ |     "
+    Write-Host "         |___/                          |___/      "
+
     Write-Host "::set-output name=telemetryScopeJson::$scopeJson"
     Write-Host "set-output name=telemetryScopeJson::$scopeJson"
 
