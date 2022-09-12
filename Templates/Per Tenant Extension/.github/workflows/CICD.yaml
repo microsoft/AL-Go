@@ -44,6 +44,17 @@ jobs:
         with:
           eventId: "DO0091"
 
+      - name: MyTask
+        run: |
+          Write-Host "  __  __         _            _    "
+          Write-Host " |  \/  |       | |          | |   "
+          Write-Host " | \  / |_   _  | |_ __ _ ___| | __"
+          Write-Host " | |\/| | | | | | __/ _` / __| |/ /"
+          Write-Host " | |  | | |_| | | || (_| \__ \   < "
+          Write-Host " |_|  |_|\__, |  \__\__,_|___/_|\_\"
+          Write-Host "          __/ |                    "
+          Write-Host "         |___/                     "
+
       - name: Read settings
         id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
