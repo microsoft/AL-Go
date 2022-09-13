@@ -292,7 +292,7 @@ jobs:
           if (-not $projects) {
             $projects = [System.Environment]::GetEnvironmentVariable("$($envName)_Projects")
             if (-not $projects) {
-              $projects = [System.Environment]::GetEnvironmentVariable('projects')
+              $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('projects')))
             }
           }
 
