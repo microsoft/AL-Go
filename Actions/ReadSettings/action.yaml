@@ -59,9 +59,20 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/ReadSettings.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -getprojects ('${{ inputs.getprojects }}' -eq 'Y') -getenvironments '${{ inputs.getenvironments }}' -includeProduction ('${{ inputs.includeProduction }}' -eq 'Y') -release ('${{ inputs.release }}' -eq 'Y') -get '${{ inputs.get }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
-      id: readsettings
+    - name: run
       shell: PowerShell
+      id: readsettings
+      env:
+        _actor: ${{ inputs.actor }}
+        _token: ${{ inputs.token }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _project: ${{ inputs.project }}
+        _getprojects: ${{ inputs.getprojects }}
+        _getenvironments: ${{ inputs.getenvironments }}
+        _includeProduction: ${{ inputs.includeProduction }}
+        _release: ${{ inputs.release }}
+        _get: ${{ inputs.get }}
+      run: try { ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getprojects ($ENV:_getprojects -eq 'Y') -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

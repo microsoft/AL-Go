@@ -28,8 +28,16 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/runpipeline.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -project '${{ inputs.project }}' -settingsJson '${{ inputs.settingsJson }}' -secretsJson '${{ inputs.secretsJson }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+    - name: run
       shell: PowerShell
+      env:
+        _actor: ${{ inputs.actor }}
+        _token: ${{ inputs.token }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _project: ${{ inputs.project }}
+        _settingsJson: ${{ inputs.settingsJson }}
+        _secretsJson: ${{ inputs.secretsJson }}
+      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

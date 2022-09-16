@@ -36,8 +36,17 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/CheckForUpdates.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -templateUrl '${{ inputs.templateUrl }}' -templateBranch '${{ inputs.templateBranch }}' -update ('${{ inputs.update }}' -eq 'Y') -directCommit ('${{ inputs.directCommit }}' -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+    - name: run
       shell: PowerShell
+      env:
+        _actor: ${{ inputs.actor }}
+        _token: ${{ inputs.token }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _templateUrl: ${{ inputs.templateUrl }}
+        _templateBranch: ${{ inputs.templateBranch }}
+        _update: ${{ inputs.update }}
+        _directCommit: ${{ inputs.directCommit }}
+      run: try { ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -templateUrl $ENV:_templateUrl -templateBranch $ENV:_templateBranch -update ($ENV:_update -eq 'Y') -directCommit ($ENV:_directCommit -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

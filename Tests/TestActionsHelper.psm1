@@ -65,6 +65,7 @@ function YamlTest {
     $cmd = get-command $actionname
     $addInputs = $true
     $parameterString = ""
+    $envLines = [System.Text.StringBuilder]::new()
     if ($cmd.Parameters.Count -gt 0) {
         $cmd.Parameters.GetEnumerator() | ForEach-Object {
             $name = $_.Key
@@ -82,14 +83,15 @@ function YamlTest {
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
+                $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
                 if ($type -eq "System.String" -or $type -eq "System.Int32") {
-                    $parameterString += " -$($name) '`${{ inputs.$($name) }}'"
+                    $parameterString += " -$($name) `$ENV:_$($name)"
                     if (!$required) {
                         $yaml.AppendLine("    default: *") | Out-Null
                     }
                 }
                 elseif ($type -eq "System.Boolean") {
-                    $parameterString += " -$($name) ('`${{ inputs.$($name) }}' -eq 'Y')"
+                    $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
                     if (!$required) {
                         $yaml.AppendLine("    default: 'N'") | Out-Null
                     }
@@ -111,11 +113,16 @@ function YamlTest {
     $yaml.AppendLine("runs:") | Out-Null
     $yaml.AppendLine("  using: composite") | Out-Null
     $yaml.AppendLine("  steps:") | Out-Null
-    $yaml.AppendLine("    - run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
+    $yaml.AppendLine("    - name: run") | Out-Null
+    $yaml.AppendLine("      shell: PowerShell") | Out-Null
     if ($outputs -and $outputs.Count -gt 0) {
         $yaml.AppendLine("      id: $($actionname.ToLowerInvariant())") | Out-Null
     }
-    $yaml.AppendLine("      shell: PowerShell") | Out-Null
+    if ($envLines.Length -gt 0) {
+        $yaml.AppendLine("      env:") | Out-Null
+        $yaml.Append($envLines.ToString())
+    }
+    $yaml.AppendLine("      run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null
     $yaml.Append("  color: blue") | Out-Null
