@@ -26,13 +26,20 @@ inputs:
 outputs:
   ReleaseNotes:
     description: Release note generated based on the changes
-    value: ${{ steps.createreleasenotes.outputs.releaseNotes }}
+    value: ${{ steps.createreleasenotes.outputs.ReleaseNotes }}
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/CreateReleaseNotes.ps1 -actor '${{ inputs.actor }}' -token '${{ inputs.token }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' -workflowToken '${{ inputs.workflowToken }}' -tag_name '${{ inputs.tag_name }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
-      id: createreleasenotes
+    - name: run
       shell: PowerShell
+      id: createreleasenotes
+      env:
+        _actor: ${{ inputs.actor }}
+        _token: ${{ inputs.token }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _workflowToken: ${{ inputs.workflowToken }}
+        _tag_name: ${{ inputs.tag_name }}
+      run: try { ${{ github.action_path }}/CreateReleaseNotes.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -workflowToken $ENV:_workflowToken -tag_name $ENV:_tag_name } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

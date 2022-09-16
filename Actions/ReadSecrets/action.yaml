@@ -15,8 +15,13 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson '${{ inputs.settingsJson }}' -secrets '${{ inputs.secrets }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+    - name: run
       shell: PowerShell
+      env:
+        _settingsJson: ${{ inputs.settingsJson }}
+        _secrets: ${{ inputs.secrets }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+      run: try { ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson $ENV:_settingsJson -secrets $ENV:_secrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

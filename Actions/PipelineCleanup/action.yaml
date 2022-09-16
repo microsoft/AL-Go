@@ -12,8 +12,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/PipelineCleanup.ps1 -project '${{ inputs.project }}' -parentTelemetryScopeJson '${{ inputs.parentTelemetryScopeJson }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+    - name: run
       shell: PowerShell
+      env:
+        _project: ${{ inputs.project }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+      run: try { ${{ github.action_path }}/PipelineCleanup.ps1 -project $ENV:_project -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
