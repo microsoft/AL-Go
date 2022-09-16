@@ -122,7 +122,7 @@ function YamlTest {
         $yaml.AppendLine("      env:") | Out-Null
         $yaml.Append($envLines.ToString())
     }
-    $yaml.AppendLine("      run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""``r"",'').Replace(""``n"",' ')))""; exit 1 }") | Out-Null
+    $yaml.AppendLine("      run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null
     $yaml.Append("  color: blue") | Out-Null
