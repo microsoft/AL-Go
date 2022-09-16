@@ -83,15 +83,15 @@ function YamlTest {
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
-                $envLines.AppendLine("        $($name): `${{ inputs.$($name) }}")
+                $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
                 if ($type -eq "System.String" -or $type -eq "System.Int32") {
-                    $parameterString += " -$($name) `$ENV:$($name)"
+                    $parameterString += " -$($name) `$ENV:_$($name)"
                     if (!$required) {
                         $yaml.AppendLine("    default: *") | Out-Null
                     }
                 }
                 elseif ($type -eq "System.Boolean") {
-                    $parameterString += " -$($name) (`$ENV:$($name) -eq 'Y')"
+                    $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
                     if (!$required) {
                         $yaml.AppendLine("    default: 'N'") | Out-Null
                     }
