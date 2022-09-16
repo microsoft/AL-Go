@@ -14,9 +14,12 @@ outputs:
 runs:
   using: composite
   steps:
-    - run: try { ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId '${{ inputs.eventId }}' } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
-      id: workflowinitialize
+    - name: run
       shell: PowerShell
+      id: workflowinitialize
+      env:
+        _eventId: ${{ inputs.eventId }}
+      run: try { ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId $ENV:_eventId } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

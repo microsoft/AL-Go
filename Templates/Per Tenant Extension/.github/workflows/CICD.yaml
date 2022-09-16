@@ -306,11 +306,11 @@ jobs:
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
         env:
-          authContext: '${{ steps.authContext.outputs.authContext }}'
+          authContext: ${{ steps.authContext.outputs.authContext }}
         with:
           type: 'CD'
-          projects: '${{ steps.authContext.outputs.projects }}'
-          environmentName: '${{ steps.authContext.outputs.environmentName }}'
+          projects: ${{ steps.authContext.outputs.projects }}
+          environmentName: ${{ steps.authContext.outputs.environmentName }}
           artifacts: '${{ github.workspace }}\artifacts'
 
   Deliver:
@@ -353,11 +353,11 @@ jobs:
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main
         env:
-          deliveryContext: '${{ steps.deliveryContext.outputs.deliveryContext }}'
+          deliveryContext: ${{ steps.deliveryContext.outputs.deliveryContext }}
         with:
           type: 'CD'
           projects: '*'
-          deliveryTarget: '${{ matrix.deliveryTarget }}'
+          deliveryTarget: ${{ matrix.deliveryTarget }}
           artifacts: '${{ github.workspace }}\artifacts'
 
   PostProcess:

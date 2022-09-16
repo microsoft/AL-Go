@@ -24,10 +24,8 @@ defaults:
     shell: PowerShell
 
 jobs:
-  Initialization:
+  CreateOnlineDevelopmentEnvironment:
     runs-on: [ windows-latest ]
-    outputs:
-      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -38,25 +36,17 @@ jobs:
         with:
           eventId: "DO0093"
 
-  CreateEnvironment:
-    runs-on: [ windows-latest ]
-    needs: [ Initialization ]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
           secrets: ${{ toJson(secrets) }}
         with:
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
           secrets: 'adminCenterApiCredentials'
 
@@ -82,23 +72,15 @@ jobs:
       - name: Create Development Environment
         uses: microsoft/AL-Go-Actions/CreateDevelopmentEnvironment@main
         with:
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          environmentName: ${{ github.event.inputs.environmentName }} 
-          reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }} 
-          directCommit: ${{ github.event.inputs.directCommit }} 
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          environmentName: ${{ github.event.inputs.environmentName }}
+          reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }}
+          directCommit: ${{ github.event.inputs.directCommit }}
           adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }} 
 
-  PostProcess:
-    if: always()
-    runs-on: [ windows-latest ]
-    needs: [ Initialization,  CreateEnvironment ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
       - name: Finalize the workflow
-        id: PostProcess
+        if: always()
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with:
           eventId: "DO0093"
-          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
