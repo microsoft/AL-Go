@@ -171,7 +171,7 @@ try {
             $environments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
         } 
         catch {}
-        $environments = @($environments+@($settings.Environments) | Where-Object { 
+        $environments = @($environments+@($settings.Environments) | Where-Object { $_ -ne "github-pages" } | Where-Object { 
             if ($includeProduction) {
                 $_ -like $getEnvironments -or $_ -like "$getEnvironments (PROD)" -or $_ -like "$getEnvironments (Production)" -or $_ -like "$getEnvironments (FAT)" -or $_ -like "$getEnvironments (Final Acceptance Test)"
             }

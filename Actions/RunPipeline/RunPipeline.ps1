@@ -92,11 +92,12 @@ try {
     $installTestApps = $repo.installTestApps
 
     if ($repo.appDependencyProbingPaths) {
-        Write-Host "Downloading dependencies ..."
+        Write-Host "::group::Downloading dependencies"
         $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps"
         Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" | ForEach-Object {
             $installTestApps += "($_)"
         }
+        Write-Host "::endgroup::"
     }
     
     # Analyze app.json version dependencies before launching pipeline
@@ -130,6 +131,7 @@ try {
         OutputWarning -message "Skipping upgrade tests"
     }
     else {
+        Write-Host "::group::Locating previous release"
         try {
             $releasesJson = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
             if ($env:GITHUB_REF_NAME -like 'release/*') {
@@ -154,6 +156,7 @@ try {
             OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
             exit
         }
+        Write-Host "::endgroup::"
     }
 
     $additionalCountries = $repo.additionalCountries
@@ -162,7 +165,9 @@ try {
     if ($repo.gitHubRunner -ne "windows-latest") {
         $imageName = $repo.cacheImageName
         if ($imageName) {
+            Write-Host "::group::Flush ContainerHelper Cache"
             Flush-ContainerHelperCache -keepdays $repo.cacheKeepDays
+            Write-Host "::endgroup::"
         }
     }
     $authContext = $null

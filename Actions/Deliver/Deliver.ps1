@@ -8,7 +8,6 @@ Param(
     [Parameter(HelpMessage = "Projects to deliver (default is all)", Mandatory = $false)]
     [string] $projects = "*",
     [Parameter(HelpMessage = "Delivery target (AppSource or Storage)", Mandatory = $true)]
-    [ValidateSet('AppSource','Storage')]
     [string] $deliveryTarget,
     [Parameter(HelpMessage = "Artifacts to deliver", Mandatory = $true)]
     [string] $artifacts,
@@ -139,7 +138,40 @@ try {
             }
         }
 
-        if ($deliveryTarget -eq "Storage") {
+        $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github\DeliverTo$deliveryTarget.ps1" 
+        if (Test-Path $customScript -PathType Leaf) {
+            $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject\.AL-Go\settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+            $parameters = @{
+                "Project" = $thisProject
+                "ProjectName" = $projectName
+                "Context" = $env:deliveryContext
+                "RepoSettings" = $settings
+                "ProjectSettings" = $projectSettings
+            }
+            $appsfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-Apps-*") -Directory)
+            if ($appsFolder.Count -eq 0) {
+                throw "Internal error - unable to locate apps folder"
+            }
+            if ($appsFolder.Count -gt 1) {
+                $appsFolder | Out-Host
+                throw "Internal error - multiple apps folders located"
+            }
+            $parameters.appsfolder = $appsfolder[0].FullName
+            $testAppsFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-TestApps-*") -Directory)
+            if ($testAppsFolder.Count -gt 1) {
+                $testAppsFolder | Out-Host
+                throw "Internal error - multiple testApps folders located"
+            }
+            $parameters.testAppsFolder = $testAppsFolder[0]
+            $dependenciesFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-Dependencies-*") -Directory)
+            if ($dependenciesFolder.Count -gt 1) {
+                $dependenciesFolder | Out-Host
+                throw "Internal error - multiple dependencies folders located"
+            }
+            $parameters.dependenciesFolder = $dependenciesFolder[0]
+            . $customScript -parameters $parameters
+        }
+        elseif ($deliveryTarget -eq "Storage") {
             try {
                 if (get-command New-AzureStorageContext -ErrorAction SilentlyContinue) {
                     Write-Host "Using Azure.Storage PowerShell module"
@@ -234,7 +266,7 @@ try {
             }
             Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
-            $mainAppJson = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$AppSourceMainAppFolder\app.json") | ConvertFrom-Json
+            $mainAppJson = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject\$AppSourceMainAppFolder\app.json") | ConvertFrom-Json
             $mainAppVersion = [Version]$mainAppJson.Version
             $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
             $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-Apps-*") -Directory)
@@ -262,6 +294,9 @@ try {
             }
             Write-Host "Submitting to AppSource"
             New-AppSourceSubmission -authContext $authContext -productId $projectSettings.AppSourceProductId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
+        }
+        else {
+            throw "Internal error, no handler for $deliveryTarget"
         }
     }
 
