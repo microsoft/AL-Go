@@ -79,14 +79,13 @@ The script will also modify launch.json to have a Local Sandbox configuration po
 $settings = ReadSettings -baseFolder $baseFolder -userName $env:USERNAME
 
 Write-Host "Checking System Requirements"
-$dockerService = Get-Service docker -ErrorAction SilentlyContinue
-if (-not $dockerService -or $dockerService.Status -ne "Running") {
-    throw "Creating a local development enviroment requires you to have Docker installed and running."
+$dockerProcess = (Get-Process "dockerd" -ErrorAction Ignore)
+if (!($dockerProcess)) {
+    Write-Host -ForegroundColor Red "Dockerd process not found. Docker might not be started, not installed or not running Windows Containers."
 }
-
 if ($settings.keyVaultName) {
     if (-not (Get-Module -ListAvailable -Name 'Az.KeyVault')) {
-        throw "A keyvault name is defined in Settings, you need to have the Az.KeyVault PowerShell module installed (use Install-Module az) or you can set the keyVaultName to an empty string in the user settings file ($($ENV:UserName).Settings.json)."
+        Write-Host -ForegroundColor Red "A keyvault name is defined in Settings, you need to have the Az.KeyVault PowerShell module installed (use Install-Module az) or you can set the keyVaultName to an empty string in the user settings file ($($ENV:UserName).Settings.json)."
     }
 }
 
