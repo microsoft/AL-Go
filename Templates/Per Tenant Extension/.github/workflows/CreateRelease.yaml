@@ -73,10 +73,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           get: TemplateUrl
+          getProjects: 'Y'
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
@@ -87,27 +89,38 @@ jobs:
       - name: Analyze Artifacts
         id: analyzeartifacts
         run: |
-          Write-Host "Analyzing artifacts"
-          $appVersion = '${{ github.event.inputs.appVersion }}'
-          $headers = @{ 
-              "Authorization" = "token ${{ github.token }}"
-              "Accept"        = "application/json"
-          }
-          $allArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts" | ConvertFrom-Json
-          $artifactsVersion = $appVersion
-          if ($appVersion -eq "latest") {
-            $artifact = $allArtifacts.artifacts | Where-Object { $_.name -like "*-Apps-*" } | Select-Object -First 1
-            $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('-Apps-')+6)
-          }
+          $projects = '${{ steps.ReadSettings.outputs.ProjectsJson }}' | ConvertFrom-Json
+          $projects | out-host
           $include = @()
-          $allArtifacts.artifacts | Where-Object { $_.name -like "*-Apps-$($artifactsVersion)" -or $_.name -like "*-TestApps-$($artifactsVersion)" -or $_.name -like "*-Dependencies-$($artifactsVersion)" } | ForEach-Object {
-            $atype = $_.name.SubString(0,$_.name.Length-$artifactsVersion.Length-1)
-            $atype = $atype.SubString($atype.LastIndexOf('-')+1)
-            $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url; "atype" = $atype } )
-          }
-          if ($include.Count -eq 0) {
-            Write-Host "::Error::No artifacts found"
-            exit 1
+          $projects | ForEach-Object {
+            $thisProject = $_
+            if ($thisProject -and ($thisProject -ne '.')) {
+              $project = $thisProject.Replace('\','_')
+            }
+            else {
+              $project = $env:RepoName
+            }
+            Write-Host "Analyzing artifacts for project $project"
+            $appVersion = '${{ github.event.inputs.appVersion }}'
+            $headers = @{ 
+                "Authorization" = "token ${{ github.token }}"
+                "Accept"        = "application/json"
+            }
+            $allArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts" | ConvertFrom-Json
+            $artifactsVersion = $appVersion
+            if ($appVersion -eq "latest") {
+              $artifact = $allArtifacts.artifacts | Where-Object { $_.name -like "$project-*-Apps-*" } | Select-Object -First 1
+              $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('-Apps-')+6)
+            }
+            $allArtifacts.artifacts | Where-Object { $_.name -like "$project-*-Apps-$($artifactsVersion)" -or $_.name -like "$project-*-TestApps-$($artifactsVersion)" -or $_.name -like "$project-*-Dependencies-$($artifactsVersion)" } | ForEach-Object {
+              $atype = $_.name.SubString(0,$_.name.Length-$artifactsVersion.Length-1)
+              $atype = $atype.SubString($atype.LastIndexOf('-')+1)
+              $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url; "atype" = $atype; "project" = $project } )
+            }
+            if ($include.Count -eq 0) {
+              Write-Host "::Error::No artifacts found"
+              exit 1
+            }
           }
           $artifacts = @{ "include" = $include }
           $artifactsJson = $artifacts | ConvertTo-Json -compress
@@ -192,7 +205,7 @@ jobs:
           deliveryContext: ${{ steps.deliveryContext.outputs.deliveryContext }}
         with:
           type: 'Release'
-          projects: '*'
+          projects: ${{ matrix.project }}
           deliveryTarget: 'Storage'
           artifacts: ${{ github.event.inputs.appVersion }}
           atypes: ${{ matrix.atype }}

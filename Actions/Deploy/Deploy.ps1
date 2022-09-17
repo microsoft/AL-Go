@@ -5,8 +5,8 @@ Param(
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '{}',
-    [Parameter(HelpMessage = "Projects to deploy (default is all)", Mandatory = $false)]
-    [string] $projects = "*",
+    [Parameter(HelpMessage = "Projects to deploy", Mandatory = $false)]
+    [string] $projects = '',
     [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
     [string] $environmentName,
     [Parameter(HelpMessage = "Artifacts to deploy", Mandatory = $true)]
@@ -21,6 +21,11 @@ Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
+if ($projects -eq '') {
+    Write-Host "No projects to deploy"
+}
+else {
+
 # IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
@@ -31,8 +36,6 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0075' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName))
-
-    if ($projects -eq '') { $projects = "*" }
 
     $apps = @()
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE "artifacts"
@@ -161,4 +164,5 @@ catch {
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+}
 }

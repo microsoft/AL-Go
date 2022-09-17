@@ -6,7 +6,7 @@ on:
       project:
         description: Project name if the repository is setup for multiple projects (* for all projects)
         required: false
-        default: '.'
+        default: '*'
       versionNumber:
         description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
         required: true

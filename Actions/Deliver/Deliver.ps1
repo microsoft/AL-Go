@@ -35,6 +35,9 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0081' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     if ($projects -eq '') { $projects = "*" }
+    if ($projects.StartsWith('[')) {
+        $projects = ($projects | ConvertFrom-Json) -join ","
+    }
 
     $settings = ReadSettings -baseFolder $ENV:GITHUB_WORKSPACE -workflowName $env:GITHUB_WORKFLOW
     if ($settings.Projects) {
