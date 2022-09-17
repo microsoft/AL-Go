@@ -112,6 +112,9 @@ jobs:
               $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('projects')))
             }
           }
+          if ($projects -eq '') {
+            $projects = '*'
+          }
 
           Write-Host "::set-output name=authContext::$authContext"
           Write-Host "set-output name=authContext::$authContext"

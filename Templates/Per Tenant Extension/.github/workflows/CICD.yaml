@@ -299,6 +299,13 @@ jobs:
               $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('projects')))
             }
           }
+          if ($projects -eq '') {
+            $projects = '*'
+          }
+          else {
+            $buildProjects = '${{ needs.Initialization.outputs.projects }}' | ConvertFrom-Json
+            $projects = ($projects.Split(',') | Where-Object { $buildProjects -contains $_ }) -join ','
+          }
 
           Write-Host "::set-output name=authContext::$authContext"
           Write-Host "set-output name=authContext::$authContext"
@@ -360,7 +367,7 @@ jobs:
           deliveryContext: ${{ steps.deliveryContext.outputs.deliveryContext }}
         with:
           type: 'CD'
-          projects: '*'
+          projects: ${{ needs.Initialization.outputs.projects }}
           deliveryTarget: ${{ matrix.deliveryTarget }}
           artifacts: '${{ github.workspace }}\artifacts'
 

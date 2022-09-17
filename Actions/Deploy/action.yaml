@@ -14,9 +14,9 @@ inputs:
     required: false
     default: '{}'
   projects:
-    description: Projects to deploy (default is all)
+    description: Projects to deploy
     required: false
-    default: '*'
+    default: ''
   environmentName:
     description: Name of environment to deploy to
     required: true
