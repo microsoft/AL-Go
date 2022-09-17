@@ -63,8 +63,8 @@ The repository settings are only read from the repository settings file (.github
 | insiderSasTokenSecretName | Specifies the name (**NOT the secret**) of the InsiderSasToken secret. Default is InsiderSasToken. AL-Go for GitHub will look for a secret with this name in GitHub Secrets or Azure KeyVault to use as InsiderSasToken for getting access to Next Minor and Next Major builds. | InsiderSasToken |
 | ghTokenWorkflowSecretName | Specifies the name (**NOT the secret**) of the GhTokenWorkflow secret. Default is GhTokenWorkflow. AL-Go for GitHub will look for a secret with this name in GitHub Secrets or Azure KeyVault to use as Personal Access Token with permission to modify workflows when running the Update AL-Go System Files workflow. Read [this](UpdateAlGoSystemFiles.md) for more information. | GhTokenWorkflow |
 | adminCenterApiCredentialsSecretName | Specifies the name (**NOT the secret**) of the adminCenterApiCredentials secret. Default is adminCenterApiCredentials. AL-Go for GitHub will look for a secret with this name in GitHub Secrets or Azure KeyVault to use when connecting to the Admin Center API when creating Online Development Environments. Read [this](CreateOnlineDevEnv2.md) for more information. | AdminCenterApiCredentials |
-| installApps | An array of 3rd party dependency apps, which you do not have access to through the appDependencyProbingPaths. The setting should be an array of secure URLs, where the CI/CD workflow can download the apps. The apps in installApps are downloaded and installed before compiling and installing the apps. | [ ] |
-| installTestApps | An array of 3rd party dependency apps, which you do not have access to through the appDependencyProbingPaths. The setting should be an array of secure URLs, where the CI/CD workflow can download the apps. The apps in installTestApps are downloaded and installed before compiling and installing the test apps. Adding a parantheses around the setting indicates that the test in this app will NOT be run, only installed. | [ ] |
+| installApps | An array of 3rd party dependency apps, which you do not have access to through the appDependencyProbingPaths. The setting should be an array of either secure URLs or paths to folders or files relative to the project, where the CI/CD workflow can find and download the apps. The apps in installApps are downloaded and installed before compiling and installing the apps. | [ ] |
+| installTestApps | An array of 3rd party dependency apps, which you do not have access to through the appDependencyProbingPaths. The setting should be an array of either secure URLs or paths to folders or files relative to the project, where the CI/CD workflow can find and download the apps. The apps in installTestApps are downloaded and installed before compiling and installing the test apps. Adding a parantheses around the setting indicates that the test in this app will NOT be run, only installed. | [ ] |
 | installOnlyReferencedApps | By default, only the apps referenced in the dependency chain of your apps will be installed when inspecting the settings: InstallApps, InstallTestApps and appDependencyProbingPath. If you change this setting to false, all apps found will be installed. | true |
 | enableCodeCop | If enableCodeCop is set to true, the CI/CD workflow will enable the CodeCop analyzer when building. | false |
 | enableUICop | If enableUICop is set to true, the CI/CD workflow will enable the UICop analyzer when building. | false |
@@ -106,6 +106,31 @@ The repository settings are only read from the repository settings file (.github
 | memoryLimit | Specifies the memory limit for the build container. By default, this is left to BcContainerHelper to handle and will currently be set to 8G | 8G |
 
 # Expert level
+
+## Custom Delivery
+
+You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named DeliverTo*.ps1 in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release.
+
+DeliverToSharePoint.ps1
+```
+Param(
+    [Hashtable]$parameters
+)
+
+Write-Host "Current project path: $($parameters.project)"
+Write-Host "Current project name: $($parameters.projectName)"
+Write-Host "Delivery Type (CD or Release): $($parameters.type)"
+Write-Host "Folder containing apps: $($parameters.appsFolder)"
+Write-Host "Folder containing test apps: $($parameters.testAppsFolder)"
+Write-Host "Folder containing dependencies (requires generateDependencyArtifact set to true): $($parameters.dependenciesFolder)"
+
+Write-Host "Repository settings:"
+$parameters.RepoSettings | Out-Host
+Write-Host "Project settings:"
+$parameters.ProjectSettings | Out-Host
+```
+
+**Note:** You can also override existing AL-Go for GitHub delivery functionality by creating a script called f.ex. DeliverToStorage.ps1 in the .github folder.
 
 ## Run-AlPipeline script override
 
