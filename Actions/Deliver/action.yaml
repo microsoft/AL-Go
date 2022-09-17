@@ -24,7 +24,7 @@ inputs:
     description: Artifacts to deliver
     required: true
   type:
-    description: Type of delivery (CD or Publish)
+    description: Type of delivery (CD or Release)
     required: false
     default: 'CD'
   atypes:

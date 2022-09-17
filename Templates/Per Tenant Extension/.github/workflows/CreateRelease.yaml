@@ -191,7 +191,7 @@ jobs:
         env:
           deliveryContext: ${{ steps.deliveryContext.outputs.deliveryContext }}
         with:
-          type: 'Publish'
+          type: 'Release'
           projects: '*'
           deliveryTarget: 'Storage'
           artifacts: ${{ github.event.inputs.appVersion }}
