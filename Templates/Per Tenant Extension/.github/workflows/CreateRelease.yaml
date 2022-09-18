@@ -77,7 +77,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          get: TemplateUrl
+          get: TemplateUrl,RepoName
           getProjects: 'Y'
 
       - name: Check for updates to AL-Go system files
