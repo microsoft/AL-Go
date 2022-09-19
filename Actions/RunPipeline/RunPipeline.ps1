@@ -213,6 +213,52 @@ try {
             }
         }
     }
+
+    if (-not $runAlPipelineParams.ContainsKey('RemoveBcContainer')) {
+        $runAlPipelineParams += @{
+            "RemoveBcContainer" = {
+                Param([Hashtable]$parameters)
+                Remove-BcContainerSession -containerName $parameters.ContainerName -killPsSessionProcess
+                Remove-BcContainer @parameters
+            }
+        }
+    }
+
+    if (-not $runAlPipelineParams.ContainsKey('ImportTestDataInBcContainer')) {
+        if (($repo.configPackages) -or ($repo.Keys | Where-Object { $_ -like 'configPackages.*' })) {
+            Write-Host "Adding Import Test Data override"
+            Write-Host "Configured config packages:"
+            $repo.Keys | Where-Object { $_ -like 'configPackages*' } | ForEach-Object {
+                Write-Host "- $($_):"
+                $repo."$_" | ForEach-Object {
+                    Write-Host "  - $_"
+                }
+            }
+            $runAlPipelineParams += @{
+                "ImportTestDataInBcContainer" = {
+                    Param([Hashtable]$parameters)
+                    $country = Get-BcContainerCountry -containerOrImageName $parameters.containerName
+                    $prop = "configPackages.$country"
+                    if (-not $repo.ContainsKey($prop)) {
+                        $prop = "configPackages"
+                    }
+                    if ($repo."$prop") {
+                        Write-Host "Importing config packages from $prop"
+                        $repo."$prop" | ForEach-Object {
+                            $configPackage = $_.Split(',')[0].Replace('{COUNTRY}',$country)
+                            $packageId = $_.Split(',')[1]
+                            UploadImportAndApply-ConfigPackageInBcContainer `
+                                -containerName $parameters.containerName `
+                                -Credential $parameters.credential `
+                                -Tenant $parameters.tenant `
+                                -ConfigPackage $configPackage `
+                                -PackageId $packageId
+                        }
+                    }
+               }
+            }
+        }
+    }
     
     "doNotBuildTests",
     "doNotRunTests",
@@ -264,8 +310,7 @@ try {
         -buildArtifactFolder $buildArtifactFolder `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
-        -uninstallRemovedApps `
-        -RemoveBcContainer { Param([Hashtable]$parameters) Remove-BcContainerSession -containerName $parameters.ContainerName -killPsSessionProcess; Remove-BcContainer @parameters }
+        -uninstallRemovedApps
 
     if ($containerBaseFolder) {
 

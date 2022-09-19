@@ -254,9 +254,8 @@ function DownloadAndImportBcContainerHelper {
             }
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
-        Remove-Item -Path "$tempName.zip"
-
         $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
+        Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
     }
     . $BcContainerHelperPath @params
     $tempName
@@ -400,6 +399,7 @@ function ReadSettings {
         "doNotRunBcptTests"                      = $false
         "doNotPublishApps"                       = $false
         "doNotSignApps"                          = $false
+        "configPackages"                         = @()
         "appSourceCopMandatoryAffixes"           = @()
         "obsoleteTagMinAllowedMajorMinor"        = ""
         "memoryLimit"                            = ""
