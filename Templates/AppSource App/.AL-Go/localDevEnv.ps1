@@ -17,6 +17,12 @@ Set-StrictMode -Version 2.0
 
 $pshost = Get-Host
 if ($pshost.Name -eq "Visual Studio Code Host") {
+    $executionPolicy = Get-ExecutionPolicy -Scope CurrentUser
+    Write-Host "Execution Policy is $executionPolicy"
+    if ($executionPolicy -eq "Restricted") {
+        Write-Host "Changing Execution Policy to RemoteSigned"
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+    }
     if ($MyInvocation.InvocationName -eq '.' -or $MyInvocation.Line -eq '') {
         $scriptName = Join-Path $PSScriptRoot $MyInvocation.MyCommand
     }
