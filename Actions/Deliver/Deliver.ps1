@@ -27,6 +27,11 @@ $bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 
+# Load the right module if on hosted runner.
+if(Test-Path -Path "C:\Modules\az_7.5.0") {
+    $env:PSModulePath += ';C:\Modules\az_7.5.0'
+}
+
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
