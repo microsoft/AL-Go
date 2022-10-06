@@ -10,13 +10,13 @@
 1. When the workflow is complete, select **< > Code** in the top bar
 1. Choose the **Code** button and copy the **https Clone Url** (in this picture: *https://github.com/freddydk/App1.git*)
 ![Clone](/Scenarios/images/1c.png)
-1. Start **VS Code**, press **Ctrl+Alt+P** and select **Git Clone**, paste the clone URL and select a folder in which you want to clone the directory.
+1. Start **VS Code**, press **Ctrl+Shift+P** and select **Git Clone**, paste the clone URL and select a folder in which you want to clone the directory.
 1. **Open the cloned repository** and **open the workspace** when VS Code asks you (or do it manually)
 1. In the **.AL-Go** folder, choose the **localDevEnv.ps1** script and Run the PowerShell script.
 ![LocalDevEnv](/Scenarios/images/1d.png)
 1. Answer the questions asked about container name, authentication mechanism, credentials and select none for license file. The script might show a dialog asking for permissions to run docker commands, select **Yes** in this dialog. Wait for completion of the script.
 ![LocalDevEnv Done](/Scenarios/images/1e.png)
-1. In VS Code, press **Ctrl+Alt+P** and **clear the credentials cache**.
+1. In VS Code, press **Ctrl+Shift+P** and **clear the credentials cache**.
 1. Open the **HelloWorld.al** file, modify the string and press **F5**. Depending on authentication selected VS Code might ask for the credentials you provided earlier.
 1. Login to **Business Central** and your **very own world** opens up!
 ![Very own world](/Scenarios/images/1f.png)
