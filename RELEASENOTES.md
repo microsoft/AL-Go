@@ -2,6 +2,9 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### Issues
+- Issue #233 AL-Go for GitHub causes GitHub to issue warnings
+
 ### Changes
 - New workflow: PullRequestHandler to handle all Pull Requests and pass control safely to CI/CD
 - Changes to yaml files, PowerShell scripts and codeowners files are not permitted from fork Pull Requests
