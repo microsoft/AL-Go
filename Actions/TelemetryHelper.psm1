@@ -11,6 +11,7 @@ $signals = @{
     "DO0079" = "AL-Go action ran: ReadSettings"
     "DO0080" = "AL-Go action ran: RunPipeline"
     "DO0081" = "AL-Go action ran: Deliver"
+    "DO0082" = "AL-Go action ran: AnalyzeTests"
 
     "DO0090" = "AL-Go workflow ran: AddExistingAppOrTestApp"
     "DO0091" = "AL-Go workflow ran: CiCd"
@@ -28,10 +29,33 @@ $signals = @{
     "DO0103" = "AL-Go workflow ran: PublishToAppSource"
 }
 
+Function strToHexStr {
+    Param(
+        [string] $str
+    )
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($str)
+    $hexStr = [System.Text.StringBuilder]::new($Bytes.Length * 2)
+    ForEach($byte in $Bytes){
+        $hexStr.AppendFormat("{0:x2}", $byte) | Out-Null
+    }
+    $hexStr.ToString()
+}
+
+Function hexStrToStr {
+    Param(
+        [String] $hexStr
+    )
+    $Bytes = [byte[]]::new($hexStr.Length / 2)
+    For($i=0; $i -lt $hexStr.Length; $i+=2){
+        $Bytes[$i/2] = [convert]::ToByte($hexStr.Substring($i, 2), 16)
+    }
+    [System.Text.Encoding]::UTF8.GetString($Bytes)
+}
+
 function CreateScope {
     param (
         [string] $eventId,
-        [string] $parentTelemetryScopeJson = '{}'
+        [string] $parentTelemetryScopeJson = '7b7d'
     )
 
     $signalName = $signals[$eventId] 
@@ -39,8 +63,8 @@ function CreateScope {
         throw "Invalid event id ($eventId) is enountered."
     }
 
-    if ($parentTelemetryScopeJson -and $parentTelemetryScopeJson -ne "{}") {
-        $telemetryScope = RegisterTelemetryScope $parentTelemetryScopeJson
+    if ($parentTelemetryScopeJson -and $parentTelemetryScopeJson -ne '7b7d') {
+        RegisterTelemetryScope (hexStrToStr -hexStr $parentTelemetryScopeJson) | Out-Null
     }
 
     $telemetryScope = InitTelemetryScope -name $signalName -eventId $eventId  -parameterValues @()  -includeParameters @()

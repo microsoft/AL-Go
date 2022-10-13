@@ -5,7 +5,7 @@ Param(
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '{}'
+    [string] $parentTelemetryScopeJson = '7b7d'
 )
 
 $ErrorActionPreference = "Stop"

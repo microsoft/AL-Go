@@ -4,7 +4,7 @@ Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '{}',
+    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Projects to deploy", Mandatory = $false)]
     [string] $projects = '',
     [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
@@ -38,9 +38,10 @@ try {
     $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName))
 
     $apps = @()
-    $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE "artifacts"
+    $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
+    $baseFolderCreated = $false
 
-    if ($artifacts -like "$($baseFolder)*") {
+    if ($artifacts -like "$($ENV:GITHUB_WORKSPACE)*") {
         if (Test-Path $artifacts -PathType Container) {
             $projects.Split(',') | ForEach-Object {
                 $project = $_.Replace('\','_')
@@ -75,6 +76,7 @@ try {
             throw "Unable to locate $artifacts release"
         }
         New-Item $baseFolder -ItemType Directory | Out-Null
+        $baseFolderCreated = $true
         DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder -mask "Apps"
         DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder -mask "Dependencies"
         $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
@@ -84,6 +86,7 @@ try {
     }
     else {
         New-Item $baseFolder -ItemType Directory | Out-Null
+        $baseFolderCreated = $true
         $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $projects -Version $artifacts -branch "main")
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $projects -Version $artifacts -branch "main")
         if ($allArtifacts) {
@@ -103,7 +106,7 @@ try {
     Write-Host "Apps to deploy"
     $apps | Out-Host
 
-    Set-Location $baseFolder
+    Set-Location $ENV:GITHUB_WORKSPACE
     if (-not ($ENV:AUTHCONTEXT)) {
         throw "An environment secret for environment($environmentName) called AUTHCONTEXT containing authentication information for the environment was not found.You must create an environment secret."
     }
@@ -153,6 +156,10 @@ try {
     catch {
         OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
         exit
+    }
+
+    if ($baseFolderCreated) {
+        Remove-Item $baseFolder -Recurse -Force
     }
 
     TrackTrace -telemetryScope $telemetryScope
