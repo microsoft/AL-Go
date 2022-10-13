@@ -16,7 +16,7 @@ inputs:
   parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
-    default: '{}'
+    default: '7b7d'
   templateUrl:
     description: URL of the template repository (default is the template repository used to create the repository)
     required: false

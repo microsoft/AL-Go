@@ -4,7 +4,7 @@ Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '{}',
+    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
     [Parameter(HelpMessage = "Indicates whether you want to retrieve the list of project list as well", Mandatory = $false)]
@@ -88,13 +88,13 @@ try {
     }
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Compress
-    Write-Host "::set-output name=SettingsJson::$outSettingsJson"
-    Write-Host "set-output name=SettingsJson::$outSettingsJson"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+    Write-Host "SettingsJson=$outSettingsJson"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
-    Write-Host "::set-output name=GitHubRunnerJson::$githubRunner"
-    Write-Host "set-output name=GitHubRunnerJson::$githubRunner"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
+    Write-Host "GitHubRunnerJson=$githubRunner"
 
     if ($getprojects) {
         $buildProjects = @()
@@ -153,11 +153,11 @@ try {
         else {
             $projectsJSon = $buildProjects | ConvertTo-Json -compress
         }
-        Write-Host "::set-output name=ProjectsJson::$projectsJson"
-        Write-Host "set-output name=ProjectsJson::$projectsJson"
-        Write-Host "::set-output name=ProjectCount::$($buildProjects.Count)"
-        Write-Host "set-output name=ProjectCount::$($buildProjects.Count)"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
         Add-Content -Path $env:GITHUB_ENV -Value "Projects=$projectsJson"
+        Write-Host "ProjectsJson=$projectsJson"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectCount=$($buildProjects.Count)"
+        Write-Host "ProjectCount=$($buildProjects.Count)"
     }
 
     if ($getenvironments) {
@@ -190,11 +190,11 @@ try {
             $json.matrix.include += @{ "environment" = $_; "os" = "$($os | ConvertTo-Json -compress)" }
         }
         $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
-        Write-Host "::set-output name=EnvironmentsJson::$environmentsJson"
-        Write-Host "set-output name=EnvironmentsJson::$environmentsJson"
-        Write-Host "::set-output name=EnvironmentCount::$($environments.Count)"
-        Write-Host "set-output name=EnvironmentCount::$($environments.Count)"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentsJson=$environmentsJson"
         Add-Content -Path $env:GITHUB_ENV -Value "Environments=$environmentsJson"
+        Write-Host "EnvironmentsJson=$environmentsJson"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($environments.Count)"
+        Write-Host "EnvironmentCount=$($environments.Count)"
     }
 
     TrackTrace -telemetryScope $telemetryScope
