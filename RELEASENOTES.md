@@ -1,6 +1,15 @@
-## v2.0
+## Preview
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
+
+### Changes
+- New workflow: PullRequestHandler to handle all Pull Requests and pass control safely to CI/CD
+- Changes to yaml files, PowerShell scripts and codeowners files are not permitted from fork Pull Requests
+
+### Continuous Delivery
+- Proof Of Concept Delivery to GitHub Packages and Nuget
+
+## v2.0
 
 ### Issues
 - Issue #143 Commit Message for **Increment Version Number** workflow
