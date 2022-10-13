@@ -4,7 +4,7 @@ Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '{}',
+    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "A GitHub token with permissions to modify workflows", Mandatory = $false)]
     [string] $workflowToken,
     [Parameter(HelpMessage = "Tag name", Mandatory = $true)]
@@ -41,8 +41,8 @@ try {
     $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag | ConvertFrom-Json
     $releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
 
-    Write-Host "::set-output name=releaseNotes::$releaseNotes"
-    Write-Host "set-output name=releaseNotes::$releaseNotes"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseNotes=$releaseNotes"
+    Write-Host "releaseNotes=$releaseNotes"
 
     TrackTrace -telemetryScope $telemetryScope
 }
@@ -50,7 +50,8 @@ catch {
     OutputWarning -message "Couldn't create release notes.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     OutputWarning -message "You can modify the release note from the release page later."
     $releaseNotes = ""
-    Write-Host "::set-output name=releaseNotes::$releaseNotes"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseNotes=$releaseNotes"
+    Write-Host "releaseNotes=$releaseNotes"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

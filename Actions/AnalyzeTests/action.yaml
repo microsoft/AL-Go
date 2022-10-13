@@ -1,0 +1,37 @@
+name: PowerShell script
+author: Freddy Kristiansen
+inputs:
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  parentTelemetryScopeJson:
+    description: Specifies the parent telemetry scope for the telemetry signal
+    required: false
+    default: '7b7d'
+  project:
+    description: Project to analyze
+    required: true
+outputs:
+  TestResultMD:
+    description: MarkDown of test result
+    value: ${{ steps.AnalyzeTests.outputs.TestResultMD }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: PowerShell
+      id: AnalyzeTests
+      env:
+        _actor: ${{ inputs.actor }}
+        _token: ${{ inputs.token }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _project: ${{ inputs.project }}
+      run: try { ${{ github.action_path }}/AnalyzeTests.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+branding:
+  icon: terminal
+  color: blue

@@ -27,7 +27,7 @@ jobs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Initialize the workflow
         id: init
@@ -41,7 +41,7 @@ jobs:
     name: Deliver to AppSource
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -59,10 +59,11 @@ jobs:
       - name: DeliveryContext
         id: deliveryContext
         run: |
+          $ErrorActionPreference = "STOP"
           $contextName = 'AppSourceContext'
           $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($contextName)))
-          Write-Host "::set-output name=deliveryContext::$deliveryContext"
-          Write-Host "set-output name=deliveryContext::$deliveryContext"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "deliveryContext=$deliveryContext"
+          Write-Host "deliveryContext=$deliveryContext"
 
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main
@@ -82,7 +83,7 @@ jobs:
     needs: [ Initialization, Deliver ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Finalize the workflow
         id: PostProcess
