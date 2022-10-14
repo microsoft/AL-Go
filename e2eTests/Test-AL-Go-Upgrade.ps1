@@ -111,6 +111,9 @@ try {
     $runs++
     MergePRandPull -branch $branch
     $runs += 2
+    
+    # Wait 5 minutes to ensure that CI/CD triggered by PR has started
+    Start-Sleep -seconds 300
 
     # Run CI/CD and wait
     $run = Run-CICD -wait -branch $branch
