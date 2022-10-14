@@ -42,7 +42,7 @@ jobs:
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
       appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Setup Repositories
         id: setup
@@ -54,7 +54,7 @@ jobs:
     outputs:
       releases: ${{ steps.calculatereleases.outputs.releases }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: CalculateReleases
         id: calculateReleases
@@ -70,16 +70,16 @@ jobs:
           else {
             $releasesJSon = $releases | ConvertTo-Json -compress
           }
-          Write-Host "::set-output name=releases::$releasesJson"
-          Write-Host "::set-output name=releasesCount::$($releases.Count)"
-          Write-Host "set-output name=releases::$releasesJson"
-          Write-Host "set-output name=releasesCount::$($releases.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
+          Write-Host "releases=$releasesJson"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "releasesCount=$($releases.Count)"
+          Write-Host "releasesCount=$($releases.Count)"
 
   TestAlGoPtePrivate:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -private
@@ -88,7 +88,7 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [SetupRepositories ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -private
@@ -97,7 +97,7 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}'
@@ -106,7 +106,7 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -multiProject
@@ -115,7 +115,7 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [SetupRepositories ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp
@@ -124,7 +124,7 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
@@ -137,7 +137,7 @@ jobs:
         release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -release '${{ matrix.release }}' -path 'pte'
@@ -150,7 +150,7 @@ jobs:
         release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
@@ -160,7 +160,7 @@ jobs:
     needs: [ SetupRepositories, TestAlGoPtePrivate, TestAlGoAppSourcePrivate, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoPteUpgrade, TestAlGoAppSourceUpgrade ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Remove Repositories
         run: e2eTests\RemoveRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

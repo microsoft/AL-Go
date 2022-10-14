@@ -28,9 +28,9 @@ $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
 
 . (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github:$github
 
-Write-Host "::set-output name=actionsRepo::$actionsRepo"
-Write-Host "::set-output name=perTenantExtensionRepo::$perTenantExtensionRepo"
-Write-Host "::set-output name=appSourceAppRepo::$appSourceAppRepo"
-Write-Host "set-output name=actionsRepo::$actionsRepo"
-Write-Host "set-output name=perTenantExtensionRepo::$perTenantExtensionRepo"
-Write-Host "set-output name=appSourceAppRepo::$appSourceAppRepo"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "actionsRepo=$actionsRepo"
+Write-Host "actionsRepo=$actionsRepo"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "perTenantExtensionRepo=$perTenantExtensionRepo"
+Write-Host "perTenantExtensionRepo=$perTenantExtensionRepo"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "appSourceAppRepo=$appSourceAppRepo"
+Write-Host "appSourceAppRepo=$appSourceAppRepo"
