@@ -3,8 +3,9 @@ name: Pull Request Handler
 on:
   pull_request:
     paths-ignore:
-      - 'README.md'
-      - '.github/**'
+      - '*.md'
+      - '*.ps1'
+      - '*.yaml'
     branches: [ 'main' ]
 
 defaults:
