@@ -6,11 +6,11 @@
 
     if ($workflowName) {
         Write-Host -ForegroundColor Yellow "`nWorkflow runs ($workflowName):"
-        $runs = @(gh run list --limit 1000 --workflow $workflowName --repo $repository)
+        $runs = @(gh run list --limit 1000 --workflow $workflowName --repo $repository | Where-Object { $_ -notlike "*`tworkflow_run`t*" })
     }
     else {
         Write-Host -ForegroundColor Yellow "`nWorkflow runs:"
-        $runs = @(gh run list --limit 1000 --repo $repository)
+        $runs = @(gh run list --limit 1000 --repo $repository | Where-Object { $_ -notlike "*`tworkflow_run`t*" })
     }
     $runs | Out-Host
     if ($runs.Count -ne $expectedNumberOfRuns) {
