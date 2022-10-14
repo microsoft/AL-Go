@@ -122,10 +122,12 @@ function RunWorkflow {
     
     Write-Host "Run workflow"
     $url = "https://api.github.com/repos/$repository/actions/workflows/$($workflow.id)/dispatches"
+    Write-Host $url
     $body = @{
         "ref" = "refs/heads/$branch"
         "inputs" = $parameters
     }
+    Write-Host $body
     InvokeWebRequest -Method Post -Headers $headers -Uri $url -Body ($body | ConvertTo-Json) | Out-Null
 
     Write-Host "Queuing"

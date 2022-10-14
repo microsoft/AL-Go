@@ -1,3 +1,49 @@
+function GetExtendedErrorMessage {
+    Param(
+        $errorRecord
+    )
+
+    $exception = $errorRecord.Exception
+    $message = $exception.Message
+
+    try {
+        $errorDetails = $errorRecord.ErrorDetails | ConvertFrom-Json
+        $message += " $($errorDetails.error)`r`n$($errorDetails.error_description)"
+    }
+    catch {}
+    try {
+        if ($exception -is [System.Management.Automation.MethodInvocationException]) {
+            $exception = $exception.InnerException
+        }
+        $webException = [System.Net.WebException]$exception
+        $webResponse = $webException.Response
+        try {
+            if ($webResponse.StatusDescription) {
+                $message += "`r`n$($webResponse.StatusDescription)"
+            }
+        } catch {}
+        $reqstream = $webResponse.GetResponseStream()
+        $sr = new-object System.IO.StreamReader $reqstream
+        $result = $sr.ReadToEnd()
+        try {
+            $json = $result | ConvertFrom-Json
+            $message += "`r`n$($json.Message)"
+        }
+        catch {
+            $message += "`r`n$result"
+        }
+        try {
+            $correlationX = $webResponse.GetResponseHeader('ms-correlation-x')
+            if ($correlationX) {
+                $message += " (ms-correlation-x = $correlationX)"
+            }
+        }
+        catch {}
+    }
+    catch{}
+    $message
+}
+
 function InvokeWebRequest {
     Param(
         [Hashtable] $headers,
@@ -26,7 +72,10 @@ function InvokeWebRequest {
         Invoke-WebRequest  @params -Uri $uri
     }
     catch {
+        $message = GetExtendedErrorMessage -errorRecord $_
         if ($retry) {
+            Write-Host $message
+            Write-Host "...retrying in 1 minute"
             Start-Sleep -Seconds 60
             try {
                 Invoke-WebRequest  @params -Uri $uri
@@ -34,19 +83,11 @@ function InvokeWebRequest {
             }
             catch {}
         }
-        $errorRecord = $_
-        $exception = $_.Exception
-        $message = $exception.Message
-        try {
-            if ($errorRecord.ErrorDetails) {
-                $errorDetails = $errorRecord.ErrorDetails | ConvertFrom-Json 
-                $errorDetails.psObject.Properties.name | ForEach-Object {
-                    $message += " $($errorDetails."$_")"
-                }
-            }
-        }
         catch {}
-        if (!$ignoreErrors.IsPresent) {
+        if ($ignoreErrors.IsPresent) {
+            Write-Host $message
+        }
+        else {
             Write-Host "::Error::$message"
             throw $message
         }
