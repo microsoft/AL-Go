@@ -83,7 +83,6 @@ function InvokeWebRequest {
             }
             catch {}
         }
-        catch {}
         if ($ignoreErrors.IsPresent) {
             Write-Host $message
         }
