@@ -8,6 +8,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 ### Changes
 - New workflow: PullRequestHandler to handle all Pull Requests and pass control safely to CI/CD
 - Changes to yaml files, PowerShell scripts and codeowners files are not permitted from fork Pull Requests
+- Test Results summary (and failed tests) are now displayed directly in the CI/CD workflow and in the Pull Request Check
 
 ### Continuous Delivery
 - Proof Of Concept Delivery to GitHub Packages and Nuget

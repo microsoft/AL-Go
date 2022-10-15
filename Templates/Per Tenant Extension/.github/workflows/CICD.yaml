@@ -372,6 +372,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             var details_url = '${{ steps.CreateCheckRun.outputs.detailsUrl }}'
+            var testResultMD = process.env.TestResultMD
             var response = await github.rest.checks.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -379,7 +380,7 @@ jobs:
               conclusion: '${{ steps.RunPipeline.conclusion }}',
               output: {
                 title: context.job.concat(' ${{ matrix.project }}'),
-                summary: process.env.TestResultMD,
+                summary: testResultMD.replaceAll('\\n','\n'),
                 text: '[Workflow details]('.concat(details_url,')')
               }
             });
