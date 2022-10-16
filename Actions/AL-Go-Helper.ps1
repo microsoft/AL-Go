@@ -619,7 +619,7 @@ function AnalyzeRepo {
                     try {
                         $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
                         if ($appIdFolders.Contains($appJson.Id)) {
-                            throw "$descr $folderName contains a duplicate AppId ($($appIdFolders."$appJson.Id"))"
+                            throw "$descr $folderName contains a duplicate AppId ($($appIdFolders."$($appJson.Id)"))"
                         }
                         $appIdFolders.Add($appJson.Id, $folderName)
                         if ($appJson.PSObject.Properties.Name -eq 'Dependencies') {
