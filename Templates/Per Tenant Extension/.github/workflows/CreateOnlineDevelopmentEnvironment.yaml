@@ -65,7 +65,8 @@ jobs:
             $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
             MaskValueInLog -value $authContext.deviceCode
-            Add-Content -Path $env:GITHUB_ENV -Value "adminCenterApiCredentials={""deviceCode"":""$($authContext.deviceCode)""}"
+            $adminCenterApiCredentials = "{""deviceCode"":""$($authContext.deviceCode)""}"
+            Add-Content -Path $env:GITHUB_ENV -Value "adminCenterApiCredentials=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($adminCenterApiCredentials)))"
             CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
           }
 
