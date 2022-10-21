@@ -66,7 +66,7 @@ try {
 
         if ($secret) {
             $value = GetSecret -secret $secret -keyVaultName $keyVaultName
-            if ($value.contains("`n")) {
+            if ($value -and ($value.contains("`n"))) {
                 Write-Host "::WARNING::Secret $secret contains line breaks. Secrets should NOT contain any line breaks as this potentially can cause problems."
             }
             if ($value) {
