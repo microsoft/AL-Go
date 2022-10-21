@@ -8,10 +8,13 @@ function IsKeyVaultSet {
     return $script:isKeyvaultSet
 }
 
-function MaskValueInLog {
+function MaskValue {
     Param(
+        [string] $key,
         [string] $value
     )
+
+    Write-Host "Masking value for $key"
 
     Write-Host "::add-mask::$value"
 
@@ -26,7 +29,9 @@ function MaskValueInLog {
         }
     }
 
-    Write-Host "::add-mask::$val2"
+    if ($val2 -ne $value) {
+        Write-Host "::add-mask::$val2"
+    }
     Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value)))"
 }
 
@@ -44,7 +49,7 @@ function GetGithubSecret {
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
         $value = $script:githubSecrets."$secret"
         if ($value) {
-            MaskValueInLog -value $value
+            MaskValue -key $secret -value $value
             Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
             return $value
         }
@@ -54,6 +59,9 @@ function GetGithubSecret {
 }
 	
 function Get-KeyVaultCredentials {
+    Param(
+        [switch] $dontmask
+    )
     if ($script:isKeyvaultSet) {
         try {
             $json = $script:gitHuBSecrets.AZURE_CREDENTIALS
@@ -61,10 +69,11 @@ function Get-KeyVaultCredentials {
                 throw "Secret contains line breaks"
             }
             $creds = $json | ConvertFrom-Json
-            MaskValueInLog -value $creds.clientId
-            MaskValueInLog -value $creds.clientSecret
-            MaskValueInLog -value $creds.subscriptionId
-            MaskValueInLog -value $creds.tenantId
+            if (!$dontmask) {
+                "clientId", "clientSecret", "subscriptionId", "tenantId" | ForEach-Object {
+                    MaskValue -key $_ -value $creds."$_"
+                }
+            }
             return $creds
         }
         catch {
@@ -163,7 +172,7 @@ function GetKeyVaultSecret {
 
     if ($keyVaultSecret) {
         $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
-        MaskValueInLog -value $value
+        MaskValue -key $secret -value $value
         return $value
     }
 
