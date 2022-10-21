@@ -219,7 +219,7 @@ try {
     Test-NumberOfRuns -expectedNumberOfRuns $runs
 
     # Modify versioning strategy
-    $projectSettingsFiles | ForEach-Object {
+    $projectSettingsFiles | Select-Object -Last 1 | ForEach-Object {
         $projectSettings = Get-Content $_ -Encoding UTF8 | ConvertFrom-Json
         $projectsettings | Add-Member -NotePropertyName 'versioningStrategy' -NotePropertyValue 16
         $projectSettings | ConvertTo-Json | Set-Content $_ -Encoding UTF8
