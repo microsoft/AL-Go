@@ -10,7 +10,6 @@ function IsKeyVaultSet {
 
 function MaskValueInLog {
     Param(
-        [string] $key,
         [string] $value
     )
 
@@ -28,7 +27,6 @@ function MaskValueInLog {
     }
 
     Write-Host "::add-mask::$val2"
-
     Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value)))"
 }
 
@@ -46,7 +44,7 @@ function GetGithubSecret {
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
         $value = $script:githubSecrets."$secret"
         if ($value) {
-            MaskValueInLog -key $secret -value $value
+            MaskValueInLog -value $value
             Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$value"
             return $value
         }
@@ -56,18 +54,24 @@ function GetGithubSecret {
 }
 	
 function Get-KeyVaultCredentials {
-    if (-not $script:isKeyvaultSet) {
-        throw "AZURE_CREDENTIALS is not set in your repo."
-    }   
-
-    try {
-        return $script:gitHuBSecrets.AZURE_CREDENTIALS | ConvertFrom-Json
+    if ($script:isKeyvaultSet) {
+        try {
+            $json = $script:gitHuBSecrets.AZURE_CREDENTIALS
+            if ($json.contains("`n")) { 
+                throw "Secret contains line breaks"
+            }
+            $creds = $json | ConvertFrom-Json
+            MaskValueInLog -value $creds.clientId
+            MaskValueInLog -value $creds.clientSecret
+            MaskValueInLog -value $creds.subscriptionId
+            MaskValueInLog -value $creds.tenantId
+            return $creds
+        }
+        catch {
+            throw "Secret AZURE_CREDENTIALS is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
+        }
     }
-    catch {
-        throw "AZURE_CREDENTIALS are wrongly formatted."
-    }
-
-    throw "AZURE_CREDENTIALS are missing. In order to use a Keyvault, please add an AZURE_CREDENTIALS secret like explained here: https://docs.microsoft.com/en-us/azure/developer/github/connect-from-azure"
+    throw "Secret AZURE_CREDENTIALS is missing. In order to use a Keyvault, please add a secret called AZURE_CREDENTIALS like explained here: https://docs.microsoft.com/en-us/azure/developer/github/connect-from-azure (remember to format the json string as compressed json, i.e. no line breaks)"
 }
 
 function InstallKeyVaultModuleIfNeeded {
@@ -159,7 +163,7 @@ function GetKeyVaultSecret {
 
     if ($keyVaultSecret) {
         $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
-        MaskValueInLog -key $secret -value $value
+        MaskValueInLog -value $value
         return $value
     }
 

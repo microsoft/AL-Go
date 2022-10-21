@@ -539,14 +539,13 @@ jobs:
           deliveryTarget: ${{ matrix.deliveryTarget }}
           artifacts: '${{ github.workspace }}\.artifacts'
 
-  PostProcess:
-    if: always()
+  UpdatePRcheck:
+    if: (always()) && (github.event_name == 'workflow_run')
     runs-on: [ windows-latest ]
-    needs: [ Initialization, Build, Deploy, Deliver ]
+    needs: [ Initialization, Build ]
     steps:
       - name: Update CI/CD Workflow Check Run
         uses: actions/github-script@v6
-        if: github.event_name == 'workflow_run'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -557,6 +556,11 @@ jobs:
               conclusion: '${{ needs.Build.result }}'
             });
 
+  PostProcess:
+    if: (!cancelled())
+    runs-on: [ windows-latest ]
+    needs: [ Initialization, Build, Deploy, Deliver ]
+    steps:
       - name: Checkout
         uses: actions/checkout@v3
 
