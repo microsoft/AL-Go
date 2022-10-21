@@ -42,7 +42,6 @@ try {
     $keyVaultName = $settings.KeyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
         $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
-        $credentialsJson.Keys | ForEach-Object { MaskValueInLog -value $credentialsJson."$_" }
         if ($credentialsJson.ContainsKey("KeyVaultName")) {
             $keyVaultName = $credentialsJson.KeyVaultName
         }
@@ -67,6 +66,9 @@ try {
 
         if ($secret) {
             $value = GetSecret -secret $secret -keyVaultName $keyVaultName
+            if ($value.contains("`n")) {
+                Write-Host "::WARNING::Secret $secret contains line breaks. Secrets should NOT contain any line breaks as this potentially can cause problems."
+            }
             if ($value) {
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
                 Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$base64value"

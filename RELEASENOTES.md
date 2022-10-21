@@ -4,6 +4,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 
 ### Issues
 - Issue #233 AL-Go for GitHub causes GitHub to issue warnings
+- Issue #244 Give error if AZURE_CREDENTIALS contains line breaks
 
 ### Changes
 - New workflow: PullRequestHandler to handle all Pull Requests and pass control safely to CI/CD
