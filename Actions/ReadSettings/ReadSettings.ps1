@@ -102,7 +102,7 @@ try {
             $projects = $settings.projects
         }
         else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName '.AL-Go\Settings.json') -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         }
         if ($projects) {
             Write-Host "All Projects: $($projects -join ', ')"
@@ -130,10 +130,12 @@ try {
                     $buildProjects = @($projects | Where-Object {
                         $project = $_
                         $buildProject = $false
-                        $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
-                        $projectFolders | Out-Host
-                        $projectFolders | ForEach-Object {
-                            if ($filesChanged -like "$_/*") { $buildProject = $true }
+                        if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project\.AL-Go\Settings.json")) {
+                            $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
+                            $projectFolders | Out-Host
+                            $projectFolders | ForEach-Object {
+                                if ($filesChanged -like "$_/*") { $buildProject = $true }
+                            }
                         }
                         $buildProject
                     })

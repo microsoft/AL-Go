@@ -44,7 +44,7 @@ try {
     if (!$project) { $project = '*' }
 
     if ($project -ne '.') {
-        $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) } | Where-Object { $_ -like $project })
+        $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName '.AL-Go\Settings.json') -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) } | Where-Object { $_ -like $project })
         if ($projects.Count -eq 0) {
             if ($project -eq '*') {
                 $projects = @( '.' )

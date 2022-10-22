@@ -44,7 +44,7 @@ try {
         $projectList = $settings.projects | Where-Object { $_ -like $projects }
     }
     else {
-        $projectList = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+        $projectList = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName '.AL-Go\Settings.json') -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         if (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE ".AL-Go") -PathType Container) {
             $projectList += @(".")
         }

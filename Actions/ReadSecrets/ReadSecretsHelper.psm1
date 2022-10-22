@@ -16,7 +16,7 @@ function MaskValue {
 
     Write-Host "Masking value for $key"
 
-    Write-Host "::add-mask::$value"
+    Write-Host "`r::add-mask::$value"
 
     $val2 = ""
     $value.ToCharArray() | ForEach-Object {
