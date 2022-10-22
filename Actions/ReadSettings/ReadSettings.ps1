@@ -102,8 +102,10 @@ try {
             $projects = $settings.projects
         }
         else {
+            Write-Host "enumerate"
             $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName '.AL-Go\Settings.json') -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         }
+        Write-Host "gotit"
         if ($projects) {
             Write-Host "All Projects: $($projects -join ', ')"
             if (($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push") -and !$settings.alwaysBuildAllProjects) {
