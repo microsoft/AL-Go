@@ -24,6 +24,7 @@ defaults:
 
 jobs:
   Initialization:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -61,6 +62,70 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: 'Download Pull Request Changes'
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            var run_id = Number('${{ github.event.workflow_run.id }}');
+            var artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: run_id
+            });
+            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == 'Pull_Request_Files'
+            })[0];
+            var download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip'
+            });
+            var fs = require('fs');
+            fs.writeFileSync('.PullRequestChanges.zip', Buffer.from(download.data));
+
+      - name: Apply Pull Request Changes
+        if: github.event_name == 'workflow_run'
+        run: |
+          $ErrorActionPreference = "STOP"
+          $location = (Get-Location).path
+          $prfolder = '.PullRequestChanges'
+          Expand-Archive -Path ".\$prfolder.zip" -DestinationPath ".\$prfolder"
+          Remove-Item -Path ".\$prfolder.zip" -force
+          Get-ChildItem -Path $prfolder -Recurse -File | ForEach-Object {
+            $path = $_.FullName
+            $deleteFile = $path.EndsWith('.REMOVE')
+            if ($deleteFile) {
+              $path = $path.SubString(0,$path.Length-7)
+            }
+            $newPath = $path.Replace("$prfolder\","")
+            $newFolder = [System.IO.Path]::GetDirectoryName($newPath)
+            $extension = [System.IO.Path]::GetExtension($path)
+            $filename = [System.IO.Path]::GetFileName($path)
+            if ('${{ github.event.workflow_run.head_repository.full_name }}' -ne $ENV:GITHUB_REPOSITORY) {
+              if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $filename -eq "CODEOWNERS") {
+                throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
+              }
+            }
+            if ($deleteFile) {
+              if (Test-Path $newPath) {
+                Write-Host "Removing $newPath"
+                Remove-Item $newPath -Force
+              }
+              else {
+                Write-Host "$newPath was already deleted"
+              }
+            }
+            else {
+              if (-not (Test-Path $newFolder)) {
+                New-Item $newFolder -ItemType Directory | Out-Null
+              }
+              Write-Host "Copying $path to $newFolder"
+              Copy-Item $path -Destination $newFolder -Force
+            }
+          }
 
       - name: Initialize the workflow
         id: init
@@ -540,7 +605,7 @@ jobs:
           artifacts: '${{ github.workspace }}\.artifacts'
 
   UpdatePRcheck:
-    if: (always()) && (github.event_name == 'workflow_run')
+    if: (always()) && (github.event_name == 'workflow_run') && (github.event.workflow_run.conclusion == 'success')
     runs-on: [ windows-latest ]
     needs: [ Initialization, Build ]
     steps:
@@ -557,7 +622,7 @@ jobs:
             });
 
   PostProcess:
-    if: (!cancelled())
+    if: (!cancelled()) && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     runs-on: [ windows-latest ]
     needs: [ Initialization, Build, Deploy, Deliver ]
     steps:
