@@ -94,7 +94,7 @@ try {
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
     Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
-    Write-Host "GitHubRunnerJson=$githubRunner"
+    Write-Host "xxxGitHubRunnerJson=$githubRunner"
 
     if ($getprojects) {
         $buildProjects = @()
