@@ -107,7 +107,7 @@ function MaskValueInLog {
     )
 
     if (!$runningLocal) {
-        Write-Host "::add-mask::$value"
+        Write-Host "`r::add-mask::$value"
     }
 }
 
