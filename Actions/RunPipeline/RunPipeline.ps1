@@ -319,6 +319,7 @@ try {
         -customCodeCops $repo.customCodeCops `
         -gitHubActions `
         -failOn $repo.failOn `
+        -treatTestFailuresAsWarnings:$repo.treatTestFailuresAsWarnings `
         -rulesetFile $repo.rulesetFile `
         -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
