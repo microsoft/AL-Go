@@ -392,6 +392,7 @@ function ReadSettings {
         "enableUICop"                            = $false
         "customCodeCops"                         = @()
         "failOn"                                 = "error"
+        "treatTestFailuresAsWarnings"            = $false
         "rulesetFile"                            = ""
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
@@ -1556,6 +1557,7 @@ function CreateDevEnv {
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
             -failOn $repo.failOn `
+            -treatTestFailuresAsWarnings:$repo.treatTestFailuresAsWarnings `
             -rulesetFile $repo.rulesetFile `
             -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
             -obsoleteTagMinAllowedMajorMinor $repo.obsoleteTagMinAllowedMajorMinor `
