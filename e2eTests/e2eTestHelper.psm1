@@ -127,7 +127,7 @@ function RunWorkflow {
         "ref" = "refs/heads/$branch"
         "inputs" = $parameters
     }
-    InvokeWebRequest -Method Post -Headers $headers -Uri $url -Body ($body | ConvertTo-Json) | Out-Null
+    InvokeWebRequest -Method Post -Headers $headers -Uri $url -retry -Body ($body | ConvertTo-Json) | Out-Null
 
     Write-Host "Queuing"
     do {
