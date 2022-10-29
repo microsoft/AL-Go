@@ -97,6 +97,7 @@ try {
     Write-Host "GitHubRunnerJson=$githubRunner"
 
     if ($getprojects) {
+
         $buildProjects = @()
         if ($settings.Projects) {
             $projects = $settings.projects
@@ -132,7 +133,6 @@ try {
                         $buildProject = $false
                         if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project\.AL-Go\Settings.json")) {
                             $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
-                            $projectFolders | Out-Host
                             $projectFolders | ForEach-Object {
                                 if ($filesChanged -like "$_/*") { $buildProject = $true }
                             }
@@ -144,6 +144,22 @@ try {
             }
             else {
                 $buildProjects = $projects
+            }
+            if ($settings.useProjectDependencies) {
+                $buildAlso = @{}
+                $buildOrder = @{}
+                $projectDependencies = @{}
+                AnalyzeProjectDependencies -basePath $ENV:GITHUB_WORKSPACE -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+                $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.ContainsKey("$_")) { $buildAlso."$_" } } | Select-Object -Unique)
+                Write-Host "Building projects: $($buildProjects -join ', ')"
+                $projectDependenciesJson = $projectDependencies | ConvertTo-Json -Compress
+                $buildOrderJson = $buildOrder | ConvertTo-Json -Compress
+                Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
+                Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
+                Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderDepth=$($buildOrder.Count)"
+                Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
+                Write-Host "BuildOrderJson=$buildOrderJson"
+                Write-Host "BuildOrderDepth=$($buildOrder.Count)"
             }
         }
         if (Test-Path ".AL-Go" -PathType Container) {

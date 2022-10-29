@@ -406,6 +406,7 @@ function ReadSettings {
         "templateUrl"                            = ""
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
+        "useProjectDependencies"                 = $false
         "runs-on"                                = "windows-latest"
         "githubRunner"                           = ""
         "cacheImageName"                         = "my"
@@ -812,6 +813,10 @@ function AnalyzeRepo {
         Write-Host "::endgroup::"
     }
 
+    Write-Host "Checking project dependencies"
+
+
+
     Write-Host "Checking appDependencyProbingPaths"
     if ($settings.appDependencyProbingPaths) {
         $settings.appDependencyProbingPaths = @($settings.appDependencyProbingPaths | ForEach-Object {
@@ -967,8 +972,6 @@ function Get-ProjectFolders {
         }
     }
 
-    Write-Host "Project $project folders:"
-    $projectFolders | ForEach-Object { Write-Host "- $_" }
     $projectFolders
 }
 
@@ -1413,9 +1416,13 @@ function CreateDevEnv {
                     New-Object -Type PSObject -Property $_
                 } 
             })
-            $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps" -saveToPath $dependenciesFolder -api_url 'https://api.github.com'
-            Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
-                $installTestApps += "($_)"
+            Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
+                if ($_.startswith('(')) {
+                    $installTestApps += $_    
+                }
+                else {
+                    $installApps += $_    
+                }
             }
         }
     
@@ -1611,5 +1618,72 @@ function CheckAndCreateProjectFolder {
                 Set-Location $project
             }
         }
+    }
+}
+
+Function AnalyzeProjectDependencies {
+    Param(
+        [string] $basePath,
+        [string[]] $projects,
+        [ref] $buildOrder,
+        [ref] $buildAlso,
+        [ref] $projectDependencies
+    )
+
+    $appDependencies = @{}
+    Write-Host "Analyzing projects"
+    $projects | ForEach-Object {
+        $project = $_
+        Write-Host "- $project"
+        $apps = @()
+        $folders = @(Get-ChildItem -Path (Join-Path $basePath $project) -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'app.json') } | ForEach-Object { $_.FullName.Substring($basePath.Length+1) } )
+        $unknownDependencies = @()
+        $apps = @()
+        $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $basePath -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
+        $appDependencies."$project" = @{
+            "apps" = $apps
+            "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
+        }
+    }
+    $no = 1
+    Write-Host "Analyzing dependencies"
+    while ($projects.Count -gt 0) {
+        $thisJob = @()
+        $projects | ForEach-Object {
+            $project = $_
+            Write-Host "- $project"
+            $dependencies = $appDependencies."$project".dependencies
+            $foundDependencies = @($dependencies | ForEach-Object {
+                $dependency = $_
+                $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
+            } | Select-Object -Unique)
+            if (!$projectDependencies.Value.ContainsKey($project)) {
+                $projectDependencies.value."$project" = $foundDependencies
+            }
+            if ($foundDependencies) {
+                Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
+                $foundDependencies | ForEach-Object { 
+                    if ($buildAlso.value.ContainsKey($_)) {
+                        if ($buildAlso.value."$_" -notcontains $project) {
+                            $buildAlso.value."$_" += @( $project )
+                        }
+                    }
+                    else {
+                        $buildAlso.value."$_" = @( $project )
+                    }
+                }
+            }
+            else {
+                Write-Host "No dependencies found"
+                $thisJob += $project
+            }
+        }
+        if ($thisJob.Count -eq 0) {
+            throw "Circular project reference encountered, cannot determine build order"
+        }
+        Write-Host "#$no - build projects: $($thisJob -join ", ")"
+        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
+        $buildOrder.value."$no" = @($thisJob)
+        $no++
     }
 }
