@@ -24,6 +24,9 @@ Describe "ReadSettings Action Tests" {
             "ProjectCount" = "Number of projects in array"
             "EnvironmentsJson" = "Environments in compressed Json format"
             "EnvironmentCount" = "Number of environments in array"
+            "ProjectDependenciesJson" = "Project Dependencies Json"
+            "BuildOrderJson" = "Build order Json"
+            "BuildOrderDepth" = "Depth in build order"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
