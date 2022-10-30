@@ -6,7 +6,7 @@
         [string] $branch = "main"
     )
 
-    $workflowName = 'Publish To Environment'
+    $workflowName = ' Publish To Environment'
     $parameters = @{
         "appVersion" = $appVersion
         "environmentName" = $environmentName

@@ -7,7 +7,7 @@
         [string] $branch = "main"
     )
 
-    $workflowName = 'Increment Version Number'
+    $workflowName = ' Increment Version Number'
     $parameters = @{
         "project" = $project
         "versionNumber" = $versionNumber
