@@ -9,7 +9,7 @@
         [string] $branch = "main"
     )
 
-    $workflowName = ' Create release'
+    $workflowName = 'Create release'
     $parameters = @{
         "appVersion" = $appVersion
         "name" = $name

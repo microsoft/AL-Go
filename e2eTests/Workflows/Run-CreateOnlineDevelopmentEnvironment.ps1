@@ -7,7 +7,7 @@
         [string] $branch = "main"
     )
 
-    $workflowName = ' Create Online Dev. Environment'
+    $workflowName = 'Create Online Dev. Environment'
     $parameters = @{
         "environmentName" = $environmentName
         "reUseExistingEnvironment" = @("Y","N")[!$reUseExistingEnvironment]

@@ -114,9 +114,9 @@ function RunWorkflow {
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
     $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
-    $workflow = $workflows | Where-Object { $_.Name -eq $name -or $_.Name -eq ($name.Trim()) }
+    $workflow = $workflows | Where-Object { $_.Name.Trim() -eq $name }
     if (!$workflow) {
-        throw "Workflow $($name.Trim()) not found"
+        throw "Workflow $name not found"
     }
 
     Write-Host "Get Previous runs"

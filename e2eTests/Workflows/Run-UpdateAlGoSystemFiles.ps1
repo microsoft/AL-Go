@@ -6,7 +6,7 @@
         [string] $branch = "main"
     )
 
-    $workflowName = ' Update AL-Go System Files'
+    $workflowName = 'Update AL-Go System Files'
     $parameters = @{
         "templateUrl" = $templateUrl
         "directCommit" = @("Y","N")[!$directCommit]

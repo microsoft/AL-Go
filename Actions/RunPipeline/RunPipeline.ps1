@@ -59,7 +59,7 @@ try {
     if ($project) {
         $sharedFolder = $baseFolder
     }
-    $workflowName = $env:GITHUB_WORKFLOW
+    $workflowName = "$env:GITHUB_WORKFLOW".Trim()
 
     Write-Host "use settings and secrets"
     $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
