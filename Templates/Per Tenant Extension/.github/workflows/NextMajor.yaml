@@ -1,4 +1,4 @@
-name: Test Next Major
+name: ' Test Next Major'
 
 on:
   workflow_dispatch:
