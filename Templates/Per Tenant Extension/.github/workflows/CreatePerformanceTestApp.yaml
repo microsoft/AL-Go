@@ -1,4 +1,4 @@
-name: Create a new performance test app
+name: 'Create a new performance test app'
 
 on:
   workflow_dispatch:

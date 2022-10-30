@@ -1,4 +1,4 @@
-name: Publish To AppSource
+name: ' Publish To AppSource'
 
 on:
   workflow_dispatch:
