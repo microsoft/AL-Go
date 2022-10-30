@@ -1,4 +1,4 @@
-name: Create a new test app
+name: 'Create a new test app'
 
 on:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: CI/CD
+name: ' CI/CD'
 
 on:
   workflow_dispatch:
@@ -26,6 +26,8 @@ jobs:
   Initialization:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: [ windows-latest ]
+    env:
+      workflowDepth: 1
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
       settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
@@ -37,6 +39,9 @@ jobs:
       deliveryTargetCount: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetCount }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       checkRunId: ${{ steps.CreateCheckRun.outputs.checkRunId }}
+      projectDependenciesJson: ${{ steps.ReadSettings.outputs.ProjectDependenciesJson }}
+      buildOrderJson: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
+      buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
     steps:
       - name: Create CI/CD Workflow Check Run
         id: CreateCheckRun
@@ -180,6 +185,44 @@ jobs:
           Write-Host "DeliveryTargetCount=$($deliveryTargets.Count)"
           Add-Content -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
 
+      - name: Determine Build Order
+        if: env.WorkflowDepth > 1
+        id: BuildOrder
+        run: |
+          $ErrorActionPreference = "STOP"
+          $projects = '${{ steps.ReadSettings.outputs.ProjectsJson }}' | ConvertFrom-Json
+          $buildOrder = '${{ steps.ReadSettings.outputs.BuildOrderJson }}' | ConvertFrom-Json
+          $depth = ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
+          $workflowDepth = ${{ steps.ReadSettings.outputs.WorkflowDepth }}
+          if ($depth -lt $workflowDepth) {
+            Write-Host "::Error::Project Dependencies depth is $depth. Workflow is only setup for $workflowDepth. You need to Run Update AL-Go System Files to update the workflows"
+            $host.SetShouldExit(1)
+          }
+          $step = $depth
+          $depth..1 | ForEach-Object {
+            $ps = @($buildOrder."$_" | Where-Object { $projects -contains $_ })
+            if ($ps.Count -eq 1) {
+              $projectsJSon = "[$($ps | ConvertTo-Json -compress)]"
+            }
+            else {
+              $projectsJSon = $ps | ConvertTo-Json -compress
+            }
+            if ($ps.Count -gt 0) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "Projects$($step)Json=$projectsJson"
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "Projects$($step)Count=$($ps.count)"
+              Write-Host "Projects$($step)Json=$projectsJson"
+              Write-Host "Projects$($step)Count=$($ps.count)"
+              $step--
+            }
+          }
+          while ($step -ge 1) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "Projects$($step)Json="
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "Projects$($step)Count=0"
+              Write-Host "Projects$($step)Json="
+              Write-Host "Projects$($step)Count=0"
+              $step--
+          }
+
   CheckForUpdates:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
@@ -269,6 +312,11 @@ jobs:
         with:
           lfs: true
 
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: '${{ github.workspace }}\.dependencies'
+
       - name: 'Download Pull Request Changes'
         if: github.event_name == 'workflow_run'
         uses: actions/github-script@v6
@@ -354,6 +402,7 @@ jobs:
         with:
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           Project: ${{ matrix.project }}
+          ProjectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
           settingsJson: ${{ env.Settings }}
           SecretsJson: ${{ env.RepoSecrets }}
 
@@ -429,7 +478,7 @@ jobs:
           Project: ${{ matrix.project }}
 
       - name: Update Build Job Check Run
-        if: (always()) && (github.event_name == 'workflow_run')
+        if: always() && github.event_name == 'workflow_run'
         uses: actions/github-script@v6
         env:
           TestResultMD: ${{ steps.analyzeTestResults.outputs.TestResultMD }}
@@ -459,7 +508,7 @@ jobs:
 
   Deploy:
     needs: [ Initialization, Build ]
-    if: ${{ (github.event_name != 'workflow_run') && (github.ref_name == 'main') && (needs.Initialization.outputs.environmentCount > 0) }}
+    if: always() && needs.Build.result == 'Success' && github.event_name != 'workflow_run' && github.ref_name == 'main' && needs.Initialization.outputs.environmentCount > 0
     strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
@@ -558,7 +607,7 @@ jobs:
 
   Deliver:
     needs: [ Initialization, Build ]
-    if: ${{ (github.event_name != 'workflow_run') && (github.ref_name == 'main') && (needs.Initialization.outputs.deliveryTargetCount > 0) }}
+    if: always() && needs.Build.result == 'Success' && github.event_name != 'workflow_run' && github.ref_name == 'main' && needs.Initialization.outputs.deliveryTargetCount > 0
     strategy:
       matrix:
         deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargets) }}
@@ -605,7 +654,7 @@ jobs:
           artifacts: '${{ github.workspace }}\.artifacts'
 
   UpdatePRcheck:
-    if: (always()) && (github.event_name == 'workflow_run') && (github.event.workflow_run.conclusion == 'success')
+    if: always() && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     runs-on: [ windows-latest ]
     needs: [ Initialization, Build ]
     steps:

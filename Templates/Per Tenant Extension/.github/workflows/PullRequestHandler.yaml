@@ -1,4 +1,4 @@
-name: Pull Request Handler
+name: 'Pull Request Handler'
 
 on:
   pull_request:

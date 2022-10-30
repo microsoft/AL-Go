@@ -56,6 +56,15 @@ outputs:
   EnvironmentCount:
     description: Number of environments in array
     value: ${{ steps.readsettings.outputs.EnvironmentCount }}
+  ProjectDependenciesJson:
+    description: Project Dependencies Json
+    value: ${{ steps.readsettings.outputs.ProjectDependenciesJson }}
+  BuildOrderJson:
+    description: Build order Json
+    value: ${{ steps.readsettings.outputs.BuildOrderJson }}
+  BuildOrderDepth:
+    description: Depth in build order
+    value: ${{ steps.readsettings.outputs.BuildOrderDepth }}
 runs:
   using: composite
   steps:

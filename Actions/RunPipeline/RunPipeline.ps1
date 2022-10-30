@@ -7,6 +7,8 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
+    [Parameter(HelpMessage = "Project Dependencies in compressed Json format", Mandatory = $false)]
+    [string] $projectDependenciesJson = "",
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"AppBuild":"", "AppRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
@@ -91,11 +93,48 @@ try {
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
 
+    Write-Host "Project: $project"
+    if ($project -and $repo.useProjectDependencies -and $projectDependenciesJson -ne "") {
+        $projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+        if ($projectDependencies.ContainsKey($project)) {
+            $projects = @($projectDependencies."$project") -join ","
+        }
+        else {
+            $projects = ''
+        }
+        if ($projects) {
+            Write-Host "Project dependencies: $projects"
+            $thisBuildProbingPaths = @(@{
+                "release_status" = "thisBuild"
+                "version" = "latest"
+                "projects" = $projects
+                "repo" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                "branch" = $ENV:GITHUB_REF_NAME
+                "authTokenSecret" = $token
+            })
+            Get-dependencies -probingPathsJson $thisBuildProbingPaths | where-Object { $_ } | ForEach-Object {
+                if ($_.startswith('(')) {
+                    $installTestApps += $_    
+                }
+                else {
+                    $installApps += $_    
+                }
+            }
+        }
+        else {
+            Write-Host "No project dependencies"
+        }
+    }
+
     if ($repo.appDependencyProbingPaths) {
         Write-Host "::group::Downloading dependencies"
-        $installApps += Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "Apps"
-        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths -mask "TestApps" | ForEach-Object {
-            $installTestApps += "($_)"
+        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths | ForEach-Object {
+            if ($_.startswith('(')) {
+                $installTestApps += $_    
+            }
+            else {
+                $installApps += $_    
+            }
         }
         Write-Host "::endgroup::"
     }

@@ -17,6 +17,10 @@ inputs:
     description: Project folder
     required: false
     default: '.'
+  projectDependenciesJson:
+    description: Project Dependencies in compressed Json format
+    required: false
+    default: ''
   settingsJson:
     description: Settings from repository in compressed Json format
     required: false
@@ -35,9 +39,10 @@ runs:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
+        _projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
         _settingsJson: ${{ inputs.settingsJson }}
         _secretsJson: ${{ inputs.secretsJson }}
-      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -projectDependenciesJson $ENV:_projectDependenciesJson -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
