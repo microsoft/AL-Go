@@ -90,7 +90,7 @@ function RunWorkflow {
         [string] $branch = "main"
     )
 
-    Write-Host -ForegroundColor Yellow "`nRun workflow $name in $repository"
+    Write-Host -ForegroundColor Yellow "`nRun workflow $($name.Trim()) in $repository"
     if ($parameters -and $parameters.Count -gt 0) {
         Write-Host "Parameters:"
         Write-Host ($parameters | ConvertTo-Json)
@@ -114,7 +114,10 @@ function RunWorkflow {
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
     $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
-    $workflow = $workflows | Where-Object { $_.Name -eq $name }
+    $workflow = $workflows | Where-Object { $_.Name -eq $name -or $_.Name -eq ($name.Trim()) }
+    if (!$workflow) {
+        throw "Workflow $($name.Trim()) not found"
+    }
 
     Write-Host "Get Previous runs"
     $url = "https://api.github.com/repos/$repository/actions/runs"
