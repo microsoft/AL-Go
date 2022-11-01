@@ -114,6 +114,7 @@ function RunWorkflow {
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
     $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
+    $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
     $workflow = $workflows | Where-Object { $_.Name.Trim() -eq $name }
     if (!$workflow) {
         throw "Workflow $name not found"
