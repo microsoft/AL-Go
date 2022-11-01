@@ -138,6 +138,7 @@ function Get-dependencies {
                     $dependency.projects = $missingProjects -join ","
                 }
             }
+            $dependency | Out-Host
             $projects = $dependency.projects
             $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
             if ($dependency.release_status -eq "latestBuild") {
@@ -162,7 +163,7 @@ function Get-dependencies {
                     Write-Host -ForegroundColor Red "Could not find any $mask artifacts for projects $projects, version $($dependency.version)"
                 }
             }
-            elseif ($dependency.release_status -ne "thisBuild" -and $dependency.release_status -eq "include") {
+            elseif ($dependency.release_status -ne "thisBuild" -and $dependency.release_status -ne "include") {
                 $releases = GetReleases -api_url $api_url -token $dependency.authTokenSecret -repository $repository
                 if ($dependency.version -ne "latest") {
                     $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }

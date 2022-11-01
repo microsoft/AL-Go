@@ -305,11 +305,20 @@ try {
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
                 $parameters.missingDependencies | ForEach-Object {
+                    $publishParams = @{
+                        "containerName" = $parameters.containerName
+                        "tenant" = $parameters.tenant
+                    }
                     $appid = $_.Split(':')[0]
                     $appName = $_.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
-                    Publish-BcNuGetPackageToContainer -containerName $parameters.ContainerName -tenant $parameters.tenant -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version -skipVerification
+                    if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
+                        $publishParams += @{
+                            "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
+                        }
+                    }
+                    Publish-BcNuGetPackageToContainer @publishParams -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version -skipVerification
                 }
             }
         }
