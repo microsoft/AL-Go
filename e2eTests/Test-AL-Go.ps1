@@ -225,7 +225,7 @@ try {
         $projectSettings | ConvertTo-Json | Set-Content $_ -Encoding UTF8
     }
     Remove-Item -Path "$($project1Folder).AL-Go\*.ps1" -Force
-    Remove-Item -Path ".github\workflows\CreateRelease.yaml" -Force
+    Remove-Item -Path ".github\workflows\AddExistingAppOrTestApp.yaml" -Force
     CommitAndPush -commitMessage "Version strategy change"
     $runs++
 
@@ -234,7 +234,7 @@ try {
     $runs++
     Pull -branch $branch
     if (Test-Path "$($project1Folder).AL-Go\*.ps1") { throw "Local PowerShell scripts in the .AL-Go folder should have been removed" }
-    if (Test-Path ".github\workflows\CreateRelease.yaml") { throw "CreateRelease.yaml should have been removed" }
+    if (Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml") { throw "AddExistingAppOrTestApp.yaml should have been removed" }
     $run = Run-CICD -wait -branch $branch
     $runs++
     Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 3 -expectedNumberOfTestApps 2 -expectedNumberOfTests 2 -folder 'artifacts3' -repoVersion '3.0.' -appVersion '3.0'
@@ -247,7 +247,7 @@ try {
     MergePRandPull -branch $branch
     $runs += 2
     if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scripts in the .AL-Go folder was not updated by Update AL-Go System Files" }
-    if (!(Test-Path ".github\workflows\CreateRelease.yaml")) { throw "CreateRelease.yaml was not updated by Update AL-Go System Files" }
+    if (!(Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml")) { throw "AddExistingAppOrTestApp.yaml was not updated by Update AL-Go System Files" }
 
     # Create Release
     Run-CreateRelease -appVersion latest -name "v3.0" -tag "v3.0" -wait -branch $branch | Out-Null
