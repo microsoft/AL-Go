@@ -138,7 +138,6 @@ function Get-dependencies {
                     $dependency.projects = $missingProjects -join ","
                 }
             }
-            $dependency | Out-Host
             $projects = $dependency.projects
             $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
             if ($dependency.release_status -eq "latestBuild") {
