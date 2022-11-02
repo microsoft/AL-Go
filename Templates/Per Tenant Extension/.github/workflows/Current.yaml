@@ -14,7 +14,7 @@ jobs:
   Initialization:
     runs-on: [ windows-latest ]
     env:
-      workflowDepth: 1
+      workflowDepth: 0
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
       settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
