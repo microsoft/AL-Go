@@ -201,7 +201,6 @@ jobs:
             $nuGetContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('NuGetContext')))
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "nuGetContext=$nuGetContext"
-          Write-Host "nuGetContext=$nuGetContext"
 
       - name: Deliver to NuGet
         uses: microsoft/AL-Go-Actions/Deliver@main
@@ -224,8 +223,7 @@ jobs:
           if ('${{ matrix.atype }}' -eq 'Apps') {
             $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('StorageContext')))
           }
-          Write-Host "Add-Content -Path $env:GITHUB_OUTPUT -Value "storageContext=$storageContext"
-          Write-Host "storageContext=$storageContext"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "storageContext=$storageContext"
 
       - name: Deliver to Storage
         uses: microsoft/AL-Go-Actions/Deliver@main
