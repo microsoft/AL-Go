@@ -4,7 +4,7 @@
     "description": "schema for AL-Go for GitHub Repo Settings File",
     "type": "object",
     "properties": {
-        "type": {
+        "typex": {
             "enum": [
                 "PTE",
                 "AppSource"
