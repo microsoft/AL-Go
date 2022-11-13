@@ -46,11 +46,11 @@ try {
             $projects.Split(',') | ForEach-Object {
                 $project = $_.Replace('\','_')
                 Write-Host "project '$project'"
-                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-*-Apps-*") | ForEach-Object { $_.FullName })
+                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-main-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
                 if (!($apps)) {
                     throw "There is no artifacts present in $artifacts."
                 }
-                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-*-Dependencies-*") | ForEach-Object { $_.FullName })
+                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-main-Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
             }
         }
         elseif (Test-Path $artifacts) {

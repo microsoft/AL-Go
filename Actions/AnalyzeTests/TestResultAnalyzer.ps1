@@ -8,6 +8,7 @@ function GetTestResultSummary {
     $totalTime = 0.0
     $totalFailed = 0
     $totalSkipped = 0
+    $failuresIncluded = 0
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()
     if ($testResults.testsuites) {
@@ -23,12 +24,6 @@ function GetTestResultSummary {
         }
         Write-Host "$($appNames.Count) TestApps, $totalTests tests, $totalFailed failed, $totalSkipped skipped, $totalTime seconds"
         $summarySb.Append('|Test app|Tests|Passed|Failed|Skipped|Time|\n|:---|---:|---:|---:|---:|---:|\n') | Out-Null
-        if ($totalFailed -gt 50) {
-            $failuresSb.Append("<details><summary><i>$totalFailed failing tests (showing the first $includeFailures here, download test results to see all)</i></summary>") | Out-Null
-        }
-        else {
-            $failuresSb.Append("<details><summary><i>$totalFailed failing tests</i></summary>") | Out-Null
-        }
         $appNames | ForEach-Object {
             $appName = $_
             $appTests = 0
@@ -57,11 +52,11 @@ function GetTestResultSummary {
                 $summarySb.Append("$($appSkipped):white_circle:") | Out-Null
             }
             $summarySb.Append("|$($appTime)s|\n") | Out-Null
-            if ($includeFailures -gt 0 -and $appFailed -gt 0) {
+            if ($appFailed -gt 0) {
                 $failuresSb.Append("<details><summary><i>$appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds</i></summary>\n") | Out-Null
                 $suites | ForEach-Object {
                     Write-Host "  - $($_.name), $($_.tests) tests, $($_.failures) failed, $($_.skipped) skipped, $($_.time) seconds"
-                    if ($includeFailures -gt 0 -and $_.failures -gt 0) {
+                    if ($_.failures -gt 0 -and $failuresSb.Length -lt 32000) {
                         $failuresSb.Append("<details><summary><i>$($_.name), $($_.tests) tests, $($_.failures) failed, $($_.skipped) skipped, $($_.time) seconds</i></summary>") | Out-Null
                         $_.testcase | ForEach-Object {
                             if ($_.ChildNodes.Count -gt 0) {
@@ -79,16 +74,35 @@ function GetTestResultSummary {
                             }
                         }
                         $failuresSb.Append("</details>") | Out-Null
-                        $includeFailures--
+                        $failuresIncluded++
                     }
                 }
                 $failuresSb.Append("</details>") | Out-Null
             }
         }
-        $failuresSb.Append("</details>") | Out-Null
     }
     if ($totalFailed -gt 0) {
-        $summarySb.Append("\n\n$($failuresSb.ToString())") | Out-Null
+        if ($totalFailed -gt $failuresIncluded) {
+            $failuresSb.Insert(0,"<details><summary><i>$totalFailed failing tests (showing the first $failuresIncluded here, download test results to see all)</i></summary>") | Out-Null
+        }
+        else {
+            $failuresSb.Insert(0,"<details><summary><i>$totalFailed failing tests</i></summary>") | Out-Null
+        }
+        $failuresSb.Append("</details>") | Out-Null
+        if (($summarySb.Length + $failuresSb.Length) -lt 65000) {
+            $summarySb.Append("\n\n$($failuresSb.ToString())") | Out-Null
+        }
+        else {
+            $summarySb.Append("\n\n<i>$totalFailed failing tests. Download test results to see all</i>") | Out-Null
+        }
     }
-    $summarySb.ToString()
+    else {
+        $summarySb.Append("\n\n<i>No test failures</i>") | Out-Null
+    }
+    if ($summarySb.Length -lt 65500) {
+        $summarySb.ToString()
+    }
+    else {
+        "<i>$totalFailed failing tests. Download test results to see all</i>"
+    }
 }
