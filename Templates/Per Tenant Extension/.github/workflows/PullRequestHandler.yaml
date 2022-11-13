@@ -3,9 +3,7 @@ name: 'Pull Request Handler'
 on:
   pull_request:
     paths-ignore:
-      - '*.md'
-      - '*.ps1'
-      - '*.yaml'
+      - '**.md'
     branches: [ 'main' ]
 
 defaults:
@@ -22,7 +20,9 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - uses: actions/checkout@v3
-      
+        with:
+          lfs: true
+
       - name: Determine Changed Files
         id: ChangedFiles
         run: |
