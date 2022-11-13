@@ -8,8 +8,9 @@ on:
       - completed
   push:
     paths-ignore:
-      - 'README.md'
-      - '.github/**'
+      - '**.md'
+      - '.github/workflows/*.yaml'
+      - '!.github/workflows/CICD.yaml'
     branches: [ 'main', 'release/*', 'feature/*' ]
 
 run-name: ${{ fromJson(format('["","Check pull request {0}{2} from {3}/{4}{1} {5}"]','#',':',github.event.workflow_run.pull_requests[0].number,github.event.workflow_run.head_repository.owner.login,github.event.workflow_run.head_branch,github.event.workflow_run.display_title))[github.event_name == 'workflow_run'] }}
@@ -68,10 +69,24 @@ jobs:
             core.setOutput('checkRunId', response.data.id);
 
       - name: Checkout
+        if: github.event_name != 'workflow_run' || (github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name != github.repository)
         uses: actions/checkout@v3
+        with:
+          lfs: true
+    
+      - name: Checkout Pull Request
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+          ref: ${{ github.event.workflow_run.head_branch }}
 
-      - name: 'Download Pull Request Changes'
-        if: github.event_name == 'workflow_run'
+      - name: Dump
+        run: |
+          Write-Host "YES!"
+
+      - name: Download Fork Pull Request Changes
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name != github.repository
         uses: actions/github-script@v6
         with:
           script: |
@@ -93,8 +108,8 @@ jobs:
             var fs = require('fs');
             fs.writeFileSync('.PullRequestChanges.zip', Buffer.from(download.data));
 
-      - name: Apply Pull Request Changes
-        if: github.event_name == 'workflow_run'
+      - name: Apply Fork Pull Request Changes
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name != github.repository
         run: |
           $ErrorActionPreference = "STOP"
           $location = (Get-Location).path
@@ -111,10 +126,8 @@ jobs:
             $newFolder = [System.IO.Path]::GetDirectoryName($newPath)
             $extension = [System.IO.Path]::GetExtension($path)
             $filename = [System.IO.Path]::GetFileName($path)
-            if ('${{ github.event.workflow_run.head_repository.full_name }}' -ne $ENV:GITHUB_REPOSITORY) {
-              if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $filename -eq "CODEOWNERS") {
-                throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
-              }
+            if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $filename -eq "CODEOWNERS") {
+              throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
             }
             if ($deleteFile) {
               if (Test-Path $newPath) {
@@ -311,17 +324,25 @@ jobs:
             });
 
       - name: Checkout
+        if: github.event_name != 'workflow_run' || (github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name != github.repository)
         uses: actions/checkout@v3
         with:
           lfs: true
+    
+      - name: Checkout Pull Request
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
           path: '${{ github.workspace }}\.dependencies'
 
-      - name: 'Download Pull Request Changes'
-        if: github.event_name == 'workflow_run'
+      - name: Download Fork Pull Request Changes
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name != github.repository
         uses: actions/github-script@v6
         with:
           script: |
@@ -343,8 +364,8 @@ jobs:
             var fs = require('fs');
             fs.writeFileSync('.PullRequestChanges.zip', Buffer.from(download.data));
 
-      - name: Apply Pull Request Changes
-        if: github.event_name == 'workflow_run'
+      - name: Apply Fork Pull Request Changes
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name != github.repository
         run: |
           $ErrorActionPreference = "STOP"
           $location = (Get-Location).path
@@ -361,10 +382,8 @@ jobs:
             $newFolder = [System.IO.Path]::GetDirectoryName($newPath)
             $extension = [System.IO.Path]::GetExtension($path)
             $filename = [System.IO.Path]::GetFileName($path)
-            if ('${{ github.event.workflow_run.head_repository.full_name }}' -ne $ENV:GITHUB_REPOSITORY) {
-              if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $filename -eq "CODEOWNERS") {
-                throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
-              }
+            if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $filename -eq "CODEOWNERS") {
+              throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
             }
             if ($deleteFile) {
               if (Test-Path $newPath) {
@@ -383,6 +402,7 @@ jobs:
               Copy-Item $path -Destination $newFolder -Force
             }
           }
+          Remove-Item -Path $prfolder -recurse -force
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
