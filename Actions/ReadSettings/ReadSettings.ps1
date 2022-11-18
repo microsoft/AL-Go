@@ -119,27 +119,32 @@ try {
                 else {
                     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.before)...$($ghEvent.after)"
                 }
-                $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
-                $filesChanged = @($response.files | ForEach-Object { $_.filename })
-                if ($filesChanged.Count -ge 250) {
-                    Write-Host "More than 250 files modified, building all projects"
+                if ($ghEvent.before -eq '0'*40) {
                     $buildProjects = $projects
                 }
                 else {
-                    Write-Host "Modified files:"
-                    $filesChanged | Out-Host
-                    $buildProjects = @($projects | Where-Object {
-                        $project = $_
-                        $buildProject = $false
-                        if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project\.AL-Go\Settings.json")) {
-                            $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
-                            $projectFolders | ForEach-Object {
-                                if ($filesChanged -like "$_/*") { $buildProject = $true }
+                    $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
+                    $filesChanged = @($response.files | ForEach-Object { $_.filename })
+                    if ($filesChanged.Count -ge 250) {
+                        Write-Host "More than 250 files modified, building all projects"
+                        $buildProjects = $projects
+                    }
+                    else {
+                        Write-Host "Modified files:"
+                        $filesChanged | Out-Host
+                        $buildProjects = @($projects | Where-Object {
+                            $project = $_
+                            $buildProject = $false
+                            if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project\.AL-Go\Settings.json")) {
+                                $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
+                                $projectFolders | ForEach-Object {
+                                    if ($filesChanged -like "$_/*") { $buildProject = $true }
+                                }
                             }
-                        }
-                        $buildProject
-                    })
-                    Write-Host "Modified projects: $($buildProjects -join ', ')"
+                            $buildProject
+                        })
+                        Write-Host "Modified projects: $($buildProjects -join ', ')"
+                    }
                 }
             }
             else {
