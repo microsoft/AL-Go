@@ -110,10 +110,10 @@ jobs:
             $allArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts" | ConvertFrom-Json
             $artifactsVersion = $appVersion
             if ($appVersion -eq "latest") {
-              $artifact = $allArtifacts.artifacts | Where-Object { $_.name -like "$project-*-Apps-*" } | Select-Object -First 1
-              $artifactsVersion = $artifact.name.SubString($artifact.name.IndexOf('-Apps-')+6)
+              $artifact = $allArtifacts.artifacts | Where-Object { $_.name -notlike "$project-PR*" -and $_.name -like "$project-*-Apps-*" } | Select-Object -First 1
+              $artifactsVersion = $artifact.name.SubString($artifact.name.LastIndexOf('-Apps-')+6)
             }
-            $allArtifacts.artifacts | Where-Object { $_.name -like "$project-*-Apps-$($artifactsVersion)" -or $_.name -like "$project-*-TestApps-$($artifactsVersion)" -or $_.name -like "$project-*-Dependencies-$($artifactsVersion)" } | ForEach-Object {
+            $allArtifacts.artifacts | Where-Object { $_.name -notlike "$project-PR*" -and ($_.name -like "$project-*-Apps-$($artifactsVersion)" -or $_.name -like "$project-*-TestApps-$($artifactsVersion)" -or $_.name -like "$project-*-Dependencies-$($artifactsVersion)") } | ForEach-Object {
               $atype = $_.name.SubString(0,$_.name.Length-$artifactsVersion.Length-1)
               $atype = $atype.SubString($atype.LastIndexOf('-')+1)
               $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url; "atype" = $atype; "project" = $thisproject } )

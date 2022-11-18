@@ -203,22 +203,29 @@ function DownloadAndImportBcContainerHelper {
         if (Test-Path $repoSettingsPath) {
             if (-not $BcContainerHelperVersion) {
                 $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+                Write-Host $ENV:GITHUB_ACTION_PATH
                 $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
                 if ($ap -and $ap.Count -gt 4) {
-                    $branch = $ap[$ap.Count-2]
+                    $folder = $ap[$ap.Count-5]
                     $owner = $ap[$ap.Count-4]
-                    if ($owner -eq "freddydk") {
-                        $bcContainerHelperVersion = "dev"
-                    }
-                    elseif ($owner -eq "businesscentralapps") {
-                        $bcContainerHelperVersion = "preview"
-                    }
-                    elseif ($owner -eq "microsoft" -and $branch -eq "preview") {
-                        $bcContainerHelperVersion = "preview"
+                    $repo = $ap[$ap.Count-3]
+                    $branch = $ap[$ap.Count-2]
+                    if ($folder -eq "_actions" -and $repo -eq "AL-Go-Actions") {
+                        if ($owner -eq "microsoft") {
+                            if ($branch -eq "preview") {
+                                $bcContainerHelperVersion = "preview"
+                            }
+                        }
+                        else {
+                            $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
+                        }
                     }
                 }
                 if ($bcContainerHelperVersion -eq "" -and $repoSettings.ContainsKey("BcContainerHelperVersion")) {
                     $BcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+                    if ($BcContainerHelperVersion -like "https://*") {
+                        throw "Setting BcContainerHelperVersion to a URL is not allowed."
+                    }
                 }
             }
             $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
@@ -240,9 +247,15 @@ function DownloadAndImportBcContainerHelper {
     else {
         $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
         $webclient = New-Object System.Net.WebClient
-        if ($BcContainerHelperVersion -eq "dev") {
-            Write-Host "Downloading BcContainerHelper developer version"
-            $webclient.DownloadFile("https://github.com/microsoft/navcontainerhelper/archive/dev.zip", "$tempName.zip")
+        if ($BcContainerHelperVersion -like "https://*") {
+            Write-Host "Downloading BcContainerHelper developer version from $BcContainerHelperVersion"
+            try {
+                $webclient.DownloadFile($BcContainerHelperVersion, "$tempName.zip")
+            }
+            catch {
+                Write-Host "Download failed, downloading BcContainerHelper $BcContainerHelperVersion version from Blob Storage"
+                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")        
+            }
         }
         elseif ($BcContainerHelperVersion -eq "preview") {
             Write-Host "Downloading BcContainerHelper $BcContainerHelperVersion version from Blob Storage"
