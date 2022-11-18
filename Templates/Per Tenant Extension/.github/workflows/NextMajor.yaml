@@ -133,7 +133,7 @@ jobs:
           $settings = '${{ env.Settings }}' | ConvertFrom-Json
           $project = '${{ matrix.project }}'
           if ($project -eq ".") { $project = $settings.RepoName }
-          'TestResults','BcptTestResults','BuildOutput' | ForEach-Object {
+          'TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
             $name = "$($_)ArtifactsName"
             $value = "$($project.Replace('\','_'))-$_-NextMajor-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
@@ -146,6 +146,14 @@ jobs:
         with:
           name: ${{ env.buildOutputArtifactsName }}
           path: '${{ matrix.project }}/BuildOutput.txt'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - container event log
+        uses: actions/upload-artifact@v3
+        if: (failure()) && (hashFiles(format('{0}/ContainerEventLog.evtx',matrix.project)) != '')
+        with:
+          name: ${{ env.ContainerEventLogArtifactsName }}
+          path: '${{ matrix.project }}/ContainerEventLog.evtx'
           if-no-files-found: ignore
 
       - name: Publish artifacts - test results
