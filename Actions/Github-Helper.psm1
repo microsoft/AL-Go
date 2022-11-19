@@ -114,7 +114,7 @@ function Get-dependencies {
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
                 $projects.Split(',') | ForEach-Object {
-                    $downloadName = Join-Path $saveToPath "$($_)-$($dependency.branch)-$($mask)-*"
+                    $downloadName = Join-Path $saveToPath "thisbuild-$($_)-$($mask)"
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
@@ -128,7 +128,7 @@ function Get-dependencies {
                         }
                     }
                     elseif ($mask -ne 'TestApps') {
-                        Write-Host "$_ not build, downloading from artifacts"
+                        Write-Host "$_ not built, downloading from artifacts"
                         $missingProjects += @($_)
                     }
                 }
