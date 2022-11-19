@@ -238,6 +238,7 @@ try {
     }
 
     $buildOutputFile = Join-Path $projectPath "BuildOutput.txt"
+    $containerEventLogFile = Join-Path $projectPath "ContainerEventLog.evtx"
 
     "containerName=$containerName" | Add-Content $ENV:GITHUB_ENV
 
@@ -362,6 +363,7 @@ try {
         -testFolders $repo.testFolders `
         -bcptTestFolders $repo.bcptTestFolders `
         -buildOutputFile $buildOutputFile `
+        -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
         -customCodeCops $repo.customCodeCops `
@@ -385,7 +387,8 @@ try {
         Copy-Item -Path (Join-Path $projectPath ".output") -Destination $destFolder -Recurse -Force
         Copy-Item -Path (Join-Path $projectPath "testResults*.xml") -Destination $destFolder
         Copy-Item -Path (Join-Path $projectPath "bcptTestResults*.json") -Destination $destFolder
-        Copy-Item -Path (Join-Path $projectPath "buildoutput.txt") -Destination $destFolder
+        Copy-Item -Path $buildOutputFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
+        Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
 
     TrackTrace -telemetryScope $telemetryScope
@@ -395,6 +398,16 @@ catch {
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
+    try {
+        if (Test-BcContainer -containerName $containerName) {
+            Write-Host "Get Event Log from container"
+            $eventlogFile = Get-BcContainerEventLog -containerName $containerName -doNotOpen
+            Copy-Item -Path $eventLogFile -Destination $containerEventLogFile
+            $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+            Copy-Item -Path $containerEventLogFile -Destination $destFolder
+        }
+    }
+    catch {}
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
     if ($containerBaseFolder -and (Test-Path $containerBaseFolder) -and $projectPath -and (Test-Path $projectPath)) {
         Write-Host "Removing temp folder"
