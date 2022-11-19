@@ -254,12 +254,16 @@ function DownloadAndImportBcContainerHelper {
             }
             catch {
                 Write-Host "Download failed, downloading BcContainerHelper $BcContainerHelperVersion version from Blob Storage"
-                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")        
+                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")
             }
+        }
+        elseif ($BcContainerHelperVersion -eq "dev") {
+            Write-Host "Downloading BcContainerHelper dev branch"
+            $webclient.DownloadFile("https://github.com/freddydk/navcontainerhelper/archive/master.zip", "$tempName.zip")
         }
         elseif ($BcContainerHelperVersion -eq "preview") {
             Write-Host "Downloading BcContainerHelper $BcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")        
+            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")
         }
         else {
             Write-Host "Downloading BcContainerHelper $BcContainerHelperVersion version from CDN"
