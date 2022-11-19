@@ -203,7 +203,7 @@ try {
                 }
 
                 if ($baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
-                    $yaml.Replace('jobs:/Initialization:/env:/workflowDepth:',"workflowDepth: $depth")
+                    $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
                     if ($depth -gt 1) {
                         $initializationOutputs = $yaml.Get('jobs:/Initialization:/outputs:/')
                         $addOutput = @()
