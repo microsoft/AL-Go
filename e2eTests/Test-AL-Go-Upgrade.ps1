@@ -109,6 +109,9 @@ try {
     SetRepositorySecret -name 'GHTOKENWORKFLOW' -value (ConvertTo-SecureString -String $token -AsPlainText -Force)
     Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
     $runs++
+    
+    # Wait for PR handler to start
+    Start-Sleep -seconds 100
     MergePRandPull -branch $branch
     $runs += 2
     
