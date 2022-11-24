@@ -3,7 +3,7 @@
 
 1. Navigate to https://github.com/microsoft/AL-Go-PTE and choose **Use this template**
 
-![Use this template](/Scenarios/images/1a.png)
+![Use this template](images/1a.png)
 
 1. Enter **app1** as repository name, select Public or Private and select **Create Repository from template**
 1. Select **Actions** -> **Create a new app** -> **Run workflow**
