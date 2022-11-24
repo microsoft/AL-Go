@@ -1,6 +1,6 @@
 # #11 Set up CI/CD for an existing AppSource App
 *Prerequisites: A GitHub account and experience from the other scenarios*
-1. Navigate to https://github.com/microsoft/AL-Go-AppSource and choose **Use this template**.
+1. Navigate to [https://github.com/microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) and choose **Use this template**.
 ![Use this template](images/11a.png)
 1. Enter **app3** as repository name and select **Create Repository from template**.
 1. My current AppSource App is using **Azure DevOps**, I download the **entire source** as a **.zip** file and place it on **Dropbox** or **Azure Blob storage** and create a **secure download Url** to the .zip file.

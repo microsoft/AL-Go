@@ -18,7 +18,7 @@ These URLs can be used in your AL project when running Update AL-Go System Files
 
 Now you can clone these repos and work with them, fix issues etc. and when you are done with the functionality you want to contribute with, run the **Collect** workflow in your local fork of the AL-Go repository. This collects the changes from your local 3 repositories and creates a Pull Request against your local fork (or commits directly)
 
-Ensure that all tests run and create a Pull Request against https://github.com/microsoft/AL-Go.
+Ensure that all tests run and create a Pull Request against [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go).
 
 > **Note**: You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your local fork of the AL-Go repository** you publish to the 3 repositories.
 

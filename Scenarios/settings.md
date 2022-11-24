@@ -42,9 +42,9 @@ The repository settings are only read from the repository settings file (.github
 | Name | Description |
 | :-- | :-- |
 | templateUrl | Defines the URL of the template repository used to create this project and is used for checking and downloading updates to AL-Go System files. |
-| nextMajorSchedule | CRON schedule for when NextMajor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: https://crontab.guru |
-| nextMinorSchedule | CRON schedule for when NextMinor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: https://crontab.guru |
-| currentSchedule | CRON schedule for when Current workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: https://crontab.guru |
+| nextMajorSchedule | CRON schedule for when NextMajor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
+| nextMinorSchedule | CRON schedule for when NextMinor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
+| currentSchedule | CRON schedule for when Current workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
 | runs-on | Specifies which github runner will be used for all jobs in all workflows (except the Update AL-Go System Files workflow). The default is to use the GitHub hosted runner Windows-latest. You can specify a special GitHub Runner for the build job using the GitHubRunner setting. Read [this](SelfHostedGitHubRunner.md) for more information.
 | githubRunner | Specifies which github runner will be used for the build job in workflows including a build job. This is the most time consuming task. By default this job uses the Windows-latest github runner (unless overridden by the runs-on setting). This settings takes precedence over runs-on so that you can use different runners for the build job and the housekeeping jobs. See runs-on setting.
 
@@ -164,8 +164,8 @@ Settings, which might be relevant to set in the settings file includes
 
 | Setting | Description | Default |
 | :-- | :-- | :-- |
-| baseUrl | The Base Url for the online Business Central Web Client. This should be changed when targetting embed apps. | https://businesscentral.dynamics.com |
-| apiBaseUrl | The Base Url for the online Business Central API endpoint. This should be changed when targetting embed apps. | https://api.businesscentral.dynamics.com |
+| baseUrl | The Base Url for the online Business Central Web Client. This should be changed when targetting embed apps. | [https://businesscentral.dynamics.com](https://businesscentral.dynamics.com) |
+| apiBaseUrl | The Base Url for the online Business Central API endpoint. This should be changed when targetting embed apps. | [https://api.businesscentral.dynamics.com](https://api.businesscentral.dynamics.com) |
 | PartnerTelemetryConnectionString | The Telemetry Connection String for partner telemetry for DevOps telemetry. | |
 | SendExtendedTelemetryToMicrosoft | Set this value to true if you agree to emit extended DevOps telemetry to Microsoft. | false |
 | ObjectIdForInternalUse | BcContainerHelper will use this Object ID for internal purposes. Change if the default Object ID is in use. | 88123 |

@@ -1,7 +1,7 @@
 # #1 Create a new per-tenant extension (like AL Go) and start developing in VS Code
 *Prerequisites: A GitHub account, VS-Code (with AL and PowerShell extensions installed), and Docker installed locally*
 
-1. Navigate to https://github.com/microsoft/AL-Go-PTE and choose **Use this template**
+1. Navigate to [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) and choose **Use this template**
 ![Use this template](images/1a.png)
 1. Enter **app1** as repository name, select Public or Private and select **Create Repository from template**
 1. Select **Actions** -> **Create a new app** -> **Run workflow**

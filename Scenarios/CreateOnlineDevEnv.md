@@ -5,7 +5,7 @@
 ![Cloud DevEnv](images/8a.png)
 1. The script will ask for an **environment name** if it isn’t specified and it will ask whether you want to reuse or **recreate** the environment if it already exists. After this the script will need access to the **admin center API** and will initiate a **device code login** for this purpose.
 ![Cloud DevEnv](images/8b.png)
-1. Open https://aka.ms/devicelogin and paste in the **code provided**, sign in and accept that you are trying to sign in with PowerShell.
+1. Open [https://aka.ms/devicelogin](https://aka.ms/devicelogin) and paste in the **code provided**, sign in and accept that you are trying to sign in with PowerShell.
 ![Cloud DevEnv](images/8c.png)
 1. Wait for the script to finish. All apps are compiled and published to the online environment using the development scope and **VS Code is ready for RAD development**
 ![Cloud DevEnv](images/8d.png)

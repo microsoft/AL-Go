@@ -5,10 +5,10 @@ When running the CI/CD workflow, the build job is by far the most time-consuming
 
 GitHub runners can be registered for an organization (accessible for all repositories in the organization) or for a single repository.
 
-1. Navigate to https://github.com/organizations/{organization}/settings/actions/runners/new to create a self-hosted runner for your organization. Use https://github.com/{organization}/{repository}/settings/actions/runners to create a self-hosted runner for a single repository.
+1. Navigate to [https://github.com/organizations/{organization}/settings/actions/runners/new](https://github.com/organizations/{organization}/settings/actions/runners/new) to create a self-hosted runner for your organization. Use [https://github.com/{organization}/{repository}/settings/actions/runners](https://github.com/{organization}/{repository}/settings/actions/runners) to create a self-hosted runner for a single repository.
 ![Organization new runner](images/13a.png)
 1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually, then go to step 9 to continue the configuration.
-1. To create an Azure VM hosting x self-hosted runners, open a new tab and navigate to https://aka.ms/getbuildagent.
+1. To create an Azure VM hosting x self-hosted runners, open a new tab and navigate to [https://aka.ms/getbuildagent](https://aka.ms/getbuildagent).
 1. Enter the **Resource Group name**, **Region**, **VM Name**, **Admin Password** of your choice.
 1. Enter the **number of agents** you want to create on the VM.
 1. Grab the **token**, the **organization Url**, and the **Agent Url** from the Create Self-Hosted runner page, and specify **self-hosted** in labels.

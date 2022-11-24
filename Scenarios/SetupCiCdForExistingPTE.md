@@ -1,8 +1,8 @@
 # #10 Set up CI/CD for an existing per-tenant extension (BingMaps)
 *Prerequisites: A GitHub account.
-We will use the BingMaps sample app, which can be found on GitHub in the [Business Central BingMaps.PTE repo](https://github.com/BusinessCentralApps/BingMaps.PTE). Copy the following URL (a direct download of the latest released app file from BingMaps sample) to the clipboard: https://businesscentralapps.blob.core.windows.net/bingmaps-pte/latest/bingmaps-pte-apps.zip – you can also download the .zip file and see the content of it.
+We will use the BingMaps sample app, which can be found on GitHub in the [Business Central BingMaps.PTE repo](https://github.com/BusinessCentralApps/BingMaps.PTE). Copy the following URL (a direct download of the latest released app file from BingMaps sample) to the clipboard: [https://businesscentralapps.blob.core.windows.net/bingmaps-pte/latest/bingmaps-pte-apps.zip](https://businesscentralapps.blob.core.windows.net/bingmaps-pte/latest/bingmaps-pte-apps.zip) – you can also download the .zip file and see the content of it.
 
-1. Navigate to https://github.com/microsoft/AL-Go-PTE and then choose **Use this template**.
+1. Navigate to [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) and then choose **Use this template**.
 ![Use this template](images/10a.png)
 1. Enter **app2** as repository name and select **Create Repository from template**.
 1. Under **Actions** select the **Add existing app or test app** workflow and choose **Run workflow**.
