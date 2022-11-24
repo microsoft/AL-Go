@@ -2,9 +2,7 @@
 *Prerequisites: A GitHub account, VS-Code (with AL and PowerShell extensions installed), and Docker installed locally*
 
 1. Navigate to https://github.com/microsoft/AL-Go-PTE and choose **Use this template**
-
 ![Use this template](images/1a.png)
-
 1. Enter **app1** as repository name, select Public or Private and select **Create Repository from template**
 1. Select **Actions** -> **Create a new app** -> **Run workflow**
 ![Run workflow](images/1b.png)
@@ -31,4 +29,4 @@
 1. Inspect the workflow run by choosing the **build job**, expanding the **Run Pipeline** section and the **Compiling apps** subsection
 ![Inspect](/Scenarios/images/1j.png)
 ---
-[back](/README.md)
+[back](../README.md)
