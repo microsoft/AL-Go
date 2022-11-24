@@ -4,7 +4,7 @@ source: .
 incremental: false
 highlighter: rouge
 markdown: kramdown
-remote-theme: pages-themes/midnight@v0.2.0
+remote-theme: pages-themes/cayman
 title: "AL-Go for GitHub"
 description: "The plug-and-play DevOps solution for Business Central app development on GitHub"
 baseurl: AL-Go/
