@@ -12,6 +12,7 @@ gist:
 kramdown:
   math_engine: mathjax
   syntax_highlighter: rouge
-remote_theme: pages-themes/slate@v0.2.0
+remote_theme: pages-themes/hacker@v0.2.0
 plugins:
 - jekyll-remote-theme
+- jekyll-responsive_image
