@@ -1,3 +1,6 @@
+---
+permalink: /README.html
+---
 # AL-Go for GitHub
 AL-Go for GitHub is a set of GitHub templates and actions, which can be used to setup and maintain professional DevOps processes for your Business Central AL projects.
 
