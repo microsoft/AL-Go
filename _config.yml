@@ -11,3 +11,9 @@ gist:
 kramdown:
   math_engine: mathjax
   syntax_highlighter: rouge
+defaults:
+  - scope:
+      path: ""
+    values:
+      title: "AL-Go for GitHub"
+      description: "The plug-and-play DevOps solution for Business Central app development on GitHub"
