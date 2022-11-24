@@ -5,8 +5,8 @@ incremental: false
 highlighter: rouge
 markdown: kramdown
 remote-theme: pages-themes/midnight@v0.2.0
-title: AL-Go for GitHub
-description: The plug-and-play DevOps solution for Business Central app development on GitHub
+title: "AL-Go for GitHub"
+description: "The plug-and-play DevOps solution for Business Central app development on GitHub"
 baseurl: AL-Go/
 gist:
   noscript: false
