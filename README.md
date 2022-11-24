@@ -38,7 +38,7 @@ This project in the main source repository for AL-Go for GitHub. This project is
 
 # Contributing
 
-Please read [this document](Scenarios/Contributing.md) to understand how to contribute to AL-Go for GitHub.
+Please read [this document](Scenarios/Contribute.md) to understand how to contribute to AL-Go for GitHub.
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us

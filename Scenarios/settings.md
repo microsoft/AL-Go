@@ -174,6 +174,6 @@ Settings, which might be relevant to set in the settings file includes
 
 ## Your own version of AL-Go for GitHub
 
-For experts only, following the description [here](Contributing.md) you can setup a local fork of **AL-Go for GitHub** and use that as your templates. You can fetch upstream changes from Microsoft regularly to incorporate these changes into your version and this way have your modified version of AL-Go for GitHub.
+For experts only, following the description [here](Contribute.md) you can setup a local fork of **AL-Go for GitHub** and use that as your templates. You can fetch upstream changes from Microsoft regularly to incorporate these changes into your version and this way have your modified version of AL-Go for GitHub.
 
 **Note:** Our goal is to never break repositories, which are using AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.

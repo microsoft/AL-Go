@@ -4,7 +4,7 @@ This section describes how to contribute to AL-Go. How to set up your own enviro
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **local GitHub account**.
 2. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
-3. In your local fork of AL-Go, create a New Repository Secret called **OrgPAT** with your personal access token as content. See https://github.com/yourGitHubUserName/AL-Go/settings/secrets/actions.
+3. In your local fork of AL-Go, create a New Repository Secret called **OrgPAT** with your personal access token as content. See **https://github.com/yourGitHubUserName/AL-Go/settings/secrets/actions**.
 4. In your local fork of AL-Go, navigate to **Actions**, select the **Deploy** workflow and choose **Run Workflow**.
 5. Using the default settings press **Run workflow**.
 
