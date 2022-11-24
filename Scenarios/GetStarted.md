@@ -29,4 +29,4 @@
 1. Inspect the workflow run by choosing the **build job**, expanding the **Run Pipeline** section and the **Compiling apps** subsection
 ![Inspect](/Scenarios/images/1j.png)
 ---
-[back](/README.md)
+[back](/)
