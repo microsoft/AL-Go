@@ -1,5 +1,5 @@
 # Sample workflow for building and deploying a Jekyll site to GitHub Pages
-name: Deploy Jekyll with GitHub Pages dependencies preinstalled
+name: Deploy Jekyll with GitHub Pages
 
 on:
   # Runs on pushes targeting the default branch
@@ -15,13 +15,11 @@ permissions:
   pages: write
   id-token: write
 
-# Allow one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
@@ -33,11 +31,10 @@ jobs:
         uses: actions/jekyll-build-pages@v1
         with:
           source: .
-          destination: ./_site
+          destination: ./_site/preview
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages
