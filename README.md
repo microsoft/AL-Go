@@ -4,8 +4,8 @@ AL-Go for GitHub is a set of GitHub templates and actions, which can be used to 
 The goal is that people who have created their GitHub repositories based on the AL-Go templates, can maintain these repositories and stay current just by running a workflow, which updates their repositories. This includes necessary changes to scripts and workflows to cope with new features and functions in Business Central.
 
 The template repositories to use as starting point are:
-- https://github.com/microsoft/AL-Go-PTE is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
-- https://github.com/microsoft/AL-Go-AppSource is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
+- [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
+- [https://github.com/microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
 
 
 The below usage scenarios takes you through how to get started and how to perform the most common tasks.
@@ -32,9 +32,9 @@ Usage scenarios:
 # This project
 This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
 
-- https://github.com/microsoft/AL-Go-PTE is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
-- https://github.com/microsoft/AL-Go-AppSource is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
-- https://github.com/microsoft/AL-Go-Actions is the GitHub repository containing the GitHub Actions used by the templates above.
+- [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
+- [https://github.com/microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
+- [https://github.com/microsoft/AL-Go-Actions](https://github.com/microsoft/AL-Go-Actions) is the GitHub repository containing the GitHub Actions used by the templates above.
 
 # Contributing
 

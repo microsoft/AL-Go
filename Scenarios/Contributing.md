@@ -1,17 +1,18 @@
 # Contributing to AL-Go
+
 This section describes how to contribute to AL-Go. How to set up your own environment (your own set of actions and your own templates)
 
-1. Fork the https://github.com/microsoft/AL-Go repository to your **local GitHub account**.
-2. Navigate to https://github.com/settings/tokens/new and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
+1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **local GitHub account**.
+2. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
 3. In your local fork of AL-Go, create a New Repository Secret called **OrgPAT** with your personal access token as content. See https://github.com/yourGitHubUserName/AL-Go/settings/secrets/actions.
 4. In your local fork of AL-Go, navigate to **Actions**, select the **Deploy** workflow and choose **Run Workflow**.
 5. Using the default settings press **Run workflow**.
 
 Now you should have 3 new public repositories:
 
-- https://github.com/yourGitHubUserName/AL-Go-Actions
-- https://github.com/yourGitHubUserName/AL-Go-AppSource
-- https://github.com/yourGitHubUserName/AL-Go-PTE
+- [https://github.com/yourGitHubUserName/AL-Go-Actions](https://github.com/yourGitHubUserName/AL-Go-Actions)
+- [https://github.com/yourGitHubUserName/AL-Go-AppSource](https://github.com/yourGitHubUserName/AL-Go-AppSource)
+- [https://github.com/yourGitHubUserName/AL-Go-PTE](https://github.com/yourGitHubUserName/AL-Go-PTE)
 
 These URLs can be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this area for your AL project.
 
@@ -25,3 +26,5 @@ Ensure that all tests run and create a Pull Request against https://github.com/m
 ---
 > **Not recommended**: You can also run the deploy and collect actions locally by running the Deploy and Collect scripts in the Internal folder with a .json file as a parameter specifying which repositories to deploy to and collect from. The `fredddk.json` file in the internal folder is a sample of this.
 
+---
+[back](../README.md)
