@@ -15,4 +15,4 @@ In the case of KeyVault access for apps, it is not enough to just add the secret
 With this, containers set up for build pipelines or development environments will have access to this keyvault.
 
 ---
-[back](/README.md)
+[back](../README.md)
