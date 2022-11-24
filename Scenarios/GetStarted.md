@@ -7,7 +7,7 @@
 
 1. Enter **app1** as repository name, select Public or Private and select **Create Repository from template**
 1. Select **Actions** -> **Create a new app** -> **Run workflow**
-![Run workflow](/Scenarios/images/1b.png)
+![Run workflow](images/1b.png)
 1. Enter **Name**, **Publisher**, **ID range** and specify **Y** in **Direct COMMIT** and choose **Run workflow**.
 1. When the workflow is complete, select **< > Code** in the top bar
 1. Choose the **Code** button and copy the **https Clone Url** (in this picture: *https://github.com/freddydk/App1.git*)
