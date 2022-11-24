@@ -9,5 +9,6 @@
 ![Run workflow](images/4c.png)
 1. Under **Actions**, select the **CI/CD** workflow and choose **Run workflow** to kick off a new CI/CD workflow. After the CI/CD workflow finishes, you can inspect the workflow output to see that the latest release was used as a baseline for the upgrade tests in the pipeline. You will also see that the new build, just created was deployed to the QA environment automatically.
 ![Run workflow](images/4d.png)
+
 ---
 [back](../README.md)

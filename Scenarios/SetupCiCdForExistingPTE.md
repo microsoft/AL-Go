@@ -14,5 +14,6 @@ We will use the BingMaps sample app, which can be found on GitHub in the [Busine
 1. After the workflow completes, you can investigate the output and see that everything works.
 ![Success](images/10d.png)
 1. Use [scenario 3](RegisterSandboxEnvironment.md), [scenario 4](CreateRelease.md), and [scenario 5](RegisterProductionEnvironment.md) to set up customer environments, publish and test the app.
+
 ---
 [back](../README.md)

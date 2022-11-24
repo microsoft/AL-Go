@@ -7,5 +7,6 @@
 1. Run the CI/CD pipeline to see that the deployment still works, reading the **authContext** secret from the KeyVault.
 ![runpipeline](images/7a.png)
 1. Redo scenario 6 to see that Update AL-Go System files still works.
+
 ---
 [back](../README.md)

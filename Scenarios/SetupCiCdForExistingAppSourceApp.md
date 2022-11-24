@@ -22,5 +22,6 @@ If your secrets are called something else than **CodesignCertificateUrl** and **
 "CodeSignCertificateUrlSecretName": "myCodeSignCertUrl",
 "CodeSignCertificatePasswordSecretName": "myCodeSignCertPassword",
 ```
+
 ---
 [back](../README.md)

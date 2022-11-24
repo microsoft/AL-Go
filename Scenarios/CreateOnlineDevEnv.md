@@ -14,5 +14,6 @@
 1. Your online environment will have your app changes.
 ![Cloud DevEnv](images/8f.png)
 1. The `launch.json` file will be updated with your new environment in VS Code. You can decide whether you want to check-in the changes to the repo or only use this locally.
+
 ---
 [back](../README.md)

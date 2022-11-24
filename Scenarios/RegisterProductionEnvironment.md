@@ -6,5 +6,6 @@
 ![Run workflow](images/5a.png)
 1. After running the **Publish to Environment** workflow, you should see that the app was deployed to the **MYPROD** environment only.
 ![Run workflow](images/5b.png)
+
 ---
 [back](../README.md)

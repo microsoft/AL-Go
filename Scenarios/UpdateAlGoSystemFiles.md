@@ -18,5 +18,6 @@
 1. Inspect the pull request and see that it indeed reverts your change to the `LocalDevEnv.ps1` file.
 ![update](images/6g.png)
 1. By default, this workflow will apply any updates to the **workflow files (in .github\workflows)** or **system scripts (in .AL-Go)** from the template repository used to spin up the repository. If you want to change branch or template Url, you can specify the `templateUrl@branch` when you run the workflow.
+
 ---
 [back](../README.md)
