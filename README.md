@@ -53,7 +53,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 ## See also
 
-- [Developing Extensions in AL](https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/devenv-dev-overview)
+- [Developing Extensions in AL](https://go.microsoft.com/fwlink/?linkid=2216858&clcid=0x409)
 - [AL-Go for GitHub](https://freddysblog.com/2022/04/26/al-go-for-github/)
 - [Migrating to AL-Go for GitHub](https://freddysblog.com/2022/04/27/migrating-to-al-go-for-github/)
 - [Structuring your AL-Go for GitHub repositories](https://freddysblog.com/2022/04/28/structuring-your-github-repositories/)
