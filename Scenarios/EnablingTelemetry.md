@@ -47,4 +47,4 @@ Here is a list of the telemetry signals for different workflows:
 | DO0101 | AL-Go workflow ran: Current |
 
 ---
-[back](/README.md)
+[back](../README.md)

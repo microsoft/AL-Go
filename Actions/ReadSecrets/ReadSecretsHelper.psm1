@@ -80,7 +80,7 @@ function Get-KeyVaultCredentials {
             throw "Secret AZURE_CREDENTIALS is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
         }
     }
-    throw "Secret AZURE_CREDENTIALS is missing. In order to use a Keyvault, please add a secret called AZURE_CREDENTIALS like explained here: https://docs.microsoft.com/en-us/azure/developer/github/connect-from-azure (remember to format the json string as compressed json, i.e. no line breaks)"
+    throw "Secret AZURE_CREDENTIALS is missing. In order to use a Keyvault, please add a secret called AZURE_CREDENTIALS like explained here: https://go.microsoft.com/fwlink/?linkid=2217318&clcid=0x409 (remember to format the json string as compressed json, i.e. no line breaks)"
 }
 
 function InstallKeyVaultModuleIfNeeded {
