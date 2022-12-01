@@ -123,14 +123,18 @@ try {
                         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.before)...$($ghEvent.after)"
                     }
                     if ($ghEvent.before -eq '0'*40) {
-                        $buildProjects = $projects
+                        $filesChanged = @()
                     }
                     else {
                         $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
                         $filesChanged = @($response.files | ForEach-Object { $_.filename })
                     }
                 }
-                if ($filesChanged.Count -ge 250) {
+                if ($filesChanged.Count -eq 0) {
+                    Write-Host "Building all projects"
+                    $buildProjects = $projects
+                }
+                elseif ($filesChanged.Count -ge 250) {
                     Write-Host "More than 250 files modified, building all projects"
                     $buildProjects = $projects
                 }
