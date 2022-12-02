@@ -1,7 +1,8 @@
 ## Release Checklist (release to Preview)
 
+1. Any issues included should be moved to https://aka.ms/algoroadmap "In preview" column
 1. Ensure .github\RELEASENOTES.md are up-to-date
-    - Include all issues from https://aka.ms/algoroadmap "In Preview" column
+    - Include all issues from https://aka.ms/algoroadmap "In preview" column
     - Top section must be ## Preview
 1. Run End 2 End tests
 1. Run Deploy workflow
