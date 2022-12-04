@@ -218,7 +218,7 @@ try {
         invoke-git commit --allow-empty -m "'$commitMessage'"
         if ($baseRepoBranch) {
             invoke-git push -u $serverUrl $baseRepoBranch
-            invoke-gh pr create --fill --head $baseRepoBranch --repo $srcOwnerAndRepo
+            invoke-gh pr create --fill --head $baseRepoBranch --repo $srcOwnerAndRepo --base $ENV:GITHUB_REF_NAME
             invoke-git checkout $algoBranch
         }
         else {
