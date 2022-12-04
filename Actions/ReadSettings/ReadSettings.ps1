@@ -209,6 +209,19 @@ try {
             else {
                 $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
             }
+        } | Where-Object {
+            $branches = @( 'main' )
+            if ($settings.Contains("$_-Branches")) {
+                $branches = @($settings."$_-Branches")
+            }
+            $branches | Out-Host
+            $includeEnvironment = $false
+            $branches | ForEach-Object {
+                if ($ENV:GITHUB_REF_NAME -like $_) {
+                    $includeEnvironment = $true
+                }
+            }
+            $includeEnvironment
         })
 
         $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
