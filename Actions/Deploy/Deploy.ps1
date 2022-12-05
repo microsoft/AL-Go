@@ -45,12 +45,13 @@ try {
         if (Test-Path $artifacts -PathType Container) {
             $projects.Split(',') | ForEach-Object {
                 $project = $_.Replace('\','_')
+                $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
                 Write-Host "project '$project'"
-                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-main-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-$refname-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
                 if (!($apps)) {
-                    throw "There is no artifacts present in $artifacts."
+                    throw "There is no artifacts present in $artifacts matching $project-$refname-Apps-<version>."
                 }
-                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-main-Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
+                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-$refname-Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
             }
         }
         elseif (Test-Path $artifacts) {

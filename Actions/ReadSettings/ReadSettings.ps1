@@ -82,8 +82,14 @@ try {
     $outSettings = @{}
     $getSettings | ForEach-Object {
         $setting = $_.Trim()
-        $outSettings += @{ "$setting" = $settings."$setting" }
-        Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settings."$setting")"
+        $settingValue = $settings."$setting"
+        $outSettings += @{ "$setting" = $settingValue }
+        if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
+            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Compress)"
+        }
+        else {
+            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
+        }
     }
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Compress
@@ -209,16 +215,32 @@ try {
             else {
                 $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
             }
+        } | Where-Object {
+            $branches = @( 'main' )
+            $environmentName = $_.Split(' ')[0]
+            $deployToName = "DeployTo$environmentName"
+            if (($settings.Contains($deployToName)) -and ($settings."$deployToName".Contains('Branches'))) {
+                $branches = @($settings."$deployToName".Branches)
+            }
+            $branches | Out-Host
+            $includeEnvironment = $false
+            $branches | ForEach-Object {
+                if ($ENV:GITHUB_REF_NAME -like $_) {
+                    $includeEnvironment = $true
+                }
+            }
+            $includeEnvironment
         })
 
         $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
         $environments | Select-Object -Unique | ForEach-Object { 
-            $environmentGitHubRunnerKey = "$($_.Split(' ')[0])_GitHubRunner"
-            $os = $settings."runs-on".Split(',').Trim()
-            if (([HashTable]$settings).ContainsKey($environmentGitHubRunnerKey)) {
-                $os = $settings."$environmentGitHubRunnerKey".Split(',').Trim()
+            $environmentName = $_.Split(' ')[0]
+            $deployToName = "DeployTo$environmentName"
+            $runson = $settings."runs-on".Split(',').Trim()
+            if (($settings.Contains($deployToName)) -and ($settings."$deployToName".Contains('runs-on'))) {
+                $runson = $settings."$deployToName"."runs-on"
             }
-            $json.matrix.include += @{ "environment" = $_; "os" = "$($os | ConvertTo-Json -compress)" }
+            $json.matrix.include += @{ "environment" = $_; "os" = "$($runson | ConvertTo-Json -compress)" }
         }
         $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
         Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentsJson=$environmentsJson"
