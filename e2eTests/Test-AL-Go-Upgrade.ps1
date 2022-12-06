@@ -114,6 +114,9 @@ try {
     Start-Sleep -seconds 100
     MergePRandPull -branch $branch
     $runs++
+    if ([System.Version]$release.Substring(1) -ge [System.Version]"2.2") {
+        $runs++
+    }
     
     # Run CI/CD and wait
     $run = Run-CICD -wait -branch $branch

@@ -89,6 +89,10 @@ jobs:
           $sha = ''
           $allArtifacts = @()
           $page = 1
+          $headers = @{ 
+            "Authorization" = "token ${{ github.token }}"
+            "Accept"        = "application/json"
+          }
           do {
             $repoArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page" | ConvertFrom-Json
             $allArtifacts += $repoArtifacts.Artifacts
@@ -108,10 +112,6 @@ jobs:
             $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
             Write-Host "Analyzing artifacts for project $project"
             $appVersion = '${{ github.event.inputs.appVersion }}'
-            $headers = @{ 
-                "Authorization" = "token ${{ github.token }}"
-                "Accept"        = "application/json"
-            }
             if ($appVersion -eq "latest") {
               Write-Host "Grab latest"
               $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*" } | Select-Object -First 1
