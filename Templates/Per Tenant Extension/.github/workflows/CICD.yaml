@@ -21,8 +21,6 @@ permissions:
   pull-requests: write
   checks: write
 
-Introducing a syntax error - right here!!!!
-
 defaults:
   run:
     shell: PowerShell
