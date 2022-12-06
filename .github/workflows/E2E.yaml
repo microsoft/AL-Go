@@ -2,6 +2,11 @@ name: End to end tests
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: ref on which to run the end-2-end tests (default is head_sha on main)
+        required: false
+        default: ''
 
 defaults:
   run:
@@ -43,6 +48,8 @@ jobs:
       appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Setup Repositories
         id: setup
@@ -55,6 +62,8 @@ jobs:
       releases: ${{ steps.calculatereleases.outputs.releases }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: CalculateReleases
         id: calculateReleases
@@ -80,6 +89,8 @@ jobs:
     needs: [ SetupRepositories ]
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -private
@@ -89,6 +100,8 @@ jobs:
     needs: [SetupRepositories ]
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -private
@@ -98,6 +111,8 @@ jobs:
     needs: [ SetupRepositories ]
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}'
@@ -107,6 +122,8 @@ jobs:
     needs: [ SetupRepositories ]
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -multiProject
@@ -116,6 +133,8 @@ jobs:
     needs: [SetupRepositories ]
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp
@@ -125,6 +144,8 @@ jobs:
     needs: [ SetupRepositories ]
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
@@ -138,6 +159,8 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -release '${{ matrix.release }}' -path 'pte'
@@ -151,6 +174,8 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Run tests
         run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
@@ -161,6 +186,8 @@ jobs:
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Remove Repositories
         run: e2eTests\RemoveRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
