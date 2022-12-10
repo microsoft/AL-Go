@@ -63,7 +63,11 @@ function YamlTest {
         }
     }
     $cmd = get-command $actionname
-    $addInputs = $true
+    $yaml.AppendLine("inputs:") | Out-Null
+    $yaml.AppendLine("  shell:") | Out-Null
+    $yaml.AppendLine("    description: Shell in which you want to run the action (powershell or pwsh)") | Out-Null
+    $yaml.AppendLine("    required: false") | Out-Null
+    $yaml.AppendLine("    default: powershell") | Out-Null
     $parameterString = ""
     $envLines = [System.Text.StringBuilder]::new()
     if ($cmd.Parameters.Count -gt 0) {
@@ -75,11 +79,6 @@ function YamlTest {
                 if (!($description)) { $description = "*" }
                 $required = $value.ParameterSets.__allParameterSets.IsMandatory
                 $type = $value.ParameterType.ToString()
-
-                if ($addInputs) {
-                    $yaml.AppendLine("inputs:") | Out-Null
-                    $addInputs = $false
-                }    
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
@@ -114,7 +113,7 @@ function YamlTest {
     $yaml.AppendLine("  using: composite") | Out-Null
     $yaml.AppendLine("  steps:") | Out-Null
     $yaml.AppendLine("    - name: run") | Out-Null
-    $yaml.AppendLine("      shell: PowerShell") | Out-Null
+    $yaml.AppendLine('      shell: ${{ inputs.shell }}') | Out-Null
     if ($outputs -and $outputs.Count -gt 0) {
         $yaml.AppendLine("      id: $($actionname.ToLowerInvariant())") | Out-Null
     }
