@@ -87,7 +87,7 @@ try {
         try {
             $templateUrl = $templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/"
             Write-Host "Api url $templateUrl"
-            $templateInfo = InvokeWebRequest -Headers $headers -Uri $templateUrl | ConvertFrom-Json
+            $templateInfo = InvokeWebRequest -Headers $headers -Uri $templateUrl -retry | ConvertFrom-Json
         }
         catch {
             throw "Could not retrieve the template repository. Error: $($_.Exception.Message)"
@@ -95,7 +95,7 @@ try {
     }
     else {
         Write-Host "Api url $($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)"
-        $repoInfo = InvokeWebRequest -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)" | ConvertFrom-Json
+        $repoInfo = InvokeWebRequest -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)" -retry | ConvertFrom-Json
         if (!($repoInfo.PSObject.Properties.Name -eq "template_repository")) {
             OutputWarning -message "This repository wasn't built on a template repository, or the template repository is deleted. You must specify a template repository in the AL-Go settings file."
             exit
@@ -112,7 +112,7 @@ try {
     }
     $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}',"/$templateBranch")
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
+    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     
