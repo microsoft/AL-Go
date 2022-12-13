@@ -10,9 +10,9 @@ if (Test-Path $gitHubHelperPath) {
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
-$ALGoFolder = ".AL-Go\"
-$ALGoSettingsFile = ".AL-Go\settings.json"
-$RepoSettingsFile = ".github\AL-Go-Settings.json"
+$ALGoFolder = ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)"
+$ALGoSettingsFile = ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json"
+$RepoSettingsFile = ".github$([System.IO.Path]::DirectorySeparatorChar)AL-Go-Settings.json"
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
@@ -51,7 +51,20 @@ $testLibrariesApps = @($systemApplicationTestLibraryAppId, $TestsTestLibrariesAp
 $testFrameworkApps = @($anyAppId, $libraryAssertAppId, $libraryVariableStorageAppId) + $testLibrariesApps
 $testRunnerApps = @($permissionsMockAppId, $testRunnerAppId) + $performanceToolkitApps + $testLibrariesApps + $testFrameworkApps
 
-$MicrosoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
+$microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
+
+$isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
+if ($isPsCore) {
+    $byteEncodingParam = @{ "asByteStream" = $true }
+    $allowUnencryptedAuthenticationParam = @{ "allowUnencryptedAuthentication" = $true }
+}
+else {
+    $byteEncodingParam = @{ "Encoding" = "byte" }
+    $allowUnencryptedAuthenticationParam = @{ }
+    $isWindows = $true
+    $isLinux = $false
+    $IsMacOS = $false
+}
 
 function ConvertTo-HashTable() {
     [CmdletBinding()]
@@ -204,7 +217,7 @@ function DownloadAndImportBcContainerHelper {
             if (-not $BcContainerHelperVersion) {
                 $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
                 Write-Host $ENV:GITHUB_ACTION_PATH
-                $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
+                $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
                 if ($ap -and $ap.Count -gt 4) {
                     $folder = $ap[$ap.Count-5]
                     $owner = $ap[$ap.Count-4]
@@ -245,7 +258,7 @@ function DownloadAndImportBcContainerHelper {
         $BcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
     }
     else {
-        $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+        $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         $webclient = New-Object System.Net.WebClient
         if ($BcContainerHelperVersion -like "https://*") {
             Write-Host "Downloading BcContainerHelper developer version from $BcContainerHelperVersion"
@@ -327,7 +340,7 @@ function MergeCustomObjectIntoOrderedDictionary {
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
-            elseif ($dstPropType -ne $srcPropType) {
+            elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 throw "property $prop should be of type $dstPropType, is $srcPropType."
             }
             else {
@@ -377,17 +390,16 @@ function ReadSettings {
         "appBuild"                               = 0
         "appRevision"                            = 0
         "keyVaultName"                           = ""
-        "licenseFileUrlSecretName"               = "LicenseFileUrl"
-        "insiderSasTokenSecretName"              = "InsiderSasToken"
-        "ghTokenWorkflowSecretName"              = "GhTokenWorkflow"
-        "adminCenterApiCredentialsSecretName"    = "AdminCenterApiCredentials"
-        "applicationInsightsConnectionStringSecretName" = "ApplicationInsightsConnectionString"
+        "licenseFileUrlSecretName"               = "licenseFileUrl"
+        "insiderSasTokenSecretName"              = "insiderSasToken"
+        "ghTokenWorkflowSecretName"              = "ghTokenWorkflow"
+        "adminCenterApiCredentialsSecretName"    = "adminCenterApiCredentials"
+        "applicationInsightsConnectionStringSecretName" = "applicationInsightsConnectionString"
         "keyVaultCertificateUrlSecretName"       = ""
         "keyVaultCertificatePasswordSecretName"  = ""
         "keyVaultClientIdSecretName"             = ""
-        "codeSignCertificateUrlSecretName"       = "CodeSignCertificateUrl"
-        "codeSignCertificatePasswordSecretName"  = "CodeSignCertificatePassword"
-        "storageContextSecretName"               = "StorageContext"
+        "codeSignCertificateUrlSecretName"       = "codeSignCertificateUrl"
+        "codeSignCertificatePasswordSecretName"  = "codeSignCertificatePassword"
         "additionalCountries"                    = @()
         "appDependencies"                        = @()
         "appFolders"                             = @()
@@ -425,14 +437,15 @@ function ReadSettings {
         "appDependencyProbingPaths"              = @()
         "useProjectDependencies"                 = $false
         "runs-on"                                = "windows-latest"
+        "shell"                                  = "powershell"
         "githubRunner"                           = ""
         "cacheImageName"                         = "my"
         "cacheKeepDays"                          = 3
         "alwaysBuildAllProjects"                 = $false
-        "MicrosoftTelemetryConnectionString"     = $MicrosoftTelemetryConnectionString
-        "PartnerTelemetryConnectionString"       = ""
-        "SendExtendedTelemetryToMicrosoft"       = $false
-        "Environments"                           = @()
+        "microsoftTelemetryConnectionString"     = $microsoftTelemetryConnectionString
+        "partnerTelemetryConnectionString"       = ""
+        "sendExtendedTelemetryToMicrosoft"       = $false
+        "environments"                           = @()
     }
     $gitHubFolder = ".github"
     $repoSettingsPath = $RepoSettingsFile
@@ -469,13 +482,18 @@ function ReadSettings {
                 }
             }
             catch {
-                throw "Settings file $settingsFile, is wrongly formatted. Error is $($_.Exception.Message)."
+                throw "Settings file $settingsFile, is wrongly formatted. Error is $($_.Exception.Message).`n$($_.ScriptStackTrace)"
             }
         }
     }
 
     if ($settings.githubRunner -eq "") {
-        $settings.githubRunner = $settings."runs-on"
+        if ($settings."runs-on" -like "ubuntu-*") {
+            $settings.githubRunner = "windows-latest"
+        }
+        else {
+            $settings.githubRunner = $settings."runs-on"
+        }
     }
     $settings
 }
@@ -544,7 +562,7 @@ function AnalyzeRepo {
     }
 
     if (-not (@($settings.appFolders)+@($settings.testFolders)+@($settings.bcptTestFolders))) {
-        Get-ChildItem -Path $projectPath -Directory | Where-Object { Test-Path -Path (Join-Path $_.FullName "app.json") } | ForEach-Object {
+        Get-ChildItem -Path $projectPath | Where-Object { $_.PSIsContainer -and (Test-Path -Path (Join-Path $_.FullName "app.json")) } | ForEach-Object {
             $folder = $_
             $appJson = Get-Content (Join-Path $folder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
             $isTestApp = $false
@@ -858,11 +876,11 @@ function AnalyzeRepo {
             if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
                 $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
             }
-            if (-not ($dependency.PsObject.Properties.name -eq "Projects")) {
-                $dependency | Add-Member -name "Projects" -MemberType NoteProperty -Value "*"
+            if (-not ($dependency.PsObject.Properties.name -eq "projects")) {
+                $dependency | Add-Member -name "projects" -MemberType NoteProperty -Value "*"
             }
-            elseif ([String]::IsNullOrEmpty($dependency.Projects)) {
-                $dependency.Projects = '*'
+            elseif ([String]::IsNullOrEmpty($dependency.projects)) {
+                $dependency.projects = '*'
             }
             if (-not ($dependency.PsObject.Properties.name -eq "release_status")) {
                 $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
@@ -870,7 +888,7 @@ function AnalyzeRepo {
             if (-not ($dependency.PsObject.Properties.name -eq "branch")) {
                 $dependency | Add-Member -name "branch" -MemberType NoteProperty -Value "main"
             }
-            Write-Host "Dependency to projects '$($dependency.Projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
+            Write-Host "Dependency to projects '$($dependency.projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
             if (-not ($dependency.PsObject.Properties.name -eq "AuthTokenSecret")) {
                 if ($token) {
                     Write-Host "Using token as AuthTokenSecret"
@@ -895,7 +913,7 @@ function AnalyzeRepo {
                     OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
                 }
                 else {
-                    $dependency.Projects.Split(',') | ForEach-Object {
+                    $dependency.projects.Split(',') | ForEach-Object {
                         if ($_ -eq '*') {
                             OutputWarning "Dependencies to the same repository cannot specify all projects (*)"
                         }
@@ -1016,7 +1034,7 @@ function CloneIntoNewFolder {
         [string] $branch
     )
 
-    $baseFolder = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+    $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item $baseFolder -ItemType Directory | Out-Null
     Set-Location $baseFolder
     $serverUri = [Uri]::new($env:GITHUB_SERVER_URL)
@@ -1261,7 +1279,7 @@ function CreateDevEnv {
         [Parameter(ParameterSetName='local')]
         [string] $containerName = "",
         [string] $insiderSasToken = "",
-        [string] $LicenseFileUrl = ""
+        [string] $licenseFileUrl = ""
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1336,10 +1354,10 @@ function CreateDevEnv {
                 installModules -modules @('Az.KeyVault')
 
                 if ($kind -eq "local") {
-                    $LicenseFileSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.LicenseFileUrlSecretName
-                    if ($LicenseFileSecret) { $LicenseFileUrl = $LicenseFileSecret.SecretValue | Get-PlainText }
+                    $LicenseFileSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.licenseFileUrlSecretName
+                    if ($LicenseFileSecret) { $licenseFileUrl = $LicenseFileSecret.SecretValue | Get-PlainText }
 
-                    $insiderSasTokenSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.InsiderSasTokenSecretName
+                    $insiderSasTokenSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.insiderSasTokenSecretName
                     if ($insiderSasTokenSecret) { $insiderSasToken = $insiderSasTokenSecret.SecretValue | Get-PlainText }
 
                     # do not add codesign cert.
@@ -1353,8 +1371,8 @@ function CreateDevEnv {
                         }
                     }
                     
-                    if ($settings.KeyVaultCertificateUrlSecretName) {
-                        $KeyVaultCertificateUrlSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.KeyVaultCertificateUrlSecretName
+                    if ($settings.keyVaultCertificateUrlSecretName) {
+                        $KeyVaultCertificateUrlSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultCertificateUrlSecretName
                         if ($KeyVaultCertificateUrlSecret) {
                             $keyVaultCertificatePasswordSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultCertificatePasswordSecretName
                             $keyVaultClientIdSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultClientIdSecretName
@@ -1371,8 +1389,8 @@ function CreateDevEnv {
                     }
                 }
                 elseif ($kind -eq "cloud") {
-                    $adminCenterApiCredentialsSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.AdminCenterApiCredentialsSecretName
-                    if ($adminCenterApiCredentialsSecret) { $AdminCenterApiCredentials = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable }
+                    $adminCenterApiCredentialsSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.adminCenterApiCredentialsSecretName
+                    if ($adminCenterApiCredentialsSecret) { $adminCenterApiCredentials = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable }
                     $legalParameters = @("RefreshToken","CliendId","ClientSecret","deviceCode","tenantId")
                     $adminCenterApiCredentials.Keys | ForEach-Object {
                         if (-not ($legalParameters -contains $_)) {
@@ -1380,7 +1398,7 @@ function CreateDevEnv {
                         }
                     }
                     if ($adminCenterApiCredentials.ContainsKey('ClientSecret')) {
-                        $adminCenterApiCredentials.ClientSecret = ConvertTo-SecureString -String $AdminCenterApiCredentials.ClientSecret -AsPlainText -Force
+                        $adminCenterApiCredentials.ClientSecret = ConvertTo-SecureString -String $adminCenterApiCredentials.ClientSecret -AsPlainText -Force
                     }
                 }
             }
@@ -1504,7 +1522,7 @@ function CreateDevEnv {
                  $authContext = Renew-BcAuthContext $bcAuthContext
             }
             else {
-                $authContext = New-BcAuthContext @AdminCenterApiCredentials -includeDeviceLogin:($caller -eq "local")
+                $authContext = New-BcAuthContext @adminCenterApiCredentials -includeDeviceLogin:($caller -eq "local")
             }
 
             $existingEnvironment = Get-BcEnvironments -bcAuthContext $authContext | Where-Object { $_.Name -eq $environmentName }
@@ -1568,7 +1586,7 @@ function CreateDevEnv {
             -imageName "" `
             -memoryLimit $repo.memoryLimit `
             -baseFolder $baseFolder `
-            -licenseFile $LicenseFileUrl `
+            -licenseFile $licenseFileUrl `
             -installApps $installApps `
             -installTestApps $installTestApps `
             -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
@@ -1653,7 +1671,7 @@ Function AnalyzeProjectDependencies {
         $project = $_
         Write-Host "- $project"
         $apps = @()
-        $folders = @(Get-ChildItem -Path (Join-Path $basePath $project) -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'app.json') } | ForEach-Object { $_.FullName.Substring($basePath.Length+1) } )
+        $folders = @(Get-ChildItem -Path (Join-Path $basePath $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($basePath.Length+1) } )
         $unknownDependencies = @()
         $apps = @()
         $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $basePath -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)

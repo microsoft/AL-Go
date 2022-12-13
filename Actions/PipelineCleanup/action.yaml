@@ -1,6 +1,10 @@
 name: PowerShell script
 author: Freddy Kristiansen
 inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
   project:
     description: Project folder
     required: false
@@ -13,7 +17,7 @@ runs:
   using: composite
   steps:
     - name: run
-      shell: PowerShell
+      shell: ${{ inputs.shell }}
       env:
         _project: ${{ inputs.project }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}

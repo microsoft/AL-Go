@@ -1,6 +1,10 @@
 name: PowerShell script
 author: Freddy Kristiansen
 inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
   actor:
     description: The GitHub actor running the action
     required: false
@@ -24,16 +28,16 @@ inputs:
   settingsJson:
     description: Settings from repository in compressed Json format
     required: false
-    default: '{"AppBuild":0,"AppRevision":0}'
+    default: '{"appBuild":0,"appRevision":0}'
   secretsJson:
     description: Secrets from repository in compressed Json format
     required: false
-    default: '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePw":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePw":"","KeyVaultClientId":"","applicationInsightsConnectionString": ""}'
+    default: '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","CodeSignCertificatePw":"","keyVaultCertificateUrl":"","KeyVaultCertificatePw":"","keyVaultClientId":"","applicationInsightsConnectionString": ""}'
 runs:
   using: composite
   steps:
     - name: run
-      shell: PowerShell
+      shell: ${{ inputs.shell }}
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}

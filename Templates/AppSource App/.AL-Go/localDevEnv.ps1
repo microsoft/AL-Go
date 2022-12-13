@@ -154,8 +154,8 @@ CreateDevEnv `
     -baseFolder $baseFolder `
     -auth $auth `
     -credential $credential `
-    -LicenseFileUrl $licenseFileUrl `
-    -InsiderSasToken $insiderSasToken
+    -licenseFileUrl $licenseFileUrl `
+    -insiderSasToken $insiderSasToken
 }
 catch {
     Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"

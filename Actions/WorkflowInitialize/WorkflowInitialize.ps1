@@ -1,6 +1,6 @@
 Param(
     [Parameter(HelpMessage = "The event id of the initiating workflow", Mandatory = $true)]
-    [string] $eventId 
+    [string] $eventId
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,7 +54,6 @@ try {
 
     Add-Content -Path $env:GITHUB_OUTPUT -Value "correlationId=$correlationId"
     Write-Host "correlationId=$correlationId"
-
 }
 catch {
     OutputError -message "WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
