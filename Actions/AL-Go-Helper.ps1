@@ -10,9 +10,9 @@ if (Test-Path $gitHubHelperPath) {
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
-$ALGoFolder = ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)"
-$ALGoSettingsFile = ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json"
-$RepoSettingsFile = ".github$([System.IO.Path]::DirectorySeparatorChar)AL-Go-Settings.json"
+$ALGoFolder = Join-Path '.AL-Go' ''
+$ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
+$RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
