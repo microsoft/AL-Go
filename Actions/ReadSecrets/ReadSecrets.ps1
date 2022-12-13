@@ -39,11 +39,11 @@ try {
     $outSecrets = [ordered]@{}
     $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     $outSettings = $settings
-    $keyVaultName = $settings.KeyVaultName
+    $keyVaultName = $settings.keyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
         $credentialsJson = Get-KeyVaultCredentials -dontmask | ConvertTo-HashTable
-        if ($credentialsJson.ContainsKey("KeyVaultName")) {
-            $keyVaultName = $credentialsJson.KeyVaultName
+        if ($credentialsJson.ContainsKey("keyVaultName")) {
+            $keyVaultName = $credentialsJson.keyVaultName
         }
     }
     [System.Collections.ArrayList]$secretsCollection = @()
@@ -114,7 +114,7 @@ try {
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
-    $outSettingsJson = $outSettings | ConvertTo-Json -Compress
+    $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
 
     TrackTrace -telemetryScope $telemetryScope

@@ -45,7 +45,7 @@ concurrency: release
 
 defaults:
   run:
-    shell: PowerShell
+    shell: powershell
 
 jobs:
   CreateRelease:
@@ -62,28 +62,32 @@ jobs:
         id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with:
+          shell: powershell
           eventId: "DO0094"
 
       - name: Read settings
         id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
+          shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          get: TemplateUrl,RepoName
+          get: templateUrl,repoName
           getProjects: 'Y'
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
+          shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          templateUrl: ${{ env.TemplateUrl }}
+          templateUrl: ${{ env.templateUrl }}
 
       - name: Analyze Artifacts
         id: analyzeartifacts
         run: |
           $ErrorActionPreference = "STOP"
+          Set-StrictMode -version 2.0
           $projects = '${{ steps.ReadSettings.outputs.ProjectsJson }}' | ConvertFrom-Json
-          Write-Host "Projects:"
+          Write-Host "projects:"
           $projects | ForEach-Object { Write-Host "- $_" }
           $include = @()
           $sha = ''
@@ -107,7 +111,7 @@ jobs:
               $project = $thisProject.Replace('\','_')
             }
             else {
-              $project = $env:RepoName
+              $project = $env:repoName
             }
             $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
             Write-Host "Analyzing artifacts for project $project"
@@ -159,6 +163,7 @@ jobs:
         id: createreleasenotes
         uses: microsoft/AL-Go-Actions/CreateReleaseNotes@main
         with:
+          shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           tag_name: ${{ github.event.inputs.tag }}
 
@@ -199,6 +204,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
+          shell: powershell
           parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
 
       - name: Read secrets
@@ -206,13 +212,15 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
+          shell: powershell
           parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
-          secrets: 'NuGetContext,StorageContext'
+          secrets: 'nuGetContext,storageContext'
 
       - name: Download artifact
         run: |
           $ErrorActionPreference = "STOP"
+          Set-StrictMode -version 2.0
           Write-Host "Downloading artifact ${{ matrix.name}}"
           $headers = @{ 
               "Authorization" = "token ${{ github.token }}"
@@ -239,14 +247,15 @@ jobs:
               data: fs.readFileSync(assetPath)
             });
 
-      - name: NuGetContext
+      - name: nuGetContext
         id: nuGetContext
-        if: ${{ env.NuGetContext }}
+        if: ${{ env.nuGetContext }}
         run: |
           $ErrorActionPreference = "STOP"
+          Set-StrictMode -version 2.0
           $nuGetContext = ''
           if ('${{ matrix.atype }}' -eq 'Apps') {
-            $nuGetContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('NuGetContext')))
+            $nuGetContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('nuGetContext')))
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "nuGetContext=$nuGetContext"
 
@@ -256,20 +265,22 @@ jobs:
         env:
           deliveryContext: ${{ steps.nuGetContext.outputs.nuGetContext }}
         with:
+          shell: powershell
           type: 'Release'
           projects: ${{ matrix.project }}
           deliveryTarget: 'NuGet'
           artifacts: ${{ github.event.inputs.appVersion }}
           atypes: 'Apps,TestApps'
 
-      - name: StorageContext
+      - name: storageContext
         id: storageContext
-        if: ${{ env.StorageContext }}
+        if: ${{ env.storageContext }}
         run: |
           $ErrorActionPreference = "STOP"
+          Set-StrictMode -version 2.0
           $storageContext = ''
           if ('${{ matrix.atype }}' -eq 'Apps') {
-            $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('StorageContext')))
+            $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('storageContext')))
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "storageContext=$storageContext"
 
@@ -279,6 +290,7 @@ jobs:
         env:
           deliveryContext: ${{ steps.storageContext.outputs.storageContext }}
         with:
+          shell: powershell
           type: 'Release'
           projects: ${{ matrix.project }}
           deliveryTarget: 'Storage'
@@ -296,6 +308,7 @@ jobs:
       - name: Create Release Branch
         run: |
           $ErrorActionPreference = "STOP"
+          Set-StrictMode -version 2.0
           git checkout -b release/${{ github.event.inputs.tag }}
           git config user.name ${{ github.actor}}
           git config user.email ${{ github.actor}}@users.noreply.github.com
@@ -310,6 +323,7 @@ jobs:
       - name: Update Version Number
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
+          shell: powershell
           parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
           versionNumber: ${{ github.event.inputs.updateVersionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}
@@ -326,5 +340,6 @@ jobs:
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with:
+          shell: powershell
           eventId: "DO0094"
           telemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}

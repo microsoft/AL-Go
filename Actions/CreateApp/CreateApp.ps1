@@ -28,7 +28,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
-$tmpFolder = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+$tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 

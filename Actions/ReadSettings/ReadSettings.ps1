@@ -8,7 +8,7 @@ Param(
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
     [Parameter(HelpMessage = "Indicates whether you want to retrieve the list of project list as well", Mandatory = $false)]
-    [bool] $getprojects,
+    [bool] $getProjects,
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (or empty for no environments)", Mandatory = $false)]
     [string] $getenvironments = "",
     [Parameter(HelpMessage = "Specifies whether you want to include production environments", Mandatory = $false)]
@@ -85,14 +85,14 @@ try {
         $settingValue = $settings."$setting"
         $outSettings += @{ "$setting" = $settingValue }
         if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
-            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Compress)"
+            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
         }
         else {
             Add-Content -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
         }
     }
 
-    $outSettingsJson = $outSettings | ConvertTo-Json -Compress
+    $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
     Write-Host "SettingsJson=$outSettingsJson"
@@ -101,14 +101,16 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
     Write-Host "GitHubRunnerJson=$githubRunner"
 
-    if ($getprojects) {
+    if ($getProjects) {
+
+        Write-Host "Determining projects to build"
 
         $buildProjects = @()
-        if ($settings.Projects) {
+        if ($settings.projects) {
             $projects = $settings.projects
         }
         else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName '.AL-Go\Settings.json') -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         }
         if ($projects) {
             Write-Host "All Projects: $($projects -join ', ')"
@@ -150,7 +152,7 @@ try {
                     $buildProjects = @($projects | Where-Object {
                         $project = $_
                         $buildProject = $false
-                        if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project\.AL-Go\Settings.json")) {
+                        if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project$([System.IO.Path]::DirectorySeparatorChar).AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json")) {
                             $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
                             $projectFolders | ForEach-Object {
                                 if ($filesChanged -like "$_/*") { $buildProject = $true }
@@ -191,7 +193,7 @@ try {
             $projectsJSon = $buildProjects | ConvertTo-Json -compress
         }
         Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
-        Add-Content -Path $env:GITHUB_ENV -Value "Projects=$projectsJson"
+        Add-Content -Path $env:GITHUB_ENV -Value "projects=$projectsJson"
         Write-Host "ProjectsJson=$projectsJson"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectCount=$($buildProjects.Count)"
         Write-Host "ProjectCount=$($buildProjects.Count)"
@@ -208,7 +210,7 @@ try {
             $environments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
         } 
         catch {}
-        $environments = @($environments+@($settings.Environments) | Where-Object { $_ -ne "github-pages" } | Where-Object { 
+        $environments = @($environments+@($settings.environments) | Where-Object { $_ -ne "github-pages" } | Where-Object { 
             if ($includeProduction) {
                 $_ -like $getEnvironments -or $_ -like "$getEnvironments (PROD)" -or $_ -like "$getEnvironments (Production)" -or $_ -like "$getEnvironments (FAT)" -or $_ -like "$getEnvironments (Final Acceptance Test)"
             }
@@ -244,7 +246,7 @@ try {
         }
         $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
         Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentsJson=$environmentsJson"
-        Add-Content -Path $env:GITHUB_ENV -Value "Environments=$environmentsJson"
+        Add-Content -Path $env:GITHUB_ENV -Value "environments=$environmentsJson"
         Write-Host "EnvironmentsJson=$environmentsJson"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($environments.Count)"
         Write-Host "EnvironmentCount=$($environments.Count)"
