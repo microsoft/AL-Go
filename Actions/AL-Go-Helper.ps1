@@ -218,6 +218,12 @@ function DownloadAndImportBcContainerHelper {
                 $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
                 Write-Host $ENV:GITHUB_ACTION_PATH
                 $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
+                # Action Path under linux is something like: /home/runner/work/_actions/freddydk/AL-Go-Actions/main/WorkflowInitialize
+                # Action Path under Windows is something like: D:\a\_actions\freddydk\AL-Go-Actions\main\WorkflowInitialize
+                # ..../_actions/<owner>/AL-Go-Actions/branch/Action
+                # ..../   -5   /  -4   /     -3      /  -2  /  -1
+                # The code below checks if you are running a preview branch of AL-Go-Actions - then use Preview ContainerHelper
+                # If you are using a private fork of AL-Go-Actions - then use (if exists) a private fork of ContainerHelper as well
                 if ($ap -and $ap.Count -gt 4) {
                     $folder = $ap[$ap.Count-5]
                     $owner = $ap[$ap.Count-4]
