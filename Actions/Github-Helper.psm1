@@ -482,7 +482,7 @@ function DownloadRelease {
 
 function CheckRateLimit {
     Param(
-        [string] $token
+        [string] $token = ''
     )
 
     $headers = GetHeader -token $token

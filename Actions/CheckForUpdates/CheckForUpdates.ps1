@@ -83,6 +83,8 @@ try {
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
 
+    CheckRateLimit
+
     if ($templateUrl -ne "") {
         try {
             $templateUrl = $templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/"
