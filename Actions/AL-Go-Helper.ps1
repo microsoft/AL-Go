@@ -436,7 +436,7 @@ function ReadSettings {
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
         "useProjectDependencies"                 = $false
-        "runs-on"                                = "windows-latest"
+        "runs-on"                                = "ubuntu-latest"
         "shell"                                  = "powershell"
         "githubRunner"                           = ""
         "cacheImageName"                         = "my"
