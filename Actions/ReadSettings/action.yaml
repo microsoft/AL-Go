@@ -48,6 +48,9 @@ outputs:
   GitHubRunnerJson:
     description: GitHubRunner in compressed Json format
     value: ${{ steps.readsettings.outputs.GitHubRunnerJson }}
+  GitHubRunnerShell:
+    description: Shell for GitHubRunner jobs
+    value: ${{ steps.readsettings.outputs.GitHubRunnerShell }}
   ProjectsJson:
     description: Projects in compressed Json format
     value: ${{ steps.readsettings.outputs.ProjectsJson }}

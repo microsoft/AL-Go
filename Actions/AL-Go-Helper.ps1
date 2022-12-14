@@ -445,6 +445,7 @@ function ReadSettings {
         "runs-on"                                = "ubuntu-latest"
         "shell"                                  = "powershell"
         "githubRunner"                           = ""
+        "githubRunnerShell"                      = ""
         "cacheImageName"                         = "my"
         "cacheKeepDays"                          = 3
         "alwaysBuildAllProjects"                 = $false
@@ -500,6 +501,9 @@ function ReadSettings {
         else {
             $settings.githubRunner = $settings."runs-on"
         }
+    }
+    if ($settings.githubRunnerShell -eq "") {
+        $settings.githubRunnerShell = $settings.Shell
     }
     $settings
 }

@@ -83,17 +83,8 @@ try {
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
 
-    CheckRateLimit
-
     if ($templateUrl -ne "") {
-        try {
-            $templateUrl = $templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/"
-            Write-Host "Api url $templateUrl"
-            $templateInfo = InvokeWebRequest -Headers $headers -Uri $templateUrl -retry | ConvertFrom-Json
-        }
-        catch {
-            throw "Could not retrieve the template repository. Error: $($_.Exception.Message)"
-        }
+        $archiveUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")/zipball/$templateBranch"
     }
     else {
         Write-Host "Api url $($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)"
@@ -102,17 +93,17 @@ try {
             OutputWarning -message "This repository wasn't built on a template repository, or the template repository is deleted. You must specify a template repository in the AL-Go settings file."
             exit
         }
-
         $templateInfo = $repoInfo.template_repository
+        $templateUrl = $templateInfo.html_url
+        $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}',"/$templateBranch")
     }
 
-    $templateUrl = $templateInfo.html_url
     Write-Host "Using template from $templateUrl@$templateBranch"
+    Write-Host "ArchiveUrl $archiveUrl"
 
     $headers = @{             
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
-    $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}',"/$templateBranch")
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName

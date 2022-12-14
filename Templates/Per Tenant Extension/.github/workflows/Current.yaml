@@ -22,6 +22,7 @@ jobs:
       projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
       projectCount: ${{ steps.ReadSettings.outputs.ProjectCount }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
+      githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
       projectDependenciesJson: ${{ steps.ReadSettings.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
       buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
@@ -87,6 +88,9 @@ jobs:
     needs: [ Initialization ]
     if: ${{ needs.Initialization.outputs.projectCount > 0 }}
     runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
+    defaults:
+      run:
+        shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
     strategy:
       matrix:
         project: ${{ fromJson(needs.Initialization.outputs.projects) }}
@@ -109,7 +113,7 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          shell: powershell
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           project: ${{ matrix.project }}
 
@@ -118,7 +122,7 @@ jobs:
         env:
           secrets: ${{ toJson(secrets) }}
         with:
-          shell: powershell
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
           secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext'
@@ -126,7 +130,7 @@ jobs:
       - name: Run pipeline
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         with:
-          shell: powershell
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           Project: ${{ matrix.project }}
           ProjectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
@@ -204,7 +208,7 @@ jobs:
         if: success() || failure()
         uses: microsoft/AL-Go-Actions/AnalyzeTests@main
         with:
-          shell: powershell
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           Project: ${{ matrix.project }}
 
@@ -212,7 +216,7 @@ jobs:
         if: always()
         uses: microsoft/AL-Go-Actions/PipelineCleanup@main
         with:
-          shell: powershell
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           Project: ${{ matrix.project }}
 

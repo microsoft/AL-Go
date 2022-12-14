@@ -231,6 +231,7 @@ function CreateRepository {
     $repoSettings | Add-Member -MemberType NoteProperty -Name "bcContainerHelperVersion" -Value "dev"
     if ($private) {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
         $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value "self-hosted"
         Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" } | ForEach-Object {
             Write-Host $_.FullName

@@ -101,6 +101,10 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
     Write-Host "GitHubRunnerJson=$githubRunner"
 
+    $gitHubRunnerShell = $settings.githubRunnerShell
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
+    Write-Host "GitHubRunnerShell=$githubRunnerShell"
+
     if ($getProjects) {
 
         Write-Host "Determining projects to build"
