@@ -442,7 +442,7 @@ function ReadSettings {
         "templateBranch"                         = ""
         "appDependencyProbingPaths"              = @()
         "useProjectDependencies"                 = $false
-        "runs-on"                                = "ubuntu-latest"
+        "runs-on"                                = "windows-latest"
         "shell"                                  = "powershell"
         "githubRunner"                           = ""
         "githubRunnerShell"                      = ""

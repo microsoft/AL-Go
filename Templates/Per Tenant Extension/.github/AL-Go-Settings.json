@@ -1,5 +1,4 @@
 {
     "type":  "PTE",
-    "templateUrl":  "https://github.com/microsoft/AL-Go-PTE@main",
-    "runs-on":  "ubuntu-latest"
+    "templateUrl":  "https://github.com/microsoft/AL-Go-PTE@main"
 }
