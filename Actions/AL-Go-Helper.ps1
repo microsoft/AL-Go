@@ -218,7 +218,7 @@ function DownloadAndImportBcContainerHelper {
                 $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
                 Write-Host $ENV:GITHUB_ACTION_PATH
                 $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
-                # Action Path under linux is something like: /home/runner/work/_actions/freddydk/AL-Go-Actions/main/WorkflowInitialize
+                # Action Path under linux is something like: /home/runner/work/_actions/microsoft/AL-Go-Actions/main/WorkflowInitialize
                 # Action Path under Windows is something like: D:\a\_actions\freddydk\AL-Go-Actions\main\WorkflowInitialize
                 # ..../_actions/<owner>/AL-Go-Actions/branch/Action
                 # ..../   -5   /  -4   /     -3      /  -2  /  -1

@@ -30,21 +30,19 @@ function EnsureAzStorageModule() {
         Write-Host "Using Az.Storage PowerShell module"
     }
     else {
-        if (!(get-command New-AzureStorageContext -ErrorAction SilentlyContinue)) {
-            $azureStorageModule = Get-Module -name 'Azure.Storage' -ListAvailable | Select-Object -First 1
-            if ($azureStorageModule) {
-                Write-Host "Azure.Storage Module is available in version $($azureStorageModule.Version)"
-                Write-Host "Using Azure.Storage version $($azureStorageModule.Version)"
-                Import-Module  'Azure.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-                Set-Alias -Name New-AzStorageContext -Value New-AzureStorageContext
-                Set-Alias -Name Get-AzStorageContainer -Value Get-AzureStorageContainer
-                Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent
-            }
-            else {
-                Write-Host "Installing and importing Az.Storage." 
-                Install-Module 'Az.Storage' -Force
-                Import-Module  'Az.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-            }
+        $azureStorageModule = Get-Module -name 'Azure.Storage' -ListAvailable | Select-Object -First 1
+        if ($azureStorageModule) {
+            Write-Host "Azure.Storage Module is available in version $($azureStorageModule.Version)"
+            Write-Host "Using Azure.Storage version $($azureStorageModule.Version)"
+            Import-Module  'Azure.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+            Set-Alias -Name New-AzStorageContext -Value New-AzureStorageContext -Scope Script
+            Set-Alias -Name Get-AzStorageContainer -Value Get-AzureStorageContainer -Scope Script
+            Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
+        }
+        else {
+            Write-Host "Installing and importing Az.Storage." 
+            Install-Module 'Az.Storage' -Force
+            Import-Module  'Az.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
         }
     }
 }
