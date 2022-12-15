@@ -56,7 +56,7 @@ try {
         $templateUrl = "https://github.com/$templateUrl"
     }
 
-    $RepoSettingsFile = ".github$([System.IO.Path]::DirectorySeparatorChar)AL-Go-Settings.json"
+    $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
     if (Test-Path $RepoSettingsFile) {
         $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
     }
@@ -110,7 +110,7 @@ try {
     Remove-Item -Path "$tempName.zip"
     
     $checkfiles = @(
-        @{ "dstPath" = ".github$([System.IO.Path]::DirectorySeparatorChar)workflows"; "srcPath" = ".github$([System.IO.Path]::DirectorySeparatorChar)workflows"; "pattern" = "*"; "type" = "workflow" },
+        @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path ".github" "workflows"; "pattern" = "*"; "type" = "workflow" },
         @{ "dstPath" = ".github"; "srcPath" = ".github"; "pattern" = "*.copy.md"; "type" = "releasenotes" }
     )
     if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
@@ -129,7 +129,7 @@ try {
             $projects = $repoSettings.projects
         }
         else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         }
         $buildAlso = @{}
         $buildOrder = @{}
@@ -317,7 +317,7 @@ try {
                 invoke-git status
 
                 $templateUrl = "$templateUrl@$templateBranch"
-                $RepoSettingsFile = ".github$([System.IO.Path]::DirectorySeparatorChar)AL-Go-Settings.json"
+                $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
                     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
                 }

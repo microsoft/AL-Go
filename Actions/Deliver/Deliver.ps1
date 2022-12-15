@@ -50,10 +50,10 @@ function EnsureAzStorageModule() {
 # IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..$([System.IO.Path]::DirectorySeparatorChar)AL-Go-Helper.ps1" -Resolve)
+    . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
 
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..$([System.IO.Path]::DirectorySeparatorChar)TelemetryHelper.psm1" -Resolve)
+    import-module (Join-Path -path $PSScriptRoot -ChildPath "../TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0081' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
@@ -71,7 +71,7 @@ try {
     }
     else {
         Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer } | ForEach-Object { Write-Host $_.FullName }
-        $projectList = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+        $projectList = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         if (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE ".AL-Go") -PathType Container) {
             $projectList += @(".")
         }
@@ -179,9 +179,9 @@ try {
             Write-Host "- $($_.Name)"
         }
 
-        $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github$([System.IO.Path]::DirectorySeparatorChar)DeliverTo$deliveryTarget.ps1" 
+        $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/DeliverTo$deliveryTarget.ps1" 
         if (Test-Path $customScript -PathType Leaf) {
-            $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject$([System.IO.Path]::DirectorySeparatorChar).AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+            $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/.AL-Go/settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
             $parameters = @{
                 "Project" = $thisProject
                 "ProjectName" = $projectName
@@ -391,7 +391,7 @@ try {
             $appSourceContextHt = $appSourceContext | ConvertFrom-Json | ConvertTo-HashTable
             $authContext = New-BcAuthContext @appSourceContextHt
 
-            $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject$([System.IO.Path]::DirectorySeparatorChar).AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+            $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/.AL-Go/settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
             if ($projectSettings.ContainsKey("AppSourceMainAppFolder")) {
                 $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder
             }
@@ -404,11 +404,11 @@ try {
                 }
             }
             if (-not $projectSettings.ContainsKey('AppSourceProductId')) {
-                throw "AppSourceProductId needs to be specified in $thisProject$([System.IO.Path]::DirectorySeparatorChar).AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json in order to deliver to AppSource"
+                throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
             }
             Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
-            $mainAppJson = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject$([System.IO.Path]::DirectorySeparatorChar)$AppSourceMainAppFolder$([System.IO.Path]::DirectorySeparatorChar)app.json") | ConvertFrom-Json
+            $mainAppJson = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/$AppSourceMainAppFolder/app.json") | ConvertFrom-Json
             $mainAppVersion = [Version]$mainAppJson.Version
             $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
             $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })

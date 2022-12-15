@@ -114,7 +114,7 @@ try {
             $projects = $settings.projects
         }
         else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         }
         if ($projects) {
             Write-Host "All Projects: $($projects -join ', ')"
@@ -156,7 +156,7 @@ try {
                     $buildProjects = @($projects | Where-Object {
                         $project = $_
                         $buildProject = $false
-                        if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project$([System.IO.Path]::DirectorySeparatorChar).AL-Go$([System.IO.Path]::DirectorySeparatorChar)settings.json")) {
+                        if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project/.AL-Go/settings.json")) {
                             $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
                             $projectFolders | ForEach-Object {
                                 if ($filesChanged -like "$_/*") { $buildProject = $true }

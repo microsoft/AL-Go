@@ -107,8 +107,8 @@ jobs:
           Set-StrictMode -version 2.0
           $location = (Get-Location).path
           $prfolder = '.PullRequestChanges'
-          Expand-Archive -Path ".$([System.IO.Path]::DirectorySeparatorChar)$prfolder.zip" -DestinationPath ".$([System.IO.Path]::DirectorySeparatorChar)$prfolder"
-          Remove-Item -Path ".$([System.IO.Path]::DirectorySeparatorChar)$prfolder.zip" -force
+          Expand-Archive -Path (Join-Path "." "$prfolder.zip") -DestinationPath (Join-Path "." $prfolder)
+          Remove-Item -Path (Join-Path "." "$prfolder.zip") -force
           Get-ChildItem -Path $prfolder -Recurse -File | ForEach-Object {
             $path = $_.FullName
             $deleteFile = $path.EndsWith('.REMOVE')
@@ -166,7 +166,7 @@ jobs:
           Set-StrictMode -version 2.0
           $deliveryTargetSecrets = @('GitHubPackagesContext','NuGetContext','StorageContext','AppSourceContext')
           $namePrefix = 'DeliverTo'
-          Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github$([System.IO.Path]::DirectorySeparatorChar)$($namePrefix)*.ps1") | ForEach-Object {
+          Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") | ForEach-Object {
             $deliveryTarget = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
             $deliveryTargetSecrets += @("$($deliveryTarget)Context")
           }
@@ -191,7 +191,7 @@ jobs:
             $deliveryTargets += @("AppSource")
           }
           $namePrefix = 'DeliverTo'
-          Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github$([System.IO.Path]::DirectorySeparatorChar)$($namePrefix)*.ps1") | ForEach-Object {
+          Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") | ForEach-Object {
             $deliveryTarget = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
             $deliveryTargets += @($deliveryTarget)
           }
@@ -400,8 +400,8 @@ jobs:
           Set-StrictMode -version 2.0
           $location = (Get-Location).path
           $prfolder = '.PullRequestChanges'
-          Expand-Archive -Path ".$([System.IO.Path]::DirectorySeparatorChar)$prfolder.zip" -DestinationPath ".$([System.IO.Path]::DirectorySeparatorChar)$prfolder"
-          Remove-Item -Path ".$([System.IO.Path]::DirectorySeparatorChar)$prfolder.zip" -force
+          Expand-Archive -Path (Join-Path "." "$prfolder.zip") -DestinationPath (Join-Path "." $prfolder)
+          Remove-Item -Path (Join-Path "." "$prfolder.zip") -force
           Get-ChildItem -Path $prfolder -Recurse -File | ForEach-Object {
             $path = $_.FullName
             $deleteFile = $path.EndsWith('.REMOVE')
@@ -500,7 +500,7 @@ jobs:
           if ($project -eq ".") { $project = $settings.repoName }
           'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
             $name = "$($_)ArtifactsName"
-            $value = "$($project.Replace("$([System.IO.Path]::DirectorySeparatorChar)",'_'))-$($ref)-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+            $value = "$($project.Replace('/','_').Replace('\','_'))-$($ref)-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }
