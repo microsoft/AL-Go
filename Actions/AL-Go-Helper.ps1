@@ -347,6 +347,10 @@ function MergeCustomObjectIntoOrderedDictionary {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
+
+                # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
+                # This is not seen as an error and will not throw an error
+
                 throw "property $prop should be of type $dstPropType, is $srcPropType."
             }
             else {
