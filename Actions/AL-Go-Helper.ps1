@@ -507,7 +507,7 @@ function ReadSettings {
         }
     }
     if ($settings.githubRunnerShell -eq "") {
-        $settings.githubRunnerShell = $settings.Shell
+        $settings.githubRunnerShell = $settings.shell
     }
     $settings
 }
