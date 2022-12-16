@@ -68,11 +68,11 @@ function Test-ALGoRepository {
 
     # Test .json files are formatted correctly
     Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse | ForEach-Object {
-        if ($_.FullName -like (Join-Path "*/.AL-Go" "settings.json")) {
+        if ($_.DirectoryName -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
             Test-Json -jsonFile $_.FullName -baseFolder $baseFolder
         }
-        elseif ($_.FullName -like (Join-Path "*/.github" "*ettings.json")) {
-            Test-Json -jsonFile $_.FullName -baseFolder $baseFolder -repo:($_.BaseName -eq "AL-Go-Settings")
+        elseif ($_.DirectoryName -eq '.github' -and $_.BaseName -like '*ettings') {
+            Test-Json -jsonFile $_.FullName -baseFolder $baseFolder -repo:($_.BaseName -eq 'AL-Go-Settings')
         }
     }
 }

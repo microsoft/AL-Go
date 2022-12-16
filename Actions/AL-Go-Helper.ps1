@@ -200,7 +200,7 @@ function Expand-7zipArchive {
 
 function DownloadAndImportBcContainerHelper {
     Param(
-        [string] $BcContainerHelperVersion = "",
+        [string] $bcContainerHelperVersion = "",
         [string] $baseFolder = ""
     )
 
@@ -214,9 +214,16 @@ function DownloadAndImportBcContainerHelper {
             }
         }
         if (Test-Path $repoSettingsPath) {
-            if (-not $BcContainerHelperVersion) {
-                $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-                Write-Host $ENV:GITHUB_ACTION_PATH
+            $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+            if (-not $bcContainerHelperVersion) {
+                if ($repoSettings.ContainsKey("BcContainerHelperVersion")) {
+                    $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+                    if ($bcContainerHelperVersion -like "https://*") {
+                        throw "Setting BcContainerHelperVersion to a URL is not allowed."
+                    }
+                }
+            }
+            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "private") {
                 $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
                 # Action Path under linux is something like: /home/runner/work/_actions/microsoft/AL-Go-Actions/main/WorkflowInitialize
                 # Action Path under Windows is something like: D:\a\_actions\freddydk\AL-Go-Actions\main\WorkflowInitialize
@@ -235,23 +242,20 @@ function DownloadAndImportBcContainerHelper {
                                 $bcContainerHelperVersion = "preview"
                             }
                         }
-                        else {
+                        elseif ($bcContainerHelperVersion -eq "private" -or $owner -eq "freddydk") {
                             $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
                         }
-                    }
-                }
-                if ($bcContainerHelperVersion -eq "" -and $repoSettings.ContainsKey("BcContainerHelperVersion")) {
-                    $BcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
-                    if ($BcContainerHelperVersion -like "https://*") {
-                        throw "Setting BcContainerHelperVersion to a URL is not allowed."
                     }
                 }
             }
             $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
         }
     }
-    if (-not $BcContainerHelperVersion) {
-        $BcContainerHelperVersion = "latest"
+    if ($bcContainerHelperVersion -eq "") {
+        $bcContainerHelperVersion = "latest"
+    }
+    elseif ($bcContainerHelperVersion -eq "private") {
+        $bcContainerHelperVersion = "preview"
     }
 
     if ($bcContainerHelperVersion -eq "none") {
@@ -266,27 +270,28 @@ function DownloadAndImportBcContainerHelper {
     else {
         $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         $webclient = New-Object System.Net.WebClient
-        if ($BcContainerHelperVersion -like "https://*") {
-            Write-Host "Downloading BcContainerHelper developer version from $BcContainerHelperVersion"
+        if ($bcContainerHelperVersion -like "https://*") {
+            Write-Host "Downloading BcContainerHelper developer version from $bcContainerHelperVersion"
             try {
-                $webclient.DownloadFile($BcContainerHelperVersion, "$tempName.zip")
+                $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
             }
             catch {
-                Write-Host "Download failed, downloading BcContainerHelper $BcContainerHelperVersion version from Blob Storage"
-                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")
+                $bcContainerHelperVersion = "preview"
+                Write-Host "Download failed, downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
+                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
             }
         }
-        elseif ($BcContainerHelperVersion -eq "dev") {
+        elseif ($bcContainerHelperVersion -eq "dev") {
             Write-Host "Downloading BcContainerHelper dev branch"
             $webclient.DownloadFile("https://github.com/freddydk/navcontainerhelper/archive/master.zip", "$tempName.zip")
         }
-        elseif ($BcContainerHelperVersion -eq "preview") {
-            Write-Host "Downloading BcContainerHelper $BcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")
+        elseif ($bcContainerHelperVersion -eq "preview") {
+            Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
+            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
         }
         else {
-            Write-Host "Downloading BcContainerHelper $BcContainerHelperVersion version from CDN"
-            $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($BcContainerHelperVersion).zip", "$tempName.zip")
+            Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from CDN"
+            $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
