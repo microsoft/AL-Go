@@ -223,28 +223,26 @@ function DownloadAndImportBcContainerHelper {
                     }
                 }
             }
-            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "private") {
-                $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
-                # Action Path under linux is something like: /home/runner/work/_actions/microsoft/AL-Go-Actions/main/WorkflowInitialize
-                # Action Path under Windows is something like: D:\a\_actions\freddydk\AL-Go-Actions\main\WorkflowInitialize
-                # ..../_actions/<owner>/AL-Go-Actions/branch/Action
-                # ..../   -5   /  -4   /     -3      /  -2  /  -1
-                # The code below checks if you are running a preview branch of AL-Go-Actions - then use Preview ContainerHelper
-                # If you are using a private fork of AL-Go-Actions - then use (if exists) a private fork of ContainerHelper as well
-                if ($ap -and $ap.Count -gt 4) {
-                    $folder = $ap[$ap.Count-5]
-                    $owner = $ap[$ap.Count-4]
-                    $repo = $ap[$ap.Count-3]
-                    $branch = $ap[$ap.Count-2]
-                    if ($folder -eq "_actions" -and $repo -eq "AL-Go-Actions") {
-                        if ($owner -eq "microsoft") {
-                            if ($branch -eq "preview") {
-                                $bcContainerHelperVersion = "preview"
-                            }
+            $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
+            # Action Path under linux is something like: /home/runner/work/_actions/microsoft/AL-Go-Actions/main/WorkflowInitialize
+            # Action Path under Windows is something like: D:\a\_actions\freddydk\AL-Go-Actions\main\WorkflowInitialize
+            # ..../_actions/<owner>/AL-Go-Actions/branch/Action
+            # ..../   -5   /  -4   /     -3      /  -2  /  -1
+            # The code below checks if you are running a preview branch of AL-Go-Actions - then use Preview ContainerHelper
+            # If you are using a private fork of AL-Go-Actions - then use (if exists) a private fork of ContainerHelper as well
+            if ($ap -and $ap.Count -gt 4) {
+                $folder = $ap[$ap.Count-5]
+                $owner = $ap[$ap.Count-4]
+                $repo = $ap[$ap.Count-3]
+                $branch = $ap[$ap.Count-2]
+                if ($folder -eq "_actions" -and $repo -eq "AL-Go-Actions") {
+                    if ($owner -eq "microsoft") {
+                        if ($branch -eq "preview") {
+                            $bcContainerHelperVersion = "preview"
                         }
-                        elseif ($bcContainerHelperVersion -eq "private" -or $owner -eq "freddydk") {
-                            $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
-                        }
+                    }
+                    elseif ($bcContainerHelperVersion -eq "private" -or $owner -eq "freddydk") {
+                        $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
                     }
                 }
             }
