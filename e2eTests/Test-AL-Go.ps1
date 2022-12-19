@@ -8,7 +8,8 @@
     [string] $insiderSasToken = "",
     [switch] $multiProject,
     [switch] $appSourceApp,
-    [switch] $private
+    [switch] $private,
+    [switch] $linux
 )
 
 #  ______           _ ___                _    _           _                                    _       
@@ -133,7 +134,7 @@ try {
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $template -branch $branch -private:$private
+    CreateRepository -template $template -branch $branch -private:$private -linux:$linix
     $repoPath = (Get-Location).Path
 
     # Add Existing App

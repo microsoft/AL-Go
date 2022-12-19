@@ -192,6 +192,7 @@ function CreateRepository {
         [string] $templateBranch = "main",
         [string] $templatePath,
         [switch] $private,
+        [switch] $linux,
         [string] $branch = "main"
     )
 
@@ -229,15 +230,29 @@ function CreateRepository {
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
     $repoSettings | Add-Member -MemberType NoteProperty -Name "bcContainerHelperVersion" -Value "dev"
+    $runson = "windows-latest"
+    $shell = "powershell"
     if ($private) {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
         $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value "self-hosted"
-        Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" } | ForEach-Object {
+        $runson = "self-hosted"
+    }
+    elseif ($linux) {
+        $runson = "ubuntu-latest"
+        $shell = "pwsh"
+    }
+
+    if ($runson -ne "windows-latest" -or $shell -ne "powershell") {
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value $runson
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "shell" -Value $shell
+        Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" -and $_.BaseName -ne "PullRequestHandler" } | ForEach-Object {
             Write-Host $_.FullName
             $content = (Get-Content -Path $_.FullName -Encoding UTF8 -Raw -Force).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
             $srcPattern = "runs-on: [ windows-latest ]`r`n"
-            $replacePattern = "runs-on: [ self-hosted ]`r`n"
+            $replacePattern = "runs-on: [ $runson ]`r`n"
+            $content = $content.Replace($srcPattern, $replacePattern)
+            $srcPattern = "shell: powershell`r`n"
+            $replacePattern = "shell: $shell`r`n"
             $content = $content.Replace($srcPattern, $replacePattern)
             Set-Content -Path $_.FullName -Encoding UTF8 -Value $content
         }
