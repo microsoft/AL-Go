@@ -201,6 +201,9 @@ try {
                     $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
+                if ($_.Name -eq "AL-Go-Helper.ps1") {
+                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)"(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""""`$5" }
+                }
                 $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
             }
         }
