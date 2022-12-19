@@ -102,10 +102,10 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
-          if ('${{ matrix.appSource }}' == 'PTE' -and '${{ matrix.multiProject }}' -eq 'singleProject' -and '${{ matrix.linux }}' -eq 'windows') {
+          if ('${{ matrix.appSource }}' -eq 'PTE' -and '${{ matrix.multiProject }}' -eq 'singleProject' -and '${{ matrix.linux }}' -eq 'windows') {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentialsParam='-adminCenterApiCredentials ${{ secrets.adminCenterApiCredentials }}'"
           }
-          if ('${{ matrix.appSource }}' == 'appSourceApp') {
+          if ('${{ matrix.appSource }}' -eq 'appSourceApp') {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrlParam='-licenseFileUrl ${{ secrets.licenseFileUrl }}"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "templateParam=-template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
           }
