@@ -191,7 +191,7 @@ try {
 
                 # Add the artifact folder to the parameters
                 if ($artifactFolder.Count -ne 0) {
-                    $parameters[$artifactType.ToLower() + "Folder"] = $artifactFolder[0].FullName
+                    $parameters[$artifactType.ToLowerInvariant() + "Folder"] = $artifactFolder[0].FullName
                 }
 
                 # Get the folders holding the artifacts from all build modes
