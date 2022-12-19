@@ -203,7 +203,7 @@ try {
                 }
             }
             
-            Write-Host "Calling custom script: $customScript with parameters: $($parameters | ConvertTo-Json -Depth 1)"
+            Write-Host "Calling custom script: $customScript"
             . $customScript -parameters $parameters
         }
         elseif ($deliveryTarget -eq "GitHubPackages") {
