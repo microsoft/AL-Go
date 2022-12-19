@@ -99,7 +99,7 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Calculate parameters
-        if: calculateParams
+        id: calculateParams
         run: |
           if ('${{ matrix.appSource }}' == 'N' -and '${{ matrix.multiProject }}' -eq 'N' -and '${{ matrix.linux }}' -eq 'N') {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentialsParam='-adminCenterApiCredentials ${{ secrets.adminCenterApiCredentials }}'"
@@ -130,7 +130,7 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Calculate parameters
-        if: calculateParams
+        id: calculateParams
         run: |
           if ('${{ matrix.appSource }}' == 'Y') {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrlParam='-licenseFileUrl ${{ secrets.licenseFileUrl }}"
