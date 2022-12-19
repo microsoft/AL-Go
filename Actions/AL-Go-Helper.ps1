@@ -262,7 +262,7 @@ function DownloadAndImportBcContainerHelper {
         elseif ($bcContainerHelperVersion -eq "preview" -or $bcContainerHelperVersion -eq "dev") {
             # For backwards compatibility, use preview when dev is specified
             Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/preview.zip", "$tempName.zip")
         }
         else {
             Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from CDN"

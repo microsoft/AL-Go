@@ -103,21 +103,21 @@ jobs:
         id: calculateParams
         run: |
           $errorActionPreference = "STOP"
+          $adminCenterApiCredentials = ''
+          $licenseFileUrl = ''
           if ('${{ matrix.appSource }}' -eq 'PTE' -and '${{ matrix.multiProject }}' -eq 'singleProject' -and '${{ matrix.linux }}' -eq 'windows') {
-            Write-Host "Setting admincenterApi"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='${{ Secrets.adminCenterApiCredentials }}'"
-          }
-          else {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials=''"
+            $adminCenterApiCredentials = '${{ Secrets.adminCenterApiCredentials }}'
           }
           if ('${{ matrix.appSource }}' -eq 'appSourceApp') {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='${{ secrets.licenseFileUrl }}'"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "template='${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'"
+            $licenseFileUrl='${{ secrets.licenseFileUrl }}'
+            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
           }
           else {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl=''"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "template='${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'"
+            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
           }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
 
       - name: Run tests
         run: |
@@ -142,15 +142,18 @@ jobs:
         run: |
           $errorActionPreference = "STOP"
           if ('${{ matrix.appSource }}' == 'appSourceApp') {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='${{ secrets.licenseFileUrl }}'"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "template='${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "path='appsourceapp'"
+            $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
+            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+            $path = 'appsourceapp'
           }
           else {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl=''"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "template='${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "path='pte'"
+            $licenseFileUrl = ''
+            $template = ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
+            $path = 'pte'
           }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "path='$path'"
 
       - name: Run tests
         run: |
