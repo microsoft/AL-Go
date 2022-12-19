@@ -102,7 +102,9 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
+          $errorActionPreference = "STOP"
           if ('${{ matrix.appSource }}' -eq 'PTE' -and '${{ matrix.multiProject }}' -eq 'singleProject' -and '${{ matrix.linux }}' -eq 'windows') {
+            Write-Host "Setting admincenterApi"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='${{ Secrets.adminCenterApiCredentials }}'"
           }
           else {
@@ -119,6 +121,7 @@ jobs:
 
       - name: Run tests
         run: |
+          $errorActionPreference = "STOP"
           e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp')
 
   TestAlGoUpgrade:
@@ -137,6 +140,7 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
+          $errorActionPreference = "STOP"
           if ('${{ matrix.appSource }}' == 'appSourceApp') {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='${{ secrets.licenseFileUrl }}'"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "template='${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'"
@@ -149,7 +153,9 @@ jobs:
           }
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path '${{ steps.calculateParams.outputs.path }}'
+        run: |
+          $errorActionPreference = "STOP"
+          e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path '${{ steps.calculateParams.outputs.path }}'
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
