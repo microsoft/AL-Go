@@ -94,7 +94,7 @@ try {
         if ($licenseFileUrl) {
             throw "License file secret should not be set"
         }
-        if ($multiProject) {
+        if ($multiProject -or $linux) {
             if ($adminCenterApiCredentials) {
                 throw "adminCenterApiCredentials should not be set"
             }

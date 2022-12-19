@@ -122,7 +122,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp')
+          e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.multiProject }}' -eq 'multiProject') -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -linux:('${{ matrix.linux }}' -eq 'linux')
 
   TestAlGoUpgrade:
     runs-on: [ windows-latest ]
