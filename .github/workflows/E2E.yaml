@@ -98,47 +98,57 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - name: Run tests (with AdminCenterCredentials)
+      - name: Calculate parameters
+        if: calculateParams
+        run: |
+          if ('${{ matrix.appSource }}' == 'N' -and '${{ matrix.multiProject }}' -eq 'N' -and '${{ matrix.linux }}' -eq 'N') {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentialsParam='-adminCenterApiCredentials ${{ secrets.adminCenterApiCredentials }}'"
+          }
+          if ('${{ matrix.appSource }}' == 'Y') {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrlParam='-licenseFileUrl ${{ secrets.licenseFileUrl }}"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "templateParam=-template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+          }
+          else {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "templateParam=-template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+          }
+
+      - name: Run tests
         if: matrix.appSource == 'N' && matrix.multiProject == 'N' && matrix.linux == 'N'
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -appSource:('${{ matrix.appSource }}' -eq 'Y')
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' ${{ steps.calculateParams.outputs.templateParam }} ${{ steps.calculateParams.outputs.adminCenterApiCredentialsParam }} ${{ steps.calculateParams.outputs.licenseFileUrlParam }} -appSource:('${{ matrix.appSource }}' -eq 'Y')
 
-      - name: Run tests (without AdminCenterCredentials)
-        if: matrix.appSource == 'Y' || matrix.multiProject == 'Y' || matrix.linux == 'Y'
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '' -private:('${{ matrix.private }}' -eq 'Y') -multiProject:('${{ matrix.multiProject }}' -eq 'Y') -linux:('${{ matrix.linux }}' -eq 'Y')
-
-  TestAlGoPteUpgrade:
+  TestAlGoUpgrade:
     runs-on: [ windows-latest ]
     needs: [SetupRepositories, CalculateReleases ]
     strategy:
       matrix:
         release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
+        appSource: [ 'Y', 'N' ]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -release '${{ matrix.release }}' -path 'pte'
-
-  TestAlGoAppSourceUpgrade:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories, CalculateReleases ]
-    strategy:
-      matrix:
-        release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
+      - name: Calculate parameters
+        if: calculateParams
+        run: |
+          if ('${{ matrix.appSource }}' == 'Y') {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrlParam='-licenseFileUrl ${{ secrets.licenseFileUrl }}"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "templateParam=-template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "path='AppSource App'"
+          }
+          else {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "templateParam=-template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "path='pte'"
+          }
 
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
+        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' ${{ steps.calculateParams.outputs.templateParam }} ${{ steps.calculateParams.outputs.licenseFileUrlParam }} -appSource:('${{ matrix.appSource }}' -eq 'Y') -release '${{ matrix.release }}' -path 'pte'
+         {{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
-    needs: [ SetupRepositories, TestAlGoPtePrivate, TestAlGoAppSourcePrivate, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoPteUpgrade, TestAlGoAppSourceUpgrade ]
+    needs: [ SetupRepositories, TestAlGo, TestAlGoUpgrade ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v3
