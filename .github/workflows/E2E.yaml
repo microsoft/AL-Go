@@ -84,115 +84,27 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "releasesCount=$($releases.Count)"
           Write-Host "releasesCount=$($releases.Count)"
 
-  TestAlGoPtePrivate:
+  TestAlGo:
     runs-on: [ windows-latest ]
     needs: [ SetupRepositories ]
+    strategy:
+      matrix:
+        private: [ 'Y', 'N' ]
+        appSource: [ 'Y', 'N' ]
+        multiProject: [ 'Y', 'N' ]
+        linux: [ 'Y', 'N' ]
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -private
+      - name: Run tests (with AdminCenterCredentials)
+        if: matrix.appSource == 'N' && matrix.multiProject == 'N' && matrix.linux == 'N'
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -appSource:('${{ matrix.appSource }}' -eq 'Y')
 
-  TestAlGoAppSourcePrivate:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -private
-
-  TestAlGoPte:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}'
-
-  TestAlGoPteMultiProject:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -multiProject
-
-  TestAlGoAppSource:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp
-
-  TestAlGoAppSourceMultiProject:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
-
-  TestAlGoPteLinux:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -linux
-
-  TestAlGoPteMultiProjectLinux:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -multiProject -linux
-
-  TestAlGoAppSourceLinux:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -linux
-
-  TestAlGoAppSourceMultiProjectLinux:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp -linux
+      - name: Run tests (without AdminCenterCredentials)
+        if: matrix.appSource == 'Y' || matrix.multiProject == 'Y' || matrix.linux == 'Y'
+        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '' -private:('${{ matrix.private }}' -eq 'Y') -multiProject:('${{ matrix.multiProject }}' -eq 'Y') -linux:('${{ matrix.linux }}' -eq 'Y')
 
   TestAlGoPteUpgrade:
     runs-on: [ windows-latest ]

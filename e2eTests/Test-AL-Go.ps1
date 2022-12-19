@@ -134,7 +134,7 @@ try {
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $template -branch $branch -private:$private -linux:$linix
+    CreateRepository -template $template -branch $branch -private:$private -linux:$linux
     $repoPath = (Get-Location).Path
 
     # Add Existing App
