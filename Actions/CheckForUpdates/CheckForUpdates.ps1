@@ -194,11 +194,17 @@ try {
                         $yaml.Replace('on:/pull_request_target:/branches:', "branches: [ '$($cicdPullRequestBranches -join "', '")' ]")
                     }
 
+                    # Do not change runs-on in Update AL Go System Files and Pull Request Handler workflows
+                    # These workflows will always run on windows-latest (or maybe Ubuntu-latest later) and not follow settings
+                    # Reasons:
+                    # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself
+                    # - Pull Request Handler workflow for security reasons
                     if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler") {
                         if ($repoSettings.ContainsKey("runs-on")) {
                             $runson = $repoSettings."runs-on"
                             $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $runson ]")
                             if ($runson -like 'ubuntu-*' -and !$repoSettings.ContainsKey("shell")) {
+                                # Default shell for Ubuntu (Linux) is pwsh
                                 $repoSettings.shell = "pwsh"
                             }
                         }
