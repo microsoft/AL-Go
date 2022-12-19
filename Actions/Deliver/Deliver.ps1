@@ -175,7 +175,7 @@ try {
                 $artifactType = $_
                 $singleArtifactFilter = "$projectToFilter-$refname-$artifactType-*.*.*.*";
 
-                # Get the folder hoding the artifacts from the standard build
+                # Get the folder holding the artifacts from the standard build
                 $artifactFolder =  @(Get-ChildItem -Path (Join-Path $baseFolder $singleArtifactFilter) -Directory)
 
                 # Verify that there is an apps folder
