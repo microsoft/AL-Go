@@ -308,6 +308,9 @@ try {
                     $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($useBranch)`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
+                if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
+                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""(.*)$', "`$1\`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)""`$4" }
+                }
                 $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
             if (Test-Path -Path '.\.github' -PathType Container) {

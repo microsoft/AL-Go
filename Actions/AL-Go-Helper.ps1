@@ -16,6 +16,7 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
+$defaultBcContainerHelperVersion = "" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -200,7 +201,7 @@ function Expand-7zipArchive {
 
 function DownloadAndImportBcContainerHelper {
     Param(
-        [string] $bcContainerHelperVersion = "",
+        [string] $bcContainerHelperVersion = $defaultBcContainerHelperVersion,
         [string] $baseFolder = ""
     )
 
@@ -215,34 +216,11 @@ function DownloadAndImportBcContainerHelper {
         }
         if (Test-Path $repoSettingsPath) {
             $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-            if (-not $bcContainerHelperVersion) {
+            if ($bcContainerHelperVersion -eq "") {
                 if ($repoSettings.ContainsKey("BcContainerHelperVersion")) {
                     $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
                     if ($bcContainerHelperVersion -like "https://*") {
                         throw "Setting BcContainerHelperVersion to a URL is not allowed."
-                    }
-                }
-            }
-            $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
-            # Action Path under linux is something like: /home/runner/work/_actions/microsoft/AL-Go-Actions/main/WorkflowInitialize
-            # Action Path under Windows is something like: D:\a\_actions\freddydk\AL-Go-Actions\main\WorkflowInitialize
-            # ..../_actions/<owner>/AL-Go-Actions/branch/Action
-            # ..../   -5   /  -4   /     -3      /  -2  /  -1
-            # The code below checks if you are running a preview branch of AL-Go-Actions - then use Preview ContainerHelper
-            # If you are using a private fork of AL-Go-Actions - then use (if exists) a private fork of ContainerHelper as well
-            if ($ap -and $ap.Count -gt 4) {
-                $folder = $ap[$ap.Count-5]
-                $owner = $ap[$ap.Count-4]
-                $repo = $ap[$ap.Count-3]
-                $branch = $ap[$ap.Count-2]
-                if ($folder -eq "_actions" -and $repo -eq "AL-Go-Actions") {
-                    if ($owner -eq "microsoft") {
-                        if ($branch -eq "preview") {
-                            $bcContainerHelperVersion = "preview"
-                        }
-                    }
-                    elseif ($bcContainerHelperVersion -eq "private" -or $owner -eq "freddydk") {
-                        $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
                     }
                 }
             }
@@ -253,7 +231,9 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperVersion = "latest"
     }
     elseif ($bcContainerHelperVersion -eq "private") {
-        $bcContainerHelperVersion = "preview"
+        # Using a private BcContainerHelper version grabs a fork of BcContainerHelper with the same owner as the AL-Go actions
+        $owner = "$ENV:GITHUB_ACTION_REPOSITORY".Split('/')[0]
+        $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
     }
 
     if ($bcContainerHelperVersion -eq "none") {
@@ -279,11 +259,8 @@ function DownloadAndImportBcContainerHelper {
                 $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
             }
         }
-        elseif ($bcContainerHelperVersion -eq "dev") {
-            Write-Host "Downloading BcContainerHelper dev branch"
-            $webclient.DownloadFile("https://github.com/freddydk/navcontainerhelper/archive/master.zip", "$tempName.zip")
-        }
-        elseif ($bcContainerHelperVersion -eq "preview") {
+        elseif ($bcContainerHelperVersion -eq "preview" -or $bcContainerHelperVersion -eq "dev") {
+            # For backwards compatibility, use preview when dev is specified
             Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
             $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
         }
