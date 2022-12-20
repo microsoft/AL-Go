@@ -141,7 +141,7 @@ jobs:
         id: calculateParams
         run: |
           $errorActionPreference = "STOP"
-          if ('${{ matrix.appSource }}' == 'appSourceApp') {
+          if ('${{ matrix.appSource }}' -eq 'appSourceApp') {
             $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
             $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
             $path = 'appsourceapp'
