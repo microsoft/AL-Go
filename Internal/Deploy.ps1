@@ -178,7 +178,7 @@ try {
         
             Write-Host -ForegroundColor Yellow "Collecting from $repo"
 
-            Get-ChildItem -Path -Path $srcPath | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
+            Get-ChildItem -Path -Path $srcPath -Force | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
                 if ($_.PSIsContainer) {
                     Remove-Item $_ -Force -Recurse
                 }
@@ -187,7 +187,7 @@ try {
                 }
             }
 
-            Get-ChildItem -Path -Path $dstPath -Recurse -File | Where-Object { $_.name -notlike '*.copy.md' } | ForEach-Object {
+            Get-ChildItem -Path -Path $dstPath -Recurse -File -Force | Where-Object { $_.name -notlike '*.copy.md' } | ForEach-Object {
                 $dstFile = $_.FullName
                 $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
                 $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
@@ -265,7 +265,7 @@ try {
                 Set-Location $repo
                 try {
                     invoke-git checkout $branch
-                    Get-ChildItem -Path "." -Exclude ".git" | Remove-Item -Force -Recurse
+                    Get-ChildItem -Path "." -Exclude ".git" -Force | Remove-Item -Force -Recurse
                 }
                 catch {
                     invoke-git checkout -b $branch
@@ -292,7 +292,7 @@ try {
                 invoke-git push -u origin $branch
             }
         
-            Get-ChildItem -Path $srcPath -Recurse -File | ForEach-Object {
+            Get-ChildItem -Path $srcPath -Recurse -File -Force | ForEach-Object {
                 $srcFile = $_.FullName
                 Write-Host "srcFile: $srcFile"
                 $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
