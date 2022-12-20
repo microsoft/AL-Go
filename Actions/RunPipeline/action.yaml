@@ -30,7 +30,7 @@ inputs:
     required: false
     default: '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePw":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePw":"","KeyVaultClientId":"","applicationInsightsConnectionString": ""}'
   buildMode:
-    description: Build mode
+    description: Specifies a mode to use for the build steps. Default mode builds the code as is.
     required: false
     default: 'Default'
 runs:
