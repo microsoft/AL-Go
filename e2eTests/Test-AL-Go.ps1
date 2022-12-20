@@ -112,7 +112,7 @@ try {
         $project2Param = @{ "project" = "P2" }
         $project2Folder = 'P2\'
         $allProjectsParam = @{ "project" = "*" }
-        $projectSettingsFiles = @("P1\.AL-Go\Settings.json", "P2\.AL-Go\Settings.json")
+        $projectSettingsFiles = @("P1\.AL-Go\settings.json", "P2\.AL-Go\settings.json")
     }
     else {
         $project1Param = @{}
@@ -120,7 +120,7 @@ try {
         $project2Param = @{}
         $project2Folder = ""
         $allProjectsParam = @{}
-        $projectSettingsFiles = @(".AL-Go\Settings.json")
+        $projectSettingsFiles = @(".AL-Go\settings.json")
     }
 
     $template = "https://github.com/$githubOwner/$template"
