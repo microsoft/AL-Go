@@ -19,4 +19,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          . (Join-Path "." "Tests/RunTests.ps1")
+          . (Join-Path "." "Tests/runtests.ps1")
