@@ -10,7 +10,7 @@ on:
 
 defaults:
   run:
-    shell: PowerShell
+    shell: pwsh
 
 jobs:
   Check:
