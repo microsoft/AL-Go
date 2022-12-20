@@ -70,8 +70,8 @@ jobs:
         run: |
           $modulePath = (Get-Item ".\e2eTests\e2eTestHelper.psm1").FullName
           Import-Module $modulePath -DisableNameChecking
-          SetTokenAndRepository -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -repository "$ENV:GITHUB_REPOSITORY" -github
-          $releases = @(gh release list --repo $ENV:GITHUB_REPOSITORY | ForEach-Object { $_.split("`t")[0] })
+          SetTokenAndRepository -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go" -github
+          $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
           Write-Host "Releases: $($releases -join ', ')"
           if ($releases.Count -eq 1) {
             $releasesJSon = "[$($releases | ConvertTo-Json -compress)]"
