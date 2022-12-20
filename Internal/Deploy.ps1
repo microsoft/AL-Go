@@ -294,8 +294,12 @@ try {
         
             Get-ChildItem -Path (Join-Path $srcPath "*") -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
                 $srcFile = $_.FullName
+                Write-Host "srcFile: $srcFile"
                 $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
+                Write-Host "dstFile: $dstFile"
                 $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
+                Write-Host "dstFilePath: $dstFilePath"
+
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
