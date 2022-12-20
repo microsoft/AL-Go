@@ -172,7 +172,7 @@ try {
             #Calculate the folders per artifact type
             'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
                 $artifactType = $_
-                $singleArtifactFilter = "$projectToFilter-$refname-$artifactType-*.*.*.*";
+                $singleArtifactFilter = "*-$refname-$artifactType-*.*.*.*";
 
                 # Get the folder holding the artifacts from the standard build
                 $artifactFolder =  @(Get-ChildItem -Path (Join-Path $baseFolder $singleArtifactFilter) -Directory)
