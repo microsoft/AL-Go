@@ -107,8 +107,8 @@ try {
     }
 
     $buildModes = $settings.buildModes | ConvertTo-Json -compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "buildModes=$buildModes"
-    Write-Host "buildModes=$buildModes"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildModes=$buildModes"
+    Write-Host "BuildModes=$buildModes"
 
     if ($getprojects) {
 

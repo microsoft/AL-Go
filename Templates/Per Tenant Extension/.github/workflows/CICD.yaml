@@ -46,7 +46,7 @@ jobs:
       projectDependenciesJson: ${{ steps.ReadSettings.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
       buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
-      buildModes: ${{ steps.ReadSettings.outputs.buildModes }}
+      buildModes: ${{ steps.ReadSettings.outputs.BuildModes }}
     steps:
       - name: Create CI/CD Workflow Check Run
         id: CreateCheckRun

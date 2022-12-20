@@ -27,6 +27,7 @@ Describe "ReadSettings Action Tests" {
             "ProjectDependenciesJson" = "Project Dependencies Json"
             "BuildOrderJson" = "Build order Json"
             "BuildOrderDepth" = "Depth in build order"
+            "BuildModes" = "Array of build modes"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

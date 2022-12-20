@@ -65,8 +65,8 @@ outputs:
   BuildOrderDepth:
     description: Depth in build order
     value: ${{ steps.readsettings.outputs.BuildOrderDepth }}
-  buildModes:
-    description: Build modes
+  BuildModes:
+    description: Array of build modes 
     value: ${{ steps.readsettings.outputs.buildModes }}
 runs:
   using: composite
