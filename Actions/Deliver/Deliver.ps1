@@ -195,8 +195,8 @@ try {
 
                 # Get the folders holding the artifacts from all build modes
                 $multipleArtifactFilter = "*-$refname-*$artifactType-*.*.*.*";
-                $artifactsFolders = @(Get-ChildItem -Path (Join-Path $baseFolder $multipleArtifactFilter) -Directory)
-                if ($artifactsFolders.Count -gt 0) {
+                $artifactFolders = @(Get-ChildItem -Path (Join-Path $baseFolder $multipleArtifactFilter) -Directory)
+                if ($artifactFolders.Count -gt 0) {
                     $parameters[$artifactType.ToLowerInvariant() + "Folders"] = $artifactFolders.FullName
                 }
             }
