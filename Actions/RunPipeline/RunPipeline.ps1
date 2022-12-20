@@ -13,7 +13,7 @@ Param(
     [string] $settingsJson = '{"AppBuild":"", "AppRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
     [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":"","StorageContext":"","ApplicationInsightsConnectionString":""}',
-    [Parameter(HelpMessage = "Build mode", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [ValidateSet('Default', 'Translated', 'Clean')]
     [string] $buildMode = 'Default'
 )
