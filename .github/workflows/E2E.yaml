@@ -57,7 +57,9 @@ jobs:
 
       - name: Setup Repositories
         id: setup
-        run: e2eTests\SetupRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}'
+        run: |
+          $errorActionPreference = "STOP"
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}'
   
   CalculateReleases:
     runs-on: [ ubuntu-latest ]
@@ -72,7 +74,7 @@ jobs:
       - name: CalculateReleases
         id: calculateReleases
         run: |
-          $modulePath = (Get-Item ".\e2eTests\e2eTestHelper.psm1").FullName
+          $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
           SetTokenAndRepository -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go" -github
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
@@ -126,7 +128,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.multiProject }}' -eq 'multiProject') -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -linux:('${{ matrix.linux }}' -eq 'linux')
+          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.multiProject }}' -eq 'multiProject') -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -linux:('${{ matrix.linux }}' -eq 'linux')
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
@@ -162,7 +164,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
+          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
