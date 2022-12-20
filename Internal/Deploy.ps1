@@ -178,7 +178,7 @@ try {
         
             Write-Host -ForegroundColor Yellow "Collecting from $repo"
 
-            Get-ChildItem -Path "$srcPath\*" | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
+            Get-ChildItem -Path (Join-Path $srcPath "*") | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
                 if ($_.PSIsContainer) {
                     Remove-Item $_ -Force -Recurse
                 }
@@ -187,7 +187,7 @@ try {
                 }
             }
 
-            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer -and $_.name -notlike '*.copy.md' } | ForEach-Object {
+            Get-ChildItem -Path (Join-Path $dstPath "*") -Recurse | Where-Object { !$_.PSIsContainer -and $_.name -notlike '*.copy.md' } | ForEach-Object {
                 $dstFile = $_.FullName
                 $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
                 $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
@@ -265,7 +265,7 @@ try {
                 Set-Location $repo
                 try {
                     invoke-git checkout $branch
-                    Get-ChildItem -Path .\* -Exclude ".git" | Remove-Item -Force -Recurse
+                    Get-ChildItem -Path (Join-Path "." "*") -Exclude ".git" | Remove-Item -Force -Recurse
                 }
                 catch {
                     invoke-git checkout -b $branch
@@ -292,7 +292,7 @@ try {
                 invoke-git push -u origin $branch
             }
         
-            Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+            Get-ChildItem -Path (Join-Path $srcPath "*") -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
                 $srcFile = $_.FullName
                 $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
                 $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
@@ -316,8 +316,8 @@ try {
                 }
                 $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
-            if (Test-Path -Path '.\.github' -PathType Container) {
-                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination ".\.github\RELEASENOTES.copy.md" -Force
+            if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
+                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
             }
             
             invoke-git add .
