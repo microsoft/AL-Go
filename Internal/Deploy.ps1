@@ -292,7 +292,7 @@ try {
                 invoke-git push -u origin $branch
             }
         
-            Get-ChildItem -Path Join-Path $srcPath -Recurse -File | ForEach-Object {
+            Get-ChildItem -Path $srcPath -Recurse -File | ForEach-Object {
                 $srcFile = $_.FullName
                 Write-Host "srcFile: $srcFile"
                 $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
