@@ -488,11 +488,13 @@ jobs:
           if ($project -eq ".") { $project = $settings.RepoName }
           'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
             $name = "$($_)ArtifactsName"
-            $value = "$($project.Replace('\','_').Replace('/','_')-$($ref)-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
-            # Translated is the default build mode, so we don't need to add it to the artifact name
-            if ($buildMode -ne 'Translated') {
-              $value = "$($buildMode)-" + $value
+            
+            if ($buildMode -eq 'Default') {
+              $buildMode = ''
             }
+            
+            $value = "$($project.Replace('\','_').Replace('/','_')-$($ref)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }
