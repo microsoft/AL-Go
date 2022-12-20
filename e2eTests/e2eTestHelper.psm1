@@ -115,6 +115,15 @@ function RunWorkflow {
     $url = "https://api.github.com/repos/$repository/actions/workflows"
     $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
     $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
+    if (!$workflows) {
+        Write-Host "No workflows found, waiting 60 seconds and retrying"
+        Start-Sleep -seconds 60
+        $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
+        $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
+        if (!$workflows) {
+            throw "No workflows found"
+        }
+    }
     $workflow = $workflows | Where-Object { $_.Name.Trim() -eq $name }
     if (!$workflow) {
         throw "Workflow $name not found"
@@ -122,7 +131,13 @@ function RunWorkflow {
 
     Write-Host "Get Previous runs"
     $url = "https://api.github.com/repos/$repository/actions/runs"
-    $previousrun = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id } | Select-Object -First 1
+    $previousrun = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
+    if ($previousrun) {
+        Write-Host "Previous run: $($previousrun.id)"
+    }
+    else {
+        Write-Host "No previous run found"
+    }
     
     Write-Host "Run workflow"
     $url = "https://api.github.com/repos/$repository/actions/workflows/$($workflow.id)/dispatches"
@@ -137,7 +152,7 @@ function RunWorkflow {
     do {
         Start-Sleep -Seconds 10
         $url = "https://api.github.com/repos/$repository/actions/runs"
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id } | Select-Object -First 1
+        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
         Write-Host "."
     } until (($run) -and ((!$previousrun) -or ($run.id -ne $previousrun.id)))
     $runid = $run.id
@@ -224,7 +239,6 @@ function CreateRepository {
     }
     if ($templatePath) {
         Write-Host "$(Join-Path $templatePath '*')"
-
         Copy-Item (Join-Path $templatePath '*') -Destination . -Recurse -Force
     }
     $repoSettingsFile = ".github\AL-Go-Settings.json"

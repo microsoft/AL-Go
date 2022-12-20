@@ -35,6 +35,10 @@ jobs:
             Write-Host "::Error::In order to run end to end tests, you need a Secret called licenseFileUrl containing a secure Url to a build license file"
             $err = $true
           }
+          if ('${{ Secrets.insiderSasToken }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called insiderSasToken containing the Insider SAS token from https://aka.ms/collaborate"
+            $err = $true
+          }
           if ($err) {
             exit 1
           }
@@ -148,7 +152,7 @@ jobs:
           }
           else {
             $licenseFileUrl = ''
-            $template = ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
+            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
             $path = 'pte'
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
@@ -158,7 +162,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path '${{ steps.calculateParams.outputs.path }}'
+          e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
 
   RemoveRepositories:
     runs-on: [ windows-latest ]
