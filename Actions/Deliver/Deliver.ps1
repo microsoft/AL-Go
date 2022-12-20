@@ -167,8 +167,7 @@ try {
                 "RepoSettings" = $settings
                 "ProjectSettings" = $projectSettings
             }
-
-            $projectToFilter = $project.Replace('\','_') # this is the project name as it appears in the artifact folder name
+            #Calculate the folders per artifact type
             
             #Calculate the folders per artifact type
             'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
@@ -195,11 +194,10 @@ try {
                 }
 
                 # Get the folders holding the artifacts from all build modes
-                # Build modes are identified as a prefix to the artifact folder name
-                $artifactsFolders = @(Get-ChildItem -Path (Join-Path $baseFolder $("*" + $singleArtifactFilter)) -Directory)
-
+                $multipleArtifactFilter = "*-$refname-*$artifactType-*.*.*.*";
+                $artifactsFolders = @(Get-ChildItem -Path (Join-Path $baseFolder $multipleArtifactFilter) -Directory)
                 if ($artifactsFolders.Count -gt 0) {
-                    $parameters[$artifactType.ToLower() + "Folders"] = $artifactsFolders.FullName
+                    $parameters[$artifactType.ToLowerInvariant() + "Folders"] = $artifactFolders.FullName
                 }
             }
             
