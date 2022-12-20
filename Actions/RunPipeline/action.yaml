@@ -32,7 +32,7 @@ inputs:
   buildMode:
     description: Build mode
     required: false
-    default: 'Translated'
+    default: 'Default'
 runs:
   using: composite
   steps:
