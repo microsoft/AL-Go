@@ -134,6 +134,18 @@ $parameters.ProjectSettings | Out-Host
 
 **Note:** You can also override existing AL-Go for GitHub delivery functionality by creating a script called f.ex. DeliverToStorage.ps1 in the .github folder.
 
+Here are the parameters to use in your custom script:
+
+| Parameter | Description | Example |
+| --------- | :--- | :--- |
+| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject
+| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject
+| `$parameters.type` | Type of delivery (CD or Release) | CD
+| `$parameters.appsFolder` | The folder that contain the output from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0
+| `$parameters.testAppsFolder` | The folder that contain the output from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0
+| `$parameters.appsFolders` | The folders that contain the output from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0
+| `$parameters.testAppsFolders` | The folders that contain the output from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0
+
 ## Run-AlPipeline script override
 
 AL-Go for GitHub utilizes the Run-AlPipeline function from BcContainerHelper to perform the actual build (compile, publish, test etc). The Run-AlPipeline function supports overriding functions for creating containers, compiling apps and a lot of other things.
