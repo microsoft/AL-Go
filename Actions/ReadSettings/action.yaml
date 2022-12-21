@@ -74,7 +74,7 @@ outputs:
     value: ${{ steps.readsettings.outputs.BuildOrderDepth }}
   BuildModes:
     description: Array of build modes
-    value: ${{ steps.readsettings.outputs.buildModes }}
+    value: ${{ steps.readsettings.outputs.BuildModes }}
 runs:
   using: composite
   steps:
