@@ -28,6 +28,7 @@ When running a workflow or a local script, the settings are applied by reading o
 | bcptTestFolders | bcptTestFolders should be an array of folders (relative to project root), which contains performance test apps for this project. Apps in these folders are sorted based on dependencies and built, published and bcpt tests are run in that order. | [ ] |
 | appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version (default latest)<br />**release_status** = latestBuild/release/prerelease/draft (default release)<br />**projects** = projects (default * = all)<br />**AuthTokenSecret** = Name of secret containing auth token (default none)<br /> | [ ] |
 | environments | Array of logical environment names. You can specify environments in GitHub environments or in the repo settings file. If you specify environments in the settings file, you can create your AUTHCONTEXT secret using **&lt;environmentname&gt;_AUTHCONTEXT**. If the actual environment name is different from the logical environmentname, then you can create a secret with the actual name called **&lt;environmentname&gt;_ENVIRONMENTNAME** | [ ] |
+| cleanModePreprocessorSymbols | List of clean tags to be used in _Clean_ build mode | [ ] |
 
 ## AppSource specific basic settings
 | Name | Description | Default value |
@@ -47,6 +48,7 @@ The repository settings are only read from the repository settings file (.github
 | currentSchedule | CRON schedule for when Current workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
 | runs-on | Specifies which github runner will be used for all jobs in all workflows (except the Update AL-Go System Files workflow). The default is to use the GitHub hosted runner Windows-latest. You can specify a special GitHub Runner for the build job using the GitHubRunner setting. Read [this](SelfHostedGitHubRunner.md) for more information.
 | githubRunner | Specifies which github runner will be used for the build job in workflows including a build job. This is the most time consuming task. By default this job uses the Windows-latest github runner (unless overridden by the runs-on setting). This settings takes precedence over runs-on so that you can use different runners for the build job and the housekeeping jobs. See runs-on setting.
+| buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go projects will be built using each built mode. Available build modes are:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: _PreprocessorSymbols_ are enabled when compiling the apps. The values for the symbols correspond to the `cleanModePreprocessorSymbols` setting of the AL-Go project.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps.
 
 ## Advanced settings
 
@@ -133,6 +135,20 @@ $parameters.ProjectSettings | Out-Host
 ```
 
 **Note:** You can also override existing AL-Go for GitHub delivery functionality by creating a script called f.ex. DeliverToStorage.ps1 in the .github folder.
+
+Here are the parameters to use in your custom script:
+
+| Parameter | Description | Example |
+| --------- | :--- | :--- |
+| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject
+| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject
+| `$parameters.type` | Type of delivery (CD or Release) | CD
+| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0
+| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0
+| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0
+| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0
+| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0
+| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0
 
 ## Run-AlPipeline script override
 

@@ -29,6 +29,10 @@ inputs:
     description: Secrets from repository in compressed Json format
     required: false
     default: '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePw":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePw":"","KeyVaultClientId":"","applicationInsightsConnectionString": ""}'
+  buildMode:
+    description: Specifies a mode to use for the build steps
+    required: false
+    default: 'Default'
 runs:
   using: composite
   steps:
@@ -42,7 +46,8 @@ runs:
         _projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
         _settingsJson: ${{ inputs.settingsJson }}
         _secretsJson: ${{ inputs.secretsJson }}
-      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -projectDependenciesJson $ENV:_projectDependenciesJson -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+        _buildMode: ${{ inputs.buildMode }}
+      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -projectDependenciesJson $ENV:_projectDependenciesJson -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson -buildMode $ENV:_buildMode } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

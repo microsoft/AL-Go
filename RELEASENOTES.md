@@ -7,6 +7,9 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue #229 Create Release action tags wrong commit
 - Issue #283 Create Release workflow uses deprecated actions
 
+### Build modes support
+AL-Go projects can now be built in different modes, by specifying the _buildModes_ setting in AL-Go-Settings.json. Read more about build modes in the [Basic Repository settings](https://github.com/microsoft/AL-Go/blob/main/Scenarios/settings.md#basic-repository-settings).
+
 ### Continuous Delivery
 
 Continuous Delivery can now run from other branches than main. By specifying a property called branches, containing an array of branches in the deliveryContext json construct, the artifacts generated from this branch are also delivered. The branch specification can include wildcards (like release/*). Default is main, i.e. no changes to functionality.
