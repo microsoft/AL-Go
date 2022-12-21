@@ -2,7 +2,7 @@ Param(
     [switch] $local
 )
 
-$gitHubHelperPath = Join-Path $PSScriptRoot 'GitHub-Helper.psm1'
+$gitHubHelperPath = Join-Path $PSScriptRoot 'Github-Helper.psm1'
 if (Test-Path $gitHubHelperPath) {
     Import-Module $gitHubHelperPath
 }
@@ -227,12 +227,14 @@ function DownloadAndImportBcContainerHelper {
             $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
         }
     }
+    Write-Host $bcContainerHelperVersion
     if ($bcContainerHelperVersion -eq "") {
         $bcContainerHelperVersion = "latest"
     }
     elseif ($bcContainerHelperVersion -eq "private") {
         # Using a private BcContainerHelper version grabs a fork of BcContainerHelper with the same owner as the AL-Go actions
-        $owner = "$ENV:GITHUB_ACTION_REPOSITORY".Split('/')[0]
+        $ActionsRepo = "microsoft/AL-Go-Actions@main"
+        $owner = $actionsRepo.Split('/')[0]
         $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
     }
 
