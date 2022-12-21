@@ -143,12 +143,14 @@ try {
             if (Test-Path $_) {
                 Set-Location $_
                 invoke-git pull
-                Set-Location $baseFolder
             }
             else {
                 $serverUrl = "https://github.com/$($config.githubOwner)/$_.git"
                 invoke-git clone --quiet $serverUrl
+                Set-Location $_
             }
+            invoke-git checkout $config.branch
+            Set-Location $baseFolder
         }
         else {
             if (Test-Path $_) {
@@ -197,7 +199,7 @@ try {
                 Write-Host "$dstFile -> $srcFile"
                 $lines = ([string](Get-Content -Raw -path $dstFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
-                    $regex = "^(.*)$($config.githubOwner)/$($config."$_")(.*)$($config.branch)(.*)$"
+                    $regex = "^(.*)$($config.githubOwner)\/$($config."$_")(.*)$($config.branch)(.*)$"
                     $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
