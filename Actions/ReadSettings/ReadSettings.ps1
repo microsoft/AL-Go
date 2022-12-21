@@ -111,7 +111,7 @@ try {
     }
 
     if ($settings.buildModes.Count -eq 1) {
-        $buildModes = "[$settings.buildModes | ConvertTo-Json -compress]"
+        $buildModes = "[$($settings.buildModes | ConvertTo-Json -compress)]"
     }
     else {
         $buildModes = $settings.buildModes | ConvertTo-Json -compress
