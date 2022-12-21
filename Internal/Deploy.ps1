@@ -180,7 +180,7 @@ try {
         
             Write-Host -ForegroundColor Yellow "Collecting from $repo"
 
-            Get-ChildItem -Path -Path $srcPath -Force | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
+            Get-ChildItem -Path $srcPath -Force | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
                 if ($_.PSIsContainer) {
                     Remove-Item $_ -Force -Recurse
                 }

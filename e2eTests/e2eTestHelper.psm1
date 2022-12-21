@@ -29,7 +29,6 @@ function SetTokenAndRepository {
     else {
         $token | gh auth login --with-token
     }
-    gh auth refresh -h github.com -s delete_repo
 }
 
 function ConvertTo-HashTable() {
