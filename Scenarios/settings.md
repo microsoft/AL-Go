@@ -143,10 +143,12 @@ Here are the parameters to use in your custom script:
 | `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject
 | `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject
 | `$parameters.type` | Type of delivery (CD or Release) | CD
-| `$parameters.appsFolder` | The folder that contain the output from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0
-| `$parameters.testAppsFolder` | The folder that contain the output from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0
-| `$parameters.appsFolders` | The folders that contain the output from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0
-| `$parameters.testAppsFolders` | The folders that contain the output from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0
+| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0
+| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0
+| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0
+| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0
+| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0
+| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0
 
 ## Run-AlPipeline script override
 
