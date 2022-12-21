@@ -47,7 +47,7 @@ jobs:
       projectDependenciesJson: ${{ steps.ReadSettings.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
       buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
-      buildModes: ${{ steps.ReadSettings.outputs.buildModes}}
+      buildModes: ${{ steps.ReadSettings.outputs.BuildModes }}
     steps:
       - name: Create CI/CD Workflow Check Run
         id: CreateCheckRun
@@ -469,24 +469,6 @@ jobs:
           SecretsJson: ${{ env.RepoSecrets }}
           buildMode: ${{ matrix.buildMode }}
 
-      - name: Upload thisbuild artifacts - apps
-        if: env.workflowDepth > 1
-        uses: actions/upload-artifact@v3
-        with:
-          name: 'thisbuild-${{ matrix.project }}-${{ matrix.buildMode }}Apps'
-          path: '${{ matrix.project }}/.buildartifacts/Apps/'
-          if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Upload thisbuild artifacts - test apps
-        if: env.workflowDepth > 1
-        uses: actions/upload-artifact@v3
-        with:
-          name: 'thisbuild-${{ matrix.project }}-${{ matrix.buildMode }}TestApps'
-          path: '${{ matrix.project }}/.buildartifacts/TestApps/'
-          if-no-files-found: ignore
-          retention-days: 1
-
       - name: Calculate Artifact names
         id: calculateArtifactNames
         if: success() || failure()
@@ -513,12 +495,32 @@ jobs:
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildMode=$buildMode"
+          Add-Content -Path $env:GITHUB_ENV -Value "BuildMode=$buildMode"
+
+      - name: Upload thisbuild artifacts - apps
+        if: env.workflowDepth > 1
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'thisbuild-${{ matrix.project }}-${{ env.BuildMode }}Apps'
+          path: '${{ matrix.project }}/.buildartifacts/Apps/'
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload thisbuild artifacts - test apps
+        if: env.workflowDepth > 1
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'thisbuild-${{ matrix.project }}-${{ env.BuildMode }}TestApps'
+          path: '${{ matrix.project }}/.buildartifacts/TestApps/'
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Publish artifacts - apps
         uses: actions/upload-artifact@v3
         if: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetCount > 0 || needs.Initialization.outputs.environmentCount > 0
         with:
-          name: ${{ env.appsArtifactsName }}
+          name: ${{ env.AppsArtifactsName }}
           path: '${{ matrix.project }}/.buildartifacts/Apps/'
           if-no-files-found: ignore
 
@@ -526,7 +528,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetCount > 0 || needs.Initialization.outputs.environmentCount > 0
         with:
-          name: ${{ env.dependenciesArtifactsName }}
+          name: ${{ env.DependenciesArtifactsName }}
           path: '${{ matrix.project }}/.buildartifacts/Dependencies/'
           if-no-files-found: ignore
 
@@ -534,7 +536,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetCount > 0 || needs.Initialization.outputs.environmentCount > 0
         with:
-          name: ${{ env.testAppsArtifactsName }}
+          name: ${{ env.TestAppsArtifactsName }}
           path: '${{ matrix.project }}/.buildartifacts/TestApps/'
           if-no-files-found: ignore
 
@@ -542,7 +544,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: (success() || failure()) && (hashFiles(format('{0}/BuildOutput.txt',matrix.project)) != '')
         with:
-          name: ${{ env.buildOutputArtifactsName }}
+          name: ${{ env.BuildOutputArtifactsName }}
           path: '${{ matrix.project }}/BuildOutput.txt'
           if-no-files-found: ignore
 
@@ -558,7 +560,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: (success() || failure()) && (hashFiles(format('{0}/TestResults.xml',matrix.project)) != '')
         with:
-          name: ${{ env.testResultsArtifactsName }}
+          name: ${{ env.TestResultsArtifactsName }}
           path: '${{ matrix.project }}/TestResults.xml'
           if-no-files-found: ignore
 
@@ -566,7 +568,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',matrix.project)) != '')
         with:
-          name: ${{ env.bcptTestResultsArtifactsName }}
+          name: ${{ env.BcptTestResultsArtifactsName }}
           path: '${{ matrix.project }}/bcptTestResults.json'
           if-no-files-found: ignore
 

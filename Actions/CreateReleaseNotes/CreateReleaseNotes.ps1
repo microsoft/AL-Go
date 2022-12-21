@@ -27,7 +27,7 @@ try {
     
     $releaseNotes = ""
 
-    Import-Module (Join-Path $PSScriptRoot '..\GitHub-Helper.psm1' -Resolve)
+    Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
 
     SemVerStrToSemVerObj -semVerStr $tag_name | Out-Null
 
