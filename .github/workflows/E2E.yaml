@@ -15,8 +15,11 @@ defaults:
 jobs:
   Check:
     runs-on: [ ubuntu-latest ]
+    outputs:
+      githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
       - name: Check secrets
+        id: check
         run: |
           $err = $false
           if ('${{ Secrets.OrgPAT }}' -eq '') {
@@ -42,6 +45,17 @@ jobs:
           if ($err) {
             exit 1
           }
+          # Modify GitHubOwner secret in order to ensure that URLs are not masked in output
+          # Makes troubleshooting much easier
+          $githubOwner = '${{ Secrets.githubOwner }}'
+          if ($githubOwner.ToLowerInvariant() -ne $githubOwner) {
+            $githubOwner = $githubOwner.ToLowerInvariant()
+          }
+          else {
+            $githubOwner = $githubOwner.ToUpperInvariant()
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
+          Write-Host "githubOwner=$githubOwner"
 
   SetupRepositories:
     runs-on: [ ubuntu-latest ]
@@ -59,7 +73,7 @@ jobs:
         id: setup
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}'
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}'
   
   CalculateReleases:
     runs-on: [ ubuntu-latest ]
@@ -76,7 +90,7 @@ jobs:
         run: |
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
-          SetTokenAndRepository -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go" -github
+          SetTokenAndRepository -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go" -github
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
           Write-Host "Releases: $($releases -join ', ')"
           if ($releases.Count -eq 1) {
@@ -128,7 +142,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.multiProject }}' -eq 'multiProject') -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -linux:('${{ matrix.linux }}' -eq 'linux')
+          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.multiProject }}' -eq 'multiProject') -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -linux:('${{ matrix.linux }}' -eq 'linux')
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
@@ -164,7 +178,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
+          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
@@ -176,4 +190,4 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Remove Repositories
-        run: e2eTests\RemoveRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+        run: e2eTests\RemoveRepositories.ps1 -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

@@ -176,7 +176,7 @@ function WaitWorkflow {
 
     $status = ""
     do {
-        Start-Sleep -Seconds 30
+        Start-Sleep -Seconds 60
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
         $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
         if ($run.status -ne $status) {
@@ -319,6 +319,7 @@ function MergePRandPull {
     Write-Host -ForegroundColor Yellow "`nMerge Pull Request $prid into repository $repository"
     invoke-gh pr merge $prid --squash --delete-branch --repo $repository | Out-Host
     Pull -branch $branch
+    Start-Sleep -Seconds 30
 }
 
 function RemoveRepository {
