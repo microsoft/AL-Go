@@ -178,17 +178,19 @@ try {
             $srcPath = $_.srcPath
             $dstPath = $_.dstPath
         
-            Write-Host -ForegroundColor Yellow "Collecting from $repo"
-
+            Write-Host "Removing $srcPath content"
             Get-ChildItem -Path $srcPath -Force | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
+                $name = $_.FullName
+                Write-Host "Remove $name"
                 if ($_.PSIsContainer) {
-                    Remove-Item $_.FullName -Force -Recurse
+                    Remove-Item $name -Force -Recurse
                 }
                 else {
-                    Remove-Item $_.FullName -Force
+                    Remove-Item $name -Force
                 }
             }
-
+            
+            Write-Host -ForegroundColor Yellow "Collecting from $repo"
             Get-ChildItem -Path -Path $dstPath -Recurse -File -Force | Where-Object { $_.name -notlike '*.copy.md' } | ForEach-Object {
                 $dstFile = $_.FullName
                 $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
