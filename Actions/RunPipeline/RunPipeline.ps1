@@ -12,7 +12,10 @@ Param(
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"appBuild":"", "appRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
-    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","codeSignCertificatePassword":"","keyVaultCertificateUrl":"","keyVaultCertificatePassword":"","keyVaultClientId":"","storageContext":"","applicationInsightsConnectionString":""}'
+    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","codeSignCertificatePassword":"","keyVaultCertificateUrl":"","keyVaultCertificatePassword":"","keyVaultClientId":"","storageContext":"","applicationInsightsConnectionString":""}',
+    [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
+    [ValidateSet('Default', 'Translated', 'Clean')]
+    [string] $buildMode = 'Default'
 )
 
 $ErrorActionPreference = "Stop"
@@ -340,7 +343,30 @@ try {
         if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
-    Write-Host "Invoke Run-AlPipeline"
+    switch($buildMode){
+        'Clean' {
+            $preprocessorsymbols = $repo.cleanModePreprocessorSymbols
+
+            if (!$preprocessorsymbols) {
+                throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
+            }
+
+            if (!$runAlPipelineParams.ContainsKey('preprocessorsymbols')) {
+                $runAlPipelineParams["preprocessorsymbols"] = @()
+            }
+
+            Write-Host "Adding Preprocessor symbols: $preprocessorsymbols"
+            $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
+        }
+        'Translated' {
+            if (!$runAlPipelineParams.ContainsKey('features')) {
+                $runAlPipelineParams["features"] = @()
+            }
+            $runAlPipelineParams["features"] += "translationfile"
+        }
+    }
+
+    Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
         -pipelinename $workflowName `
         -containerName $containerName `

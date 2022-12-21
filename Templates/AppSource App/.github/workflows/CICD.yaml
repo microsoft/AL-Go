@@ -47,6 +47,7 @@ jobs:
       projectDependenciesJson: ${{ steps.ReadSettings.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
       buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
+      buildModes: ${{ steps.ReadSettings.outputs.BuildModes }}
     steps:
       - name: Create CI/CD Workflow Check Run
         id: CreateCheckRun
@@ -300,8 +301,9 @@ jobs:
     strategy:
       matrix:
         project: ${{ fromJson(needs.Initialization.outputs.projects) }}
+        buildMode: ${{ fromJson(needs.Initialization.outputs.buildModes) }}
       fail-fast: false
-    name: Build ${{ matrix.project }}
+    name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
     outputs:
       AppsArtifactsName: ${{ steps.calculateArtifactNames.outputs.AppsArtifactsName }}
       TestAppsArtifactsName: ${{ steps.calculateArtifactNames.outputs.TestAppsArtifactsName }}
@@ -456,6 +458,8 @@ jobs:
       - name: Run pipeline
         id: RunPipeline
         uses: microsoft/AL-Go-Actions/RunPipeline@main
+        env:
+          BuildMode: ${{ matrix.buildMode }}
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
@@ -463,12 +467,13 @@ jobs:
           ProjectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
           settingsJson: ${{ env.Settings }}
           SecretsJson: ${{ env.RepoSecrets }}
+          buildMode: ${{ matrix.buildMode }}
 
       - name: Upload thisbuild artifacts - apps
         if: env.workflowDepth > 1
         uses: actions/upload-artifact@v3
         with:
-          name: 'thisbuild-${{ matrix.project }}-Apps'
+          name: 'thisbuild-${{ matrix.project }}-${{ matrix.buildMode }}Apps'
           path: '${{ matrix.project }}/.buildartifacts/Apps/'
           if-no-files-found: ignore
           retention-days: 1
@@ -477,7 +482,7 @@ jobs:
         if: env.workflowDepth > 1
         uses: actions/upload-artifact@v3
         with:
-          name: 'thisbuild-${{ matrix.project }}-TestApps'
+          name: 'thisbuild-${{ matrix.project }}-${{ matrix.buildMode }}TestApps'
           path: '${{ matrix.project }}/.buildartifacts/TestApps/'
           if-no-files-found: ignore
           retention-days: 1
@@ -490,6 +495,7 @@ jobs:
           Set-StrictMode -version 2.0
           $settings = '${{ env.Settings }}' | ConvertFrom-Json
           $project = '${{ matrix.project }}'
+          $buildMode = '${{ matrix.buildMode }}'
           if ("$ENV:GITHUB_EVENT_NAME" -eq 'workflow_run') {
             $eventStr = Get-Content $ENV:GITHUB_EVENT_PATH -Encoding UTF8
             $eventStr | Out-Host
@@ -500,9 +506,10 @@ jobs:
             $ref = "$ENV:GITHUB_REF_NAME".Replace('/','_')
           }
           if ($project -eq ".") { $project = $settings.repoName }
+          if ($buildMode -eq 'Default') { $buildMode = '' }
           'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
             $name = "$($_)ArtifactsName"
-            $value = "$($project.Replace('/','_').Replace('\','_'))-$($ref)-$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+            $value = "$($project.Replace('\','_').Replace('/','_'))-$($ref)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }

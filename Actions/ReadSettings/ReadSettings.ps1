@@ -105,10 +105,23 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
     Write-Host "GitHubRunnerShell=$githubRunnerShell"
 
+    # Add only default build mode if not specified in settings
+    if (!$settings.buildModes) {
+        $settings.buildModes = @("Default")
+    }
+
+    if ($settings.buildModes.Count -eq 1) {
+        $buildModes = "[$settings.buildModes | ConvertTo-Json -compress]"
+    }
+    else {
+        $buildModes = $settings.buildModes | ConvertTo-Json -compress
+    }
+    
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildModes=$buildModes"
+    Write-Host "BuildModes=$buildModes"
+
     if ($getProjects) {
-
         Write-Host "Determining projects to build"
-
         $buildProjects = @()
         if ($settings.projects) {
             $projects = $settings.projects

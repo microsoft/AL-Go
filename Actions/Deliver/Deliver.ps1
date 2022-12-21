@@ -179,8 +179,12 @@ try {
             Write-Host "- $($_.Name)"
         }
 
-        $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/DeliverTo$deliveryTarget.ps1" 
+        # Check if there is a custom script to run for the delivery target
+        $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/DeliverTo$deliveryTarget.ps1"
+
         if (Test-Path $customScript -PathType Leaf) {
+            Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
+            
             $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/.AL-Go/settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
             $parameters = @{
                 "Project" = $thisProject
@@ -190,38 +194,41 @@ try {
                 "RepoSettings" = $settings
                 "ProjectSettings" = $projectSettings
             }
+            #Calculate the folders per artifact type
+            
+            #Calculate the folders per artifact type
+            'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
+                $artifactType = $_
+                $singleArtifactFilter = "*-$refname-$artifactType-*.*.*.*";
 
-            $appsfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
-            if ($appsFolder.Count -eq 0) {
-                throw "Internal error - unable to locate apps folder"
+                # Get the folder holding the artifacts from the standard build
+                $artifactFolder =  @(Get-ChildItem -Path (Join-Path $baseFolder $singleArtifactFilter) -Directory)
+
+                # Verify that there is an apps folder
+                if ($artifactFolder.Count -eq 0 -and $artifactType -eq "Apps") {
+                    throw "Internal error - unable to locate apps folder"
+                }
+
+                # Verify that there is only at most one artifact folder for the standard build
+                if ($artifactFolder.Count -gt 1) {
+                    $artifactFolder | Out-Host
+                    throw "Internal error - multiple $artifactType folders located"
+                }
+
+                # Add the artifact folder to the parameters
+                if ($artifactFolder.Count -ne 0) {
+                    $parameters[$artifactType.ToLowerInvariant() + "Folder"] = $artifactFolder[0].FullName
+                }
+
+                # Get the folders holding the artifacts from all build modes
+                $multipleArtifactFilter = "*-$refname-*$artifactType-*.*.*.*";
+                $artifactFolders = @(Get-ChildItem -Path (Join-Path $baseFolder $multipleArtifactFilter) -Directory)
+                if ($artifactFolders.Count -gt 0) {
+                    $parameters[$artifactType.ToLowerInvariant() + "Folders"] = $artifactFolders.FullName
+                }
             }
-            if ($appsFolder.Count -gt 1) {
-                $appsFolder | Out-Host
-                throw "Internal error - multiple apps folders located"
-            }
-            $parameters.appsfolder = $appsfolder[0].FullName
-            $testAppsFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-TestApps-*.*.*.*") | Where-Object { $_.PSIsContainer })
-            if ($testAppsFolder.Count -gt 1) {
-                $testAppsFolder | Out-Host
-                throw "Internal error - multiple testApps folders located"
-            }
-            elseif ($testAppsFolder.Count -eq 1) {
-                $parameters.testAppsFolder = $testAppsFolder[0]
-            }
-            else {
-                $parameters.testAppsFolder = ""
-            }
-            $dependenciesFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
-            if ($dependenciesFolder.Count -gt 1) {
-                $dependenciesFolder | Out-Host
-                throw "Internal error - multiple dependencies folders located"
-            }
-            elseif ($dependenciesFolder.Count -eq 1) {
-                $parameters.dependenciesFolder = $dependenciesFolder[0]
-            }
-            else {
-                $parameters.dependenciesFolder = ""
-            }
+            
+            Write-Host "Calling custom script: $customScript"
             . $customScript -parameters $parameters
         }
         elseif ($deliveryTarget -eq "GitHubPackages") {
