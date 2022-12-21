@@ -106,7 +106,13 @@ try {
         $settings.buildModes = @("Default")
     }
 
-    $buildModes = $settings.buildModes | ConvertTo-Json -compress
+    if ($settings.buildModes.Count -eq 1) {
+        $buildModes = "[$settings.buildModes | ConvertTo-Json -compress]"
+    }
+    else {
+        $buildModes = $settings.buildModes | ConvertTo-Json -compress
+    }
+    
     Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildModes=$buildModes"
     Write-Host "BuildModes=$buildModes"
 
