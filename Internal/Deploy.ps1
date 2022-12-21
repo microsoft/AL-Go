@@ -182,10 +182,10 @@ try {
 
             Get-ChildItem -Path $srcPath -Force | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
                 if ($_.PSIsContainer) {
-                    Remove-Item $_ -Force -Recurse
+                    Remove-Item $_.FullName -Force -Recurse
                 }
                 else {
-                    Remove-Item $_ -Force
+                    Remove-Item $_.FullName -Force
                 }
             }
 
