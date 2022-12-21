@@ -191,7 +191,7 @@ try {
             }
             
             Write-Host -ForegroundColor Yellow "Collecting from $repo"
-            Get-ChildItem -Path -Path $dstPath -Recurse -File -Force | Where-Object { $_.name -notlike '*.copy.md' } | ForEach-Object {
+            Get-ChildItem -Path $dstPath -Recurse -File -Force | Where-Object { $_.name -notlike '*.copy.md' } | ForEach-Object {
                 $dstFile = $_.FullName
                 $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
                 $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
