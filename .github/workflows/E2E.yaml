@@ -106,7 +106,7 @@ jobs:
 
   TestAlGo:
     runs-on: [ ubuntu-latest ]
-    needs: [ SetupRepositories ]
+    needs: [ Check, SetupRepositories ]
     strategy:
       matrix:
         private: [ 'private', 'public' ]
@@ -146,7 +146,7 @@ jobs:
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
-    needs: [ SetupRepositories, CalculateReleases ]
+    needs: [ Check, SetupRepositories, CalculateReleases ]
     strategy:
       matrix:
         release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
@@ -182,7 +182,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
-    needs: [ SetupRepositories, TestAlGo, TestAlGoUpgrade ]
+    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v3
