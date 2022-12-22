@@ -52,7 +52,7 @@ jobs:
           # Modify GitHubOwner secret in order to ensure that URLs are not masked in output
           # Makes troubleshooting much easier
           $githubOwner = '${{ Secrets.githubOwner }}'
-          if ($githubOwner.ToLowerInvariant() -ne $githubOwner) {
+          if ($githubOwner.ToLowerInvariant() -cne $githubOwner) {
             $githubOwner = $githubOwner.ToLowerInvariant()
           }
           else {
