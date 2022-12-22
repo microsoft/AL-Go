@@ -44,7 +44,7 @@ try {
     if (!$project) { $project = '*' }
 
     if ($project -ne '.') {
-        $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName '.AL-Go\Settings.json') -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) } | Where-Object { $_ -like $project })
+        $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) } | Where-Object { $_ -like $project })
         if ($projects.Count -eq 0) {
             if ($project -eq '*') {
                 $projects = @( '.' )
@@ -63,8 +63,8 @@ try {
         try {
             Write-Host "Reading settings from $project\$ALGoSettingsFile"
             $settingsJson = Get-Content "$project\$ALGoSettingsFile" -Encoding UTF8 | ConvertFrom-Json
-            if ($settingsJson.PSObject.Properties.Name -eq "RepoVersion") {
-                $oldVersion = [System.Version]"$($settingsJson.RepoVersion).0.0"
+            if ($settingsJson.PSObject.Properties.Name -eq "repoVersion") {
+                $oldVersion = [System.Version]"$($settingsJson.repoVersion).0.0"
                 if ((!$addToVersionNumber) -and $newVersion -le $oldVersion) {
                     throw "The new version number ($($newVersion.Major).$($newVersion.Minor)) must be larger than the old version number ($($oldVersion.Major).$($oldVersion.Minor))"
                 }
@@ -72,16 +72,16 @@ try {
                 if ($addToVersionNumber) {
                     $repoVersion = [System.Version]"$($newVersion.Major+$oldVersion.Major).$($newVersion.Minor+$oldVersion.Minor).0.0"
                 }
-                $settingsJson.RepoVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
+                $settingsJson.repoVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
             }
             else {
                 $repoVersion = $newVersion
                 if ($addToVersionNumber) {
                     $repoVersion = [System.Version]"$($newVersion.Major+1).$($newVersion.Minor).0.0"
                 }
-                Add-Member -InputObject $settingsJson -NotePropertyName "RepoVersion" -NotePropertyValue "$($repoVersion.Major).$($repoVersion.Minor)" | Out-Null
+                Add-Member -InputObject $settingsJson -NotePropertyName "repoVersion" -NotePropertyValue "$($repoVersion.Major).$($repoVersion.Minor)" | Out-Null
             }
-            $useRepoVersion = (($settingsJson.PSObject.Properties.Name -eq "VersioningStrategy") -and (($settingsJson.VersioningStrategy -band 16) -eq 16))
+            $useRepoVersion = (($settingsJson.PSObject.Properties.Name -eq "versioningStrategy") -and (($settingsJson.versioningStrategy -band 16) -eq 16))
             $settingsJson
             $settingsJson | ConvertTo-Json -Depth 99 | Set-Content "$project\$ALGoSettingsFile" -Encoding UTF8
         }
@@ -91,7 +91,7 @@ try {
 
         $folders = @('appFolders', 'testFolders' | ForEach-Object { if ($SettingsJson.PSObject.Properties.Name -eq $_) { $settingsJson."$_" } })
         if (-not ($folders)) {
-            $folders = Get-ChildItem -Path $project -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'app.json') } | ForEach-Object { $_.Name }
+            $folders = Get-ChildItem -Path $project | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.Name }
         }
         $folders | ForEach-Object {
             Write-Host "Modifying app.json in folder $project\$_"

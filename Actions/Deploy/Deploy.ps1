@@ -37,9 +37,14 @@ try {
 
     $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName))
 
+    $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
+
     $apps = @()
     $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
     $baseFolderCreated = $false
+    if ($artifacts -eq ".artifacts") {
+        $artifacts = $baseFolder
+    }
 
     if ($artifacts -like "$($ENV:GITHUB_WORKSPACE)*") {
         if (Test-Path $artifacts -PathType Container) {
@@ -108,10 +113,10 @@ try {
     $apps | Out-Host
 
     Set-Location $ENV:GITHUB_WORKSPACE
-    if (-not ($ENV:AUTHCONTEXT)) {
+    if (-not ($ENV:AuthContext)) {
         throw "An environment secret for environment($environmentName) called AUTHCONTEXT containing authentication information for the environment was not found.You must create an environment secret."
     }
-    $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:AUTHCONTEXT))
+    $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:AuthContext))
 
     try {
         $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable

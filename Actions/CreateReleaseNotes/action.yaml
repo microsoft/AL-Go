@@ -4,6 +4,10 @@ permissions:
   contents: write
   pull-requests: write
 inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
   actor:
     description: The GitHub actor running the action
     required: false
@@ -31,7 +35,7 @@ runs:
   using: composite
   steps:
     - name: run
-      shell: PowerShell
+      shell: ${{ inputs.shell }}
       id: createreleasenotes
       env:
         _actor: ${{ inputs.actor }}

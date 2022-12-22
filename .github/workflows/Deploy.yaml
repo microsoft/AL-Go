@@ -11,6 +11,10 @@ on:
         description: Additionally deploy templates to main+preview branch? (Y/N) - (NOTE Only use Yes when deploying ordinary releases on microsoft/al-go)
         required: false
         default: 'N'
+      defaultBcContainerHelperVersion:
+        description: Which version of BcContainerHelper to use? (latest, preview, private or a specific version number - default is latest)
+        required: false
+        default: ''
 
 defaults:
   run:
@@ -49,6 +53,7 @@ jobs:
                   "copyToMain" = ('${{ github.event.inputs.copyToMain }}' -eq 'Y')
                   "localFolder" = ""
                   "baseFolder" = [System.IO.Path]::GetTempPath()
+                  "defaultBcContainerHelperVersion" = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
               }
               $settingsFile = Join-Path $settings.baseFolder "deploy.json"
               $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8

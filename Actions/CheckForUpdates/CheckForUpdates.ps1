@@ -56,7 +56,7 @@ try {
         $templateUrl = "https://github.com/$templateUrl"
     }
 
-    $RepoSettingsFile = ".github\AL-Go-Settings.json"
+    $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
     if (Test-Path $RepoSettingsFile) {
         $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
     }
@@ -65,11 +65,11 @@ try {
     }
 
     $updateSettings = $true
-    if ($repoSettings.ContainsKey("TemplateUrl")) {
+    if ($repoSettings.ContainsKey("templateUrl")) {
         if ($templateUrl.StartsWith('@')) {
-            $templateUrl = "$($repoSettings.TemplateUrl.Split('@')[0])$templateUrl"
+            $templateUrl = "$($repoSettings.templateUrl.Split('@')[0])$templateUrl"
         }
-        if ($repoSettings.TemplateUrl -eq $templateUrl) {
+        if ($repoSettings.templateUrl -eq $templateUrl) {
             $updateSettings = $false
         }
     }
@@ -84,47 +84,40 @@ try {
     }
 
     if ($templateUrl -ne "") {
-        try {
-            $templateUrl = $templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/"
-            Write-Host "Api url $templateUrl"
-            $templateInfo = InvokeWebRequest -Headers $headers -Uri $templateUrl | ConvertFrom-Json
-        }
-        catch {
-            throw "Could not retrieve the template repository. Error: $($_.Exception.Message)"
-        }
+        $archiveUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")/zipball/$templateBranch"
     }
     else {
         Write-Host "Api url $($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)"
-        $repoInfo = InvokeWebRequest -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)" | ConvertFrom-Json
+        $repoInfo = InvokeWebRequest -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)" -retry | ConvertFrom-Json
         if (!($repoInfo.PSObject.Properties.Name -eq "template_repository")) {
             OutputWarning -message "This repository wasn't built on a template repository, or the template repository is deleted. You must specify a template repository in the AL-Go settings file."
             exit
         }
-
         $templateInfo = $repoInfo.template_repository
+        $templateUrl = $templateInfo.html_url
+        $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}',"/$templateBranch")
     }
 
-    $templateUrl = $templateInfo.html_url
     Write-Host "Using template from $templateUrl@$templateBranch"
+    Write-Host "ArchiveUrl $archiveUrl"
 
     $headers = @{             
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
-    $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}',"/$templateBranch")
-    $tempName = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
-    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
+    $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     
     $checkfiles = @(
-        @{ "dstPath" = ".github\workflows"; "srcPath" = ".github\workflows"; "pattern" = "*"; "type" = "workflow" },
+        @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path ".github" "workflows"; "pattern" = "*"; "type" = "workflow" },
         @{ "dstPath" = ".github"; "srcPath" = ".github"; "pattern" = "*.copy.md"; "type" = "releasenotes" }
     )
     if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
         $checkfiles += @(@{ "dstPath" = ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
     }
     else {
-        Get-ChildItem -Path $baseFolder -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container } | ForEach-Object {
+        Get-ChildItem -Path $baseFolder | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container) } | ForEach-Object {
             $checkfiles += @(@{ "dstPath" = Join-Path $_.Name ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
         }
     }
@@ -132,136 +125,155 @@ try {
 
     $depth = 1
     if ($repoSettings.ContainsKey('useProjectDependencies') -and $repoSettings.useProjectDependencies) {
-        if ($repoSettings.ContainsKey('Projects')) {
+        if ($repoSettings.ContainsKey('projects')) {
             $projects = $repoSettings.projects
         }
         else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName '.AL-Go\Settings.json') -PathType Leaf } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         }
         $buildAlso = @{}
         $buildOrder = @{}
         $projectDependencies = @{}
         AnalyzeProjectDependencies -basePath $ENV:GITHUB_WORKSPACE -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
         $depth = $buildOrder.Count
+        Write-Host "Calculated dependency depth"
     }
 
     $checkfiles | ForEach-Object {
+        Write-Host "Checking $($_.srcPath)\$($_.pattern)"
         $type = $_.type
         $srcPath = $_.srcPath
         $dstPath = $_.dstPath
         $dstFolder = Join-Path $baseFolder $dstPath
-        $srcFolder = (Get-Item (Join-Path $tempName "*\$($srcPath)")).FullName
-        Get-ChildItem -Path $srcFolder -Filter $_.pattern | ForEach-Object {
-            $srcFile = $_.FullName
-            $fileName = $_.Name
-            $baseName = $_.BaseName
-            $name = $type
-            if ($type -eq "workflow") {
-                $yaml = [Yaml]::Load($srcFile)
-                $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
+        $srcFolder = Join-Path $tempName "*\$($srcPath)"
+        $srcFolder = Get-ChildItem $srcFolder | ForEach-Object { $_.FullName }
+        if ($srcFolder) {
+            Get-ChildItem -Path $srcFolder -Filter $_.pattern | ForEach-Object {
+                $srcFile = $_.FullName
+                $fileName = $_.Name
+                Write-Host "- $filename"
+                $baseName = $_.BaseName
+                $name = $type
+                if ($type -eq "workflow") {
+                    $yaml = [Yaml]::Load($srcFile)
+                    $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
 
-                if ($baseName -ne "PullRequestHandler") {
-                    $workflowScheduleKey = "$($baseName)Schedule"
-                    if ($repoSettings.ContainsKey($workflowScheduleKey)) {
-                        $yamlOn = $yaml.Get('on:/')
-                        $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
-                    }
-                }
-
-                if ($baseName -eq "CICD") {
-                    if ($repoSettings.ContainsKey('CICDPushBranches')) {
-                        $CICDPushBranches = $repoSettings.CICDPushBranches
-                    }
-                    elseif ($repoSettings.ContainsKey($workflowScheduleKey)) {
-                        $CICDPushBranches = ''
-                    }
-                    else {
-                        $CICDPushBranches = $defaultCICDPushBranches
-                    }
-                    if ($CICDPushBranches) {
-                        $yaml.Replace('on:/push:/branches:', "branches: [ '$($cicdPushBranches -join "', '")' ]")
-                    }
-                    else {
-                        $yaml.Replace('on:/push:',@())
-                    }
-                }
-
-                if ($baseName -eq "PullRequestHandler") {
-                    if ($repoSettings.ContainsKey('CICDPullRequestBranches')) {
-                        $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
-                    }
-                    else {
-                        $CICDPullRequestBranches = $defaultCICDPullRequestBranches
-                    }
-                    $yaml.Replace('on:/pull_request:/branches:', "branches: [ '$($cicdPullRequestBranches -join "', '")' ]")
-                }
-
-                if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler") {
-                    if ($repoSettings.ContainsKey("runs-on")) {
-                        $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $($repoSettings."runs-on") ]")
-                    }
-                }
-
-                if ($baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
-                    $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
-                    if ($depth -gt 1) {
-                        $initializationOutputs = $yaml.Get('jobs:/Initialization:/outputs:/')
-                        $addOutput = @()
-                        1..$depth | ForEach-Object {
-                            $addOutput += @(
-                              "projects$($_): `${{ steps.BuildOrder.outputs.Projects$($_)Json }}"
-                              "projects$($_)Count: `${{ steps.BuildOrder.outputs.Projects$($_)Count }}"
-                            )
+                    if ($baseName -ne "PullRequestHandler") {
+                        $workflowScheduleKey = "$($baseName)Schedule"
+                        if ($repoSettings.ContainsKey($workflowScheduleKey)) {
+                            $yamlOn = $yaml.Get('on:/')
+                            $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
                         }
-                        $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content+$addOutput)
+                    }
 
-                        $newBuild = @()
-                        $build = $yaml.Get('jobs:/Build:/')
-                        1..$depth | ForEach-Object {
-                            if ($_ -eq 1) {
-                                $needs = @('Initialization')
-                                $if = "if: needs.Initialization.outputs.projects$($_)Count > 0"
-                            }
-                            else {
-                                $newBuild += @('')
-                                $needs = @('Initialization',"Build$($_-1)")
-                                $if = "if: always() && (!cancelled()) && (needs.Build$($_-1).result == 'success' || needs.Build$($_-1).result == 'skipped') && needs.Initialization.outputs.projects$($_)Count > 0"
-                            }
-                            if ($depth -eq $_) {
-                                $newBuild += @("Build:")
-                            }
-                            else {
-                                $newBuild += @("Build$($_):")
-                            }
-                            $build.Replace('if:', $if)
-                            $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-                            $build.Replace('strategy:/matrix:/project:',"project: `${{ fromJson(needs.Initialization.outputs.projects$($_)) }}")
-                        
-                            $build.content | ForEach-Object { $newBuild += @("  $_") }
+                    if ($baseName -eq "CICD") {
+                        if ($repoSettings.ContainsKey('CICDPushBranches')) {
+                            $CICDPushBranches = $repoSettings.CICDPushBranches
                         }
-                        $yaml.Replace('jobs:/Build:', $newBuild)
+                        elseif ($repoSettings.ContainsKey($workflowScheduleKey)) {
+                            $CICDPushBranches = ''
+                        }
+                        else {
+                            $CICDPushBranches = $defaultCICDPushBranches
+                        }
+                        if ($CICDPushBranches) {
+                            $yaml.Replace('on:/push:/branches:', "branches: [ '$($cicdPushBranches -join "', '")' ]")
+                        }
+                        else {
+                            $yaml.Replace('on:/push:',@())
+                        }
+                    }
+
+                    if ($baseName -eq "PullRequestHandler") {
+                        if ($repoSettings.ContainsKey('CICDPullRequestBranches')) {
+                            $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
+                        }
+                        else {
+                            $CICDPullRequestBranches = $defaultCICDPullRequestBranches
+                        }
+                        $yaml.Replace('on:/pull_request_target:/branches:', "branches: [ '$($cicdPullRequestBranches -join "', '")' ]")
+                    }
+
+                    # Do not change runs-on in Update AL Go System Files and Pull Request Handler workflows
+                    # These workflows will always run on windows-latest (or maybe Ubuntu-latest later) and not follow settings
+                    # Reasons:
+                    # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself
+                    # - Pull Request Handler workflow for security reasons
+                    if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler") {
+                        if ($repoSettings.ContainsKey("runs-on")) {
+                            $runson = $repoSettings."runs-on"
+                            $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $runson ]")
+                            if ($runson -like 'ubuntu-*' -and !$repoSettings.ContainsKey("shell")) {
+                                # Default shell for Ubuntu (Linux) is pwsh
+                                $repoSettings.shell = "pwsh"
+                            }
+                        }
+                        if ($repoSettings.ContainsKey("shell")) {
+                            $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings."shell")")
+                        }
+                    }
+
+                    if ($baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
+                        $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
+                        if ($depth -gt 1) {
+                            $initializationOutputs = $yaml.Get('jobs:/Initialization:/outputs:/')
+                            $addOutput = @()
+                            1..$depth | ForEach-Object {
+                                $addOutput += @(
+                                  "projects$($_): `${{ steps.BuildOrder.outputs.projects$($_)Json }}"
+                                  "projects$($_)Count: `${{ steps.BuildOrder.outputs.projects$($_)Count }}"
+                                )
+                            }
+                            $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content+$addOutput)
+
+                            $newBuild = @()
+                            $build = $yaml.Get('jobs:/Build:/')
+                            1..$depth | ForEach-Object {
+                                if ($_ -eq 1) {
+                                    $needs = @('Initialization')
+                                    $if = "if: needs.Initialization.outputs.projects$($_)Count > 0"
+                                }
+                                else {
+                                    $newBuild += @('')
+                                    $needs = @('Initialization',"Build$($_-1)")
+                                    $if = "if: always() && (!cancelled()) && (needs.Build$($_-1).result == 'success' || needs.Build$($_-1).result == 'skipped') && needs.Initialization.outputs.projects$($_)Count > 0"
+                                }
+                                if ($depth -eq $_) {
+                                    $newBuild += @("Build:")
+                                }
+                                else {
+                                    $newBuild += @("Build$($_):")
+                                }
+                                $build.Replace('if:', $if)
+                                $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+                                $build.Replace('strategy:/matrix:/project:',"project: `${{ fromJson(needs.Initialization.outputs.projects$($_)) }}")
+                            
+                                $build.content | ForEach-Object { $newBuild += @("  $_") }
+                            }
+                            $yaml.Replace('jobs:/Build:', $newBuild)
+                        }
+                    }
+                    $srcContent = $yaml.content -join "`r`n"
+                }
+                else {
+                    $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+                }
+
+
+                $dstFile = Join-Path $dstFolder $fileName
+                if (Test-Path -Path $dstFile -PathType Leaf) {
+                    # file exists, compare
+                    $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+                    if ($dstContent -cne $srcContent) {
+                        Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
+                        $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                     }
                 }
-                $srcContent = $yaml.content -join "`r`n"
-            }
-            else {
-                $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
-            }
-
-                
-            $dstFile = Join-Path $dstFolder $fileName
-            if (Test-Path -Path $dstFile -PathType Leaf) {
-                # file exists, compare
-                $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
-                if ($dstContent -ne $srcContent) {
-                    Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
+                else {
+                    # new file
+                    Write-Host "New $name ($(Join-Path $dstPath $filename)) available"
                     $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
-            }
-            else {
-                # new file
-                Write-Host "New $name ($(Join-Path $dstPath $filename)) available"
-                $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
             }
         }
     }
@@ -281,7 +293,7 @@ try {
         if ($updateSettings -or ($updateFiles) -or ($removeFiles)) {
             try {
                 # URL for git commands
-                $tempRepo = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+                $tempRepo = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
                 New-Item $tempRepo -ItemType Directory | Out-Null
                 Set-Location $tempRepo
                 $serverUri = [Uri]::new($env:GITHUB_SERVER_URL)
@@ -311,7 +323,7 @@ try {
                 invoke-git status
 
                 $templateUrl = "$templateUrl@$templateBranch"
-                $RepoSettingsFile = ".github\AL-Go-Settings.json"
+                $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
                     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
                 }

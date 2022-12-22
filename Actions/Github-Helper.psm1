@@ -482,7 +482,7 @@ function DownloadRelease {
 
 function CheckRateLimit {
     Param(
-        [string] $token
+        [string] $token = ''
     )
 
     $headers = GetHeader -token $token
@@ -495,7 +495,7 @@ function CheckRateLimit {
         $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
         $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
         Write-Host "Less than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-        Start-Sleep -seconds $waitTime.TotalSeconds+1
+        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
     }
 }
 

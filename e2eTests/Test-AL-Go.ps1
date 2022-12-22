@@ -8,7 +8,8 @@
     [string] $insiderSasToken = "",
     [switch] $multiProject,
     [switch] $appSourceApp,
-    [switch] $private
+    [switch] $private,
+    [switch] $linux
 )
 
 #  ______           _ ___                _    _           _                                    _       
@@ -93,7 +94,7 @@ try {
         if ($licenseFileUrl) {
             throw "License file secret should not be set"
         }
-        if ($multiProject) {
+        if ($multiProject -or $linux) {
             if ($adminCenterApiCredentials) {
                 throw "adminCenterApiCredentials should not be set"
             }
@@ -111,7 +112,7 @@ try {
         $project2Param = @{ "project" = "P2" }
         $project2Folder = 'P2\'
         $allProjectsParam = @{ "project" = "*" }
-        $projectSettingsFiles = @("P1\.AL-Go\Settings.json", "P2\.AL-Go\Settings.json")
+        $projectSettingsFiles = @("P1\.AL-Go\settings.json", "P2\.AL-Go\settings.json")
     }
     else {
         $project1Param = @{}
@@ -119,7 +120,7 @@ try {
         $project2Param = @{}
         $project2Folder = ""
         $allProjectsParam = @{}
-        $projectSettingsFiles = @(".AL-Go\Settings.json")
+        $projectSettingsFiles = @(".AL-Go\settings.json")
     }
 
     $template = "https://github.com/$githubOwner/$template"
@@ -133,7 +134,7 @@ try {
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $template -branch $branch -private:$private
+    CreateRepository -template $template -branch $branch -private:$private -linux:$linux
     $repoPath = (Get-Location).Path
 
     # Add Existing App

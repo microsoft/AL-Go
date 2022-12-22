@@ -30,6 +30,7 @@ function Test-ArtifactsFromRun {
     )
 
     Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
+    Start-Sleep -Seconds 30
     Write-Host "Download build artifacts to $folder"
     gh run download $runid --dir $folder
 

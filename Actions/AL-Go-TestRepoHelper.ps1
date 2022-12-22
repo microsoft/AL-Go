@@ -64,13 +64,15 @@ function Test-ALGoRepository {
         [string] $baseFolder
     )
     
+    Write-Host "BaseFolder: $baseFolder"
+
     # Test .json files are formatted correctly
     Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse | ForEach-Object {
-        if ($_.FullName -like '*\.AL-Go\Settings.json') {
+        if ($_.DirectoryName -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
             Test-Json -jsonFile $_.FullName -baseFolder $baseFolder
         }
-        elseif ($_.FullName -like '*\.github\*Settings.json') {
-            Test-Json -jsonFile $_.FullName -baseFolder $baseFolder -repo:($_.BaseName -eq "AL-Go-Settings")
+        elseif ($_.DirectoryName -eq '.github' -and $_.BaseName -like '*ettings') {
+            Test-Json -jsonFile $_.FullName -baseFolder $baseFolder -repo:($_.BaseName -eq 'AL-Go-Settings')
         }
     }
 }
@@ -206,8 +208,8 @@ $chars = @{
 0..5 | ForEach-Object {
     $line = $_
     $str.ToCharArray() | ForEach-Object {
-        $ch = $chars."$_"
-        if ($ch) {
+        if ($chars.ContainsKey($_)) {
+            $ch = $chars."$_"
             Write-Host -noNewline $ch[$line]
         }
     }

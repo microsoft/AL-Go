@@ -10,17 +10,20 @@ on:
 
 defaults:
   run:
-    shell: PowerShell
+    shell: pwsh
 
 jobs:
   Check:
-    runs-on: [ windows-latest ]
+    runs-on: [ ubuntu-latest ]
+    outputs:
+      githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
       - name: Check secrets
+        id: check
         run: |
           $err = $false
           if ('${{ Secrets.OrgPAT }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token"
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow"
             $err = $true
           }
           if ('${{ Secrets.githubOwner }}' -eq '') {
@@ -35,12 +38,27 @@ jobs:
             Write-Host "::Error::In order to run end to end tests, you need a Secret called licenseFileUrl containing a secure Url to a build license file"
             $err = $true
           }
+          if ('${{ Secrets.insiderSasToken }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called insiderSasToken containing the Insider SAS token from https://aka.ms/collaborate"
+            $err = $true
+          }
           if ($err) {
             exit 1
           }
+          # Modify GitHubOwner secret in order to ensure that URLs are not masked in output
+          # Makes troubleshooting much easier
+          $githubOwner = '${{ Secrets.githubOwner }}'
+          if ($githubOwner.ToLowerInvariant() -ne $githubOwner) {
+            $githubOwner = $githubOwner.ToLowerInvariant()
+          }
+          else {
+            $githubOwner = $githubOwner.ToUpperInvariant()
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
+          Write-Host "githubOwner=$githubOwner"
 
   SetupRepositories:
-    runs-on: [ windows-latest ]
+    runs-on: [ ubuntu-latest ]
     needs: [ Check ]
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
@@ -53,10 +71,12 @@ jobs:
 
       - name: Setup Repositories
         id: setup
-        run: e2eTests\SetupRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}'
+        run: |
+          $errorActionPreference = "STOP"
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}'
   
   CalculateReleases:
-    runs-on: [ windows-latest ]
+    runs-on: [ ubuntu-latest ]
     needs: [ Check ]
     outputs:
       releases: ${{ steps.calculatereleases.outputs.releases }}
@@ -68,10 +88,10 @@ jobs:
       - name: CalculateReleases
         id: calculateReleases
         run: |
-          $modulePath = (Get-Item ".\e2eTests\e2eTestHelper.psm1").FullName
+          $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
-          SetTokenAndRepository -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -repository "$ENV:GITHUB_REPOSITORY" -github
-          $releases = @(gh release list --repo $ENV:GITHUB_REPOSITORY | ForEach-Object { $_.split("`t")[0] })
+          SetTokenAndRepository -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go" -github
+          $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
           Write-Host "Releases: $($releases -join ', ')"
           if ($releases.Count -eq 1) {
             $releasesJSon = "[$($releases | ConvertTo-Json -compress)]"
@@ -84,105 +104,85 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "releasesCount=$($releases.Count)"
           Write-Host "releasesCount=$($releases.Count)"
 
-  TestAlGoPtePrivate:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -private
-
-  TestAlGoAppSourcePrivate:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp -private
-
-  TestAlGoPte:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}'
-
-  TestAlGoPteMultiProject:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -multiProject
-
-  TestAlGoAppSource:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -appSourceApp
-
-  TestAlGoAppSourceMultiProject:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Run tests
-        run: e2eTests\Test-AL-Go.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -multiProject -appSourceApp
-
-  TestAlGoPteUpgrade:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories, CalculateReleases ]
+  TestAlGo:
+    runs-on: [ ubuntu-latest ]
+    needs: [ Check, SetupRepositories ]
     strategy:
       matrix:
-        release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
+        visibility: [ 'private', 'public' ]
+        type: [ 'appSourceApp', 'PTE' ]
+        style: [ 'multiProject', 'singleProject' ]
+        os: [ 'linux', 'windows' ]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -release '${{ matrix.release }}' -path 'pte'
+      - name: Calculate parameters
+        id: calculateParams
+        run: |
+          $errorActionPreference = "STOP"
+          $adminCenterApiCredentials = ''
+          $licenseFileUrl = ''
+          if ('${{ matrix.type }}' -eq 'PTE' -and '${{ matrix.style }}' -eq 'singleProject' -and '${{ matrix.os }}' -eq 'windows') {
+            $adminCenterApiCredentials = '${{ Secrets.adminCenterApiCredentials }}'
+          }
+          if ('${{ matrix.type }}' -eq 'appSourceApp') {
+            $licenseFileUrl='${{ secrets.licenseFileUrl }}'
+            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+          }
+          else {
+            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
 
-  TestAlGoAppSourceUpgrade:
-    runs-on: [ windows-latest ]
-    needs: [SetupRepositories, CalculateReleases ]
+      - name: Run tests
+        run: |
+          $errorActionPreference = "STOP"
+          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
+
+  TestAlGoUpgrade:
+    runs-on: [ ubuntu-latest ]
+    needs: [ Check, SetupRepositories, CalculateReleases ]
     strategy:
       matrix:
         release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
+        type: [ 'appSourceApp', 'PTE' ]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.ref }}
 
+      - name: Calculate parameters
+        id: calculateParams
+        run: |
+          $errorActionPreference = "STOP"
+          if ('${{ matrix.type }}' -eq 'appSourceApp') {
+            $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
+            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+            $path = 'appsourceapp'
+          }
+          else {
+            $licenseFileUrl = ''
+            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+            $path = 'pte'
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "path='$path'"
+
       - name: Run tests
-        run: e2eTests\Test-AL-Go-Upgrade.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -template '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -release '${{ matrix.release }}' -licenseFileUrl '${{ Secrets.LicenseFileUrl }}' -path 'appsourceapp' -appSourceApp
+        run: |
+          $errorActionPreference = "STOP"
+          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
 
   RemoveRepositories:
-    runs-on: [ windows-latest ]
-    needs: [ SetupRepositories, TestAlGoPtePrivate, TestAlGoAppSourcePrivate, TestAlGoPte, TestAlGoPteMultiProject, TestAlGoAppSource, TestAlGoAppSourceMultiProject, TestAlGoPteUpgrade, TestAlGoAppSourceUpgrade ]
+    runs-on: [ ubuntu-latest ]
+    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v3
@@ -190,4 +190,6 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Remove Repositories
-        run: e2eTests\RemoveRepositories.ps1 -github -githubOwner '${{ Secrets.githubOwner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+        run: |
+          $errorActionPreference = "STOP"
+          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

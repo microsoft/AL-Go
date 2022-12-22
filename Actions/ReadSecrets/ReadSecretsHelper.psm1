@@ -1,4 +1,4 @@
-$script:gitHubSecrets = $env:Secrets | ConvertFrom-Json
+$script:gitHubSecrets = $env:secrets | ConvertFrom-Json
 $script:keyvaultConnectionExists = $false
 $script:azureRm210 = $false
 $script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
@@ -15,8 +15,7 @@ function MaskValue {
     )
 
     Write-Host "Masking value for $key"
-
-    Write-Host "`r::add-mask::$value"
+    Write-Host "::add-mask::$value"
 
     $val2 = ""
     $value.ToCharArray() | ForEach-Object {
@@ -88,27 +87,43 @@ function InstallKeyVaultModuleIfNeeded {
         return
     }
 
-    $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -erroraction 'silentlycontinue'
-    if ($AzKeyVaultModule) {
-        Write-Host "Using Az.KeyVault version $($AzKeyVaultModule.Version)"
-        Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue
+    if ($isWindows) {
+        $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
+        if ($azModulesPath) {
+          Write-Host $azModulesPath.FullName
+          $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
+        }
+    }
+
+    $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
+    if ($azKeyVaultModule) {
+        Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
+        Write-Host "Using Az.KeyVault version $($azKeyVaultModule.Version)"
+        Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
     }
     else {
-        $azureRmKeyVaultModule = Get-Module -name 'AzureRm.KeyVault' -ListAvailable | Select-Object -First 1
-        if ($azureRmKeyVaultModule) { Write-Host "AzureRm.KeyVault Module is available in version $($azureRmKeyVaultModule.Version)" }
-        $azureRmProfileModule = Get-Module -name 'AzureRm.Profile' -ListAvailable | Select-Object -First 1
-        if ($azureRmProfileModule) { Write-Host "AzureRm.Profile Module is available in version $($azureRmProfileModule.Version)" }
-        if ($azureRmKeyVaultModule -and $azureRmProfileModule -and "$($azureRmKeyVaultModule.Version)" -eq "2.1.0" -and "$($azureRmProfileModule.Version)" -eq "2.1.0") {
-            Write-Host "Using AzureRM version 2.1.0"
-            $script:azureRm210 = $true
-            $azureRmKeyVaultModule | Import-Module -WarningAction SilentlyContinue
-            $azureRmProfileModule | Import-Module -WarningAction SilentlyContinue
-            Disable-AzureRmDataCollection -WarningAction SilentlyContinue
+        $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -ErrorAction SilentlyContinue
+        if ($AzKeyVaultModule) {
+            Write-Host "Az.KeyVault version $($AzKeyVaultModule.Version) is installed"
+            Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue
         }
         else {
-            Write-Host "Installing and importing Az.KeyVault." 
-            Install-Module 'Az.KeyVault' -Force
-            Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+            $azureRmKeyVaultModule = Get-Module -name 'AzureRm.KeyVault' -ListAvailable | Select-Object -First 1
+            if ($azureRmKeyVaultModule) { Write-Host "AzureRm.KeyVault Module is available in version $($azureRmKeyVaultModule.Version)" }
+            $azureRmProfileModule = Get-Module -name 'AzureRm.Profile' -ListAvailable | Select-Object -First 1
+            if ($azureRmProfileModule) { Write-Host "AzureRm.Profile Module is available in version $($azureRmProfileModule.Version)" }
+            if ($azureRmKeyVaultModule -and $azureRmProfileModule -and "$($azureRmKeyVaultModule.Version)" -eq "2.1.0" -and "$($azureRmProfileModule.Version)" -eq "2.1.0") {
+                Write-Host "Using AzureRM version 2.1.0"
+                $script:azureRm210 = $true
+                $azureRmKeyVaultModule | Import-Module -WarningAction SilentlyContinue
+                $azureRmProfileModule | Import-Module -WarningAction SilentlyContinue
+                Disable-AzureRmDataCollection -WarningAction SilentlyContinue
+            }
+            else {
+                Write-Host "Installing and importing Az.KeyVault." 
+                Install-Module 'Az.KeyVault' -Force
+                Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+            }
         }
     }
 }
@@ -128,17 +143,17 @@ function ConnectAzureKeyVaultIfNeeded {
         $credential = New-Object PSCredential -argumentList $clientId, (ConvertTo-SecureString $clientSecret -AsPlainText -Force)
         if ($script:azureRm210) {
             Add-AzureRmAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
-            Set-AzureRmContext -SubscriptionId $subscriptionId -Tenant $tenantId -WarningAction SilentlyContinue | Out-Null
+            Set-AzureRmContext -SubscriptionId $subscriptionId -Tenant $tenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
         }
         else {
             Clear-AzContext -Scope Process
             Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
-            Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential | Out-Null
-            Set-AzContext -SubscriptionId $subscriptionId -Tenant $tenantId | Out-Null
+            Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
+            Set-AzContext -SubscriptionId $subscriptionId -Tenant $tenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
         }
         $script:keyvaultConnectionExists = $true
         Write-Host "Successfully connected to Azure Key Vault."
-}
+    }
     catch {
         throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
     }
@@ -167,7 +182,7 @@ function GetKeyVaultSecret {
         $keyVaultSecret = Get-AzureKeyVaultSecret -VaultName $keyVaultName -Name $secret -ErrorAction SilentlyContinue
     }
     else {
-        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret 
+        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret -ErrorAction SilentlyContinue
     }
 
     if ($keyVaultSecret) {

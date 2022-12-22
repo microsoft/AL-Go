@@ -9,13 +9,14 @@ on:
 
 defaults:
   run:
-    shell: PowerShell
+    shell: pwsh
 
 jobs:
   Test:
-    runs-on: [ windows-latest ]
+    runs-on: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v3
 
       - name: Run Tests
-        run: Tests\RunTests.ps1
+        run: |
+          . (Join-Path "." "Tests/runtests.ps1")

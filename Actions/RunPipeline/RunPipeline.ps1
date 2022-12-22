@@ -10,9 +10,9 @@ Param(
     [Parameter(HelpMessage = "Project Dependencies in compressed Json format", Mandatory = $false)]
     [string] $projectDependenciesJson = "",
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
-    [string] $settingsJson = '{"AppBuild":"", "AppRevision":""}',
+    [string] $settingsJson = '{"appBuild":"", "appRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
-    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","CodeSignCertificateUrl":"","CodeSignCertificatePassword":"","KeyVaultCertificateUrl":"","KeyVaultCertificatePassword":"","KeyVaultClientId":"","StorageContext":"","ApplicationInsightsConnectionString":""}',
+    [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","codeSignCertificatePassword":"","keyVaultCertificateUrl":"","keyVaultCertificatePassword":"","keyVaultClientId":"","storageContext":"","applicationInsightsConnectionString":""}',
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [ValidateSet('Default', 'Translated', 'Clean')]
     [string] $buildMode = 'Default'
@@ -69,7 +69,7 @@ try {
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','CodeSignCertificateUrl','CodeSignCertificatePassword','KeyVaultCertificateUrl','KeyVaultCertificatePassword','KeyVaultClientId','StorageContext','GitHubPackagesContext','ApplicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','storageContext','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         if ($secrets.ContainsKey($_)) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
         }
@@ -148,7 +148,7 @@ try {
 
     # Check if insidersastoken is used (and defined)
 
-    if (!$repo.doNotSignApps -and $CodeSignCertificateUrl -and $CodeSignCertificatePassword) {
+    if (!$repo.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword) {
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
             "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
@@ -160,9 +160,9 @@ try {
         }
     }
 
-    if ($KeyVaultCertificateUrl -and $KeyVaultCertificatePassword -and $KeyVaultClientId) {
+    if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
         $runAlPipelineParams += @{ 
-            "KeyVaultCertPfxFile" = $KeyVaultCertificateUrl
+            "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
             "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword -AsPlainText -Force
             "keyVaultClientId" = $keyVaultClientId
         }
@@ -378,7 +378,7 @@ try {
         -memoryLimit $repo.memoryLimit `
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
-        -licenseFile $LicenseFileUrl `
+        -licenseFile $licenseFileUrl `
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
@@ -397,7 +397,7 @@ try {
         -failOn $repo.failOn `
         -treatTestFailuresAsWarnings:$repo.treatTestFailuresAsWarnings `
         -rulesetFile $repo.rulesetFile `
-        -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
+        -appSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
         -obsoleteTagMinAllowedMajorMinor $repo.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `

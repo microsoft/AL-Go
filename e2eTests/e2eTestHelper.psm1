@@ -2,7 +2,7 @@
 $token = "token"
 $repository = "repo"
 
-$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\GitHub-Helper.psm1" -Resolve
+$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve
 Import-Module $gitHubHelperPath -DisableNameChecking
 
 function SetTokenAndRepository {
@@ -108,13 +108,22 @@ function RunWorkflow {
         $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
         $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
         Write-Host "Less than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-        Start-Sleep -seconds $waitTime.TotalSeconds+1
+        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
     }
 
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
     $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
     $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
+    if (!$workflows) {
+        Write-Host "No workflows found, waiting 60 seconds and retrying"
+        Start-Sleep -seconds 60
+        $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
+        $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
+        if (!$workflows) {
+            throw "No workflows found"
+        }
+    }
     $workflow = $workflows | Where-Object { $_.Name.Trim() -eq $name }
     if (!$workflow) {
         throw "Workflow $name not found"
@@ -122,7 +131,13 @@ function RunWorkflow {
 
     Write-Host "Get Previous runs"
     $url = "https://api.github.com/repos/$repository/actions/runs"
-    $previousrun = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id } | Select-Object -First 1
+    $previousrun = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
+    if ($previousrun) {
+        Write-Host "Previous run: $($previousrun.id)"
+    }
+    else {
+        Write-Host "No previous run found"
+    }
     
     Write-Host "Run workflow"
     $url = "https://api.github.com/repos/$repository/actions/workflows/$($workflow.id)/dispatches"
@@ -137,7 +152,7 @@ function RunWorkflow {
     do {
         Start-Sleep -Seconds 10
         $url = "https://api.github.com/repos/$repository/actions/runs"
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id } | Select-Object -First 1
+        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
         Write-Host "."
     } until (($run) -and ((!$previousrun) -or ($run.id -ne $previousrun.id)))
     $runid = $run.id
@@ -160,7 +175,7 @@ function WaitWorkflow {
 
     $status = ""
     do {
-        Start-Sleep -Seconds 30
+        Start-Sleep -Seconds 60
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
         $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
         if ($run.status -ne $status) {
@@ -192,6 +207,7 @@ function CreateRepository {
         [string] $templateBranch = "main",
         [string] $templatePath,
         [switch] $private,
+        [switch] $linux,
         [string] $branch = "main"
     )
 
@@ -223,20 +239,34 @@ function CreateRepository {
     }
     if ($templatePath) {
         Write-Host "$(Join-Path $templatePath '*')"
-
         Copy-Item (Join-Path $templatePath '*') -Destination . -Recurse -Force
     }
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
     $repoSettings | Add-Member -MemberType NoteProperty -Name "bcContainerHelperVersion" -Value "dev"
+    $runson = "windows-latest"
+    $shell = "powershell"
     if ($private) {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value "self-hosted"
-        Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" } | ForEach-Object {
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
+        $runson = "self-hosted"
+    }
+    elseif ($linux) {
+        $runson = "ubuntu-latest"
+        $shell = "pwsh"
+    }
+
+    if ($runson -ne "windows-latest" -or $shell -ne "powershell") {
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value $runson
+        $repoSettings | Add-Member -MemberType NoteProperty -Name "shell" -Value $shell
+        Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" -and $_.BaseName -ne "PullRequestHandler" } | ForEach-Object {
             Write-Host $_.FullName
             $content = (Get-Content -Path $_.FullName -Encoding UTF8 -Raw -Force).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
             $srcPattern = "runs-on: [ windows-latest ]`r`n"
-            $replacePattern = "runs-on: [ self-hosted ]`r`n"
+            $replacePattern = "runs-on: [ $runson ]`r`n"
+            $content = $content.Replace($srcPattern, $replacePattern)
+            $srcPattern = "shell: powershell`r`n"
+            $replacePattern = "shell: $shell`r`n"
             $content = $content.Replace($srcPattern, $replacePattern)
             Set-Content -Path $_.FullName -Encoding UTF8 -Value $content
         }
@@ -288,6 +318,7 @@ function MergePRandPull {
     Write-Host -ForegroundColor Yellow "`nMerge Pull Request $prid into repository $repository"
     invoke-gh pr merge $prid --squash --delete-branch --repo $repository | Out-Host
     Pull -branch $branch
+    Start-Sleep -Seconds 30
 }
 
 function RemoveRepository {

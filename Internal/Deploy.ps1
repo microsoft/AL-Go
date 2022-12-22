@@ -8,7 +8,7 @@
     [switch] $directCommit
 )
 
-$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\GitHub-Helper.psm1" -Resolve
+$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve
 Import-Module $gitHubHelperPath -DisableNameChecking
 
 $ErrorActionPreference = "stop"
@@ -143,12 +143,14 @@ try {
             if (Test-Path $_) {
                 Set-Location $_
                 invoke-git pull
-                Set-Location $baseFolder
             }
             else {
                 $serverUrl = "https://github.com/$($config.githubOwner)/$_.git"
                 invoke-git clone --quiet $serverUrl
+                Set-Location $_
             }
+            invoke-git checkout $config.branch
+            Set-Location $baseFolder
         }
         else {
             if (Test-Path $_) {
@@ -176,18 +178,20 @@ try {
             $srcPath = $_.srcPath
             $dstPath = $_.dstPath
         
-            Write-Host -ForegroundColor Yellow "Collecting from $repo"
-
-            Get-ChildItem -Path "$srcPath\*" | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
+            Write-Host "Removing $srcPath content"
+            Get-ChildItem -Path $srcPath -Force | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
+                $name = $_.FullName
+                Write-Host "Remove $name"
                 if ($_.PSIsContainer) {
-                    Remove-Item $_ -Force -Recurse
+                    Remove-Item $name -Force -Recurse
                 }
                 else {
-                    Remove-Item $_ -Force
+                    Remove-Item $name -Force
                 }
             }
-
-            Get-ChildItem "$dstPath\*" -Recurse | Where-Object { !$_.PSIsContainer -and $_.name -notlike '*.copy.md' } | ForEach-Object {
+            
+            Write-Host -ForegroundColor Yellow "Collecting from $repo"
+            Get-ChildItem -Path $dstPath -Recurse -File -Force | Where-Object { $_.name -notlike '*.copy.md' } | ForEach-Object {
                 $dstFile = $_.FullName
                 $srcFile = $srcPath + $dstFile.Substring($dstPath.Length)
                 $srcFilePath = [System.IO.Path]::GetDirectoryName($srcFile)
@@ -197,9 +201,12 @@ try {
                 Write-Host "$dstFile -> $srcFile"
                 $lines = ([string](Get-Content -Raw -path $dstFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
-                    $regex = "^(.*)$($config.githubOwner)/$($config."$_")(.*)$($config.branch)(.*)$"
+                    $regex = "^(.*)$($config.githubOwner)\/$($config."$_")(.*)$($config.branch)(.*)$"
                     $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+                }
+                if ($_.Name -eq "AL-Go-Helper.ps1") {
+                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)"(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""""`$5" }
                 }
                 $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
             }
@@ -262,7 +269,7 @@ try {
                 Set-Location $repo
                 try {
                     invoke-git checkout $branch
-                    Get-ChildItem -Path .\* -Exclude ".git" | Remove-Item -Force -Recurse
+                    Get-ChildItem -Path "." -Exclude ".git" -Force | Remove-Item -Force -Recurse
                 }
                 catch {
                     invoke-git checkout -b $branch
@@ -289,10 +296,14 @@ try {
                 invoke-git push -u origin $branch
             }
         
-            Get-ChildItem "$srcPath\*" -Recurse | Where-Object { !$_.PSIsContainer } | ForEach-Object {
+            Get-ChildItem -Path $srcPath -Recurse -File -Force | ForEach-Object {
                 $srcFile = $_.FullName
+                Write-Host "srcFile: $srcFile"
                 $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
+                Write-Host "dstFile: $dstFile"
                 $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
+                Write-Host "dstFilePath: $dstFilePath"
+
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
@@ -308,10 +319,13 @@ try {
                     $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($useBranch)`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
+                if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
+                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)""`$4" }
+                }
                 $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
             }
-            if (Test-Path -Path '.\.github' -PathType Container) {
-                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination ".\.github\RELEASENOTES.copy.md" -Force
+            if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
+                Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
             }
             
             invoke-git add .
