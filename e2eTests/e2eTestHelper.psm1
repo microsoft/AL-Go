@@ -243,7 +243,6 @@ function CreateRepository {
     }
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-    $repoSettings | Add-Member -MemberType NoteProperty -Name "bcContainerHelperVersion" -Value "dev"
     $runson = "windows-latest"
     $shell = "powershell"
     if ($private) {
@@ -251,7 +250,7 @@ function CreateRepository {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
         $runson = "self-hosted"
     }
-    elseif ($linux) {
+    if ($linux) {
         $runson = "ubuntu-latest"
         $shell = "pwsh"
     }

@@ -1,7 +1,8 @@
 ﻿Param(
     [switch] $github,
     [string] $githubOwner,
-    [string] $token
+    [string] $token,
+    [string] $bcContainerHelperVersion = ''
 )
 
 $repoBaseName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
@@ -21,6 +22,7 @@ $settings = [ordered]@{
     "branch" = "main"
     "localFolder" = ""
     "baseFolder" = [System.IO.Path]::GetTempPath()
+    "defaultBcContainerHelperVersion" = $bcContainerHelperVersion
 }
 
 $settingsFile = Join-Path $settings.baseFolder "$repoBaseName.json"

@@ -7,6 +7,10 @@ on:
         description: ref on which to run the end-2-end tests (default is head_sha on main)
         required: false
         default: ''
+      bcContainerHelperVersion:
+        description: Which version of BcContainerHelper to use? (latest, preview, private or a specific version number - default is latest)
+        required: false
+        default: ''
 
 defaults:
   run:
@@ -73,7 +77,7 @@ jobs:
         id: setup
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}'
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -bcContainerHelperVersion ${{ github.event.inputs.bcContainerHelperVersion }}
   
   CalculateReleases:
     runs-on: [ ubuntu-latest ]
