@@ -109,10 +109,10 @@ jobs:
     needs: [ Check, SetupRepositories ]
     strategy:
       matrix:
-        private: [ 'private', 'public' ]
-        appSource: [ 'appSourceApp', 'PTE' ]
-        multiProject: [ 'multiProject', 'singleProject' ]
-        linux: [ 'linux', 'windows' ]
+        visibility: [ 'private', 'public' ]
+        type: [ 'appSourceApp', 'PTE' ]
+        style: [ 'multiProject', 'singleProject' ]
+        os: [ 'linux', 'windows' ]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -125,10 +125,10 @@ jobs:
           $errorActionPreference = "STOP"
           $adminCenterApiCredentials = ''
           $licenseFileUrl = ''
-          if ('${{ matrix.appSource }}' -eq 'PTE' -and '${{ matrix.multiProject }}' -eq 'singleProject' -and '${{ matrix.linux }}' -eq 'windows') {
+          if ('${{ matrix.type }}' -eq 'PTE' -and '${{ matrix.style }}' -eq 'singleProject' -and '${{ matrix.os }}' -eq 'windows') {
             $adminCenterApiCredentials = '${{ Secrets.adminCenterApiCredentials }}'
           }
-          if ('${{ matrix.appSource }}' -eq 'appSourceApp') {
+          if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl='${{ secrets.licenseFileUrl }}'
             $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
           }
@@ -142,7 +142,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.multiProject }}' -eq 'multiProject') -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -linux:('${{ matrix.linux }}' -eq 'linux')
+          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
@@ -150,7 +150,7 @@ jobs:
     strategy:
       matrix:
         release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
-        appSource: [ 'appSourceApp', 'PTE' ]
+        type: [ 'appSourceApp', 'PTE' ]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -161,7 +161,7 @@ jobs:
         id: calculateParams
         run: |
           $errorActionPreference = "STOP"
-          if ('${{ matrix.appSource }}' -eq 'appSourceApp') {
+          if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
             $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
             $path = 'appsourceapp'
@@ -178,7 +178,7 @@ jobs:
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.appSource }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
+          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
