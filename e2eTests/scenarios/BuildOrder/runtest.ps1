@@ -1,0 +1,99 @@
+﻿Param(
+    [string] $githubOwner = "",
+    [string] $token = "",
+    [string] $pteTemplate = "",
+    [string] $appSourceTemplate = "",
+    [string] $adminCenterApiCredentials = "",
+    [string] $licenseFileUrl = "",
+    [string] $insiderSasToken = ""
+)
+
+#  ____        _ _     _  ____          _           
+# |  _ \      (_) |   | |/ __ \        | |          
+# | |_) |_   _ _| | __| | |  | |_ __ __| | ___ _ __ 
+# |  _ <| | | | | |/ _` | |  | | '__/ _` |/ _ \ '__|
+# | |_) | |_| | | | (_| | |__| | | | (_| |  __/ |   
+# |____/ \__,_|_|_|\__,_|\____/|_|  \__,_|\___|_|   
+#                                                 #
+# This test tests the following scenarios:
+#                                                                                                      
+#  1. Login to GitHub
+#  2. Create a new repository based on the PTE template with the app from the appfolder
+#  3. Run Update AL-Go System Files to apply settings from the app
+#  4. Run the "CI/CD" workflow
+#  5. Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+#  6. Run the Test Current Workflow
+#  7. Run the Test Next Minor Workflow
+#  8. Run the Test Next Major Workflow
+#  9. Cleanup repositories
+#
+  
+$ErrorActionPreference = "stop"
+Set-StrictMode -Version 2.0
+
+try {
+    Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
+    Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
+
+    $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+    $repository = "$githubOwner/$repoName"
+    $branch = "main"
+
+    $template = "https://github.com/$githubOwner/$pteTemplate"
+    $runs = 0
+
+    if ($adminCenterApiCredentials) {
+        $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
+    }
+    
+    # Login
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github
+
+    # Create repo
+    CreateRepository -template $template -branch $branch
+    $repoPath = (Get-Location).Path
+
+    # Add app
+    Copy-Item -Path (Join-Path $PSScriptRoot "app") -Destination $repoPath -Recurse -Force
+    CommitAndPush -commitMessage "Add app"
+    $runs++
+
+    # Update AL-Go System Files
+    $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
+    SetRepositorySecret -name 'GHTOKENWORKFLOW' -value (ConvertTo-SecureString -String $token -AsPlainText -Force)
+    Run-UpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
+    $runs++
+    MergePRandPull -branch $branch
+    $runs++
+
+    # Run CI/CD and wait
+    $run = Run-CICD -wait -branch $branch
+    $runs++
+
+    # Launch Current, NextMinor and NextMajor builds
+    $runTestCurrent = Run-TestCurrent -branch $branch
+    SetRepositorySecret -name 'INSIDERSASTOKEN' -value (ConvertTo-SecureString -String $insiderSasToken -AsPlainText -Force)
+    $runTestNextMinor = Run-TestNextMinor -branch $branch
+    $runTestNextMajor = Run-TestNextMajor -branch $branch
+
+    WaitWorkflow -runid $runTestNextMajor.id
+    $runs++
+
+    WaitWorkflow -runid $runTestNextMinor.id
+    $runs++
+
+    WaitWorkflow -runid $runTestCurrent.id
+    $runs++
+
+    Test-NumberOfRuns -expectedNumberOfRuns $runs
+    
+    RemoveRepository -repository $repository -path $repoPath
+}
+catch {
+    Write-Host $_.Exception.Message
+    Write-Host "::Error::$($_.Exception.Message)"
+    $host.SetShouldExit(1)
+}
+finally {
+    # Cleanup environments and other stuff
+}
