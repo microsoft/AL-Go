@@ -106,16 +106,11 @@ jobs:
         id: Analyze
         run: |
           $errorActionPreference = "STOP"
-          if ('${{ github.event.inputs.runUpgradeTests }}' -eq 'Y') {
-            $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
-            Import-Module $modulePath -DisableNameChecking
-            SetTokenAndRepository -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go"
-            $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
-            Write-Host "Releases: $($releases -join ', ')"
-          }
-          else {
-            $releases = @()
-          }
+          $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
+          Import-Module $modulePath -DisableNameChecking
+          SetTokenAndRepository -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go"
+          $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
+          Write-Host "Releases: $($releases -join ', ')"
           if ($releases.Count -le 1) {
             $releasesJSon = "[$($releases | ConvertTo-Json -compress)]"
           }
