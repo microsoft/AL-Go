@@ -105,12 +105,18 @@ jobs:
       - name: Analyze
         id: Analyze
         run: |
-          $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
-          Import-Module $modulePath -DisableNameChecking
-          SetTokenAndRepository -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go"
-          $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
-          Write-Host "Releases: $($releases -join ', ')"
-          if ($releases.Count -eq 1) {
+          $errorActionPreference = "STOP"
+          if ('${{ github.event.inputs.runUpgradeTests }}' == 'Y') {
+            $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
+            Import-Module $modulePath -DisableNameChecking
+            SetTokenAndRepository -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go"
+            $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
+            Write-Host "Releases: $($releases -join ', ')"
+          }
+          else {
+            $releases = @()
+          }
+          if ($releases.Count -le 1) {
             $releasesJSon = "[$($releases | ConvertTo-Json -compress)]"
           }
           else {
@@ -118,10 +124,8 @@ jobs:
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
           Write-Host "releases=$releasesJson"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "releasesCount=$($releases.Count)"
-          Write-Host "releasesCount=$($releases.Count)"
           $scenarios = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
-          if ($scenarios.Count -eq 1) {
+          if ($scenarios.Count -le 1) {
             $scenariosJSon = "[$($scenarios | ConvertTo-Json -compress)]"
           }
           else {
