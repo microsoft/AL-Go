@@ -7,6 +7,18 @@ on:
         description: ref on which to run the end-2-end tests (default is head_sha on main)
         required: false
         default: ''
+      runTestMatrix:
+        description: Run the End 2 End Test Scenario for the full test matrix
+        required: false
+        default: 'Y'
+      runScenarios:
+        description: Run the End 2 End Scenario Tests
+        required: false
+        default: 'Y'
+      runUpgradeTests:
+        description: Run the End 2 End Upgrade Tests
+        required: false
+        default: 'Y'
       bcContainerHelperVersion:
         description: Which version of BcContainerHelper to use? (latest, preview, private or a specific version number - default is latest)
         required: false
@@ -121,6 +133,7 @@ jobs:
   Scenario:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
+    if: github.event.inputs.runScenarios == 'Y'
     strategy:
       matrix:
         scenario: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
@@ -147,6 +160,7 @@ jobs:
   TestAlGo:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories ]
+    if: github.event.inputs.runTestMatrix == 'Y'
     strategy:
       matrix:
         visibility: [ 'private', 'public' ]
@@ -191,6 +205,7 @@ jobs:
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
+    if: github.event.inputs.runUpgradeTests == 'Y'
     strategy:
       matrix:
         release: ${{ fromJson(needs.Analyze.outputs.releases) }}
