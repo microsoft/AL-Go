@@ -33,6 +33,7 @@ jobs:
     runs-on: [ ubuntu-latest ]
     outputs:
       githubOwner: ${{ steps.check.outputs.githubOwner }}
+      testJobs: ${{ steps.check.outputs.testJobs }}
     steps:
       - name: Check secrets
         id: check
@@ -72,6 +73,18 @@ jobs:
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
+          $testJobs = @()
+          if ('${{ github.event.inputs.runScenarios }}' == 'Y'') { $testJobs += 'Scenario' }
+          if ('${{ github.event.inputs.runTestMatrix }}' == 'Y'') { $testJobs += 'TestALGo' }
+          if ('${{ github.event.inputs.runUpgradeTests }}' == 'Y'') { $testJobs += 'TestALGoUpgrade' }
+          if ($testJobs.Count -eq 1) {
+            $testJobsJSon = "[$($testJobs | ConvertTo-Json -compress)]"
+          }
+          else {
+            $testJobsJSon = $testJobs | ConvertTo-Json -compress
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "testJobs=$testJobsJson"
+          Write-Host "testJobs=$testJobsJson"
 
   SetupRepositories:
     runs-on: [ ubuntu-latest ]
@@ -157,7 +170,7 @@ jobs:
           $errorActionPreference = "STOP"
           . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
 
-  TestAlGo:
+  TestALGo:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories ]
     if: github.event.inputs.runTestMatrix == 'Y'
@@ -202,7 +215,7 @@ jobs:
           $errorActionPreference = "STOP"
           . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
 
-  TestAlGoUpgrade:
+  TestALGoUpgrade:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
     if: github.event.inputs.runUpgradeTests == 'Y'
@@ -245,7 +258,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
-    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
+    needs: ${{ fromJson(needs.Check.outputs.testJobs) }}
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v3
