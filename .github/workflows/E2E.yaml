@@ -89,7 +89,7 @@ jobs:
         id: setup
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -bcContainerHelperVersion ${{ github.event.inputs.bcContainerHelperVersion }}
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
   
   Analyze:
     runs-on: [ ubuntu-latest ]
