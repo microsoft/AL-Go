@@ -1,5 +1,6 @@
 ﻿Param(
     [string] $githubOwner = "",
+    [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = "",
     [string] $pteTemplate = "",
     [string] $appSourceTemplate = "",
@@ -35,7 +36,6 @@ try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
     Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
-    $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
     $repository = "$githubOwner/$repoName"
     $branch = "main"
 
@@ -54,7 +54,7 @@ try {
     $repoPath = (Get-Location).Path
 
     # Add content
-    Copy-Item -Path (Join-Path $PSScriptRoot "cointent/*") -Destination $repoPath -Recurse -Force
+    Copy-Item -Path (Join-Path $PSScriptRoot "content/*") -Destination $repoPath -Recurse -Force
     CommitAndPush -commitMessage "Add content"
     $runs++
 

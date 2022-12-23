@@ -130,10 +130,19 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref }}
 
+      - name: Calculate parameters
+        id: calculateParams
+        run: |
+          $errorActionPreference = "STOP"
+          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Write-Host "repoName='$repoName'"
+          Write-Host "Repo URL: https://github.com/'${{ needs.Check.outputs.githubowner }}'/$repoName"
+
       - name: Run test
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
+          . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
 
   TestAlGo:
     runs-on: [ ubuntu-latest ]
@@ -169,11 +178,15 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Write-Host "repoName='$repoName'"
+          Write-Host "Repo URL: https://github.com/'${{ needs.Check.outputs.githubowner }}'/$repoName"
 
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          #. (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
+          #. (Join-Path "." "e2eTests/Test-AL-Go.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
@@ -205,11 +218,15 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "path='$path'"
+          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Write-Host "repoName='$repoName'"
+          Write-Host "Repo URL: https://github.com/'${{ needs.Check.outputs.githubowner }}'/$repoName"
 
       - name: Run tests
         run: |
           $errorActionPreference = "STOP"
-          #. (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
+          #. (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]

@@ -1,6 +1,6 @@
 ﻿Param(
-    [switch] $github,
     [string] $githubOwner = "",
+    [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = "",
     [string] $template = "",
     [string] $adminCenterApiCredentials = "",
@@ -63,15 +63,6 @@ try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
     Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-    if (!$github) {
-        if (!$token) {  $token = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText }
-        $githubOwner = "freddydk"
-        if (!$adminCenterApiCredentials) { $adminCenterApiCredentials = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "adminCenterApiCredentials").SecretValue | Get-PlainText }
-        if (!$licenseFileUrl) { $licenseFileUrl = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText }
-        if (!$insiderSasToken) { $insiderSasToken = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "insiderSasToken").SecretValue | Get-PlainText }
-    }
-
-    $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
     $repository = "$githubOwner/$repoName"
     $branch = "main"
     
@@ -131,7 +122,7 @@ try {
     }
     
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository
 
     # Create repo
     CreateRepository -template $template -branch $branch -private:$private -linux:$linux
@@ -286,9 +277,7 @@ try {
 catch {
     Write-Host $_.Exception.Message
     Write-Host "::Error::$($_.Exception.Message)"
-    if ($github) {
-        $host.SetShouldExit(1)
-    }
+    $host.SetShouldExit(1)
 }
 finally {
     try {

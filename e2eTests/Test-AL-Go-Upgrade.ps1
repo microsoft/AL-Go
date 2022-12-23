@@ -1,6 +1,6 @@
 ﻿Param(
-    [switch] $github,
     [string] $githubOwner = "",
+    [string] $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = "",
     [string] $path = "",
     [string] $release = "",
@@ -43,20 +43,6 @@ try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
     Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-    if (!$github) {
-        if (!$token) {  $token = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "OrgPAT").SecretValue | Get-PlainText }
-        $githubOwner = "freddydk"
-        if (!$licenseFileUrl -and $appSourceApp) { $licenseFileUrl = (Get-AzKeyVaultSecret -VaultName "BuildVariables" -Name "licenseFile").SecretValue | Get-PlainText }
-        $release = "v0.1"
-        if ($appSourceApp) {
-            $path = "appsourceapp"
-        }
-        else {
-            $path = "pte"
-        }
-    }
-
-    $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
     $repository = "$githubOwner/$repoName"
     $branch = "main"
 
@@ -76,7 +62,7 @@ try {
     $runs = 0
 
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository
 
     # Create repo
     CreateRepository -template $orgTemplate -templateBranch $release -templatePath (Join-Path $PSScriptRoot $path) -branch $branch -private:$private
@@ -130,7 +116,5 @@ try {
 catch {
     Write-Host $_.Exception.Message
     Write-Host "::Error::$($_.Exception.Message)"
-    if ($github) {
-        $host.SetShouldExit(1)
-    }
+    $host.SetShouldExit(1)
 }
