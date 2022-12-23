@@ -22,10 +22,10 @@
 #  2. Create a new repository based on the PTE template with the app from the appfolder
 #  3. Run Update AL-Go System Files to apply settings from the app
 #  4. Run the "CI/CD" workflow
-#  5. Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
-#  6. Run the Test Current Workflow
-#  7. Run the Test Next Minor Workflow
-#  8. Run the Test Next Major Workflow
+#  5. Run the Test Current Workflow
+#  6. Run the Test Next Minor Workflow
+#  7. Run the Test Next Major Workflow
+#  8. Test that runs were successful and artifacts were created
 #  9. Cleanup repositories
 #
   
@@ -66,7 +66,7 @@ try {
     $runs++
 
     # Run CI/CD and wait
-    $run = Run-CICD -wait -branch $branch
+    $run = Run-CICD -branch $branch
     $runs++
 
     # Launch Current, NextMinor and NextMajor builds
@@ -75,13 +75,14 @@ try {
     $runTestNextMinor = Run-TestNextMinor -branch $branch
     $runTestNextMajor = Run-TestNextMajor -branch $branch
 
-    WaitWorkflow -runid $runTestNextMajor.id
+    # Wait for all workflows to finish
+    WaitWorkflow -runid $run.id
     $runs++
-
+    WaitWorkflow -runid $runTestCurrent.id
+    $runs++
     WaitWorkflow -runid $runTestNextMinor.id
     $runs++
-
-    WaitWorkflow -runid $runTestCurrent.id
+    WaitWorkflow -runid $runTestNextMajor.id
     $runs++
 
     Test-NumberOfRuns -expectedNumberOfRuns $runs
