@@ -47,7 +47,7 @@ try {
     }
     
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository
 
     # Create repo
     CreateRepository -template $template -branch $branch
