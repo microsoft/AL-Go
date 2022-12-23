@@ -1,0 +1,44 @@
+﻿{
+    "id":  "8af3e447-af36-4a6c-9a31-55381372b3b6",
+    "name":  "IT",
+    "publisher":  "Freddy",
+    "version":  "1.0.0.0",
+    "brief":  "",
+    "description":  "",
+    "privacyStatement":  "",
+    "EULA":  "",
+    "help":  "",
+    "url":  "",
+    "logo":  "",
+    "dependencies":  [
+        {
+            "id":  "ff9b7020-fd41-4a13-a5c6-3e8485013905",
+            "name":  "Common",
+            "publisher":  "Freddy",
+            "version":  "1.0.0.0"        
+        },
+        {
+            "id":  "ae6a4699-f7bb-49cd-ba92-c6a88fe0364b",
+            "name":  "W1",
+            "publisher":  "Freddy",
+            "version":  "1.0.0.0"        
+        }
+                     ],
+    "screenshots":  [
+
+                    ],
+    "platform":  "1.0.0.0",
+    "application":  "19.0.0.0",
+    "runtime": "8.0",
+    "idRanges":  [
+                     {
+                         "from":  62000,
+                         "to":  63000
+                     }
+                 ],
+    "resourceExposurePolicy":  {
+                                   "allowDebugging":  true,
+                                   "allowDownloadingSource":  false,
+                                   "includeSourceInSymbolFile":  false
+                               }
+}

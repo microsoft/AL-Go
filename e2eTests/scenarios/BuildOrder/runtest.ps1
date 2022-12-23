@@ -53,15 +53,14 @@ try {
     CreateRepository -template $template -branch $branch
     $repoPath = (Get-Location).Path
 
-    # Add app
-    Copy-Item -Path (Join-Path $PSScriptRoot "app") -Destination $repoPath -Recurse -Force
-    CommitAndPush -commitMessage "Add app"
+    # Add content
+    Copy-Item -Path (Join-Path $PSScriptRoot "cointent/*") -Destination $repoPath -Recurse -Force
+    CommitAndPush -commitMessage "Add content"
     $runs++
 
     # Update AL-Go System Files
-    $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
     SetRepositorySecret -name 'GHTOKENWORKFLOW' -value (ConvertTo-SecureString -String $token -AsPlainText -Force)
-    Run-UpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
+    Run-UpdateAlGoSystemFiles -templateUrl "$($template)@main" -wait -branch $branch | Out-Null
     $runs++
     MergePRandPull -branch $branch
     $runs++
