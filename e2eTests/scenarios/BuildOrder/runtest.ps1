@@ -1,12 +1,13 @@
 ﻿Param(
-    [string] $githubOwner = "",
+    [switch] $github,
+    [string] $githubOwner = "businesscentralapps",
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = "",
-    [string] $pteTemplate = "",
-    [string] $appSourceTemplate = "",
-    [string] $adminCenterApiCredentials = "",
-    [string] $licenseFileUrl = "",
-    [string] $insiderSasToken = ""
+    [string] $token = ($E2EPATSecret.SecretValue | Get-PlainText),
+    [string] $pteTemplate = "$(invoke-git config user.name -silent -returnValue)/AL-Go-PTE@main",
+    [string] $appSourceTemplate = "$(invoke-git config user.name -silent -returnValue)/AL-Go-AppSource@main",
+    [string] $adminCenterApiToken = ($AdminCenterApiCredentialsSecret.SecretValue | Get-PlainText),
+    [string] $licenseFileUrl = ($LicenseFileUrlSecret.SecretValue | Get-PlainText),
+    [string] $insiderSasToken = ($InsiderSasTokenSecret.SecretValue | Get-PlainText)
 )
 
 #  ____        _ _     _  ____          _           
@@ -15,22 +16,23 @@
 # |  _ <| | | | | |/ _` | |  | | '__/ _` |/ _ \ '__|
 # | |_) | |_| | | | (_| | |__| | | | (_| |  __/ |   
 # |____/ \__,_|_|_|\__,_|\____/|_|  \__,_|\___|_|   
-#                                                 #
+#
 # This test tests the following scenarios:
 #                                                                                                      
-#  1. Login to GitHub
-#  2. Create a new repository based on the PTE template with the app from the appfolder
-#  3. Run Update AL-Go System Files to apply settings from the app
-#  4. Run the "CI/CD" workflow
-#  5. Run the Test Current Workflow
-#  6. Run the Test Next Minor Workflow
-#  7. Run the Test Next Major Workflow
-#  8. Test that runs were successful and artifacts were created
-#  9. Cleanup repositories
+#  - Create a new repository based on the PTE template with the content from the content folder
+#  - Run Update AL-Go System Files to apply settings from the app
+#  - Run the "CI/CD" workflow
+#  - Run the Test Current Workflow
+#  - Run the Test Next Minor Workflow
+#  - Run the Test Next Major Workflow
+#  - Test that runs were successful and artifacts were created
+#  - Cleanup repositories
 #
   
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
+$prevLocation = Get-Location
+$repoPath = ""
 
 try {
     Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
@@ -39,28 +41,19 @@ try {
     $repository = "$githubOwner/$repoName"
     $branch = "main"
 
-    $template = "https://github.com/$githubOwner/$pteTemplate"
+    $template = "https://github.com/$($pteTemplate)@main"
     $runs = 0
 
-    if ($adminCenterApiCredentials) {
-        $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
-    }
-    
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $template -branch $branch
+    CreateRepository -template $template -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
     $repoPath = (Get-Location).Path
-
-    # Add content
-    Copy-Item -Path (Join-Path $PSScriptRoot "content/*") -Destination $repoPath -Recurse -Force
-    CommitAndPush -commitMessage "Add content"
-    $runs++
 
     # Update AL-Go System Files
     SetRepositorySecret -name 'GHTOKENWORKFLOW' -value (ConvertTo-SecureString -String $token -AsPlainText -Force)
-    Run-UpdateAlGoSystemFiles -templateUrl "$($template)@main" -wait -branch $branch | Out-Null
+    Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
     $runs++
     MergePRandPull -branch $branch
     $runs++
@@ -87,12 +80,15 @@ try {
 
     Test-NumberOfRuns -expectedNumberOfRuns $runs
     
+    Set-Location $prevLocation
     RemoveRepository -repository $repository -path $repoPath
 }
 catch {
     Write-Host $_.Exception.Message
     Write-Host "::Error::$($_.Exception.Message)"
-    $host.SetShouldExit(1)
+    if ($github) {
+        $host.SetShouldExit(1)
+    }
 }
 finally {
     # Cleanup environments and other stuff

@@ -1,8 +1,9 @@
 ﻿Param(
+    [switch] $github,
     [string] $githubOwner = "",
     [string] $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = "",
-    [string] $path = "",
+    [string] $contentPath = "",
     [string] $release = "",
     [string] $template = "",
     [string] $licenseFileUrl = "",
@@ -22,18 +23,18 @@
 # This scenario runs for every previously released version of GitHub Go - both for PTEs and AppSource Apps
 # The scenario tests that we do not break existing CI/CD workflows and that existing repositories can upgrade to newest version
 #
-#  1. Login
-#  2. Create a new repository based on the selected template and the selected version
-#  3. If (AppSource App) Create a licensefileurl secret
-#  4. Run CI/CD workflow
-#  5.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
-#  6. Create the GHTOKENWORKFLOW secret
-#  7. Run the "Update AL-Go System Files" workflow as a Pull Request
-#  8.  Test that a Pull Request was created and merge the Pull Request
-#  9. Run CI/CD workflow
-# 10.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
-# 11.  Test number of workflows ran is correct
-# 12. Cleanup
+# - Login
+# - Create a new repository based on the selected template and the selected version
+# - If (AppSource App) Create a licensefileurl secret
+# - Run CI/CD workflow
+# -  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+# - Create the GHTOKENWORKFLOW secret
+# - Run the "Update AL-Go System Files" workflow as a Pull Request
+# -  Test that a Pull Request was created and merge the Pull Request
+# - Run CI/CD workflow
+# -  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+# -  Test number of workflows ran is correct
+# - Cleanup
 #
 
 $ErrorActionPreference = "stop"
@@ -58,14 +59,14 @@ try {
             throw "License file secret should not be set"
         }
     }
-    $template = "https://github.com/$githubOwner/$template"
+    $template = "https://github.com/$template"
     $runs = 0
 
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $orgTemplate -templateBranch $release -templatePath (Join-Path $PSScriptRoot $path) -branch $branch -private:$private
+    CreateRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
     $repoPath = (Get-Location).Path
 
     # Add AppFolders and TestFolders
@@ -116,5 +117,7 @@ try {
 catch {
     Write-Host $_.Exception.Message
     Write-Host "::Error::$($_.Exception.Message)"
-    $host.SetShouldExit(1)
+    if ($github) {
+        $host.SetShouldExit(1)
+    }
 }

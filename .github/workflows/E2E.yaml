@@ -154,7 +154,7 @@ jobs:
         if: github.event.inputs.runScenarios == 'Y'
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
+          . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
 
   TestAlGo:
     runs-on: [ ubuntu-latest ]
@@ -182,10 +182,10 @@ jobs:
           }
           if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl='${{ secrets.licenseFileUrl }}'
-            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
           }
           else {
-            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
@@ -199,7 +199,7 @@ jobs:
         if: github.event.inputs.runTestMatrix == 'Y'
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
+          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
@@ -220,17 +220,17 @@ jobs:
           $errorActionPreference = "STOP"
           if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
-            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
-            $path = 'appsourceapp'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+            $contentPath = 'appsourceapp'
           }
           else {
             $licenseFileUrl = ''
-            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
-            $path = 'pte'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+            $contentPath = 'pte'
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "path='$path'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "contentPath='$contentPath'"
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
           Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
           Write-Host "repoName='$repoName'"
@@ -240,7 +240,7 @@ jobs:
         if: github.event.inputs.runUpgradeTests == 'Y'
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
+          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -contentPath ${{ steps.calculateParams.outputs.contentPath }}
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
@@ -254,4 +254,4 @@ jobs:
       - name: Remove Repositories
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

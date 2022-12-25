@@ -1,9 +1,10 @@
 ﻿Param(
+    [switch] $github,
     [string] $githubOwner = "",
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = "",
     [string] $template = "",
-    [string] $adminCenterApiCredentials = "",
+    [string] $adminCenterApiToken = "",
     [string] $licenseFileUrl = "",
     [string] $insiderSasToken = "",
     [switch] $multiProject,
@@ -21,34 +22,34 @@
 #
 # This scenario runs for both PTE template and AppSource App template and as single project and multi project repositories
 #                                                                                                      
-#  1. Login to GitHub
-#  2. Create a new repository based on the selected template
-#  3. If (AppSource App) Create a licensefileurl secret
-#  4. Run the "Add an existing app" workflow and add an app as a Pull Request
-#  5.  Test that a Pull Request was created and merge the Pull Request
-#  6. Run the "CI/CD" workflow
-#  7.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
-#  8. Run the "Create Release" workflow to create a version 1.0 release
-#  9. Run the "Create a new App" workflow to add a new app (adjust necessary properties if multiproject or appsource app)
-# 10.  Test that app.json exists and properties in app.json are as expected
-# 11. Run the "Create a new Test App" workflow to add a new test app
-# 12.  Test that app.json exists and properties in app.json are as expected
-# 13. Run the "Create Online Development Environment" if requested
-# 14. Run the "Increment version number" workflow for one project (not changing apps) as a Pull Request
-# 15.  Test that a Pull Request was created and merge the Pull Request
-# 16. Run the CI/CD workflow
-# 17.  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
-# 18. Modify repository versioning strategy and remove some scripts + a .yaml file
-# 19. Run the CI/CD workflow
-# 20.  Test that artifacts created from CI/CD are correct and of the right version (also apps version numbers should be updated)
-# 21. Create the GHTOKENWORKFLOW secret
-# 22. Run the "Update AL-Go System Files" workflow as a Pull Request
-# 23.  Test that a Pull Request was created and merge the Pull Request
-# 24.  Test that the previously deleted files are now updated
-# 25. Run the "Create Release" workflow
-# 26. Run the Test Current Workflow
-# 27. Run the Test Next Minor Workflow
-# 28. Run the Test Next Major Workflow
+# - Login to GitHub
+# - Create a new repository based on the selected template
+# - If (AppSource App) Create a licensefileurl secret
+# - Run the "Add an existing app" workflow and add an app as a Pull Request
+# -  Test that a Pull Request was created and merge the Pull Request
+# - Run the "CI/CD" workflow
+# -  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+# - Run the "Create Release" workflow to create a version 1.0 release
+# - Run the "Create a new App" workflow to add a new app (adjust necessary properties if multiproject or appsource app)
+# -  Test that app.json exists and properties in app.json are as expected
+# - Run the "Create a new Test App" workflow to add a new test app
+# -  Test that app.json exists and properties in app.json are as expected
+# - Run the "Create Online Development Environment" if requested
+# - Run the "Increment version number" workflow for one project (not changing apps) as a Pull Request
+# -  Test that a Pull Request was created and merge the Pull Request
+# - Run the CI/CD workflow
+# -  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
+# - Modify repository versioning strategy and remove some scripts + a .yaml file
+# - Run the CI/CD workflow
+# -  Test that artifacts created from CI/CD are correct and of the right version (also apps version numbers should be updated)
+# - Create the GHTOKENWORKFLOW secret
+# - Run the "Update AL-Go System Files" workflow as a Pull Request
+# -  Test that a Pull Request was created and merge the Pull Request
+# -  Test that the previously deleted files are now updated
+# - Run the "Create Release" workflow
+# - Run the Test Current Workflow
+# - Run the Test Next Minor Workflow
+# - Run the Test Next Major Workflow
 #
 # TODO: some more tests to do here
 #
@@ -69,32 +70,11 @@ try {
     if ($appSourceApp) {
         $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/apps.zip"
         $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/testapps.zip"
-        if (!$template) { $template = 'al-go-appSource' }
-        if (!$licenseFileUrl) {
-            throw "License file secret must be set"
-        }
-        if ($adminCenterApiCredentials) {
-            throw "adminCenterApiCredentials should not be set"
-        }
         $idRange = @{ "from" = 75055000; "to" = 75056000 }
     }
     else {
         $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
         $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/testapps.zip"
-        if (!$template) { $template = 'al-go-pte' }
-        if ($licenseFileUrl) {
-            throw "License file secret should not be set"
-        }
-        if ($multiProject -or $linux) {
-            if ($adminCenterApiCredentials) {
-                throw "adminCenterApiCredentials should not be set"
-            }
-        }
-        else {
-            if (-not $adminCenterApiCredentials) {
-                throw "adminCenterApiCredentials should be set"
-            }
-        }
         $idRange = @{ "from" = 55000; "to" = 56000 }
     }
     if ($multiProject) {
@@ -114,18 +94,14 @@ try {
         $projectSettingsFiles = @(".AL-Go\settings.json")
     }
 
-    $template = "https://github.com/$githubOwner/$template"
+    $template = "https://github.com/$($template)@main"
     $runs = 0
 
-    if ($adminCenterApiCredentials) {
-        $adminCenterApiCredentialsSecret = ConvertTo-SecureString -String $adminCenterApiCredentials -AsPlainText -Force
-    }
-    
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository
+    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
     # Create repo
-    CreateRepository -template $template -branch $branch -private:$private -linux:$linux
+    CreateRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux
     $repoPath = (Get-Location).Path
 
     # Add Existing App
@@ -189,8 +165,8 @@ try {
     Test-PropertiesInJsonFile -jsonFile "$($project2folder)My TestApp\app.json" -properties @{ "name" = "My TestApp"; "publisher" = "My Publisher"; 'idRanges[0].from' = 58000; "idRanges[0].to" = 59000; 'idRanges.Count' = 1 }
 
     # Create Online Development Environment
-    if ($adminCenterApiCredentials -and -not $multiProject) {
-        SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentialsSecret
+    if ($adminCenterApiToken -and -not $multiProject) {
+        SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value (ConvertTo-SecureString -String $adminCenterApiToken -AsPlainText -Force)
         Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
         $runs++
     }
@@ -277,13 +253,17 @@ try {
 catch {
     Write-Host $_.Exception.Message
     Write-Host "::Error::$($_.Exception.Message)"
-    $host.SetShouldExit(1)
+    if ($github) {
+        $host.SetShouldExit(1)
+    }
 }
 finally {
     try {
-        $params = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable
-        $authContext = New-BcAuthContext @params
-        Remove-BcEnvironment -bcAuthContext $authContext -environment $reponame -doNotWait
+        if ($adminCenterApiToken) {
+            $params = $adminCenterApiToken | ConvertFrom-Json | ConvertTo-HashTable
+            $authContext = New-BcAuthContext @params
+            Remove-BcEnvironment -bcAuthContext $authContext -environment $repoName -doNotWait
+        }
     }
     catch {}
 }

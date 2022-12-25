@@ -1,6 +1,6 @@
 ﻿$githubOwner = "githubOwner"
 $token = "token"
-$repository = "repo"
+$defaultRepository = "repo"
 
 $gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve
 Import-Module $gitHubHelperPath -DisableNameChecking
@@ -10,17 +10,14 @@ function SetTokenAndRepository {
         [string] $githubOwner,
         [string] $token,
         [string] $repository,
-        [switch] $local
+        [switch] $github
     )
 
     $script:githubOwner = $githubOwner
     $script:token = $token
-    $script:repository = $repository
+    $script:defaultRepository = $repository
 
-    if ($local) {
-        $token | gh auth login --with-token
-    }
-    else {
+    if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
@@ -28,6 +25,9 @@ function SetTokenAndRepository {
 
         $ENV:GITHUB_TOKEN = $token
         gh auth login --with-token
+    }
+    else {
+#        $token | gh auth login --with-token
     }
 }
 
@@ -38,7 +38,7 @@ function ConvertTo-HashTable() {
     )
     $ht = @{}
     if ($object) {
-        $object.PSObject.Properties | Foreach { $ht[$_.Name] = $_.Value }
+        $object.PSObject.Properties | ForEach-Object { $ht[$_.Name] = $_.Value }
     }
     $ht
 }
@@ -79,7 +79,7 @@ function Add-PropertiesToJsonFile {
 
 function DisplayTokenAndRepository {
     Write-Host "Token: $token"
-    Write-Host "Rrepo: $repository"
+    Write-Host "Repo: $defaultRepository"
 }
 
 function RunWorkflow {
@@ -87,6 +87,7 @@ function RunWorkflow {
         [string] $name,
         [hashtable] $parameters = @{},
         [switch] $wait,
+        [string] $repository = $defaultRepository,
         [string] $branch = "main"
     )
 
@@ -165,6 +166,7 @@ function RunWorkflow {
 
 function WaitWorkflow {
     Param(
+        [string] $repository = $defaultRepository,
         [string] $runid
     )
 
@@ -194,6 +196,7 @@ function WaitWorkflow {
 
 function SetRepositorySecret {
     Param(
+        [string] $repository = $defaultRepository,
         [string] $name,
         [secureString] $value
     )
@@ -203,43 +206,48 @@ function SetRepositorySecret {
 
 function CreateRepository {
     Param(
-        [string] $template,
-        [string] $templateBranch = "main",
-        [string] $templatePath,
+        [switch] $github,
+        [string] $repository = $defaultRepository,
+        [string] $template = "",
+        [string] $contentPath,
         [switch] $private,
         [switch] $linux,
         [string] $branch = "main"
     )
+
+    if (!$template.Contains('@')) {
+        $template += '@main'
+    }
+    $templateBranch = $template.Split('@')[1]
+    $templateRepo = $template.Split('@')[0]
 
     $tempPath = [System.IO.Path]::GetTempPath()
     $path = Join-Path $tempPath ([GUID]::NewGuid().ToString())
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
     if ($private) {
-        Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template@$templateBranch)"
+        Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
         invoke-gh repo create $repository --private --clone
     }
     else {
-        Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template@$templateBranch)"
+        Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
         invoke-gh repo create $repository --public --clone
     }
     Start-Sleep -seconds 10
     Set-Location '*'
 
-    if ($template) {
-        $templateUrl = "$template/archive/refs/heads/$templateBranch.zip"
-        $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
-        [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
-        
-        $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
-        Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
-        Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
-        Remove-Item -Path $tempRepoPath -Force -Recurse
-        Remove-Item -Path $zipFileName -Force
-    }
-    if ($templatePath) {
-        Write-Host "$(Join-Path $templatePath '*')"
-        Copy-Item (Join-Path $templatePath '*') -Destination . -Recurse -Force
+    $templateUrl = "$templateRepo/archive/refs/heads/$templateBranch.zip"
+    $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
+    [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
+    
+    $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
+    Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
+    Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
+    Remove-Item -Path $tempRepoPath -Force -Recurse
+    Remove-Item -Path $zipFileName -Force
+    if ($contentPath) {
+        Write-Host "$(Join-Path $contentPath '*')"
+        Copy-Item (Join-Path $contentPath '*') -Destination . -Recurse -Force
     }
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
@@ -279,6 +287,9 @@ function CreateRepository {
         invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
+    if (!$github) {
+        Start-Process "https://github.com/$repository"
+    }
     Start-Sleep -seconds 10
 }
 
@@ -303,6 +314,7 @@ function CommitAndPush {
 
 function MergePRandPull {
     Param(
+        [string] $repository = $defaultRepository,
         [string] $branch = "main"
     )
 
@@ -322,7 +334,7 @@ function MergePRandPull {
 
 function RemoveRepository {
     Param(
-        [string] $repository,
+        [string] $repository = $defaultRepository,
         [string] $path = ""
     )
 

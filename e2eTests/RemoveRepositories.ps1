@@ -1,4 +1,5 @@
 ﻿Param(
+    [switch] $github,
     [string] $githubOwner,
     [string] $token,
     [string] $actionsRepo,
@@ -13,7 +14,7 @@ Set-StrictMode -Version 2.0
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-SetTokenAndRepository  -githubOwner $githubOwner -token $token -repository ''
+SetTokenAndRepository  -githubOwner $githubOwner -token $token -repository '' -github:$github
 
 RemoveRepository -repository "$githubOwner/$actionsRepo"
 RemoveRepository -repository "$githubOwner/$perTenantExtensionRepo"
