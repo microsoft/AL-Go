@@ -1,4 +1,5 @@
 ﻿Param(
+    [switch] $github,
     [string] $githubOwner,
     [string] $token,
     [string] $bcContainerHelperVersion = ''
@@ -27,7 +28,7 @@ $settings = [ordered]@{
 $settingsFile = Join-Path $settings.baseFolder "$repoBaseName.json"
 $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
 
-. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github
+. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github:$github
 
 Add-Content -Path $env:GITHUB_OUTPUT -Value "actionsRepo=$actionsRepo"
 Write-Host "actionsRepo=$actionsRepo"

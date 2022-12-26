@@ -47,6 +47,9 @@ try {
     # Login
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
+    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"application":  "19.0.0.0"' -replace '"application":  "21.0.0.0"'
+    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"runtime": "8.0"' -replace '"runtime": "10.0"'
+
     # Create repo
     CreateRepository -template $template -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
     $repoPath = (Get-Location).Path

@@ -354,13 +354,12 @@ function RemoveRepository {
 
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
-        invoke-gh repo delete $repository --confirm | Out-Host
-
         $owner = $repository.Split("/")[0]
-        @(invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json) | Where-Object { $_.repository.full_name -eq $repo } | ForEach-Object {
-            Write-Host "- $($_.name)"
+        @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.repository.full_name -eq $repo } | ForEach-Object {
+            Write-Host "+ package $($_.name)"
             invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name)
         }
+        invoke-gh repo delete $repository --confirm | Out-Host
     }
 
     if ($path) {

@@ -44,6 +44,16 @@ $repoPath = ""
     $commonRepository = "$repository.Common"
     $w1Repository = "$repository.W1"
 
+    # Replace AppIds in sample apps
+    Get-ChildItem -Path $PSScriptRoot -include 'app.json' -Recurse | ForEach-Object {
+        $appJson = Get-Content -Path $_.FullName -Encoding UTF8 | ConvertFrom-Json
+        $newId = ([GUID]::NewGuid().ToString())
+        Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search $appJson.Id -replace $newId
+        Write-Host "$($_.Directory) -> $newId"
+    }
+    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"application":  "19.0.0.0"' -replace '"application":  "21.0.0.0"'
+    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"runtime": "8.0"' -replace '"runtime": "10.0"'
+
     # Create common repo
     CreateRepository -linux `
         -template $template `
@@ -80,24 +90,24 @@ $repoPath = ""
         -applyRepoSettings @{ "generateDependencyArtifact" = $true } `
         -applyAlGoSettings @{ "country" = "dk" }
     SetRepositorySecret `
-        -repository $w1Repository `
+        -repository $repository `
         -name 'GitHubPackagesContext' `
         -value (@{"serverUrl"="https://nuget.pkg.github.com/$githubOwner/index.json";"token"=$token} | ConvertTo-Json -Compress)
     $repoPath = (Get-Location).Path
 
+    Set-Location $commonRepoPath
     # Wait for CI/CD workflow of Common to finish
     WaitWorkflow -repository $commonRepository -runid $commonRun.id
     $runs++
+    Test-ArtifactsFromRun -runid $commonRun.id -folder 'artifacts' -expectedNumberOfApps 3 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 0 -repoVersion '1.0' -appVersion '1.0'
 
-    Test-ArtifactsFromRun -runid $commonRun.id -folder 'commonartifacts' -expectedNumberOfApps 3 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 0 -repoVersion '1.0' -appVersion '1.0'
-
+    Set-Location $w1RepoPath
     $w1Run = Run-CICD -repository $w1Repository -branch $branch -wait
+    Test-ArtifactsFromRun -runid $w1Run.id -folder 'artifacts' -expectedNumberOfApps 1 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 0 -repoVersion '1.0' -appVersion '1.0'
 
-    Test-ArtifactsFromRun -runid $commonRun.id -folder 'w1artifacts' -expectedNumberOfApps 1 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 0 -repoVersion '1.0' -appVersion '1.0'
-
+    Set-Location $repoPath
     $run = Run-CICD -repository $repository -branch $branch -wait
-
-    Test-ArtifactsFromRun -runid $run -folder 'artifacts' -expectedNumberOfApps 1 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 3 -repoVersion '1.0' -appVersion '1.0'
+    Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedNumberOfApps 1 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 3 -repoVersion '1.0' -appVersion '1.0'
 
     Set-Location $prevLocation
     RemoveRepository -repository $repository -path $repoPath

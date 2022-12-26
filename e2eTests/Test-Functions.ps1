@@ -89,15 +89,15 @@ function Test-PropertiesInJsonFile {
 function Replace-StringInFiles {
     Param(
         [string] $path,
-        [string] $include = "*.json",
+        [string] $include = "*",
         [string] $search,
         [string] $replace
     )
 
     Get-ChildItem -Path $path -Recurse -Include $include -File | ForEach-Object {
-        $content = Get-Content $_.FullName -Encoding UTF8
+        $content = Get-Content $_.FullName -Encoding utf8
         $content = $content -replace $search, $replace
-        Set-Content $_.FullName -Value $content -Encoding UTF8
+        Set-Content -Path $_.FullName -Value $content -Encoding utf8
     }
 }
 
