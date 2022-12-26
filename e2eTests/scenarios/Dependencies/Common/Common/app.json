@@ -1,5 +1,5 @@
 ﻿{
-    "id":  "e8e0aa0b-7a2f-48a5-9ed0-d9c5e17e49d7",
+    "id":  "bd1abdb2-50d5-4e94-9fc9-10ed95942839",
     "name":  "Common",
     "publisher":  "Freddy",
     "version":  "1.0.0.0",
@@ -17,8 +17,8 @@
 
                     ],
     "platform":  "1.0.0.0",
-    "application":  "19.0.0.0",
-    "runtime": "8.0",
+    "application":  "21.0.0.0",
+    "runtime":  "10.0",
     "idRanges":  [
                      {
                          "from":  50000,

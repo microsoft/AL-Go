@@ -1,5 +1,5 @@
 ﻿{
-    "id":  "61cebcc2-2a77-42bd-b2f1-a38efcdee431",
+    "id":  "0cec3a20-a4b3-4fe2-8438-062f3f577353",
     "name":  "Misc",
     "publisher":  "Freddy",
     "version":  "1.0.0.0",
@@ -11,13 +11,14 @@
     "url":  "",
     "logo":  "",
     "dependencies":  [
+
                      ],
     "screenshots":  [
 
                     ],
     "platform":  "1.0.0.0",
-    "application":  "19.0.0.0",
-    "runtime": "8.0",
+    "application":  "21.0.0.0",
+    "runtime":  "10.0",
     "idRanges":  [
                      {
                          "from":  62000,

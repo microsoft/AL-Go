@@ -47,8 +47,13 @@ try {
     # Login
     SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
 
-    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"application":  "19.0.0.0"' -replace '"application":  "21.0.0.0"'
-    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"runtime": "8.0"' -replace '"runtime": "10.0"'
+    # Adjust app.json files
+    Get-ChildItem -Path $PSScriptRoot -include 'app.json' -Recurse | ForEach-Object {
+        $appJson = Get-Content -Path $_.FullName -Encoding UTF8 | ConvertFrom-Json
+        $appJson.application = "21.0.0.0"
+        $appJson.runtime = "10.0"
+        Set-Content -Path $_.FullName -Value ($appJson | ConvertTo-Json -Depth 99) -Encoding UTF8
+    }
 
     # Create repo
     CreateRepository -template $template -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')

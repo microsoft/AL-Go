@@ -1,5 +1,5 @@
 ﻿{
-    "id":  "4c6e67ed-aec9-4c4b-9c6c-0b7cc8e146b5",
+    "id":  "d7fe0f0b-82da-4f62-ac9e-2d6908ec0bfc",
     "name":  "Licensing",
     "publisher":  "Freddy",
     "version":  "1.0.0.0",
@@ -11,13 +11,14 @@
     "url":  "",
     "logo":  "",
     "dependencies":  [
+
                      ],
     "screenshots":  [
 
                     ],
     "platform":  "1.0.0.0",
-    "application":  "19.0.0.0",
-    "runtime": "8.0",
+    "application":  "21.0.0.0",
+    "runtime":  "10.0",
     "idRanges":  [
                      {
                          "from":  51000,

@@ -13,13 +13,19 @@
 #
 # This test tests the following scenarios:
 #                                                                                                      
-#  - Create a new repository based on the PTE template with the content from the content folder
-#  - Run Update AL-Go System Files to apply settings from the app
-#  - Run the "CI/CD" workflow
-#  - Run the Test Current Workflow
-#  - Run the Test Next Minor Workflow
-#  - Run the Test Next Major Workflow
-#  - Test that runs were successful and artifacts were created
+#  - Create a new repository based on the PTE template with the content from the common folder
+#  - Set GitHubPackagesContext secret in common repo
+#  - Run the "CI/CD" workflow in common repo
+#  - Create a new repository based on the PTE template with the content from the w1 folder
+#  - Set GitHubPackagesContext secret in w1 repo
+#  - Create a new repository based on the PTE template with the content from the dk folder
+#  - Set GitHubPackagesContext secret in dk repo
+#  - Wait for "CI/CD" workflow from common repo to complete
+#  - Check artifacts generated in common repo
+#  - Run the "CI/CD" workflow from w1 repo and wait for completion
+#  - Check artifacts generated in w1 repo
+#  - Run the "CI/CD" workflow from dk repo and wait for completion
+#  - Check artifacts generated in dk repo
 #  - Cleanup repositories
 #
   
@@ -44,15 +50,17 @@ $repoPath = ""
     $commonRepository = "$repository.Common"
     $w1Repository = "$repository.W1"
 
-    # Replace AppIds in sample apps
+    # Adjust app.json files
     Get-ChildItem -Path $PSScriptRoot -include 'app.json' -Recurse | ForEach-Object {
         $appJson = Get-Content -Path $_.FullName -Encoding UTF8 | ConvertFrom-Json
         $newId = ([GUID]::NewGuid().ToString())
         Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search $appJson.Id -replace $newId
         Write-Host "$($_.Directory) -> $newId"
+        $appJson.id = $newId
+        $appJson.application = "21.0.0.0"
+        $appJson.runtime = "10.0"
+        Set-Content -Path $_.FullName -Value ($appJson | ConvertTo-Json -Depth 99) -Encoding UTF8
     }
-    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"application":  "19.0.0.0"' -replace '"application":  "21.0.0.0"'
-    Replace-StringInFiles -path $PSScriptRoot -include 'app.json' -search '"runtime": "8.0"' -replace '"runtime": "10.0"'
 
     # Create common repo
     CreateRepository -linux `

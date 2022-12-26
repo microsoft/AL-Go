@@ -93,10 +93,13 @@ function RunWorkflow {
         [string] $name,
         [hashtable] $parameters = @{},
         [switch] $wait,
-        [string] $repository = $defaultRepository,
+        [string] $repository,
         [string] $branch = "main"
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     Write-Host -ForegroundColor Yellow "`nRun workflow $($name.Trim()) in $repository"
     if ($parameters -and $parameters.Count -gt 0) {
         Write-Host "Parameters:"
@@ -172,10 +175,13 @@ function RunWorkflow {
 
 function WaitWorkflow {
     Param(
-        [string] $repository = $defaultRepository,
+        [string] $repository,
         [string] $runid
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     $headers = @{ 
         "Accept" = "application/vnd.github.v3+json"
         "Authorization" = "token $token"
@@ -202,18 +208,22 @@ function WaitWorkflow {
 
 function SetRepositorySecret {
     Param(
-        [string] $repository = $defaultRepository,
+        [string] $repository,
         [string] $name,
         [string] $value
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+    Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
     invoke-gh secret set $name -b $value --repo $repository -returnValue
 }
 
 function CreateRepository {
     Param(
         [switch] $github,
-        [string] $repository = $defaultRepository,
+        [string] $repository,
         [string] $template = "",
         [string] $contentPath,
         [switch] $private,
@@ -223,6 +233,9 @@ function CreateRepository {
         [hashtable] $applyAlGoSettings = @{}
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     if (!$template.Contains('@')) {
         $template += '@main'
     }
@@ -328,10 +341,13 @@ function CommitAndPush {
 
 function MergePRandPull {
     Param(
-        [string] $repository = $defaultRepository,
+        [string] $repository,
         [string] $branch = "main"
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     $phs = @(invoke-gh -returnValue pr list --repo $repository)
     if ($phs.Count -eq 0) {
         throw "No Pull Request was created"
@@ -348,10 +364,13 @@ function MergePRandPull {
 
 function RemoveRepository {
     Param(
-        [string] $repository = $defaultRepository,
+        [string] $repository,
         [string] $path = ""
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         $owner = $repository.Split("/")[0]

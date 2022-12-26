@@ -1,5 +1,5 @@
 ﻿{
-    "id":  "7b8a7d50-773c-4d7a-858b-15d0c51ac0e5",
+    "id":  "d486b42f-5e36-45fd-a56f-11d48a42bc52",
     "name":  "DK",
     "publisher":  "Freddy",
     "version":  "1.0.0.0",
@@ -11,25 +11,25 @@
     "url":  "",
     "logo":  "",
     "dependencies":  [
-        {
-            "id":  "e8e0aa0b-7a2f-48a5-9ed0-d9c5e17e49d7",
-            "name":  "Common",
-            "publisher":  "Freddy",
-            "version":  "1.0.0.0"        
-        },
-        {
-            "id":  "755eb545-3abb-4058-876d-a8e85d6e8798",
-            "name":  "W1",
-            "publisher":  "Freddy",
-            "version":  "1.0.0.0"        
-        }
+                         {
+                             "id":  "bd1abdb2-50d5-4e94-9fc9-10ed95942839",
+                             "name":  "Common",
+                             "publisher":  "Freddy",
+                             "version":  "1.0.0.0"
+                         },
+                         {
+                             "id":  "355a5657-dc2b-483c-b916-00900183916f",
+                             "name":  "W1",
+                             "publisher":  "Freddy",
+                             "version":  "1.0.0.0"
+                         }
                      ],
     "screenshots":  [
 
                     ],
     "platform":  "1.0.0.0",
-    "application":  "19.0.0.0",
-    "runtime": "8.0",
+    "application":  "21.0.0.0",
+    "runtime":  "10.0",
     "idRanges":  [
                      {
                          "from":  61000,
