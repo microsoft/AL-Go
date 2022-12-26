@@ -63,7 +63,7 @@ try {
     $runs = 0
 
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
+    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
     # Create repo
     CreateRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private

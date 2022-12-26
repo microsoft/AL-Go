@@ -45,7 +45,7 @@ try {
     $runs = 0
 
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
+    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
     # Adjust app.json files
     Get-ChildItem -Path $PSScriptRoot -include 'app.json' -Recurse | ForEach-Object {

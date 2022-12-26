@@ -14,7 +14,7 @@ Set-StrictMode -Version 2.0
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-SetTokenAndRepository  -github:$github -githubOwner $githubOwner -token $token -repository ''
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository ''
 
 RemoveRepository -repository "$githubOwner/$actionsRepo"
 RemoveRepository -repository "$githubOwner/$perTenantExtensionRepo"

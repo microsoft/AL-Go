@@ -45,7 +45,7 @@ $repoPath = ""
     $runs = 0
 
     # Login
-    SetTokenAndRepository -githubOwner $githubOwner -token $token -repository $repository -github:$github
+    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
     $commonRepository = "$repository.Common"
     $w1Repository = "$repository.W1"
