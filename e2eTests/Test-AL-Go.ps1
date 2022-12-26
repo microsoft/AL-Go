@@ -112,7 +112,7 @@ try {
     $runs++
     if ($appSourceApp) {
         Pull -branch $branch
-        Add-PropertiesToJsonFile -commit path "$($project1Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
+        Add-PropertiesToJsonFile -commit -path "$($project1Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
         $runs++
     }
 
