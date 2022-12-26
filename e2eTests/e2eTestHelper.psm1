@@ -217,7 +217,7 @@ function SetRepositorySecret {
         $repository = $defaultRepository
     }
     Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
-    invoke-gh secret set $name -b $value --repo $repository -returnValue
+    invoke-gh secret set $name -b $value --repo $repository
 }
 
 function CreateRepository {
