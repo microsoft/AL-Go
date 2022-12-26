@@ -227,7 +227,6 @@ function DownloadAndImportBcContainerHelper {
             $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
         }
     }
-    Write-Host $bcContainerHelperVersion
     if ($bcContainerHelperVersion -eq "") {
         $bcContainerHelperVersion = "latest"
     }

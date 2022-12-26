@@ -106,13 +106,13 @@ try {
 
     # Add Existing App
     if ($appSourceApp) {
-        SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
+        SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
     }
     Run-AddExistingAppOrTestApp @project1Param -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
     $runs++
     if ($appSourceApp) {
         Pull -branch $branch
-        Add-PropertiesToJsonFile -jsonFile "$($project1Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
+        Add-PropertiesToJsonFile -commit path "$($project1Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "hw_", "cus" ) }
         $runs++
     }
 
@@ -139,11 +139,11 @@ try {
     Pull -branch $branch
     if ($appSourceApp) {
         if ($multiProject) {
-            Add-PropertiesToJsonFile -jsonFile "$($project2Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "cus" ) }
+            Add-PropertiesToJsonFile -commit -path "$($project2Folder).AL-Go\settings.json" -properties @{ "AppSourceCopMandatoryAffixes" = @( "cus" ) }
             $runs++
         }
         Copy-Item -path "$($project1Folder)Default App Name\logo\helloworld256x240.png" -Destination "$($project2Folder)My App\helloworld256x240.png"
-        Add-PropertiesToJsonFile -jsonFile "$($project2Folder)My App\app.json" -properties @{
+        Add-PropertiesToJsonFile -commit -path "$($project2Folder)My App\app.json" -properties @{
             "brief" = "Hello World for AppSource"
             "description" = "Hello World sample app for AppSource"
             "logo" = "helloworld256x240.png"
@@ -166,7 +166,7 @@ try {
 
     # Create Online Development Environment
     if ($adminCenterApiToken -and -not $multiProject) {
-        SetRepositorySecret -name 'ADMINCENTERAPICREDENTIALS' -value (ConvertTo-SecureString -String $adminCenterApiToken -AsPlainText -Force)
+        SetRepositorySecret -repository $repository -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiToken
         Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
         $runs++
     }
@@ -209,7 +209,7 @@ try {
 
     # Update AL-Go System Files
     $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
-    SetRepositorySecret -name 'GHTOKENWORKFLOW' -value (ConvertTo-SecureString -String $token -AsPlainText -Force)
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
     Run-UpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
     $runs++
     MergePRandPull -branch $branch
@@ -223,9 +223,8 @@ try {
 
     # Launch Current, NextMinor and NextMajor builds
     $runTestCurrent = Run-TestCurrent -branch $branch
-    SetRepositorySecret -name 'INSIDERSASTOKEN' -value (ConvertTo-SecureString -String $insiderSasToken -AsPlainText -Force)
-    $runTestNextMinor = Run-TestNextMinor -branch $branch
-    $runTestNextMajor = Run-TestNextMajor -branch $branch
+    $runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
+    $runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
 
     # TODO: Test workspace
     

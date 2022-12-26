@@ -24,10 +24,8 @@ try {
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
-
-        $ENV:GITHUB_TOKEN = $token
-        gh auth login --with-token
     }
+    $token | invoke-gh auth login --with-token
 
     $originalOwnerAndRepo = @{
         "actionsRepo" = "microsoft/AL-Go-Actions"
@@ -39,7 +37,7 @@ try {
     Set-Location $PSScriptRoot
     $baseRepoPath = invoke-git -returnValue rev-parse --show-toplevel
     Write-Host "Base repo path: $baseRepoPath"
-    $user = gh api user | ConvertFrom-Json
+    $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
 
     if ($configName -eq "") { $configName = $user.login }

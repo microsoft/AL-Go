@@ -199,26 +199,35 @@ function CmdDo {
         [string] $command = "",
         [string] $arguments = "",
         [switch] $silent,
-        [switch] $returnValue
+        [switch] $returnValue,
+        [string] $inputStr = ""
     )
 
     $oldNoColor = "$env:NO_COLOR"
     $env:NO_COLOR = "Y"
     $oldEncoding = [Console]::OutputEncoding
-    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
     try {
         $result = $true
         $pinfo = New-Object System.Diagnostics.ProcessStartInfo
         $pinfo.FileName = $command
         $pinfo.RedirectStandardError = $true
         $pinfo.RedirectStandardOutput = $true
+        if ($inputStr) {
+            $pinfo.RedirectStandardInput = $true
+        }
         $pinfo.WorkingDirectory = Get-Location
         $pinfo.UseShellExecute = $false
         $pinfo.Arguments = $arguments
+        $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
+
         $p = New-Object System.Diagnostics.Process
         $p.StartInfo = $pinfo
         $p.Start() | Out-Null
-    
+        if ($inputStr) {
+            $p.StandardInput.WriteLine($inputStr)
+            $p.StandardInput.Close()
+        }
         $outtask = $p.StandardOutput.ReadToEndAsync()
         $errtask = $p.StandardError.ReadToEndAsync()
         $p.WaitForExit();
@@ -246,13 +255,15 @@ function CmdDo {
         }
     }
     finally {
-    #    [Console]::OutputEncoding = $oldEncoding
+        try { [Console]::OutputEncoding = $oldEncoding } catch {}
         $env:NO_COLOR = $oldNoColor
     }
 }
 
 function invoke-gh {
     Param(
+        [parameter(mandatory = $false, ValueFromPipeline = $true)]
+        [string] $inputStr = "",
         [switch] $silent,
         [switch] $returnValue,
         [parameter(mandatory = $true, position = 0)][string] $command,
@@ -268,11 +279,13 @@ function invoke-gh {
             $arguments += "$_ "
         }
     }
-    cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue
+    cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
 }
 
 function invoke-git {
     Param(
+        [parameter(mandatory = $false, ValueFromPipeline = $true)]
+        [string] $inputStr = "",
         [switch] $silent,
         [switch] $returnValue,
         [parameter(mandatory = $true, position = 0)][string] $command,
@@ -288,7 +301,7 @@ function invoke-git {
             $arguments += "$_ "
         }
     }
-    cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue
+    cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
 }
 
 function SemVerObjToSemVerStr {

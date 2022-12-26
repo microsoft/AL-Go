@@ -24,6 +24,7 @@ function Test-ArtifactsFromRun {
         [string] $folder,
         [string] $expectedNumberOfApps,
         [string] $expectedNumberOfTestApps,
+        [string] $expectedNumberOfDependencies,
         [string] $expectedNumberOfTests = 0,
         [string] $repoVersion = "",
         [string] $appVersion = ""
@@ -32,7 +33,7 @@ function Test-ArtifactsFromRun {
     Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
     Start-Sleep -Seconds 30
     Write-Host "Download build artifacts to $folder"
-    gh run download $runid --dir $folder
+    invoke-gh run download $runid --dir $folder
 
     $actualNumberOfApps = @(Get-ChildItem -Path "$folder\*-Apps-$repoVersion*\*$appVersion*.app").Count
     if ($actualNumberOfApps -ne $expectedNumberOfApps) {
@@ -41,6 +42,10 @@ function Test-ArtifactsFromRun {
     $actualNumberOfTestApps = @(Get-ChildItem -Path "$folder\*-TestApps-$repoVersion*\*$appVersion*.app").Count
     if ($actualNumberOfTestApps -ne $expectedNumberOfTestApps) {
         throw "Expected number of test apps was $expectedNumberOfTestApps. Actual number of test apps is $actualNumberOfTestApps"
+    }
+    $actualNumberOfDependencies = @(Get-ChildItem -Path "$folder\*-Dependencies-$repoVersion*\*$appVersion*.app").Count
+    if ($actualNumberOfDependencies -ne $expectedNumberOfDependencies) {
+        throw "Expected number of dependencies was $expectedNumberOfDependencies. Actual number of test apps is $actualNumberOfDependencies"
     }
     if ($expectedNumberOfTests) {
         $actualNumberOfTests = 0
@@ -79,5 +84,21 @@ function Test-PropertiesInJsonFile {
             Write-Host "$_ is $actual. Expected $expected"
         }
     }
-
 }
+
+function Replace-StringInFiles {
+    Param(
+        [string] $path,
+        [string] $include = "*.json",
+        [string] $search,
+        [string] $replace
+    )
+
+    Get-ChildItem -Path $path -Recurse -Include $include -File | ForEach-Object {
+        $content = Get-Content $_.FullName -Encoding UTF8
+        $content = $content -replace $search, $replace
+        Set-Content $_.FullName -Value $content -Encoding UTF8
+    }
+}
+
+

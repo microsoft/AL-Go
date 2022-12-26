@@ -3,6 +3,7 @@
         [string] $appVersion,
         [string] $environmentName,
         [switch] $wait,
+        [string] $repository,
         [string] $branch = "main"
     )
 
@@ -11,5 +12,5 @@
         "appVersion" = $appVersion
         "environmentName" = $environmentName
     }
-    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch
+    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

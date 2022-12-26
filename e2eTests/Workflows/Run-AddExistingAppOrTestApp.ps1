@@ -4,6 +4,7 @@
         [string] $url,
         [switch] $directCommit,
         [switch] $wait,
+        [string] $repository,
         [string] $branch = "main"
     )
 
@@ -13,5 +14,5 @@
         "url" = $url
         "directCommit" = @("Y","N")[!$directCommit]
     }
-    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch
+    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

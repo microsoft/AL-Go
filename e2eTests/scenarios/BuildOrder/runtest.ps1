@@ -52,21 +52,17 @@ try {
     $repoPath = (Get-Location).Path
 
     # Update AL-Go System Files
-    SetRepositorySecret -name 'GHTOKENWORKFLOW' -value (ConvertTo-SecureString -String $token -AsPlainText -Force)
-    Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
-    $runs++
-    MergePRandPull -branch $branch
+    Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
     $runs++
 
-    # Run CI/CD and wait
+    # Run CI/CD workflow
     $run = Run-CICD -branch $branch
     $runs++
 
     # Launch Current, NextMinor and NextMajor builds
     $runTestCurrent = Run-TestCurrent -branch $branch
-    SetRepositorySecret -name 'INSIDERSASTOKEN' -value (ConvertTo-SecureString -String $insiderSasToken -AsPlainText -Force)
-    $runTestNextMinor = Run-TestNextMinor -branch $branch
-    $runTestNextMajor = Run-TestNextMajor -branch $branch
+    $runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
+    $runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
 
     # Wait for all workflows to finish
     WaitWorkflow -runid $run.id

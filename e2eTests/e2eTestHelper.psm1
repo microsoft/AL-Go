@@ -22,23 +22,26 @@ function SetTokenAndRepository {
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
-
-        $ENV:GITHUB_TOKEN = $token
-        gh auth login --with-token
     }
-    else {
-#        $token | gh auth login --with-token
-    }
+    $token | invoke-gh auth login --with-token
 }
 
-function ConvertTo-HashTable() {
+function ConvertTo-HashTable {
     Param(
         [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object
+        [PSCustomObject] $object,
+        [switch] $recurse
     )
     $ht = @{}
     if ($object) {
-        $object.PSObject.Properties | ForEach-Object { $ht[$_.Name] = $_.Value }
+        $object.PSObject.Properties | ForEach-Object { 
+            if ($recurse -and ($_.Value -is [PSCustomObject])) {
+                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
+            }
+            else {
+                $ht[$_.Name] = $_.Value
+            }
+        }
     }
     $ht
 }
@@ -59,21 +62,24 @@ function Get-PlainText {
 
 function Add-PropertiesToJsonFile {
     Param(
-        [string] $jsonFile,
-        [hashTable] $properties
+        [string] $path,
+        [hashTable] $properties,
+        [Switch] $commit
     )
 
-    Write-Host -ForegroundColor Yellow "`nAdd Properties to $([System.IO.Path]::GetFileName($jsonFile))"
+    Write-Host -ForegroundColor Yellow "`nAdd Properties to $([System.IO.Path]::GetFileName($path))"
     Write-Host "Properties"
     $properties | Out-Host
 
-    $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+    $json = Get-Content $path -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
     $properties.Keys | ForEach-Object {
         $json."$_" = $properties."$_"
     }
-    $json | ConvertTo-Json | Set-Content $jsonFile -Encoding UTF8
+    $json | ConvertTo-Json | Set-Content $path -Encoding UTF8
 
-    CommitAndPush -commitMessage "Update $([System.IO.Path]::GetFileName($jsonFile))"
+    if ($commit) {
+        CommitAndPush -commitMessage "Add properties to $([System.IO.Path]::GetFileName($path))"
+    }
 }
 
 
@@ -159,7 +165,7 @@ function RunWorkflow {
     $runid = $run.id
     Write-Host "Run URL: https://github.com/$repository/actions/runs/$runid"
     if ($wait) {
-        WaitWorkflow -runid $run.id
+        WaitWorkflow -repository $repository -runid $run.id
     }
     $run
 }
@@ -198,10 +204,10 @@ function SetRepositorySecret {
     Param(
         [string] $repository = $defaultRepository,
         [string] $name,
-        [secureString] $value
+        [string] $value
     )
 
-    gh secret set $name -b ($value | Get-PlainText) --repo $repository
+    invoke-gh secret set $name -b $value --repo $repository -returnValue
 }
 
 function CreateRepository {
@@ -212,7 +218,9 @@ function CreateRepository {
         [string] $contentPath,
         [switch] $private,
         [switch] $linux,
-        [string] $branch = "main"
+        [string] $branch = "main",
+        [hashtable] $applyRepoSettings = @{},
+        [hashtable] $applyAlGoSettings = @{}
     )
 
     if (!$template.Contains('@')) {
@@ -279,6 +287,12 @@ function CreateRepository {
         }
     }
     $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
+    if ($applyRepoSettings.Keys.Count) {
+        Add-PropertiesToJsonFile -path $repoSettingsFile -properties $applyRepoSettings
+    }
+    if ($applyAlGoSettings.Keys.Count) {
+        Add-PropertiesToJsonFile -path ".AL-Go\settings.json" -properties $applyAlGoSettings
+    }
 
     invoke-git add *
     invoke-git commit --allow-empty -m 'init'
@@ -341,6 +355,12 @@ function RemoveRepository {
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         invoke-gh repo delete $repository --confirm | Out-Host
+
+        $owner = $repository.Split("/")[0]
+        @(invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json) | Where-Object { $_.repository.full_name -eq $repo } | ForEach-Object {
+            Write-Host "- $($_.name)"
+            invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name)
+        }
     }
 
     if ($path) {

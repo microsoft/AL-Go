@@ -84,7 +84,7 @@ try {
 
     # Add Existing App
     if ($appSourceApp) {
-        SetRepositorySecret -name 'LICENSEFILEURL' -value (ConvertTo-SecureString -String $licenseFileUrl -AsPlainText -Force)
+        SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
     }
 
     # Run CI/CD and wait
@@ -93,7 +93,7 @@ try {
     Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
 
     # Update AL-Go System Files
-    SetRepositorySecret -name 'GHTOKENWORKFLOW' -value (ConvertTo-SecureString -String $token -AsPlainText -Force)
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
     Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
     $runs++
     

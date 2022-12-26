@@ -1,0 +1,33 @@
+﻿{
+    "id":  "ff9b7020-fd41-4a13-a5c6-3e8485013905",
+    "name":  "Common",
+    "publisher":  "Freddy",
+    "version":  "1.0.0.0",
+    "brief":  "",
+    "description":  "",
+    "privacyStatement":  "",
+    "EULA":  "",
+    "help":  "",
+    "url":  "",
+    "logo":  "",
+    "dependencies":  [
+
+                     ],
+    "screenshots":  [
+
+                    ],
+    "platform":  "1.0.0.0",
+    "application":  "19.0.0.0",
+    "runtime": "8.0",
+    "idRanges":  [
+                     {
+                         "from":  50000,
+                         "to":  51000
+                     }
+                 ],
+    "resourceExposurePolicy":  {
+                                   "allowDebugging":  true,
+                                   "allowDownloadingSource":  false,
+                                   "includeSourceInSymbolFile":  false
+                               }
+}
