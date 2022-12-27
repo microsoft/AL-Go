@@ -20,7 +20,7 @@ on:
         required: false
         default: 'Y'
       bcContainerHelperVersion:
-        description: Which version of BcContainerHelper to use? (latest, preview, private or a specific version number - empty is latest)
+        description: Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)
         required: false
         default: 'preview'
 
