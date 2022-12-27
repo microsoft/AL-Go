@@ -42,7 +42,7 @@ try {
 
     if ($configName -eq "") { $configName = $user.login }
     if ([System.IO.Path]::GetExtension($configName) -eq "") { $configName += ".json" }
-    $config = Get-Content $configName | ConvertFrom-Json
+    $config = Get-Content $configName -Encoding UTF8 | ConvertFrom-Json
 
     Write-Host "Using config file: $configName"
     $config | ConvertTo-Json | Out-Host
@@ -197,7 +197,7 @@ try {
                     New-Item $srcFilePath -ItemType Directory | Out-Null
                 }
                 Write-Host "$dstFile -> $srcFile"
-                $lines = ([string](Get-Content -Raw -path $dstFile)).Split("`n")
+                $lines = ([string](Get-Content -Raw -path $dstFile -Encoding UTF8)).Replace("`r", "").TrimEnd("`n").Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     $regex = "^(.*)$($config.githubOwner)\/$($config."$_")(.*)$($config.branch)(.*)$"
                     $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
@@ -206,7 +206,7 @@ try {
                 if ($_.Name -eq "AL-Go-Helper.ps1") {
                     $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)"(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""""`$5" }
                 }
-                [System.IO.File]::WriteAllText($srcFile, ($lines -join "`n"), [System.Text.UTF8Encoding]($False))
+                [System.IO.File]::WriteAllText($srcFile, ($lines -join "`r`n"), [System.Text.UTF8Encoding]($False))
             }
         }
         Set-Location $baseRepoPath
@@ -302,7 +302,7 @@ try {
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
-                $lines = ([string](Get-Content -Raw -path $srcFile)).Split("`n")
+                $lines = ([string](Get-Content -Raw -path $srcFile -Encoding UTF8)).Replace("`r", "").TrimEnd("`n").Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     if ($_ -eq "actionsRepo") {
                         $useBranch = $config.branch
@@ -317,7 +317,7 @@ try {
                 if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
                     $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)""`$4" }
                 }
-                [System.IO.File]::WriteAllText($dstFile, ($lines -join "`n"), [System.Text.UTF8Encoding]($False))
+                [System.IO.File]::WriteAllText($dstFile, ($lines -join "`r`n"), [System.Text.UTF8Encoding]($False))
             }
             if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
                 Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
