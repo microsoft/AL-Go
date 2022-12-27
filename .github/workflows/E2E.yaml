@@ -151,7 +151,7 @@ jobs:
         id: calculateParams
         run: |
           $errorActionPreference = "STOP"
-          Import-Module (Join-Path "." "e2eTestHelper.psm1") -DisableNameChecking
+          Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
           # To allow more than one end-2-end test simultanously: replace AppIDs with new GUIDs and adjust dependencies
           # Additionally, set application and runtime in all app.json files
           $path = Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}"
