@@ -29,8 +29,8 @@ defaults:
     shell: pwsh
 
 env:
-  scenarioApplicationVersion = "21.0.0.0"
-  scenarioRuntimeVersion = "10.0"
+  scenarioApplicationVersion: 21.0.0.0
+  scenarioRuntimeVersion: 10.0
 
 jobs:
   Check:
