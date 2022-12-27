@@ -129,7 +129,7 @@ $run = Run-CICD -wait -branch $branch
 $runs++
 
 Test-NumberOfRuns -expectedNumberOfRuns $runs
-Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 2 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
+Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
 
 # Create Release
 Run-CreateRelease -appVersion "1.0.$($runs-2).0" -name '1.0' -tag '1.0' -wait -branch $branch | Out-Null
@@ -181,10 +181,10 @@ $runs++
 $run = Run-CICD -wait -branch $branch
 $runs++
 if ($multiProject) {
-    Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0.' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0.' -appVersion ''
 }
 else {
-    Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 3 -expectedNumberOfTestApps 2 -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0.' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0.' -appVersion ''
 }
 Test-NumberOfRuns -expectedNumberOfRuns $runs
 
@@ -207,7 +207,7 @@ if (Test-Path "$($project1Folder).AL-Go\*.ps1") { throw "Local PowerShell script
 if (Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml") { throw "AddExistingAppOrTestApp.yaml should have been removed" }
 $run = Run-CICD -wait -branch $branch
 $runs++
-Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 3 -expectedNumberOfTestApps 2 -expectedNumberOfTests 2 -folder 'artifacts3' -repoVersion '3.0.' -appVersion '3.0'
+Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests 2 -folder 'artifacts3' -repoVersion '3.0.' -appVersion '3.0'
 
 # Update AL-Go System Files
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json

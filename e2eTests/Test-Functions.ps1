@@ -22,9 +22,7 @@ function Test-ArtifactsFromRun {
     Param(
         [string] $runid,
         [string] $folder,
-        [string] $expectedNumberOfApps,
-        [string] $expectedNumberOfTestApps,
-        [string] $expectedNumberOfDependencies,
+        [hashtable] $expectedArtifacts = @{},
         [string] $expectedNumberOfTests = 0,
         [string] $repoVersion = "",
         [string] $appVersion = ""
@@ -35,17 +33,12 @@ function Test-ArtifactsFromRun {
     Write-Host "Download build artifacts to $folder"
     invoke-gh run download $runid --dir $folder
 
-    $actualNumberOfApps = @(Get-ChildItem -Path "$folder\*-Apps-$repoVersion*\*$appVersion*.app").Count
-    if ($actualNumberOfApps -ne $expectedNumberOfApps) {
-        throw "Expected number of apps was $expectedNumberOfApps. Actual number of apps is $actualNumberOfApps"
-    }
-    $actualNumberOfTestApps = @(Get-ChildItem -Path "$folder\*-TestApps-$repoVersion*\*$appVersion*.app").Count
-    if ($actualNumberOfTestApps -ne $expectedNumberOfTestApps) {
-        throw "Expected number of test apps was $expectedNumberOfTestApps. Actual number of test apps is $actualNumberOfTestApps"
-    }
-    $actualNumberOfDependencies = @(Get-ChildItem -Path "$folder\*-Dependencies-$repoVersion*\*$appVersion*.app").Count
-    if ($actualNumberOfDependencies -ne $expectedNumberOfDependencies) {
-        throw "Expected number of dependencies was $expectedNumberOfDependencies. Actual number of test apps is $actualNumberOfDependencies"
+    $expectedArtifacts.Keys | ForEach-Object {
+        $expected = $expectedArtifacts."$_"
+        $actual = @(Get-ChildItem -Path "$folder\*-$($_)-$repoVersion*\*$appVersion*.app").Count
+        if ($actual -ne $expected) {
+            throw "Expected number of $_ was $expected. Actual number of $_ is $actual"
+        }
     }
     if ($expectedNumberOfTests) {
         $actualNumberOfTests = 0

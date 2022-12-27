@@ -49,6 +49,7 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateRepository -template $template -repository $repository -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
 $repoPath = (Get-Location).Path
+$runs++
 
 # Update AL-Go System Files
 Run-UpdateAlGoSystemFiles -templateUrl $template -repository $repository -branch $branch -ghTokenWorkflow $token -directCommit -wait | Out-Null
@@ -59,6 +60,7 @@ $run = Run-CICD -repository $repository -branch $branch -wait
 $runs++
 
 Test-NumberOfRuns -expectedNumberOfRuns $runs
+Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation
 

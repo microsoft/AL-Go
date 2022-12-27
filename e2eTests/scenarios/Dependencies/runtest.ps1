@@ -83,15 +83,15 @@ Set-Location $commonRepoPath
 # Wait for CI/CD workflow of Common to finish
 WaitWorkflow -repository $commonRepository -runid $commonRun.id
 $runs++
-Test-ArtifactsFromRun -runid $commonRun.id -folder 'artifacts' -expectedNumberOfApps 3 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 0 -repoVersion '1.0' -appVersion '1.0'
+Test-ArtifactsFromRun -runid $commonRun.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $w1RepoPath
 $w1Run = Run-CICD -repository $w1Repository -branch $branch -wait
-Test-ArtifactsFromRun -runid $w1Run.id -folder 'artifacts' -expectedNumberOfApps 1 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 0 -repoVersion '1.0' -appVersion '1.0'
+Test-ArtifactsFromRun -runid $w1Run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $repoPath
 $run = Run-CICD -repository $repository -branch $branch -wait
-Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedNumberOfApps 1 -expectedNumberOfTestApps 0 -expectedNumberOfDependencies 3 -repoVersion '1.0' -appVersion '1.0'
+Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=3} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation
 
