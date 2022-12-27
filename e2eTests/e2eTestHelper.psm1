@@ -299,6 +299,8 @@ function CreateRepository {
             Set-Content -Path $_.FullName -Encoding UTF8 -Value $content
         }
     }
+    # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
+    $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
     $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
     if ($applyRepoSettings.Keys.Count) {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties $applyRepoSettings
