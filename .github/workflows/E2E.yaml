@@ -141,11 +141,6 @@ jobs:
         scenario: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
       fail-fast: false
     steps:
-      - name: Skipped
-        if: github.event.inputs.runScenarios != 'Y'
-        run: |
-          Write-Host "Skipped"
-
       - uses: actions/checkout@v3
         if: github.event.inputs.runScenarios == 'Y'
         with:
@@ -199,11 +194,6 @@ jobs:
         os: [ 'linux', 'windows' ]
       fail-fast: false
     steps:
-      - name: Skipped
-        if: github.event.inputs.runTestMatrix != 'Y'
-        run: |
-          Write-Host "Skipped"
-
       - uses: actions/checkout@v3
         if: github.event.inputs.runTestMatrix == 'Y'
         with:
@@ -256,11 +246,6 @@ jobs:
         type: [ 'appSourceApp', 'PTE' ]
       fail-fast: false
     steps:
-      - name: Skipped
-        if: github.event.inputs.runUpgradeTests != 'Y'
-        run: |
-          Write-Host "Skipped"
-
       - uses: actions/checkout@v3
         if: github.event.inputs.runUpgradeTests == 'Y'
         with:
