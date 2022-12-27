@@ -1,16 +1,17 @@
 ﻿Param(
     [switch] $github,
-    [string] $githubOwner = "",
-    [string] $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = "",
-    [string] $contentPath = "",
-    [string] $release = "",
-    [string] $template = "",
+    [string] $githubOwner = $global:E2EgithubOwner,
+    [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
+    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $contentPath = "pte",
+    [string] $release = "v2.2",
+    [string] $template = "$(invoke-git config user.name -silent -returnValue)/AL-Go-PTE@main",
     [string] $licenseFileUrl = "",
     [switch] $appSourceApp,
     [switch] $private
 )
 
+Write-Host -ForegroundColor Yellow @'
 #  ______           _ ___                _    _    _                           _         _           _                                    _       
 # |  ____|         | |__ \              | |  | |  | |                         | |       | |         | |                                  (_)      
 # | |__   _ __   __| |  ) |___ _ __   __| |  | |  | |_ __   __ _ _ __ __ _  __| | ___   | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___  
@@ -36,88 +37,83 @@
 # -  Test number of workflows ran is correct
 # - Cleanup
 #
+'@
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
+$prevLocation = Get-Location
 
-try {
-    Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
-    Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
+Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
+Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-    $repository = "$githubOwner/$repoName"
-    $branch = "main"
+$repository = "$githubOwner/$repoName"
+$branch = "main"
 
-    if ($appSourceApp) {
-        $orgTemplate = 'https://github.com/microsoft/al-go-appSource'
-        if (!$licenseFileUrl) {
-            throw "License file secret must be set"
-        }
-    }
-    else {
-        $orgTemplate = 'https://github.com/microsoft/al-go-pte'
-        if ($licenseFileUrl) {
-            throw "License file secret should not be set"
-        }
-    }
-    $template = "https://github.com/$template"
-    $runs = 0
-
-    # Login
-    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
-
-    # Create repo
-    CreateRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
-    $repoPath = (Get-Location).Path
-
-    # Add AppFolders and TestFolders
-    $settingsFile = Join-Path $repoPath '.AL-Go\settings.json'
-    $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
-    $settings.appFolders += "My App"
-    $settings.testFolders += "My App.Test"
-    if ($appSourceApp) {
-        $settings.AppSourceCopMandatoryAffixes = @("cust")
-    }
-    $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
-    Add-Content -path (Join-Path $repoPath '.AL-Go\localdevenv.ps1') -Encoding UTF8 -Value "`n`n# Dummy comment" |
-    CommitAndPush -commitMessage "Update settings.json"
-    $runs++
-
-    # Add Existing App
-    if ($appSourceApp) {
-        SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
-    }
-
-    # Run CI/CD and wait
-    $run = Run-CICD -wait -branch $branch
-    $runs++
-    Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
-
-    # Update AL-Go System Files
-    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-    Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
-    $runs++
-    
-    # Wait for PR handler to start
-    Start-Sleep -seconds 100
-    MergePRandPull -branch $branch
-    $runs++
-    if ([System.Version]$release.Substring(1) -ge [System.Version]"2.2") {
-        $runs++
-    }
-    
-    # Run CI/CD and wait
-    $run = Run-CICD -wait -branch $branch
-    $runs++
-    Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0.' -appVersion ''
-    
-    Test-NumberOfRuns -expectedNumberOfRuns $runs
-    
-    RemoveRepository -repository $repository -path $repoPath
-}
-catch {
-    Write-Host $_.Exception.Message
-    Write-Host "::Error::$($_.Exception.Message)"
-    if ($github) {
-        $host.SetShouldExit(1)
+if ($appSourceApp) {
+    $orgTemplate = 'https://github.com/microsoft/al-go-appSource'
+    if (!$licenseFileUrl) {
+        throw "License file secret must be set"
     }
 }
+else {
+    $orgTemplate = 'https://github.com/microsoft/al-go-pte'
+    if ($licenseFileUrl) {
+        throw "License file secret should not be set"
+    }
+}
+$template = "https://github.com/$template"
+$runs = 0
+
+# Login
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+
+# Create repo
+CreateRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
+$repoPath = (Get-Location).Path
+
+# Add AppFolders and TestFolders
+$settingsFile = Join-Path $repoPath '.AL-Go\settings.json'
+$settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+$settings.appFolders += "My App"
+$settings.testFolders += "My App.Test"
+if ($appSourceApp) {
+    $settings.AppSourceCopMandatoryAffixes = @("cust")
+}
+$settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+Add-Content -path (Join-Path $repoPath '.AL-Go\localdevenv.ps1') -Encoding UTF8 -Value "`n`n# Dummy comment" |
+CommitAndPush -commitMessage "Update settings.json"
+$runs++
+
+# Add Existing App
+if ($appSourceApp) {
+    SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
+}
+
+# Run CI/CD and wait
+$run = Run-CICD -wait -branch $branch
+$runs++
+Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0.' -appVersion ''
+
+# Update AL-Go System Files
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
+$runs++
+
+# Wait for PR handler to start
+Start-Sleep -seconds 100
+MergePRandPull -branch $branch
+$runs++
+if ([System.Version]$release.Substring(1) -ge [System.Version]"2.2") {
+    $runs++
+}
+
+# Run CI/CD and wait
+$run = Run-CICD -wait -branch $branch
+$runs++
+Test-ArtifactsFromRun -runid $run.id -expectedNumberOfApps 1 -expectedNumberOfTestApps 1 -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0.' -appVersion ''
+
+Test-NumberOfRuns -expectedNumberOfRuns $runs
+
+Set-Location $prevLocation
+
+RemoveRepository -repository $repository -path $repoPath

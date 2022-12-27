@@ -1,6 +1,6 @@
 ﻿{
-    "id":  "152f1eb0-4449-4e98-a3ab-707d5685bcf3",
-    "name":  "Misc",
+    "id":  "71bca69b-809b-4f31-9d66-86a4cde7dc73",
+    "name":  "HelloWorld",
     "publisher":  "Freddy",
     "version":  "1.0.0.0",
     "brief":  "",
@@ -21,8 +21,8 @@
     "runtime":  "10.0",
     "idRanges":  [
                      {
-                         "from":  62000,
-                         "to":  63000
+                         "from":  75000,
+                         "to":  75010
                      }
                  ],
     "resourceExposurePolicy":  {

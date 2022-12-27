@@ -267,8 +267,8 @@ function CreateRepository {
     Remove-Item -Path $tempRepoPath -Force -Recurse
     Remove-Item -Path $zipFileName -Force
     if ($contentPath) {
-        Write-Host "$(Join-Path $contentPath '*')"
-        Copy-Item (Join-Path $contentPath '*') -Destination . -Recurse -Force
+        Write-Host "Copy content from $contentPath"
+        Copy-Item (Join-Path $contentPath "*") -Destination . -Recurse -Force
     }
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json

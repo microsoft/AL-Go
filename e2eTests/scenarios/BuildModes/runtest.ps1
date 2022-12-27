@@ -11,21 +11,19 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  ____        _ _     _  ____          _           
-# |  _ \      (_) |   | |/ __ \        | |          
-# | |_) |_   _ _| | __| | |  | |_ __ __| | ___ _ __ 
-# |  _ <| | | | | |/ _` | |  | | '__/ _` |/ _ \ '__|
-# | |_) | |_| | | | (_| | |__| | | | (_| |  __/ |   
-# |____/ \__,_|_|_|\__,_|\____/|_|  \__,_|\___|_|   
+#  ____        _ _     _ __  __           _           
+# |  _ \      (_) |   | |  \/  |         | |          
+# | |_) |_   _ _| | __| | \  / | ___   __| | ___  ___ 
+# |  _ <| | | | | |/ _` | |\/| |/ _ \ / _` |/ _ \/ __|
+# | |_) | |_| | | | (_| | |  | | (_) | (_| |  __/\__ \
+# |____/ \__,_|_|_|\__,_|_|  |_|\___/ \__,_|\___||___/
+#                                                     
 #
 # This test tests the following scenario:
 #                                                                                                      
-#  - Create a new repository based on the PTE template with the content from the content folder
+#  - Create a new repository based on the PTE template with the content from the content folder (single project HelloWorld app)
 #  - Run Update AL-Go System Files to apply settings from the app
 #  - Run the "CI/CD" workflow
-#  - Run the Test Current Workflow
-#  - Run the Test Next Minor Workflow
-#  - Run the Test Next Major Workflow
 #  - Test that runs were successful and artifacts were created
 #  - Cleanup repositories
 #
@@ -49,30 +47,15 @@ $runs = 0
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
 # Create repo
-CreateRepository -template $template -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
+CreateRepository -template $template -repository $repository -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
 $repoPath = (Get-Location).Path
 
 # Update AL-Go System Files
-Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
+Run-UpdateAlGoSystemFiles -templateUrl $template -repository $repository -branch $branch -ghTokenWorkflow $token -directCommit -wait | Out-Null
 $runs++
 
 # Run CI/CD workflow
-$run = Run-CICD -branch $branch
-$runs++
-
-# Launch Current, NextMinor and NextMajor builds
-$runTestCurrent = Run-TestCurrent -branch $branch
-$runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
-
-# Wait for all workflows to finish
-WaitWorkflow -runid $run.id
-$runs++
-WaitWorkflow -runid $runTestCurrent.id
-$runs++
-WaitWorkflow -runid $runTestNextMinor.id
-$runs++
-WaitWorkflow -runid $runTestNextMajor.id
+$run = Run-CICD -repository $repository -branch $branch -wait
 $runs++
 
 Test-NumberOfRuns -expectedNumberOfRuns $runs

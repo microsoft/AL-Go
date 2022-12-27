@@ -1,0 +1,7 @@
+﻿{
+    "type":  "PTE",
+    "templateUrl":  "https://github.com/freddydk/AL-Go-PTE@main",
+    "runs-on":  "ubuntu-latest",
+    "buildModes":  [ "Clean", "Default", "Translated" ],
+    "cleanModePreprocessorSymbols":  [ "CLEAN" ]
+}
