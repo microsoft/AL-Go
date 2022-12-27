@@ -20,7 +20,7 @@ on:
         required: false
         default: 'Y'
       bcContainerHelperVersion:
-        description: Which version of BcContainerHelper to use? (latest, preview, private or a specific version number - default is latest)
+        description: Which version of BcContainerHelper to use? (latest, preview, private or a specific version number - empty is latest)
         required: false
         default: 'preview'
 
