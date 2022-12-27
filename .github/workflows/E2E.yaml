@@ -161,8 +161,8 @@ jobs:
               Replace-StringInFiles -path $path -include 'app.json' -search $appJson.Id -replace $newId
               Write-Host "$($_.Directory) -> $newId"
               $appJson.id = $newId
-              $appJson.application = $ENV:scenarioApplicationVersion
-              $appJson.runtime = $ENV:scenarioRuntimeVersion
+              $appJson.application = "$ENV:scenarioApplicationVersion"
+              $appJson.runtime = "$ENV:scenarioRuntimeVersion"
               Set-Content -Path $_.FullName -Value ($appJson | ConvertTo-Json -Depth 99) -Encoding UTF8
           }
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
