@@ -1,0 +1,69 @@
+name: Cleanup after failed E2E 
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  Check:
+    runs-on: [ ubuntu-latest ]
+    outputs:
+      githubOwner: ${{ steps.check.outputs.githubOwner }}
+    steps:
+      - name: Check secrets
+        id: check
+        run: |
+          $err = $false
+          if ('${{ Secrets.OrgPAT }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow"
+            $err = $true
+          }
+          if ('${{ Secrets.githubOwner }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called githubOwner containing a the name of the owner of temp repositories"
+            $err = $true
+          }
+          if ('${{ Secrets.adminCenterApiCredentials }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called adminCenterApiCredentials containing API access credentials for BC Admin Center"
+            $err = $true
+          }
+          if ($err) {
+            exit 1
+          }
+          # Modify GitHubOwner secret in order to ensure that URLs are not masked in output
+          # Makes troubleshooting much easier
+          $githubOwner = '${{ Secrets.githubOwner }}'
+          if ($githubOwner.ToLowerInvariant() -cne $githubOwner) {
+            $githubOwner = $githubOwner.ToLowerInvariant()
+          }
+          else {
+            $githubOwner = $githubOwner.ToUpperInvariant()
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
+          Write-Host "githubOwner=$githubOwner"
+
+  RemoveRepositories:
+    runs-on: [ ubuntu-latest ]
+    needs: [ Check ]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Remove Temp Repositories
+        run: |
+          $errorActionPreference = "STOP"
+          Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
+          $owner = '${{ needs.Check.outputs.githubowner }}'
+          SetTokenAndRepository -github -githubOwner $owner -token '${{ Secrets.OrgPAT }}' -repository ''
+          @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_".startswith("$owner/tmp") } | ForEach-Object {
+              $repo = $_
+              Write-Host "https://github.com/$repo"
+              @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { ($_.PSObject.Properties.Name -eq 'repository') -and ($_.repository.full_name -eq $repo) } | ForEach-Object {
+                  Write-Host "- package $($_.name)"
+              #    invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name)
+              }
+              #invoke-gh repo delete "https://github.com/$repo" --confirm | Out-Host
+          }
