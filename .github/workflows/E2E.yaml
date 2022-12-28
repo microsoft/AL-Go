@@ -41,6 +41,10 @@ jobs:
       - name: Check secrets
         id: check
         run: |
+          $s = @{ "a" = "b"; "c" = "d"}
+          $json = $s | ConvertTo-Json
+          Write-Host $json.Length
+
           $err = $false
           if ('${{ Secrets.OrgPAT }}' -eq '') {
             Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow"
