@@ -296,7 +296,7 @@ function CreateRepository {
             $srcPattern = "shell: powershell`r`n"
             $replacePattern = "shell: $shell`r`n"
             $content = $content.Replace($srcPattern, $replacePattern)
-            Set-Content -Path $_.FullName -Encoding UTF8 -Value $content
+            [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests

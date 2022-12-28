@@ -25,21 +25,16 @@ function Test-ArtifactsFromRun {
         [hashtable] $expectedArtifacts = @{},
         [string] $expectedNumberOfTests = 0,
         [string] $repoVersion = "",
-        [string] $appVersion = ""
+        [string] $appVersion = "",
+        [switch] $addDelay
     )
 
     Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
     Start-Sleep -Seconds 30
     Write-Host "Download build artifacts to $folder"
     invoke-gh run download $runid --dir $folder
+    $err = $false
 
-    $expectedArtifacts.Keys | ForEach-Object {
-        $expected = $expectedArtifacts."$_"
-        $actual = @(Get-ChildItem -Path "$folder\*-$($_)-$repoVersion*\*$appVersion*.app").Count
-        if ($actual -ne $expected) {
-            throw "Expected number of $_ was $expected. Actual number of $_ is $actual"
-        }
-    }
     if ($expectedNumberOfTests) {
         $actualNumberOfTests = 0
         $actualNumberOfErrors = 0
@@ -54,11 +49,31 @@ function Test-ArtifactsFromRun {
         }
 
         if ($actualNumberOfTests -ne $expectedNumberOfTests) {
-            throw "Expected number of tests was $expectedNumberOfTests. Actual number of tests is $actualNumberOfTests"
+            Write-Host "::Error::Expected number of tests was $expectedNumberOfTests. Actual number of tests is $actualNumberOfTests"
+            $err = $true
         }
-
         if ($actualNumberOfErrors -ne 0 -or $actualNumberOfFailures -ne 0) {
-            throw "Test results indicate unexpected errors"
+            Write-Host "::Error::Test results indicate unexpected errors"
+            $err = $true
+        }
+        if (!$err) {
+            Write-Host "Number of tests was $actualNumberOfTests as expected and all tests passed"
+        }
+    }
+    $expectedArtifacts.Keys | ForEach-Object {
+        $expected = $expectedArtifacts."$_"
+        if ($_ -eq 'thisbuild') {
+            $actual = @(Get-ChildItem -Path "$folder\thisbuild-*-Apps\*$appVersion.*.*.app").Count
+        }
+        else {
+            $actual = @(Get-ChildItem -Path "$folder\*-$($_)-$repoVersion.*.*\*$appVersion.*.*.app").Count
+        }
+        if ($actual -ne $expected) {
+            Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
+            $err = $true
+        }
+        else {
+            Write-Host "Number of $_ was $actual as expected"
         }
     }
 }
@@ -88,9 +103,9 @@ function Replace-StringInFiles {
     )
 
     Get-ChildItem -Path $path -Recurse -Include $include -File | ForEach-Object {
-        $content = Get-Content $_.FullName -Encoding utf8
+        $content = Get-Content $_.FullName -Raw -Encoding utf8
         $content = $content -replace $search, $replace
-        Set-Content -Path $_.FullName -Value $content -Encoding utf8
+        [System.IO.File]::WriteAllText($_.FullName, $content)
     }
 }
 

@@ -3,8 +3,8 @@
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $pteTemplate = "$(invoke-git config user.name -silent -returnValue)/AL-Go-PTE@main",
-    [string] $appSourceTemplate = "$(invoke-git config user.name -silent -returnValue)/AL-Go-AppSource@main",
+    [string] $pteTemplate = $global:pteTemplate,
+    [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
     [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
     [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText)
@@ -21,10 +21,10 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test tests the following scenario:
 #                                                                                                      
-#  - Create a new repository based on the PTE template with the content from the content folder (single project HelloWorld app)
-#  - Run Update AL-Go System Files to apply settings from the app
+#  - Create a new repository based on the PTE template with the content from the content folder
+#    - single project HelloWorld app with BuildModes set
 #  - Run the "CI/CD" workflow
-#  - Test that runs were successful and artifacts were created
+#  - Test artifacts generated
 #  - Cleanup repositories
 #
 '@
@@ -41,7 +41,6 @@ $repository = "$githubOwner/$repoName"
 $branch = "main"
 
 $template = "https://github.com/$($pteTemplate)@main"
-$runs = 0
 
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
@@ -49,17 +48,11 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateRepository -template $template -repository $repository -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
 $repoPath = (Get-Location).Path
-$runs++
-
-# Update AL-Go System Files
-Run-UpdateAlGoSystemFiles -templateUrl $template -repository $repository -branch $branch -ghTokenWorkflow $token -directCommit -wait | Out-Null
-$runs++
 
 # Run CI/CD workflow
 $run = Run-CICD -repository $repository -branch $branch -wait
-$runs++
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs
+# Test number of artifacts
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation

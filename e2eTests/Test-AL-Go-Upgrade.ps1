@@ -5,7 +5,7 @@
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $contentPath = "pte",
     [string] $release = "v2.2",
-    [string] $template = "$(invoke-git config user.name -silent -returnValue)/AL-Go-PTE@main",
+    [string] $template = $global:pteTemplate,
     [string] $licenseFileUrl = "",
     [switch] $appSourceApp,
     [switch] $private

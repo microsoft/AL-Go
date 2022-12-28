@@ -3,7 +3,7 @@
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $template = "$(invoke-git config user.name -silent -returnValue)/AL-Go-PTE@main",
+    [string] $template = $global:pteTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
     [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
     [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText),
