@@ -56,8 +56,7 @@ jobs:
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
           $owner = '${{ needs.Check.outputs.githubowner }}'
           SetTokenAndRepository -github -githubOwner $owner -token '${{ Secrets.OrgPAT }}' -repository ''
-          invoke-gh repo list $owner --limit 1000 -silent -returnValue | out-host
-          @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_".startswith("$owner/tmp") } | ForEach-Object {
+          @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
               Write-Host "https://github.com/$repo"
               @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { ($_.PSObject.Properties.Name -eq 'repository') -and ($_.repository.full_name -eq $repo) } | ForEach-Object {
