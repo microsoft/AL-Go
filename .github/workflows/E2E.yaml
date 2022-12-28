@@ -43,6 +43,7 @@ jobs:
         run: |
           $s = @{ "a" = "b"; "c" = "d"}
           $json = $s | ConvertTo-Json
+          Write-Host "'$json'"
           Write-Host $json.Length
 
           $err = $false
