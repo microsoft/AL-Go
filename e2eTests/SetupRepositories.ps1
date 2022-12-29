@@ -12,8 +12,6 @@ $actionsRepo = "$repoBaseName-Actions"
 $perTenantExtensionRepo = "$repoBaseName-PTE"
 $appSourceAppRepo = "$repoBaseName-AppSource"
 
-[System.IO.Path]::GetTempPath()
-
 $settings = [ordered]@{
     "githubOwner" = $githubOwner
     "actionsRepo" = $actionsRepo

@@ -24,7 +24,11 @@ function SetTokenAndRepository {
         invoke-git config --global core.autocrlf true
         $ENV:GITHUB_TOKEN = ''
     }
+    Write-Host "Authenticating with GitHub using token"
     $token | invoke-gh auth login --with-token
+    if ($github) {
+        $ENV:GITHUB_TOKEN = $token
+    }
 }
 
 function ConvertTo-HashTable {
