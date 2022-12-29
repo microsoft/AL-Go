@@ -9,4 +9,3 @@ The GitHub token running the action
 Name of workflow initiating the deployment
 ### telemetryScope
 Telemetry scope generated during the workflow initialization
-
