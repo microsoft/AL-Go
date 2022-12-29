@@ -46,8 +46,19 @@ $template = "https://github.com/$($pteTemplate)@main"
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
 # Create repo
-CreateRepository -template $template -repository $repository -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
+CreateAlGoRepository `
+    -github:$github `
+    -linux `
+    -template $template `
+    -repository $repository `
+    -branch $branch `
+    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated" ); "cleanModePreprocessorSymbols" = @( "CLEAN" )} `
+    -contentScript {
+        Param([string] $path)
+        CreateNewAppInFolder -folder $path -name "App" -publisher "MS Test"
+    }
 $repoPath = (Get-Location).Path
+Start-Process $repoPath
 
 # Run CI/CD workflow
 $run = Run-CICD -repository $repository -branch $branch -wait

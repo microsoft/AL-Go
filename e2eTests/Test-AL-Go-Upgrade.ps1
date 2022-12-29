@@ -68,7 +68,7 @@ $runs = 0
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
 # Create repo
-CreateRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
+CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
 $repoPath = (Get-Location).Path
 
 # Add AppFolders and TestFolders

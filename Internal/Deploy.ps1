@@ -24,7 +24,9 @@ try {
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
+        $ENV:GITHUB_TOKEN = $token
     }
+    Write-Host "Authenticating with GitHub"
     $token | invoke-gh auth login --with-token
 
     $originalOwnerAndRepo = @{

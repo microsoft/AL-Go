@@ -103,7 +103,7 @@ $runs = 0
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
 # Create repo
-CreateRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux
+CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux
 $repoPath = (Get-Location).Path
 
 # Add Existing App

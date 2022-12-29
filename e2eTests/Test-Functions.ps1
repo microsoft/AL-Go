@@ -84,29 +84,17 @@ function Test-PropertiesInJsonFile {
         [Hashtable] $properties
     )
 
+    $err = $false
     $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
     $properties.Keys | ForEach-Object {
         $expected = $properties."$_"
         $actual = Invoke-Expression "`$json.$_"
         if ($actual -ne $expected) {
-            Write-Host "$_ is $actual. Expected $expected"
+            Write-Host "::Error::Property $_ is $actual. Expected $expected"
+            $err = $true
         }
     }
-}
-
-function Replace-StringInFiles {
-    Param(
-        [string] $path,
-        [string] $include = "*",
-        [string] $search,
-        [string] $replace
-    )
-
-    Get-ChildItem -Path $path -Recurse -Include $include -File | ForEach-Object {
-        $content = Get-Content $_.FullName -Raw -Encoding utf8
-        $content = $content -replace $search, $replace
-        [System.IO.File]::WriteAllText($_.FullName, $content)
+    if ($err) {
+        throw "Testing properties in $jsonFile failed"
     }
 }
-
-

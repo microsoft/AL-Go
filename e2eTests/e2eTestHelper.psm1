@@ -220,17 +220,57 @@ function SetRepositorySecret {
     invoke-gh secret set $name -b $value --repo $repository
 }
 
-function CreateRepository {
+function CreateNewAppInFolder {
+    Param(
+        [string] $folder,
+        [string] $id = [GUID]::NewGUID().ToString(),
+        [int] $objID = 50000,
+        [string] $name,
+        [string] $publisher,
+        [string] $version = "1.0.0.0",
+        [string] $application = "21.0.0.0",
+        [string] $runtime = "10.0",
+        [HashTable[]] $dependencies = @()
+    )
+
+    $al = @(
+        "pageextension $objID CustListExt$name extends ""Customer List"""
+        "{"
+        "  trigger OnOpenPage();"
+        "  begin"
+        "    Message('App published: Hello $name!');"
+        "  end;"
+        "}")
+    $appJson = [ordered]@{
+        "id" = $id
+        "name" = $name
+        "version" = $version
+        "publisher" = $publisher
+        "dependencies" = $dependencies
+        "application" = $application
+        "runtime" = $runtime
+        "idRanges" = @( @{ "from" = $objID; "to" = $objID } )
+        "resourceExposurePolicy" = @{ "allowDebugging" = $true; "allowDownloadingSource" = $true; "includeSourceInSymbolFile" = $true }
+    }
+    $folder = Join-Path $folder $name
+    New-Item -Path $folder -ItemType Directory | Out-Null
+    $appJson | ConvertTo-Json -Depth 99 | Set-Content -Path (Join-Path $folder "app.json") -Encoding UTF8
+    $al -join "`n" | Set-Content -Path (Join-Path $folder "$name.al") -Encoding UTF8
+    $id
+}
+
+function CreateAlGoRepository {
     Param(
         [switch] $github,
         [string] $repository,
         [string] $template = "",
+        [string[]] $projects = @(),
         [string] $contentPath,
+        [scriptBlock] $contentScript,
         [switch] $private,
         [switch] $linux,
         [string] $branch = "main",
-        [hashtable] $applyRepoSettings = @{},
-        [hashtable] $applyAlGoSettings = @{}
+        [hashtable] $addRepoSettings = @{}
     )
 
     if (!$repository) {
@@ -266,9 +306,20 @@ function CreateRepository {
     Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
     Remove-Item -Path $tempRepoPath -Force -Recurse
     Remove-Item -Path $zipFileName -Force
+    if ($projects) {
+        # Make Repo multi-project
+        $projects | ForEach-Object {
+            New-Item $_ -ItemType Directory | Out-Null
+            Copy-Item '.AL-Go' -Destination $_ -Recurse -Force
+        }
+        Remove-Item '.AL-Go' -Force -Recurse
+    }
     if ($contentPath) {
         Write-Host "Copy content from $contentPath"
         Copy-Item (Join-Path $contentPath "*") -Destination . -Recurse -Force
+    }
+    if ($contentScript) {
+        & $contentScript -path (get-location).Path
     }
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
@@ -302,11 +353,8 @@ function CreateRepository {
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
     $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
-    if ($applyRepoSettings.Keys.Count) {
-        Add-PropertiesToJsonFile -path $repoSettingsFile -properties $applyRepoSettings
-    }
-    if ($applyAlGoSettings.Keys.Count) {
-        Add-PropertiesToJsonFile -path ".AL-Go\settings.json" -properties $applyAlGoSettings
+    if ($addRepoSettings.Keys.Count) {
+        Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
     }
 
     invoke-git add *
@@ -376,7 +424,7 @@ function RemoveRepository {
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         $owner = $repository.Split("/")[0]
-        @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { ($_.PSObject.Properties.Name -eq 'repository') -and ($_.repository.full_name -eq $repository) } | ForEach-Object {
+        @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { Write-Host $_.name; $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
             Write-Host "+ package $($_.name)"
             invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name)
         }
@@ -391,6 +439,21 @@ function RemoveRepository {
             Set-Location ([System.IO.Path]::GetTempPath())
             Remove-Item $path -Recurse -Force
         }
+    }
+}
+
+function Replace-StringInFiles {
+    Param(
+        [string] $path,
+        [string] $include = "*",
+        [string] $search,
+        [string] $replace
+    )
+
+    Get-ChildItem -Path $path -Recurse -Include $include -File | ForEach-Object {
+        $content = Get-Content $_.FullName -Raw -Encoding utf8
+        $content = $content -replace $search, $replace
+        [System.IO.File]::WriteAllText($_.FullName, $content)
     }
 }
 

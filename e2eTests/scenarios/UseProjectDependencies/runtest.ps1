@@ -18,11 +18,18 @@ Write-Host -ForegroundColor Yellow @'
 # | |__| \__ \  __/ |   | | | (_) | |  __/ (__| |_| |__| |  __/ |_) |  __/ | | | (_| |  __/ | | | (__| |  __/\__ \
 #  \____/|___/\___|_|   |_|  \___/| |\___|\___|\__|_____/ \___| .__/ \___|_| |_|\__,_|\___|_| |_|\___|_|\___||___/
 #                                _/ |                         | |                                                 
-#                               |__/                          |_|                                                 #
+#                               |__/                          |_|
+#
 # This test tests the following scenario:
 #                                                                                                      
-#  - Create a new repository based on the PTE template with the content from the content folder
-#  - Run Update AL-Go System Files to apply settings from the repo
+#  - Create a new repository based on the PTE template with 5 projects and useProjectDependencies set to true
+#    - P1/app1 with dependency to P1/app2
+#    - P1/app2 with no dependencies
+#    - P2/app3 with dependency to P1/app1 and P1/app2
+#    - P3/app4 with dependency to P1/app1
+#    - P4/app5 with dependency to P3/app4 and P2/app3 
+#    - P5/app6 with dependency to P3/app4 and P2/app3 
+#  - Run Update AL-Go System Files to apply useProjectDependencies
 #  - Run the "CI/CD" workflow
 #  - Run the Test Current Workflow
 #  - Run the Test Next Minor Workflow
@@ -49,7 +56,29 @@ $template = "https://github.com/$($pteTemplate)@main"
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
 # Create repo
-CreateRepository -template $template -branch $branch -contentPath (Join-Path $PSScriptRoot 'content')
+CreateAlGoRepository `
+    -github:$github `
+    -linux `
+    -template $template `
+    -repository $repository `
+    -branch $branch `
+    -projects @('P1','P2','P3','P4','P5') `
+    -addRepoSettings @{ "useProjectDependencies" = $true } `
+    -contentScript {
+        Param([string] $path)
+        $id2 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name app2 -publisher "MS Test" -objID 50002
+        $id1 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name app1 -publisher "MS Test" -objID 50001 -dependencies @( @{ "id" = $id2; "name" = "app2"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P1\.AL-Go\settings.json') -properties @{ "country" = "w1" }
+        $id3 = CreateNewAppInFolder -folder (Join-Path $path 'P2') -name app3 -publisher "MS Test" -objID 50003 -dependencies @( @{ "id" = $id1; "name" = "app1"; "publisher" = "MS Test"; "version" = "1.0.0.0" }, @{ "id" = $id2; "name" = "app2"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P2\.AL-Go\settings.json') -properties @{ "country" = "w1" }
+        $id4 = CreateNewAppInFolder -folder (Join-Path $path 'P3') -name app4 -publisher "MS Test" -objID 50004 -dependencies @( @{ "id" = $id1; "name" = "app1"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P3\.AL-Go\settings.json') -properties @{ "country" = "w1" }
+        $id5 = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -publisher "MS Test" -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = "MS Test"; "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P4\.AL-Go\settings.json') -properties @{ "country" = "it" }
+        $id6 = CreateNewAppInFolder -folder (Join-Path $path 'P5') -name app6 -publisher "MS Test" -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = "MS Test"; "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P5\.AL-Go\settings.json') -properties @{ "country" = "dk" }
+    }
+
 $repoPath = (Get-Location).Path
 
 # Update AL-Go System Files to uptake UseProjectDependencies setting
