@@ -1696,13 +1696,20 @@ Function AnalyzeProjectDependencies {
             $dependencies = $appDependencies."$project".dependencies
             $foundDependencies = @($dependencies | ForEach-Object {
                 $dependency = $_
-                $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
+                $depProjects = $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
+                $depProjects | ForEach-Object {
+                    $_
+                    if (!$projectDependencies.Value.ContainsKey($_)) {
+                        $projectDependencies.value."$_"
+                    }
+                }
             } | Select-Object -Unique)
             if (!$projectDependencies.Value.ContainsKey($project)) {
                 $projectDependencies.value."$project" = $foundDependencies
             }
             if ($foundDependencies) {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
+                # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
                 $foundDependencies | ForEach-Object { 
                     if ($buildAlso.value.ContainsKey($_)) {
                         if ($buildAlso.value."$_" -notcontains $project) {

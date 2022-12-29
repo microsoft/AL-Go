@@ -27,8 +27,8 @@ Write-Host -ForegroundColor Yellow @'
 #    - P1/app2 with no dependencies
 #    - P2/app3 with dependency to P1/app1 and P1/app2
 #    - P3/app4 with dependency to P1/app1
-#    - P4/app5 with dependency to P3/app4 and P2/app3 
-#    - P5/app6 with dependency to P3/app4 and P2/app3 
+#    - P4/app5 with dependency to P3/app4 and P2/app3
+#    - P5/app6 with dependency to P3/app4 and P2/app3
 #  - Run Update AL-Go System Files to apply useProjectDependencies
 #  - Run the "CI/CD" workflow
 #  - Run the Test Current Workflow
