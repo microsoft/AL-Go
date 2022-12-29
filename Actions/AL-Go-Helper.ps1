@@ -1696,11 +1696,14 @@ Function AnalyzeProjectDependencies {
             $dependencies = $appDependencies."$project".dependencies
             $foundDependencies = @($dependencies | ForEach-Object {
                 $dependency = $_
+                Write-Host "-- $_"
                 $depProjects = $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
                 $depProjects | ForEach-Object {
                     $_
+                    Write-Host "--- $_"
                     if (!$projectDependencies.Value.ContainsKey($_)) {
                         $projectDependencies.value."$_"
+                        Write-Host "---- $($projectDependencies.value."$_"  -join ',')"
                     }
                 }
             } | Select-Object -Unique)
