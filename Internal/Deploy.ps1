@@ -25,9 +25,13 @@ try {
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
         $ENV:GITHUB_TOKEN = $token
+        Write-Host "Authenticating with GitHub using GITHUB_TOKEN"
+        gh auth login --with-token
     }
-    Write-Host "Authenticating with GitHub"
-    $token | invoke-gh auth login --with-token
+    else {
+        Write-Host "Authenticating with GitHub using token"
+        $token | invoke-gh auth login --with-token
+    }
 
     $originalOwnerAndRepo = @{
         "actionsRepo" = "microsoft/AL-Go-Actions"
