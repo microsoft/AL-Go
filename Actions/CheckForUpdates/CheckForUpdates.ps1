@@ -229,14 +229,19 @@ try {
                             $newBuild = @()
                             $build = $yaml.Get('jobs:/Build:/')
                             1..$depth | ForEach-Object {
+                                $needs = @('Initialization')
                                 if ($_ -eq 1) {
-                                    $needs = @('Initialization')
                                     $if = "if: needs.Initialization.outputs.projects$($_)Count > 0"
                                 }
                                 else {
+                                    # Build jobs needs to have a dependency on all previous build jobs
                                     $newBuild += @('')
-                                    $needs = @('Initialization',"Build$($_-1)")
-                                    $if = "if: always() && (!cancelled()) && (needs.Build$($_-1).result == 'success' || needs.Build$($_-1).result == 'skipped') && needs.Initialization.outputs.projects$($_)Count > 0"
+                                    $ifpart = ""
+                                    ($_-1)..1 | ForEach-Object {
+                                        $needs += @("Build$_")
+                                        $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
+                                    }
+                                    $if = "if: always() && (!cancelled())$ifpart && needs.Initialization.outputs.projects$($_)Count > 0"
                                 }
                                 if ($depth -eq $_) {
                                     $newBuild += @("Build:")
