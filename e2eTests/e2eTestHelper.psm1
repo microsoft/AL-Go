@@ -22,6 +22,7 @@ function SetTokenAndRepository {
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
+        $ENV:GITHUB_TOKEN = ''
     }
     $token | invoke-gh auth login --with-token
 }
