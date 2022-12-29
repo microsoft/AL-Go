@@ -1696,18 +1696,26 @@ Function AnalyzeProjectDependencies {
             $dependencies = $appDependencies."$project".dependencies
             $foundDependencies = @($dependencies | ForEach-Object {
                 $dependency = $_
-                Write-Host "-- $_"
                 $depProjects = $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
                 $depProjects | ForEach-Object {
                     $_
-                    Write-Host "--- $_"
-                    if (!$projectDependencies.Value.ContainsKey($_)) {
+                    if ($projectDependencies.Value.ContainsKey($_)) {
                         $projectDependencies.value."$_"
-                        Write-Host "---- $($projectDependencies.value."$_"  -join ',')"
                     }
                 }
             } | Select-Object -Unique)
             if (!$projectDependencies.Value.ContainsKey($project)) {
+                $keys = @($projectDependencies.value.Keys)
+                $keys | ForEach-Object {
+                    if ($projectDependencies.value."$_" -contains $project) {
+                        $projectDeps = @( $projectDependencies.value."$_" )
+                        $projectDependencies.value."$_" = @( @($projectDeps + $foundDependencies) | Select-Object -Unique )
+                        if (Compare-Object -ReferenceObject $projectDependencies.value."$_" -differenceObject $projectDeps) {
+                            Write-Host "Add ProjectDependencies $($foundDependencies -join ',') to $_"
+                        }
+                    }
+                }
+                Write-Host "Set ProjectDependencies for $project to $($foundDependencies -join ',')"
                 $projectDependencies.value."$project" = $foundDependencies
             }
             if ($foundDependencies) {

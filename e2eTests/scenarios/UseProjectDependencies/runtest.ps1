@@ -28,7 +28,7 @@ Write-Host -ForegroundColor Yellow @'
 #    - P2/app3 with dependency to P1/app1 and P1/app2
 #    - P3/app4 with dependency to P1/app1
 #    - P4/app5 with dependency to P3/app4 and P2/app3
-#    - P5/app6 with dependency to P3/app4 and P2/app3
+#    - P0/app6 with dependency to P3/app4 and P2/app3
 #  - Run Update AL-Go System Files to apply useProjectDependencies
 #  - Run the "CI/CD" workflow
 #  - Run the Test Current Workflow
@@ -62,7 +62,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -projects @('P1','P2','P3','P4','P5') `
+    -projects @('P1','P2','P3','P4','P0') `
     -addRepoSettings @{ "useProjectDependencies" = $true } `
     -contentScript {
         Param([string] $path)
@@ -75,8 +75,8 @@ CreateAlGoRepository `
         Add-PropertiesToJsonFile -path (Join-Path $path 'P3\.AL-Go\settings.json') -properties @{ "country" = "w1" }
         $id5 = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -publisher "MS Test" -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = "MS Test"; "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P4\.AL-Go\settings.json') -properties @{ "country" = "it" }
-        $id6 = CreateNewAppInFolder -folder (Join-Path $path 'P5') -name app6 -publisher "MS Test" -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = "MS Test"; "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
-        Add-PropertiesToJsonFile -path (Join-Path $path 'P5\.AL-Go\settings.json') -properties @{ "country" = "dk" }
+        $id6 = CreateNewAppInFolder -folder (Join-Path $path 'P0') -name app6 -publisher "MS Test" -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = "MS Test"; "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = "MS Test"; "version" = "1.0.0.0" } )
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P0\.AL-Go\settings.json') -properties @{ "country" = "dk" }
     }
 
 $repoPath = (Get-Location).Path
