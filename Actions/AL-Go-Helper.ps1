@@ -1673,6 +1673,9 @@ Function AnalyzeProjectDependencies {
 
     $appDependencies = @{}
     Write-Host "Analyzing projects"
+    # Loop through all projects
+    # Get all apps in the project
+    # Get all dependencies for the apps
     $projects | ForEach-Object {
         $project = $_
         Write-Host "- $project"
@@ -1686,25 +1689,49 @@ Function AnalyzeProjectDependencies {
             "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
         }
     }
+    # AppDependencies is a hashtable with the following structure
+    # $appDependencies = @{
+    #     "project1" = @{
+    #         "apps" = @("appid1", "appid2")
+    #         "dependencies" = @("appid3", "appid4")
+    #     }
+    #     "project2" = @{
+    #         "apps" = @("appid5", "appid6")
+    #         "dependencies" = @("appid7", "appid8")
+    #     }
+    # }
     $no = 1
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
+        # Loop through all projects and find projects that do not have dependencies on other projects in the list
+        # These projects can be built in parallel and are added to the build order
+        # The projects that are added to the build order are removed from the list of projects
+        # The loop continues until all projects have been added to the build order
         $projects | ForEach-Object {
             $project = $_
             Write-Host "- $project"
+            # Find all project dependencies for the current project
             $dependencies = $appDependencies."$project".dependencies
+            # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @($dependencies | ForEach-Object {
                 $dependency = $_
-                $depProjects = $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
-                $depProjects | ForEach-Object {
+                # Find the project that contains the app for which the current project has a dependency
+                $depProject = $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
+                # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
+                $depProject | ForEach-Object {
                     $_
                     if ($projectDependencies.Value.ContainsKey($_)) {
                         $projectDependencies.value."$_"
                     }
                 }
             } | Select-Object -Unique)
+            # foundProjects now contains all projects that the current project has a dependency on
+            # Update ref variable projectDependencies for this project
             if (!$projectDependencies.Value.ContainsKey($project)) {
+                # Loop through the list of projects for which we already built a dependency list
+                # Update the dependency list for that project if it contains the current project, which might lead to a changed dependency list
+                # This is needed because we are looping through the projects in a any order
                 $keys = @($projectDependencies.value.Keys)
                 $keys | ForEach-Object {
                     if ($projectDependencies.value."$_" -contains $project) {
@@ -1733,7 +1760,7 @@ Function AnalyzeProjectDependencies {
                 }
             }
             else {
-                Write-Host "No dependencies found"
+                Write-Host "No additional dependencies found, add project to build order"
                 $thisJob += $project
             }
         }
