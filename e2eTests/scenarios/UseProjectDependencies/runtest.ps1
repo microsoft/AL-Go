@@ -107,4 +107,4 @@ Test-ArtifactsFromRun -runid $runTestNextMajor.id -folder 'nextmajorartifacts' -
 
 Set-Location $prevLocation
 
-#RemoveRepository -repository $repository -path $repoPath
+RemoveRepository -repository $repository -path $repoPath
