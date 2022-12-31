@@ -18,8 +18,10 @@ function SetTokenAndRepository {
     $script:defaultRepository = $repository
 
     if ($github) {
-        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
-        invoke-git config --global user.name "$githubOwner"
+#        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
+#        invoke-git config --global user.name "$githubOwner"
+        invoke-git config --global user.email "freddyk@microsoft.com"
+        invoke-git config --global user.name "freddydk"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
         $ENV:GITHUB_TOKEN = ''
