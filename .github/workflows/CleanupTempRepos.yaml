@@ -57,7 +57,7 @@ jobs:
           $owner = '${{ needs.Check.outputs.githubowner }}'
           $token = '${{ Secrets.OrgPAT }}'
           $ENV:GITHUB_TOKEN = $token
-          SetTokenAndRepository -github -githubOwner $owner -token $token -repository ''
+          SetTokenAndRepository -githubOwner $owner -token $token -repository ''
           @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
               Write-Host "https://github.com/$repo"
