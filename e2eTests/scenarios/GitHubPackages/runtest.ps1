@@ -60,11 +60,8 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 
 $repository1 = "$repository.1"
 $repository2 = "$repository.2"
-$githubPackagesContext = @{
-    "serverUrl"="https://nuget.pkg.github.com/$githubOwner/index.json"
-    "token"=$token
-}
-$githubPackagesContextJson = ($githubPackagesContext | ConvertTo-Json -Compress)
+$githubPackagesContextJson = New-ALGoNugetContext -serverUrl "https://nuget.pkg.github.com/$githubOwner/index.json" -token $token
+$githubPackagesContextJson.ToCharArray() | % { Write-Host -NoNewline "$_ " }
 
 # Create repository1
 CreateAlGoRepository `
@@ -136,6 +133,8 @@ Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"A
 
 Set-Location $prevLocation
 
-#RemoveRepository -repository $repository -path $repoPath
-#RemoveRepository -repository $repository2 -path $repoPath2
-#RemoveRepository -repository $repository1 -path $repoPath1
+throw "err"
+
+RemoveRepository -repository $repository -path $repoPath
+RemoveRepository -repository $repository2 -path $repoPath2
+RemoveRepository -repository $repository1 -path $repoPath1
