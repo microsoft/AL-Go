@@ -64,6 +64,7 @@ jobs:
               @((invoke-gh api -H "Accept: application/vnd.github+json" "/orgs/$repoOwner/packages?package_type=nuget" -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { ($_.PSObject.Properties.Name -eq 'repository') -and ($_.repository.full_name -eq $repo) } | ForEach-Object {
                   Write-Host "- package $($_.name)"
                   Write-Host "/orgs/$repoOwner/packages/nuget/$($_.name)"
+                  invoke-gh auth status
                   invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" "/orgs/$repoOwner/packages/nuget/$($_.name)"
               }
               invoke-gh repo delete "https://github.com/$repo" --confirm | Out-Host
