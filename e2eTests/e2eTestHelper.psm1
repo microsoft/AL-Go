@@ -18,10 +18,8 @@ function SetTokenAndRepository {
     $script:defaultRepository = $repository
 
     if ($github) {
-#        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
-#        invoke-git config --global user.name "$githubOwner"
-        invoke-git config --global user.email "freddyk@microsoft.com"
-        invoke-git config --global user.name "freddydk"
+        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
+        invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf true
         $ENV:GITHUB_TOKEN = ''
@@ -433,7 +431,8 @@ function RemoveRepository {
         $owner = $repository.Split("/")[0]
         @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_ | ConvertTo-Json | Out-Host; $_.GetType() | Out-Host; $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
             Write-Host "+ package $($_.name)"
-            invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name)
+            # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
+            '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name) --input -
         }
         invoke-gh repo delete $repository --confirm | Out-Host
     }
