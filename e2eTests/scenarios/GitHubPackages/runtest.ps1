@@ -61,11 +61,10 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 $repository1 = "$repository.1"
 $repository2 = "$repository.2"
 $githubPackagesContext = @{
-    "serverUrl"="https://nuget.pkg.github.com/$githubOwner/index.json"
+    "serverUrl"="https://nuget.pkg.github.com/$($githubOwner.ToLowerInvariant())/index.json"
     "token"=$token
 }
 $githubPackagesContextJson = ($githubPackagesContext | ConvertTo-Json -Compress)
-$githubPackagesContextJson.ToCharArray() | % { Write-Host -NoNewline "$_ " }
 
 # Create repository1
 CreateAlGoRepository `
