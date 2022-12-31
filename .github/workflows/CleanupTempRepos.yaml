@@ -54,7 +54,7 @@ jobs:
         run: |
           $errorActionPreference = "STOP"
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
-          $owner = '${{ needs.Check.outputs.githubowner }}'
+          $owner = '${{ needs.Check.outputs.githubowner }}'.ToLowerInvariant()
           SetTokenAndRepository -github -githubOwner $owner -token '${{ Secrets.OrgPAT }}' -repository ''
           @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
