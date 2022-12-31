@@ -54,14 +54,15 @@ jobs:
         run: |
           $errorActionPreference = "STOP"
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
-          $owner = '${{ needs.Check.outputs.githubowner }}'.ToLowerInvariant()
+          $owner = '${{ needs.Check.outputs.githubowner }}'
           SetTokenAndRepository -github -githubOwner $owner -token '${{ Secrets.OrgPAT }}' -repository ''
           @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
               Write-Host "https://github.com/$repo"
-              @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { ($_.PSObject.Properties.Name -eq 'repository') -and ($_.repository.full_name -eq $repo) } | ForEach-Object {
+              $repoOwner = $repo.Split('/')[0]
+              @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$repoOwner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { ($_.PSObject.Properties.Name -eq 'repository') -and ($_.repository.full_name -eq $repo) } | ForEach-Object {
                   Write-Host "- package $($_.name)"
-                  invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name)
+                  invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$repoOwner/packages/nuget/$($_.name)
               }
               invoke-gh repo delete "https://github.com/$repo" --confirm | Out-Host
           }
