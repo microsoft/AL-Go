@@ -136,8 +136,6 @@ Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"A
 
 Set-Location $prevLocation
 
-throw "err"
-
 RemoveRepository -repository $repository -path $repoPath
 RemoveRepository -repository $repository2 -path $repoPath2
 RemoveRepository -repository $repository1 -path $repoPath1
