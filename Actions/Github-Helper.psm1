@@ -523,10 +523,7 @@ function Set-ContentLF {
         $content
     )
 
-    Write-Host $path
     $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-    Write-Host $path
-
     if ($content -is [array]) {
         $content = $content -join "`n"
     }
@@ -554,14 +551,10 @@ function Set-JsonContentLF {
         [object] $object
     )
 
-    $object | ConvertTo-Json -Depth 99 | Out-Host
     $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
-
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         try {
             $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-            Write-Host $path
-            Get-Content -path $path | Out-Host
             . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
         }
         catch {
