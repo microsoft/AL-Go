@@ -520,16 +520,16 @@ function Set-ContentLF {
         [parameter(mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
         [parameter(mandatory = $true, ValueFromPipeline = $true)]
-        [object] $value
+        $content
     )
 
-    if ($value -is [array]) {
-        $value = $value -join "`n"
+    if ($content -is [array]) {
+        $content = $content -join "`n"
     }
     else {
-        $value = "$value".Replace("`r", "")
+        $content = "$content".Replace("`r", "")
     }
-    [System.IO.File]::WriteAllText($path, "$value`n")
+    [System.IO.File]::WriteAllText($path, "$content`n")
 }
 
 # Format Object to JSON and write to file with LF line endings and formatted as PowerShell 7 would do it
@@ -551,7 +551,9 @@ function Set-JsonContentLF {
     )
 
     $object | ConvertTo-Json -Depth 99 | Out-Host
+    Write-Host $path
     $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
+
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         try {
             $path = (Get-Item $path).FullName
