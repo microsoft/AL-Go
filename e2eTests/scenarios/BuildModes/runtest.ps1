@@ -55,7 +55,7 @@ CreateAlGoRepository `
     -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated" ); "cleanModePreprocessorSymbols" = @( "CLEAN" )} `
     -contentScript {
         Param([string] $path)
-        CreateNewAppInFolder -folder $path -name "App" -publisher "MS Test" | Out-Null
+        CreateNewAppInFolder -folder $path -name "App" | Out-Null
     }
 $repoPath = (Get-Location).Path
 Start-Process $repoPath

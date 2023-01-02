@@ -28,10 +28,6 @@ defaults:
   run:
     shell: pwsh
 
-env:
-  scenarioApplicationVersion: "21.0.0.0"
-  scenarioRuntimeVersion: "10.0"
-
 jobs:
   Check:
     runs-on: [ ubuntu-latest ]
@@ -151,20 +147,6 @@ jobs:
         id: calculateParams
         run: |
           $errorActionPreference = "STOP"
-          Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
-          # To allow more than one end-2-end test simultanously: replace AppIDs with new GUIDs and adjust dependencies
-          # Additionally, set application and runtime in all app.json files
-          $path = Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}"
-          Get-ChildItem -Path $path -include 'app.json' -Recurse | ForEach-Object {
-              $appJson = Get-Content -Path $_.FullName -Encoding UTF8 | ConvertFrom-Json
-              $newId = ([GUID]::NewGuid().ToString())
-              Replace-StringInFiles -path $path -include 'app.json' -search $appJson.Id -replace $newId
-              Write-Host "$($_.Directory) -> $newId"
-              $appJson.id = $newId
-              $appJson.application = $ENV:scenarioApplicationVersion
-              $appJson.runtime = $ENV:scenarioRuntimeVersion
-              Set-Content -Path $_.FullName -Value ($appJson | ConvertTo-Json -Depth 99) -Encoding UTF8
-          }
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
           Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
           Write-Host "repoName='$repoName'"

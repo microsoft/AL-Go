@@ -1,8 +1,15 @@
 ﻿$githubOwner = "githubOwner"
 $token = "token"
 $defaultRepository = "repo"
+$defaultApplication = "21.0.0.0"
+$defaultRuntime = "10.0"
+$defaultPublisher = (GetDefaultPublisher)
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
+
+function GetDefaultPublisher() {
+    return $defaultPublisher
+}
 
 function SetTokenAndRepository {
     Param(
@@ -230,10 +237,10 @@ function CreateNewAppInFolder {
         [string] $id = [GUID]::NewGUID().ToString(),
         [int] $objID = 50000,
         [string] $name,
-        [string] $publisher,
+        [string] $publisher = $defaultPublisher,
         [string] $version = "1.0.0.0",
-        [string] $application = "21.0.0.0",
-        [string] $runtime = "10.0",
+        [string] $application = $defaultApplication,
+        [string] $runtime = $defaultRuntime,
         [HashTable[]] $dependencies = @()
     )
 
