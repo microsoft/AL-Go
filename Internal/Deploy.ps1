@@ -22,6 +22,7 @@ try {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
+        invoke-git config --global core.autocrlf false
         $ENV:GITHUB_TOKEN = ''
     }
     Write-Host "Authenticating with GitHub using token"

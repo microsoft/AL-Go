@@ -308,12 +308,11 @@ try {
                 $env:GITHUB_USER = $actor
                 $env:GITHUB_TOKEN = $token
 
-                # Configure git username and email
+                # Configure git
                 invoke-git config --global user.email "$actor@users.noreply.github.com"
                 invoke-git config --global user.name "$actor"
-
-                # Configure hub to use https
                 invoke-git config --global hub.protocol https
+                invoke-git config --global core.autocrlf false
 
                 # Clone URL
                 invoke-git clone $url

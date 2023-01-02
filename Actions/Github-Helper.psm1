@@ -553,7 +553,8 @@ function Set-JsonContentLF {
     $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         try {
-          . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
+            $path = (Get-Item $path).FullName
+            . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
         }
         catch {
             Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted like in PowerShell $($PSVersionTable.PSVersion)"
