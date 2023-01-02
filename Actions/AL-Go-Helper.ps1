@@ -1725,7 +1725,7 @@ Function AnalyzeProjectDependencies {
                     }
                 }
             } | Select-Object -Unique)
-            # foundProjects now contains all projects that the current project has a dependency on
+            # foundDependencies now contains all projects that the current project has a dependency on
             # Update ref variable projectDependencies for this project
             if (!$projectDependencies.Value.ContainsKey($project)) {
                 # Loop through the list of projects for which we already built a dependency list
