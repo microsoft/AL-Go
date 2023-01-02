@@ -26,7 +26,7 @@ $settings = [ordered]@{
 }
 
 $settingsFile = Join-Path $settings.baseFolder "$repoBaseName.json"
-$settings | Set-JsonContentCRLF -path $settingsFile
+$settings | Set-JsonContentLF -path $settingsFile
 
 . (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github:$github
 

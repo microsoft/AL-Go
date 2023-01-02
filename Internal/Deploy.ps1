@@ -22,7 +22,6 @@ try {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
-        invoke-git config --global core.autocrlf true
         $ENV:GITHUB_TOKEN = ''
     }
     Write-Host "Authenticating with GitHub using token"
@@ -210,7 +209,7 @@ try {
                 if ($_.Name -eq "AL-Go-Helper.ps1") {
                     $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)"(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""""`$5" }
                 }
-                [System.IO.File]::WriteAllText($srcFile, "$($lines -join "`r`n")`r`n")
+                [System.IO.File]::WriteAllText($srcFile, "$($lines -join "`n")`n")
             }
         }
         Set-Location $baseRepoPath
@@ -321,7 +320,7 @@ try {
                 if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
                     $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)""`$4" }
                 }
-                [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`r`n")`r`n")
+                [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
             }
             if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
                 Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force

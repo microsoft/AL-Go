@@ -107,7 +107,7 @@ try {
                     $SettingsJson.appFolders += @($folderName)
                 }
             }
-            $SettingsJson | Set-JsonContentCRLF -Path $settingsJsonFile
+            $SettingsJson | Set-JsonContentLF -Path $settingsJsonFile
         }
     }
     catch {

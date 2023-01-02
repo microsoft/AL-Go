@@ -8,7 +8,7 @@ function GetExtendedErrorMessage {
 
     try {
         $errorDetails = $errorRecord.ErrorDetails | ConvertFrom-Json
-        $message += " $($errorDetails.error)`r`n$($errorDetails.error_description)"
+        $message += " $($errorDetails.error)`n$($errorDetails.error_description)"
     }
     catch {}
     try {
@@ -19,7 +19,7 @@ function GetExtendedErrorMessage {
         $webResponse = $webException.Response
         try {
             if ($webResponse.StatusDescription) {
-                $message += "`r`n$($webResponse.StatusDescription)"
+                $message += "`n$($webResponse.StatusDescription)"
             }
         } catch {}
         $reqstream = $webResponse.GetResponseStream()
@@ -27,10 +27,10 @@ function GetExtendedErrorMessage {
         $result = $sr.ReadToEnd()
         try {
             $json = $result | ConvertFrom-Json
-            $message += "`r`n$($json.Message)"
+            $message += "`n$($json.Message)"
         }
         catch {
-            $message += "`r`n$result"
+            $message += "`n$result"
         }
         try {
             $correlationX = $webResponse.GetResponseHeader('ms-correlation-x')
@@ -514,8 +514,8 @@ function CheckRateLimit {
 
 # Set-Content defaults to culture specific ANSI encoding, which is not what we want
 # Set-Content defaults to environment specific line endings, which is not what we want
-# This function forces UTF8 encoding and CRLF line endings
-function Set-ContentCRLF {
+# This function forces UTF8 encoding and LF line endings
+function Set-ContentLF {
     Param(
         [parameter(mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
@@ -524,15 +524,15 @@ function Set-ContentCRLF {
     )
 
     if ($value -is [array]) {
-        $value = $value -join "`r`n"
+        $value = $value -join "`n"
     }
     else {
-        $value = "$value".Replace("`r", "").Replace("`n", "`r`n")
+        $value = "$value".Replace("`r", "")
     }
-    [System.IO.File]::WriteAllText($path, "$value`r`n")
+    [System.IO.File]::WriteAllText($path, "$value`n")
 }
 
-# Format Object to JSON and write to file with CRLF line endings and formatted as PowerShell 7 would do it
+# Format Object to JSON and write to file with LF line endings and formatted as PowerShell 7 would do it
 # PowerShell 5.1 formats JSON differently than PowerShell 7, so we need to use pwsh to format it
 # PowerShell 5.1 format:
 # {
@@ -542,7 +542,7 @@ function Set-ContentCRLF {
 # {
 #   "key": "value"
 # }
-function Set-JsonContentCRLF {
+function Set-JsonContentLF {
     Param(
         [parameter(mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
@@ -550,7 +550,7 @@ function Set-JsonContentCRLF {
         [object] $object
     )
 
-    $object | ConvertTo-Json -Depth 99 | Set-ContentCRLF -path $path
+    $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         try {
           . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path

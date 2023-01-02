@@ -13,7 +13,7 @@ class Yaml {
     }
 
     Save([string] $filename) {
-        $this.content | Set-ContentCRLF -Path $filename
+        $this.content | Set-ContentLF -Path $filename
     }
 
     [bool] Find([string] $line, [ref] $start, [ref] $count) {

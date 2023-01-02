@@ -20,7 +20,6 @@ function SetTokenAndRepository {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
-        invoke-git config --global core.autocrlf true
         $ENV:GITHUB_TOKEN = ''
     }
     Write-Host "Authenticating with GitHub using token"
@@ -79,7 +78,7 @@ function Add-PropertiesToJsonFile {
     $properties.Keys | ForEach-Object {
         $json."$_" = $properties."$_"
     }
-    $json | Set-JsonContentCRLF -path $path
+    $json | Set-JsonContentLF -path $path
 
     if ($commit) {
         CommitAndPush -commitMessage "Add properties to $([System.IO.Path]::GetFileName($path))"
@@ -258,8 +257,8 @@ function CreateNewAppInFolder {
     }
     $folder = Join-Path $folder $name
     New-Item -Path $folder -ItemType Directory | Out-Null
-    $appJson | Set-JsonContentCRLF -Path (Join-Path $folder "app.json")
-    $al -join "`n" | Set-ContentCRLF -Path (Join-Path $folder "$name.al")
+    $appJson | Set-JsonContentLF -Path (Join-Path $folder "app.json")
+    $al -join "`n" | Set-ContentLF -Path (Join-Path $folder "$name.al")
     $id
 }
 
@@ -344,19 +343,19 @@ function CreateAlGoRepository {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "shell" -Value $shell
         Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" -and $_.BaseName -ne "PullRequestHandler" } | ForEach-Object {
             Write-Host $_.FullName
-            $content = (Get-Content -Path $_.FullName -Encoding UTF8 -Raw -Force).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
-            $srcPattern = "runs-on: [ windows-latest ]`r`n"
-            $replacePattern = "runs-on: [ $runson ]`r`n"
+            $content = (Get-Content -Path $_.FullName -Encoding UTF8 -Raw -Force).Replace("`r", "").TrimEnd("`n")
+            $srcPattern = "runs-on: [ windows-latest ]`n"
+            $replacePattern = "runs-on: [ $runson ]`n"
             $content = $content.Replace($srcPattern, $replacePattern)
-            $srcPattern = "shell: powershell`r`n"
-            $replacePattern = "shell: $shell`r`n"
+            $srcPattern = "shell: powershell`n"
+            $replacePattern = "shell: $shell`n"
             $content = $content.Replace($srcPattern, $replacePattern)
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
-    $repoSettings | Set-JsonContentCRLF -path $repoSettingsFile
+    $repoSettings | Set-JsonContentLF -path $repoSettingsFile
     if ($addRepoSettings.Keys.Count) {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
     }
