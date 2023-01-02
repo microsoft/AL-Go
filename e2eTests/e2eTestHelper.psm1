@@ -2,8 +2,7 @@
 $token = "token"
 $defaultRepository = "repo"
 
-$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve
-Import-Module $gitHubHelperPath -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
 
 function SetTokenAndRepository {
     Param(

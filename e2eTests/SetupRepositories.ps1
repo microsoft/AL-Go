@@ -5,6 +5,8 @@
     [string] $bcContainerHelperVersion = ''
 )
 
+Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
+
 $repoBaseName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
 Write-Host $repoBaseName
 

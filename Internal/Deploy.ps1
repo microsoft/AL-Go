@@ -8,8 +8,7 @@
     [switch] $directCommit
 )
 
-$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve
-Import-Module $gitHubHelperPath -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
