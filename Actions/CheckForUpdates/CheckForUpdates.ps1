@@ -341,7 +341,7 @@ try {
                 else {
                     $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
                 }
-                $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
+                $repoSettings | Set-JsonContentCRLF -path $repoSettingsFile
 
                 $releaseNotes = ""
                 try {
@@ -370,7 +370,7 @@ try {
                             }
                         }
                         Write-Host "Update $($_.DstFile)"
-                        Set-Content -Path $_.DstFile -Encoding UTF8 -Value $_.Content
+                        $_.Content | Set-ContentCRLF -Path $_.DstFile
                     }
                 }
                 catch {}

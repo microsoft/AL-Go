@@ -13,7 +13,7 @@ class Yaml {
     }
 
     Save([string] $filename) {
-        Set-Content -Encoding UTF8 -Path $filename -Value $this.content
+        $thid.content | Set-ContentCRLF -Path $filename
     }
 
     [bool] Find([string] $line, [ref] $start, [ref] $count) {

@@ -24,7 +24,7 @@ $settings = [ordered]@{
 }
 
 $settingsFile = Join-Path $settings.baseFolder "$repoBaseName.json"
-$settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+$settings | Set-JsonContentCRLF -path $settingsFile
 
 . (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github:$github
 

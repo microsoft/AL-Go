@@ -491,7 +491,7 @@ function DownloadRelease {
             return $filename
         }
     }
-}       
+}
 
 function CheckRateLimit {
     Param(
@@ -512,6 +512,54 @@ function CheckRateLimit {
     }
 }
 
+# Set-Content defaults to culture specific ANSI encoding, which is not what we want
+# Set-Content defaults to environment specific line endings, which is not what we want
+# This function forces UTF8 encoding and CRLF line endings
+function Set-ContentCRLF {
+    Param(
+        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [string] $path,
+        [parameter(mandatory = $true, ValueFromPipeline = $true)]
+        [object] $value
+    )
+
+    if ($value -is [array]) {
+        $value = $value -join "`r`n"
+    }
+    else {
+        $value = "$value".Replace("`r", "").Replace("`n", "`r`n")
+    }
+    [System.IO.File]::WriteAllText($path, "$value`r`n")
+}
+
+# Format Object to JSON and write to file with CRLF line endings and formatted as PowerShell 7 would do it
+# PowerShell 5.1 formats JSON differently than PowerShell 7, so we need to use pwsh to format it
+# PowerShell 5.1 format:
+# {
+#     "key":  "value"
+# }
+# PowerShell 7 format:
+# {
+#   "key": "value"
+# }
+function Set-JsonContentCRLF {
+    Param(
+        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [string] $path,
+        [parameter(mandatory = $true, ValueFromPipeline = $true)]
+        [object] $object
+    )
+
+    $object | ConvertTo-Json -Depth 99 | Set-ContentCRLF -path $path
+    if ($PSVersionTable.PSVersion.Major -lt 6) {
+        try {
+          . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
+        }
+        catch {
+            Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted like in PowerShell $($PSVersionTable.PSVersion)"
+        }
+    }
+}
 
 function GetArtifacts {
     Param(

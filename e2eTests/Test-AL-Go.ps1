@@ -192,7 +192,7 @@ Test-NumberOfRuns -expectedNumberOfRuns $runs
 $projectSettingsFiles | Select-Object -Last 1 | ForEach-Object {
     $projectSettings = Get-Content $_ -Encoding UTF8 | ConvertFrom-Json
     $projectsettings | Add-Member -NotePropertyName 'versioningStrategy' -NotePropertyValue 16
-    $projectSettings | ConvertTo-Json | Set-Content $_ -Encoding UTF8
+    $projectSettings | Set-JsonContentCRLF -path $_
 }
 Remove-Item -Path "$($project1Folder).AL-Go\*.ps1" -Force
 Remove-Item -Path ".github\workflows\AddExistingAppOrTestApp.yaml" -Force

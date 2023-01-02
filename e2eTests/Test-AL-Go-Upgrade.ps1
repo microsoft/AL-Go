@@ -79,7 +79,7 @@ $settings.testFolders += "My App.Test"
 if ($appSourceApp) {
     $settings.AppSourceCopMandatoryAffixes = @("cust")
 }
-$settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+$settings | Set-JsonContentCRLF -path $settingsFile
 Add-Content -path (Join-Path $repoPath '.AL-Go\localdevenv.ps1') -Encoding UTF8 -Value "`n`n# Dummy comment" |
 CommitAndPush -commitMessage "Update settings.json"
 $runs++

@@ -1653,7 +1653,7 @@ function CheckAndCreateProjectFolder {
                     "country" = "us"
                     "appFolders" = @()
                     "testFolders" = @()
-                } | ConvertTo-Json | Set-Content $ALGoSettingsFile -Encoding UTF8
+                } | Set-JsonContentCRLF -path $ALGoSettingsFile
             }
             else {
                 Set-Location $project

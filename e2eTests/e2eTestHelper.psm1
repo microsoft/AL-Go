@@ -80,7 +80,7 @@ function Add-PropertiesToJsonFile {
     $properties.Keys | ForEach-Object {
         $json."$_" = $properties."$_"
     }
-    $json | ConvertTo-Json | Set-Content $path -Encoding UTF8
+    $json | Set-JsonContentCRLF -path $path
 
     if ($commit) {
         CommitAndPush -commitMessage "Add properties to $([System.IO.Path]::GetFileName($path))"
@@ -259,8 +259,8 @@ function CreateNewAppInFolder {
     }
     $folder = Join-Path $folder $name
     New-Item -Path $folder -ItemType Directory | Out-Null
-    $appJson | ConvertTo-Json -Depth 99 | Set-Content -Path (Join-Path $folder "app.json") -Encoding UTF8
-    $al -join "`n" | Set-Content -Path (Join-Path $folder "$name.al") -Encoding UTF8
+    $appJson | Set-JsonContentCRLF -Path (Join-Path $folder "app.json")
+    $al -join "`n" | Set-ContentCRLF -Path (Join-Path $folder "$name.al")
     $id
 }
 
@@ -357,7 +357,7 @@ function CreateAlGoRepository {
     }
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
-    $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
+    $repoSettings | Set-JsonContentCRLF -path $repoSettingsFile
     if ($addRepoSettings.Keys.Count) {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
     }
@@ -429,7 +429,7 @@ function RemoveRepository {
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         $owner = $repository.Split("/")[0]
-        @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_ | ConvertTo-Json | Out-Host; $_.GetType() | Out-Host; $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
+        @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
             Write-Host "+ package $($_.name)"
             # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
             '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name) --input -
