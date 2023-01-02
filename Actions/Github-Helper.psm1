@@ -523,6 +523,10 @@ function Set-ContentLF {
         $content
     )
 
+    Write-Host $path
+    $path = (Get-Item $path -Force).FullName
+    Write-Host $path
+
     if ($content -is [array]) {
         $content = $content -join "`n"
     }
@@ -551,12 +555,11 @@ function Set-JsonContentLF {
     )
 
     $object | ConvertTo-Json -Depth 99 | Out-Host
-    Write-Host $path
     $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
 
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         try {
-            $path = (Get-Item $path).FullName
+            $path = (Get-Item $path -Force).FullName
             Write-Host $path
             Get-Content -path $path | Out-Host
             . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
