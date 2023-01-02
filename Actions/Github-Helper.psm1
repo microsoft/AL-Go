@@ -524,7 +524,7 @@ function Set-ContentLF {
     )
 
     Write-Host $path
-    $path = (Get-Item $path -Force).FullName
+    $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
     Write-Host $path
 
     if ($content -is [array]) {
@@ -559,13 +559,13 @@ function Set-JsonContentLF {
 
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         try {
-            $path = (Get-Item $path -Force).FullName
+            $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
             Write-Host $path
             Get-Content -path $path | Out-Host
             . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
         }
         catch {
-            Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted like in PowerShell $($PSVersionTable.PSVersion)"
+            Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted by PowerShell $($PSVersionTable.PSVersion)"
         }
     }
 }
