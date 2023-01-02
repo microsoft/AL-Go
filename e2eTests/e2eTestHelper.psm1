@@ -3,7 +3,7 @@ $token = "token"
 $defaultRepository = "repo"
 $defaultApplication = "21.0.0.0"
 $defaultRuntime = "10.0"
-$defaultPublisher = (GetDefaultPublisher)
+$defaultPublisher = "MS Test"
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
 
