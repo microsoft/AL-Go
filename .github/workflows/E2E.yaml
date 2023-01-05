@@ -38,7 +38,6 @@ jobs:
     outputs:
       maxParallel: ${{ steps.check.outputs.maxParallel }}
       githubOwner: ${{ steps.check.outputs.githubOwner }}
-      E2EPAT: ${{ steps.check.outputs.E2EPAT }}
     steps:
       - uses: actions/checkout@v3
 
@@ -48,14 +47,8 @@ jobs:
           githubOwner: ${{ github.event.inputs.githubOwner }}
         run: |
           $err = $false
-          if ('${{ Secrets.E2EPAT }}' -ne '') {
-            $E2EPAT = '${{ Secrets.E2EPAT }}'
-          }
-          elseif ('${{ Secrets.OrgPAT }}' -ne '') {
-            $E2EPAT = '${{ Secrets.OrgPAT }}'
-          }
-          else {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT (or OrgPAT) containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
+          if ('${{ Secrets.E2EPAT }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
             $err = $true
           }
           if ('${{ Secrets.adminCenterApiCredentials }}' -eq '') {
@@ -87,8 +80,6 @@ jobs:
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "maxParallel=$maxParallel"
           Write-Host "maxParallel=$maxParallel"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "E2EPAT=$E2EPAT"
-          Write-Host "E2EPAT=$E2EPAT"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
 
@@ -108,7 +99,7 @@ jobs:
         id: setup
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ needs.Check.outputs.E2EPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
   
   Analyze:
     runs-on: [ ubuntu-latest ]
@@ -127,7 +118,7 @@ jobs:
           $errorActionPreference = "STOP"
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
-          SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ needs.Check.outputs.E2EPAT }}' -repository "microsoft/AL-Go"
+          SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -repository "microsoft/AL-Go"
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
           Write-Host "Releases: $($releases -join ', ')"
           if ($releases.Count -le 1) {
@@ -175,7 +166,7 @@ jobs:
         if: github.event.inputs.runScenarios == 'Y'
         run: |
           try {
-            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ needs.Check.outputs.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
+            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
           }
           catch {
             Write-Host $_.Exception.Message
@@ -230,7 +221,7 @@ jobs:
         if: github.event.inputs.runTestMatrix == 'Y'
         run: |
           try {
-            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ needs.Check.outputs.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
+            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
           }
           catch {
             Write-Host $_.Exception.Message
@@ -280,7 +271,7 @@ jobs:
         if: github.event.inputs.runUpgradeTests == 'Y'
         run: |
           try {
-            . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ needs.Check.outputs.E2EPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -contentPath ${{ steps.calculateParams.outputs.contentPath }}
+            . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -contentPath ${{ steps.calculateParams.outputs.contentPath }}
           }
           catch {
             Write-Host $_.Exception.Message
@@ -301,4 +292,4 @@ jobs:
       - name: Remove Repositories
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ needs.Check.outputs.E2EPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

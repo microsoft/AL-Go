@@ -17,7 +17,6 @@ jobs:
     runs-on: [ ubuntu-latest ]
     outputs:
       githubOwner: ${{ steps.check.outputs.githubOwner }}
-      E2EPAT: ${{ steps.check.outputs.E2EPAT }}
     steps:
       - name: Check secrets
         id: check
@@ -25,14 +24,8 @@ jobs:
           githubOwner: ${{ github.event.inputs.githubOwner }}
         run: |
           $err = $false
-          if ('${{ Secrets.E2EPAT }}' -ne '') {
-            $E2EPAT = '${{ Secrets.E2EPAT }}'
-          }
-          elseif ('${{ Secrets.OrgPAT }}' -ne '') {
-            $E2EPAT = '${{ Secrets.OrgPAT }}'
-          }
-          else {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT (or OrgPAT) containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
+          if ('${{ Secrets.E2EPAT }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
             $err = $true
           }
           if ('${{ Secrets.adminCenterApiCredentials }}' -eq '') {
@@ -50,7 +43,6 @@ jobs:
           if ($orgmap.PSObject.Properties.Name -eq $githubOwner) {
             $githubOwner = $orgmap."$githubOwner"
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "E2EPAT=$E2EPAT"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
 
@@ -65,7 +57,7 @@ jobs:
           $errorActionPreference = "STOP"
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
           $owner = '${{ needs.Check.outputs.githubowner }}'
-          $token = '${{ needs.Check.outputs.E2EPAT }}'
+          $token = '${{ Secrets.E2EPAT }}'
           SetTokenAndRepository -github -githubOwner $owner -token $token -repository ''
           @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
