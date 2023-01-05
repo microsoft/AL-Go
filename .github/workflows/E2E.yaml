@@ -145,7 +145,7 @@ jobs:
     strategy:
       matrix:
         scenario: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
-      max-parallel: ${{ needs.Check.outputs.maxParallel }}
+      max-parallel: ${{ Number(needs.Check.outputs.maxParallel) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -185,7 +185,7 @@ jobs:
         type: [ 'appSourceApp', 'PTE' ]
         style: [ 'multiProject', 'singleProject' ]
         os: [ 'linux', 'windows' ]
-      max-parallel: ${{ needs.Check.outputs.maxParallel }}
+      max-parallel: ${{ Number(needs.Check.outputs.maxParallel) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -238,7 +238,7 @@ jobs:
       matrix:
         release: ${{ fromJson(needs.Analyze.outputs.releases) }}
         type: [ 'appSourceApp', 'PTE' ]
-      max-parallel: ${{ needs.Check.outputs.maxParallel }}
+      max-parallel: ${{ Number(needs.Check.outputs.maxParallel) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
