@@ -18,6 +18,8 @@ jobs:
     outputs:
       githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
+      - uses: actions/checkout@v3
+
       - name: Check secrets
         id: check
         env:
