@@ -145,6 +145,7 @@ jobs:
     strategy:
       matrix:
         scenario: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
+      max-parallel: ${{ needs.Check.outputs.maxParallel }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -237,6 +238,7 @@ jobs:
       matrix:
         release: ${{ fromJson(needs.Analyze.outputs.releases) }}
         type: [ 'appSourceApp', 'PTE' ]
+      max-parallel: ${{ needs.Check.outputs.maxParallel }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
