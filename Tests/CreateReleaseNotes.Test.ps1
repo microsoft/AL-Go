@@ -36,10 +36,10 @@ Describe 'CreateReleaseNotes Tests' {
     
     It 'Confirms that right functions are called' {
         Mock GetLatestRelease { return "{""tag_name"" : ""1.0.0.0""}" | ConvertFrom-Json } 
-        Mock GetReleaseNotes  {return "{
+        Mock GetReleaseNotes  { return "{
             ""name"": ""tagname"",
             ""body"": ""Mocked notes""
-        }"}
+        }" }
         Mock DownloadAndImportBcContainerHelper  {}
         Mock CreateScope  {}
 

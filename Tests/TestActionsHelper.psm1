@@ -1,6 +1,8 @@
 ﻿Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
+$env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
+
 function iReplace {
     Param(
         [string] $string,
