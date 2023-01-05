@@ -86,7 +86,9 @@ jobs:
             $maxParallel = 8
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "maxParallel=$maxParallel"
+          Write-Host "maxParallel=$maxParallel"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "E2EPAT=$E2EPAT"
+          Write-Host "E2EPAT=$E2EPAT"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
 
