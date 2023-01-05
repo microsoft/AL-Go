@@ -2,6 +2,11 @@ name: Cleanup after failed E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      githubOwner:
+        description: GitHub organization set as owner for the temp repositories (default is to use your personal account)
+        required: false
+        default: ''
 
 defaults:
   run:
@@ -12,17 +17,22 @@ jobs:
     runs-on: [ ubuntu-latest ]
     outputs:
       githubOwner: ${{ steps.check.outputs.githubOwner }}
+      E2EPAT: ${{ steps.check.outputs.E2EPAT }}
     steps:
       - name: Check secrets
         id: check
+        env:
+          githubOwner: ${{ github.event.inputs.githubOwner }}
         run: |
           $err = $false
-          if ('${{ Secrets.OrgPAT }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow"
-            $err = $true
+          if ('${{ Secrets.E2EPAT }}' -ne '') {
+            $E2EPAT = '${{ Secrets.E2EPAT }}'
           }
-          if ('${{ Secrets.githubOwner }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called githubOwner containing a the name of the owner of temp repositories"
+          elseif ('${{ Secrets.OrgPAT }}' -ne '') {
+            $E2EPAT = '${{ Secrets.OrgPAT }}'
+          }
+          else {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT (or OrgPAT) containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
             $err = $true
           }
           if ('${{ Secrets.adminCenterApiCredentials }}' -eq '') {
@@ -32,15 +42,15 @@ jobs:
           if ($err) {
             exit 1
           }
-          # Modify GitHubOwner secret in order to ensure that URLs are not masked in output
-          # Makes troubleshooting much easier
-          $githubOwner = '${{ Secrets.githubOwner }}'
-          if ($githubOwner.ToLowerInvariant() -cne $githubOwner) {
-            $githubOwner = $githubOwner.ToLowerInvariant()
+          $githubOwner = $ENV:githubOwner
+          if (!($githubOwner)) {
+              $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
           }
-          else {
-            $githubOwner = $githubOwner.ToUpperInvariant()
+          $orgmap = Get-Content -path (Join-Path "." "e2eTests\orgmap.json') -encoding UTF8 -raw | ConvertFrom-Json
+          if ($orgmap.PSObject.Properties.Name -eq $githubOwner) {
+            $githubOwner = $orgmap."$githubOwner"
           }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "E2EPAT=$E2EPAT"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
 
@@ -55,7 +65,7 @@ jobs:
           $errorActionPreference = "STOP"
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
           $owner = '${{ needs.Check.outputs.githubowner }}'
-          $token = '${{ Secrets.OrgPAT }}'
+          $token = '${{ needs.Check.outputs.E2EPAT }}'
           SetTokenAndRepository -github -githubOwner $owner -token $token -repository ''
           @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
