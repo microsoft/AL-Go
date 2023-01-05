@@ -24,7 +24,7 @@ Describe "CheckForUpdates Action Tests" {
     }
 
     It 'Test YamlClass' {
-        . (Join-Path $scriptRoot "YamlClass.ps1")
+        . (Join-Path $scriptRoot "yamlclass.ps1")
         $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
         
         # Yaml file should have 79 entries
