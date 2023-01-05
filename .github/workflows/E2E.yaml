@@ -105,6 +105,7 @@ jobs:
     runs-on: [ ubuntu-latest ]
     needs: [ Check ]
     outputs:
+      testruns: ${{ steps.Analyze.outputs.testruns }}
       releases: ${{ steps.Analyze.outputs.releases }}
       scenarios: ${{ steps.Analyze.outputs.scenarios }}
     steps:
@@ -119,34 +120,46 @@ jobs:
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
           SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -repository "microsoft/AL-Go"
+          $maxParallel = '${{ needs.Check.outputs.maxParallel }}'
+
+          $testrunsJson = @{
+              "matrix" = @{
+                "visibility" = @( 'private', 'public' )
+                "type" = @( 'appSourceApp', 'PTE' )
+                "style" = @( 'multiProject', 'singleProject' )
+                "os" = @( 'linux', 'windows' )
+              }
+              "max-parallel" = $maxParallel
+              "fail-fast" = $false
+          } | ConvertTo-Json -depth 99 -compress
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "testruns=$testrunsJson"
+          Write-Host "testruns=$testrunsJson"
+
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
-          Write-Host "Releases: $($releases -join ', ')"
-          if ($releases.Count -le 1) {
-            $releasesJSon = "[$($releases | ConvertTo-Json -compress)]"
-          }
-          else {
-            $releasesJSon = $releases | ConvertTo-Json -compress
-          }
+          $releasesJson = @{
+              "matrix" = @{
+                  "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
+              };
+              "max-parallel" = $maxParallel
+              "fail-fast" = $false
+          } | ConvertTo-Json -depth 99 -compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
           Write-Host "releases=$releasesJson"
-          $scenarios = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
-          if ($scenarios.Count -le 1) {
-            $scenariosJSon = "[$($scenarios | ConvertTo-Json -compress)]"
-          }
-          else {
-            $scenariosJSon = $scenarios | ConvertTo-Json -compress
-          }
+
+          $scenariosJson = @{
+              "matrix" = @{
+                  "include" = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { @{ "Scenario" = $_.Directory.Name } } )
+              };
+              "max-parallel" = $maxParallel
+              "fail-fast" = $false
+          } | ConvertTo-Json -depth 99 -compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
           Write-Host "scenarios=$scenariosJson"
 
   Scenario:
     runs-on: [ windows-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    strategy:
-      matrix:
-        scenario: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
-      max-parallel: ${{ Number(needs.Check.outputs.maxParallel) }}
-      fail-fast: false
+    strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - uses: actions/checkout@v3
         if: github.event.inputs.runScenarios == 'Y'
@@ -179,14 +192,7 @@ jobs:
   TestAlGo:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories ]
-    strategy:
-      matrix:
-        visibility: [ 'private', 'public' ]
-        type: [ 'appSourceApp', 'PTE' ]
-        style: [ 'multiProject', 'singleProject' ]
-        os: [ 'linux', 'windows' ]
-      max-parallel: ${{ Number(needs.Check.outputs.maxParallel) }}
-      fail-fast: false
+    strategy: ${{ fromJson(needs.Analyze.outputs.testruns) }}
     steps:
       - uses: actions/checkout@v3
         if: github.event.inputs.runTestMatrix == 'Y'
@@ -234,12 +240,7 @@ jobs:
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    strategy:
-      matrix:
-        release: ${{ fromJson(needs.Analyze.outputs.releases) }}
-        type: [ 'appSourceApp', 'PTE' ]
-      max-parallel: ${{ Number(needs.Check.outputs.maxParallel) }}
-      fail-fast: false
+    strategy: ${{ fromJson(needs.Analyze.outputs.releases) }}
     steps:
       - uses: actions/checkout@v3
         if: github.event.inputs.runUpgradeTests == 'Y'
