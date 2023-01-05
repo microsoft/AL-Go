@@ -45,6 +45,13 @@ try {
         if ($repoSettings.ContainsKey('templateUrl')) {
             $templateUrl = $repoSettings.templateUrl
         }
+        if ($verstr -eq "d") {
+            $verstr = "Developer/Private"
+        }
+        elseif ($verstr -eq "p") {
+            $verstr = "Preview"
+        }
+        AddTelemetryProperty -telemetryScope $telemetryScope -key "ALGoVersion" -value $verstr
         AddTelemetryProperty -telemetryScope $telemetryScope -key "type" -value $type
         AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
         AddTelemetryProperty -telemetryScope $telemetryScope -key "repository" -value $ENV:GITHUB_REPOSITORY
