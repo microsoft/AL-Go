@@ -123,35 +123,46 @@ jobs:
           $maxParallel = [int]'${{ needs.Check.outputs.maxParallel }}'
 
           $testrunsJson = @{
-              "matrix" = @{
-                "visibility" = @( 'private', 'public' )
-                "type" = @( 'appSourceApp', 'PTE' )
-                "style" = @( 'multiProject', 'singleProject' )
-                "os" = @( 'linux', 'windows' )
-              }
-              "max-parallel" = $maxParallel
-              "fail-fast" = $false
+            "matrix" = @{
+              "include" = @( 
+                @('private','public') | ForEach-Object { 
+                  $visibility = $_
+                  @('appSourceApp','PTE') | ForEach-Object {
+                    $type = $_
+                    @('multiProject','singleProject') | ForEach-Object {
+                      $style = $_
+                      @('linux','windows') | ForEach-Object {
+                        $os = $_
+                        @{ "visibility" = $visibility; "type" = $type; "style" = $style; "os" = $os }
+                      }
+                    }
+                  }
+                }
+              )
+            }
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
           } | ConvertTo-Json -depth 99 -compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "testruns=$testrunsJson"
           Write-Host "testruns=$testrunsJson"
 
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
           $releasesJson = @{
-              "matrix" = @{
-                  "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
-              };
-              "max-parallel" = $maxParallel
-              "fail-fast" = $false
+            "matrix" = @{
+              "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
+            };
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
           } | ConvertTo-Json -depth 99 -compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
           Write-Host "releases=$releasesJson"
 
           $scenariosJson = @{
-              "matrix" = @{
-                  "include" = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { @{ "Scenario" = $_.Directory.Name } } )
-              };
-              "max-parallel" = $maxParallel
-              "fail-fast" = $false
+            "matrix" = @{
+              "include" = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { @{ "Scenario" = $_.Directory.Name } } )
+            };
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
           } | ConvertTo-Json -depth 99 -compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
           Write-Host "scenarios=$scenariosJson"
