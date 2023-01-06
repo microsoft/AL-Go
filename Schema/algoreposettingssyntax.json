@@ -1,23 +1,80 @@
 {
     "$id": "AL-Go for GitHub Repo Settings File",
     "$schema": "http://json-schema.org/draft-07/schema",
+    "title": "AL-Go for GitHub Repo Settings File",
     "description": "schema for AL-Go for GitHub Repo Settings File",
     "type": "object",
     "properties": {
         "type": {
             "enum": [
                 "PTE",
-                "AppSource"
+                "AppSource App"
             ],
-            "enumDescriptions": [
-                "Per Tenant Extension",
-                "AppSource app"
-            ],
-            "description": "Repository type"
+            "description": "Specifies the type of project. See https://aka.ms/AL-Go-Settings#type"
         },
         "templateUrl": {
             "type": "string",
-            "description": "URL the GitHub repository template for this repository"
+            "description": "URL to the GitHub repository template for this repository. See https://aka.ms/AL-Go-Settings#templateUrl"
+        },
+        "runs-on": {
+            "type": "string",
+            "examples": [
+                "windows-latest",
+                "self-hosted",
+                "ubuntu-latest"
+            ],
+            "description": "Specifies which GitHub runner is used to run non-build jobs. See https://aka.ms/AL-Go-Settings#runs-on"
+        },
+        "shell": {
+            "enum": [
+                "powershell",
+                "pwsh"
+            ],
+            "description": "Specifies the shell to use for non-build jobs. See https://aka.ms/AL-Go-Settings#shell"
+        },
+        "githubRunner": {
+            "type": "string",
+            "examples": [
+                "windows-latest",
+                "self-hosted"
+            ],
+            "description": "Specifies which GitHub runner is used to run build jobs. See https://aka.ms/AL-Go-Settings#githubRunner"
+        },
+        "githubRunnerShell": {
+            "enum": [
+                "powershell",
+                "pwsh"
+            ],
+            "description": "Specifies the shell to use for build jobs. See https://aka.ms/AL-Go-Settings#githubRunnerShell"
+        },
+        "useProjectDependencies": {
+            "type": "boolean",
+            "description": "Specifies whether the project dependencies should be used to setup multi-stage build jobs. See https://aka.ms/AL-Go-Settings#useProjectDependencies"
+        },
+        "currentSchedule": {
+            "type": "string",
+            "examples": [
+                "0 22 * * 1,2,3,4,5",
+                "0 1 * * *"
+            ],
+            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/AL-Go-Settings#currentSchedule"
+        },
+        "nextMinorSchedule": {
+            "type": "string",
+            "examples": [
+                "0 22 * * 6",
+                "0 1 * * *"
+            ],
+            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/AL-Go-Settings#nextMinorSchedule"
+        },
+        "nextMajorSchedule": {
+            "type": "string",
+            "examples": [
+                "0 22 * * 0",
+                "0 1 * * *"
+            ],
+            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/AL-Go-Settings#nextMajorSchedule"
         }
-    }
+    },
+    "required": [ "type", "templateUrl" ]
 }
