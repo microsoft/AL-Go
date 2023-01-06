@@ -12,15 +12,15 @@ on:
         required: false
         default: ''
       runTestMatrix:
-        description: Run the End 2 End Test Scenario for the full test matrix
+        description: Run the end to end test scenario for the full test matrix
         required: false
         default: 'Y'
       runScenarios:
-        description: Run the End 2 End Scenario Tests
+        description: Run the end to end scenario tests
         required: false
         default: 'Y'
       runUpgradeTests:
-        description: Run the End 2 End Upgrade Tests
+        description: Run the end to end upgrade tests
         required: false
         default: 'Y'
       bcContainerHelperVersion:
