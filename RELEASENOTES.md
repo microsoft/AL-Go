@@ -25,7 +25,7 @@ There is no longer a hard dependency on the main branch name from Create Release
 Some unit tests have been added and AL-Go unit tests can now be run directly from VS Code.
 Another set of end to end tests have also been added and in the documentation on contributing to AL-Go, you can see how to run these in a local fork or from VS Code.
 
-# LF, UTF8 and JSON
+### LF, UTF8 and JSON
 GitHub natively uses LF as line seperator in source files.
 In earlier versions of AL-Go for GitHub, many scripts and actions would use CRLF and convert back and forth. Some files were written with UTF8 BOM (Byte Order Mark), other files without and JSON formatting was done using PowerShell 5.1 (which is different from PowerShell 7).
 In the latest version, we always use LF as line seperator, UTF8 without BOM and JSON files are written using PowerShell 7. If you have self-hosted runners, you need to ensure that PS7 is installed to make this work.
