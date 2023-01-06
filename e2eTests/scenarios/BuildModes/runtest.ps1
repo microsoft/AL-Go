@@ -21,10 +21,10 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test tests the following scenario:
 #                                                                                                      
-#  - Create a new repository based on the PTE template with the content from the content folder
-#    - single project HelloWorld app with BuildModes set
+#  - Create a new repository based on the PTE template with a single project HelloWorld app
+#    - add BuildModes and CleanModePreprocessorSymbols to the repo settings
 #  - Run the "CI/CD" workflow
-#  - Test artifacts generated
+#  - Test artifacts generated, that there are 3 types of artifacts
 #  - Cleanup repositories
 #
 '@
