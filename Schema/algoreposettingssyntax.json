@@ -10,11 +10,11 @@
                 "PTE",
                 "AppSource App"
             ],
-            "description": "Specifies the type of project. See https://aka.ms/AL-Go-Settings#type"
+            "description": "Specifies the type of project. See https://aka.ms/ALGoSettings#type"
         },
         "templateUrl": {
             "type": "string",
-            "description": "URL to the GitHub repository template for this repository. See https://aka.ms/AL-Go-Settings#templateUrl"
+            "description": "URL to the GitHub repository template for this repository. See https://aka.ms/ALGoSettings#templateUrl"
         },
         "runs-on": {
             "type": "string",
@@ -23,14 +23,14 @@
                 "self-hosted",
                 "ubuntu-latest"
             ],
-            "description": "Specifies which GitHub runner is used to run non-build jobs. See https://aka.ms/AL-Go-Settings#runs-on"
+            "description": "Specifies which GitHub runner is used to run non-build jobs. See https://aka.ms/ALGoSettings#runs-on"
         },
         "shell": {
             "enum": [
                 "powershell",
                 "pwsh"
             ],
-            "description": "Specifies the shell to use for non-build jobs. See https://aka.ms/AL-Go-Settings#shell"
+            "description": "Specifies the shell to use for non-build jobs. See https://aka.ms/ALGoSettings#shell"
         },
         "githubRunner": {
             "type": "string",
@@ -38,18 +38,18 @@
                 "windows-latest",
                 "self-hosted"
             ],
-            "description": "Specifies which GitHub runner is used to run build jobs. See https://aka.ms/AL-Go-Settings#githubRunner"
+            "description": "Specifies which GitHub runner is used to run build jobs. See https://aka.ms/ALGoSettings#githubRunner"
         },
         "githubRunnerShell": {
             "enum": [
                 "powershell",
                 "pwsh"
             ],
-            "description": "Specifies the shell to use for build jobs. See https://aka.ms/AL-Go-Settings#githubRunnerShell"
+            "description": "Specifies the shell to use for build jobs. See https://aka.ms/ALGoSettings#githubRunnerShell"
         },
         "useProjectDependencies": {
             "type": "boolean",
-            "description": "Specifies whether the project dependencies should be used to setup multi-stage build jobs. See https://aka.ms/AL-Go-Settings#useProjectDependencies"
+            "description": "Specifies whether the project dependencies should be used to setup multi-stage build jobs. See https://aka.ms/ALGoSettings#useProjectDependencies"
         },
         "currentSchedule": {
             "type": "string",
@@ -57,7 +57,7 @@
                 "0 22 * * 1,2,3,4,5",
                 "0 1 * * *"
             ],
-            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/AL-Go-Settings#currentSchedule"
+            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#currentSchedule"
         },
         "nextMinorSchedule": {
             "type": "string",
@@ -65,7 +65,7 @@
                 "0 22 * * 6",
                 "0 1 * * *"
             ],
-            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/AL-Go-Settings#nextMinorSchedule"
+            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#nextMinorSchedule"
         },
         "nextMajorSchedule": {
             "type": "string",
@@ -73,7 +73,7 @@
                 "0 22 * * 0",
                 "0 1 * * *"
             ],
-            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/AL-Go-Settings#nextMajorSchedule"
+            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#nextMajorSchedule"
         }
     },
     "required": [ "type", "templateUrl" ]
