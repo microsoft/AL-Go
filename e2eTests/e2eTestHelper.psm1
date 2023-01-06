@@ -351,7 +351,7 @@ function CreateAlGoRepository {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "shell" -Value $shell
         Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" -and $_.BaseName -ne "PullRequestHandler" } | ForEach-Object {
             Write-Host $_.FullName
-            $content = (Get-Content -Path $_.FullName -Encoding UTF8 -Raw -Force).Replace("`r", "").TrimEnd("`n")
+            $content = Get-ContentLF -Path $_.FullName
             $srcPattern = "runs-on: [ windows-latest ]`n"
             $replacePattern = "runs-on: [ $runson ]`n"
             $content = $content.Replace($srcPattern, $replacePattern)

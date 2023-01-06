@@ -512,6 +512,17 @@ function CheckRateLimit {
     }
 }
 
+# Get Content of UTF8 encoded file as a string with LF line endings
+# No empty line at the end of the file
+function Get-ContentLF {
+    Param(
+        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [string] $path
+    )
+
+    (Get-Content -Path $path -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+}
+
 # Set-Content defaults to culture specific ANSI encoding, which is not what we want
 # Set-Content defaults to environment specific line endings, which is not what we want
 # This function forces UTF8 encoding and LF line endings

@@ -201,7 +201,7 @@ try {
                     New-Item $srcFilePath -ItemType Directory | Out-Null
                 }
                 Write-Host "$dstFile -> $srcFile"
-                $lines = ([string](Get-Content -Raw -path $dstFile -Encoding UTF8)).Replace("`r", "").TrimEnd("`n").Split("`n")
+                $lines = ([string](Get-ContentLF -path $dstFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     $regex = "^(.*)$($config.githubOwner)\/$($config."$_")(.*)$($config.branch)(.*)$"
                     $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
@@ -306,7 +306,7 @@ try {
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
-                $lines = ([string](Get-Content -Raw -path $srcFile -Encoding UTF8)).Replace("`r", "").TrimEnd("`n").Split("`n")
+                $lines = ([string](Get-ContentLF -path $srcFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     if ($_ -eq "actionsRepo") {
                         $useBranch = $config.branch

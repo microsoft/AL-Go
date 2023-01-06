@@ -306,14 +306,14 @@ try {
                 }
                 else {
                     # For non-workflow files, just read the file content
-                    $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+                    $srcContent = Get-ContentLF -Path $srcFile
                 }
 
 
                 $dstFile = Join-Path $dstFolder $fileName
                 if (Test-Path -Path $dstFile -PathType Leaf) {
                     # file exists, compare and add to $updateFiles if different
-                    $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+                    $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {
                         Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
                         $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
@@ -407,7 +407,7 @@ try {
                             New-Item -Path $path -ItemType Directory | Out-Null
                         }
                         if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                            $oldReleaseNotes = (Get-Content -Path $_.DstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+                            $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
                             while ($oldReleaseNotes) {
                                 $releaseNotes = $_.Content
                                 if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
