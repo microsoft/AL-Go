@@ -160,6 +160,10 @@ try {
                     Write-Host "Building all projects"
                     $buildProjects = $projects
                 }
+                elseif (($filesChanged -like '.github/*.json') -or ($filesChanged -eq '.github/workflows/CICD.yaml')) {
+                    Write-Host "Changes to CI/CD workflow or Repo Settings, building all projects"
+                    $buildProjects = $projects
+                }
                 elseif ($filesChanged.Count -ge 250) {
                     Write-Host "More than 250 files modified, building all projects"
                     $buildProjects = $projects
