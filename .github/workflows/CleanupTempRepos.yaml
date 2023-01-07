@@ -49,7 +49,7 @@ jobs:
           Write-Host "githubOwner=$githubOwner"
 
   RemoveRepositories:
-    runs-on: [ windows-latest ]
+    runs-on: [ ubuntu-latest ]
     needs: [ Check ]
     steps:
       - uses: actions/checkout@v3

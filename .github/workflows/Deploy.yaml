@@ -18,11 +18,11 @@ on:
 
 defaults:
   run:
-    shell: PowerShell
+    shell: pwsh
 
 jobs:
   Deploy:
-    runs-on: [ windows-latest ]
+    runs-on: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v3
 
