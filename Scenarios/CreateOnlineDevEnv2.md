@@ -1,7 +1,8 @@
 # #9 Create Online Development Environment from GitHub
 *Prerequisites: A completed [scenario 7](UseAzureKeyVault.md).*
+
 *To create an online development environment, we need to authenticate to our Business Central Admin API using OAuth. The Create Online Dev. Environment workflow works unattended if you provide a secret called **AdminCenterApiCredentials** (either as a GitHub Secret or in a keyvault).
-At the time when writing this, the Admin Center API does not yet support S2S, meaning that the `AdminCenterApiCredentials` cannot be formatted like explained in section 3, but needs to be formatted as:
+At the time when writing this, the Admin Center API does not yet support S2S, meaning that the `AdminCenterApiCredentials` cannot be formatted like explained in section 3, but needs to be formatted as:*
 
 `{"refreshtoken":"refreshtoken"}`
 

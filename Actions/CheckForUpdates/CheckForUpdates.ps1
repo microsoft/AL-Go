@@ -56,6 +56,14 @@ try {
         $templateUrl = "https://github.com/$templateUrl"
     }
 
+    # TemplateUrl is now always a full url + @ and a branch name
+
+    # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
+    # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on", "UseProjectDependencies", etc.
+    # if $update is set to true, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
+    # if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
+
+    # Get Repo settings as a hashtable
     $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
     if (Test-Path $RepoSettingsFile) {
         $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
@@ -64,12 +72,14 @@ try {
         $repoSettings = @{}
     }
 
+    # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
     $updateSettings = $true
     if ($repoSettings.ContainsKey("templateUrl")) {
         if ($templateUrl.StartsWith('@')) {
             $templateUrl = "$($repoSettings.templateUrl.Split('@')[0])$templateUrl"
         }
         if ($repoSettings.templateUrl -eq $templateUrl) {
+            # No need to update settings file
             $updateSettings = $false
         }
     }
@@ -79,28 +89,14 @@ try {
     $templateBranch = $templateUrl.Split('@')[1]
     $templateUrl = $templateUrl.Split('@')[0]
 
-    $headers = @{
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-    }
-
-    if ($templateUrl -ne "") {
-        $archiveUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")/zipball/$templateBranch"
-    }
-    else {
-        Write-Host "Api url $($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)"
-        $repoInfo = InvokeWebRequest -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)" -retry | ConvertFrom-Json
-        if (!($repoInfo.PSObject.Properties.Name -eq "template_repository")) {
-            OutputWarning -message "This repository wasn't built on a template repository, or the template repository is deleted. You must specify a template repository in the AL-Go settings file."
-            exit
-        }
-        $templateInfo = $repoInfo.template_repository
-        $templateUrl = $templateInfo.html_url
-        $archiveUrl = $templateInfo.archive_url.Replace('{archive_format}','zipball').replace('{/ref}',"/$templateBranch")
-    }
+    # Build the $archiceUrl instead of using the GitHub API
+    # The GitHub API has a rate limit of 60 requests per hour, which is not enough for a large number of repositories using AL-Go
+    $archiveUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")/zipball/$templateBranch"
 
     Write-Host "Using template from $templateUrl@$templateBranch"
-    Write-Host "ArchiveUrl $archiveUrl"
+    Write-Host "Using ArchiveUrl $archiveUrl"
 
+    # Download the template repository and unpack to a temp folder
     $headers = @{             
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
@@ -109,63 +105,85 @@ try {
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     
+    # CheckFiles is an array of hashtables with the following properties:
+    # dstPath: The path to the file in the current repository
+    # srcPath: The path to the file in the template repository
+    # pattern: The pattern to use when searching for files in the template repository
+    # type: The type of file (script, workflow, releasenotes)
+    # The files currently checked are:
+    # - All files in .github/workflows
+    # - All files in .github that ends with .copy.md
+    # - All PowerShell scripts in .AL-Go folders (all projects)
     $checkfiles = @(
         @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path ".github" "workflows"; "pattern" = "*"; "type" = "workflow" },
         @{ "dstPath" = ".github"; "srcPath" = ".github"; "pattern" = "*.copy.md"; "type" = "releasenotes" }
     )
-    if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
-        $checkfiles += @(@{ "dstPath" = ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
+    # Get the list of projects in the current repository
+    if ($repoSettings.ContainsKey('projects')) {
+        $projects = $repoSettings.projects
     }
     else {
-        Get-ChildItem -Path $baseFolder | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go") -PathType Container) } | ForEach-Object {
-            $checkfiles += @(@{ "dstPath" = Join-Path $_.Name ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
-        }
+        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
     }
+    # To support single project repositories, we check for the .AL-Go folder in the root
+    if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
+        $projects += @(".")
+    }
+    $projects | ForEach-Object {
+        $checkfiles += @(@{ "dstPath" = Join-Path $_ ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
+    }
+
+    # $updateFiles will hold an array of files, which needs to be updated
     $updateFiles = @()
 
+    # If useProjectDependencies is true, we need to calculate the dependency depth for all projects
+    # Dependency depth determines how many build jobs we need to run sequentially
+    # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
     $depth = 1
-    if ($repoSettings.ContainsKey('useProjectDependencies') -and $repoSettings.useProjectDependencies) {
-        if ($repoSettings.ContainsKey('projects')) {
-            $projects = $repoSettings.projects
-        }
-        else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
-        }
+    if ($repoSettings.ContainsKey('useProjectDependencies') -and $repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
         $buildAlso = @{}
         $buildOrder = @{}
         $projectDependencies = @{}
-        AnalyzeProjectDependencies -basePath $ENV:GITHUB_WORKSPACE -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+        AnalyzeProjectDependencies -basePath $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
         $depth = $buildOrder.Count
-        Write-Host "Calculated dependency depth"
+        Write-Host "Calculated dependency depth to be $depth"
     }
 
+    # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
     $checkfiles | ForEach-Object {
         Write-Host "Checking $($_.srcPath)\$($_.pattern)"
         $type = $_.type
         $srcPath = $_.srcPath
         $dstPath = $_.dstPath
         $dstFolder = Join-Path $baseFolder $dstPath
-        $srcFolder = Join-Path $tempName "*\$($srcPath)"
-        $srcFolder = Get-ChildItem $srcFolder | ForEach-Object { $_.FullName }
+        $srcFolder = Resolve-Path -path (Join-Path $tempName "*\$($srcPath)") -ErrorAction SilentlyContinue
         if ($srcFolder) {
+            # Loop through all files in the template repository matching the pattern
             Get-ChildItem -Path $srcFolder -Filter $_.pattern | ForEach-Object {
+                # Read the template file and modify it based on the settings
+                # Compare the modified file with the file in the current repository
                 $srcFile = $_.FullName
                 $fileName = $_.Name
                 Write-Host "- $filename"
                 $baseName = $_.BaseName
                 $name = $type
                 if ($type -eq "workflow") {
+                    # for workflow files, we might need to modify the file based on the settings
                     $yaml = [Yaml]::Load($srcFile)
                     $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
+                    $workflowScheduleKey = "$($baseName)Schedule"
 
+                    # Any workflow (except for the PullRequestHandler) can have a RepoSetting called <workflowname>Schedule, which will be used to set the schedule for the workflow
                     if ($baseName -ne "PullRequestHandler") {
-                        $workflowScheduleKey = "$($baseName)Schedule"
                         if ($repoSettings.ContainsKey($workflowScheduleKey)) {
+                            # Read the section under the on: key and add the schedule section
                             $yamlOn = $yaml.Get('on:/')
                             $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
                         }
                     }
 
+                    # The CICD workflow can have a RepoSetting called CICDPushBranches, which will be used to set the branches for the workflow
+                    # Setting the CICDSchedule will disable the push trigger for the CI/CD workflow (unless CICDPushBranches is set)
                     if ($baseName -eq "CICD") {
                         if ($repoSettings.ContainsKey('CICDPushBranches')) {
                             $CICDPushBranches = $repoSettings.CICDPushBranches
@@ -176,6 +194,7 @@ try {
                         else {
                             $CICDPushBranches = $defaultCICDPushBranches
                         }
+                        # update the branches: line with the new branches
                         if ($CICDPushBranches) {
                             $yaml.Replace('on:/push:/branches:', "branches: [ '$($cicdPushBranches -join "', '")' ]")
                         }
@@ -184,6 +203,7 @@ try {
                         }
                     }
 
+                    # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                     if ($baseName -eq "PullRequestHandler") {
                         if ($repoSettings.ContainsKey('CICDPullRequestBranches')) {
                             $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
@@ -191,10 +211,14 @@ try {
                         else {
                             $CICDPullRequestBranches = $defaultCICDPullRequestBranches
                         }
+                        # update the branches: line with the new branches
                         $yaml.Replace('on:/pull_request_target:/branches:', "branches: [ '$($cicdPullRequestBranches -join "', '")' ]")
                     }
 
-                    # Do not change runs-on in Update AL Go System Files and Pull Request Handler workflows
+                    # Repo Setting runs-on and shell determines which GitHub runner is used for all non-build jobs (build jobs are run using the GitHubRunner/GitHubRunnerShell repo settings)
+                    # The default for runs-on is windows-latest and the default for shell is powershell
+                    # The default for GitHubRunner/GitHubRunnerShell is runs-on/shell (unless Ubuntu-latest are selected here, as build jobs cannot run on Ubuntu)
+                    # We do not change runs-on in Update AL Go System Files and Pull Request Handler workflows
                     # These workflows will always run on windows-latest (or maybe Ubuntu-latest later) and not follow settings
                     # Reasons:
                     # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself
@@ -213,9 +237,12 @@ try {
                         }
                     }
 
+                    # CICD, Current, NextMinor and NextMajor workflows all include a build step.
+                    # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
                     if ($baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
                         $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
                         if ($depth -gt 1) {
+                            # When there are multiple build jobs, we need to add build job specific project list (and count) to the output of the Initialization job
                             $initializationOutputs = $yaml.Get('jobs:/Initialization:/outputs:/')
                             $addOutput = @()
                             1..$depth | ForEach-Object {
@@ -224,53 +251,76 @@ try {
                                   "projects$($_)Count: `${{ steps.BuildOrder.outputs.projects$($_)Count }}"
                                 )
                             }
-                            $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content+$addOutput)
+                            $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content + $addOutput)
 
                             $newBuild = @()
+                            # Also, duplicate the build job for each dependency depth
                             $build = $yaml.Get('jobs:/Build:/')
                             1..$depth | ForEach-Object {
+                                # All build job needs to have a dependency on the Initialization job
+                                $needs = @('Initialization')
                                 if ($_ -eq 1) {
-                                    $needs = @('Initialization')
+                                    # First build job needs to have a dependency on the Initialization job only
+                                    # Example (depth 1):
+                                    #    needs: [ Initialization ]
+                                    #    if: needs.Initialization.outputs.projects1Count > 0
                                     $if = "if: needs.Initialization.outputs.projects$($_)Count > 0"
                                 }
                                 else {
+                                    # Subsequent build jobs needs to have a dependency on all previous build jobs
+                                    # Example (depth 2):
+                                    #    needs: [ Initialization, Build1 ]
+                                    #    if: always() && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects2Count > 0
+                                    # Another example (depth 3):
+                                    #    needs: [ Initialization, Build2, Build1 ]
+                                    #    if: always() && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects3Count > 0
                                     $newBuild += @('')
-                                    $needs = @('Initialization',"Build$($_-1)")
-                                    $if = "if: always() && (!cancelled()) && (needs.Build$($_-1).result == 'success' || needs.Build$($_-1).result == 'skipped') && needs.Initialization.outputs.projects$($_)Count > 0"
+                                    $ifpart = ""
+                                    ($_-1)..1 | ForEach-Object {
+                                        $needs += @("Build$_")
+                                        $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
+                                    }
+                                    $if = "if: always() && (!cancelled())$ifpart && needs.Initialization.outputs.projects$($_)Count > 0"
                                 }
+                                # Replace the if:, the needs: and the strategy/matrix/project: in the build job with the correct values
+                                $build.Replace('if:', $if)
+                                $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+                                $build.Replace('strategy:/matrix:/project:',"project: `${{ fromJson(needs.Initialization.outputs.projects$($_)) }}")
+                            
+                                # Last build job is called build, all other build jobs are called build1, build2, etc.
                                 if ($depth -eq $_) {
                                     $newBuild += @("Build:")
                                 }
                                 else {
                                     $newBuild += @("Build$($_):")
                                 }
-                                $build.Replace('if:', $if)
-                                $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-                                $build.Replace('strategy:/matrix:/project:',"project: `${{ fromJson(needs.Initialization.outputs.projects$($_)) }}")
-                            
+                                # Add the content of the calculated build job to the new build job list with an indentation of 2 spaces
                                 $build.content | ForEach-Object { $newBuild += @("  $_") }
                             }
+                            # Replace the entire build: job with the new build job list
                             $yaml.Replace('jobs:/Build:', $newBuild)
                         }
                     }
-                    $srcContent = $yaml.content -join "`r`n"
+                    # combine all the yaml file lines into a single string with LF line endings
+                    $srcContent = $yaml.content -join "`n"
                 }
                 else {
-                    $srcContent = (Get-Content -Path $srcFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+                    # For non-workflow files, just read the file content
+                    $srcContent = Get-ContentLF -Path $srcFile
                 }
 
 
                 $dstFile = Join-Path $dstFolder $fileName
                 if (Test-Path -Path $dstFile -PathType Leaf) {
-                    # file exists, compare
-                    $dstContent = (Get-Content -Path $dstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+                    # file exists, compare and add to $updateFiles if different
+                    $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {
                         Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
                         $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                     }
                 }
                 else {
-                    # new file
+                    # new file, add to $updateFiles
                     Write-Host "New $name ($(Join-Path $dstPath $filename)) available"
                     $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
@@ -280,6 +330,7 @@ try {
     $removeFiles = @()
 
     if (-not $update) {
+        # $update not set, just issue a warning in the CI/CD workflow that updates are available
         if (($updateFiles) -or ($removeFiles)) {
             OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
             AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $true
@@ -290,6 +341,7 @@ try {
         }
     }
     else {
+        # $update set, update the files
         if ($updateSettings -or ($updateFiles) -or ($removeFiles)) {
             try {
                 # URL for git commands
@@ -303,25 +355,29 @@ try {
                 $env:GITHUB_USER = $actor
                 $env:GITHUB_TOKEN = $token
 
-                # Configure git username and email
+                # Configure git
                 invoke-git config --global user.email "$actor@users.noreply.github.com"
                 invoke-git config --global user.name "$actor"
-
-                # Configure hub to use https
                 invoke-git config --global hub.protocol https
+                invoke-git config --global core.autocrlf false
 
                 # Clone URL
                 invoke-git clone $url
 
+                # Set current location to the repository folder
                 Set-Location -Path *
             
+                # If $directCommit, then changes are made directly to the default branch
                 if (!$directcommit) {
+                    # If not direct commit, create a new branch with a random name, and switch to it
                     $branch = [System.IO.Path]::GetRandomFileName()
                     invoke-git checkout -b $branch
                 }
 
+                # Show git status
                 invoke-git status
 
+                # Update Repo Settings file with the template URL
                 $templateUrl = "$templateUrl@$templateBranch"
                 $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
@@ -334,19 +390,24 @@ try {
                     $repoSettings.templateUrl = $templateUrl
                 }
                 else {
+                    # Add the property if it doesn't exist
                     $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
                 }
-                $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
+                # Save the file with LF line endings and UTF8 encoding
+                $repoSettings | Set-JsonContentLF -path $repoSettingsFile
 
+                # Update the files
+                # Calculate the release notes, while updating
                 $releaseNotes = ""
                 try {
                     $updateFiles | ForEach-Object {
+                        # Create the destination folder if it doesn't exist
                         $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
                         if (-not (Test-Path -path $path -PathType Container)) {
                             New-Item -Path $path -ItemType Directory | Out-Null
                         }
                         if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                            $oldReleaseNotes = (Get-Content -Path $_.DstFile -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
+                            $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
                             while ($oldReleaseNotes) {
                                 $releaseNotes = $_.Content
                                 if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
@@ -354,7 +415,7 @@ try {
                                     $oldReleaseNotes = ""
                                 }
                                 else {
-                                    $idx = $oldReleaseNotes.IndexOf("`r`n## ")
+                                    $idx = $oldReleaseNotes.IndexOf("`n## ")
                                     if ($idx -gt 0) {
                                         $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
                                     }
@@ -365,7 +426,7 @@ try {
                             }
                         }
                         Write-Host "Update $($_.DstFile)"
-                        Set-Content -Path $_.DstFile -Encoding UTF8 -Value $_.Content
+                        $_.Content | Set-ContentLF -Path $_.DstFile
                     }
                 }
                 catch {}
@@ -377,6 +438,7 @@ try {
                     Remove-Item (Join-Path (Get-Location).Path $_) -Force
                 }
 
+                # Add changes files to git changeset
                 invoke-git add *
 
                 Write-Host "ReleaseNotes:"

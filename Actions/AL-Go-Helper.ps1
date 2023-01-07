@@ -227,7 +227,6 @@ function DownloadAndImportBcContainerHelper {
             $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
         }
     }
-    Write-Host $bcContainerHelperVersion
     if ($bcContainerHelperVersion -eq "") {
         $bcContainerHelperVersion = "latest"
     }
@@ -1051,12 +1050,11 @@ function CloneIntoNewFolder {
     $env:GITHUB_USER = $actor
     $env:GITHUB_TOKEN = $token
 
-    # Configure git username and email
+    # Configure git
     invoke-git config --global user.email "$actor@users.noreply.github.com"
     invoke-git config --global user.name "$actor"
-
-    # Configure hub to use https
     invoke-git config --global hub.protocol https
+    invoke-git config --global core.autocrlf false
 
     invoke-git clone $serverUrl
 
@@ -1654,7 +1652,7 @@ function CheckAndCreateProjectFolder {
                     "country" = "us"
                     "appFolders" = @()
                     "testFolders" = @()
-                } | ConvertTo-Json | Set-Content $ALGoSettingsFile -Encoding UTF8
+                } | Set-JsonContentLF -path $ALGoSettingsFile
             }
             else {
                 Set-Location $project
@@ -1674,6 +1672,9 @@ Function AnalyzeProjectDependencies {
 
     $appDependencies = @{}
     Write-Host "Analyzing projects"
+    # Loop through all projects
+    # Get all apps in the project
+    # Get all dependencies for the apps
     $projects | ForEach-Object {
         $project = $_
         Write-Host "- $project"
@@ -1687,23 +1688,65 @@ Function AnalyzeProjectDependencies {
             "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
         }
     }
+    # AppDependencies is a hashtable with the following structure
+    # $appDependencies = @{
+    #     "project1" = @{
+    #         "apps" = @("appid1", "appid2")
+    #         "dependencies" = @("appid3", "appid4")
+    #     }
+    #     "project2" = @{
+    #         "apps" = @("appid5", "appid6")
+    #         "dependencies" = @("appid7", "appid8")
+    #     }
+    # }
     $no = 1
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
+        # Loop through all projects and find projects that do not have dependencies on other projects in the list
+        # These projects can be built in parallel and are added to the build order
+        # The projects that are added to the build order are removed from the list of projects
+        # The loop continues until all projects have been added to the build order
         $projects | ForEach-Object {
             $project = $_
             Write-Host "- $project"
+            # Find all project dependencies for the current project
             $dependencies = $appDependencies."$project".dependencies
+            # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @($dependencies | ForEach-Object {
                 $dependency = $_
-                $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
+                # Find the project that contains the app for which the current project has a dependency
+                $depProject = $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
+                # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
+                $depProject | ForEach-Object {
+                    $_
+                    if ($projectDependencies.Value.ContainsKey($_)) {
+                        $projectDependencies.value."$_"
+                    }
+                }
             } | Select-Object -Unique)
+            # foundDependencies now contains all projects that the current project has a dependency on
+            # Update ref variable projectDependencies for this project
             if (!$projectDependencies.Value.ContainsKey($project)) {
+                # Loop through the list of projects for which we already built a dependency list
+                # Update the dependency list for that project if it contains the current project, which might lead to a changed dependency list
+                # This is needed because we are looping through the projects in a any order
+                $keys = @($projectDependencies.value.Keys)
+                $keys | ForEach-Object {
+                    if ($projectDependencies.value."$_" -contains $project) {
+                        $projectDeps = @( $projectDependencies.value."$_" )
+                        $projectDependencies.value."$_" = @( @($projectDeps + $foundDependencies) | Select-Object -Unique )
+                        if (Compare-Object -ReferenceObject $projectDependencies.value."$_" -differenceObject $projectDeps) {
+                            Write-Host "Add ProjectDependencies $($foundDependencies -join ',') to $_"
+                        }
+                    }
+                }
+                Write-Host "Set ProjectDependencies for $project to $($foundDependencies -join ',')"
                 $projectDependencies.value."$project" = $foundDependencies
             }
             if ($foundDependencies) {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
+                # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
                 $foundDependencies | ForEach-Object { 
                     if ($buildAlso.value.ContainsKey($_)) {
                         if ($buildAlso.value."$_" -notcontains $project) {
@@ -1716,7 +1759,7 @@ Function AnalyzeProjectDependencies {
                 }
             }
             else {
-                Write-Host "No dependencies found"
+                Write-Host "No additional dependencies found, add project to build order"
                 $thisJob += $project
             }
         }

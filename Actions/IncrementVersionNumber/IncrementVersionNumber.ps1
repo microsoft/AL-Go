@@ -83,7 +83,7 @@ try {
             }
             $useRepoVersion = (($settingsJson.PSObject.Properties.Name -eq "versioningStrategy") -and (($settingsJson.versioningStrategy -band 16) -eq 16))
             $settingsJson
-            $settingsJson | ConvertTo-Json -Depth 99 | Set-Content "$project\$ALGoSettingsFile" -Encoding UTF8
+            $settingsJson | Set-JsonContentLF -path "$project\$ALGoSettingsFile"
         }
         catch {
             throw "Settings file $project\$ALGoSettingsFile is malformed.$([environment]::Newline) $($_.Exception.Message)."
@@ -110,7 +110,7 @@ try {
                         $appVersion = $newVersion
                     }
                     $appJson.Version = "$appVersion"
-                    $appJson | ConvertTo-Json -Depth 99 | Set-Content $appJsonFile -Encoding UTF8
+                    $appJson | Set-JsonContentLF -path $appJsonFile
                 }
                 catch {
                     throw "Application manifest file($appJsonFile) is malformed."

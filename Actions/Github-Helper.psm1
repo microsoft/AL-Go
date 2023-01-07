@@ -8,7 +8,7 @@ function GetExtendedErrorMessage {
 
     try {
         $errorDetails = $errorRecord.ErrorDetails | ConvertFrom-Json
-        $message += " $($errorDetails.error)`r`n$($errorDetails.error_description)"
+        $message += " $($errorDetails.error)`n$($errorDetails.error_description)"
     }
     catch {}
     try {
@@ -19,7 +19,7 @@ function GetExtendedErrorMessage {
         $webResponse = $webException.Response
         try {
             if ($webResponse.StatusDescription) {
-                $message += "`r`n$($webResponse.StatusDescription)"
+                $message += "`n$($webResponse.StatusDescription)"
             }
         } catch {}
         $reqstream = $webResponse.GetResponseStream()
@@ -27,10 +27,10 @@ function GetExtendedErrorMessage {
         $result = $sr.ReadToEnd()
         try {
             $json = $result | ConvertFrom-Json
-            $message += "`r`n$($json.Message)"
+            $message += "`n$($json.Message)"
         }
         catch {
-            $message += "`r`n$result"
+            $message += "`n$result"
         }
         try {
             $correlationX = $webResponse.GetResponseHeader('ms-correlation-x')
@@ -199,26 +199,35 @@ function CmdDo {
         [string] $command = "",
         [string] $arguments = "",
         [switch] $silent,
-        [switch] $returnValue
+        [switch] $returnValue,
+        [string] $inputStr = ""
     )
 
     $oldNoColor = "$env:NO_COLOR"
     $env:NO_COLOR = "Y"
     $oldEncoding = [Console]::OutputEncoding
-    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
     try {
         $result = $true
         $pinfo = New-Object System.Diagnostics.ProcessStartInfo
         $pinfo.FileName = $command
         $pinfo.RedirectStandardError = $true
         $pinfo.RedirectStandardOutput = $true
+        if ($inputStr) {
+            $pinfo.RedirectStandardInput = $true
+        }
         $pinfo.WorkingDirectory = Get-Location
         $pinfo.UseShellExecute = $false
         $pinfo.Arguments = $arguments
+        $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
+
         $p = New-Object System.Diagnostics.Process
         $p.StartInfo = $pinfo
         $p.Start() | Out-Null
-    
+        if ($inputStr) {
+            $p.StandardInput.WriteLine($inputStr)
+            $p.StandardInput.Close()
+        }
         $outtask = $p.StandardOutput.ReadToEndAsync()
         $errtask = $p.StandardError.ReadToEndAsync()
         $p.WaitForExit();
@@ -246,13 +255,15 @@ function CmdDo {
         }
     }
     finally {
-    #    [Console]::OutputEncoding = $oldEncoding
+        try { [Console]::OutputEncoding = $oldEncoding } catch {}
         $env:NO_COLOR = $oldNoColor
     }
 }
 
 function invoke-gh {
     Param(
+        [parameter(mandatory = $false, ValueFromPipeline = $true)]
+        [string] $inputStr = "",
         [switch] $silent,
         [switch] $returnValue,
         [parameter(mandatory = $true, position = 0)][string] $command,
@@ -268,11 +279,13 @@ function invoke-gh {
             $arguments += "$_ "
         }
     }
-    cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue
+    cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
 }
 
 function invoke-git {
     Param(
+        [parameter(mandatory = $false, ValueFromPipeline = $true)]
+        [string] $inputStr = "",
         [switch] $silent,
         [switch] $returnValue,
         [parameter(mandatory = $true, position = 0)][string] $command,
@@ -288,7 +301,7 @@ function invoke-git {
             $arguments += "$_ "
         }
     }
-    cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue
+    cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
 }
 
 function SemVerObjToSemVerStr {
@@ -478,7 +491,7 @@ function DownloadRelease {
             return $filename
         }
     }
-}       
+}
 
 function CheckRateLimit {
     Param(
@@ -499,6 +512,67 @@ function CheckRateLimit {
     }
 }
 
+# Get Content of UTF8 encoded file as a string with LF line endings
+# No empty line at the end of the file
+function Get-ContentLF {
+    Param(
+        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [string] $path
+    )
+
+    (Get-Content -Path $path -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+}
+
+# Set-Content defaults to culture specific ANSI encoding, which is not what we want
+# Set-Content defaults to environment specific line endings, which is not what we want
+# This function forces UTF8 encoding and LF line endings
+function Set-ContentLF {
+    Param(
+        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [string] $path,
+        [parameter(mandatory = $true, ValueFromPipeline = $true)]
+        $content
+    )
+
+    $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
+    if ($content -is [array]) {
+        $content = $content -join "`n"
+    }
+    else {
+        $content = "$content".Replace("`r", "")
+    }
+    [System.IO.File]::WriteAllText($path, "$content`n")
+}
+
+# Format Object to JSON and write to file with LF line endings and formatted as PowerShell 7 would do it
+# PowerShell 5.1 formats JSON differently than PowerShell 7, so we need to use pwsh to format it
+# PowerShell 5.1 format:
+# {
+#     "key":  "value"
+# }
+# PowerShell 7 format:
+# {
+#   "key": "value"
+# }
+function Set-JsonContentLF {
+    Param(
+        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [string] $path,
+        [parameter(mandatory = $true, ValueFromPipeline = $true)]
+        [object] $object
+    )
+
+    $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
+    if ($PSVersionTable.PSVersion.Major -lt 6) {
+        try {
+            $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
+            . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
+        }
+        catch {
+            Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted by PowerShell $($PSVersionTable.PSVersion)"
+        }
+    }
+}
 
 function GetArtifacts {
     Param(

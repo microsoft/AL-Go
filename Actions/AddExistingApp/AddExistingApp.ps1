@@ -201,7 +201,7 @@ try {
                             $SettingsJson.appFolders += @($folderName)
                         }
                     }
-                    $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
+                    $SettingsJson | Set-JsonContentLF -Path $settingsJsonFile
                 }
             }
             catch {
@@ -217,7 +217,7 @@ try {
                     if (-not ($workspace.folders | Where-Object { $_.Path -eq $foldername })) {
                         $workspace.folders += @(@{ "path" = $foldername })
                     }
-                    $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile -Encoding UTF8
+                    $workspace | Set-JsonContentLF -Path $workspaceFile
                 }
                 catch {
                    throw "$workspaceFileName is malformed.$([environment]::Newline) $($_.Exception.Message)"

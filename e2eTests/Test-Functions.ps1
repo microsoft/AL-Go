@@ -22,26 +22,19 @@ function Test-ArtifactsFromRun {
     Param(
         [string] $runid,
         [string] $folder,
-        [string] $expectedNumberOfApps,
-        [string] $expectedNumberOfTestApps,
+        [hashtable] $expectedArtifacts = @{},
         [string] $expectedNumberOfTests = 0,
         [string] $repoVersion = "",
-        [string] $appVersion = ""
+        [string] $appVersion = "",
+        [switch] $addDelay
     )
 
     Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
     Start-Sleep -Seconds 30
     Write-Host "Download build artifacts to $folder"
-    gh run download $runid --dir $folder
+    invoke-gh run download $runid --dir $folder
+    $err = $false
 
-    $actualNumberOfApps = @(Get-ChildItem -Path "$folder\*-Apps-$repoVersion*\*$appVersion*.app").Count
-    if ($actualNumberOfApps -ne $expectedNumberOfApps) {
-        throw "Expected number of apps was $expectedNumberOfApps. Actual number of apps is $actualNumberOfApps"
-    }
-    $actualNumberOfTestApps = @(Get-ChildItem -Path "$folder\*-TestApps-$repoVersion*\*$appVersion*.app").Count
-    if ($actualNumberOfTestApps -ne $expectedNumberOfTestApps) {
-        throw "Expected number of test apps was $expectedNumberOfTestApps. Actual number of test apps is $actualNumberOfTestApps"
-    }
     if ($expectedNumberOfTests) {
         $actualNumberOfTests = 0
         $actualNumberOfErrors = 0
@@ -56,11 +49,31 @@ function Test-ArtifactsFromRun {
         }
 
         if ($actualNumberOfTests -ne $expectedNumberOfTests) {
-            throw "Expected number of tests was $expectedNumberOfTests. Actual number of tests is $actualNumberOfTests"
+            Write-Host "::Error::Expected number of tests was $expectedNumberOfTests. Actual number of tests is $actualNumberOfTests"
+            $err = $true
         }
-
         if ($actualNumberOfErrors -ne 0 -or $actualNumberOfFailures -ne 0) {
-            throw "Test results indicate unexpected errors"
+            Write-Host "::Error::Test results indicate unexpected errors"
+            $err = $true
+        }
+        if (!$err) {
+            Write-Host "Number of tests was $actualNumberOfTests as expected and all tests passed"
+        }
+    }
+    $expectedArtifacts.Keys | ForEach-Object {
+        $expected = $expectedArtifacts."$_"
+        if ($_ -eq 'thisbuild') {
+            $actual = @(Get-ChildItem -Path "$folder\thisbuild-*-Apps\*$appVersion.*.*.app").Count
+        }
+        else {
+            $actual = @(Get-ChildItem -Path "$folder\*-$($_)-$repoVersion.*.*\*$appVersion.*.*.app").Count
+        }
+        if ($actual -ne $expected) {
+            Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
+            $err = $true
+        }
+        else {
+            Write-Host "Number of $_ was $actual as expected"
         }
     }
 }
@@ -71,13 +84,17 @@ function Test-PropertiesInJsonFile {
         [Hashtable] $properties
     )
 
+    $err = $false
     $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
     $properties.Keys | ForEach-Object {
         $expected = $properties."$_"
         $actual = Invoke-Expression "`$json.$_"
         if ($actual -ne $expected) {
-            Write-Host "$_ is $actual. Expected $expected"
+            Write-Host "::Error::Property $_ is $actual. Expected $expected"
+            $err = $true
         }
     }
-
+    if ($err) {
+        throw "Testing properties in $jsonFile failed"
+    }
 }

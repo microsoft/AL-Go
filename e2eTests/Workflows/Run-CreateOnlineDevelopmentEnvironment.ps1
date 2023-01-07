@@ -4,6 +4,7 @@
         [switch] $reUseExistingEnvironment,
         [switch] $directCommit,
         [switch] $wait,
+        [string] $repository,
         [string] $branch = "main"
     )
 
@@ -13,5 +14,5 @@
         "reUseExistingEnvironment" = @("Y","N")[!$reUseExistingEnvironment]
         "directCommit" = @("Y","N")[!$directCommit]
     }
-    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch
+    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

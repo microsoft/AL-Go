@@ -107,7 +107,7 @@ try {
                     $SettingsJson.appFolders += @($folderName)
                 }
             }
-            $SettingsJson | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsJsonFile -Encoding UTF8
+            $SettingsJson | Set-JsonContentLF -Path $settingsJsonFile
         }
     }
     catch {

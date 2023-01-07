@@ -130,6 +130,7 @@ try {
             $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         }
         if ($projects) {
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
             Write-Host "All Projects: $($projects -join ', ')"
             if (!$settings.alwaysBuildAllProjects -and ($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push" -or ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE '.PullRequestFilesChanged'))))) {
                 if ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE '.PullRequestFilesChanged'))) {

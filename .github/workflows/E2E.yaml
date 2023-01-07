@@ -7,6 +7,26 @@ on:
         description: ref on which to run the end-2-end tests (default is head_sha on main)
         required: false
         default: ''
+      githubOwner:
+        description: GitHub organization set as owner for the temp repositories (default is to use your personal account - CANNOT be a free account)
+        required: false
+        default: ''
+      runTestMatrix:
+        description: Run the end to end test scenario for the full test matrix
+        required: false
+        default: 'Y'
+      runScenarios:
+        description: Run the end to end scenario tests
+        required: false
+        default: 'Y'
+      runUpgradeTests:
+        description: Run the end to end upgrade tests
+        required: false
+        default: 'Y'
+      bcContainerHelperVersion:
+        description: Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)
+        required: false
+        default: 'preview'
 
 defaults:
   run:
@@ -16,18 +36,19 @@ jobs:
   Check:
     runs-on: [ ubuntu-latest ]
     outputs:
+      maxParallel: ${{ steps.check.outputs.maxParallel }}
       githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
+      - uses: actions/checkout@v3
+
       - name: Check secrets
         id: check
+        env:
+          githubOwner: ${{ github.event.inputs.githubOwner }}
         run: |
           $err = $false
-          if ('${{ Secrets.OrgPAT }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called OrgPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow"
-            $err = $true
-          }
-          if ('${{ Secrets.githubOwner }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called githubOwner containing a the name of the owner of temp repositories"
+          if ('${{ Secrets.E2EPAT }}' -eq '') {
+            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
             $err = $true
           }
           if ('${{ Secrets.adminCenterApiCredentials }}' -eq '') {
@@ -45,15 +66,20 @@ jobs:
           if ($err) {
             exit 1
           }
-          # Modify GitHubOwner secret in order to ensure that URLs are not masked in output
-          # Makes troubleshooting much easier
-          $githubOwner = '${{ Secrets.githubOwner }}'
-          if ($githubOwner.ToLowerInvariant() -ne $githubOwner) {
-            $githubOwner = $githubOwner.ToLowerInvariant()
+          $githubOwner = $ENV:githubOwner
+          $maxParallel = 99
+          if (!($githubOwner)) {
+              $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
           }
-          else {
-            $githubOwner = $githubOwner.ToUpperInvariant()
+          $orgmap = Get-Content -path (Join-Path "." "e2eTests\orgmap.json") -encoding UTF8 -raw | ConvertFrom-Json
+          if ($orgmap.PSObject.Properties.Name -eq $githubOwner) {
+            $githubOwner = $orgmap."$githubOwner"
           }
+          if ($githubOwner -eq $ENV:GITHUB_REPOSITORY_OWNER) {
+            $maxParallel = 8
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "maxParallel=$maxParallel"
+          Write-Host "maxParallel=$maxParallel"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
 
@@ -73,53 +99,119 @@ jobs:
         id: setup
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}'
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
   
-  CalculateReleases:
+  Analyze:
     runs-on: [ ubuntu-latest ]
     needs: [ Check ]
     outputs:
-      releases: ${{ steps.calculatereleases.outputs.releases }}
+      testruns: ${{ steps.Analyze.outputs.testruns }}
+      releases: ${{ steps.Analyze.outputs.releases }}
+      scenarios: ${{ steps.Analyze.outputs.scenarios }}
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - name: CalculateReleases
-        id: calculateReleases
+      - name: Analyze
+        id: Analyze
         run: |
+          $errorActionPreference = "STOP"
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
-          SetTokenAndRepository -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -repository "microsoft/AL-Go" -github
+          SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -repository "microsoft/AL-Go"
+          $maxParallel = [int]'${{ needs.Check.outputs.maxParallel }}'
+
+          $testrunsJson = @{
+            "matrix" = @{
+              "include" = @( 
+                @('private','public') | ForEach-Object { 
+                  $visibility = $_
+                  @('appSourceApp','PTE') | ForEach-Object {
+                    $type = $_
+                    @('multiProject','singleProject') | ForEach-Object {
+                      $style = $_
+                      @('linux','windows') | ForEach-Object {
+                        $os = $_
+                        @{ "visibility" = $visibility; "type" = $type; "style" = $style; "os" = $os }
+                      }
+                    }
+                  }
+                }
+              )
+            }
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
+          } | ConvertTo-Json -depth 99 -compress
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "testruns=$testrunsJson"
+          Write-Host "testruns=$testrunsJson"
+
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
-          Write-Host "Releases: $($releases -join ', ')"
-          if ($releases.Count -eq 1) {
-            $releasesJSon = "[$($releases | ConvertTo-Json -compress)]"
-          }
-          else {
-            $releasesJSon = $releases | ConvertTo-Json -compress
-          }
+          $releasesJson = @{
+            "matrix" = @{
+              "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
+            };
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
+          } | ConvertTo-Json -depth 99 -compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
           Write-Host "releases=$releasesJson"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "releasesCount=$($releases.Count)"
-          Write-Host "releasesCount=$($releases.Count)"
 
-  TestAlGo:
-    runs-on: [ ubuntu-latest ]
-    needs: [ Check, SetupRepositories ]
-    strategy:
-      matrix:
-        visibility: [ 'private', 'public' ]
-        type: [ 'appSourceApp', 'PTE' ]
-        style: [ 'multiProject', 'singleProject' ]
-        os: [ 'linux', 'windows' ]
-      fail-fast: false
+          $scenariosJson = @{
+            "matrix" = @{
+              "include" = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { @{ "Scenario" = $_.Directory.Name } } )
+            };
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
+          } | ConvertTo-Json -depth 99 -compress
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
+          Write-Host "scenarios=$scenariosJson"
+
+  Scenario:
+    runs-on: [ windows-latest ]
+    needs: [ Check, SetupRepositories, Analyze ]
+    strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - uses: actions/checkout@v3
+        if: github.event.inputs.runScenarios == 'Y'
         with:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Calculate parameters
+        if: github.event.inputs.runScenarios == 'Y'
+        id: calculateParams
+        run: |
+          $errorActionPreference = "STOP"
+          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Write-Host "repoName='$repoName'"
+          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+
+      - name: Run test
+        if: github.event.inputs.runScenarios == 'Y'
+        run: |
+          try {
+            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -licenseFileUrl '${{ Secrets.licenseFileUrl }}'
+          }
+          catch {
+            Write-Host $_.Exception.Message
+            Write-Host $_.ScriptStackTrace
+            Write-Host "::Error::$($_.Exception.Message)"
+            $host.SetShouldExit(1)
+          }
+
+  TestAlGo:
+    runs-on: [ ubuntu-latest ]
+    needs: [ Check, SetupRepositories, Analyze ]
+    strategy: ${{ fromJson(needs.Analyze.outputs.testruns) }}
+    steps:
+      - uses: actions/checkout@v3
+        if: github.event.inputs.runTestMatrix == 'Y'
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Calculate parameters
+        if: github.event.inputs.runTestMatrix == 'Y'
         id: calculateParams
         run: |
           $errorActionPreference = "STOP"
@@ -130,59 +222,81 @@ jobs:
           }
           if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl='${{ secrets.licenseFileUrl }}'
-            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
           }
           else {
-            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Write-Host "repoName='$repoName'"
+          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run tests
+        if: github.event.inputs.runTestMatrix == 'Y'
         run: |
-          $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
+          try {
+            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
+          }
+          catch {
+            Write-Host $_.Exception.Message
+            Write-Host $_.ScriptStackTrace
+            Write-Host "::Error::$($_.Exception.Message)"
+            $host.SetShouldExit(1)
+          }
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
-    needs: [ Check, SetupRepositories, CalculateReleases ]
-    strategy:
-      matrix:
-        release: ${{ fromJson(needs.CalculateReleases.outputs.releases) }}
-        type: [ 'appSourceApp', 'PTE' ]
-      fail-fast: false
+    needs: [ Check, SetupRepositories, Analyze ]
+    strategy: ${{ fromJson(needs.Analyze.outputs.releases) }}
     steps:
       - uses: actions/checkout@v3
+        if: github.event.inputs.runUpgradeTests == 'Y'
         with:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Calculate parameters
+        if: github.event.inputs.runUpgradeTests == 'Y'
         id: calculateParams
         run: |
           $errorActionPreference = "STOP"
           if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
-            $template = '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
-            $path = 'appsourceapp'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+            $contentPath = 'appsourceapp'
           }
           else {
             $licenseFileUrl = ''
-            $template = '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
-            $path = 'pte'
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+            $contentPath = 'pte'
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "path='$path'"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "contentPath='$contentPath'"
+          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Write-Host "repoName='$repoName'"
+          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run tests
+        if: github.event.inputs.runUpgradeTests == 'Y'
         run: |
-          $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -path ${{ steps.calculateParams.outputs.path }}
+          try {
+            . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -template ${{ steps.calculateParams.outputs.template }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -contentPath ${{ steps.calculateParams.outputs.contentPath }}
+          }
+          catch {
+            Write-Host $_.Exception.Message
+            Write-Host $_.ScriptStackTrace
+            Write-Host "::Error::$($_.Exception.Message)"
+            $host.SetShouldExit(1)
+          }
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
-    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade ]
+    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
     if: always() && (${{ needs.SetupRepositories.result == 'Success' }})
     steps:
       - uses: actions/checkout@v3
@@ -192,4 +306,4 @@ jobs:
       - name: Remove Repositories
         run: |
           $errorActionPreference = "STOP"
-          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.OrgPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

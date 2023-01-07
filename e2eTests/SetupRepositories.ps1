@@ -1,8 +1,11 @@
 ﻿Param(
     [switch] $github,
     [string] $githubOwner,
-    [string] $token
+    [string] $token,
+    [string] $bcContainerHelperVersion = ''
 )
+
+Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
 $repoBaseName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
 Write-Host $repoBaseName
@@ -10,8 +13,6 @@ Write-Host $repoBaseName
 $actionsRepo = "$repoBaseName-Actions"
 $perTenantExtensionRepo = "$repoBaseName-PTE"
 $appSourceAppRepo = "$repoBaseName-AppSource"
-
-[System.IO.Path]::GetTempPath()
 
 $settings = [ordered]@{
     "githubOwner" = $githubOwner
@@ -21,10 +22,11 @@ $settings = [ordered]@{
     "branch" = "main"
     "localFolder" = ""
     "baseFolder" = [System.IO.Path]::GetTempPath()
+    "defaultBcContainerHelperVersion" = $bcContainerHelperVersion
 }
 
 $settingsFile = Join-Path $settings.baseFolder "$repoBaseName.json"
-$settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+$settings | Set-JsonContentLF -path $settingsFile
 
 . (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github:$github
 

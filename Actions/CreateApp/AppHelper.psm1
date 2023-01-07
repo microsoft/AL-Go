@@ -75,7 +75,7 @@ function UpdateManifest
         )
 
     }
-    $appJson | ConvertTo-Json -depth 99 | Set-Content $appJsonFile -Encoding UTF8
+    $appJson | Set-JsonContentLF -path $appJsonFile
 }
 
 function UpdateALFile 
@@ -93,7 +93,7 @@ function UpdateALFile
         $al = $al.Replace("$_", $startId)
         $startId++
     }
-    Set-Content -Path (Join-Path $destinationFolder $alFileName) -value $al -Encoding UTF8
+    $al | Set-ContentLF -Path (Join-Path $destinationFolder $alFileName)
 }
 
 <#
@@ -197,7 +197,7 @@ function Update-WorkSpaces
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
                     $workspace.folders += @(@{ "path" = $appName })
                 }
-                $workspace | ConvertTo-Json -Depth 99 | Set-Content -Path $workspaceFile -Encoding UTF8
+                $workspace | Set-JsonContentLF -Path $workspaceFile
             }
             catch {
                 throw "Updating the workspace file $workspaceFileName failed.$([environment]::Newline) $($_.Exception.Message)"

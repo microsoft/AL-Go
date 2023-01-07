@@ -36,7 +36,25 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId $eventId
     if ($telemetryScope) {
-        AddTelemetryProperty -telemetryScope $telemetryScope -key "repository" -value (GetHash -str $ENV:GITHUB_REPOSITORY)
+        $repoSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE '.github/AL-Go-Settings.json') -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+        $type = 'PTE'
+        if ($repoSettings.ContainsKey('type')) {
+            $type = $repoSettings.type
+        }
+        $templateUrl = 'Not set'
+        if ($repoSettings.ContainsKey('templateUrl')) {
+            $templateUrl = $repoSettings.templateUrl
+        }
+        if ($verstr -eq "d") {
+            $verstr = "Developer/Private"
+        }
+        elseif ($verstr -eq "p") {
+            $verstr = "Preview"
+        }
+        AddTelemetryProperty -telemetryScope $telemetryScope -key "ALGoVersion" -value $verstr
+        AddTelemetryProperty -telemetryScope $telemetryScope -key "type" -value $type
+        AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
+        AddTelemetryProperty -telemetryScope $telemetryScope -key "repository" -value $ENV:GITHUB_REPOSITORY
         AddTelemetryProperty -telemetryScope $telemetryScope -key "runAttempt" -value $ENV:GITHUB_RUN_ATTEMPT
         AddTelemetryProperty -telemetryScope $telemetryScope -key "runNumber" -value $ENV:GITHUB_RUN_NUMBER
         AddTelemetryProperty -telemetryScope $telemetryScope -key "runId" -value $ENV:GITHUB_RUN_ID

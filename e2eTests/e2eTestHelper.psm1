@@ -1,9 +1,15 @@
 ﻿$githubOwner = "githubOwner"
 $token = "token"
-$repository = "repo"
+$defaultRepository = "repo"
+$defaultApplication = "21.0.0.0"
+$defaultRuntime = "10.0"
+$defaultPublisher = "MS Test"
 
-$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve
-Import-Module $gitHubHelperPath -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
+
+function GetDefaultPublisher() {
+    return $defaultPublisher
+}
 
 function SetTokenAndRepository {
     Param(
@@ -15,30 +21,38 @@ function SetTokenAndRepository {
 
     $script:githubOwner = $githubOwner
     $script:token = $token
-    $script:repository = $repository
+    $script:defaultRepository = $repository
 
     if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
-        invoke-git config --global core.autocrlf true
-
-        $ENV:GITHUB_TOKEN = $token
-        gh auth login --with-token
+        invoke-git config --global core.autocrlf false
+        $ENV:GITHUB_TOKEN = ''
     }
-    else {
-        $token | gh auth login --with-token
+    Write-Host "Authenticating with GitHub using token"
+    $token | invoke-gh auth login --with-token
+    if ($github) {
+        $ENV:GITHUB_TOKEN = $token
     }
 }
 
-function ConvertTo-HashTable() {
+function ConvertTo-HashTable {
     Param(
         [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object
+        [PSCustomObject] $object,
+        [switch] $recurse
     )
     $ht = @{}
     if ($object) {
-        $object.PSObject.Properties | Foreach { $ht[$_.Name] = $_.Value }
+        $object.PSObject.Properties | ForEach-Object { 
+            if ($recurse -and ($_.Value -is [PSCustomObject])) {
+                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
+            }
+            else {
+                $ht[$_.Name] = $_.Value
+            }
+        }
     }
     $ht
 }
@@ -59,27 +73,30 @@ function Get-PlainText {
 
 function Add-PropertiesToJsonFile {
     Param(
-        [string] $jsonFile,
-        [hashTable] $properties
+        [string] $path,
+        [hashTable] $properties,
+        [Switch] $commit
     )
 
-    Write-Host -ForegroundColor Yellow "`nAdd Properties to $([System.IO.Path]::GetFileName($jsonFile))"
+    Write-Host -ForegroundColor Yellow "`nAdd Properties to $([System.IO.Path]::GetFileName($path))"
     Write-Host "Properties"
     $properties | Out-Host
 
-    $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+    $json = Get-Content $path -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
     $properties.Keys | ForEach-Object {
         $json."$_" = $properties."$_"
     }
-    $json | ConvertTo-Json | Set-Content $jsonFile -Encoding UTF8
+    $json | Set-JsonContentLF -path $path
 
-    CommitAndPush -commitMessage "Update $([System.IO.Path]::GetFileName($jsonFile))"
+    if ($commit) {
+        CommitAndPush -commitMessage "Add properties to $([System.IO.Path]::GetFileName($path))"
+    }
 }
 
 
 function DisplayTokenAndRepository {
     Write-Host "Token: $token"
-    Write-Host "Rrepo: $repository"
+    Write-Host "Repo: $defaultRepository"
 }
 
 function RunWorkflow {
@@ -87,9 +104,13 @@ function RunWorkflow {
         [string] $name,
         [hashtable] $parameters = @{},
         [switch] $wait,
+        [string] $repository,
         [string] $branch = "main"
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     Write-Host -ForegroundColor Yellow "`nRun workflow $($name.Trim()) in $repository"
     if ($parameters -and $parameters.Count -gt 0) {
         Write-Host "Parameters:"
@@ -158,16 +179,20 @@ function RunWorkflow {
     $runid = $run.id
     Write-Host "Run URL: https://github.com/$repository/actions/runs/$runid"
     if ($wait) {
-        WaitWorkflow -runid $run.id
+        WaitWorkflow -repository $repository -runid $run.id
     }
     $run
 }
 
 function WaitWorkflow {
     Param(
+        [string] $repository,
         [string] $runid
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     $headers = @{ 
         "Accept" = "application/vnd.github.v3+json"
         "Authorization" = "token $token"
@@ -194,56 +219,121 @@ function WaitWorkflow {
 
 function SetRepositorySecret {
     Param(
+        [string] $repository,
         [string] $name,
-        [secureString] $value
+        [string] $value
     )
 
-    gh secret set $name -b ($value | Get-PlainText) --repo $repository
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+    Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
+    invoke-gh secret set $name -b $value --repo $repository
 }
 
-function CreateRepository {
+function CreateNewAppInFolder {
     Param(
-        [string] $template,
-        [string] $templateBranch = "main",
-        [string] $templatePath,
+        [string] $folder,
+        [string] $id = [GUID]::NewGUID().ToString(),
+        [int] $objID = 50000,
+        [string] $name,
+        [string] $publisher = $defaultPublisher,
+        [string] $version = "1.0.0.0",
+        [string] $application = $defaultApplication,
+        [string] $runtime = $defaultRuntime,
+        [HashTable[]] $dependencies = @()
+    )
+
+    $al = @(
+        "pageextension $objID CustListExt$name extends ""Customer List"""
+        "{"
+        "  trigger OnOpenPage();"
+        "  begin"
+        "    Message('App published: Hello $name!');"
+        "  end;"
+        "}")
+    $appJson = [ordered]@{
+        "id" = $id
+        "name" = $name
+        "version" = $version
+        "publisher" = $publisher
+        "dependencies" = $dependencies
+        "application" = $application
+        "runtime" = $runtime
+        "idRanges" = @( @{ "from" = $objID; "to" = $objID } )
+        "resourceExposurePolicy" = @{ "allowDebugging" = $true; "allowDownloadingSource" = $true; "includeSourceInSymbolFile" = $true }
+    }
+    $folder = Join-Path $folder $name
+    New-Item -Path $folder -ItemType Directory | Out-Null
+    $appJson | Set-JsonContentLF -Path (Join-Path $folder "app.json")
+    $al -join "`n" | Set-ContentLF -Path (Join-Path $folder "$name.al")
+    $id
+}
+
+function CreateAlGoRepository {
+    Param(
+        [switch] $github,
+        [string] $repository,
+        [string] $template = "",
+        [string[]] $projects = @(),
+        [string] $contentPath,
+        [scriptBlock] $contentScript,
         [switch] $private,
         [switch] $linux,
-        [string] $branch = "main"
+        [string] $branch = "main",
+        [hashtable] $addRepoSettings = @{}
     )
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+    if (!$template.Contains('@')) {
+        $template += '@main'
+    }
+    $templateBranch = $template.Split('@')[1]
+    $templateRepo = $template.Split('@')[0]
 
     $tempPath = [System.IO.Path]::GetTempPath()
     $path = Join-Path $tempPath ([GUID]::NewGuid().ToString())
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
     if ($private) {
-        Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template@$templateBranch)"
+        Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
         invoke-gh repo create $repository --private --clone
     }
     else {
-        Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template@$templateBranch)"
+        Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
         invoke-gh repo create $repository --public --clone
     }
     Start-Sleep -seconds 10
     Set-Location '*'
 
-    if ($template) {
-        $templateUrl = "$template/archive/refs/heads/$templateBranch.zip"
-        $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
-        [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
-        
-        $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
-        Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
-        Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
-        Remove-Item -Path $tempRepoPath -Force -Recurse
-        Remove-Item -Path $zipFileName -Force
+    $templateUrl = "$templateRepo/archive/refs/heads/$templateBranch.zip"
+    $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
+    [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
+    
+    $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
+    Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
+    Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
+    Remove-Item -Path $tempRepoPath -Force -Recurse
+    Remove-Item -Path $zipFileName -Force
+    if ($projects) {
+        # Make Repo multi-project
+        $projects | ForEach-Object {
+            New-Item $_ -ItemType Directory | Out-Null
+            Copy-Item '.AL-Go' -Destination $_ -Recurse -Force
+        }
+        Remove-Item '.AL-Go' -Force -Recurse
     }
-    if ($templatePath) {
-        Write-Host "$(Join-Path $templatePath '*')"
-        Copy-Item (Join-Path $templatePath '*') -Destination . -Recurse -Force
+    if ($contentPath) {
+        Write-Host "Copy content from $contentPath"
+        Copy-Item (Join-Path $contentPath "*") -Destination . -Recurse -Force
+    }
+    if ($contentScript) {
+        & $contentScript -path (get-location).Path
     }
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-    $repoSettings | Add-Member -MemberType NoteProperty -Name "bcContainerHelperVersion" -Value "dev"
     $runson = "windows-latest"
     $shell = "powershell"
     if ($private) {
@@ -251,7 +341,7 @@ function CreateRepository {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
         $runson = "self-hosted"
     }
-    elseif ($linux) {
+    if ($linux) {
         $runson = "ubuntu-latest"
         $shell = "pwsh"
     }
@@ -261,17 +351,22 @@ function CreateRepository {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "shell" -Value $shell
         Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" -and $_.BaseName -ne "PullRequestHandler" } | ForEach-Object {
             Write-Host $_.FullName
-            $content = (Get-Content -Path $_.FullName -Encoding UTF8 -Raw -Force).Replace("`r", "").TrimEnd("`n").Replace("`n", "`r`n")
-            $srcPattern = "runs-on: [ windows-latest ]`r`n"
-            $replacePattern = "runs-on: [ $runson ]`r`n"
+            $content = Get-ContentLF -Path $_.FullName
+            $srcPattern = "runs-on: [ windows-latest ]`n"
+            $replacePattern = "runs-on: [ $runson ]`n"
             $content = $content.Replace($srcPattern, $replacePattern)
-            $srcPattern = "shell: powershell`r`n"
-            $replacePattern = "shell: $shell`r`n"
+            $srcPattern = "shell: powershell`n"
+            $replacePattern = "shell: $shell`n"
             $content = $content.Replace($srcPattern, $replacePattern)
-            Set-Content -Path $_.FullName -Encoding UTF8 -Value $content
+            [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
-    $repoSettings | ConvertTo-Json -Depth 99 | Set-Content $repoSettingsFile -Encoding UTF8
+    # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
+    $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
+    $repoSettings | Set-JsonContentLF -path $repoSettingsFile
+    if ($addRepoSettings.Keys.Count) {
+        Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
+    }
 
     invoke-git add *
     invoke-git commit --allow-empty -m 'init'
@@ -280,6 +375,9 @@ function CreateRepository {
         invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
+    if (!$github) {
+        Start-Process "https://github.com/$repository"
+    }
     Start-Sleep -seconds 10
 }
 
@@ -304,9 +402,13 @@ function CommitAndPush {
 
 function MergePRandPull {
     Param(
+        [string] $repository,
         [string] $branch = "main"
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     $phs = @(invoke-gh -returnValue pr list --repo $repository)
     if ($phs.Count -eq 0) {
         throw "No Pull Request was created"
@@ -327,8 +429,23 @@ function RemoveRepository {
         [string] $path = ""
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
     if ($repository) {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
+        try {
+            $owner = $repository.Split("/")[0]
+            @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
+                Write-Host "+ package $($_.name)"
+                # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
+                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name) --input -
+            }
+        }
+        catch {
+            Write-Host -ForegroundColor Red "Error removing packages"
+            Write-Host -ForegroundColor Red $_.Exception.Message
+        }
         invoke-gh repo delete $repository --confirm | Out-Host
     }
 
@@ -340,6 +457,21 @@ function RemoveRepository {
             Set-Location ([System.IO.Path]::GetTempPath())
             Remove-Item $path -Recurse -Force
         }
+    }
+}
+
+function Replace-StringInFiles {
+    Param(
+        [string] $path,
+        [string] $include = "*",
+        [string] $search,
+        [string] $replace
+    )
+
+    Get-ChildItem -Path $path -Recurse -Include $include -File | ForEach-Object {
+        $content = Get-Content $_.FullName -Raw -Encoding utf8
+        $content = $content -replace $search, $replace
+        [System.IO.File]::WriteAllText($_.FullName, $content)
     }
 }
 

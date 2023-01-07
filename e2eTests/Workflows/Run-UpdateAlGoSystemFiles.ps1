@@ -3,13 +3,18 @@
         [string] $templateUrl,
         [switch] $directCommit,
         [switch] $wait,
-        [string] $branch = "main"
+        [string] $repository,
+        [string] $branch = "main",
+        [string] $ghTokenWorkflow
     )
 
+    if ($ghTokenWorkflow) {
+        SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $ghTokenWorkflow
+    }
     $workflowName = 'Update AL-Go System Files'
     $parameters = @{
         "templateUrl" = $templateUrl
         "directCommit" = @("Y","N")[!$directCommit]
     }
-    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch
+    RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

@@ -8,8 +8,7 @@
     [switch] $directCommit
 )
 
-$gitHubHelperPath = Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve
-Import-Module $gitHubHelperPath -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
@@ -23,10 +22,13 @@ try {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
-        invoke-git config --global core.autocrlf true
-
+        invoke-git config --global core.autocrlf false
+        $ENV:GITHUB_TOKEN = ''
+    }
+    Write-Host "Authenticating with GitHub using token"
+    $token | invoke-gh auth login --with-token
+    if ($github) {
         $ENV:GITHUB_TOKEN = $token
-        gh auth login --with-token
     }
 
     $originalOwnerAndRepo = @{
@@ -39,12 +41,12 @@ try {
     Set-Location $PSScriptRoot
     $baseRepoPath = invoke-git -returnValue rev-parse --show-toplevel
     Write-Host "Base repo path: $baseRepoPath"
-    $user = gh api user | ConvertFrom-Json
+    $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
 
     if ($configName -eq "") { $configName = $user.login }
     if ([System.IO.Path]::GetExtension($configName) -eq "") { $configName += ".json" }
-    $config = Get-Content $configName | ConvertFrom-Json
+    $config = Get-Content $configName -Encoding UTF8 | ConvertFrom-Json
 
     Write-Host "Using config file: $configName"
     $config | ConvertTo-Json | Out-Host
@@ -199,7 +201,7 @@ try {
                     New-Item $srcFilePath -ItemType Directory | Out-Null
                 }
                 Write-Host "$dstFile -> $srcFile"
-                $lines = ([string](Get-Content -Raw -path $dstFile)).Split("`n")
+                $lines = ([string](Get-ContentLF -path $dstFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     $regex = "^(.*)$($config.githubOwner)\/$($config."$_")(.*)$($config.branch)(.*)$"
                     $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
@@ -208,7 +210,7 @@ try {
                 if ($_.Name -eq "AL-Go-Helper.ps1") {
                     $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)"(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""""`$5" }
                 }
-                $lines -join "`n" | Set-Content $srcFile -Force -NoNewline
+                [System.IO.File]::WriteAllText($srcFile, "$($lines -join "`n")`n")
             }
         }
         Set-Location $baseRepoPath
@@ -298,16 +300,13 @@ try {
         
             Get-ChildItem -Path $srcPath -Recurse -File -Force | ForEach-Object {
                 $srcFile = $_.FullName
-                Write-Host "srcFile: $srcFile"
                 $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
-                Write-Host "dstFile: $dstFile"
                 $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
-                Write-Host "dstFilePath: $dstFilePath"
 
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
-                $lines = ([string](Get-Content -Raw -path $srcFile)).Split("`n")
+                $lines = ([string](Get-ContentLF -path $srcFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                     if ($_ -eq "actionsRepo") {
                         $useBranch = $config.branch
@@ -322,7 +321,7 @@ try {
                 if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
                     $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)""`$4" }
                 }
-                $lines -join "`n" | Set-Content $dstFile -Force -NoNewline
+                [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
             }
             if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
                 Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
