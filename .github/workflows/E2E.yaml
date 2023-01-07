@@ -168,7 +168,7 @@ jobs:
           Write-Host "scenarios=$scenariosJson"
 
   Scenario:
-    runs-on: [ windows-latest ]
+    runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
