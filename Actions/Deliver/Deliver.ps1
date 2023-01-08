@@ -393,55 +393,57 @@ try {
             }
         }
         elseif ($deliveryTarget -eq "AppSource") {
-            EnsureAzStorageModule
-            $appSourceContextHt = $appSourceContext | ConvertFrom-Json | ConvertTo-HashTable
-            $authContext = New-BcAuthContext @appSourceContextHt
-
             $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/.AL-Go/settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
-            if ($projectSettings.ContainsKey("AppSourceMainAppFolder")) {
-                $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder
-            }
-            else {
-                try {
-                    $AppSourceMainAppFolder = $projectSettings.appFolders[0]
-                }
-                catch {
-                    throw "Unable to determine main App folder"
-                }
-            }
-            if (-not $projectSettings.ContainsKey('AppSourceProductId')) {
-                throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
-            }
-            Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
+            if ($projectSettings.ContainsKey('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery) {
+                EnsureAzStorageModule
+                $appSourceContextHt = $appSourceContext | ConvertFrom-Json | ConvertTo-HashTable
+                $authContext = New-BcAuthContext @appSourceContextHt
 
-            $mainAppJson = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/$AppSourceMainAppFolder/app.json") | ConvertFrom-Json
-            $mainAppVersion = [Version]$mainAppJson.Version
-            $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
-            $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
-            if ($artFolder.Count -eq 0) {
-                throw "Internal error - unable to locate apps"
+                if ($projectSettings.ContainsKey("AppSourceMainAppFolder")) {
+                    $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder
+                }
+                else {
+                    try {
+                        $AppSourceMainAppFolder = $projectSettings.appFolders[0]
+                    }
+                    catch {
+                        throw "Unable to determine main App folder"
+                    }
+                }
+                if (-not $projectSettings.ContainsKey('AppSourceProductId')) {
+                    throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
+                }
+                Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
+
+                $mainAppJson = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/$AppSourceMainAppFolder/app.json") | ConvertFrom-Json
+                $mainAppVersion = [Version]$mainAppJson.Version
+                $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
+                $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
+                if ($artFolder.Count -eq 0) {
+                    throw "Internal error - unable to locate apps"
+                }
+                if ($artFolder.Count -gt 1) {
+                    $artFolder | Out-Host
+                    throw "Internal error - multiple apps located"
+                }
+                $artfolder = $artfolder[0].FullName
+                $appFile = Get-ChildItem -path $artFolder | Where-Object { $_.name -like $mainAppFileName } | ForEach-Object { $_.FullName }
+                $libraryAppFiles = @(Get-ChildItem -path $artFolder | Where-Object { $_.name -notlike $mainAppFileName } | ForEach-Object { $_.FullName })
+                Write-Host "Main App File:"
+                Write-Host "- $([System.IO.Path]::GetFileName($appFile))"
+                Write-Host "Library App Files:"
+                if ($libraryAppFiles.Count -eq 0) {
+                    Write-Host "- None"
+                }
+                else {
+                    $libraryAppFiles | ForEach-Object { Write-Host "- $([System.IO.Path]::GetFileName($_))" }
+                }
+                if (-not $appFile) {
+                    throw "Unable to locate main app file ($mainAppFileName doesn't exist)"
+                }
+                Write-Host "Submitting to AppSource"
+                New-AppSourceSubmission -authContext $authContext -productId $projectSettings.AppSourceProductId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
             }
-            if ($artFolder.Count -gt 1) {
-                $artFolder | Out-Host
-                throw "Internal error - multiple apps located"
-            }
-            $artfolder = $artfolder[0].FullName
-            $appFile = Get-ChildItem -path $artFolder | Where-Object { $_.name -like $mainAppFileName } | ForEach-Object { $_.FullName }
-            $libraryAppFiles = @(Get-ChildItem -path $artFolder | Where-Object { $_.name -notlike $mainAppFileName } | ForEach-Object { $_.FullName })
-            Write-Host "Main App File:"
-            Write-Host "- $([System.IO.Path]::GetFileName($appFile))"
-            Write-Host "Library App Files:"
-            if ($libraryAppFiles.Count -eq 0) {
-                Write-Host "- None"
-            }
-            else {
-                $libraryAppFiles | ForEach-Object { Write-Host "- $([System.IO.Path]::GetFileName($_))" }
-            }
-            if (-not $appFile) {
-                throw "Unable to locate main app file ($mainAppFileName doesn't exist)"
-            }
-            Write-Host "Submitting to AppSource"
-            New-AppSourceSubmission -authContext $authContext -productId $projectSettings.AppSourceProductId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
         }
         else {
             throw "Internal error, no handler for $deliveryTarget"
