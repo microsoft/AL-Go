@@ -70,7 +70,6 @@ try {
         $projectList = $settings.projects | Where-Object { $_ -like $projects }
     }
     else {
-        Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer } | ForEach-Object { Write-Host $_.FullName }
         $projectList = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
         if (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE ".AL-Go") -PathType Container) {
             $projectList += @(".")
@@ -199,7 +198,7 @@ try {
             #Calculate the folders per artifact type
             'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
                 $artifactType = $_
-                $singleArtifactFilter = "*-$refname-$artifactType-*.*.*.*";
+                $singleArtifactFilter = "$project-$refname-$artifactType-*.*.*.*";
 
                 # Get the folder holding the artifacts from the standard build
                 $artifactFolder =  @(Get-ChildItem -Path (Join-Path $baseFolder $singleArtifactFilter) -Directory)
@@ -221,7 +220,7 @@ try {
                 }
 
                 # Get the folders holding the artifacts from all build modes
-                $multipleArtifactFilter = "*-$refname-*$artifactType-*.*.*.*";
+                $multipleArtifactFilter = "$project-$refname-*$artifactType-*.*.*.*";
                 $artifactFolders = @(Get-ChildItem -Path (Join-Path $baseFolder $multipleArtifactFilter) -Directory)
                 if ($artifactFolders.Count -gt 0) {
                     $parameters[$artifactType.ToLowerInvariant() + "Folders"] = $artifactFolders.FullName
@@ -234,7 +233,7 @@ try {
         elseif ($deliveryTarget -eq "GitHubPackages") {
             $githubPackagesCredential = $githubPackagesContext | ConvertFrom-Json
             'Apps' | ForEach-Object {
-                $folder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
+                $folder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($folder.Count -gt 1) {
                     $folder | Out-Host
                     throw "Internal error - multiple $_ folders located"
@@ -264,7 +263,7 @@ try {
             catch {
                 throw "NuGetContext secret is malformed. Needs to be formatted as Json, containing serverUrl and token as a minimum."
             }
-            $appsfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
+            $appsfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
             if ($appsFolder.Count -eq 0) {
                 throw "Internal error - unable to locate apps folder"
             }
@@ -272,12 +271,12 @@ try {
                 $appsFolder | Out-Host
                 throw "Internal error - multiple apps folders located"
             }
-            $testAppsFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-TestApps-*.*.*.*") | Where-Object { $_.PSIsContainer })
+            $testAppsFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-$refname-TestApps-*.*.*.*") | Where-Object { $_.PSIsContainer })
             if ($testAppsFolder.Count -gt 1) {
                 $testAppsFolder | Out-Host
                 throw "Internal error - multiple testApps folders located"
             }
-            $dependenciesFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
+            $dependenciesFolder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
             if ($dependenciesFolder.Count -gt 1) {
                 $dependenciesFolder | Out-Host
                 throw "Internal error - multiple dependencies folders located"
@@ -418,7 +417,7 @@ try {
             $mainAppJson = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/$AppSourceMainAppFolder/app.json") | ConvertFrom-Json
             $mainAppVersion = [Version]$mainAppJson.Version
             $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
-            $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "*-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
+            $artfolder = @(Get-ChildItem -Path (Join-Path $baseFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
             if ($artFolder.Count -eq 0) {
                 throw "Internal error - unable to locate apps"
             }
