@@ -7,6 +7,10 @@ on:
         description: App version to deliver to AppSource (current, prerelease, draft, latest or version number)
         required: false
         default: 'current'
+      projects:
+        description: Projects to publish to AppSource if the repository is multi-project. Default is *, which will publish all projects to AppSource.
+        required: false
+        default: '*'
       GoLive:
         description: Promote AppSource App to go live if it passes technical validation? (Y/N)
         required: false
@@ -77,7 +81,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           type: 'Release'
-          projects: '*'
+          projects: ${{ github.event.inputs.projects }}
           deliveryTarget: 'AppSource'
           artifacts: ${{ github.event.inputs.appVersion }}
           goLive: ${{ github.event.inputs.goLive }}
