@@ -482,7 +482,7 @@ jobs:
             $eventStr = Get-Content $ENV:GITHUB_EVENT_PATH -Encoding UTF8
             $eventStr | Out-Host
             $event = $eventStr | ConvertFrom-Json
-            $ref = "PR$($event.workflow_run.pull_requests[0].number)"
+            $ref = "PR$($event.workflow_run.id)"
           }
           else {
             $ref = "$ENV:GITHUB_REF_NAME".Replace('/','_')
