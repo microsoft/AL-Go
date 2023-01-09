@@ -60,22 +60,23 @@ function Test-ArtifactsFromRun {
             Write-Host "Number of tests was $actualNumberOfTests as expected and all tests passed"
         }
     }
-    Write-Host $folder
-    Write-Host (Get-Location).Path
+    $path = Join-Path (Get-Location).Path $folder -Resolve
+
     $expectedArtifacts | Out-Host
-    (Get-ChildItem -Path $folder -Recurse) | Out-Host
-    (Get-ChildItem -Path $folder -Recurse) | ForEach-Object {
+    (Get-ChildItem -Path $path -File -Recurse) | ForEach-Object {
         Write-Host $_.FullName
     }
-    Write-Host "Match '*-$($_)-$repoVersion.*.*/*$appVersion.*.*.app'"
 
     $expectedArtifacts.Keys | ForEach-Object {
         $expected = $expectedArtifacts."$_"
+        Write-Host "Key: $_"
         if ($_ -eq 'thisbuild') {
-            $actual = @(Get-ChildItem -Path (Join-Path $folder "thisbuild-*-Apps/*$appVersion.*.*.app")).Count
+            Write-Host "Match thisbuild-*-Apps?*$appVersion.*.*.app"
+            $actual = @(Get-ChildItem -Path $path -File | Where-Object { $_.FullName.Substring($path.Length) -like "thisbuild-*-Apps?*$appVersion.*.*.app" }).Count
         }
         else {
-            $actual = @(Get-ChildItem -Path (Join-Path $folder "*-$($_)-$repoVersion.*.*/*$appVersion.*.*.app")).Count
+            Write-Host "Match thisbuild-*-Apps?*$appVersion.*.*.app"
+            $actual = @(Get-ChildItem -Path $path -File | Where-Object { $_.FullName.SubString($path.Length) -like "*-$($_)-$repoVersion.*.*?*$appVersion.*.*.app" }).Count
         }
         if ($actual -ne $expected) {
             Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
