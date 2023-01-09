@@ -68,7 +68,7 @@ function Test-ArtifactsFromRun {
             $actual = @(Get-ChildItem -Path (Join-Path $folder "thisbuild-*-Apps/*$appVersion.*.*.app")).Count
         }
         else {
-            $actual = @(Get-ChildItem -Path (Join-Path "$folder "*-$($_)-$repoVersion.*.*/*$appVersion.*.*.app")).Count
+            $actual = @(Get-ChildItem -Path (Join-Path $folder "*-$($_)-$repoVersion.*.*/*$appVersion.*.*.app")).Count
         }
         if ($actual -ne $expected) {
             Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
