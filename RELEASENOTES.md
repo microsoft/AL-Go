@@ -6,6 +6,10 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue #312 Branching enhancements
 - Issue #229 Create Release action tags wrong commit
 - Issue #283 Create Release workflow uses deprecated actions
+- Issue #319 Support for AssignPremiumPlan
+
+### New Settings
+New Project setting: AssignPremiumPlan on user in container executing tests and when setting up local development environment
 
 ### Build modes support
 AL-Go projects can now be built in different modes, by specifying the _buildModes_ setting in AL-Go-Settings.json. Read more about build modes in the [Basic Repository settings](https://github.com/microsoft/AL-Go/blob/main/Scenarios/settings.md#basic-repository-settings).
