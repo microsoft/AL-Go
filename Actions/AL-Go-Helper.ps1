@@ -415,6 +415,7 @@ function ReadSettings {
         "failOn"                                 = "error"
         "treatTestFailuresAsWarnings"            = $false
         "rulesetFile"                            = ""
+        "assignPremiumPlan"                      = $false
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
         "doNotRunBcptTests"                      = $false
@@ -629,7 +630,10 @@ function AnalyzeRepo {
             $appJsonFile = Join-Path $folder "app.json"
             $bcptSuiteFile = Join-Path $folder "bcptSuite.json"
             $enumerate = $true
-            if (-not (Test-Path $folder -PathType Container)) {
+
+            # Check if there are any folders matching $folder
+            # Test-Path $folder -PathType Container will return false if any files matches $folder (beside folders)
+            if (-not ((Test-Path $folder) -and (Get-ChildItem $folder -Directory))) {
                 if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not exist" }
             }
             elseif (-not (Test-Path $appJsonFile -PathType Leaf)) {
