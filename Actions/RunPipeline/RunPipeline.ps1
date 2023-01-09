@@ -328,6 +328,7 @@ try {
         }
     }
 
+    "assignPremiumPlan",
     "doNotBuildTests",
     "doNotRunTests",
     "doNotRunBcptTests",
