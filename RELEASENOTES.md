@@ -7,6 +7,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue #229 Create Release action tags wrong commit
 - Issue #283 Create Release workflow uses deprecated actions
 - Issue #319 Support for AssignPremiumPlan
+- Issue #328 Allow multiple projects in AppSource App repo
 
 ### New Settings
 New Project setting: AssignPremiumPlan on user in container executing tests and when setting up local development environment
