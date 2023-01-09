@@ -71,6 +71,10 @@ try {
     else {
         $repoSettings = @{}
     }
+    $unusedALGoSystemFiles = @()
+    if ($repoSettings.ContainsKey("unusedALGoSystemFiles")) {
+        $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
+    }
 
     # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
     $updateSettings = $true
@@ -135,6 +139,8 @@ try {
 
     # $updateFiles will hold an array of files, which needs to be updated
     $updateFiles = @()
+    # $removeFiles will hold an array of files, which needs to be removed
+    $removeFiles = @()
 
     # If useProjectDependencies is true, we need to calculate the dependency depth for all projects
     # Dependency depth determines how many build jobs we need to run sequentially
@@ -309,9 +315,13 @@ try {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
-
                 $dstFile = Join-Path $dstFolder $fileName
-                if (Test-Path -Path $dstFile -PathType Leaf) {
+                if ($unusedALGoSystemFiles -contains $fileName) {
+                    if (Test-Path -Path $dstFile -PathType Leaf) {
+                        $removeFiles += @(Join-Path $dstPath $filename)
+                    }
+                }
+                elseif (Test-Path -Path $dstFile -PathType Leaf) {
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {
@@ -327,7 +337,6 @@ try {
             }
         }
     }
-    $removeFiles = @()
 
     if (-not $update) {
         # $update not set, just issue a warning in the CI/CD workflow that updates are available
