@@ -61,29 +61,17 @@ function Test-ArtifactsFromRun {
         }
     }
     $path = Join-Path (Get-Location).Path $folder -Resolve
-
-    $expectedArtifacts | Out-Host
-    (Get-ChildItem -Path $path -File -Recurse) | ForEach-Object {
-        Write-Host $_.FullName
-    }
-
     $expectedArtifacts.Keys | ForEach-Object {
         $type = $_
         $expected = $expectedArtifacts."$type"
         Write-Host "Type: $type, Expected: $expected"
         if ($type -eq 'thisbuild') {
-            Write-Host "Match thisbuild-*-Apps?*$appVersion.*.*.app"
             $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object { 
-                Write-Host $_.FullName.SubString($path.Length+1)
-                Write-Host $_.FullName.Substring($path.Length+1) -like "thisbuild-*-Apps?*$appVersion.*.*.app"
                 $_.FullName.Substring($path.Length+1) -like "thisbuild-*-Apps?*$appVersion.*.*.app"
             }).Count
         }
         else {
-            Write-Host "Match *-$type-$repoVersion.*.*?*$appVersion.*.*.app"
             $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
-                Write-Host $_.FullName.SubString($path.Length+1)
-                Write-Host $_.FullName.SubString($path.Length+1) -like "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
                 $_.FullName.SubString($path.Length+1) -like "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
             }).Count
         }
