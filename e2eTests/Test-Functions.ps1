@@ -39,7 +39,7 @@ function Test-ArtifactsFromRun {
         $actualNumberOfTests = 0
         $actualNumberOfErrors = 0
         $actualNumberOfFailures = 0
-        Get-Item "$folder\*-TestResults*\TestResults.xml" | ForEach-Object {
+        Get-Item (Join-Path $folder "*-TestResults*/TestResults.xml") | ForEach-Object {
             [xml]$testResults = Get-Content $_.FullName -encoding UTF8
             @($testresults.testsuites.testsuite) | ForEach-Object {
                 $actualNumberOfTests += $_.tests
@@ -60,8 +60,10 @@ function Test-ArtifactsFromRun {
             Write-Host "Number of tests was $actualNumberOfTests as expected and all tests passed"
         }
     }
+    Write-Host $folder
+    Write-Host (Get-Location).Path
     $expectedArtifacts | Out-Host
-    Get-ChildItem -Path $folder | Out-Host
+    (Get-ChildItem -Path $folder) | Out-Host
     $expectedArtifacts.Keys | ForEach-Object {
         $expected = $expectedArtifacts."$_"
         if ($_ -eq 'thisbuild') {
