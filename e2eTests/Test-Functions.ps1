@@ -63,7 +63,10 @@ function Test-ArtifactsFromRun {
     Write-Host $folder
     Write-Host (Get-Location).Path
     $expectedArtifacts | Out-Host
-    (Get-ChildItem -Path $folder) | Out-Host
+    (Get-ChildItem -Path $folder -Recurse) | Out-Host
+    (Get-ChildItem -Path $folder -Recurse) | ForEach-Object {
+        Write-Host $_.FullName
+    }
     $expectedArtifacts.Keys | ForEach-Object {
         $expected = $expectedArtifacts."$_"
         if ($_ -eq 'thisbuild') {
