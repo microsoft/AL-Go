@@ -67,6 +67,8 @@ function Test-ArtifactsFromRun {
     (Get-ChildItem -Path $folder -Recurse) | ForEach-Object {
         Write-Host $_.FullName
     }
+    Write-Host "Match '*-$($_)-$repoVersion.*.*/*$appVersion.*.*.app'"
+
     $expectedArtifacts.Keys | ForEach-Object {
         $expected = $expectedArtifacts."$_"
         if ($_ -eq 'thisbuild') {
