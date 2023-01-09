@@ -72,11 +72,11 @@ function Test-ArtifactsFromRun {
         Write-Host "Key: $_"
         if ($_ -eq 'thisbuild') {
             Write-Host "Match thisbuild-*-Apps?*$appVersion.*.*.app"
-            $actual = @(Get-ChildItem -Path $path -File | Where-Object { $_.FullName.Substring($path.Length) -like "thisbuild-*-Apps?*$appVersion.*.*.app" }).Count
+            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object { $_.FullName.Substring($path.Length) -like "thisbuild-*-Apps?*$appVersion.*.*.app" }).Count
         }
         else {
             Write-Host "Match *-$($_)-$repoVersion.*.*?*$appVersion.*.*.app"
-            $actual = @(Get-ChildItem -Path $path -File | Where-Object { Write-Host $_.FullName.SubString($path.Length); $_.FullName.SubString($path.Length) -like "*-$($_)-$repoVersion.*.*?*$appVersion.*.*.app" }).Count
+            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object { Write-Host $_.FullName.SubString($path.Length); $_.FullName.SubString($path.Length) -like "*-$($_)-$repoVersion.*.*?*$appVersion.*.*.app" }).Count
         }
         if ($actual -ne $expected) {
             Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
