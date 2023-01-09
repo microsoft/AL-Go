@@ -10,6 +10,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 
 ### New Settings
 New Project setting: AssignPremiumPlan on user in container executing tests and when setting up local development environment
+New Repo setting: unusedALGoSystemFiles is an array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed. Use with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional.
 
 ### Build modes support
 AL-Go projects can now be built in different modes, by specifying the _buildModes_ setting in AL-Go-Settings.json. Read more about build modes in the [Basic Repository settings](https://github.com/microsoft/AL-Go/blob/main/Scenarios/settings.md#basic-repository-settings).
