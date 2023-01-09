@@ -76,6 +76,9 @@ function Test-ArtifactsFromRun {
             Write-Host "Number of $_ was $actual as expected"
         }
     }
+    if ($err) {
+        throw "Testing artifacts from run failed"
+    }
 }
 
 function Test-PropertiesInJsonFile {
