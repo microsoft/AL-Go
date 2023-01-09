@@ -60,6 +60,8 @@ function Test-ArtifactsFromRun {
             Write-Host "Number of tests was $actualNumberOfTests as expected and all tests passed"
         }
     }
+    $expectedArtifacts | Out-Host
+    Get-ChildItem -Path $folder | Out-Host
     $expectedArtifacts.Keys | ForEach-Object {
         $expected = $expectedArtifacts."$_"
         if ($_ -eq 'thisbuild') {
