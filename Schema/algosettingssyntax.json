@@ -1,41 +1,218 @@
 {
     "$id": "AL-Go for GitHub Repo Settings File",
     "$schema": "http://json-schema.org/draft-07/schema",
-    "description": "schema for AL-Go for GitHub Repo Settings File",
+    "description": "schema for AL-Go for GitHub Project Settings File",
     "type": "object",
     "properties": {
         "country": {
             "type": "string",
             "examples": [ "us", "w1", "base", "at", "au", "be", "bg", "br", "ca", "ch", "co", "cz", "de", "dk", "ee", "es", "fi", "fr", "gb", "gr", "hk", "hr", "hu", "ie", "in", "is", "it", "jp", "kr", "lt", "lv", "mx", "nl", "no", "nz", "pe", "ph", "pl", "pt", "ro", "rs", "se", "si", "sk", "th", "tr", "tw", "ua", "vn" ],
-            "description": "Country version of Business Central used. See https://aka.ms/ALGoSettings#country"
-        },
-        "appSourceCopMandatoryAffixes": {
-            "type": "array",
-            "items": {
-                "type": "string"
-            },
-            "description": "An array of affixes, which is used for running AppSource Cop. See https://aka.ms/ALGoSettings#appsourcecopmandatoryaffixes"
+            "description": "Project Setting. Country version of Business Central used. See https://aka.ms/ALGoSettings#country"
         },
         "appFolders": {
             "type": "array",
             "items": {
                 "type": "string"
             },
-            "description": "An array of folders containing apps. See https://aka.ms/ALGoSettings#appfolders"
+            "description": "Project Setting. An array of folders containing apps. See https://aka.ms/ALGoSettings#appfolders"
         },
         "testFolders": {
             "type": "array",
             "items": {
                 "type": "string"
             },
-            "description": "An array of folders containing test apps. See https://aka.ms/ALGoSettings#testfolders"
+            "description": "Project Setting. An array of folders containing test apps. See https://aka.ms/ALGoSettings#testfolders"
         },
         "bcptTestFolders": {
             "type": "array",
             "items": {
                 "type": "string"
             },
-            "description": "An array of folders containing BCPT test apps. See https://aka.ms/ALGoSettings#bcpttestfolders"
-        }
+            "description": "Project Setting. An array of folders containing BCPT test apps. See https://aka.ms/ALGoSettings#bcpttestfolders"
+        },
+        "artifact": {
+            "type": "string",
+            "description": "Project Setting. The Business Central Artifacts to use during build. By default the artifacts are calculated based on Application Dependency and Country. See https://aka.ms/ALGoSettings#artifact"
+        },
+        "companyName": {
+            "type": "string",
+            "description": "Project Setting. The company name to use when running tests during CI/CD. See https://aka.ms/ALGoSettings#companyname"
+        },
+        "versioningStrategy": {
+            "type": "integer",
+            "examples": [ 0, 2, 16, 18 ],
+            "description": "Project Setting. The versioning strategy to use when building apps in CI/CD. See https://aka.ms/ALGoSettings#versioningstrategy"
+        },
+        "runNumberOffset": {
+            "type": "integer",
+            "description": "Project Setting. An offset, which is added to the GitHub RUN_NUMBER to compose the build number of the build. See https://aka.ms/ALGoSettings#runnumberoffset"
+        },
+        "keyVaultName": {
+            "type": "string",
+            "description": "Project Setting. When using an Azure KeyVault for secrets, you can specify the name of the KeyVault in settings and/or in the AZURE_CREDENTIALS secret. See https://aka.ms/ALGoSettings#keyvaultname"
+        },
+        "additionalCountries": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "examples": [ "us", "w1", "base", "at", "au", "be", "bg", "br", "ca", "ch", "co", "cz", "de", "dk", "ee", "es", "fi", "fr", "gb", "gr", "hk", "hr", "hu", "ie", "in", "is", "it", "jp", "kr", "lt", "lv", "mx", "nl", "no", "nz", "pe", "ph", "pl", "pt", "ro", "rs", "se", "si", "sk", "th", "tr", "tw", "ua", "vn" ],
+            },
+            "description": "Project Setting. An array of additional countries to use when building apps in CI/CD. See https://aka.ms/ALGoSettings#additionalcountries"
+        },
+        "installApps": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Project Setting. An array of apps to install (file or folder names or direct download URLs), when running tests in CI/CD. See https://aka.ms/ALGoSettings#installApps"
+        },
+        "installTestApps": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Project Setting. An array of apps to install (file or folder names or direct download URLs), when building apps CI/CD. See https://aka.ms/ALGoSettings#installTestApps"
+        },
+        "installOnlyReferencedApps": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, only dependency apps referenced by apps or test apps being build in the repository will be installed. See https://aka.ms/ALGoSettings#installOnlyReferencedApps"
+        },
+        "generateDependencyArtifact": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, an artifact with all dependencies used when building apps will be generated in the repository during CI/CD. See https://aka.ms/ALGoSettings#generateDependencyArtifact"
+        },
+        "skipUpgrade": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the upgrade step will be skipped during CI/CD. See https://aka.ms/ALGoSettings#skipUpgrade"
+        },
+        "doNotBuildTests": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the test apps will not be built during CI/CD. See https://aka.ms/ALGoSettings#doNotBuildTests"
+        },
+        "doNotRunTests": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the test apps will not be run during CI/CD. See https://aka.ms/ALGoSettings#doNotRunTests"
+        },
+        "doNotRunBcptTests": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the BCPT test apps will not be run during CI/CD. See https://aka.ms/ALGoSettings#doNotRunBcptTests"
+        },
+        "doNotPublishApps": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the apps will not be published during CI/CD. See https://aka.ms/ALGoSettings#doNotPublishApps"
+        },
+        "doNotSignApps": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the apps will not be signed during CI/CD. See https://aka.ms/ALGoSettings#doNotSignApps"
+        },
+        "applicationDependency": {
+            "type": "string",
+            "pattern": "^[0-9]+.[0-9]+.[0-9]+.[0-9]+$",
+            "description": "Project Setting. The minimum application dependency to use when building apps in CI/CD. If not specified the minimum application dependency in all apps will be used. See https://aka.ms/ALGoSettings#applicationDependency"
+        },
+        "updateDependencies": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the dependencies of apps will be updated to the actual version used during CI/CD. See https://aka.ms/ALGoSettings#updateDependencies"
+        },
+        "installTestRunner": {
+            "type": "boolean",
+            "description": "Project Setting. This value is automatically calculated. When set to true, the test runner will be installed during CI/CD. See https://aka.ms/ALGoSettings#installTestRunner"
+        },
+        "installTestFramework": {
+            "type": "boolean",
+            "description": "Project Setting. This value is automatically calculated. When set to true, the test framework will be installed during CI/CD. See https://aka.ms/ALGoSettings#installTestFramework"
+        },
+        "installTestLibraries": {
+            "type": "boolean",
+            "description": "Project Setting. This value is automatically calculated. When set to true, the test libraries will be installed during CI/CD. See https://aka.ms/ALGoSettings#installTestLibraries"
+        },
+        "installPerformanceToolkit": {
+            "type": "boolean",
+            "description": "Project Setting. This value is automatically calculated. When set to true, the performance test toolkit will be installed during CI/CD. See https://aka.ms/ALGoSettings#installPerformanceToolkit"
+        },
+        "enableAppSourceCop": {
+            "type": "boolean",
+            "description": "Project Setting. This value will be automatically set to true in AppSource App repositories. When set to true, AppSourceCop will be enabled during CI/CD. See https://aka.ms/ALGoSettings#enableAppSourceCop"
+        },
+        "enablePerTenantExtensionCop": {
+            "type": "boolean",
+            "description": "Project Setting. This value will be automatically set to true in PTE repositories. When set to true, PerTenantExtensionCop will be enabled during CI/CD. See https://aka.ms/ALGoSettings#enablePerTenantExtensionCop"
+        },
+        "enableCodeCop": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, CodeCop will be enabled during CI/CD. See https://aka.ms/ALGoSettings#enableCodeCop"
+        },
+        "enableUICop": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, UICop will be enabled during CI/CD. See https://aka.ms/ALGoSettings#enableUICop"
+        },
+        "assignPremiumPlan": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, the Premium plan will be assigned to the environment during CI/CD. See https://aka.ms/ALGoSettings#assignPremiumPlan"
+        },
+        "customCodeCops": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Project Setting. An array of custom CodeCop assemblies to use during CI/CD. See https://aka.ms/ALGoSettings#customCodeCops"
+        },
+        "failon": {
+            "enum": [
+                "None",
+                "Error",
+                "Warning"
+            ],
+            "description": "Project Setting. An array of warnings and errors to fail on during CI/CD. See https://aka.ms/ALGoSettings#failon"
+        },
+        "treatTestFailuresAsWarnings": {
+            "type": "boolean",
+            "description": "Project Setting. When set to true, test failures will be treated as warnings instead of errors during CI/CD. See https://aka.ms/ALGoSettings#treatTestFailuresAsWarnings"
+        }, 
+        "rulesetFile": {
+            "type": "string",
+            "description": "Project Setting. The path to a code analyzer ruleset file to use during CI/CD. See https://aka.ms/ALGoSettings#rulesetFile"
+        },
+        "configPackages": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Project Setting. An array of config packages to upload, import and apply during CI/CD. See https://aka.ms/ALGoSettings#configPackages"
+        },
+        "appSourceMainAppFolder": {
+            "type": "string",
+            "description": "Project Setting. Only relevant in AppSource App repositories. The folder name of the main app in this project. See https://aka.ms/ALGoSettings#appSourceMainAppFolder"
+        },
+        "appSourceProductId": {
+            "type": "string",
+            "description": "Project Setting. Only relevant in AppSource App repositories. The AppSource Product id of the main app in this project. See https://aka.ms/ALGoSettings#appSourceProductId"
+        },
+        "appSourceCopMandatoryAffixes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Project Setting. Only relevant in AppSource App repositories. An array of affixes used in the apps in this project. See https://aka.ms/ALGoSettings#appSourceCopMandatoryAffixes"
+        },
+        "conditionalSettings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "branches": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Project Setting. Branches for which these settings should be applied. See https://aka.ms/ALGoSettings#conditionalSettings"
+                    },
+                    "settings": {
+                        "type": "object",
+                        "$ref": "#"
+                    }
+                }
+            },
+            "description": "Project Setting. An array of settings to apply for specific branches. See https://aka.ms/ALGoSettings#conditionalSettings"
     }
 }

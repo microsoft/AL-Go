@@ -2,7 +2,7 @@
     "$id": "AL-Go for GitHub Repo Settings File",
     "$schema": "http://json-schema.org/draft-07/schema",
     "title": "AL-Go for GitHub Repo Settings File",
-    "description": "schema for AL-Go for GitHub Repo Settings File",
+    "description": "Schema for AL-Go for GitHub Repo Settings File",
     "type": "object",
     "properties": {
         "type": {
@@ -10,11 +10,11 @@
                 "PTE",
                 "AppSource App"
             ],
-            "description": "Specifies the type of project. See https://aka.ms/ALGoSettings#type"
+            "description": "Repo Setting. Specifies the type of project. See https://aka.ms/ALGoSettings#type"
         },
         "templateUrl": {
             "type": "string",
-            "description": "URL to the GitHub repository template for this repository. See https://aka.ms/ALGoSettings#templateUrl"
+            "description": "Repo Setting. URL to the GitHub repository template for this repository. See https://aka.ms/ALGoSettings#templateUrl"
         },
         "runs-on": {
             "type": "string",
@@ -23,14 +23,14 @@
                 "self-hosted",
                 "ubuntu-latest"
             ],
-            "description": "Specifies which GitHub runner is used to run non-build jobs. See https://aka.ms/ALGoSettings#runs-on"
+            "description": "Repo Setting. Specifies which GitHub runner is used to run non-build jobs. See https://aka.ms/ALGoSettings#runs-on"
         },
         "shell": {
             "enum": [
                 "powershell",
                 "pwsh"
             ],
-            "description": "Specifies the shell to use for non-build jobs. See https://aka.ms/ALGoSettings#shell"
+            "description": "Repo Setting. Specifies the shell to use for non-build jobs. See https://aka.ms/ALGoSettings#shell"
         },
         "githubRunner": {
             "type": "string",
@@ -38,18 +38,18 @@
                 "windows-latest",
                 "self-hosted"
             ],
-            "description": "Specifies which GitHub runner is used to run build jobs. See https://aka.ms/ALGoSettings#githubRunner"
+            "description": "Repo Setting. Specifies which GitHub runner is used to run build jobs. See https://aka.ms/ALGoSettings#githubRunner"
         },
         "githubRunnerShell": {
             "enum": [
                 "powershell",
                 "pwsh"
             ],
-            "description": "Specifies the shell to use for build jobs. See https://aka.ms/ALGoSettings#githubRunnerShell"
+            "description": "Repo Setting. Specifies the shell to use for build jobs. See https://aka.ms/ALGoSettings#githubRunnerShell"
         },
         "useProjectDependencies": {
             "type": "boolean",
-            "description": "Specifies whether the project dependencies should be used to setup multi-stage build jobs. See https://aka.ms/ALGoSettings#useProjectDependencies"
+            "description": "Repo Setting. Specifies whether the project dependencies should be used to setup multi-stage build jobs. See https://aka.ms/ALGoSettings#useProjectDependencies"
         },
         "currentSchedule": {
             "type": "string",
@@ -57,7 +57,7 @@
                 "0 22 * * 1,2,3,4,5",
                 "0 1 * * *"
             ],
-            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#currentSchedule"
+            "description": "Repo Setting. Specifies the schedule for the next major test builds in crontab format (see https://crontab.guru/). Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#currentSchedule"
         },
         "nextMinorSchedule": {
             "type": "string",
@@ -65,7 +65,7 @@
                 "0 22 * * 6",
                 "0 1 * * *"
             ],
-            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#nextMinorSchedule"
+            "description": "Repo Setting. Specifies the schedule for the next major test builds in crontab format (see https://crontab.guru/). Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#nextMinorSchedule"
         },
         "nextMajorSchedule": {
             "type": "string",
@@ -73,7 +73,99 @@
                 "0 22 * * 0",
                 "0 1 * * *"
             ],
-            "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#nextMajorSchedule"
+            "description": "Repo Setting. Specifies the schedule for the next major test builds in crontab format (see https://crontab.guru/). Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#nextMajorSchedule"
+        },
+        "CICDSchedule": {
+            "type": "string",
+            "examples": [
+                "0 22 * * 0",
+                "0 1 * * *"
+            ],
+            "description": "Repo Setting. Specifies the schedule for the next major test builds in crontab format (see https://crontab.guru/). Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#CICDSchedule"
+        },
+        "UpdateGitHubGoSystemFilesSchedule": {
+            "type": "string",
+            "examples": [
+                "0 21 * * *"
+            ],
+            "description": "Repo Setting. Set a schedule for running Update AL-Go System Files recurringly (Auto-Update) in crontab format (see https://crontab.guru/). Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#updateGitHubGoSystemFilesSchedule"
+        },
+        "unusedALGoSystemFiles": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Repo Setting. An array of filenames for unused AL-Go System Files. See https://aka.ms/ALGoSettings#unusedALGoSystemFiles"
+        },
+        "projects": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Repo Setting. An array of project folders. By Default AL-Go for GitHub will enumerate all folders from the root and 2 levels deep to discover projects. See https://aka.ms/ALGoSettings#projects"
+        },
+        "repoVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+.[0-9]+$",
+            "description": "Repo Setting. The Repository Version Number (Major.Minor). Repository version number will be part of build artifacts naming. See https://aka.ms/ALGoSettings#repoVersion"
+        },
+        "repoName": {
+            "type": "string",
+            "description": "Repo Setting. The Repository Name (to override the actual repository name in artifacts naming). See https://aka.ms/ALGoSettings#repoName"
+        },
+        "environments": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Repo Setting. An array of environments to use for Deployment. Environments can also be specified in GitHub Environments. See https://aka.ms/ALGoSettings#environments"
+        },
+        "CICDPushBranches": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Repo Setting. An array of branches, which will trigger a CI/CD workflow to be run after commit. See https://aka.ms/ALGoSettings#CICDPushBranches"
+        },
+        "CICDPullRequestBranches": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Repo Setting. An array of branches, which will trigger a CI/CD workflow to be run after a pull request is created. See https://aka.ms/ALGoSettings#CICDPullRequestBranches"
+        },
+        "buildModes": {
+            "type": "array",
+            "items": {
+                "enum": [
+                    "Clean",
+                    "Default",
+                    "Translated"
+                ]
+            },
+            "description": "Repo Setting. An array of build modes. See https://aka.ms/ALGoSettings#buildModes"
+        },
+        "cacheImageName": {
+            "type": "string",
+            "description": "Repo Setting. The prefix of the Docker image to use for caching on self-hosted GitHub Runners. Default is 'my'. See https://aka.ms/ALGoSettings#cacheImageName"
+        },
+        "cacheKeepDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365,
+            "description": "Repo Setting. The number of days to keep an unused Docker image for caching on self-hosted GitHub Runners. Default is 3. See https://aka.ms/ALGoSettings#cacheKeepDays"
+        },
+        "alwaysBuildAllProjects": {
+            "type": "boolean",
+            "description": "Repo Setting. Specifies whether all projects should be built even if there are no changes. See https://aka.ms/ALGoSettings#alwaysBuildAllProjects"
+        },
+        "partnerTelemetryConnectionString": {
+            "type": "string",
+            "description": "Repo Setting. Specifies the connection string for your application insights account to capture telemetry for your AL-Go repositories. See https://aka.ms/ALGoSettings#partnerTelemetryConnectionString"
+        },
+        "sendExtendedTelemetryToMicrosoft": {
+            "type": "boolean",
+            "description": "Repo Setting. Specifies whether extended telemetry should be sent to Microsoft for troubleshooting purposes. See https://aka.ms/ALGoSettings#sendExtendedTelemetryToMicrosoft"
         }
     },
     "required": [ "type", "templateUrl" ]
