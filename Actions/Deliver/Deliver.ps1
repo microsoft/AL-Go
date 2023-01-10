@@ -398,7 +398,7 @@ try {
             $appSourceContextHt = $appSourceContext | ConvertFrom-Json | ConvertTo-HashTable
             $authContext = New-BcAuthContext @appSourceContextHt
 
-            $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/.AL-Go/settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+            $projectSettings = AnalyzeRepo -settings $settings -baseFolder $ENV:GITHUB_WORKSPACE -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
             if ($projectSettings.ContainsKey("AppSourceMainAppFolder")) {
                 $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder
             }
