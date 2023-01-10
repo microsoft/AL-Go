@@ -185,7 +185,7 @@ try {
         if (Test-Path $customScript -PathType Leaf) {
             Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
             
-            $projectSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE "$thisProject/.AL-Go/settings.json") | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+            $projectSettings = AnalyzeRepo -settings $settings -baseFolder $ENV:GITHUB_WORKSPACE -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
             $parameters = @{
                 "Project" = $thisProject
                 "ProjectName" = $projectName
