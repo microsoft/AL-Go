@@ -7,6 +7,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue #229 Create Release action tags wrong commit
 - Issue #283 Create Release workflow uses deprecated actions
 - Issue #319 Support for AssignPremiumPlan
+- Issue #344 Deliver To AppSource on finding app.json for the app
 - Issue #345 LocalDevEnv.ps1 can't Dowload the file license file
 
 ### New Settings
