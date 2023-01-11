@@ -316,12 +316,15 @@ try {
                 }
 
                 $dstFile = Join-Path $dstFolder $fileName
+                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 if ($unusedALGoSystemFiles -contains $fileName) {
-                    if (Test-Path -Path $dstFile -PathType Leaf) {
+                    # file is not used by ALGo, remove it if it exists
+                    # do not add it to $updateFiles if it does not exist
+                    if ($dstFileExists) {
                         $removeFiles += @(Join-Path $dstPath $filename)
                     }
                 }
-                elseif (Test-Path -Path $dstFile -PathType Leaf) {
+                elseif ($dstFileExists) {
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {
