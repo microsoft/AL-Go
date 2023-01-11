@@ -112,7 +112,8 @@ if (-not $licenseFileUrl) {
         -title "LicenseFileUrl" `
         -description $description `
         -question "Local path or a secure download URL to license file " `
-        -default $default
+        -default $default `
+        -doNotConvertToLower
 
     if ($licenseFileUrl -eq "none") {
         $licenseFileUrl = ""
