@@ -166,7 +166,7 @@ jobs:
           if ($project -eq ".") { $project = $settings.repoName }
           'TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
             $name = "$($_)ArtifactsName"
-            $value = "$($project.Replace('\','_'))-$_-NextMinor-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
+            $value = "$($project.Replace('\','_').Replace('/','_'))-$_-NextMinor-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
             Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
           }

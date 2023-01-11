@@ -480,7 +480,7 @@ function DownloadRelease {
         "Authorization" = "token $token"
     }
     $projects.Split(',') | ForEach-Object {
-        $project = $_.Replace('\','_')
+        $project = $_.Replace('\','_').Replace('/','_')
         Write-Host "project '$project'"
         
         $release.assets | Where-Object { $_.name -like "$project-*-$mask-*.zip" -or $_.name -like "$project-$mask-*.zip" } | ForEach-Object {
@@ -601,7 +601,7 @@ function GetArtifacts {
         $result = @()
         $allArtifactsFound = $true
         $projects.Split(',') | ForEach-Object {
-            $project = $_.Replace('\','_')
+            $project = $_.Replace('\','_').Replace('/','_')
             Write-Host "project '$project'"
             $projectArtifact = $allArtifacts | Where-Object { $_.name -like "$project-$branch-$mask-$version" } | Select-Object -First 1
             if ($projectArtifact) {

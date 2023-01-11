@@ -205,7 +205,7 @@ try {
                 Write-Host "BuildOrderDepth=$($buildOrder.Count)"
             }
         }
-        if (Test-Path ".AL-Go" -PathType Container) {
+        if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
             $buildProjects += @(".")
         }
         if ($buildProjects.Count -eq 1) {

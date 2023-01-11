@@ -39,7 +39,7 @@ function Test-ArtifactsFromRun {
         $actualNumberOfTests = 0
         $actualNumberOfErrors = 0
         $actualNumberOfFailures = 0
-        Get-Item "$folder\*-TestResults*\TestResults.xml" | ForEach-Object {
+        Get-Item (Join-Path $folder "*-TestResults*/TestResults.xml") | ForEach-Object {
             [xml]$testResults = Get-Content $_.FullName -encoding UTF8
             @($testresults.testsuites.testsuite) | ForEach-Object {
                 $actualNumberOfTests += $_.tests
@@ -60,13 +60,20 @@ function Test-ArtifactsFromRun {
             Write-Host "Number of tests was $actualNumberOfTests as expected and all tests passed"
         }
     }
+    $path = Join-Path (Get-Location).Path $folder -Resolve
     $expectedArtifacts.Keys | ForEach-Object {
-        $expected = $expectedArtifacts."$_"
-        if ($_ -eq 'thisbuild') {
-            $actual = @(Get-ChildItem -Path "$folder\thisbuild-*-Apps\*$appVersion.*.*.app").Count
+        $type = $_
+        $expected = $expectedArtifacts."$type"
+        Write-Host "Type: $type, Expected: $expected"
+        if ($type -eq 'thisbuild') {
+            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object { 
+                $_.FullName.Substring($path.Length+1) -like "thisbuild-*-Apps?*$appVersion.*.*.app"
+            }).Count
         }
         else {
-            $actual = @(Get-ChildItem -Path "$folder\*-$($_)-$repoVersion.*.*\*$appVersion.*.*.app").Count
+            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
+                $_.FullName.SubString($path.Length+1) -like "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
+            }).Count
         }
         if ($actual -ne $expected) {
             Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
@@ -75,6 +82,9 @@ function Test-ArtifactsFromRun {
         else {
             Write-Host "Number of $_ was $actual as expected"
         }
+    }
+    if ($err) {
+        throw "Testing artifacts from run failed"
     }
 }
 
