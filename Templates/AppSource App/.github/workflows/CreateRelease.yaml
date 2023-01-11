@@ -108,7 +108,7 @@ jobs:
           $projects | ForEach-Object {
             $thisProject = $_
             if ($thisProject -and ($thisProject -ne '.')) {
-              $project = $thisProject.Replace('\','_')
+              $project = $thisProject.Replace('\','_').Replace('/','_')
             }
             else {
               $project = $env:repoName

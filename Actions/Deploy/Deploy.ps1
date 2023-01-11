@@ -49,7 +49,7 @@ try {
     if ($artifacts -like "$($ENV:GITHUB_WORKSPACE)*") {
         if (Test-Path $artifacts -PathType Container) {
             $projects.Split(',') | ForEach-Object {
-                $project = $_.Replace('\','_')
+                $project = $_.Replace('\','_').Replace('/','_')
                 $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
                 Write-Host "project '$project'"
                 $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-$refname-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
