@@ -112,6 +112,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="doNotRunBcptTests"></a>doNotRunBcptTests | This setting forces the pipeline to NOT run the performance tests in testFolders. Performance tests are still being built and published. Note this setting can be set in a workflow specific settings file to only apply to that workflow | false |
 | <a id="memoryLimit"></a>memoryLimit | Specifies the memory limit for the build container. By default, this is left to BcContainerHelper to handle and will currently be set to 8G | 8G |
 | <a id="BcContainerHelperVersion"></a>BcContainerHelperVersion | This setting can be set to a specific version (ex. 3.0.8) of BcContainerHelper to force AL-Go to use this version. **latest** means that AL-Go will use the latest released version. **preview** means that AL-Go will use the latest preview version. **dev** means that AL-Go will use the dev branch of containerhelper. | latest (or preview for AL-Go preview) |
+| <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | [ ] |
 
 # Expert level
 
