@@ -1583,6 +1583,7 @@ function CreateDevEnv {
             }
         }
         
+        "assignPremiumPlan",
         "installTestRunner",
         "installTestFramework",
         "installTestLibraries",
