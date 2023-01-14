@@ -1240,14 +1240,12 @@ function Enter-Value {
         }
     } while (-not ($answer))
 
+    if ($trimQuotesAndSpaces) {
+        $answer = $answer.trim(@('"',"'",' '))
+    }
     Write-Host -ForegroundColor Green "$answer selected"
     Write-Host
-    if ($trimQuotesAndSpaces) {
-        $answer.trim(@('"',"'",' '))
-    }
-    else {
-        $answer
-    }
+    $answer
 }
 
 function OptionallyConvertFromBase64 {
