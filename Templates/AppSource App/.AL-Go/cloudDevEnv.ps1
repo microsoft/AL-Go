@@ -59,7 +59,8 @@ if (-not $environmentName) {
     $environmentName = Enter-Value `
         -title "Environment name" `
         -question "Please enter the name of the environment to create" `
-        -default "$($env:USERNAME)-sandbox"
+        -default "$($env:USERNAME)-sandbox" `
+        -trimQuotesAndSpaces
 }
 
 if (-not $PSBoundParameters.ContainsKey('reuseExistingEnvironment')) {

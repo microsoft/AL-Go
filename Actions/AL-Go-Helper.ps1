@@ -1187,7 +1187,8 @@ function Enter-Value {
         [Parameter(Mandatory=$true)]
         [string] $question,
         [switch] $doNotConvertToLower,
-        [switch] $previousStep
+        [switch] $previousStep,
+        [switch] $trimQuotesAndSpaces
     )
 
     if ($title) {
@@ -1241,7 +1242,12 @@ function Enter-Value {
 
     Write-Host -ForegroundColor Green "$answer selected"
     Write-Host
-    $answer
+    if ($trimQuotesAndSpaces) {
+        $answer.trim(@('"',"'",' '))
+    }
+    else {
+        $answer
+    }
 }
 
 function OptionallyConvertFromBase64 {
