@@ -34,10 +34,6 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    if ($project  -eq ".") { $project = "" }
-
-    $projectFolder = Join-Path $baseFolder $project
-   
     $settings = ReadSettings -baseFolder $baseFolder -project $project
     if ($get) {
         $getSettings = $get.Split(',').Trim()
