@@ -169,10 +169,10 @@ try {
                     Write-Host "Modified files:"
                     $filesChanged | Out-Host
                     $buildProjects = @($projects | Where-Object {
-                        $project = $_
+                        $checkProject = $_
                         $buildProject = $false
-                        if (Test-Path -path (Join-Path $baseFolder "$project/.AL-Go/settings.json")) {
-                            $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
+                        if (Test-Path -path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
+                            $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -token $token -includeAlGoFolder -includeApps -includeTestApps
                             $projectFolders | ForEach-Object {
                                 if ($filesChanged -like "$_/*") { $buildProject = $true }
                             }
