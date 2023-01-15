@@ -19,81 +19,6 @@ $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 
-$defaultSettings = [ordered]@{
-    "type"                                   = "PTE"
-    "unusedALGoSystemFiles"                  = @()
-    "projects"                               = @()
-    "country"                                = "us"
-    "artifact"                               = ""
-    "companyName"                            = ""
-    "repoVersion"                            = "1.0"
-    "repoName"                               = ''
-    "versioningStrategy"                     = 0
-    "runNumberOffset"                        = 0
-    "appBuild"                               = 0
-    "appRevision"                            = 0
-    "keyVaultName"                           = ""
-    "licenseFileUrlSecretName"               = "licenseFileUrl"
-    "insiderSasTokenSecretName"              = "insiderSasToken"
-    "ghTokenWorkflowSecretName"              = "ghTokenWorkflow"
-    "adminCenterApiCredentialsSecretName"    = "adminCenterApiCredentials"
-    "applicationInsightsConnectionStringSecretName" = "applicationInsightsConnectionString"
-    "keyVaultCertificateUrlSecretName"       = ""
-    "keyVaultCertificatePasswordSecretName"  = ""
-    "keyVaultClientIdSecretName"             = ""
-    "codeSignCertificateUrlSecretName"       = "codeSignCertificateUrl"
-    "codeSignCertificatePasswordSecretName"  = "codeSignCertificatePassword"
-    "additionalCountries"                    = @()
-    "appDependencies"                        = @()
-    "appFolders"                             = @()
-    "testDependencies"                       = @()
-    "testFolders"                            = @()
-    "bcptTestFolders"                        = @()
-    "installApps"                            = @()
-    "installTestApps"                        = @()
-    "installOnlyReferencedApps"              = $true
-    "generateDependencyArtifact"             = $false
-    "skipUpgrade"                            = $false
-    "applicationDependency"                  = "18.0.0.0"
-    "updateDependencies"                     = $false
-    "installTestRunner"                      = $false
-    "installTestFramework"                   = $false
-    "installTestLibraries"                   = $false
-    "installPerformanceToolkit"              = $false
-    "enableCodeCop"                          = $false
-    "enableUICop"                            = $false
-    "customCodeCops"                         = @()
-    "failOn"                                 = "error"
-    "treatTestFailuresAsWarnings"            = $false
-    "rulesetFile"                            = ""
-    "assignPremiumPlan"                      = $false
-    "doNotBuildTests"                        = $false
-    "doNotRunTests"                          = $false
-    "doNotRunBcptTests"                      = $false
-    "doNotPublishApps"                       = $false
-    "doNotSignApps"                          = $false
-    "configPackages"                         = @()
-    "appSourceCopMandatoryAffixes"           = @()
-    "obsoleteTagMinAllowedMajorMinor"        = ""
-    "memoryLimit"                            = ""
-    "templateUrl"                            = ""
-    "templateBranch"                         = ""
-    "appDependencyProbingPaths"              = @()
-    "useProjectDependencies"                 = $false
-    "runs-on"                                = "windows-latest"
-    "shell"                                  = "powershell"
-    "githubRunner"                           = ""
-    "githubRunnerShell"                      = ""
-    "cacheImageName"                         = "my"
-    "cacheKeepDays"                          = 3
-    "alwaysBuildAllProjects"                 = $false
-    "microsoftTelemetryConnectionString"     = $microsoftTelemetryConnectionString
-    "partnerTelemetryConnectionString"       = ""
-    "sendExtendedTelemetryToMicrosoft"       = $false
-    "environments"                           = @()
-    "buildModes"                             = @()
-}
-
 $runAlPipelineOverrides = @(
     "DockerPull"
     "NewBcContainer"
@@ -459,6 +384,25 @@ function GetBaseFolder {
     $folder
 }
 
+function GetProject {
+    Param(
+        [string] $baseFolder,
+        [string] $ALGoFolder
+    )
+
+    $projectFolder = Join-Path $ALGoFolder ".." -Resolve
+    if ($projectFolder -eq $baseFolder) {
+        $project = '.'
+    }
+    else {
+        Push-Location
+        Set-Location $baseFolder
+        $project = (Resolve-Path -Path $projectFolder -Relative).Substring(2)
+        Pop-Location
+    }
+    $project
+}
+
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
@@ -474,9 +418,81 @@ function ReadSettings {
     $workflowName = $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 
     # Start with default settings
-    $settings = $defaultSettings.Clone()
-    $settings.RepoName = $repoName
-
+    $settings = [ordered]@{
+        "type"                                   = "PTE"
+        "unusedALGoSystemFiles"                  = @()
+        "projects"                               = @()
+        "country"                                = "us"
+        "artifact"                               = ""
+        "companyName"                            = ""
+        "repoVersion"                            = "1.0"
+        "repoName"                               = $repoName
+        "versioningStrategy"                     = 0
+        "runNumberOffset"                        = 0
+        "appBuild"                               = 0
+        "appRevision"                            = 0
+        "keyVaultName"                           = ""
+        "licenseFileUrlSecretName"               = "licenseFileUrl"
+        "insiderSasTokenSecretName"              = "insiderSasToken"
+        "ghTokenWorkflowSecretName"              = "ghTokenWorkflow"
+        "adminCenterApiCredentialsSecretName"    = "adminCenterApiCredentials"
+        "applicationInsightsConnectionStringSecretName" = "applicationInsightsConnectionString"
+        "keyVaultCertificateUrlSecretName"       = ""
+        "keyVaultCertificatePasswordSecretName"  = ""
+        "keyVaultClientIdSecretName"             = ""
+        "codeSignCertificateUrlSecretName"       = "codeSignCertificateUrl"
+        "codeSignCertificatePasswordSecretName"  = "codeSignCertificatePassword"
+        "additionalCountries"                    = @()
+        "appDependencies"                        = @()
+        "appFolders"                             = @()
+        "testDependencies"                       = @()
+        "testFolders"                            = @()
+        "bcptTestFolders"                        = @()
+        "installApps"                            = @()
+        "installTestApps"                        = @()
+        "installOnlyReferencedApps"              = $true
+        "generateDependencyArtifact"             = $false
+        "skipUpgrade"                            = $false
+        "applicationDependency"                  = "18.0.0.0"
+        "updateDependencies"                     = $false
+        "installTestRunner"                      = $false
+        "installTestFramework"                   = $false
+        "installTestLibraries"                   = $false
+        "installPerformanceToolkit"              = $false
+        "enableCodeCop"                          = $false
+        "enableUICop"                            = $false
+        "customCodeCops"                         = @()
+        "failOn"                                 = "error"
+        "treatTestFailuresAsWarnings"            = $false
+        "rulesetFile"                            = ""
+        "assignPremiumPlan"                      = $false
+        "doNotBuildTests"                        = $false
+        "doNotRunTests"                          = $false
+        "doNotRunBcptTests"                      = $false
+        "doNotPublishApps"                       = $false
+        "doNotSignApps"                          = $false
+        "configPackages"                         = @()
+        "appSourceCopMandatoryAffixes"           = @()
+        "obsoleteTagMinAllowedMajorMinor"        = ""
+        "memoryLimit"                            = ""
+        "templateUrl"                            = ""
+        "templateBranch"                         = ""
+        "appDependencyProbingPaths"              = @()
+        "useProjectDependencies"                 = $false
+        "runs-on"                                = "windows-latest"
+        "shell"                                  = "powershell"
+        "githubRunner"                           = ""
+        "githubRunnerShell"                      = ""
+        "cacheImageName"                         = "my"
+        "cacheKeepDays"                          = 3
+        "alwaysBuildAllProjects"                 = $false
+        "microsoftTelemetryConnectionString"     = $microsoftTelemetryConnectionString
+        "partnerTelemetryConnectionString"       = ""
+        "sendExtendedTelemetryToMicrosoft"       = $false
+        "environments"                           = @()
+        "buildModes"                             = @()
+    }
+    
     # Read settings from files and merge them into the settings object
     $settingsFiles = @((Join-Path $baseFolder $RepoSettingsFile))
     if ($project) {
