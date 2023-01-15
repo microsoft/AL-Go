@@ -27,17 +27,18 @@ $bcContainerHelperPath = $null
 # IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
+    $baseFolder = $ENV:GITHUB_WORKSPACE
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     if ($project  -eq ".") { $project = "" }
 
-    $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+    $projectFolder = Join-Path $baseFolder $project
    
-    $settings = ReadSettings -baseFolder $baseFolder -workflowName $env:GITHUB_WORKFLOW
+    $settings = ReadSettings -baseFolder $baseFolder -project $project
     if ($get) {
         $getSettings = $get.Split(',').Trim()
     }
@@ -127,14 +128,14 @@ try {
             $projects = $settings.projects
         }
         else {
-            $projects = @(Get-ChildItem -Path $ENV:GITHUB_WORKSPACE -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring("$ENV:GITHUB_WORKSPACE".length+1) })
+            $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
         }
         if ($projects) {
             AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
             Write-Host "All Projects: $($projects -join ', ')"
-            if (!$settings.alwaysBuildAllProjects -and ($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push" -or ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE '.PullRequestFilesChanged'))))) {
-                if ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $ENV:GITHUB_WORKSPACE '.PullRequestFilesChanged'))) {
-                    $filesChanged = @(Get-Content (Join-Path $ENV:GITHUB_WORKSPACE '.PullRequestFilesChanged') -Encoding UTF8)
+            if (!$settings.alwaysBuildAllProjects -and ($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push" -or ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $baseFolder '.PullRequestFilesChanged'))))) {
+                if ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $baseFolder '.PullRequestFilesChanged'))) {
+                    $filesChanged = @(Get-Content (Join-Path $baseFolder '.PullRequestFilesChanged') -Encoding UTF8)
                 }
                 else {
                     $headers = @{             
@@ -174,8 +175,8 @@ try {
                     $buildProjects = @($projects | Where-Object {
                         $project = $_
                         $buildProject = $false
-                        if (Test-Path -path (Join-Path $ENV:GITHUB_WORKSPACE "$project/.AL-Go/settings.json")) {
-                            $projectFolders = Get-ProjectFolders -baseFolder $ENV:GITHUB_WORKSPACE -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
+                        if (Test-Path -path (Join-Path $baseFolder "$project/.AL-Go/settings.json")) {
+                            $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $project -token $token -includeAlGoFolder -includeApps -includeTestApps
                             $projectFolders | ForEach-Object {
                                 if ($filesChanged -like "$_/*") { $buildProject = $true }
                             }
@@ -192,7 +193,7 @@ try {
                 $buildAlso = @{}
                 $buildOrder = @{}
                 $projectDependencies = @{}
-                AnalyzeProjectDependencies -basePath $ENV:GITHUB_WORKSPACE -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+                AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
                 $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.ContainsKey("$_")) { $buildAlso."$_" } } | Select-Object -Unique)
                 Write-Host "Building projects: $($buildProjects -join ', ')"
                 $projectDependenciesJson = $projectDependencies | ConvertTo-Json -Compress

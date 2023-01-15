@@ -150,7 +150,7 @@ try {
         $buildAlso = @{}
         $buildOrder = @{}
         $projectDependencies = @{}
-        AnalyzeProjectDependencies -basePath $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+        AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
         $depth = $buildOrder.Count
         Write-Host "Calculated dependency depth to be $depth"
     }
