@@ -17,6 +17,8 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
+$microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
+
 $defaultSettings = [ordered]@{
     "type"                                   = "PTE"
     "unusedALGoSystemFiles"                  = @()
@@ -25,7 +27,7 @@ $defaultSettings = [ordered]@{
     "artifact"                               = ""
     "companyName"                            = ""
     "repoVersion"                            = "1.0"
-    "repoName"                               = $repoName
+    "repoName"                               = ''
     "versioningStrategy"                     = 0
     "runNumberOffset"                        = 0
     "appBuild"                               = 0
@@ -92,7 +94,6 @@ $defaultSettings = [ordered]@{
     "buildModes"                             = @()
 }
 
-
 $runAlPipelineOverrides = @(
     "DockerPull"
     "NewBcContainer"
@@ -126,8 +127,6 @@ $performanceToolkitApps = @($performanceToolkitAppId)
 $testLibrariesApps = @($systemApplicationTestLibraryAppId, $TestsTestLibrariesAppId)
 $testFrameworkApps = @($anyAppId, $libraryAssertAppId, $libraryVariableStorageAppId) + $testLibrariesApps
 $testRunnerApps = @($permissionsMockAppId, $testRunnerAppId) + $performanceToolkitApps + $testLibrariesApps + $testFrameworkApps
-
-$microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 
 $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
 if ($isPsCore) {
@@ -476,6 +475,7 @@ function ReadSettings {
 
     # Start with default settings
     $settings = $defaultSettings.Clone()
+    $settings.RepoName = $repoName
 
     # Read settings from files and merge them into the settings object
     $settingsFiles = @((Join-Path $baseFolder $RepoSettingsFile))
