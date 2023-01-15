@@ -497,7 +497,7 @@ function ReadSettings {
     $settingsFiles = @((Join-Path $baseFolder $RepoSettingsFile))
     if ($project) {
         $projectFolder = Join-Path $baseFolder $project -Resolve
-        $settingsFiles += @((Join-Path $projectFolder $RepoSettingsFile))
+        $settingsFiles += @((Join-Path $projectFolder $ALGoSettingsFile))
     }
     if ($workflowName) {
         $settingsFiles += @((Join-Path $gitHubFolder "$workflowName.settings.json"))
