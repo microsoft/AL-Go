@@ -80,6 +80,10 @@ Describe "RunPipeline Action Tests" {
     }
 
     It 'ReadSettings' {
+        Mock Write-Host { }
+        Mock Out-Host { }
+
+        Push-Location
         $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         $githubFolder = Join-Path $tempName ".github"
         $ALGoFolder = Join-Path $tempName $ALGoFolderName
@@ -131,6 +135,7 @@ Describe "RunPipeline Action Tests" {
         $workflowMultiSettings.property3 | Should -Be 'repo3'
         $workflowMultiSettings.property4 | Should -Be 'branch4'
         $workflowMultiSettings.property5 | Should -Be 'multi5'
+        { $workflowMultiSettings.property6 } | Should -Throw
 
         $userWorkflowMultiSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
         $userWorkflowMultiSettings.property1 | Should -Be 'user1'
@@ -138,13 +143,17 @@ Describe "RunPipeline Action Tests" {
         $userWorkflowMultiSettings.property3 | Should -Be 'repo3'
         $userWorkflowMultiSettings.property4 | Should -Be 'branch4'
         $userWorkflowMultiSettings.property5 | Should -Be 'multi5'
+        $userWorkflowMultiSettings.property6 | Should -Be 'user6'
 
         # Clean up
+        Pop-Location
         Remove-Item -Path $tempName -Recurse -Force
     }
 
     It 'CheckAndCreateProjectFolder' {
         Mock Write-Host { }
+
+        Push-Location
 
         # Create a temp folder with the PTE template files
         $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -191,6 +200,7 @@ Describe "RunPipeline Action Tests" {
         Join-Path $repoFolder 'project2/project2.code-workspace' | Should -Exist
 
         # Clean up
+        Pop-Location
         Remove-Item -Path $tempName -Recurse -Force
     }
 }
