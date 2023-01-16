@@ -10,7 +10,7 @@ if (Test-Path $gitHubHelperPath) {
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
-$ALGoFolder = '.AL-Go'
+$ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
 $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
@@ -387,10 +387,10 @@ function GetBaseFolder {
 function GetProject {
     Param(
         [string] $baseFolder,
-        [string] $ALGoFolder
+        [string] $projectALGoFolder
     )
 
-    $projectFolder = Join-Path $ALGoFolder ".." -Resolve
+    $projectFolder = Join-Path $projectALGoFolder ".." -Resolve
     if ($projectFolder -eq $baseFolder) {
         $project = '.'
     }
@@ -502,11 +502,13 @@ function ReadSettings {
     if ($workflowName) {
         $settingsFiles += @((Join-Path $gitHubFolder "$workflowName.settings.json"))
         if ($project) {
-            $settingsFiles += @((Join-Path $projectFolder "$ALGoFolder/$workflowName.settings.json"), (Join-Path $projectFolder "$ALGoFolder/$userName.settings.json"))
+            Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json" | out-host
+            $settingsFiles += @((Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json"), (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json"))
         }
     }
     $settingsFiles | ForEach-Object {
         $settingsFile = $_
+        Write-Host "Testing $settingsFile"
         if (Test-Path $settingsFile) {
             try {
                 Write-Host "Reading $settingsFile"
@@ -1044,7 +1046,7 @@ function Get-ProjectFolders {
     $settings = ReadSettings -baseFolder $baseFolder -project $project -workflowName "CI/CD"
     $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -includeOnlyAppIds $includeOnlyAppIds -doNotIssueWarnings -doNotCheckArtifactSetting -server_url $server_url -repository $repository
     $AlGoFolderArr = @()
-    if ($includeALGoFolder) { $AlGoFolderArr = @($ALGoFolder) }
+    if ($includeALGoFolder) { $AlGoFolderArr = @($ALGoFolderName) }
     Set-Location $baseFolder
     @($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders + $AlGoFolderArr) | ForEach-Object {
         $fullPath = Join-Path $baseFolder "$project/$_" -Resolve
@@ -1544,7 +1546,7 @@ function CreateDevEnv {
         Set-Location $projectFolder
         $runAlPipelineOverrides | ForEach-Object {
             $scriptName = $_
-            $scriptPath = Join-Path $ALGoFolder "$ScriptName.ps1"
+            $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
             if (Test-Path -Path $scriptPath -Type Leaf) {
                 Write-Host "Add override for $scriptName"
                 $runAlPipelineParams += @{
@@ -1699,7 +1701,7 @@ function CheckAndCreateProjectFolder {
             if ($appCount -eq 0) {
                 OutputWarning "Converting the repository to a multi-project repository as no other apps have been added previously."
                 New-Item $project -ItemType Directory | Out-Null
-                Move-Item -path $ALGoFolder -Destination $project
+                Move-Item -path $ALGoFolderName -Destination $project
                 Set-Location $project
                 $createCodeWorkspace = $true
             }
@@ -1709,7 +1711,7 @@ function CheckAndCreateProjectFolder {
         }
         else {
             if (!(Test-Path $project)) {
-                New-Item -Path (Join-Path $project $ALGoFolder) -ItemType Directory | Out-Null
+                New-Item -Path (Join-Path $project $ALGoFolderName) -ItemType Directory | Out-Null
                 Set-Location $project
                 OutputWarning "Project folder doesn't exist, creating a new project folder and a default settings file with country us. Please modify if needed."
                 [ordered]@{

@@ -80,7 +80,67 @@ Describe "RunPipeline Action Tests" {
     }
 
     It 'ReadSettings' {
+        $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        $githubFolder = Join-Path $tempName ".github"
+        $ALGoFolder = Join-Path $tempName $ALGoFolderName
+        $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
 
+        New-Item $githubFolder -ItemType Directory | Out-Null
+        New-Item $ALGoFolder -ItemType Directory | Out-Null
+        New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+        @{ "property1" = "repo1"; "property2" = "repo2"; "property3" = "repo3" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
+        @{ "property1" = "single1"; "property4" = "single4" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $ALGoFolder "settings.json") -encoding utf8 -Force
+        @{ "property1" = "multi1"; "property5" = "multi5" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -encoding utf8 -Force
+        @{ "property2" = "workflow2"; "conditionalSettings" = @{ "branches" = @( 'dev' ); "settings" = @{ "property1" = "branch1"; "property4" = "branch4" } } } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "Workflow.settings.json") -encoding utf8 -Force
+        @{ "property1" = "user1"; "property6" = "user6" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "user.settings.json") -encoding utf8 -Force
+
+        $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+        $repoSettings.property1 | Should -Be 'repo1'
+        $repoSettings.property2 | Should -Be 'repo2'
+        $repoSettings.property3 | Should -Be 'repo3'
+
+        $singleProjectSettings = ReadSettings -baseFolder $tempName -project '.' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+        $singleProjectSettings.property1 | Should -Be 'single1'
+        $singleProjectSettings.property2 | Should -Be 'repo2'
+        $singleProjectSettings.property4 | Should -Be 'single4'
+
+        $multiProjectSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+        $multiProjectSettings.property1 | Should -Be 'multi1'
+        $multiProjectSettings.property2 | Should -Be 'repo2'
+        $multiProjectSettings.property5 | Should -Be 'multi5'
+
+        $workflowRepoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName 'Workflow' -branchName '' -userName ''
+        $workflowRepoSettings.property1 | Should -Be 'repo1'
+        $workflowRepoSettings.property2 | Should -Be 'workflow2'
+
+        $workflowSingleSettings = ReadSettings -baseFolder $tempName -project '.' -repoName 'repo' -workflowName 'Workflow' -branchName '' -userName ''
+        $workflowSingleSettings.property1 | Should -Be 'single1'
+        $workflowSingleSettings.property2 | Should -Be 'workflow2'
+        $workflowSingleSettings.property4 | Should -Be 'single4'
+        $workflowSingleSettings.property3 | Should -Be 'repo3'
+
+        $workflowMultiSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName ''
+        $workflowMultiSettings.property1 | Should -Be 'branch1'
+        $workflowMultiSettings.property2 | Should -Be 'workflow2'
+        $workflowMultiSettings.property3 | Should -Be 'repo3'
+        $workflowMultiSettings.property4 | Should -Be 'branch4'
+        $workflowMultiSettings.property5 | Should -Be 'multi5'
+
+        $userWorkflowMultiSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
+        $userWorkflowMultiSettings.property1 | Should -Be 'user1'
+        $userWorkflowMultiSettings.property2 | Should -Be 'workflow2'
+        $userWorkflowMultiSettings.property3 | Should -Be 'repo3'
+        $userWorkflowMultiSettings.property4 | Should -Be 'branch4'
+        $userWorkflowMultiSettings.property5 | Should -Be 'multi5'
+
+        # Clean up
+        Remove-Item -Path $tempName -Recurse -Force
     }
 
     It 'CheckAndCreateProjectFolder' {
@@ -129,7 +189,8 @@ Describe "RunPipeline Action Tests" {
         { CheckAndCreateProjectFolder -project 'project2' } | Should -Not -Throw
         Join-Path $repoFolder 'project2/.AL-Go/settings.json' | Should -Exist
         Join-Path $repoFolder 'project2/project2.code-workspace' | Should -Exist
+
+        # Clean up
+        Remove-Item -Path $tempName -Recurse -Force
     }
-
-
 }

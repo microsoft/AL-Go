@@ -248,7 +248,7 @@ try {
     Set-Location $projectPath
     $runAlPipelineOverrides | ForEach-Object {
         $scriptName = $_
-        $scriptPath = Join-Path $ALGoFolder "$ScriptName.ps1"
+        $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
             Write-Host "Add override for $scriptName"
             $runAlPipelineParams += @{
