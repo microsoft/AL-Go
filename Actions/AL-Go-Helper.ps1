@@ -367,6 +367,13 @@ function MergeCustomObjectIntoOrderedDictionary {
     }
 }
 
+# Read settings from the settings files
+# Settings are read from the following files:
+# - .github/AL-Go-Settings.json
+# - <project>/.AL-Go/settings.json
+# - .github/<workflowName>.settings.json
+# - .project/.AL-Go/<workflowName>.settings.json
+# - .project/.AL-Go/<userName>.settings.json
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
@@ -466,7 +473,6 @@ function ReadSettings {
     if ($workflowName) {
         $settingsFiles += @((Join-Path $gitHubFolder "$workflowName.settings.json"))
         if ($project) {
-            Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json" | out-host
             $settingsFiles += @((Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json"), (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json"))
         }
     }
