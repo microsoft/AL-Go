@@ -129,7 +129,7 @@ try {
         New-SampleApp -destinationPath (Join-Path $projectFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids 
     }
 
-    Update-WorkSpaces -baseFolder $projectFolder -appName $folderName
+    Update-WorkSpaces -projectFolder $projectFolder -appName $folderName
 
     Set-Location $baseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch

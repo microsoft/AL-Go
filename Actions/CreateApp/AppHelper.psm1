@@ -184,11 +184,11 @@ function New-SamplePerformanceTestApp
 
 function Update-WorkSpaces 
 (
-    [string] $baseFolder,
+    [string] $projectFolder,
     [string] $appName
 ) 
 {
-    Get-ChildItem -Path $baseFolder -Filter "*.code-workspace" | 
+    Get-ChildItem -Path $projectFolder -Filter "*.code-workspace" | 
         ForEach-Object {
             try {
                 $workspaceFileName = $_.Name
