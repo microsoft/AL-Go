@@ -472,7 +472,6 @@ function ReadSettings {
     }
     $settingsFiles | ForEach-Object {
         $settingsFile = $_
-        Write-Host "Testing $settingsFile"
         if (Test-Path $settingsFile) {
             try {
                 Write-Host "Reading $settingsFile"
