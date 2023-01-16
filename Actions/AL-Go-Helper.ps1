@@ -367,42 +367,6 @@ function MergeCustomObjectIntoOrderedDictionary {
     }
 }
 
-function GetBaseFolder {
-    Param(
-        [string] $folder
-    )
-
-    if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-        $folder = (Get-Item -Path $folder).Parent.FullName
-        if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-            $folder = (Get-Item -Path $folder).Parent.FullName
-            if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-                throw "Cannot determine base folder from folder $folder."
-            }
-        }
-    }
-    $folder
-}
-
-function GetProject {
-    Param(
-        [string] $baseFolder,
-        [string] $projectALGoFolder
-    )
-
-    $projectFolder = Join-Path $projectALGoFolder ".." -Resolve
-    if ($projectFolder -eq $baseFolder) {
-        $project = '.'
-    }
-    else {
-        Push-Location
-        Set-Location $baseFolder
-        $project = (Resolve-Path -Path $projectFolder -Relative).Substring(2)
-        Pop-Location
-    }
-    $project
-}
-
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
@@ -1845,3 +1809,40 @@ Function AnalyzeProjectDependencies {
         $no++
     }
 }
+
+function GetBaseFolder {
+    Param(
+        [string] $folder
+    )
+
+    if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
+        $folder = (Get-Item -Path $folder).Parent.FullName
+        if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
+            $folder = (Get-Item -Path $folder).Parent.FullName
+            if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
+                throw "Cannot determine base folder from folder $folder."
+            }
+        }
+    }
+    $folder
+}
+
+function GetProject {
+    Param(
+        [string] $baseFolder,
+        [string] $projectALGoFolder
+    )
+
+    $projectFolder = Join-Path $projectALGoFolder ".." -Resolve
+    if ($projectFolder -eq $baseFolder) {
+        $project = '.'
+    }
+    else {
+        Push-Location
+        Set-Location $baseFolder
+        $project = (Resolve-Path -Path $projectFolder -Relative).Substring(2)
+        Pop-Location
+    }
+    $project
+}
+
