@@ -372,8 +372,8 @@ function MergeCustomObjectIntoOrderedDictionary {
 # - .github/AL-Go-Settings.json
 # - <project>/.AL-Go/settings.json
 # - .github/<workflowName>.settings.json
-# - .project/.AL-Go/<workflowName>.settings.json
-# - .project/.AL-Go/<userName>.settings.json
+# - <project>/.AL-Go/<workflowName>.settings.json
+# - <project>/.AL-Go/<userName>.settings.json
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
