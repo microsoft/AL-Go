@@ -190,7 +190,7 @@ try {
                 $buildOrder = @{}
                 $projectDependencies = @{}
                 AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-                $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.ContainsKey("$_")) { $buildAlso."$_" } } | Select-Object -Unique)
+                $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
                 Write-Host "Building projects: $($buildProjects -join ', ')"
                 $projectDependenciesJson = $projectDependencies | ConvertTo-Json -Compress
                 $buildOrderJson = $buildOrder | ConvertTo-Json -Compress

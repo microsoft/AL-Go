@@ -63,7 +63,7 @@ if (-not $environmentName) {
         -default "$($env:USERNAME)-sandbox"
 }
 
-if (-not $PSBoundParameters.ContainsKey('reuseExistingEnvironment')) {
+if (-not $PSBoundParameters.Keys -contains 'reuseExistingEnvironment') {
     $reuseExistingEnvironment = (Select-Value `
         -title "What if the environment already exists?" `
         -options @{ "Yes" = "Reuse existing environment"; "No" = "Recreate environment" } `

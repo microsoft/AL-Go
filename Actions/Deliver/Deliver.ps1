@@ -296,7 +296,7 @@ try {
             if ($dependenciesFolder.Count -gt 0) {
                 $parameters.dependencyAppFiles = @(Get-Item -Path (Join-Path $dependenciesFolder[0] "*.app") | ForEach-Object { $_.FullName })
             }
-            if ($nuGetAccount.ContainsKey('PackageName')) {
+            if ($nuGetAccount.Keys -contains 'PackageName') {
                 $parameters.packageId = $nuGetAccount.PackageName.replace('{project}',$projectName).replace('{owner}',$ENV:GITHUB_REPOSITORY_OWNER).replace('{repo}',$env:repoName)
             }
             else {
@@ -311,19 +311,19 @@ try {
                 $parameters.packageId += "-preview"
             }
             $parameters.packageVersion = [System.Version]$appsFolder[0].Name.SubString($appsFolder[0].Name.IndexOf("-Apps-")+6)
-            if ($nuGetAccount.ContainsKey('PackageTitle')) {
+            if ($nuGetAccount.Keys -contains 'PackageTitle') {
                 $parameters.packageTitle = $nuGetAccount.PackageTitle
             }
             else {
                  $parameters.packageTitle = $parameters.packageId
             }
-            if ($nuGetAccount.ContainsKey('PackageDescription')) {
+            if ($nuGetAccount.Keys -contains 'PackageDescription') {
                 $parameters.packageDescription = $nuGetAccount.PackageDescription
             }
             else {
                 $parameters.packageDescription = $parameters.packageTitle
             }
-            if ($nuGetAccount.ContainsKey('PackageAuthors')) {
+            if ($nuGetAccount.Keys -contains 'PackageAuthors') {
                 $parameters.packageAuthors = $nuGetAccount.PackageAuthors
             }
             else {
@@ -337,7 +337,7 @@ try {
             try {
                 $storageAccount = $storageContext | ConvertFrom-Json | ConvertTo-HashTable
                 Write-Host "Json OK"
-                if ($storageAccount.ContainsKey('sastoken')) {
+                if ($storageAccount.Keys -contains 'sastoken') {
                     $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
                 }
                 else {
@@ -401,12 +401,12 @@ try {
             $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
             # if type is Release, we only get here with the projects that needs to be delivered to AppSource
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
-            if ($type -eq 'Release' -or ($projectSettings.ContainsKey('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery)) {
+            if ($type -eq 'Release' -or ($projectSettings.Keys -contains 'AppSourceContinuousDelivery' -and $projectSettings.AppSourceContinuousDelivery)) {
                 EnsureAzStorageModule
                 $appSourceContextHt = $appSourceContext | ConvertFrom-Json | ConvertTo-HashTable
                 $authContext = New-BcAuthContext @appSourceContextHt
 
-                if ($projectSettings.ContainsKey("AppSourceMainAppFolder")) {
+                if ($projectSettings.Keys -contains "AppSourceMainAppFolder") {
                     $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder
                 }
                 else {
@@ -417,7 +417,7 @@ try {
                         throw "Unable to determine main App folder"
                     }
                 }
-                if (-not $projectSettings.ContainsKey('AppSourceProductId')) {
+                if (-not $projectSettings.Keys -contains 'AppSourceProductId') {
                     throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
                 }
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"

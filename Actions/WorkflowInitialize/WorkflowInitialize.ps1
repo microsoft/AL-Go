@@ -38,11 +38,11 @@ try {
     if ($telemetryScope) {
         $repoSettings = Get-Content -Path (Join-Path $ENV:GITHUB_WORKSPACE '.github/AL-Go-Settings.json') -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
         $type = 'PTE'
-        if ($repoSettings.ContainsKey('type')) {
+        if ($repoSettings.Keys -contains 'type') {
             $type = $repoSettings.type
         }
         $templateUrl = 'Not set'
-        if ($repoSettings.ContainsKey('templateUrl')) {
+        if ($repoSettings.Keys -contains 'templateUrl') {
             $templateUrl = $repoSettings.templateUrl
         }
         if ($verstr -eq "d") {

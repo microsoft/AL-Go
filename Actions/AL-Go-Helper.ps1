@@ -216,7 +216,7 @@ function DownloadAndImportBcContainerHelper {
         if (Test-Path $repoSettingsPath) {
             $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
             if ($bcContainerHelperVersion -eq "") {
-                if ($repoSettings.ContainsKey("BcContainerHelperVersion")) {
+                if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
                     $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
                     if ($bcContainerHelperVersion -like "https://*") {
                         throw "Setting BcContainerHelperVersion to a URL is not allowed."
@@ -1426,7 +1426,7 @@ function CreateDevEnv {
                             throw "$_ is an illegal property in adminCenterApiCredentials setting"
                         }
                     }
-                    if ($adminCenterApiCredentials.ContainsKey('ClientSecret')) {
+                    if ($adminCenterApiCredentials.Keys -contains 'ClientSecret') {
                         $adminCenterApiCredentials.ClientSecret = ConvertTo-SecureString -String $adminCenterApiCredentials.ClientSecret -AsPlainText -Force
                     }
                 }
@@ -1543,7 +1543,7 @@ function CreateDevEnv {
             }
         }
         elseif ($kind -eq "cloud") {
-            if ($runAlPipelineParams.ContainsKey('NewBcContainer')) {
+            if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
                 throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
             }
             
@@ -1762,14 +1762,14 @@ Function AnalyzeProjectDependencies {
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
                 $depProject | ForEach-Object {
                     $_
-                    if ($projectDependencies.Value.ContainsKey($_)) {
+                    if ($projectDependencies.Value.Keys -contains $_) {
                         $projectDependencies.value."$_"
                     }
                 }
             } | Select-Object -Unique)
             # foundDependencies now contains all projects that the current project has a dependency on
             # Update ref variable projectDependencies for this project
-            if (!$projectDependencies.Value.ContainsKey($project)) {
+            if (!$projectDependencies.Value.Keys -contains $project) {
                 # Loop through the list of projects for which we already built a dependency list
                 # Update the dependency list for that project if it contains the current project, which might lead to a changed dependency list
                 # This is needed because we are looping through the projects in a any order
@@ -1790,7 +1790,7 @@ Function AnalyzeProjectDependencies {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
                 # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
                 $foundDependencies | ForEach-Object { 
-                    if ($buildAlso.value.ContainsKey($_)) {
+                    if ($buildAlso.value.Keys -contains $_) {
                         if ($buildAlso.value."$_" -notcontains $project) {
                             $buildAlso.value."$_" += @( $project )
                         }

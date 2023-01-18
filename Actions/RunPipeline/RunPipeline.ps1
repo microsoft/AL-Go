@@ -70,7 +70,7 @@ try {
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
     'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','storageContext','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
-        if ($secrets.ContainsKey($_)) {
+        if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
         }
         else {
@@ -99,7 +99,7 @@ try {
     Write-Host "Project: $project"
     if ($project -and $repo.useProjectDependencies -and $projectDependenciesJson -ne "") {
         $projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-        if ($projectDependencies.ContainsKey($project)) {
+        if ($projectDependencies.Keys -contains $project) {
             $projects = @($projectDependencies."$project") -join ","
         }
         else {
@@ -257,7 +257,7 @@ try {
         }
     }
 
-    if (-not $runAlPipelineParams.ContainsKey('RemoveBcContainer')) {
+    if (-not $runAlPipelineParams.Keys -contains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
             "RemoveBcContainer" = {
                 Param([Hashtable]$parameters)
@@ -267,7 +267,7 @@ try {
         }
     }
 
-    if (-not $runAlPipelineParams.ContainsKey('ImportTestDataInBcContainer')) {
+    if (-not $runAlPipelineParams.Keys -contains 'ImportTestDataInBcContainer') {
         if (($repo.configPackages) -or ($repo.Keys | Where-Object { $_ -like 'configPackages.*' })) {
             Write-Host "Adding Import Test Data override"
             Write-Host "Configured config packages:"
@@ -282,7 +282,7 @@ try {
                     Param([Hashtable]$parameters)
                     $country = Get-BcContainerCountry -containerOrImageName $parameters.containerName
                     $prop = "configPackages.$country"
-                    if (-not $repo.ContainsKey($prop)) {
+                    if (-not $repo.Keys -contains $prop) {
                         $prop = "configPackages"
                     }
                     if ($repo."$prop") {
@@ -303,7 +303,7 @@ try {
         }
     }
 
-    if ($gitHubPackagesContext -and (-not $runAlPipelineParams.ContainsKey('InstallMissingDependencies'))) {
+    if ($gitHubPackagesContext -and (-not $runAlPipelineParams.Keys -contains 'InstallMissingDependencies')) {
         $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
@@ -317,7 +317,7 @@ try {
                     $appName = $_.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
-                    if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
+                    if ($parameters.Keys -contains 'CopyInstalledAppsToFolder') {
                         $publishParams += @{
                             "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
                         }
@@ -352,7 +352,7 @@ try {
                 throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
             }
 
-            if (!$runAlPipelineParams.ContainsKey('preprocessorsymbols')) {
+            if (!$runAlPipelineParams.Keys -contains 'preprocessorsymbols') {
                 $runAlPipelineParams["preprocessorsymbols"] = @()
             }
 
@@ -360,7 +360,7 @@ try {
             $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
         }
         'Translated' {
-            if (!$runAlPipelineParams.ContainsKey('features')) {
+            if (!$runAlPipelineParams.Keys -contains 'features') {
                 $runAlPipelineParams["features"] = @()
             }
             $runAlPipelineParams["features"] += "translationfile"
