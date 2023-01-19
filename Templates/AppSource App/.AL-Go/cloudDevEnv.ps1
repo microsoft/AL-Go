@@ -27,7 +27,7 @@ Import-Module $GitHubHelperPath
 . $ALGoHelperPath -local
 
 $baseFolder = GetBaseFolder -folder $PSScriptRoot
-$project = GetProject -folder $baseFolder -ALGoFolder $PSScriptRoot
+$project = GetProject -baseFolder $baseFolder -projectALGoFolder $PSScriptRoot
 
 Clear-Host
 Write-Host

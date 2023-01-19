@@ -30,7 +30,7 @@ Import-Module $GitHubHelperPath
 . $ALGoHelperPath -local
 
 $baseFolder = GetBaseFolder -folder $PSScriptRoot
-$project = GetProject -folder $baseFolder -ALGoFolder $PSScriptRoot
+$project = GetProject -baseFolder $baseFolder -projectALGoFolder $PSScriptRoot
 
 Clear-Host
 Write-Host
@@ -128,7 +128,7 @@ CreateDevEnv `
     -caller local `
     -containerName $containerName `
     -baseFolder $baseFolder `
-    -project $project
+    -project $project `
     -auth $auth `
     -credential $credential `
     -licenseFileUrl $licenseFileUrl `
