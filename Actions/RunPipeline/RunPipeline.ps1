@@ -257,7 +257,7 @@ try {
         }
     }
 
-    if (-not $runAlPipelineParams.Keys -contains 'RemoveBcContainer') {
+    if ($runAlPipelineParams.Keys -notcontains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
             "RemoveBcContainer" = {
                 Param([Hashtable]$parameters)
@@ -267,7 +267,7 @@ try {
         }
     }
 
-    if (-not $runAlPipelineParams.Keys -contains 'ImportTestDataInBcContainer') {
+    if ($runAlPipelineParams.Keys -notcontains 'ImportTestDataInBcContainer') {
         if (($repo.configPackages) -or ($repo.Keys | Where-Object { $_ -like 'configPackages.*' })) {
             Write-Host "Adding Import Test Data override"
             Write-Host "Configured config packages:"
@@ -282,7 +282,7 @@ try {
                     Param([Hashtable]$parameters)
                     $country = Get-BcContainerCountry -containerOrImageName $parameters.containerName
                     $prop = "configPackages.$country"
-                    if (-not $repo.Keys -contains $prop) {
+                    if ($repo.Keys -notcontains $prop) {
                         $prop = "configPackages"
                     }
                     if ($repo."$prop") {
@@ -303,7 +303,7 @@ try {
         }
     }
 
-    if ($gitHubPackagesContext -and (-not $runAlPipelineParams.Keys -contains 'InstallMissingDependencies')) {
+    if ($gitHubPackagesContext -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
         $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
@@ -352,7 +352,7 @@ try {
                 throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
             }
 
-            if (!$runAlPipelineParams.Keys -contains 'preprocessorsymbols') {
+            if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
                 $runAlPipelineParams["preprocessorsymbols"] = @()
             }
 
@@ -360,7 +360,7 @@ try {
             $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
         }
         'Translated' {
-            if (!$runAlPipelineParams.Keys -contains 'features') {
+            if ($runAlPipelineParams.Keys -notcontains 'features') {
                 $runAlPipelineParams["features"] = @()
             }
             $runAlPipelineParams["features"] += "translationfile"

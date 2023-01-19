@@ -233,7 +233,7 @@ try {
                         if ($repoSettings.Keys -contains "runs-on") {
                             $runson = $repoSettings."runs-on"
                             $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $runson ]")
-                            if ($runson -like 'ubuntu-*' -and !$repoSettings.Keys -contains "shell") {
+                            if ($runson -like 'ubuntu-*' -and $repoSettings.Keys -notcontains "shell") {
                                 # Default shell for Ubuntu (Linux) is pwsh
                                 $repoSettings.shell = "pwsh"
                             }

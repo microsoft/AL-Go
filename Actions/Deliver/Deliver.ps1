@@ -417,7 +417,7 @@ try {
                         throw "Unable to determine main App folder"
                     }
                 }
-                if (-not $projectSettings.Keys -contains 'AppSourceProductId') {
+                if ($projectSettings.Keys -notcontains 'AppSourceProductId') {
                     throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
                 }
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"

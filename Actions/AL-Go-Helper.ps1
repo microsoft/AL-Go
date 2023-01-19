@@ -1769,7 +1769,7 @@ Function AnalyzeProjectDependencies {
             } | Select-Object -Unique)
             # foundDependencies now contains all projects that the current project has a dependency on
             # Update ref variable projectDependencies for this project
-            if (!$projectDependencies.Value.Keys -contains $project) {
+            if ($projectDependencies.Value.Keys -notcontains $project) {
                 # Loop through the list of projects for which we already built a dependency list
                 # Update the dependency list for that project if it contains the current project, which might lead to a changed dependency list
                 # This is needed because we are looping through the projects in a any order
