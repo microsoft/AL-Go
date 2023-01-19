@@ -26,7 +26,8 @@ $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actio
 Import-Module $GitHubHelperPath
 . $ALGoHelperPath -local
     
-$baseFolder = Join-Path $PSScriptRoot ".." -Resolve
+$baseFolder = GetBaseFolder -folder $PSScriptRoot
+$project = GetProject -folder $baseFolder -ALGoFolder $PSScriptRoot
 
 Clear-Host
 Write-Host
@@ -51,7 +52,7 @@ if (Test-Path (Join-Path $PSScriptRoot "NewBcContainer.ps1")) {
     Write-Host -ForegroundColor Red "WARNING: The project has a NewBcContainer override defined. Typically, this means that you cannot run a cloud development environment"
 }
 
-$settings = ReadSettings -baseFolder $baseFolder -userName $env:USERNAME
+$settings = ReadSettings -baseFolder $baseFolder -project $project -userName $env:USERNAME
 
 Write-Host
 
@@ -62,7 +63,7 @@ if (-not $environmentName) {
         -default "$($env:USERNAME)-sandbox"
 }
 
-if (-not $PSBoundParameters.ContainsKey('reuseExistingEnvironment')) {
+if ($PSBoundParameters.Keys -notcontains 'reuseExistingEnvironment') {
     $reuseExistingEnvironment = (Select-Value `
         -title "What if the environment already exists?" `
         -options @{ "Yes" = "Reuse existing environment"; "No" = "Recreate environment" } `
@@ -75,7 +76,8 @@ CreateDevEnv `
     -caller local `
     -environmentName $environmentName `
     -reuseExistingEnvironment:$reuseExistingEnvironment `
-    -baseFolder $baseFolder
+    -baseFolder $baseFolder `
+    -project $project
 }
 catch {
     Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"

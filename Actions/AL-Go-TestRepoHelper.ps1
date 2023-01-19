@@ -8,7 +8,7 @@ function Test-Property {
         [switch] $shouldnot
     )
 
-    $exists = $json.ContainsKey($key)
+    $exists = $json.Keys -contains $key
     if ($exists) {
         if ($maynot) {
             Write-Host "::Error::Property '$key' may not exist in $settingsFile"
@@ -208,7 +208,7 @@ $chars = @{
 0..5 | ForEach-Object {
     $line = $_
     $str.ToCharArray() | ForEach-Object {
-        if ($chars.ContainsKey($_)) {
+        if ($chars.Keys -contains $_) {
             $ch = $chars."$_"
             Write-Host -noNewline $ch[$line]
         }

@@ -107,7 +107,7 @@ jobs:
             Write-Host "::Error::No AuthContext provided"
             exit 1
           }
-          if ($deployToSetting.PSObject.Properties.name -eq "EnvironmentName") {
+          if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "EnvironmentName") {
             $environmentName = $deployToSetting.EnvironmentName
           }
           else {
@@ -126,7 +126,7 @@ jobs:
             $environmentName = '${{ steps.envName.outputs.envName }}'
           }
           $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
-          if ($deployToSetting.PSObject.Properties.name -eq "projects") {
+          if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "projects") {
             $projects = $deployToSetting.projects
           }
           else {

@@ -29,7 +29,8 @@ $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actio
 Import-Module $GitHubHelperPath
 . $ALGoHelperPath -local
 
-$baseFolder = Join-Path $PSScriptRoot ".." -Resolve
+$baseFolder = GetBaseFolder -folder $PSScriptRoot
+$project = GetProject -folder $baseFolder -ALGoFolder $PSScriptRoot
 
 Clear-Host
 Write-Host
@@ -54,7 +55,7 @@ The script will also modify launch.json to have a Local Sandbox configuration po
 
 '@
 
-$settings = ReadSettings -baseFolder $baseFolder -userName $env:USERNAME
+$settings = ReadSettings -baseFolder $baseFolder -project $project -userName $env:USERNAME
 
 Write-Host "Checking System Requirements"
 $dockerProcess = (Get-Process "dockerd" -ErrorAction Ignore)
@@ -125,6 +126,7 @@ CreateDevEnv `
     -caller local `
     -containerName $containerName `
     -baseFolder $baseFolder `
+    -project $project
     -auth $auth `
     -credential $credential `
     -licenseFileUrl $licenseFileUrl `

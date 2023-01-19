@@ -40,10 +40,10 @@ try {
     $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
 
     $apps = @()
-    $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
-    $baseFolderCreated = $false
+    $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
+    $artifactsFolderCreated = $false
     if ($artifacts -eq ".artifacts") {
-        $artifacts = $baseFolder
+        $artifacts = $artifactsFolder
     }
 
     if ($artifacts -like "$($ENV:GITHUB_WORKSPACE)*") {
@@ -81,23 +81,23 @@ try {
         if (!($release)) {
             throw "Unable to locate $artifacts release"
         }
-        New-Item $baseFolder -ItemType Directory | Out-Null
-        $baseFolderCreated = $true
-        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder -mask "Apps"
-        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $baseFolder -mask "Dependencies"
-        $apps = @((Get-ChildItem -Path $baseFolder) | ForEach-Object { $_.FullName })
+        New-Item $artifactsFolder -ItemType Directory | Out-Null
+        $artifactsFolderCreated = $true
+        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
+        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Dependencies"
+        $apps = @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { $_.FullName })
         if (!$apps) {
             throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
         }
     }
     else {
-        New-Item $baseFolder -ItemType Directory | Out-Null
+        New-Item $artifactsFolder -ItemType Directory | Out-Null
         $baseFolderCreated = $true
         $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $projects -Version $artifacts -branch "main")
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $projects -Version $artifacts -branch "main")
         if ($allArtifacts) {
             $allArtifacts | ForEach-Object {
-                $appFile = DownloadArtifact -token $token -artifact $_ -path $baseFolder
+                $appFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
                 if (!(Test-Path $appFile)) {
                     throw "Unable to download artifact $($_.name)"
                 }
@@ -164,8 +164,8 @@ try {
         exit
     }
 
-    if ($baseFolderCreated) {
-        Remove-Item $baseFolder -Recurse -Force
+    if ($artifactsFolderCreated) {
+        Remove-Item $artifactsFolder -Recurse -Force
     }
 
     TrackTrace -telemetryScope $telemetryScope

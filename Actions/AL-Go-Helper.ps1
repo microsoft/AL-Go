@@ -10,13 +10,14 @@ if (Test-Path $gitHubHelperPath) {
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
-$ALGoFolder = Join-Path '.AL-Go' ''
+$ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
 $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
+$microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -51,8 +52,6 @@ $performanceToolkitApps = @($performanceToolkitAppId)
 $testLibrariesApps = @($systemApplicationTestLibraryAppId, $TestsTestLibrariesAppId)
 $testFrameworkApps = @($anyAppId, $libraryAssertAppId, $libraryVariableStorageAppId) + $testLibrariesApps
 $testRunnerApps = @($permissionsMockAppId, $testRunnerAppId) + $performanceToolkitApps + $testLibrariesApps + $testFrameworkApps
-
-$microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 
 $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
 if ($isPsCore) {
@@ -217,7 +216,7 @@ function DownloadAndImportBcContainerHelper {
         if (Test-Path $repoSettingsPath) {
             $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
             if ($bcContainerHelperVersion -eq "") {
-                if ($repoSettings.ContainsKey("BcContainerHelperVersion")) {
+                if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
                     $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
                     if ($bcContainerHelperVersion -like "https://*") {
                         throw "Setting BcContainerHelperVersion to a URL is not allowed."
@@ -299,8 +298,9 @@ function MergeCustomObjectIntoOrderedDictionary {
         [PSCustomObject] $src
     )
 
-    # Add missing properties in OrderedDictionary
-
+    # Loop through all properties in the source object
+    # If the property does not exist in the destination object, add it with the right type, but no value
+    # Types supported: PSCustomObject, Object[] and simple types
     $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
         $prop = $_.Name
         $srcProp = $src."$prop"
@@ -318,6 +318,13 @@ function MergeCustomObjectIntoOrderedDictionary {
         }
     }
 
+    # Loop through all properties in the destination object
+    # If the property does not exist in the source object, do nothing
+    # If the property exists in the source object, but is of a different type, throw an error
+    # If the property exists in the source object:
+    # If the property is an Object, call this function recursively to merge values
+    # If the property is an Object[], merge the arrays
+    # If the property is a simple type, replace the value in the destination object with the value from the source object
     @($dst.Keys) | ForEach-Object {
         $prop = $_
         if ($src.PSObject.Properties.Name -eq $prop) {
@@ -329,10 +336,8 @@ function MergeCustomObjectIntoOrderedDictionary {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
-
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
                 # This is not seen as an error and will not throw an error
-
                 throw "property $prop should be of type $dstPropType, is $srcPropType."
             }
             else {
@@ -341,12 +346,16 @@ function MergeCustomObjectIntoOrderedDictionary {
                         $srcElm = $_
                         $srcElmType = $srcElm.GetType().Name
                         if ($srcElmType -eq "PSCustomObject") {
+                            # Array of objects are not checked for uniqueness
                             $ht = [ordered]@{}
-                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture "iv-iv" | ForEach-Object { $ht[$_.Name] = $_.Value }
+                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture "iv-iv" | ForEach-Object {
+                                $ht[$_.Name] = $_.Value
+                            }
                             $dst."$prop" += @($ht)
                         }
                         else {
-                            $dst."$prop" += $srcElm
+                            # Add source element to destination array, but only if it does not already exist
+                            $dst."$prop" = @($dst."$prop" + $srcElm | Select-Object -Unique)
                         }
                     }
                 }
@@ -358,17 +367,28 @@ function MergeCustomObjectIntoOrderedDictionary {
     }
 }
 
+# Read settings from the settings files
+# Settings are read from the following files:
+# - .github/AL-Go-Settings.json
+# - <project>/.AL-Go/settings.json
+# - .github/<workflowName>.settings.json
+# - <project>/.AL-Go/<workflowName>.settings.json
+# - <project>/.AL-Go/<userName>.settings.json
 function ReadSettings {
     Param(
-        [string] $baseFolder,
-        [string] $repoName = "$env:GITHUB_REPOSITORY",
-        [string] $workflowName = "",
-        [string] $userName = ""
+        [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
+        [string] $repoName = "$ENV:GITHUB_REPOSITORY",
+        [string] $project = '.',
+        [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
+        [string] $userName = "$ENV:GITHUB_ACTOR",
+        [string] $branchName = "$ENV:GITHUB_REF_NAME"
     )
 
     $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
-    
-    # Read Settings file
+    $githubFolder = Join-Path $baseFolder ".github"
+    $workflowName = $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+
+    # Start with default settings
     $settings = [ordered]@{
         "type"                                   = "PTE"
         "unusedALGoSystemFiles"                  = @()
@@ -443,42 +463,39 @@ function ReadSettings {
         "environments"                           = @()
         "buildModes"                             = @()
     }
-    $gitHubFolder = ".github"
-    $repoSettingsPath = $RepoSettingsFile
-    if (-not (Test-Path (Join-Path $baseFolder $repoSettingsPath) -PathType Leaf)) {
-        $RepoSettingsPath = "..\$RepoSettingsPath"
-        $gitHubFolder = "..\$gitHubFolder"
-        if (-not (Test-Path (Join-Path $baseFolder $RepoSettingsPath) -PathType Leaf)) {
-            $RepoSettingsPath = "..\$RepoSettingsPath"
-            $gitHubFolder = "..\$gitHubFolder"
+    
+    # Read settings from files and merge them into the settings object
+    $settingsFiles = @((Join-Path $baseFolder $RepoSettingsFile))
+    if ($project) {
+        $projectFolder = Join-Path $baseFolder $project -Resolve
+        $settingsFiles += @((Join-Path $projectFolder $ALGoSettingsFile))
+    }
+    if ($workflowName) {
+        $settingsFiles += @((Join-Path $gitHubFolder "$workflowName.settings.json"))
+        if ($project) {
+            $settingsFiles += @((Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json"), (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json"))
         }
     }
-
-    $workflowName = $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
-    $RepoSettingsPath, $ALGoSettingsFile, (Join-Path $gitHubFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$workflowName.settings.json"), (Join-Path $ALGoFolder "$userName.settings.json") | ForEach-Object {
+    $settingsFiles | ForEach-Object {
         $settingsFile = $_
-        $settingsPath = Join-Path $baseFolder $settingsFile
-        if (Test-Path $settingsPath) {
+        if (Test-Path $settingsFile) {
             try {
                 Write-Host "Reading $settingsFile"
-                $settingsJson = Get-Content $settingsPath -Encoding UTF8 | ConvertFrom-Json
-       
-                # check settingsJson.version and do modifications if needed
-         
+                $settingsJson = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
                 MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
 
                 if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
                     $settingsJson.ConditionalSettings | ForEach-Object {
                         $conditionalSetting = $_
-                        if ($conditionalSetting.branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }) {
-                            Write-Host "Applying conditional settings for $ENV:GITHUB_REF_NAME"
+                        if ($conditionalSetting.branches | Where-Object { $branchName -like $_ }) {
+                            Write-Host "Applying conditional settings for $branchName"
                             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
                         }
                     }
                 }
             }
             catch {
-                throw "Settings file $settingsFile, is wrongly formatted. Error is $($_.Exception.Message).`n$($_.ScriptStackTrace)"
+                throw "Error reading $settingsFile. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
             }
         }
     }
@@ -936,9 +953,7 @@ function AnalyzeRepo {
                             Write-Host "Identified dependency to project $depProject in the same repository"
 
                             $dependencyIds = @( @($settings.appDependencies + $settings.testDependencies) | ForEach-Object { $_.id })
-                            $depProjectPath = Join-Path $baseFolder $depProject
-                            $depSettings = ReadSettings -baseFolder $depProjectPath -workflowName "CI/CD"
-
+                            $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
                             $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps) -doNotIssueWarnings -doNotCheckArtifactSetting -server_url $server_url -repository $repository
 
                             Set-Location $projectPath
@@ -947,7 +962,7 @@ function AnalyzeRepo {
                                 Write-Host "Adding folders from $depProject to $_"
                                 $found = $true
                                 $depSettings."$propertyName" | ForEach-Object {
-                                    $folder = (Resolve-Path -Path (Join-Path $depProjectPath $_) -Relative).ToLowerInvariant()
+                                    $folder = (Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative).ToLowerInvariant()
                                     if (!$settings."$propertyName".Contains($folder)) {
                                         $settings."$propertyName" += @($folder)
                                         $found = $true
@@ -997,14 +1012,13 @@ function Get-ProjectFolders {
     }
 
     $projectFolders = @()
-    $projectPath = Join-Path $baseFolder $project
-    $settings = ReadSettings -baseFolder $projectPath -workflowName "CI/CD"
+    $settings = ReadSettings -baseFolder $baseFolder -project $project -workflowName "CI/CD"
     $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -includeOnlyAppIds $includeOnlyAppIds -doNotIssueWarnings -doNotCheckArtifactSetting -server_url $server_url -repository $repository
     $AlGoFolderArr = @()
-    if ($includeALGoFolder) { $AlGoFolderArr = @(".AL-Go") }
+    if ($includeALGoFolder) { $AlGoFolderArr = @($ALGoFolderName) }
     Set-Location $baseFolder
     @($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders + $AlGoFolderArr) | ForEach-Object {
-        $fullPath = Join-Path $projectPath $_ -Resolve
+        $fullPath = Join-Path $baseFolder "$project/$_" -Resolve
         $relativePath = Resolve-Path -Path $fullPath -Relative
         $folder = $relativePath.Substring(2).Replace('\','/').ToLowerInvariant()
         if ($includeOnlyAppIds) {
@@ -1272,6 +1286,7 @@ function CreateDevEnv {
         [string] $caller = 'local',
         [Parameter(Mandatory=$true)]
         [string] $baseFolder,
+        [string] $project,
         [string] $userName = $env:Username,
         [string] $bcContainerHelperPath = "",
 
@@ -1299,7 +1314,8 @@ function CreateDevEnv {
         throw "Specified parameters doesn't match kind=$kind"
     }
 
-    $dependenciesFolder = Join-Path $baseFolder ".dependencies"
+    $projectFolder = Join-Path $baseFolder $project -Resolve
+    $dependenciesFolder = Join-Path $projectFolder ".dependencies"
     $runAlPipelineParams = @{}
     $loadBcContainerHelper = ($bcContainerHelperPath -eq "")
     if ($loadBcContainerHelper) {
@@ -1316,7 +1332,7 @@ function CreateDevEnv {
         $workflowName = "$($kind)DevEnv"
         $params = @{
             "baseFolder" = $baseFolder
-            "project" = "."
+            "project" = $project
             "workflowName" = $workflowName
         }
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
@@ -1410,7 +1426,7 @@ function CreateDevEnv {
                             throw "$_ is an illegal property in adminCenterApiCredentials setting"
                         }
                     }
-                    if ($adminCenterApiCredentials.ContainsKey('ClientSecret')) {
+                    if ($adminCenterApiCredentials.Keys -contains 'ClientSecret') {
                         $adminCenterApiCredentials.ClientSecret = ConvertTo-SecureString -String $adminCenterApiCredentials.ClientSecret -AsPlainText -Force
                     }
                 }
@@ -1419,7 +1435,7 @@ function CreateDevEnv {
 
         $params = @{
             "settings" = $settings
-            "baseFolder" = $baseFolder
+            "baseFolder" = $projectFolder
         }
         if ($kind -eq "local") {
             $params += @{
@@ -1490,16 +1506,16 @@ function CreateDevEnv {
         }
 
         $allTestResults = "testresults*.xml"
-        $testResultsFile = Join-Path $baseFolder "TestResults.xml"
-        $testResultsFiles = Join-Path $baseFolder $allTestResults
+        $testResultsFile = Join-Path $projectFolder "TestResults.xml"
+        $testResultsFiles = Join-Path $projectFolder $allTestResults
         if (Test-Path $testResultsFiles) {
             Remove-Item $testResultsFiles -Force
         }
     
-        Set-Location $baseFolder
+        Set-Location $projectFolder
         $runAlPipelineOverrides | ForEach-Object {
             $scriptName = $_
-            $scriptPath = Join-Path $ALGoFolder "$ScriptName.ps1"
+            $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
             if (Test-Path -Path $scriptPath -Type Leaf) {
                 Write-Host "Add override for $scriptName"
                 $runAlPipelineParams += @{
@@ -1527,7 +1543,7 @@ function CreateDevEnv {
             }
         }
         elseif ($kind -eq "cloud") {
-            if ($runAlPipelineParams.ContainsKey('NewBcContainer')) {
+            if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
                 throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
             }
             
@@ -1599,7 +1615,7 @@ function CreateDevEnv {
             -pipelinename $workflowName `
             -imageName "" `
             -memoryLimit $repo.memoryLimit `
-            -baseFolder $baseFolder `
+            -baseFolder $projectFolder `
             -licenseFile $licenseFileUrl `
             -installApps $installApps `
             -installTestApps $installTestApps `
@@ -1632,21 +1648,31 @@ function CreateDevEnv {
     }
 }
 
+# This function will check and create the project folder if needed
+# If project is not specified (or '.'), the root folder is used and the repository is single project
+# If project is specified, check whether project folder exists and create it if it doesn't
+# If no apps has been added to the repository, move the .AL-Go folder to the project folder (Convert to multi-project repository)
 function CheckAndCreateProjectFolder {
     Param(
         [string] $project
     )
 
-    if (-not $project) { $project -eq "." }
-    if ($project -ne ".") {
+    if (-not $project) { $project = "." }
+    if ($project -eq ".") {
+        if (!(Test-Path $ALGoSettingsFile)) {
+            throw "Repository is setup as a multi-project repository, but no project has been specified."
+        }
+    }
+    else {
+        $createCodeWorkspace = $false
         if (Test-Path $ALGoSettingsFile) {
-            Write-Host "Reading $ALGoSettingsFile"
-            $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-            if ($settingsJson.appFolders.Count -eq 0 -and $settingsJson.testFolders.Count -eq 0) {
+            $appCount = @(Get-ChildItem -Path '.' -Filter 'app.json' -Recurse -File).Count
+            if ($appCount -eq 0) {
                 OutputWarning "Converting the repository to a multi-project repository as no other apps have been added previously."
                 New-Item $project -ItemType Directory | Out-Null
-                Move-Item -path $ALGoFolder -Destination $project
+                Move-Item -path $ALGoFolderName -Destination $project
                 Set-Location $project
+                $createCodeWorkspace = $true
             }
             else {
                 throw "Repository is setup for a single project, cannot add a project. Move all appFolders, testFolders and the .AL-Go folder to a subdirectory in order to convert to a multi-project repository."
@@ -1654,7 +1680,7 @@ function CheckAndCreateProjectFolder {
         }
         else {
             if (!(Test-Path $project)) {
-                New-Item -Path (Join-Path $project $ALGoFolder) -ItemType Directory | Out-Null
+                New-Item -Path (Join-Path $project $ALGoFolderName) -ItemType Directory | Out-Null
                 Set-Location $project
                 OutputWarning "Project folder doesn't exist, creating a new project folder and a default settings file with country us. Please modify if needed."
                 [ordered]@{
@@ -1662,17 +1688,24 @@ function CheckAndCreateProjectFolder {
                     "appFolders" = @()
                     "testFolders" = @()
                 } | Set-JsonContentLF -path $ALGoSettingsFile
+                $createCodeWorkspace = $true
             }
             else {
                 Set-Location $project
             }
+        }
+        if ($createCodeWorkspace) {
+            [ordered]@{
+                "folders" = @( @{ "path" = ".AL-Go" } )
+                "settings" = @{}
+            } | Set-JsonContentLF -path "$project.code-workspace"
         }
     }
 }
 
 Function AnalyzeProjectDependencies {
     Param(
-        [string] $basePath,
+        [string] $baseFolder,
         [string[]] $projects,
         [ref] $buildOrder,
         [ref] $buildAlso,
@@ -1688,10 +1721,10 @@ Function AnalyzeProjectDependencies {
         $project = $_
         Write-Host "- $project"
         $apps = @()
-        $folders = @(Get-ChildItem -Path (Join-Path $basePath $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($basePath.Length+1) } )
+        $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
         $unknownDependencies = @()
         $apps = @()
-        $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $basePath -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
+        $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
         $appDependencies."$project" = @{
             "apps" = $apps
             "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
@@ -1729,14 +1762,14 @@ Function AnalyzeProjectDependencies {
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
                 $depProject | ForEach-Object {
                     $_
-                    if ($projectDependencies.Value.ContainsKey($_)) {
+                    if ($projectDependencies.Value.Keys -contains $_) {
                         $projectDependencies.value."$_"
                     }
                 }
             } | Select-Object -Unique)
             # foundDependencies now contains all projects that the current project has a dependency on
             # Update ref variable projectDependencies for this project
-            if (!$projectDependencies.Value.ContainsKey($project)) {
+            if ($projectDependencies.Value.Keys -notcontains $project) {
                 # Loop through the list of projects for which we already built a dependency list
                 # Update the dependency list for that project if it contains the current project, which might lead to a changed dependency list
                 # This is needed because we are looping through the projects in a any order
@@ -1757,7 +1790,7 @@ Function AnalyzeProjectDependencies {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
                 # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
                 $foundDependencies | ForEach-Object { 
-                    if ($buildAlso.value.ContainsKey($_)) {
+                    if ($buildAlso.value.Keys -contains $_) {
                         if ($buildAlso.value."$_" -notcontains $project) {
                             $buildAlso.value."$_" += @( $project )
                         }
@@ -1781,3 +1814,40 @@ Function AnalyzeProjectDependencies {
         $no++
     }
 }
+
+function GetBaseFolder {
+    Param(
+        [string] $folder
+    )
+
+    if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
+        $folder = (Get-Item -Path $folder).Parent.FullName
+        if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
+            $folder = (Get-Item -Path $folder).Parent.FullName
+            if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
+                throw "Cannot determine base folder from folder $folder."
+            }
+        }
+    }
+    $folder
+}
+
+function GetProject {
+    Param(
+        [string] $baseFolder,
+        [string] $projectALGoFolder
+    )
+
+    $projectFolder = Join-Path $projectALGoFolder ".." -Resolve
+    if ($projectFolder -eq $baseFolder) {
+        $project = '.'
+    }
+    else {
+        Push-Location
+        Set-Location $baseFolder
+        $project = (Resolve-Path -Path $projectFolder -Relative).Substring(2)
+        Pop-Location
+    }
+    $project
+}
+

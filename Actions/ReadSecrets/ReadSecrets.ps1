@@ -42,7 +42,7 @@ try {
     $keyVaultName = $settings.keyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
         $credentialsJson = Get-KeyVaultCredentials -dontmask | ConvertTo-HashTable
-        if ($credentialsJson.ContainsKey("keyVaultName")) {
+        if ($credentialsJson.Keys -contains "keyVaultName") {
             $keyVaultName = $credentialsJson.keyVaultName
         }
     }
@@ -50,7 +50,7 @@ try {
     $secrets.Split(',') | ForEach-Object {
         $secret = $_
         $secretNameProperty = "$($secret)SecretName"
-        if ($settings.containsKey($secretNameProperty)) {
+        if ($settings.Keys -contains $secretNameProperty) {
             $secret = "$($secret)=$($settings."$secretNameProperty")"
         }
         $secretsCollection += $secret
@@ -90,7 +90,7 @@ try {
         }
     }
 
-    if ($outSettings.ContainsKey('appDependencyProbingPaths')) {
+    if ($outSettings.Keys -contains 'appDependencyProbingPaths') {
         $outSettings.appDependencyProbingPaths | ForEach-Object {
             if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
                 $_.authTokenSecret = GetSecret -secret $_.authTokenSecret -keyVaultName $keyVaultName

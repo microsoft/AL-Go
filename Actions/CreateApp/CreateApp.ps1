@@ -36,8 +36,8 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
-    $repoBaseFolder = (Get-Location).Path
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+    $baseFolder = (Get-Location).Path
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0072' -parentTelemetryScopeJson $parentTelemetryScopeJson
@@ -57,12 +57,12 @@ try {
     $ids = Confirm-IdRanges -templateType $type -idrange $idrange
 
     CheckAndCreateProjectFolder -project $project
-    $baseFolder = (Get-Location).Path
+    $projectFolder = (Get-Location).Path
 
     if ($type -eq "Performance Test App") {
         try {
-            $settings = ReadSettings -baseFolder $baseFolder -repoName $env:GITHUB_REPOSITORY -workflowName $env:GITHUB_WORKFLOW
-            $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $repoBaseFolder -project $project -doNotIssueWarnings
+            $settings = ReadSettings -baseFolder $baseFolder -project $project
+            $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotIssueWarnings
             $folders = Download-Artifacts -artifactUrl $settings.artifact -includePlatform
             $sampleApp = Join-Path $folders[0] "Applications.*\Microsoft_Performance Toolkit Samples_*.app"
             if (Test-Path $sampleApp) {
@@ -82,14 +82,14 @@ try {
     }
 
     $orgfolderName = $name.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
-    $folderName = GetUniqueFolderName -baseFolder $baseFolder -folderName $orgfolderName
+    $folderName = GetUniqueFolderName -baseFolder $projectFolder -folderName $orgfolderName
     if ($folderName -ne $orgfolderName) {
         OutputWarning -message "Folder $orgFolderName already exists in the repo, folder name $folderName will be used instead."
     }
 
     # Modify .AL-Go\settings.json
     try {
-        $settingsJsonFile = Join-Path $baseFolder $ALGoSettingsFile
+        $settingsJsonFile = Join-Path $projectFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
         if (@($settingsJson.appFolders)+@($settingsJson.testFolders)) {
             if ($type -eq "Performance Test App") {
@@ -120,18 +120,18 @@ try {
     }
 
     if ($type -eq "Performance Test App") {
-        New-SamplePerformanceTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -sampleSuite $sampleSuite -idrange $ids -appSourceFolder $tmpFolder
+        New-SamplePerformanceTestApp -destinationPath (Join-Path $projectFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -sampleSuite $sampleSuite -idrange $ids -appSourceFolder $tmpFolder
     }
     elseif ($type -eq "Test App") {
-        New-SampleTestApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids
+        New-SampleTestApp -destinationPath (Join-Path $projectFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids
     }
     else {
-        New-SampleApp -destinationPath (Join-Path $baseFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids 
+        New-SampleApp -destinationPath (Join-Path $projectFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids 
     }
 
-    Update-WorkSpaces -baseFolder $baseFolder -appName $folderName
+    Update-WorkSpaces -projectFolder $projectFolder -appName $folderName
 
-    Set-Location $repoBaseFolder
+    Set-Location $baseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch
 
     TrackTrace -telemetryScope $telemetryScope
