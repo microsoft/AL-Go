@@ -328,6 +328,7 @@ try {
         }
     }
 
+    "enableTaskScheduler",
     "assignPremiumPlan",
     "doNotBuildTests",
     "doNotRunTests",
