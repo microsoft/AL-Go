@@ -1,3 +1,4 @@
+# AL-Go for GitHub
 AL-Go for GitHub is a set of GitHub templates and actions, which can be used to setup and maintain professional DevOps processes for your Business Central AL projects.
 
 The goal is that people who have created their GitHub repositories based on the AL-Go templates, can maintain these repositories and stay current just by running a workflow, which updates their repositories. This includes necessary changes to scripts and workflows to cope with new features and functions in Business Central.
@@ -11,7 +12,7 @@ The template repositories to use as starting point are:
 
 The below usage scenarios takes you through how to get started and how to perform the most common tasks.
 
-Usage scenarios:
+## Usage scenarios:
 1. [Create a new per-tenant extension (like AL Go) and start developing in VS Code](Scenarios/GetStarted.md)
 2. [Add a test app to an existing project](Scenarios/AddATestApp.md)
 3. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/RegisterSandboxEnvironment.md)
@@ -28,6 +29,10 @@ Usage scenarios:
 14. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
 15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 16. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
+
+## Migration scenarios
+A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](MigrateFromAzureDevOpsWithoutHistory.md)<br />
+B. [Migrate a repository from Azure DevOps to AL-Go for GitHub with history](MigrateFromAzureDevOpsWithHistory.md)
 
 **Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 # This project
