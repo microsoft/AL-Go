@@ -1201,7 +1201,8 @@ function Enter-Value {
         [Parameter(Mandatory=$true)]
         [string] $question,
         [switch] $doNotConvertToLower,
-        [switch] $previousStep
+        [switch] $previousStep,
+        [char[]] $trimCharacters = @()
     )
 
     if ($title) {
@@ -1253,6 +1254,9 @@ function Enter-Value {
         }
     } while (-not ($answer))
 
+    if ($trimCharacters) {
+        $answer = $answer.trim($trimCharacters)
+    }
     Write-Host -ForegroundColor Green "$answer selected"
     Write-Host
     $answer

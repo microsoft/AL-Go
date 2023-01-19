@@ -74,7 +74,8 @@ if (-not $containerName) {
     $containerName = Enter-Value `
         -title "Container name" `
         -question "Please enter the name of the container to create" `
-        -default "bcserver"
+        -default "bcserver" `
+        -trimCharacters @('"',"'",' ')
 }
 
 if (-not $auth) {
@@ -114,7 +115,8 @@ if (-not $licenseFileUrl) {
         -description $description `
         -question "Local path or a secure download URL to license file " `
         -default $default `
-        -doNotConvertToLower
+        -doNotConvertToLower `
+        -trimCharacters @('"',"'",' ')
 
     if ($licenseFileUrl -eq "none") {
         $licenseFileUrl = ""
