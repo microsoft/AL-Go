@@ -31,8 +31,8 @@ The below usage scenarios takes you through how to get started and how to perfor
 16. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
 
 ## Migration scenarios
-A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](MigrateFromAzureDevOpsWithoutHistory.md)<br />
-B. [Migrate a repository from Azure DevOps to AL-Go for GitHub with history](MigrateFromAzureDevOpsWithHistory.md)
+A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](Scenarios/MigrateFromAzureDevOpsWithoutHistory.md)<br />
+B. [Migrate a repository from Azure DevOps to AL-Go for GitHub with history](Scenarios/MigrateFromAzureDevOpsWithHistory.md)
 
 **Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 # This project
