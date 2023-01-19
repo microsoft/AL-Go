@@ -1188,7 +1188,7 @@ function Enter-Value {
         [string] $question,
         [switch] $doNotConvertToLower,
         [switch] $previousStep,
-        [switch] $trimQuotesAndSpaces
+        [char[]] $trimCharacters = @()
     )
 
     if ($title) {
@@ -1240,8 +1240,8 @@ function Enter-Value {
         }
     } while (-not ($answer))
 
-    if ($trimQuotesAndSpaces) {
-        $answer = $answer.trim(@('"',"'",' '))
+    if ($trimCharacters) {
+        $answer = $answer.trim($trimCharacters)
     }
     Write-Host -ForegroundColor Green "$answer selected"
     Write-Host
