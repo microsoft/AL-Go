@@ -27,6 +27,10 @@ Usage scenarios:
 15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 16. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
 
+Migration scenarios
+A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](MigrateFromAzureDevOpsWithoutHistory.md)
+B. [Migrate a repository from Azure DevOps to AL-Go for GitHub with history](MigrateFromAzureDevOpsWithHistory.md)
+
 **Note:** Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 # This project
 This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:

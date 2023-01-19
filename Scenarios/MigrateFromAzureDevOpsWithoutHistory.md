@@ -7,13 +7,13 @@
 
 1. Start out by navigating to your **Azure DevOps** repository. Click the **Clone** button.
 ![Azure DevOps](images/a1.png)
-1. Clone the repository to your PC by selecting Clone in VS Code (or your favorite way of cloning). And open the files in the file explorer.
+1. Clone the repository to your PC by selecting Clone in **VS Code** (or your favorite way of cloning). And open the files in the **file explorer**.
 ![files](images/a2.png)
-1. Navigate to [https://aka.ms/algopte](https://aka.ms/algopte) or [https://aka.ms/algoappsource](https://aka.ms/algoappsource), click **Use this template**. Select **Create a new repository** and choose the owner + name of the repository and select public or private. Click **Create repository from template**.
+1. Navigate to [https://aka.ms/algopte](https://aka.ms/algopte) or [https://aka.ms/algoappsource](https://aka.ms/algoappsource), click **Use this template**. Select **Create a new repository** and choose the owner + name of the repository and select public or private. Click **Create repository from template** and open the repository.
 ![createrepo](images/a3.png)
-1. Click the **<> Code** button and copy the git address to the clipboard. Open VS Code, press Ctrl+Shift+P, select **Git Clone** and paste your git URL into the address bar. Select a location, clone and open the repo and navigate to the File Explorer with the Azure DevOps cloned files.
+1. In the new repository, click the **<> Code** button and copy the git address to the clipboard. Open VS Code, press Ctrl+Shift+P, select **Git Clone** and paste your git URL into the address bar. Select a location, clone and open the repo and navigate to the File Explorer with the **Azure DevOps cloned files**.
 ![clone](images/a4.png)
-1. In the file Explorer containing the cloned files from the Azure DevOps repo, select all the folders containing apps, test apps or other files you need to migrate over. Leave the .git, .github, .azureDevOps, .pipelines and scripts folders behind - we won't be using them. Drag the files to VS Code and select **Copy Folders**
+1. In the file Explorer containing the cloned files from the Azure DevOps repo, select all the folders containing apps, test apps or other files you need to migrate over. Do not include the **.git**, **.github**, **.azureDevOps**, **.pipelines** and **scripts** folders - we won't be using them. Drag the files to VS Code and select **Copy Folders**
 ![copy](images/a5.png)
 1. Modify any settings necessary for the app. Typical settings you might need to modify are:
     - appFolders, see https://aka.ms/algosettings#appfolders
@@ -36,13 +36,13 @@
 ![commit](images/a6.png)
 1. Navigate back to your repository on GitHub. See that your files have been uploaded.
 ![upload](images/a7.png)
-1. Click **Actions** to see that the CI/CD workflow was kicked off with your migration files.
+1. Click **Actions** to see that the **CI/CD** workflow was kicked off with your migration files.
 ![cicd](images/a8.png)
-1. Open the running workflow to see status and summary and wait for the build to complete.
+1. Open the running workflow to see **status and summary** and wait for the build to complete.
 ![success](images/a9.png)
-1. Scroll down to see the artifacts and the test results
+1. Scroll down to see the **artifacts** and the **test results**.
 ![testresults](images/a10.png)
-1. Navigate to **Code** and click **Commits** to see the history
+1. Navigate to **Code** and click **Commits** to see the history.
 ![history](images/a11.png)
 
 ---
