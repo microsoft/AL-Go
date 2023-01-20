@@ -6,6 +6,10 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue #171 create a workspace file when creating a project
 - Issue #356 Publish to AppSource fails in multi project repo
 - Issue #358 Publish To Environment Action stopped working in v2.3
+- Issue #362 Support for EnableTaskScheduler
+
+### New Settings
+New Project setting: EnableTaskScheduler in container executing tests and when setting up local development environment
 
 ### Refactoring and tests
 ReadSettings has been refactored to allow organization wide settings to be added as well. CI Tests have been added to cover ReadSettings.
