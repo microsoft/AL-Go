@@ -369,20 +369,43 @@ function MergeCustomObjectIntoOrderedDictionary {
 
 # Read settings from the settings files
 # Settings are read from the following files:
-# - .github/AL-Go-Settings.json
-# - <project>/.AL-Go/settings.json
-# - .github/<workflowName>.settings.json
-# - <project>/.AL-Go/<workflowName>.settings.json
-# - <project>/.AL-Go/<userName>.settings.json
+# - ALGoOrgSettings (github Variable)                 = Organization settings variable
+# - .github/AL-Go-Settings.json                       = Repository Settings file
+# - ALGoRepoSettings (github Variable)                = Repository settings variable
+# - <project>/.AL-Go/settings.json                    = Project settings file
+# - .github/<workflowName>.settings.json              = Workflow settings file
+# - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
+# - <project>/.AL-Go/<userName>.settings.json         = User settings file
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
         [string] $repoName = "$ENV:GITHUB_REPOSITORY",
         [string] $project = '.',
-        [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
+        [string] $workflowName = "$ENV:GITHUB_WORKFLOW".Trim(),
         [string] $userName = "$ENV:GITHUB_ACTOR",
-        [string] $branchName = "$ENV:GITHUB_REF_NAME"
+        [string] $branchName = "$ENV:GITHUB_REF_NAME",
+        [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
+        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
     )
+
+    function GetSettingsObject  { 
+        Param(
+            [string] $path
+        )
+        
+        if (Test-Path $path) {
+            try {
+                $settings = Get-Content $path -Encoding UTF8 | ConvertFrom-Json
+                if ($settings) {
+                    return $settings
+                }
+            }
+            catch {
+                throw "Error reading $path. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
+            }
+        }
+        return $null
+    }
 
     $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
     $githubFolder = Join-Path $baseFolder ".github"
@@ -463,39 +486,69 @@ function ReadSettings {
         "environments"                           = @()
         "buildModes"                             = @()
     }
-    
+
     # Read settings from files and merge them into the settings object
-    $settingsFiles = @((Join-Path $baseFolder $RepoSettingsFile))
+
+    $settingsObjects = @()
+    # Read settings from organization settings variable (parameter)
+    if ($orgSettingsVariableValue) {
+        $orgSettingsVariableObject = $orgSettingsVariableValue | ConvertFrom-Json
+        $settingsObjects += @($orgSettingsVariableObject)
+    }
+    # Read settings from repository settings file
+    $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
+    $settingsObjects += @($repoSettingsObject)
+    # Read settings from repository settings variable (parameter)
+    if ($repoSettingsVariableValue) {
+        $repoSettingsVariableObject = $repoSettingsVariableValue | ConvertFrom-Json
+        $settingsObjects += @($repoSettingsVariableObject)
+    }
     if ($project) {
+        # Read settings from project settings file
         $projectFolder = Join-Path $baseFolder $project -Resolve
-        $settingsFiles += @((Join-Path $projectFolder $ALGoSettingsFile))
+        $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
+        $settingsObjects += @($projectSettingsObject)
     }
     if ($workflowName) {
-        $settingsFiles += @((Join-Path $gitHubFolder "$workflowName.settings.json"))
+        # Read settings from workflow settings file
+        $workflowSettingsObject = GetSettingsObject -Path (Join-Path $gitHubFolder "$workflowName.settings.json")
+        $settingsObjects += @($workflowSettingsObject)
         if ($project) {
-            $settingsFiles += @((Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json"), (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json"))
+            # Read settings from project workflow settings file
+            $projectWorkflowSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json")
+            # Read settings from user settings file
+            $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
+            $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
     }
-    $settingsFiles | ForEach-Object {
-        $settingsFile = $_
-        if (Test-Path $settingsFile) {
-            try {
-                Write-Host "Reading $settingsFile"
-                $settingsJson = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
-                MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
-
-                if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
-                    $settingsJson.ConditionalSettings | ForEach-Object {
-                        $conditionalSetting = $_
-                        if ($conditionalSetting.branches | Where-Object { $branchName -like $_ }) {
-                            Write-Host "Applying conditional settings for $branchName"
-                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
-                        }
+    $settingsObjects | Where-Object { $_ } | ForEach-Object {
+        $settingsJson = $_
+        MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+        if ("$settingsJson" -ne "" -and $settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
+            $settingsJson.ConditionalSettings | ForEach-Object {
+                $conditionalSetting = $_
+                if ("$conditionalSetting" -ne "") {
+                    $conditionMet = $true
+                    if ($conditionalSetting.PSObject.Properties.Name -eq "branches") {
+                        $conditionMet = $conditionMet -and ($conditionalSetting.branches | Where-Object { $branchName -like $_ })
+                    }
+                    if ($conditionalSetting.PSObject.Properties.Name -eq "repositories") {
+                        $conditionMet = $conditionMet -and ($conditionalSetting.repositories | Where-Object { $repoName -like $_ })
+                    }
+                    if ($project -and $conditionalSetting.PSObject.Properties.Name -eq "projects") {
+                        $conditionMet = $conditionMet -and ($conditionalSetting.projects | Where-Object { $project -like $_ })
+                    }
+                    if ($workflowName -and $conditionalSetting.PSObject.Properties.Name -eq "workflows") {
+                        $conditionMet = $conditionMet -and ($conditionalSetting.workflows | Where-Object { $workflowName -like $_ })
+                    }
+                    if ($userName -and $conditionalSetting.PSObject.Properties.Name -eq "users") {
+                        $conditionMet = $conditionMet -and ($conditionalSetting.users | Where-Object { $userName -like $_ })
+                    }
+                    if ($conditionMet) {
+                        Write-Host "Applying conditional settings for $branchName"
+                        MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
                     }
                 }
-            }
-            catch {
-                throw "Error reading $settingsFile. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
             }
         }
     }
@@ -1854,4 +1907,3 @@ function GetProject {
     }
     $project
 }
-
