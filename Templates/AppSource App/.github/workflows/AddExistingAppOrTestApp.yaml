@@ -23,6 +23,10 @@ defaults:
   run:
     shell: powershell
 
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
 jobs:
   AddExistingAppOrTestApp:
     runs-on: [ windows-latest ]
