@@ -529,23 +529,29 @@ function ReadSettings {
                 $conditionalSetting = $_
                 if ("$conditionalSetting" -ne "") {
                     $conditionMet = $true
+                    $conditions = @()
                     if ($conditionalSetting.PSObject.Properties.Name -eq "branches") {
                         $conditionMet = $conditionMet -and ($conditionalSetting.branches | Where-Object { $branchName -like $_ })
+                        $conditions += @("branchName: $branchName")
                     }
                     if ($conditionalSetting.PSObject.Properties.Name -eq "repositories") {
                         $conditionMet = $conditionMet -and ($conditionalSetting.repositories | Where-Object { $repoName -like $_ })
+                        $conditions += @("repoName: $repoName")
                     }
                     if ($project -and $conditionalSetting.PSObject.Properties.Name -eq "projects") {
                         $conditionMet = $conditionMet -and ($conditionalSetting.projects | Where-Object { $project -like $_ })
+                        $conditions += @("project: $project")
                     }
                     if ($workflowName -and $conditionalSetting.PSObject.Properties.Name -eq "workflows") {
                         $conditionMet = $conditionMet -and ($conditionalSetting.workflows | Where-Object { $workflowName -like $_ })
+                        $conditions += @("workflowName: $workflowName")
                     }
                     if ($userName -and $conditionalSetting.PSObject.Properties.Name -eq "users") {
                         $conditionMet = $conditionMet -and ($conditionalSetting.users | Where-Object { $userName -like $_ })
+                        $conditions += @("userName: $userName")
                     }
                     if ($conditionMet) {
-                        Write-Host "Applying conditional settings for $branchName"
+                        Write-Host "Applying conditional settings for $($conditions -join ", ")"
                         MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
                     }
                 }

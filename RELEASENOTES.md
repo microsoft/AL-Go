@@ -7,6 +7,14 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue #356 Publish to AppSource fails in multi project repo
 - Issue #358 Publish To Environment Action stopped working in v2.3
 
+### Support for GitHub variables: ALGoOrgSettings and ALGoRepoSettings
+Recently, GitHub added support for variables, which you can define on your organization or your repository.
+AL-Go now supports that you can define a GitHub variable called ALGoOrgSettings, which will work for all repositories (with access to the variable)
+Org Settings will be applied before Repo settings and local repository settings files will override values in the org settings
+You can also define a variable called ALGoRepoSettings on the repository, which will be applied after reading the Repo Settings file in the repo
+Example for usage could be setup of branching strategies, versioning or an appDependencyProbingPaths to repositories which all repositories share.
+appDependencyProbingPaths from settings variables are merged together with appDependencyProbingPaths defined in repositories
+
 ### Refactoring and tests
 ReadSettings has been refactored to allow organization wide settings to be added as well. CI Tests have been added to cover ReadSettings.
 

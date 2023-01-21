@@ -93,16 +93,22 @@ Describe "RunPipeline Action Tests" {
         New-Item $ALGoFolder -ItemType Directory | Out-Null
         New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-        @{ "property1" = "repo1"; "property2" = "repo2"; "property3" = "repo3" } | ConvertTo-Json -Depth 99 |
+        New-Item -Path (Join-Path $tempName "projectx/$ALGoFolderName") -ItemType Directory | Out-Null
+        New-Item -Path (Join-Path $tempName "projecty/$ALGoFolderName") -ItemType Directory | Out-Null
+        
+        @{ "property1" = "repo1"; "property2" = "repo2"; "property3" = "repo3"; "arr1" = @("repo1","repo2") } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
         @{ "property1" = "single1"; "property4" = "single4" } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $ALGoFolder "settings.json") -encoding utf8 -Force
         @{ "property1" = "multi1"; "property5" = "multi5" } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -encoding utf8 -Force
-        @{ "property2" = "workflow2"; "conditionalSettings" = @{ "branches" = @( 'dev' ); "settings" = @{ "property1" = "branch1"; "property4" = "branch4" } } } | ConvertTo-Json -Depth 99 |
+        @{ "property2" = "workflow2"; "conditionalSettings" = @( @{ "branches" = @( 'dev' ); "settings" = @{ "property1" = "branch1"; "property4" = "branch4" } } ) } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "Workflow.settings.json") -encoding utf8 -Force
         @{ "property1" = "user1"; "property6" = "user6" } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $projectALGoFolder "user.settings.json") -encoding utf8 -Force
+
+        $ENV:ALGoOrgSettings = ''
+        $ENV:ALGoRepoSettings = ''
 
         $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName ''
         $repoSettings.property1 | Should -Be 'repo1'
@@ -144,6 +150,91 @@ Describe "RunPipeline Action Tests" {
         $userWorkflowMultiSettings.property4 | Should -Be 'branch4'
         $userWorkflowMultiSettings.property5 | Should -Be 'multi5'
         $userWorkflowMultiSettings.property6 | Should -Be 'user6'
+
+        $ENV:ALGoOrgSettings = @{ "property2" = "orgsetting2"; "property7" = "orgsetting7"; "arr1" = @("org3") } | ConvertTo-Json -Depth 99
+
+        $withOrgSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
+        $withOrgSettings.property1 | Should -Be 'user1'
+        $withOrgSettings.property2 | Should -Be 'workflow2'
+        $withOrgSettings.property3 | Should -Be 'repo3'
+        $withOrgSettings.property4 | Should -Be 'branch4'
+        $withOrgSettings.property5 | Should -Be 'multi5'
+        $withOrgSettings.property6 | Should -Be 'user6'
+        $withOrgSettings.property7 | Should -Be 'orgsetting7'
+        $withOrgSettings.arr1 | Should -Be @("org3","repo1","repo2")
+
+        $ENV:ALGoRepoSettings = @{ "property3" = "reposetting3"; "property8" = "reposetting8" } | ConvertTo-Json -Depth 99
+
+        $withRepoSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
+        $withRepoSettings.property1 | Should -Be 'user1'
+        $withRepoSettings.property2 | Should -Be 'workflow2'
+        $withRepoSettings.property3 | Should -Be 'reposetting3'
+        $withRepoSettings.property4 | Should -Be 'branch4'
+        $withRepoSettings.property5 | Should -Be 'multi5'
+        $withRepoSettings.property6 | Should -Be 'user6'
+        $withRepoSettings.property7 | Should -Be 'orgsetting7'
+        $withRepoSettings.property8 | Should -Be 'reposetting8'
+
+        $conditionalSettings = [ordered]@{
+            "conditionalSettings" = @(
+                @{
+                    "branches" = @( 'branchx', 'branchy' )
+                    "settings" = @{ "property3" = "branchxy"; "property4" = "branchxy" }
+                }
+                @{
+                    "repositories" = @( 'repox', 'repoy' )
+                    "settings" = @{ "property3" = "repoxy"; "property4" = "repoxy" }
+                }
+                @{
+                    "projects" = @( 'projectx', 'projecty' )
+                    "settings" = @{ "property3" = "projectxy"; "property4" = "projectxy" }
+                }
+                @{
+                    "workflows" = @( 'workflowx', 'workflowy' )
+                    "settings" = @{ "property3" = "workflowxy"; "property4" = "workflowxy" }
+                }
+                @{
+                    "users" = @( 'userx', 'usery' )
+                    "settings" = @{ "property3" = "userxy"; "property4" = "userxy" }
+                }
+                @{
+                    "branches" = @( 'branchx', 'branchy' )
+                    "projects" = @( 'projectx','projecty' )
+                    "settings" = @{ "property3" = "bpxy"; "property4" = "bpxy" }
+                }
+            )
+        }
+        $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
+
+        $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchy' -userName 'user'
+        $conditionalSettings.property3 | Should -Be 'branchxy'
+        $conditionalSettings.property4 | Should -Be 'branchxy'
+
+        $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repox' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
+        $conditionalSettings.property3 | Should -Be 'repoxy'
+        $conditionalSettings.property4 | Should -Be 'branch4'
+
+        $conditionalSettings = ReadSettings -baseFolder $tempName -project 'projectx' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'user'
+        $conditionalSettings.property3 | Should -Be 'projectxy'
+        $conditionalSettings.property4 | Should -Be 'projectxy'
+
+        $conditionalSettings = ReadSettings -baseFolder $tempName -project 'projectx' -repoName 'repo' -workflowName 'Workflowx' -branchName 'branch' -userName 'user'
+        $conditionalSettings.property3 | Should -Be 'workflowxy'
+        $conditionalSettings.property4 | Should -Be 'workflowxy'
+
+        $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'usery'
+        $conditionalSettings.property3 | Should -Be 'userxy'
+        $conditionalSettings.property4 | Should -Be 'userxy'
+
+        $conditionalSettings = ReadSettings -baseFolder $tempName -project 'projecty' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchx' -userName 'user'
+        $conditionalSettings.property3 | Should -Be 'bpxy'
+        $conditionalSettings.property4 | Should -Be 'bpxy'
+
+        $ENV:ALGoOrgSettings = 'this is not json'
+        { ReadSettings -baseFolder $tempName -project 'Project' } | Should -Throw
+        
+        $ENV:ALGoOrgSettings = ''
+        $ENV:ALGoRepoSettings = ''
 
         # Clean up
         Pop-Location
