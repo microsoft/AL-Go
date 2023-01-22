@@ -420,8 +420,6 @@ function GetLatestRelease {
     # Default github sorting will return the latest historically created release as the latest release - not the highest version
     $releases = GetReleases -token $token -api_url $api_url -repository $repository
 
-    $releases | Out-Host
-
     # Get Latest release
     $latestRelease = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
     if ($ref -like 'release/*') {
@@ -429,10 +427,8 @@ function GetLatestRelease {
             # If release branch, get the latest release from that the release branch
             # This is given by the latest release with the same major.minor as the release branch
             $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString(8)
-            $semVerObj | Out-Host
             $latestRelease = $releases | Where-Object {
                 $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-                $releaseSemVerObj | Out-Host
                 $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
             } | Select-Object -First 1
         }
