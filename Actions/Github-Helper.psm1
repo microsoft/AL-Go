@@ -397,14 +397,50 @@ function GetReleases {
             $sortedReleases
         }
         catch {
-            Write-Host -ForegroundColor red "Some of the release tags cannot be recognized as a semantic version string (https://semver.org)"
-            Write-Host -ForegroundColor red "Using default GitHub sorting for releases"
+            Write-Host "::Warning::Some of the release tags cannot be recognized as a semantic version string (https://semver.org). Using default GitHub sorting for releases, which will not work for release branches"
             $releases
         }
     }
     else {
         $releases
     }
+}
+
+function GetLatestRelease {
+    Param(
+        [string] $token,
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [string] $ref = $ENV:GITHUB_REFNAME
+    )
+    
+    Write-Host "Getting the latest release from $api_url/repos/$repository/releases/latest - branch $ref"
+    # Get all releases from GitHub, sorted by SemVer tag
+    # If any release tag is not a valid SemVer tag, use default GitHub sorting and issue a warning
+    # Default github sorting will return the latest historically created release as the latest release - not the highest version
+    $releases = GetReleases -token $token -api_url $api_url -repository $repository
+
+    $releases | Out-Host
+
+    # Get Latest release
+    $latestRelease = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+    if ($ref -like 'release/*') {
+        try {
+            # If release branch, get the latest release from that the release branch
+            # This is given by the latest release with the same major.minor as the release branch
+            $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString(8)
+            $semVerObj | Out-Host
+            $latestRelease = $releases | Where-Object {
+                $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                $releaseSemVerObj | Out-Host
+                $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
+            } | Select-Object -First 1
+        }
+        catch {
+            throw "Release branch name '$ref' is not a valid semantic version string (https://semver.org)"
+        }
+    }
+    $latestRelease
 }
 
 function GetHeader {
@@ -440,22 +476,6 @@ function GetReleaseNotes {
     }
 
     InvokeWebRequest -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" 
-}
-
-function GetLatestRelease {
-    Param(
-        [string] $token,
-        [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY
-    )
-    
-    Write-Host "Getting the latest release from $api_url/repos/$repository/releases/latest"
-    try {
-        InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases/latest" -ignoreErrors | ConvertFrom-Json
-    }
-    catch {
-        return $null
-    }
 }
 
 function DownloadRelease {

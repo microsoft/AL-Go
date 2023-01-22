@@ -184,6 +184,29 @@ function RunWorkflow {
     $run
 }
 
+function DownloadWorkflowLog {
+    Param(
+        [string] $repository,
+        [string] $runid,
+        [string] $path
+    )
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+    $headers = @{ 
+        "Accept" = "application/vnd.github.v3+json"
+        "Authorization" = "token $token"
+    }
+
+    $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
+    $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
+    $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
+    $tempFileName = [System.IO.Path]::GetTempFileName()
+    [System.IO.File]::WriteAllBytes($tempFileName, $log.Content)
+    Expand-Archive -Path $tempFileName -DestinationPath $path
+}
+
 function WaitWorkflow {
     Param(
         [string] $repository,
@@ -460,19 +483,24 @@ function RemoveRepository {
     }
 }
 
-function Replace-StringInFiles {
+function Test-LogContainsFromRun {
     Param(
-        [string] $path,
-        [string] $include = "*",
-        [string] $search,
-        [string] $replace
+        [string] $repository,
+        [string] $runid,
+        [string] $jobName,
+        [string] $stepName,
+        [string] $expectedText
     )
 
-    Get-ChildItem -Path $path -Recurse -Include $include -File | ForEach-Object {
-        $content = Get-Content $_.FullName -Raw -Encoding utf8
-        $content = $content -replace $search, $replace
-        [System.IO.File]::WriteAllText($_.FullName, $content)
+    DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
+    $runPipelineLog = Get-Content -Path (Get-Item "logs/$jobName/*_$stepName.txt").FullName -encoding utf8 -raw
+    if ($runPipelineLog.contains($expectedText, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Write-Host "'$expectedText' found in the log for $jobName/$stepName as expected"
     }
+    else {
+        throw "Expected to find '$expectedText' in the log for $jobName/$stepName, but did not find it"
+    }
+    Remove-Item -Path 'logs' -Recurse -Force
 }
 
 . (Join-Path $PSScriptRoot "Workflows\Run-AddExistingAppOrTestApp.ps1")
