@@ -54,6 +54,7 @@ jobs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       releaseId: ${{ steps.createrelease.outputs.releaseId }}
+      commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -304,16 +305,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          ref: '${{ needs.createRelease.outputs.commitish }}'
 
       - name: Create Release Branch
         run: |
           $ErrorActionPreference = "STOP"
           Set-StrictMode -version 2.0
-          git checkout -b release/${{ github.event.inputs.tag }}
+          git checkout -b ${{ steps.createreleasenotes.outputs.releaseBranch }}
           git config user.name ${{ github.actor}}
           git config user.email ${{ github.actor}}@users.noreply.github.com
-          git commit --allow-empty -m "Release branch ${{ github.event.inputs.tag }}"
-          git push origin release/${{ github.event.inputs.tag }}
+          git commit --allow-empty -m "Release branch ${{ steps.createreleasenotes.outputs.releaseNotes }}"
+          git push origin ${{ steps.createreleasenotes.outputs.releaseBranch }}
 
   UpdateVersionNumber:
     if: ${{ github.event.inputs.updateVersionNumber!='' }}

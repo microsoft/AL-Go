@@ -84,8 +84,9 @@ Test-LogContainsFromRun -runid $run.id -jobName 'Build . - Default' -stepName 'R
 
 # Release version 1.0
 $tag1 = '1.0.0'
-$releaseBranch1 = "release/$tag1"
-Run-CreateRelease -repository $repository -branch $branch -appVersion 'latest' -name 'v1.0' -tag $tag1 -createReleaseBranch -updateVersionNumber '+1.0' -directCommit -wait
+$ver1 = 'v1.0'
+$releaseBranch1 = "release/1.0"
+Run-CreateRelease -repository $repository -branch $branch -appVersion 'latest' -name $ver1 -tag $tag1 -createReleaseBranch -updateVersionNumber '+1.0' -directCommit -wait
 
 # Run CI/CD workflow
 $run = Run-CICD -repository $repository -branch $branch -wait
@@ -93,13 +94,14 @@ $run = Run-CICD -repository $repository -branch $branch -wait
 # Test number of artifacts
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '2.0' -appVersion '2.0'
 
-# Check that v1.0 was used as previous release
-Test-LogContainsFromRun -runid $run.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText 'Using v1.0 as previous release'
+# Check that $tag1 was used as previous release
+Test-LogContainsFromRun -runid $run.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText "Using $ver1 (tag $tag1) as previous release"
 
 # Release version 2.0
 $tag2 = '2.0.0'
-$releaseBranch2 = "release/$tag2"
-Run-CreateRelease -repository $repository -branch $branch -appVersion 'latest' -name 'v2.0' -tag $tag2 -createReleaseBranch -updateVersionNumber '+0.1' -directCommit -wait
+$ver2 = 'v2.0'
+$releaseBranch2 = "release/2.0"
+Run-CreateRelease -repository $repository -branch $branch -appVersion 'latest' -name $ver2 -tag $tag2 -createReleaseBranch -updateVersionNumber '+0.1' -directCommit -wait
 
 # Run CI/CD workflow
 $run = Run-CICD -repository $repository -branch $branch -wait
@@ -107,8 +109,8 @@ $run = Run-CICD -repository $repository -branch $branch -wait
 # Test number of artifacts
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '2.1' -appVersion '2.1'
 
-# Check that v2.0 was used as previous release
-Test-LogContainsFromRun -runid $run.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText 'Using v2.0 as previous release'
+# Check that $tag2 was used as previous release
+Test-LogContainsFromRun -runid $run.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText "Using $ver2 (tag $tag2) as previous release"
 
 # Run CI/CD workflow in release branch 1.0.0
 $runRelease1 = Run-CICD -repository $repository -branch $releaseBranch1 -wait
@@ -119,8 +121,8 @@ if ($noOfReleaseArtifacts -ne 1) {
     throw "Expected 1 artifact in release artifact1, but found $noOfReleaseArtifacts"
 }
 
-# Check that v1.0 was used as previous release for builds in release branch 1.0.0
-Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText 'Using v1.0 as previous release'
+# Check that $tag1 was used as previous release for builds in release branch 1.0.0
+Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText "Using $ver1 (tag $tag1) as previous release"
 
 # Run CI/CD workflow in release branch 2.0.0
 $runRelease2 = Run-CICD -repository $repository -branch $releaseBranch2 -wait
@@ -131,16 +133,30 @@ if ($noOfReleaseArtifacts -ne 1) {
     throw "Expected 1 artifact in release artifact2, but found $noOfReleaseArtifacts"
 }
 
-# Check that v2.0 was used as previous release for builds in release branch 2.0.0
-Test-LogContainsFromRun -runid $runRelease2.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText 'Using v2.0 as previous release'
+# Check that $tag2 was used as previous release for builds in release branch 2.0.0
+Test-LogContainsFromRun -runid $runRelease2.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText "Using $ver2 (tag $tag2) as previous release"
 
 # Release hotfix from version 1.0
 $tag1 = "1.0.$($runRelease1.run_number)"
-Run-CreateRelease -repository $repository -branch $releaseBranch1 -appVersion "$tag1.0" -name "v$tag1" -tag $tag1 -directCommit -wait
+$ver1 = "v$tag1"
+Run-CreateRelease -repository $repository -branch $releaseBranch1 -appVersion "$tag1.0" -name $ver1 -tag $tag1 -directCommit -wait
 
 # Release hotfix from version 2.0
 $tag2 = "2.0.$($runRelease2.run_number)"
-Run-CreateRelease -repository $repository -branch $releaseBranch2 -appVersion "$tag2.0" -name "v$tag2" -tag $tag2 -directCommit -wait
+$ver2 = "v$tag2"
+Run-CreateRelease -repository $repository -branch $releaseBranch2 -appVersion "$tag2.0" -name $ver2 -tag $tag2 -directCommit -wait
+
+# Run CI/CD workflow in release branch 1.0.0
+$runRelease1 = Run-CICD -repository $repository -branch $releaseBranch1 -wait
+
+Test-ArtifactsFromRun -runid $runRelease1.id -folder 'artifacts1' -expectedArtifacts @{"Apps"=1} -repoVersion '1.0' -appVersion '1.0'
+$noOfReleaseArtifacts = @(get-childitem -path 'artifacts1' -filter '*-release_1.0.0-Apps-1.0.*').count
+if ($noOfReleaseArtifacts -ne 1) {
+    throw "Expected 1 artifact in release artifact1, but found $noOfReleaseArtifacts"
+}
+
+# Check that $tag1 was used as previous release for builds in release branch 1.0.0
+Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . - Default' -stepName 'Run pipeline' -expectedText "Using $ver1 (tag $tag1) as previous release"
 
 #Set-Location $prevLocation
 

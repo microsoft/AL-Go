@@ -29,9 +29,24 @@ try {
 
     Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
 
-    SemVerStrToSemVerObj -semVerStr $tag_name | Out-Null
+    # Check that tag is SemVer
+    $SemVerObj = SemVerStrToSemVerObj -semVerStr $tag_name
 
-    $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY 
+    # Calculate release branch
+    $releaseBranch = "$($SemVerObj.Prefix)$($SemVerObj.Major).$($SemVerObj.Minor)"
+    if ($SemVerObj.Patch) {
+        $releaseBranch += ".$($SemVerObj.Patch)"
+    }
+    if ($SemVerObj.addt0) {
+        $releaseBranch += "-$($SemVerObj.addt0)"
+    }
+    1..4 | ForEach-Object {
+        if ($SemVerObj."addt$($_)") {
+            $releaseBranch += ".$($SemVerObj."addt$($_)")"
+        }
+    }
+
+    $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
 
     $latestReleaseTag = ""
     if ($latestRelease -and ([bool]($latestRelease.PSobject.Properties.name -match "tag_name"))){
@@ -40,6 +55,9 @@ try {
 
     $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag | ConvertFrom-Json
     $releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
+
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseBranch=$releaseBranch"
+    Write-Host "releaseBranch=$releaseBranch"
 
     Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseNotes=$releaseNotes"
     Write-Host "releaseNotes=$releaseNotes"

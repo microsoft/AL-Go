@@ -325,7 +325,8 @@ function SemVerObjToSemVerStr {
 
 function SemVerStrToSemVerObj {
     Param(
-        [string] $semVerStr
+        [string] $semVerStr,
+        [switch] $allowMajorMinorOnly
     )
 
     $obj = New-Object PSCustomObject
@@ -338,6 +339,15 @@ function SemVerStrToSemVerObj {
         }
         $version = [System.Version]"$($verStr.split('-')[0])"
         if ($version.Revision -ne -1) { throw "not semver" }
+        if ($version.Build -eq -1) {
+            if ($allowMajorMinorOnly) {
+                $version = [System.Version]"$($version.Major).$($version.Minor).0"
+                $semVerStr = "$($semVerStr).0"
+            }
+            else {
+                throw "not semver"
+            }
+        }
         $obj | Add-Member -MemberType NoteProperty -Name "Prefix" -Value $prefix
         $obj | Add-Member -MemberType NoteProperty -Name "Major" -Value ([int]$version.Major)
         $obj | Add-Member -MemberType NoteProperty -Name "Minor" -Value ([int]$version.Minor)
@@ -426,7 +436,7 @@ function GetLatestRelease {
         try {
             # If release branch, get the latest release from that the release branch
             # This is given by the latest release with the same major.minor as the release branch
-            $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString(8)
+            $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString(8) -allowMajorMinorOnly
             $latestRelease = $releases | Where-Object {
                 $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
                 $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
