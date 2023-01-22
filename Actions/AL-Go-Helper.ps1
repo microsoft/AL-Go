@@ -437,6 +437,7 @@ function ReadSettings {
         "treatTestFailuresAsWarnings"            = $false
         "rulesetFile"                            = ""
         "assignPremiumPlan"                      = $false
+        "enableTaskScheduler"                    = $false
         "doNotBuildTests"                        = $false
         "doNotRunTests"                          = $false
         "doNotRunBcptTests"                      = $false
@@ -1603,6 +1604,7 @@ function CreateDevEnv {
             }
         }
         
+        "enableTaskScheduler",
         "assignPremiumPlan",
         "installTestRunner",
         "installTestFramework",
