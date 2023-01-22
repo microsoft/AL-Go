@@ -31,7 +31,7 @@ try {
     $SemVerObj = SemVerStrToSemVerObj -semVerStr $tag_name
 
     # Calculate release branch
-    $releaseBranch = "$($SemVerObj.Prefix)$($SemVerObj.Major).$($SemVerObj.Minor)"
+    $releaseBranch = "release/$($SemVerObj.Prefix)$($SemVerObj.Major).$($SemVerObj.Minor)"
     if ($SemVerObj.Patch -or $SemVerObj.addt0 -ne 'zzz') {
         $releaseBranch += ".$($SemVerObj.Patch)"
         if ($SemVerObj.addt0 -ne 'zzz') {

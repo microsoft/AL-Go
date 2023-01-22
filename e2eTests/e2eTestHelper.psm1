@@ -399,7 +399,7 @@ function CreateAlGoRepository {
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
-        Start-Process "https://github.com/$repository"
+        Start-Process "https://github.com/$repository/actions"
     }
     Start-Sleep -seconds 10
 }
