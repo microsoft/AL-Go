@@ -55,6 +55,7 @@ jobs:
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       releaseId: ${{ steps.createrelease.outputs.releaseId }}
       commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
+      releaseBranch: ${{ steps.createreleasenotes.outputs.releaseBranch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -312,11 +313,11 @@ jobs:
         run: |
           $ErrorActionPreference = "STOP"
           Set-StrictMode -version 2.0
-          git checkout -b ${{ steps.createreleasenotes.outputs.releaseBranch }}
+          git checkout -b ${{ needs.CreateRelease.outputs.releaseBranch }}
           git config user.name ${{ github.actor}}
           git config user.email ${{ github.actor}}@users.noreply.github.com
-          git commit --allow-empty -m "Release branch ${{ steps.createreleasenotes.outputs.releaseNotes }}"
-          git push origin ${{ steps.createreleasenotes.outputs.releaseBranch }}
+          git commit --allow-empty -m "Release branch ${{ needs.CreateRelease.outputs.releaseBranch }}"
+          git push origin ${{ needs.CreateRelease.outputs.releaseBranch }}
 
   UpdateVersionNumber:
     if: ${{ github.event.inputs.updateVersionNumber!='' }}
