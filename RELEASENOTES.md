@@ -3,10 +3,16 @@
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
 ### Issues
-- Issue #171 create a workspace file when creating a project
-- Issue #356 Publish to AppSource fails in multi project repo
-- Issue #358 Publish To Environment Action stopped working in v2.3
-- Issue #362 Support for EnableTaskScheduler
+- Issue [#171](https://github.com/microsoft/AL-Go/issues/171) create a workspace file when creating a project
+- Issue [#356](https://github.com/microsoft/AL-Go/issues/356) Publish to AppSource fails in multi project repo
+- Issue [#358](https://github.com/microsoft/AL-Go/issues/358) Publish To Environment Action stopped working in v2.3
+- Issue [#362](https://github.com/microsoft/AL-Go/issues/362) Support for EnableTaskScheduler
+- Issue [#360](https://github.com/microsoft/AL-Go/issues/360) Creating a release and deploying from a release branch
+- Issue [#371](https://github.com/microsoft/AL-Go/issues/371) 'No previous release found' for builds on release branches
+
+### Release Branches
+This version contains a number of bug fixes to release branches, to ensure that the recommended branching strategy is fully supported.
+![Branching Strategy](Scenarios/images/branchingstrategy.png)
 
 ### New Settings
 New Project setting: EnableTaskScheduler in container executing tests and when setting up local development environment
