@@ -486,18 +486,13 @@ function GetLatestRelease {
     $latestRelease = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
     $releaseBranchPrefix = 'release/'
     if ($ref -like "$releaseBranchPrefix*") {
-        try {
-            # If release branch, get the latest release from that the release branch
-            # This is given by the latest release with the same major.minor as the release branch
-            $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString($releaseBranchPrefix.Length) -allowMajorMinorOnly
-            $latestRelease = $releases | Where-Object {
-                $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-                $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
-            } | Select-Object -First 1
-        }
-        catch {
-            throw "Release branch name '$ref' is not a valid semantic version string (https://semver.org)"
-        }
+        # If release branch, get the latest release from that the release branch
+        # This is given by the latest release with the same major.minor as the release branch
+        $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString($releaseBranchPrefix.Length) -allowMajorMinorOnly
+        $latestRelease = $releases | Where-Object {
+            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+            $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
+        } | Select-Object -First 1
     }
     $latestRelease
 }
