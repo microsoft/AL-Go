@@ -186,6 +186,7 @@ jobs:
               body: bodyMD.replaceAll('\\n','\n'),
               draft: ${{ github.event.inputs.draft=='Y' }},
               prerelease: ${{ github.event.inputs.prerelease=='Y' }},
+              make_latest: 'legacy',
               target_commitish: '${{ steps.analyzeartifacts.outputs.commitish }}'
             });
             const {
