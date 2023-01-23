@@ -210,9 +210,11 @@ function DownloadWorkflowLog {
 function WaitWorkflow {
     Param(
         [string] $repository,
-        [string] $runid
+        [string] $runid,
+        [switch] $noDelay
     )
 
+    $delay = !$noDelay.IsPresent
     if (!$repository) {
         $repository = $defaultRepository
     }
@@ -223,7 +225,9 @@ function WaitWorkflow {
 
     $status = ""
     do {
-        Start-Sleep -Seconds 60
+        if ($delay) {
+            Start-Sleep -Seconds 60
+        }
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
         $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
         if ($run.status -ne $status) {
@@ -232,6 +236,7 @@ function WaitWorkflow {
             Write-Host -NoNewline "$status"
         }
         Write-Host -NoNewline "."
+        $delay = $true
     } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
     Write-Host
     Write-Host $run.conclusion
