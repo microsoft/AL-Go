@@ -133,7 +133,6 @@ jobs:
               Write-Host "::Error::No artifacts found for this project"
               exit 1
             }
-            $artifact | out-host
             if ($sha) {
               if ($artifact.workflow_run.head_sha -ne $sha) {
                 Write-Host "::Error::The build selected for release doesn't contain all projects. Please rebuild all projects by manually running the CI/CD workflow and recreate the release."
