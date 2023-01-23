@@ -304,11 +304,26 @@ function invoke-git {
     cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
 }
 
+# Convert a semantic version object to a semantic version string
+#
+# The SemVer object has the following properties:
+#   Prefix: 'v' or ''
+#   Major: the major version number
+#   Minor: the minor version number
+#   Patch: the patch version number
+#   Addt0: the first additional segment (zzz means not specified)
+#   Addt1: the second additional segment (zzz means not specified)
+#   Addt2: the third additional segment (zzz means not specified)
+#   Addt3: the fourth additional segment (zzz means not specified)
+#   Addt4: the fifth additional segment (zzz means not specified)
+#
+# Returns the SemVer string
+#   #   [v]major.minor.patch[-addt0[.addt1[.addt2[.addt3[.addt4]]]]]
 function SemVerObjToSemVerStr {
     Param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         $semVerObj
     )
-
     try {
         $str = "$($semVerObj.Prefix)$($semVerObj.Major).$($semVerObj.Minor).$($semVerObj.Patch)"
         for ($i=0; $i -lt 5; $i++) {
@@ -323,44 +338,80 @@ function SemVerObjToSemVerStr {
     }
 }
 
+# Convert a semantic version string to a semantic version object
+# SemVer strings supported are defined under https://semver.org, additionally allowing a leading 'v' (as supported by GitHub semver sorting)
+#
+# The string has the following format:
+#   if allowMajorMinorOnly is specified:
+#     [v]major.minor.[patch[-addt0[.addt1[.addt2[.addt3[.addt4]]]]]]
+#   else
+#     [v]major.minor.patch[-addt0[.addt1[.addt2[.addt3[.addt4]]]]]
+#
+# Returns the SemVer object. The SemVer object has the following properties:
+#   Prefix: 'v' or ''
+#   Major: the major version number
+#   Minor: the minor version number
+#   Patch: the patch version number
+#   Addt0: the first additional segment (zzz means not specified)
+#   Addt1: the second additional segment (zzz means not specified)
+#   Addt2: the third additional segment (zzz means not specified)
+#   Addt3: the fourth additional segment (zzz means not specified)
+#   Addt4: the fifth additional segment (zzz means not specified)
+
 function SemVerStrToSemVerObj {
     Param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string] $semVerStr,
         [switch] $allowMajorMinorOnly
     )
 
     $obj = New-Object PSCustomObject
     try {
+        # Only allowed prefix is a 'v'.
+        # This is supported by GitHub when sorting tags
         $prefix = ''
         $verstr = $semVerStr
         if ($semVerStr -like 'v*') {
             $prefix = 'v'
             $verStr = $semVerStr.Substring(1)
         }
+        # Next part is a version number with 2 or 3 segments
+        # 2 segments are allowed only if $allowMajorMinorOnly is specified
         $version = [System.Version]"$($verStr.split('-')[0])"
         if ($version.Revision -ne -1) { throw "not semver" }
         if ($version.Build -eq -1) {
             if ($allowMajorMinorOnly) {
                 $version = [System.Version]"$($version.Major).$($version.Minor).0"
-                $semVerStr = "$($semVerStr).0"
+                $idx = $semVerStr.IndexOf('-')
+                if ($idx -eq -1) {
+                    $semVerStr = "$semVerStr.0"
+                }
+                else {
+                    $semVerstr = $semVerstr.insert($idx, '.0')
+                }
             }
             else {
                 throw "not semver"
             }
         }
+        # Add properties to the object
         $obj | Add-Member -MemberType NoteProperty -Name "Prefix" -Value $prefix
         $obj | Add-Member -MemberType NoteProperty -Name "Major" -Value ([int]$version.Major)
         $obj | Add-Member -MemberType NoteProperty -Name "Minor" -Value ([int]$version.Minor)
         $obj | Add-Member -MemberType NoteProperty -Name "Patch" -Value ([int]$version.Build)
         0..4 | ForEach-Object {
+            # default segments to 'zzz' for sorting of SemVer Objects to work as GitHub does
             $obj | Add-Member -MemberType NoteProperty -Name "Addt$_" -Value 'zzz'
         }
         $idx = $verStr.IndexOf('-')
         if ($idx -gt 0) {
             $segments = $verStr.SubString($idx+1).Split('.')
-            if ($segments.Count -ge 5) {
+            if ($segments.Count -gt 5) {
                 throw "max. 5 segments"
             }
+            # Add all 5 segments to the object
+            # If the segment is a number, it is converted to an integer
+            # If the segment is a string, it cannot be -ge 'zzz' (would be sorted wrongly)
             0..($segments.Count-1) | ForEach-Object {
                 $result = 0
                 if ([int]::TryParse($segments[$_], [ref] $result)) {
@@ -374,6 +425,7 @@ function SemVerStrToSemVerObj {
                 }
             }
         }
+        # Check that the object can be converted back to the original string
         $newStr = SemVerObjToSemVerStr -semVerObj $obj
         if ($newStr -cne $semVerStr) {
             throw "Not equal"
