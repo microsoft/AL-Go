@@ -11,7 +11,11 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue [#371](https://github.com/microsoft/AL-Go/issues/371) 'No previous release found' for builds on release branches
 
 ### Release Branches
+**NOTE:** Release Branches are now only named after major.minor if the patch value is 0 in the release tag (which must be semver compatible)
+
 This version contains a number of bug fixes to release branches, to ensure that the recommended branching strategy is fully supported.
+
+Recommended branching strategy:
 ![Branching Strategy](Scenarios/images/branchingstrategy.png)
 
 ### New Settings
