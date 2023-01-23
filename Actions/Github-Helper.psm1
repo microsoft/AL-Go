@@ -484,11 +484,12 @@ function GetLatestRelease {
 
     # Get Latest release
     $latestRelease = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
-    if ($ref -like 'release/*') {
+    $releaseBranchPrefix = 'release/'
+    if ($ref -like "$releaseBranchPrefix*") {
         try {
             # If release branch, get the latest release from that the release branch
             # This is given by the latest release with the same major.minor as the release branch
-            $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString(8) -allowMajorMinorOnly
+            $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString($releaseBranchPrefix.Length) -allowMajorMinorOnly
             $latestRelease = $releases | Where-Object {
                 $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
                 $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
