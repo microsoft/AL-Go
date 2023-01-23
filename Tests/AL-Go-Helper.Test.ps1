@@ -96,6 +96,16 @@ Describe "RunPipeline Action Tests" {
         New-Item -Path (Join-Path $tempName "projectx/$ALGoFolderName") -ItemType Directory | Out-Null
         New-Item -Path (Join-Path $tempName "projecty/$ALGoFolderName") -ItemType Directory | Out-Null
         
+        # Create settings files
+        # Property:    Repo:               Project (single):   Project (multi):    Workflow:           Workflow:           User:               
+        #                                                                                              if(branch=dev):
+        # Property1    repo1               single1             multi1                                  branch1             user1               
+        # Property2    repo2                                                       workflow2                                                   
+        # Property3    repo3                                                                                                                   
+        # Arr1         @("repo1","repo2")                                                                                                      
+        # Property4                        single4                                                     branch4                                 
+        # property5                                            multi5                                                                          
+        # property6                                                                                                        user6               
         @{ "property1" = "repo1"; "property2" = "repo2"; "property3" = "repo3"; "arr1" = @("repo1","repo2") } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
         @{ "property1" = "single1"; "property4" = "single4" } | ConvertTo-Json -Depth 99 |
@@ -107,34 +117,41 @@ Describe "RunPipeline Action Tests" {
         @{ "property1" = "user1"; "property6" = "user6" } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $projectALGoFolder "user.settings.json") -encoding utf8 -Force
 
+        # No settings variables
         $ENV:ALGoOrgSettings = ''
         $ENV:ALGoRepoSettings = ''
 
+        # Repo only
         $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName ''
         $repoSettings.property1 | Should -Be 'repo1'
         $repoSettings.property2 | Should -Be 'repo2'
         $repoSettings.property3 | Should -Be 'repo3'
 
+        # Repo + single project
         $singleProjectSettings = ReadSettings -baseFolder $tempName -project '.' -repoName 'repo' -workflowName '' -branchName '' -userName ''
         $singleProjectSettings.property1 | Should -Be 'single1'
         $singleProjectSettings.property2 | Should -Be 'repo2'
         $singleProjectSettings.property4 | Should -Be 'single4'
 
+        # Repo + multi project
         $multiProjectSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
         $multiProjectSettings.property1 | Should -Be 'multi1'
         $multiProjectSettings.property2 | Should -Be 'repo2'
         $multiProjectSettings.property5 | Should -Be 'multi5'
 
+        # Repo + workflow
         $workflowRepoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName 'Workflow' -branchName '' -userName ''
         $workflowRepoSettings.property1 | Should -Be 'repo1'
         $workflowRepoSettings.property2 | Should -Be 'workflow2'
 
+        # Repo + single project + workflow
         $workflowSingleSettings = ReadSettings -baseFolder $tempName -project '.' -repoName 'repo' -workflowName 'Workflow' -branchName '' -userName ''
         $workflowSingleSettings.property1 | Should -Be 'single1'
         $workflowSingleSettings.property2 | Should -Be 'workflow2'
         $workflowSingleSettings.property4 | Should -Be 'single4'
         $workflowSingleSettings.property3 | Should -Be 'repo3'
 
+        # Repo + multi project + workflow + dev branch
         $workflowMultiSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName ''
         $workflowMultiSettings.property1 | Should -Be 'branch1'
         $workflowMultiSettings.property2 | Should -Be 'workflow2'
@@ -143,6 +160,7 @@ Describe "RunPipeline Action Tests" {
         $workflowMultiSettings.property5 | Should -Be 'multi5'
         { $workflowMultiSettings.property6 } | Should -Throw
 
+        # Repo + multi project + workflow + dev branch + user
         $userWorkflowMultiSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
         $userWorkflowMultiSettings.property1 | Should -Be 'user1'
         $userWorkflowMultiSettings.property2 | Should -Be 'workflow2'
@@ -151,8 +169,13 @@ Describe "RunPipeline Action Tests" {
         $userWorkflowMultiSettings.property5 | Should -Be 'multi5'
         $userWorkflowMultiSettings.property6 | Should -Be 'user6'
 
+        # Org settings variable
+        # property 2 = orgsetting2
+        # property 7 = orgsetting7
+        # arr1 = @(org3) - gets merged
         $ENV:ALGoOrgSettings = @{ "property2" = "orgsetting2"; "property7" = "orgsetting7"; "arr1" = @("org3") } | ConvertTo-Json -Depth 99
 
+        # Org(var) + Repo + multi project + workflow + dev branch + user
         $withOrgSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
         $withOrgSettings.property1 | Should -Be 'user1'
         $withOrgSettings.property2 | Should -Be 'workflow2'
@@ -163,8 +186,12 @@ Describe "RunPipeline Action Tests" {
         $withOrgSettings.property7 | Should -Be 'orgsetting7'
         $withOrgSettings.arr1 | Should -Be @("org3","repo1","repo2")
 
+        # Repo settings variable
+        # property3 = reposetting3
+        # property8 = reposetting8
         $ENV:ALGoRepoSettings = @{ "property3" = "reposetting3"; "property8" = "reposetting8" } | ConvertTo-Json -Depth 99
 
+        # Org(var) + Repo + Repo(var) + multi project + workflow + dev branch + user
         $withRepoSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user'
         $withRepoSettings.property1 | Should -Be 'user1'
         $withRepoSettings.property2 | Should -Be 'workflow2'
@@ -175,6 +202,7 @@ Describe "RunPipeline Action Tests" {
         $withRepoSettings.property7 | Should -Be 'orgsetting7'
         $withRepoSettings.property8 | Should -Be 'reposetting8'
 
+        # Add conditional settings as repo(var) settings
         $conditionalSettings = [ordered]@{
             "conditionalSettings" = @(
                 @{
@@ -206,6 +234,7 @@ Describe "RunPipeline Action Tests" {
         }
         $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
 
+        # Test that conditional settings are applied correctly
         $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchy' -userName 'user'
         $conditionalSettings.property3 | Should -Be 'branchxy'
         $conditionalSettings.property4 | Should -Be 'branchxy'
@@ -230,6 +259,7 @@ Describe "RunPipeline Action Tests" {
         $conditionalSettings.property3 | Should -Be 'bpxy'
         $conditionalSettings.property4 | Should -Be 'bpxy'
 
+        # Invalid Org(var) setting should throw
         $ENV:ALGoOrgSettings = 'this is not json'
         { ReadSettings -baseFolder $tempName -project 'Project' } | Should -Throw
         
