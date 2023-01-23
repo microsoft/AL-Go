@@ -378,7 +378,10 @@ try {
 
                 # Set current location to the repository folder
                 Set-Location -Path *
-            
+
+                # checkout branch to update
+                invoke-git checkout $updateBranch
+                
                 # If $directCommit, then changes are made directly to the default branch
                 if (!$directcommit) {
                     # If not direct commit, create a new branch with a random name, and switch to it
