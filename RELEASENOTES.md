@@ -9,6 +9,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue [#362](https://github.com/microsoft/AL-Go/issues/362) Support for EnableTaskScheduler
 - Issue [#360](https://github.com/microsoft/AL-Go/issues/360) Creating a release and deploying from a release branch
 - Issue [#371](https://github.com/microsoft/AL-Go/issues/371) 'No previous release found' for builds on release branches
+- Issue [#376](https://github.com/microsoft/AL-Go/issues/376) CICD jobs that are triggered by the pull request trigger run directly to an error if title contains quotes
 
 ### Release Branches
 **NOTE:** Release Branches are now only named after major.minor if the patch value is 0 in the release tag (which must be semver compatible)
