@@ -25,13 +25,28 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0074' -parentTelemetryScopeJson $parentTelemetryScopeJson
     
-    $releaseNotes = ""
-
     Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
 
-    SemVerStrToSemVerObj -semVerStr $tag_name | Out-Null
+    # Check that tag is SemVer
+    $SemVerObj = SemVerStrToSemVerObj -semVerStr $tag_name
 
-    $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY 
+    # Calculate release branch
+    $releaseBranch = "release/$($SemVerObj.Prefix)$($SemVerObj.Major).$($SemVerObj.Minor)"
+    if ($SemVerObj.Patch -or $SemVerObj.addt0 -ne 'zzz') {
+        $releaseBranch += ".$($SemVerObj.Patch)"
+        if ($SemVerObj.addt0 -ne 'zzz') {
+            $releaseBranch += "-$($SemVerObj.addt0)"
+            1..4 | ForEach-Object {
+                if ($SemVerObj."addt$($_)" -ne 'zzz') {
+                    $releaseBranch += ".$($SemVerObj."addt$($_)")"
+                }
+            }
+        }
+    }
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseBranch=$releaseBranch"
+    Write-Host "releaseBranch=$releaseBranch"
+
+    $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
 
     $latestReleaseTag = ""
     if ($latestRelease -and ([bool]($latestRelease.PSobject.Properties.name -match "tag_name"))){

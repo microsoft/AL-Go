@@ -175,16 +175,9 @@ try {
     else {
         Write-Host "::group::Locating previous release"
         try {
-            $releasesJson = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-            if ($env:GITHUB_REF_NAME -like 'release/*') {
-                # For CI/CD in a release branch use that release as previous build
-                $latestRelease = $releasesJson | Where-Object { $_.tag_name -eq "$env:GITHUB_REF_NAME".SubString(8) } | Select-Object -First 1
-            }
-            else {
-                $latestRelease = $releasesJson | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
-            }
+            $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
             if ($latestRelease) {
-                Write-Host "Using $($latestRelease.name) as previous release"
+                Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
                 $artifactsFolder = Join-Path $baseFolder "artifacts"
                 New-Item $artifactsFolder -ItemType Directory | Out-Null
                 DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"

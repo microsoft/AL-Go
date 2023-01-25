@@ -96,13 +96,13 @@ $runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderS
 WaitWorkflow -runid $run.id
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=6;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
 
-WaitWorkflow -runid $runTestCurrent.id
+WaitWorkflow -runid $runTestCurrent.id -noDelay
 Test-ArtifactsFromRun -runid $runTestCurrent.id -folder 'currentartifacts' -expectedArtifacts @{"Apps"=0;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
 
-WaitWorkflow -runid $runTestNextMinor.id
+WaitWorkflow -runid $runTestNextMinor.id -noDelay
 Test-ArtifactsFromRun -runid $runTestNextMinor.id -folder 'nextminorartifacts' -expectedArtifacts @{"Apps"=0;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
 
-WaitWorkflow -runid $runTestNextMajor.id
+WaitWorkflow -runid $runTestNextMajor.id -noDelay
 Test-ArtifactsFromRun -runid $runTestNextMajor.id -folder 'nextmajorartifacts' -expectedArtifacts @{"Apps"=0;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation

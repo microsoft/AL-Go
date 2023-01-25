@@ -241,10 +241,10 @@ $runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderS
 WaitWorkflow -runid $runTestNextMajor.id
 $runs++
 
-WaitWorkflow -runid $runTestNextMinor.id
+WaitWorkflow -runid $runTestNextMinor.id -noDelay
 $runs++
 
-WaitWorkflow -runid $runTestCurrent.id
+WaitWorkflow -runid $runTestCurrent.id -noDelay
 $runs++
 
 Test-NumberOfRuns -expectedNumberOfRuns $runs
