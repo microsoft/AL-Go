@@ -23,6 +23,7 @@ This version contains a number of bug fixes to release branches, to ensure that 
 - Release was created on the right SHA, but the release branch was created on the wrong SHA
 
 Recommended branching strategy:
+
 ![Branching Strategy](Scenarios/images/branchingstrategy.png)
 
 ### New Settings
