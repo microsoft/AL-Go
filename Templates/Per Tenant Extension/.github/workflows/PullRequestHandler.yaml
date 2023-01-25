@@ -29,7 +29,7 @@ jobs:
         run: |
           $ErrorActionPreference = "STOP"
           Set-StrictMode -version 2.0
-
+          $sb = [System.Text.StringBuilder]::new()
           $headers = @{             
               "Authorization" = 'token ${{ secrets.GITHUB_TOKEN }}'
               "Accept" = "application/vnd.github.baptiste-preview+json"
@@ -38,17 +38,52 @@ jobs:
           $headSHA = '${{ github.event.pull_request.head.sha }}'
           $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$baseSHA...$headSHA"
           $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
-
           $location = (Get-Location).path
+          $prfolder = [GUID]::NewGuid().ToString()
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "prfolder=$prfolder"
+          $prPath = Join-Path $location $prFolder
+          New-Item -Path $prPath -ItemType Directory | Out-Null
           $prfilesChanged = @()
           Write-Host "Files Changed:"
           $response.files | ForEach-Object {
             $filename = $_.filename
-            $extension = [System.IO.Path]::GetExtension($filename)
-            Write-Host "- $filename $_.status"
+            $status = $_.status
+            Write-Host "- $filename $status"
+            $prFilesChanged += $filename
+            $path = Join-Path $location $filename
+            $newPath = Join-Path $prPath $filename
+            $newfolder = [System.IO.Path]::GetDirectoryName($newpath)
+            $extension = [System.IO.Path]::GetExtension($path)
+            $name = [System.IO.Path]::GetFileName($path)
             if ('${{ github.event.pull_request.head.repo.full_name }}' -ne $ENV:GITHUB_REPOSITORY) {
               if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $name -eq "CODEOWNERS") {
                 throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
               }
             }
+            if (-not (Test-Path $newfolder)) {
+              New-Item $newfolder -ItemType Directory | Out-Null
+            }
+            if ($status -eq "renamed") {
+              Copy-Item -Path $path -Destination $newfolder -Force
+              $oldPath = Join-Path $prPath $_.previous_filename
+              $oldFolder = [System.IO.Path]::GetDirectoryName($oldpath)
+              if (-not (Test-Path $oldFolder)) {
+                New-Item $oldFolder -ItemType Directory | Out-Null
+              }
+              New-Item -Path "$oldPath.REMOVE" -itemType File | Out-Null
+            }
+            elseif ($status -eq "removed") {
+              New-Item -Path $newfolder -name "$name.REMOVE" -itemType File | Out-Null
+            }
+            else {
+              Copy-Item -Path $path -Destination $newfolder -Force
+            }
           }
+          Set-Content -path (Join-Path $prPath ".PullRequestCommentId") -value '${{ steps.CreateComment.outputs.comment_id }}' -Encoding UTF8 -NoNewLine -Force
+          Set-Content -path (Join-Path $prPath ".PullRequestFilesChanged") -value $prFilesChanged -Encoding UTF8 -Force
+
+      - name: Upload Changed Files
+        uses: actions/upload-artifact@v3
+        with:
+          name: Pull_Request_Files
+          path: '${{ steps.ChangedFiles.outputs.prfolder }}/'
