@@ -28,6 +28,9 @@ inputs:
     description: Tag name
     required: true
 outputs:
+  ReleaseBranch:
+    description: Name of the release branch
+    value: ${{ steps.createreleasenotes.outputs.ReleaseBranch }}
   ReleaseNotes:
     description: Release note generated based on the changes
     value: ${{ steps.createreleasenotes.outputs.ReleaseNotes }}

@@ -3,10 +3,28 @@
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
 ### Issues
-- Issue #171 create a workspace file when creating a project
-- Issue #356 Publish to AppSource fails in multi project repo
-- Issue #358 Publish To Environment Action stopped working in v2.3
-- Issue #362 Support for EnableTaskScheduler
+- Issue [#171](https://github.com/microsoft/AL-Go/issues/171) create a workspace file when creating a project
+- Issue [#356](https://github.com/microsoft/AL-Go/issues/356) Publish to AppSource fails in multi project repo
+- Issue [#358](https://github.com/microsoft/AL-Go/issues/358) Publish To Environment Action stopped working in v2.3
+- Issue [#362](https://github.com/microsoft/AL-Go/issues/362) Support for EnableTaskScheduler
+- Issue [#360](https://github.com/microsoft/AL-Go/issues/360) Creating a release and deploying from a release branch
+- Issue [#371](https://github.com/microsoft/AL-Go/issues/371) 'No previous release found' for builds on release branches
+- Issue [#376](https://github.com/microsoft/AL-Go/issues/376) CICD jobs that are triggered by the pull request trigger run directly to an error if title contains quotes
+
+### Release Branches
+**NOTE:** Release Branches are now only named after major.minor if the patch value is 0 in the release tag (which must be semver compatible)
+
+This version contains a number of bug fixes to release branches, to ensure that the recommended branching strategy is fully supported. Bugs fixed includes:
+- Release branches was named after the full tag (1.0.0), even though subsequent hotfixes released from this branch would be 1.0.x
+- Release branches named 1.0 wasn't picked up as a release branch
+- Release notes contained the wrong changelog
+- The previous release was always set to be the first release from a release branch
+- SemVerStr could not have 5 segments after the dash
+- Release was created on the right SHA, but the release branch was created on the wrong SHA
+
+Recommended branching strategy:
+
+![Branching Strategy](Scenarios/images/branchingstrategy.png)
 
 ### New Settings
 New Project setting: EnableTaskScheduler in container executing tests and when setting up local development environment

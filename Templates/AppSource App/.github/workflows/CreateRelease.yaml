@@ -58,6 +58,8 @@ jobs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
       artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
       releaseId: ${{ steps.createrelease.outputs.releaseId }}
+      commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
+      releaseBranch: ${{ steps.createreleasenotes.outputs.releaseBranch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -135,7 +137,6 @@ jobs:
               Write-Host "::Error::No artifacts found for this project"
               exit 1
             }
-            $artifact | out-host
             if ($sha) {
               if ($artifact.workflow_run.head_sha -ne $sha) {
                 Write-Host "::Error::The build selected for release doesn't contain all projects. Please rebuild all projects by manually running the CI/CD workflow and recreate the release."
@@ -188,6 +189,7 @@ jobs:
               body: bodyMD.replaceAll('\\n','\n'),
               draft: ${{ github.event.inputs.draft=='Y' }},
               prerelease: ${{ github.event.inputs.prerelease=='Y' }},
+              make_latest: 'legacy',
               target_commitish: '${{ steps.analyzeartifacts.outputs.commitish }}'
             });
             const {
@@ -308,16 +310,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          ref: '${{ needs.createRelease.outputs.commitish }}'
 
       - name: Create Release Branch
         run: |
           $ErrorActionPreference = "STOP"
           Set-StrictMode -version 2.0
-          git checkout -b release/${{ github.event.inputs.tag }}
+          git checkout -b ${{ needs.CreateRelease.outputs.releaseBranch }}
           git config user.name ${{ github.actor}}
           git config user.email ${{ github.actor}}@users.noreply.github.com
-          git commit --allow-empty -m "Release branch ${{ github.event.inputs.tag }}"
-          git push origin release/${{ github.event.inputs.tag }}
+          git commit --allow-empty -m "Release branch ${{ needs.CreateRelease.outputs.releaseBranch }}"
+          git push origin ${{ needs.CreateRelease.outputs.releaseBranch }}
 
   UpdateVersionNumber:
     if: ${{ github.event.inputs.updateVersionNumber!='' }}
