@@ -20,7 +20,8 @@ if ($prHeadRepository -ne $prBaseRepository) {
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
     $url = "$($githubApiUrl)/repos/$($prBaseRepository)/compare/$baseSHA...$headSHA"
-    $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Js
+    Write-Host $url
+    $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
     Write-Host "Files Changed:"
     $response.files | ForEach-Object {
       $filename = $_.filename
@@ -31,6 +32,7 @@ if ($prHeadRepository -ne $prBaseRepository) {
         throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
       }
     }
+    Write-Host "No changes to scripts, workflows or CODEOWNERS found."
 } else {
     Write-Host "Pull Request is from the same repository, skipping check."
 }
