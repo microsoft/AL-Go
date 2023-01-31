@@ -5,8 +5,8 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  settings:
-    description: settings
+  settingsJson:
+    description: Settings from repository in compressed Json format
     required: true
   project:
     description: project
@@ -23,7 +23,9 @@ runs:
     - name: Determine Changed Files
       id: calculateArtifactNames
       shell: ${{ inputs.shell }}
-      run: ${{ github.action_path }}/CalculateArtifactNames.ps1 -Settings ${{ inputs.settings }} -Project ${{ inputs.project }} -BuildMode ${{ inputs.buildMode }} -RefName ${{ inputs.refName }}
+      env:
+        _settingsJson: ${{ inputs.settingsJson }}
+      run: ${{ github.action_path }}/CalculateArtifactNames.ps1 -SettingsJson $ENV:_settingsJson -Project ${{ inputs.project }} -BuildMode ${{ inputs.buildMode }} -RefName ${{ inputs.refName }}
 branding:
   icon: terminal
   color: blue

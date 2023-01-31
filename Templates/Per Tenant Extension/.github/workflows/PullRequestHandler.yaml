@@ -20,7 +20,7 @@ jobs:
   PregateCheck:
     runs-on: [ windows-latest ]
     steps:
-      - uses: aholstrup1/AL-Go-Actions/VerifyPRChanges@main
+      - uses: microsoft/AL-Go-Actions/VerifyPRChanges@main
         with:
           baseSHA: ${{ github.event.pull_request.base.sha }}
           headSHA: ${{ github.event.pull_request.head.sha }}
@@ -58,7 +58,7 @@ jobs:
 
       - name: Read settings
         id: ReadSettings
-        uses: aholstrup1/AL-Go-Actions/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -68,7 +68,7 @@ jobs:
       - name: Determine Build Order
         if: env.workflowDepth > 1
         id: BuildOrder
-        uses: aholstrup1/AL-Go-Actions/DetermineBuildOrder@main
+        uses: microsoft/AL-Go-Actions/DetermineBuildOrder@main
         with:
           projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
           buildOrder: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
@@ -108,7 +108,7 @@ jobs:
           path: '.dependencies'
 
       - name: Read settings
-        uses: aholstrup1/AL-Go-Actions/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
@@ -139,7 +139,7 @@ jobs:
           buildMode: ${{ matrix.buildMode }}
 
       - name: Calculate Artifact names
-        uses: aholstrup1/AL-Go-Actions/CalculateArtifactNames@main
+        uses: microsoft/AL-Go-Actions/CalculateArtifactNames@main
         if: success() || failure()
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}

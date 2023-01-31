@@ -129,7 +129,7 @@ try {
         if ($projects) {
             AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
             Write-Host "All Projects: $($projects -join ', ')"
-            if (!$settings.alwaysBuildAllProjects -and ($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or $ENV:GITHUB_EVENT_NAME -eq "push" -or ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $baseFolder '.PullRequestFilesChanged'))))) {
+            if (!$settings.alwaysBuildAllProjects -and ($ENV:GITHUB_EVENT_NAME -eq "pull_request" -or ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $baseFolder '.PullRequestFilesChanged'))))) {
                 if ($ENV:GITHUB_EVENT_NAME -eq "workflow_run" -and (Test-Path (Join-Path $baseFolder '.PullRequestFilesChanged'))) {
                     $filesChanged = @(Get-Content (Join-Path $baseFolder '.PullRequestFilesChanged') -Encoding UTF8)
                 }
