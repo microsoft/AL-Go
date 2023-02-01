@@ -68,8 +68,8 @@ $deliveryTargets = Get-DeliveryTargets -projects $projects -settings $settings -
 
 $deliveryTargets = @($deliveryTargets | Select-Object -unique | Where-Object {
   $include = $false
+  Write-Host "Check DeliveryTarget $_"
   $contextName = "$($_)Context"
-  Write-Host "Checking Context: $contextName"
   $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($contextName)))
   if ($deliveryContext) {
     $settingName = "DeliverTo$_"
