@@ -1,12 +1,12 @@
 Param(
     [Parameter(HelpMessage = "Base commit of the PR", Mandatory = $true)]
     [string] $baseSHA,
-    [Parameter(HelpMessage = "HEAD commit of the PR", Mandatory = $true)]
+    [Parameter(HelpMessage = "Head commit of the PR", Mandatory = $true)]
     [string] $headSHA,
-    [Parameter(HelpMessage = "The name of the repository the PR is coming from", Mandatory = $true)]
-    [string] $prHeadRepository,
     [Parameter(HelpMessage = "The name of the repository the PR is going to", Mandatory = $true)]
     [string] $prBaseRepository,
+    [Parameter(HelpMessage = "The name of the repository the PR is coming from", Mandatory = $true)]
+    [string] $prHeadRepository,
     [Parameter(HelpMessage = "The URL of the GitHub API", Mandatory = $true)]
     [string] $githubApiUrl
 

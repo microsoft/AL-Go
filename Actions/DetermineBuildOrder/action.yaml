@@ -18,7 +18,7 @@ inputs:
     description: Workflow depth
     required: true
   outputPath:
-    description: output path
+    description: Output path
     required: false
     default: ${{ github.output }}
 runs:
@@ -27,7 +27,13 @@ runs:
     - name: Determine Changed Files
       id: BuildOrder
       shell: ${{ inputs.shell }}
-      run: ${{ github.action_path }}/DetermineBuildOrder.ps1 -Projects ${{ inputs.projects }} -BuildOrder ${{ inputs.buildOrder }} -BuildOrderDepth ${{ inputs.buildOrderDepth }} -WorkflowDepth ${{ inputs.workflowDepth }} -OutputPath ${{ inputs.outputPath }}
+      env:
+        _projects: ${{ inputs.projects }}
+        _buildOrder: ${{ inputs.buildOrder }}
+        _buildOrderDepth: ${{ inputs.buildOrderDepth }}
+        _workflowDepth: ${{ inputs.workflowDepth }}
+        _outputPath: ${{ inputs.outputPath }}
+      run: ${{ github.action_path }}/DetermineBuildOrder.ps1 -Projects $Env:_projects -BuildOrder $Env:_buildOrder -BuildOrderDepth $Env:_buildOrderDepth -WorkflowDepth $Env:_workflowDepth -OutputPath $Env:_outputPath
 
 branding:
   icon: terminal

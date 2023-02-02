@@ -23,7 +23,8 @@ jobs:
         with:
           baseSHA: ${{ github.event.pull_request.base.sha }}
           headSHA: ${{ github.event.pull_request.head.sha }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          prbaseRepository: ${{ github.event.pull_request.base.repo.full_name }}
+          prheadRepository: ${{ github.event.pull_request.head.repo.full_name }}
 
   Initialization:
     needs: [ PregateCheck ]
@@ -69,6 +70,7 @@ jobs:
         id: BuildOrder
         uses: aholstrup1/AL-Go-Actions/DetermineBuildOrder@main
         with:
+          shell: powershell
           projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
           buildOrder: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
           buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}

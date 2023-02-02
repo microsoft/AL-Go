@@ -9,13 +9,13 @@ inputs:
     description: Settings from repository in compressed Json format
     required: true
   project:
-    description: project
+    description: Name of the build project
     required: true
   buildMode:
-    description:  buildMode
+    description:  Buildmode used when building the artifacts
     required: true
-  refName:
-    description: refName
+  branchName:
+    description: Name of the branch the workflow is running on
     required: true
 runs:
   using: composite
@@ -25,7 +25,10 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _settingsJson: ${{ inputs.settingsJson }}
-      run: ${{ github.action_path }}/CalculateArtifactNames.ps1 -SettingsJson $ENV:_settingsJson -Project ${{ inputs.project }} -BuildMode ${{ inputs.buildMode }} -RefName ${{ inputs.refName }}
+        _project: ${{ inputs.project }}
+        _buildMode: ${{ inputs.buildMode }}
+        _branchName: ${{ inputs.branchName }}
+      run: ${{ github.action_path }}/CalculateArtifactNames.ps1 -SettingsJson $Env:_settingsJson -Project $Env:_project -BuildMode $Env:_buildMode -BranchName $Env:_branchName
 branding:
   icon: terminal
   color: blue

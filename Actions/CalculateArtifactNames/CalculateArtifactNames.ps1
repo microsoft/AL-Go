@@ -1,12 +1,13 @@
 Param(
-    [Parameter(HelpMessage = "settings", Mandatory = $true)]
+    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
     [string] $settingsJson,
-    [Parameter(HelpMessage = "project", Mandatory = $true)]
+    [Parameter(HelpMessage = "Name of the build project", Mandatory = $true)]
     [string] $project,
-    [Parameter(HelpMessage = "buildmode", Mandatory = $true)]
+    [Parameter(HelpMessage = "Buildmode used when building the artifacts", Mandatory = $true)]
     [string] $buildMode,
-    [Parameter(HelpMessage = "refname", Mandatory = $true)]
-    [string] $refName,
+    [Parameter(HelpMessage = "Name of the branch the workflow is running on", Mandatory = $true)]
+    [string] $branchName,
+    [Parameter(HelpMessage = "Setting this switch will write github outputs to environment variables", Mandatory = $false)]
     [switch] $runLocally
 )
 
@@ -37,7 +38,7 @@ if ($buildMode -eq 'Default') {
 
 'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
   $name = "$($_)ArtifactsName"
-  $value = "$($project.Replace('\','_').Replace('/','_'))-$($refName)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+  $value = "$($project.Replace('\','_').Replace('/','_'))-$($branchName)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
   Set-EnvVariable -name $name -value $value -runLocally:$runLocally
 }
 Set-EnvVariable -name "BuildMode" -value $buildMode -runLocally:$runLocally
