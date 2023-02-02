@@ -20,7 +20,7 @@ if ($prHeadRepository -ne $prBaseRepository) {
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
     $url = "$($githubApiUrl)/repos/$($prBaseRepository)/compare/$baseSHA...$headSHA"
-    $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Js
+    $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
     Write-Host "Files Changed:"
     $response.files | ForEach-Object {
       $filename = $_.filename
