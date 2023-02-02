@@ -31,6 +31,7 @@ if ($prHeadRepository -ne $prBaseRepository) {
         throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
       }
     }
+    Write-Host "Verification completed successfully."
 } else {
     Write-Host "Pull Request is from the same repository, skipping check."
 }

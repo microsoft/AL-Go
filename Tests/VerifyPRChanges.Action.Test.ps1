@@ -15,7 +15,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" 
-        } | -Should Throw
+        } | Should -Throw
     }
 
     It 'should fail if the PR is from a fork and changes the CODEOWNERS file' {
@@ -29,7 +29,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" 
-        } | -Should Throw
+        } | Should -Throw
     }
 
     It 'should succeed if the PR is from a fork and changes an .al file' {
@@ -43,7 +43,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" 
-        Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "No changes to scripts, workflows or CODEOWNERS found." }
+        Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
     It "should always succeed if it is coming from the same repository" {
