@@ -1,4 +1,4 @@
-name: 'Official Build'
+name: 'CICD'
 
 on:
   workflow_dispatch:

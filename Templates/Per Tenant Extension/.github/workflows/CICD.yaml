@@ -1,11 +1,11 @@
-name: 'Official Build'
+name: 'CICD'
 
 on:
   workflow_dispatch:
   push:
     branches: [ 'main', 'release/*', 'feature/*' ]
 
-run-name: 'Official Build: ${{github.event.head_commit.message}}'
+run-name: 'CICD: ${{github.event.head_commit.message}}'
 
 defaults:
   run:

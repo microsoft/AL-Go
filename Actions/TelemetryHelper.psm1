@@ -14,7 +14,7 @@ $signals = @{
     "DO0082" = "AL-Go action ran: AnalyzeTests"
 
     "DO0090" = "AL-Go workflow ran: AddExistingAppOrTestApp"
-    "DO0091" = "AL-Go workflow ran: Official Build"
+    "DO0091" = "AL-Go workflow ran: CICD"
     "DO0092" = "AL-Go workflow ran: CreateApp"
     "DO0093" = "AL-Go workflow ran: CreateOnlineDevelopmentEnvironment"
     "DO0094" = "AL-Go workflow ran: CreateRelease"

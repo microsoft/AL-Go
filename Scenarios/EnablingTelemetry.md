@@ -34,7 +34,7 @@ Here is a list of the telemetry signals for different workflows:
 | Event ID | Description |
 | :-- | :-- |
 | DO0090 | AL-Go workflow ran: AddExistingAppOrTestApp |
-| DO0091 | AL-Go workflow ran: Official Build |
+| DO0091 | AL-Go workflow ran: CICD |
 | DO0092 | AL-Go workflow ran: CreateApp |
 | DO0093 | AL-Go workflow ran: CreateOnlineDevelopmentEnvironment |
 | DO0094 | AL-Go workflow ran: CreateRelease |
