@@ -4,7 +4,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $scriptPath = Join-Path $PSScriptRoot "..\Actions\CalculateArtifactNames\CalculateArtifactNames.ps1" -Resolve
         $settingsJson = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
         $project = "ALGOProject"
-        $refName = "main"
+        $branchName = "main"
     }
 
 
@@ -14,7 +14,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
-                -refName $refName `
+                -branchName $branchName `
                 -runLocally
         
         $env:AppsArtifactsName | Should -Be "ALGOProject-main-CleanApps-22.0.123.0"
@@ -27,7 +27,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
-                -refName $refName `
+                -branchName $branchName `
                 -runLocally
         
         Write-Host "BuildMode - $($Env:BuildMode)"
