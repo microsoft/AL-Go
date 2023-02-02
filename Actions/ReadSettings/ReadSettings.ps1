@@ -144,7 +144,7 @@ try {
         if ($settings.alwaysBuildAllProjects) {
             Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
             return $projects
-        } elseif ($ENV:GITHUB_WORKFLOW -eq 'CICD') {
+        } elseif ($ENV:GITHUB_WORKFLOW -eq 'CI/CD') {
             Write-Host "Building all projects because this is a CICD run"
             return $projects
         }

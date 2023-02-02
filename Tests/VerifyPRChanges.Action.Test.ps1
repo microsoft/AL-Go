@@ -47,6 +47,9 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It "should always succeed if it is coming from the same repository" {
+        Mock -CommandName Invoke-WebRequest -MockWith { 
+            '{ "files": [{ "filename": "CODEOWNERS", "status": "modified" }] }'
+        }
         Mock Write-Host {}
         & $scriptPath `
                 -baseSHA "123" `
