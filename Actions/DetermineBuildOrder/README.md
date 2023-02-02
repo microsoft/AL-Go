@@ -1,11 +1,11 @@
 # Read settings
-Read settings for AL-Go workflows
+Determine Build Order for AL-Go workflows
 ## Parameters
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-### get (reqiured)
-Comma separated list of properties to get from repo settings
+### projects
+JSON formatted string of projects to build
+### buildOrder
+JSON formatted build order
+### buildOrderDepth
+Build order depth
+### workflowDepth
+Workflow depth

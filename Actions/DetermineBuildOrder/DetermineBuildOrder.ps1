@@ -6,9 +6,7 @@ Param(
     [Parameter(HelpMessage = "Build order depth", Mandatory = $true)]
     [string] $BuildOrderDepth,
     [Parameter(HelpMessage = "Workflow depth", Mandatory = $true)]
-    [string] $WorkflowDepth,
-    [Parameter(HelpMessage = "Output path", Mandatory = $true)]
-    [string] $OutputPath
+    [string] $WorkflowDepth
 )
 
 $ErrorActionPreference = "STOP"
@@ -34,16 +32,16 @@ $BuildOrderDepth..1 | ForEach-Object {
     $projectsJSon = $ps | ConvertTo-Json -compress
   }
   if ($ps.Count -gt 0) {
-    Add-Content -Path $OutputPath -Value "projects$($step)Json=$projectsJson"
-    Add-Content -Path $OutputPath -Value "projects$($step)Count=$($ps.count)"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "projects$($step)Json=$projectsJson"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "projects$($step)Count=$($ps.count)"
     Write-Host "projects$($step)Json=$projectsJson"
     Write-Host "projects$($step)Count=$($ps.count)"
     $step--
   }
 }
 while ($step -ge 1) {
-    Add-Content -Path $OutputPath -Value "projects$($step)Json="
-    Add-Content -Path $OutputPath -Value "projects$($step)Count=0"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "projects$($step)Json="
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "projects$($step)Count=0"
     Write-Host "projects$($step)Json="
     Write-Host "projects$($step)Count=0"
     $step--

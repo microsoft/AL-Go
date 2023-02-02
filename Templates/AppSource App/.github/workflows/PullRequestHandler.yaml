@@ -75,7 +75,6 @@ jobs:
           buildOrder: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
           buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
           workflowDepth: ${{ env.workflowDepth }}
-          outputPath: ${{ env.GITHUB_OUTPUT }}
 
   Build:
     needs: [ Initialization ]

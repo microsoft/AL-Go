@@ -1,11 +1,13 @@
 # Read settings
-Read settings for AL-Go workflows
+Verify PR Changes for AL-Go workflows
 ## Parameters
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-### get (reqiured)
-Comma separated list of properties to get from repo settings
+### baseSHA
+Base commit of the PR
+### headSHA
+Head commit of the PR
+### prBaseRepository
+The name of the repository the PR is going to
+### prHeadRepository
+The name of the repository the PR is coming from
+### githubapiurl
+The URL of the GitHub API

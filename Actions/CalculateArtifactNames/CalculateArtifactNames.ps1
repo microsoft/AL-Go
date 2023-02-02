@@ -1,7 +1,7 @@
 Param(
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
     [string] $settingsJson,
-    [Parameter(HelpMessage = "Name of the build project", Mandatory = $true)]
+    [Parameter(HelpMessage = "Name of the built project", Mandatory = $true)]
     [string] $project,
     [Parameter(HelpMessage = "Buildmode used when building the artifacts", Mandatory = $true)]
     [string] $buildMode,

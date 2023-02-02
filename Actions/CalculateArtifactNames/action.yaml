@@ -9,7 +9,7 @@ inputs:
     description: Settings from repository in compressed Json format
     required: true
   project:
-    description: Name of the build project
+    description: Name of the built project
     required: true
   buildMode:
     description:  Buildmode used when building the artifacts

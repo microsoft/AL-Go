@@ -1,11 +1,11 @@
-# Read settings
-Read settings for AL-Go workflows
+# Calculate Artifact Names
+Calculate Artifact Names for AL-Go workflows
 ## Parameters
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-### get (reqiured)
-Comma separated list of properties to get from repo settings
+### settingsJson
+Settings from repository in compressed Json format
+### project 
+Name of the built project
+### buildMode 
+Buildmode used when building the artifacts
+### branchName 
+Name of the branch the workflow is running on

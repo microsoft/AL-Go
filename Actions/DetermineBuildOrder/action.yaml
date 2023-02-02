@@ -17,10 +17,6 @@ inputs:
   workflowDepth:
     description: Workflow depth
     required: true
-  outputPath:
-    description: Output path
-    required: false
-    default: ${{ github.output }}
 runs:
   using: composite
   steps:
@@ -33,7 +29,7 @@ runs:
         _buildOrderDepth: ${{ inputs.buildOrderDepth }}
         _workflowDepth: ${{ inputs.workflowDepth }}
         _outputPath: ${{ inputs.outputPath }}
-      run: ${{ github.action_path }}/DetermineBuildOrder.ps1 -Projects $Env:_projects -BuildOrder $Env:_buildOrder -BuildOrderDepth $Env:_buildOrderDepth -WorkflowDepth $Env:_workflowDepth -OutputPath $Env:_outputPath
+      run: ${{ github.action_path }}/DetermineBuildOrder.ps1 -Projects $Env:_projects -BuildOrder $Env:_buildOrder -BuildOrderDepth $Env:_buildOrderDepth -WorkflowDepth $Env:_workflowDepth
 
 branding:
   icon: terminal

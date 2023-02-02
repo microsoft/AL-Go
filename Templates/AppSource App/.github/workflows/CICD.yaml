@@ -148,7 +148,6 @@ jobs:
           buildOrder: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
           buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
           workflowDepth: ${{ env.workflowDepth }}
-          outputPath: ${{ env.GITHUB_OUTPUT }}
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
