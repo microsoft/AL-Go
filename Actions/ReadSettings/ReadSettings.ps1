@@ -147,9 +147,9 @@ try {
         } elseif ($ENV:GITHUB_WORKFLOW -eq 'Official Build') {
             Write-Host "Building all projects because this is an official build"
             return $projects
-        } 
+        }
         else {
-            $filesChanged = Get-ChangedFiles -token $token
+            $filesChanged = @(Get-ChangedFiles -token $token)
             if ($filesChanged.Count -eq 0) {
                 Write-Host "Building all projects"
                 return $projects
@@ -195,7 +195,7 @@ try {
 
         if ($projects) {
             AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
-            Write-Host "All Projects: $($projects -join ', ') - $($projects.GetType())"
+            Write-Host "All Projects: $($projects -join ', ')"
             $buildProjects += Get-ProjectsToBuild -settings $settings -projects $projects -baseFolder $baseFolder -token $token
             
             if ($settings.useProjectDependencies) {
@@ -215,7 +215,7 @@ try {
                 Write-Host "BuildOrderDepth=$($buildOrder.Count)"
             }
         }
-        Write-Host "Projects to build: $($buildProjects -join ', ') - $($BuildProjects.GetType())"
+        Write-Host "Projects to build: $($buildProjects -join ', ')"
         Write-Host $buildProjects
         if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
             $buildProjects += @(".")
