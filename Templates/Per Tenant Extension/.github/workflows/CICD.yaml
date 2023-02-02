@@ -1,11 +1,11 @@
-name: 'CICD'
+name: 'CI/CD'
 
 on:
   workflow_dispatch:
   push:
     branches: [ 'main', 'release/*', 'feature/*' ]
 
-run-name: 'CICD: ${{github.event.head_commit.message}}'
+run-name: 'CI/CD: ${{github.event.head_commit.message}}'
 
 defaults:
   run:
