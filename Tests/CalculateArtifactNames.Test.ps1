@@ -17,7 +17,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -refName $refName `
                 -runLocally
         
-        $env:AppsArtifactsName | Should -Be "ALGOProject-main-CleanApps-22.0.123.0"
+        $env:AppsArtifactsName | -Should -Be "ALGOProject-main-CleanApps-22.0.123.0"
         $env:TestAppsArtifactsName | Should -Be "ALGOProject-main-CleanTestApps-22.0.123.0"
     }
 
@@ -31,8 +31,8 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -runLocally
         
         Write-Host "BuildMode - $($Env:BuildMode)"
-        $env:AppsArtifactsName | Should -Be "ALGOProject-main-Apps-22.0.123.0"
-        $env:TestAppsArtifactsName | Should -Be "ALGOProject-main-TestApps-22.0.123.0"
+        $env:AppsArtifactsName | -Should -Be "ALGOProject-main-Apps-22.0.123.0"
+        $env:TestAppsArtifactsName | -Should -Be "ALGOProject-main-TestApps-22.0.123.0"
     }
 
 }
