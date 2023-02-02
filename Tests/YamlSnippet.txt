@@ -1,4 +1,4 @@
-name: 'CI/CD'
+name: 'Official Build'
 
 on:
   workflow_dispatch:
