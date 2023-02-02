@@ -1,4 +1,4 @@
-Describe 'CalculateArtifactNames Action Tests' {
+Describe 'DetermineDeliveryTargets Action Tests' {
 
     BeforeAll {
         $scriptPath = Join-Path $PSScriptRoot "..\Actions\DetermineDeliveryTargets\DetermineDeliveryTargets.ps1" -Resolve
@@ -6,13 +6,23 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     AfterEach {
         if ($env:NugetContext) {
-            [Environment]::SetEnvironmentVariable("NugetContext",$null)
+            if ($env:GITHUB_ENV) {
+                Add-Content -Path $env:GITHUB_ENV -Value "NugetContext=$null"
+            } else {
+                [Environment]::SetEnvironmentVariable("NugetContext",$null)
+            }
         }
     }
 
 
     It 'should add Nuget as a DeliveryTarget if NugetContext is set' {
-        [System.Environment]::SetEnvironmentVariable("NugetContext", [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("NugetPAT")))
+        $name = "NugetContext"
+        $value = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("NugetPAT"))
+        if ($env:GITHUB_ENV) {
+            Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
+        } else {
+            [Environment]::SetEnvironmentVariable($name, $value)
+        }
 
         $projectsJson = '["Modules"]'
         $settingsJson = '{ "DeliverToNuget": { "Branches": ["main"]}}'
