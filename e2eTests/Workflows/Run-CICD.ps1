@@ -5,7 +5,7 @@
         [string] $branch = "main"
     )
 
-    $workflowName = 'CICD'
+    $workflowName = 'CI/CD'
     $parameters = @{
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
