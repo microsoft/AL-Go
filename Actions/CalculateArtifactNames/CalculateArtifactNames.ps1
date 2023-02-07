@@ -21,7 +21,6 @@ function Set-EnvVariable([string]$name, [string]$value, [switch]$runLocally) {
     }
 }
 
-
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 
