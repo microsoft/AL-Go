@@ -1,29 +1,29 @@
 Param(
     [Parameter(HelpMessage = "JSON formatted string of projects to build", Mandatory = $true)]
-    [string] $Projects,
+    [string] $projectsJson,
     [Parameter(HelpMessage = "JSON formatted build order", Mandatory = $true)]
-    [string] $BuildOrder,
+    [string] $buildOrderJson,
     [Parameter(HelpMessage = "Build order depth", Mandatory = $true)]
-    [string] $BuildOrderDepth,
+    [int] $buildOrderDepth,
     [Parameter(HelpMessage = "Workflow depth", Mandatory = $true)]
-    [string] $WorkflowDepth
+    [int] $workflowDepth
 )
 
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 
-Write-Host "Projects=$Projects"
-$Projects = $Projects | ConvertFrom-Json
-Write-Host "BuildOrder=$BuildOrder"
-$BuildOrder = $Projects | ConvertFrom-Json
+Write-Host "Projects=$projectsJson"
+$Projects = $projectsJson | ConvertFrom-Json
+Write-Host "BuildOrder=$buildOrderJson"
+$BuildOrder = $buildOrderJson | ConvertFrom-Json
 
-if ($BuildOrderDepth -lt $WorkflowDepth) {
-  Write-Host "::Error::Project Dependencies depth is $BuildOrderDepth. Workflow is only setup for $WorkflowDepth. You need to Run Update AL-Go System Files to update the workflows"
+if ($buildOrderDepth -lt $workflowDepth) {
+  Write-Host "::Error::Project Dependencies depth is $buildOrderDepth. Workflow is only setup for $workflowDepth. You need to Run Update AL-Go System Files to update the workflows"
   $host.SetShouldExit(1)
 }
 
-$step = $BuildOrderDepth
-$BuildOrderDepth..1 | ForEach-Object {
+$step = $buildOrderDepth
+$buildOrderDepth..1 | ForEach-Object {
   $ps = @($BuildOrder."$_" | Where-Object { $Projects -contains $_ })
   if ($ps.Count -eq 1) {
     $projectsJSon = "[$($ps | ConvertTo-Json -compress)]"

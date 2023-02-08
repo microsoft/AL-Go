@@ -5,10 +5,10 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  projects:
+  projectsJson:
     description: JSON formatted string of projects to build
     required: true
-  buildOrder:
+  buildOrderJson:
     description: JSON formatted build order
     required: true
   buildOrderDepth:
@@ -23,11 +23,11 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       env:
-        _projects: ${{ inputs.projects }}
-        _buildOrder: ${{ inputs.buildOrder }}
+        _projectsJson: ${{ inputs.projectsJson }}
+        _buildOrderJson: ${{ inputs.buildOrderJson }}
         _buildOrderDepth: ${{ inputs.buildOrderDepth }}
         _workflowDepth: ${{ inputs.workflowDepth }}
-      run: try { ${{ github.action_path }}/DetermineBuildOrder.ps1 -Projects $ENV:_Projects -BuildOrder $ENV:_BuildOrder -BuildOrderDepth $ENV:_BuildOrderDepth -WorkflowDepth $ENV:_WorkflowDepth } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/DetermineBuildOrder.ps1 -projectsJson $ENV:_projectsJson -buildOrderJson $ENV:_buildOrderJson -buildOrderDepth $ENV:_BuildOrderDepth -workflowDepth $ENV:_WorkflowDepth } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
