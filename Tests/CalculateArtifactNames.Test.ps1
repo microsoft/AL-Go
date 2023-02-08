@@ -52,10 +52,6 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -buildMode $buildMode `
                 -branchName $branchName
         
-        Write-Host "BuildMode - $($Env:BuildMode)"
-        $env:AppsArtifactsName | Should -Be "ALGOProject-main-Apps-22.0.123.0"
-        $env:TestAppsArtifactsName | Should -Be "ALGOProject-main-TestApps-22.0.123.0"
-
         $generatedEnvVariables = Get-Content $env:GITHUB_ENV
         $generatedEnvVariables | Should -Contain "AppsArtifactsName=ALGOProject-main-Apps-22.0.123.0"
         $generatedEnvVariables | Should -Contain "DependenciesArtifactsName=ALGOProject-main-Dependencies-22.0.123.0"
