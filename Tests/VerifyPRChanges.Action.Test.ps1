@@ -21,7 +21,8 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
-                -githubApiUrl "https://api.github.com" 
+                -githubApiUrl "https://api.github.com" `
+                -githubToken "ABC" 
         } | Should -Throw
     }
 
@@ -35,7 +36,8 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
-                -githubApiUrl "https://api.github.com" 
+                -githubApiUrl "https://api.github.com" `
+                -githubToken "ABC" 
         } | Should -Throw
     }
 
@@ -49,7 +51,8 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
-                -githubApiUrl "https://api.github.com" 
+                -githubApiUrl "https://api.github.com" `
+                -githubToken "ABC" 
         } | Should -Throw
     }
 
@@ -63,7 +66,8 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
-                -githubApiUrl "https://api.github.com" 
+                -githubApiUrl "https://api.github.com" `
+                -githubToken "ABC" 
         } | Should -Throw
     }
 
@@ -77,7 +81,8 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
-                -githubApiUrl "https://api.github.com" 
+                -githubApiUrl "https://api.github.com" `
+                -githubToken "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
@@ -91,7 +96,8 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
-                -githubApiUrl "https://api.github.com" 
+                -githubApiUrl "https://api.github.com" `
+                -githubToken "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
@@ -105,7 +111,8 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -prHeadRepository "fork/AL-Go" `
-                -githubApiUrl "https://api.github.com" 
+                -githubApiUrl "https://api.github.com" `
+                -githubToken "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
@@ -120,11 +127,20 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prHeadRepository "microsoft/AL-Go" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -githubApiUrl "https://api.github.com"
+                -githubApiUrl "https://api.github.com"`
+                -githubToken "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Pull Request is from the same repository, skipping check." }
     }
 
     It 'Compile Action' {
         Invoke-Expression $actionScript
+    }
+
+    It 'Test action.yaml matches script' {
+        $permissions = [ordered]@{
+        }
+        $outputs = [ordered]@{
+        }
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
 }
