@@ -12,7 +12,7 @@ inputs:
     description: JSON formatted build order
     required: true
   buildOrderDepth:
-    description:  Build order depth
+    description: Build order depth
     required: true
   workflowDepth:
     description: Workflow depth
@@ -20,17 +20,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Determine Changed Files
-      id: BuildOrder
+    - name: run
       shell: ${{ inputs.shell }}
       env:
         _projects: ${{ inputs.projects }}
         _buildOrder: ${{ inputs.buildOrder }}
         _buildOrderDepth: ${{ inputs.buildOrderDepth }}
         _workflowDepth: ${{ inputs.workflowDepth }}
-        _outputPath: ${{ inputs.outputPath }}
-      run: ${{ github.action_path }}/DetermineBuildOrder.ps1 -Projects $Env:_projects -BuildOrder $Env:_buildOrder -BuildOrderDepth $Env:_buildOrderDepth -WorkflowDepth $Env:_workflowDepth
-
+      run: try { ${{ github.action_path }}/DetermineBuildOrder.ps1 -Projects $ENV:_Projects -BuildOrder $ENV:_BuildOrder -BuildOrderDepth $ENV:_BuildOrderDepth -WorkflowDepth $ENV:_WorkflowDepth } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

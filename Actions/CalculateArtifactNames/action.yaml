@@ -12,7 +12,7 @@ inputs:
     description: Name of the built project
     required: true
   buildMode:
-    description:  Buildmode used when building the artifacts
+    description: Buildmode used when building the artifacts
     required: true
   branchName:
     description: Name of the branch the workflow is running on
@@ -20,15 +20,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Determine Changed Files
-      id: calculateArtifactNames
+    - name: run
       shell: ${{ inputs.shell }}
       env:
         _settingsJson: ${{ inputs.settingsJson }}
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
         _branchName: ${{ inputs.branchName }}
-      run: ${{ github.action_path }}/CalculateArtifactNames.ps1 -SettingsJson $Env:_settingsJson -Project $Env:_project -BuildMode $Env:_buildMode -BranchName $Env:_branchName
+      run: try { ${{ github.action_path }}/CalculateArtifactNames.ps1 -settingsJson $ENV:_settingsJson -project $ENV:_project -buildMode $ENV:_buildMode -branchName $ENV:_branchName } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

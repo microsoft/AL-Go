@@ -1,10 +1,26 @@
+Get-Module TestActionsHelper | Remove-Module -Force
+Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+
 Describe 'CalculateArtifactNames Action Tests' {
 
     BeforeAll {
-        $scriptPath = Join-Path $PSScriptRoot "..\Actions\CalculateArtifactNames\CalculateArtifactNames.ps1" -Resolve
+        $actionName = "CalculateArtifactNames"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $scriptName = "$actionName.ps1"
+        $scriptPath = Join-Path $scriptRoot $scriptName
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+
         $settingsJson = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
         $project = "ALGOProject"
         $branchName = "main"
+    }
+
+    BeforeEach {
+        $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
+        $env:GITHUB_ENV = [System.IO.Path]::GetTempFileName()
+
+        Write-Host $env:GITHUB_OUTPUT
+        Write-Host $env:GITHUB_ENV
     }
 
 
@@ -14,11 +30,18 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
-                -branchName $branchName `
-                -runLocally
+                -branchName $branchName
         
-        $env:AppsArtifactsName | Should -Be "ALGOProject-main-CleanApps-22.0.123.0"
-        $env:TestAppsArtifactsName | Should -Be "ALGOProject-main-CleanTestApps-22.0.123.0"
+        $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "AppsArtifactsName=ALGOProject-main-CleanApps-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "DependenciesArtifactsName=ALGOProject-main-CleanDependencies-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "TestAppsArtifactsName=ALGOProject-main-CleanTestApps-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "TestResultsArtifactsName=ALGOProject-main-CleanTestResults-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "BcptTestResultsArtifactsName=ALGOProject-main-CleanBcptTestResults-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "BuildOutputArtifactsName=ALGOProject-main-CleanBuildOutput-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-main-CleanContainerEventLog-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "BuildMode=Clean"
+
     }
 
     It 'should not include buildmode name in artifact name if buildmode is default' {
@@ -27,12 +50,31 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
-                -branchName $branchName `
-                -runLocally
+                -branchName $branchName
         
         Write-Host "BuildMode - $($Env:BuildMode)"
         $env:AppsArtifactsName | Should -Be "ALGOProject-main-Apps-22.0.123.0"
         $env:TestAppsArtifactsName | Should -Be "ALGOProject-main-TestApps-22.0.123.0"
+
+        $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "AppsArtifactsName=ALGOProject-main-Apps-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "DependenciesArtifactsName=ALGOProject-main-Dependencies-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "TestAppsArtifactsName=ALGOProject-main-TestApps-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "TestResultsArtifactsName=ALGOProject-main-TestResults-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "BcptTestResultsArtifactsName=ALGOProject-main-BcptTestResults-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "BuildOutputArtifactsName=ALGOProject-main-BuildOutput-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-main-ContainerEventLog-22.0.123.0"
     }
 
+    It 'Compile Action' {
+        Invoke-Expression $actionScript
+    }
+
+    It 'Test action.yaml matches script' {
+        $permissions = [ordered]@{
+        }
+        $outputs = [ordered]@{
+        }
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+    }
 }

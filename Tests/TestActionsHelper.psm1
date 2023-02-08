@@ -133,6 +133,8 @@ function YamlTest {
 
     $i = 0
     while ($i -lt $yamlLines.Count -and $i -lt $actualYaml.count) {
+        Write-Host "Comparing line $i"
+        Write-Host "Expected: $($yamlLines[$i]) - Actual: $($actualYaml[$i])"
         $actualYaml[$i] | Should -BeLike $yamlLines[$i]
         $i++
     }
