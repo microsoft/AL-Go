@@ -3,6 +3,10 @@ name: 'CI/CD'
 on:
   workflow_dispatch:
   push:
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/*.yaml'
+      - '!.github/workflows/CICD.yaml'
     branches: [ 'main', 'release/*', 'feature/*' ]
 
 run-name: 'CI/CD: ${{github.event.head_commit.message}}'
@@ -10,6 +14,10 @@ run-name: 'CI/CD: ${{github.event.head_commit.message}}'
 defaults:
   run:
     shell: powershell
+
+permissions:
+  contents: read
+  actions: read
 
 env:
   workflowDepth: 1

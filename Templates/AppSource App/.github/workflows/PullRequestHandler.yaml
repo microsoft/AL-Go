@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   PregateCheck:
+    if: ${{ github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name}}
     runs-on: [ windows-latest ]
     steps:
       - uses: aholstrup1/AL-Go-Actions/VerifyPRChanges@main
@@ -28,17 +29,15 @@ jobs:
 
   Initialization:
     needs: [ PregateCheck ]
+    if: ${{ !failure() }}
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
       settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
       projects: ${{ steps.ReadSettings.outputs.ProjectsJson }}
       projectCount: ${{ steps.ReadSettings.outputs.ProjectCount }}
-      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
-      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
-      checkRunId: ${{ steps.CreateCheckRun.outputs.checkRunId }}
       projectDependenciesJson: ${{ steps.ReadSettings.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.ReadSettings.outputs.BuildOrderJson }}
       buildOrderDepth: ${{ steps.ReadSettings.outputs.BuildOrderDepth }}
@@ -122,7 +121,7 @@ jobs:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
-          secrets: 'licenseFileUrl,insiderSasToken,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId' #TODO: Update list of secrets to only fetch the needed ones 
+          secrets: 'licenseFileUrl,insiderSasToken,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId'
 
       - name: Run pipeline
         id: RunPipeline
@@ -165,46 +164,6 @@ jobs:
           path: '${{ matrix.project }}/.buildartifacts/TestApps/'
           if-no-files-found: ignore
           retention-days: 1
-
-      - name: Publish artifacts - apps
-        uses: actions/upload-artifact@v3
-        if: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.environmentCount > 0
-        with:
-          name: ${{ env.AppsArtifactsName }}
-          path: '${{ matrix.project }}/.buildartifacts/Apps/'
-          if-no-files-found: ignore
-
-      - name: Publish artifacts - dependencies
-        uses: actions/upload-artifact@v3
-        if: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.environmentCount > 0
-        with:
-          name: ${{ env.DependenciesArtifactsName }}
-          path: '${{ matrix.project }}/.buildartifacts/Dependencies/'
-          if-no-files-found: ignore
-
-      - name: Publish artifacts - test apps
-        uses: actions/upload-artifact@v3
-        if: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.environmentCount > 0
-        with:
-          name: ${{ env.TestAppsArtifactsName }}
-          path: '${{ matrix.project }}/.buildartifacts/TestApps/'
-          if-no-files-found: ignore
-
-      - name: Publish artifacts - build output
-        uses: actions/upload-artifact@v3
-        if: (success() || failure()) && (hashFiles(format('{0}/BuildOutput.txt',matrix.project)) != '')
-        with:
-          name: ${{ env.BuildOutputArtifactsName }}
-          path: '${{ matrix.project }}/BuildOutput.txt'
-          if-no-files-found: ignore
-
-      - name: Publish artifacts - container event log
-        uses: actions/upload-artifact@v3
-        if: (failure()) && (hashFiles(format('{0}/ContainerEventLog.evtx',matrix.project)) != '')
-        with:
-          name: ${{ env.ContainerEventLogArtifactsName }}
-          path: '${{ matrix.project }}/ContainerEventLog.evtx'
-          if-no-files-found: ignore
 
       - name: Publish artifacts - test results
         uses: actions/upload-artifact@v3
