@@ -123,9 +123,6 @@ try {
             "Accept" = "application/vnd.github.baptiste-preview+json"
         }
         $ghEvent = Get-Content $ENV:GITHUB_EVENT_PATH -encoding UTF8 | ConvertFrom-Json
-        
-        Write-Host "ENV:GITHUB_EVENT_PATH: $ENV:GITHUB_EVENT_PATH"
-        Write-Host "GhEvent: $ghEvent"
 
         if (($ENV:GITHUB_EVENT_NAME -eq "pull_request") -or ($ENV:GITHUB_EVENT_NAME -eq "pull_request_target")) {
             $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ENV:GITHUB_SHA)"
@@ -144,11 +141,19 @@ try {
     }
 
     function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
+        $ghEvent = Get-Content $ENV:GITHUB_EVENT_PATH -encoding UTF8 | ConvertFrom-Json
+        Write-Host "ENV:GITHUB_EVENT_PATH: $ENV:GITHUB_EVENT_PATH"
+        Write-Host "GhEvent: $ghEvent"
+
+
         if ($settings.alwaysBuildAllProjects) {
             Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
             return $projects
         } elseif ($ENV:GITHUB_WORKFLOW -eq 'CI/CD') {
             Write-Host "Building all projects because this is a CICD run"
+            return $projects
+        } elseif ($ENV:GITHUB_EVENT_NAME -notin @("pull_request", "push")) {
+            Write-Host "Building all projects because this is not a push or pull request"
             return $projects
         }
         else {
