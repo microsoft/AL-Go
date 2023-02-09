@@ -25,6 +25,9 @@ if ($project -eq ".") {
   $project = $settings.repoName 
 }
 
+$branchName = $branchName.Replace('\','_').Replace('/','_')
+$projectName = $project.Replace('\','_').Replace('/','_')
+
 # If the buildmode is default, then we don't want to add it to the artifact name
 if ($buildMode -eq 'Default') { 
   $buildMode = '' 
@@ -33,6 +36,6 @@ Set-EnvVariable -name "BuildMode" -value $buildMode
 
 'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
   $name = "$($_)ArtifactsName"
-  $value = "$($project.Replace('\','_').Replace('/','_'))-$($branchName)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+  $value = "$($projectName)-$($branchName)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
   Set-EnvVariable -name $name -value $value
 }

@@ -12,7 +12,6 @@ Describe 'CalculateArtifactNames Action Tests' {
 
         $settingsJson = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
         $project = "ALGOProject"
-        $branchName = "main"
     }
 
     BeforeEach {
@@ -26,6 +25,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should include buildmode name in artifact name if buildmode is not default' {
         $buildMode = "Clean"
+        $branchName = "main"
         & $scriptPath `
                 -settingsJson $settingsJson `
                 -project $project `
@@ -46,6 +46,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should not include buildmode name in artifact name if buildmode is default' {
         $buildMode = "Default"
+        $branchName = "main"
         & $scriptPath `
                 -settingsJson $settingsJson `
                 -project $project `
@@ -61,6 +62,26 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedEnvVariables | Should -Contain "BuildOutputArtifactsName=ALGOProject-main-BuildOutput-22.0.123.0"
         $generatedEnvVariables | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-main-ContainerEventLog-22.0.123.0"
     }
+
+    It 'should escape slashes and backslashes in artifact name' {
+        $buildMode = "Default"
+        $branchName = "releases/1.0"
+        & $scriptPath `
+                -settingsJson $settingsJson `
+                -project $project `
+                -buildMode $buildMode `
+                -branchName $branchName
+        
+        $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "AppsArtifactsName=ALGOProject-releases_1.0-Apps-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "DependenciesArtifactsName=ALGOProject-releases_1.0-Dependencies-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "TestAppsArtifactsName=ALGOProject-releases_1.0-TestApps-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "TestResultsArtifactsName=ALGOProject-releases_1.0-TestResults-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "BcptTestResultsArtifactsName=ALGOProject-releases_1.0-BcptTestResults-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "BuildOutputArtifactsName=ALGOProject-releases_1.0-BuildOutput-22.0.123.0"
+        $generatedEnvVariables | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-22.0.123.0"
+    }
+
 
     It 'Compile Action' {
         Invoke-Expression $actionScript
