@@ -13,10 +13,9 @@ $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 
 Write-Host "Projects=$projectsJson"
-$Projects = $projectsJson | ConvertFrom-Json
+$projects = $projectsJson | ConvertFrom-Json
 Write-Host "BuildOrder=$buildOrderJson"
-$BuildOrder = $buildOrderJson | ConvertFrom-Json
-
+$buildOrder = $buildOrderJson | ConvertFrom-Json
 if ($buildOrderDepth -lt $workflowDepth) {
   Write-Host "::Error::Project Dependencies depth is $buildOrderDepth. Workflow is only setup for $workflowDepth. You need to Run Update AL-Go System Files to update the workflows"
   $host.SetShouldExit(1)
@@ -24,17 +23,23 @@ if ($buildOrderDepth -lt $workflowDepth) {
 
 $step = $buildOrderDepth
 $buildOrderDepth..1 | ForEach-Object {
-  $ps = @($BuildOrder."$_" | Where-Object { $Projects -contains $_ })
+  Write-host "$_"
+  if ($buildOrder.PSobject.Properties.name.contains($_)) {
+    $ps = @($buildOrder."$_" | Where-Object { $projects -contains $_ })
+  } else {
+    $ps = @()
+  }
+
   if ($ps.Count -eq 1) {
-    $projectsJSon = "[$($ps | ConvertTo-Json -compress)]"
+    $buildProjectJson = "[$($ps | ConvertTo-Json -compress)]"
   }
   else {
-    $projectsJSon = $ps | ConvertTo-Json -compress
+    $buildProjectJson = $ps | ConvertTo-Json -compress
   }
   if ($ps.Count -gt 0) {
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "projects$($step)Json=$projectsJson"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "projects$($step)Json=$buildProjectJson"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "projects$($step)Count=$($ps.count)"
-    Write-Host "projects$($step)Json=$projectsJson"
+    Write-Host "projects$($step)Json=$buildProjectJson"
     Write-Host "projects$($step)Count=$($ps.count)"
     $step--
   }
