@@ -141,18 +141,13 @@ try {
     }
 
     function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
-        $ghEvent = Get-Content $ENV:GITHUB_EVENT_PATH -encoding UTF8 | ConvertFrom-Json
-        Write-Host "ENV:GITHUB_EVENT_PATH: $ENV:GITHUB_EVENT_PATH"
-        Write-Host "GhEvent: $ghEvent"
-
-
         if ($settings.alwaysBuildAllProjects) {
             Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
             return $projects
         } elseif ($ENV:GITHUB_WORKFLOW -eq 'CI/CD') {
             Write-Host "Building all projects because this is a CICD run"
             return $projects
-        } elseif ($ENV:GITHUB_EVENT_NAME -notin @("pull_request", "push")) {
+        } elseif ($ENV:GITHUB_EVENT_NAME -notin @("pull_request_target", "pull_request", "push")) {
             Write-Host "Building all projects because this is not a push or pull request"
             return $projects
         }
