@@ -17,10 +17,6 @@ inputs:
     description: The name of the repository the PR is going to
     required: false
     default: ${{ github.event.pull_request.base.repo.full_name }}
-  prHeadRepository:
-    description: The name of the repository the PR is coming from
-    required: false
-    default: ${{ github.event.pull_request.head.repo.full_name }}
   githubapiurl:
     description: The URL of the GitHub API
     required: false
@@ -38,10 +34,9 @@ runs:
         _baseSHA: ${{ inputs.baseSHA }}
         _headSHA: ${{ inputs.headSHA }}
         _prBaseRepository: ${{ inputs.prBaseRepository }}
-        _prHeadRepository: ${{ inputs.prHeadRepository }}
         _githubapiurl: ${{ inputs.githubapiurl }}
         _githubToken: ${{ inputs.githubToken }}
-      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository -prHeadRepository $ENV:_prHeadRepository -githubApiUrl $ENV:_githubApiUrl -githubToken $ENV:_githubToken } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository -githubApiUrl $ENV:_githubApiUrl -githubToken $ENV:_githubToken } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

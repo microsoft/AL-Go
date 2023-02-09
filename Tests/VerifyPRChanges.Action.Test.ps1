@@ -20,7 +20,6 @@ Describe 'VerifyPRChanges Action Tests' {
                 -baseSHA "123" `
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
                 -githubToken "ABC" 
         } | Should -Throw
@@ -35,7 +34,6 @@ Describe 'VerifyPRChanges Action Tests' {
                 -baseSHA "123" `
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
                 -githubToken "ABC" 
         } | Should -Throw
@@ -50,7 +48,6 @@ Describe 'VerifyPRChanges Action Tests' {
                 -baseSHA "123" `
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
                 -githubToken "ABC" 
         } | Should -Throw
@@ -65,7 +62,6 @@ Describe 'VerifyPRChanges Action Tests' {
                 -baseSHA "123" `
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
                 -githubToken "ABC" 
         } | Should -Throw
@@ -80,7 +76,6 @@ Describe 'VerifyPRChanges Action Tests' {
                 -baseSHA "123" `
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
                 -githubToken "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
@@ -95,7 +90,6 @@ Describe 'VerifyPRChanges Action Tests' {
                 -baseSHA "123" `
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
                 -githubToken "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
@@ -110,26 +104,9 @@ Describe 'VerifyPRChanges Action Tests' {
                 -baseSHA "123" `
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
-                -prHeadRepository "fork/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
                 -githubToken "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
-    }
-
-    It "should always succeed if it is coming from the same repository" {
-        Write-Host "$scriptPath"
-        Mock -CommandName Invoke-WebRequest -MockWith { 
-            '{ "files": [{ "filename": "CODEOWNERS", "status": "modified" }] }'
-        }
-        Mock Write-Host {}
-        & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
-                -prHeadRepository "microsoft/AL-Go" `
-                -prBaseRepository "microsoft/AL-Go" `
-                -githubApiUrl "https://api.github.com"`
-                -githubToken "ABC" 
-        Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Pull Request is from the same repository, skipping check." }
     }
 
     It 'Compile Action' {
