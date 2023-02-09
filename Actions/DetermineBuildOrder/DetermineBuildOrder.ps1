@@ -12,6 +12,8 @@ Param(
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 
+Write-Host "BuildOrderDepth=$buildOrderDepth"
+Write-Host "WorkflowDepth=$workflowDepth"
 Write-Host "Projects=$projectsJson"
 $projects = $projectsJson | ConvertFrom-Json
 Write-Host "BuildOrder=$buildOrderJson"
