@@ -18,7 +18,7 @@ Describe "DetermineBuildOrder Action Tests" {
     It 'should generate correct projects for depth 3' {
         & $scriptPath `
                 -projectsJson '["P0","P1","P2","P3","P4"]' `
-                -BuildOrderJson '{"3":["P0","P4"],"1":["P1"],"2":["P2","P3"]}' `
+                -BuildOrderJson '{"1":["P1"],"2":["P2","P3"],"3":["P0","P4"]}' `
                 -BuildOrderDepth '3' `
                 -WorkflowDepth '3'
         
