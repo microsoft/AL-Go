@@ -124,6 +124,9 @@ try {
         }
         $ghEvent = Get-Content $ENV:GITHUB_EVENT_PATH -encoding UTF8 | ConvertFrom-Json
 
+        Write-Host "ghevent $ghEvent"
+        Write-Host "GITHUB_EVENT_PATH $($ENV:GITHUB_EVENT_PATH)"
+
         if (($ENV:GITHUB_EVENT_NAME -eq "pull_request") -or ($ENV:GITHUB_EVENT_NAME -eq "pull_request_target")) {
             $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ENV:GITHUB_SHA)"
         } else {
