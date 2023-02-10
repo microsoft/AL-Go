@@ -91,6 +91,14 @@ Describe 'CalculateArtifactNames Action Tests' {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
+            "AppsArtifactsName" = "Artifacts name for Apps"
+            "DependenciesArtifactsName" = "Artifacts name for Dependencies"
+            "TestAppsArtifactsName" = "Artifacts name for TestApps"
+            "TestResultsArtifactsName" = "Artifacts name for TestResults"
+            "BcptTestResultsArtifactsName" = "Artifacts name for BcptTestResults"
+            "BuildOutputArtifactsName" = "Artifacts name for BuildOutput"
+            "ContainerEventLogArtifactsName" = "Artifacts name for ContainerEventLog"
+            "BuildMode" = "Buildmode used when building the artifacts"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

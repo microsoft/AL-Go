@@ -17,11 +17,37 @@ inputs:
   branchName:
     description: Name of the branch the workflow is running on
     required: true
+outputs:
+  AppsArtifactsName:
+    description: Artifacts name for Apps
+    value: ${{ steps.calculateartifactnames.outputs.AppsArtifactsName }}
+  DependenciesArtifactsName:
+    description: Artifacts name for Dependencies
+    value: ${{ steps.calculateartifactnames.outputs.DependenciesArtifactsName }}
+  TestAppsArtifactsName:
+    description: Artifacts name for TestApps
+    value: ${{ steps.calculateartifactnames.outputs.TestAppsArtifactsName }}
+  TestResultsArtifactsName:
+    description: Artifacts name for TestResults
+    value: ${{ steps.calculateartifactnames.outputs.TestResultsArtifactsName }}
+  BcptTestResultsArtifactsName:
+    description: Artifacts name for BcptTestResults
+    value: ${{ steps.calculateartifactnames.outputs.BcptTestResultsArtifactsName }}
+  BuildOutputArtifactsName:
+    description: Artifacts name for BuildOutput
+    value: ${{ steps.calculateartifactnames.outputs.BuildOutputArtifactsName }}
+  ContainerEventLogArtifactsName:
+    description: Artifacts name for ContainerEventLog
+    value: ${{ steps.calculateartifactnames.outputs.ContainerEventLogArtifactsName }}
+  BuildMode:
+    description: Buildmode used when building the artifacts
+    value: ${{ steps.calculateartifactnames.outputs.BuildMode }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      id: calculateartifactnames
       env:
         _settingsJson: ${{ inputs.settingsJson }}
         _project: ${{ inputs.project }}
