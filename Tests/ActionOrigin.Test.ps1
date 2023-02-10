@@ -6,11 +6,11 @@ Describe "All AL-GO Actions should be coming from the microsoft/AL-Go-Actions re
 
     It 'All PTE workflows are referencing the microsoft/AL-Go-Actions' {
         $workflowsFolder = (Join-Path $PSScriptRoot "..\Templates\Per Tenant Extension\.github\workflows\" -Resolve)
-        Test-AllWorkflowsInPath -Path $workflowsFolder
+        TestAllWorkflowsInPath -Path $workflowsFolder
     }
 
     It 'All AppSource workflows are referencing the microsoft/AL-Go-Actions' {
         $workflowsFolder = (Join-Path $PSScriptRoot "..\Templates\AppSource App\.github\workflows\" -Resolve)
-        Test-AllWorkflowsInPath -Path $workflowsFolder
+        TestAllWorkflowsInPath -Path $workflowsFolder
     }
 }
