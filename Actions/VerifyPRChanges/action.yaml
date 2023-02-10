@@ -5,6 +5,10 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  token:
+    description: The token to use for the GitHub API
+    required: false
+    default: ${{ github.token }}
   baseSHA:
     description: Base commit of the PR
     required: false
@@ -21,22 +25,18 @@ inputs:
     description: The URL of the GitHub API
     required: false
     default: ${{ github.api_url }}
-  token:
-    description: The token to use for the GitHub API
-    required: false
-    default: ${{ github.token }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
       env:
+        _token: ${{ inputs.token }}
         _baseSHA: ${{ inputs.baseSHA }}
         _headSHA: ${{ inputs.headSHA }}
         _prBaseRepository: ${{ inputs.prBaseRepository }}
         _githubapiurl: ${{ inputs.githubapiurl }}
-        _token: ${{ inputs.token }}
-      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository -githubApiUrl $ENV:_githubApiUrl -token $ENV:_token } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository -githubApiUrl $ENV:_githubApiUrl } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

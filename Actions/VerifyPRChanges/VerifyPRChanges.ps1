@@ -1,4 +1,6 @@
 Param(
+  [Parameter(HelpMessage = "The token to use for the GitHub API", Mandatory = $false)]
+  [string] $token,
   [Parameter(HelpMessage = "Base commit of the PR", Mandatory = $false)]
   [string] $baseSHA,
   [Parameter(HelpMessage = "Head commit of the PR", Mandatory = $false)]
@@ -6,9 +8,7 @@ Param(
   [Parameter(HelpMessage = "The name of the repository the PR is going to", Mandatory = $false)]
   [string] $prBaseRepository,
   [Parameter(HelpMessage = "The URL of the GitHub API", Mandatory = $false)]
-  [string] $githubApiUrl,
-  [Parameter(HelpMessage = "The token to use for the GitHub API", Mandatory = $false)]
-  [string] $token
+  [string] $githubApiUrl
 
 )
 
