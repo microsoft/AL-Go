@@ -124,26 +124,10 @@ try {
         }
         $ghEvent = Get-Content $ENV:GITHUB_EVENT_PATH -encoding UTF8 | ConvertFrom-Json
 
-        Write-Host "ghevent $ghEvent"
-        Write-Host "ghevent pull_request $($ghEvent.pull_request)"
-
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ENV:GITHUB_SHA)"
 
         $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
         $filesChanged = @($response.files | ForEach-Object { $_.filename })
-
-        <#if (($ENV:GITHUB_EVENT_NAME -eq "pull_request") -or ($ENV:GITHUB_EVENT_NAME -eq "pull_request_target")) {
-            $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ENV:GITHUB_SHA)"
-        } else {
-            $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.before)...$($ghEvent.after)"
-        }
-
-        if ($ghEvent.before -eq '0'*40) {
-            $filesChanged = @()
-        } else {
-            $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
-            $filesChanged = @($response.files | ForEach-Object { $_.filename })
-        }#>
 
         return $filesChanged
     }
