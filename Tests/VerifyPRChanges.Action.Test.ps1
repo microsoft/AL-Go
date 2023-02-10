@@ -21,7 +21,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
-                -githubToken "ABC" 
+                -token "ABC" 
         } | Should -Throw
     }
 
@@ -35,7 +35,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
-                -githubToken "ABC" 
+                -token "ABC" 
         } | Should -Throw
     }
 
@@ -49,7 +49,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
-                -githubToken "ABC" 
+                -token "ABC" 
         } | Should -Throw
     }
 
@@ -63,7 +63,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
-                -githubToken "ABC" 
+                -token "ABC" 
         } | Should -Throw
     }
 
@@ -77,7 +77,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
-                -githubToken "ABC" 
+                -token "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
@@ -91,7 +91,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
-                -githubToken "ABC" 
+                -token "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
@@ -105,7 +105,7 @@ Describe 'VerifyPRChanges Action Tests' {
                 -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -githubApiUrl "https://api.github.com" `
-                -githubToken "ABC" 
+                -token "ABC" 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 

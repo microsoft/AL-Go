@@ -21,7 +21,7 @@ inputs:
     description: The URL of the GitHub API
     required: false
     default: ${{ github.api_url }}
-  githubToken:
+  token:
     description: The token to use for the GitHub API
     required: false
     default: ${{ github.token }}
@@ -35,8 +35,8 @@ runs:
         _headSHA: ${{ inputs.headSHA }}
         _prBaseRepository: ${{ inputs.prBaseRepository }}
         _githubapiurl: ${{ inputs.githubapiurl }}
-        _githubToken: ${{ inputs.githubToken }}
-      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository -githubApiUrl $ENV:_githubApiUrl -githubToken $ENV:_githubToken } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+        _token: ${{ inputs.token }}
+      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository -githubApiUrl $ENV:_githubApiUrl -token $ENV:_token } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

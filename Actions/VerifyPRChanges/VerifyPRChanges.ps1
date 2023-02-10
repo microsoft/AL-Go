@@ -8,14 +8,14 @@ Param(
   [Parameter(HelpMessage = "The URL of the GitHub API", Mandatory = $false)]
   [string] $githubApiUrl,
   [Parameter(HelpMessage = "The token to use for the GitHub API", Mandatory = $false)]
-  [string] $githubToken
+  [string] $token
 
 )
 
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 $headers = @{             
-  "Authorization" = "token $githubToken"
+  "Authorization" = "token $token"
   "Accept"        = "application/vnd.github.baptiste-preview+json"
 }
 $url = "$($githubApiUrl)/repos/$($prBaseRepository)/compare/$baseSHA...$headSHA"
