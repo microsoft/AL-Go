@@ -20,3 +20,7 @@ jobs:
       - name: Run Tests
         run: |
           . (Join-Path "." "Tests/runtests.ps1")
+
+      - name: Test AL-GO Action Origins
+        run: |
+          . (Join-Path "." "Tests/ActionOrigin.Test.ps1")
