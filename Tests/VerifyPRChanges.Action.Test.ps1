@@ -13,7 +13,7 @@ Describe 'VerifyPRChanges Action Tests' {
 
     It 'should fail if the PR is from a fork and changes a script' {
         Mock -CommandName Invoke-WebRequest -MockWith { 
-            '{ "files": [{ "filename": "Actions/AL-Go-Helper.ps1", "status": "modified" }] }'
+            '{ "files": [{ "filename": "Scripts/BuildScript.ps1", "status": "modified" }] }'
         }
        { 
         & $scriptPath `
@@ -27,7 +27,7 @@ Describe 'VerifyPRChanges Action Tests' {
 
     It 'should fail if the PR is from a fork and adds a script' {
         Mock -CommandName Invoke-WebRequest -MockWith { 
-            '{ "files": [{ "filename": "Actions/AL-Go-Helper.ps1", "status": "added" }] }'
+            '{ "files": [{ "filename": "Scripts/BuildScript.ps1", "status": "added" }] }'
         }
        { 
         & $scriptPath `
@@ -41,7 +41,7 @@ Describe 'VerifyPRChanges Action Tests' {
 
     It 'should fail if the PR is from a fork and removes a script' {
         Mock -CommandName Invoke-WebRequest -MockWith { 
-            '{ "files": [{ "filename": "Actions/AL-Go-Helper.ps1", "status": "removed" }] }'
+            '{ "files": [{ "filename": "Scripts/BuildScript.ps1", "status": "removed" }] }'
         }
        { 
         & $scriptPath `
