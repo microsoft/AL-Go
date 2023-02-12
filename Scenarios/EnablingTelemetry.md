@@ -28,6 +28,8 @@ Here is a list of the telemetry signals for different tasks:
 | DO0078 | AL-Go action ran: ReadSecrets |
 | DO0079 | AL-Go action ran: ReadSettings |
 | DO0080 | AL-Go action ran: RunPipeline |
+| DO0081 | AL-Go action ran: Deliver |
+| DO0082 | AL-Go action ran: AnalyzeTests |
 
 Here is a list of the telemetry signals for different workflows:
 
