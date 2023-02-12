@@ -45,6 +45,9 @@ Here is a list of the telemetry signals for different workflows:
 | DO0099 | AL-Go workflow ran: NextMajor |
 | DO0100 | AL-Go workflow ran: NextMinor |
 | DO0101 | AL-Go workflow ran: Current |
+| DO0102 | AL-Go workflow ran: CreatePerformanceTestApp |
+| DO0103 | AL-Go workflow ran: PublishToAppSource |
+| DO0104 | AL-Go workflow ran: PullRequestHandler |
 
 ---
 [back](../README.md)

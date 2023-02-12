@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           lfs: true
-          ref:  ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: aholstrup1/AL-Go-Actions/VerifyPRChanges@main
         with:
@@ -57,7 +57,7 @@ jobs:
         uses: aholstrup1/AL-Go-Actions/WorkflowInitialize@main
         with:
           shell: powershell
-          eventId: "DO0091"
+          eventId: "DO0104"
 
       - name: Read settings
         id: ReadSettings
@@ -242,5 +242,5 @@ jobs:
         uses: aholstrup1/AL-Go-Actions/WorkflowPostProcess@main
         with:
           shell: powershell
-          eventId: "DO0091"
+          eventId: "DO0104"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
