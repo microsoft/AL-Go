@@ -73,7 +73,6 @@ function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
                 }
                 $buildProject
             })
-        Write-Host "Modified projects: $($buildProjects -join ', ')"
         return $buildProjects
     }
 }
@@ -197,7 +196,6 @@ try {
                 $projectDependencies = @{}
                 AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
                 $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
-                Write-Host "Building projects: $($buildProjects -join ', ')"
                 $projectDependenciesJson = $projectDependencies | ConvertTo-Json -Compress
                 $buildOrderJson = $buildOrder | ConvertTo-Json -Compress
                 Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
@@ -209,7 +207,6 @@ try {
             }
         }
         Write-Host "Projects to build: $($buildProjects -join ', ')"
-        Write-Host $buildProjects
         if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
             $buildProjects += @(".")
         }
