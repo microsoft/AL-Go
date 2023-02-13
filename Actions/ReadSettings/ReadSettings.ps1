@@ -46,11 +46,7 @@ function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
     }
 
     $filesChanged = @(Get-ChangedFiles -token $token)
-    if ($filesChanged.Count -eq 0) {
-        Write-Host "Building all projects"
-        return $projects
-    }
-    elseif ($filesChanged -like '.github/*.json') {
+    if ($filesChanged -like '.github/*.json') {
         Write-Host "Changes to repo Settings, building all projects"
         return $projects
     }
