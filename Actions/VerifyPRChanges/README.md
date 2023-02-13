@@ -9,5 +9,3 @@ Base commit of the PR
 Head commit of the PR
 ### prBaseRepository (default github.event.pull_request.base.repo.full_name)
 The name of the repository the PR is going to
-### githubapiurl (default github.api_url)
-The URL of the GitHub API

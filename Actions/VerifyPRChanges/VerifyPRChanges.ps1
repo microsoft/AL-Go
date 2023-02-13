@@ -6,10 +6,7 @@ Param(
   [Parameter(HelpMessage = "Head commit of the PR", Mandatory = $false)]
   [string] $headSHA,
   [Parameter(HelpMessage = "The name of the repository the PR is going to", Mandatory = $false)]
-  [string] $prBaseRepository,
-  [Parameter(HelpMessage = "The URL of the GitHub API", Mandatory = $false)]
-  [string] $githubApiUrl
-
+  [string] $prBaseRepository
 )
 
 $ErrorActionPreference = "STOP"
@@ -18,7 +15,7 @@ $headers = @{
   "Authorization" = "token $token"
   "Accept"        = "application/vnd.github.baptiste-preview+json"
 }
-$url = "$($githubApiUrl)/repos/$($prBaseRepository)/compare/$baseSHA...$headSHA"
+$url = "https://api.github.com/repos/$($prBaseRepository)/compare/$baseSHA...$headSHA"
 $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
 Write-Host "Files Changed:"
 $response.files | ForEach-Object {
@@ -26,7 +23,7 @@ $response.files | ForEach-Object {
   Write-Host "- $filename $_.status"
   $extension = [System.IO.Path]::GetExtension($filename)
   $name = [System.IO.Path]::GetFileName($filename)
-  if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $name -eq "CODEOWNERS") {
+  if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $name -eq "CODEOWNERS" -or $filename.StartsWith(".github/")) {
     throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
   }
 }
