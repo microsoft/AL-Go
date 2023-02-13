@@ -98,7 +98,7 @@ Describe 'CalculateArtifactNames Action Tests' {
             "BcptTestResultsArtifactsName" = "Artifacts name for BcptTestResults"
             "BuildOutputArtifactsName" = "Artifacts name for BuildOutput"
             "ContainerEventLogArtifactsName" = "Artifacts name for ContainerEventLog"
-            "BuildMode" = "Buildmode used when building the artifacts"
+            "BuildMode" = "Build mode used when building the artifacts"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

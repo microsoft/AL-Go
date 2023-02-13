@@ -12,7 +12,7 @@ inputs:
     description: Name of the built project
     required: true
   buildMode:
-    description: Buildmode used when building the artifacts
+    description: Build mode used when building the artifacts
     required: true
   branchName:
     description: Name of the branch the workflow is running on
@@ -40,7 +40,7 @@ outputs:
     description: Artifacts name for ContainerEventLog
     value: ${{ steps.calculateartifactnames.outputs.ContainerEventLogArtifactsName }}
   BuildMode:
-    description: Buildmode used when building the artifacts
+    description: Build mode used when building the artifacts
     value: ${{ steps.calculateartifactnames.outputs.BuildMode }}
 runs:
   using: composite

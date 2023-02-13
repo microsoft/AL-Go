@@ -6,6 +6,6 @@ Settings from repository in compressed Json format
 ### project 
 Name of the built project
 ### buildMode 
-Buildmode used when building the artifacts
+Build mode used when building the artifacts
 ### branchName 
 Name of the branch the workflow is running on

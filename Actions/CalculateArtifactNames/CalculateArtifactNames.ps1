@@ -3,7 +3,7 @@ Param(
     [string] $settingsJson,
     [Parameter(HelpMessage = "Name of the built project", Mandatory = $true)]
     [string] $project,
-    [Parameter(HelpMessage = "Buildmode used when building the artifacts", Mandatory = $true)]
+    [Parameter(HelpMessage = "Build mode used when building the artifacts", Mandatory = $true)]
     [string] $buildMode,
     [Parameter(HelpMessage = "Name of the branch the workflow is running on", Mandatory = $true)]
     [string] $branchName
