@@ -1,16 +1,18 @@
 ﻿function Test-NumberOfRuns {
     Param(
+        [string] $repository,
         [string] $workflowName,
         [int] $expectedNumberOfRuns
     )
 
+    $returnFields = "conclusion,displayTitle,workflowName,headBranch,event,databaseId"
     if ($workflowName) {
         Write-Host -ForegroundColor Yellow "`nWorkflow runs ($workflowName):"
-        $runs = @(gh run list --limit 1000 --workflow $workflowName --repo $repository | Where-Object { $_ -notlike "*`tworkflow_run`t*" })
+        $runs = gh run list --limit 1000 --workflow $workflowName --repo $repository --json $returnFields | ConvertFrom-Json | Where-Object { $_.event -ne "workflow_run" }
     }
     else {
         Write-Host -ForegroundColor Yellow "`nWorkflow runs:"
-        $runs = @(gh run list --limit 1000 --repo $repository | Where-Object { $_ -notlike "*`tworkflow_run`t*" })
+        $runs = gh run list --limit 1000 --repo $repository --json $returnFields | ConvertFrom-Json | Where-Object { $_.workflowName -ne "workflow_run" }
     }
     $runs | Out-Host
     if ($runs.Count -ne $expectedNumberOfRuns) {

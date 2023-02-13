@@ -112,7 +112,7 @@ $run = Run-CICD -wait -branch $branch
 $runs++
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0' -appVersion ''
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs
+Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 Set-Location $prevLocation
 

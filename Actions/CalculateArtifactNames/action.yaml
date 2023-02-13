@@ -1,0 +1,59 @@
+name: PowerShell script
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  settingsJson:
+    description: Settings from repository in compressed Json format
+    required: true
+  project:
+    description: Name of the built project
+    required: true
+  buildMode:
+    description: Build mode used when building the artifacts
+    required: true
+  branchName:
+    description: Name of the branch the workflow is running on
+    required: true
+outputs:
+  AppsArtifactsName:
+    description: Artifacts name for Apps
+    value: ${{ steps.calculateartifactnames.outputs.AppsArtifactsName }}
+  DependenciesArtifactsName:
+    description: Artifacts name for Dependencies
+    value: ${{ steps.calculateartifactnames.outputs.DependenciesArtifactsName }}
+  TestAppsArtifactsName:
+    description: Artifacts name for TestApps
+    value: ${{ steps.calculateartifactnames.outputs.TestAppsArtifactsName }}
+  TestResultsArtifactsName:
+    description: Artifacts name for TestResults
+    value: ${{ steps.calculateartifactnames.outputs.TestResultsArtifactsName }}
+  BcptTestResultsArtifactsName:
+    description: Artifacts name for BcptTestResults
+    value: ${{ steps.calculateartifactnames.outputs.BcptTestResultsArtifactsName }}
+  BuildOutputArtifactsName:
+    description: Artifacts name for BuildOutput
+    value: ${{ steps.calculateartifactnames.outputs.BuildOutputArtifactsName }}
+  ContainerEventLogArtifactsName:
+    description: Artifacts name for ContainerEventLog
+    value: ${{ steps.calculateartifactnames.outputs.ContainerEventLogArtifactsName }}
+  BuildMode:
+    description: Build mode used when building the artifacts
+    value: ${{ steps.calculateartifactnames.outputs.BuildMode }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: calculateartifactnames
+      env:
+        _settingsJson: ${{ inputs.settingsJson }}
+        _project: ${{ inputs.project }}
+        _buildMode: ${{ inputs.buildMode }}
+        _branchName: ${{ inputs.branchName }}
+      run: try { ${{ github.action_path }}/CalculateArtifactNames.ps1 -settingsJson $ENV:_settingsJson -project $ENV:_project -buildMode $ENV:_buildMode -branchName $ENV:_branchName } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+branding:
+  icon: terminal
+  color: blue

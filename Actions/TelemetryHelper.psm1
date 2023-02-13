@@ -14,7 +14,7 @@ $signals = @{
     "DO0082" = "AL-Go action ran: AnalyzeTests"
 
     "DO0090" = "AL-Go workflow ran: AddExistingAppOrTestApp"
-    "DO0091" = "AL-Go workflow ran: CiCd"
+    "DO0091" = "AL-Go workflow ran: CICD"
     "DO0092" = "AL-Go workflow ran: CreateApp"
     "DO0093" = "AL-Go workflow ran: CreateOnlineDevelopmentEnvironment"
     "DO0094" = "AL-Go workflow ran: CreateRelease"
@@ -27,6 +27,7 @@ $signals = @{
     "DO0101" = "AL-Go workflow ran: Current"
     "DO0102" = "AL-Go workflow ran: CreatePerformanceTestApp"
     "DO0103" = "AL-Go workflow ran: PublishToAppSource"
+    "DO0104" = "AL-Go workflow ran: PullRequestHandler"
 }
 
 Function strToHexStr {

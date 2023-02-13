@@ -128,7 +128,7 @@ $runs++
 $run = Run-CICD -wait -branch $branch
 $runs++
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs
+Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Create Release
@@ -186,7 +186,7 @@ if ($multiProject) {
 else {
     Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
 }
-Test-NumberOfRuns -expectedNumberOfRuns $runs
+Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 # Modify versioning strategy
 $projectSettingsFiles | Select-Object -Last 1 | ForEach-Object {
@@ -247,7 +247,7 @@ $runs++
 WaitWorkflow -runid $runTestCurrent.id -noDelay
 $runs++
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs
+Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 Set-Location $prevLocation
 
