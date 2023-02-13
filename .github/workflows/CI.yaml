@@ -20,3 +20,13 @@ jobs:
       - name: Run Tests
         run: |
           . (Join-Path "." "Tests/runtests.ps1")
+  
+  TestALGOActionOrigins:
+    name: Test ALGO Action Origins
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Test AL-GO Action Origins
+        run: |
+          . (Join-Path "." "Tests/ActionOrigin.Test.ps1")
