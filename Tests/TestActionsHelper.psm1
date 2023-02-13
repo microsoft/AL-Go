@@ -147,12 +147,15 @@ function TestALGOActionsAreComingFromMicrosoft {
     )
 
     $yaml = Get-Content -Path $YamlPath -Raw
-    $pattern = '\w*/AL-Go-Actions/'
+    $pattern = '\w*/AL-Go-Actions/\w*@\w*'
     $actions = [regex]::matches($yaml, $pattern)
+
+    $mainAction = "microsoft/AL-Go-Actions/\w*@main"
+    $previewAction = "microsoft/AL-Go-Actions/\w*@preview"
 
     $actions | ForEach-Object {
         $action = $_.Value
-        $action | Should -BeLike "microsoft/AL-Go-Actions/"
+        $action | Should -Match "$mainAction|$previewAction"
     }
 }
 
