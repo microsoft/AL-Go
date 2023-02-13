@@ -38,29 +38,31 @@ function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
         return $projects
-    } elseif ($ENV:GITHUB_EVENT_NAME -notin @("pull_request_target", "pull_request")) {
+    } 
+    
+    if ($ENV:GITHUB_EVENT_NAME -notin @("pull_request_target", "pull_request")) {
         Write-Host "Building all projects because this is not a pull request"
         return $projects
     }
+
+    $filesChanged = @(Get-ChangedFiles -token $token)
+    if ($filesChanged.Count -eq 0) {
+        Write-Host "Building all projects"
+        return $projects
+    }
+    elseif ($filesChanged -like '.github/*.json') {
+        Write-Host "Changes to Repo Settings, building all projects"
+        return $projects
+    }
+    elseif ($filesChanged.Count -ge 250) {
+        Write-Host "More than 250 files modified, building all projects"
+        return $projects
+    }
     else {
-        $filesChanged = @(Get-ChangedFiles -token $token)
-        if ($filesChanged.Count -eq 0) {
-            Write-Host "Building all projects"
-            return $projects
-        }
-        elseif ($filesChanged -like '.github/*.json') {
-            Write-Host "Changes to Repo Settings, building all projects"
-            return $projects
-        }
-        elseif ($filesChanged.Count -ge 250) {
-            Write-Host "More than 250 files modified, building all projects"
-            return $projects
-        }
-        else {
-            Write-Host "Modified files:"
-            $buildProjects = @()
-            $filesChanged | Out-Host
-            $buildProjects = @($projects | Where-Object {
+        Write-Host "Modified files:"
+        $buildProjects = @()
+        $filesChanged | Out-Host
+        $buildProjects = @($projects | Where-Object {
                 $checkProject = $_
                 $buildProject = $false
                 if (Test-Path -path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
@@ -71,9 +73,8 @@ function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
                 }
                 $buildProject
             })
-            Write-Host "Modified projects: $($buildProjects -join ', ')"
-            return $buildProjects
-        }
+        Write-Host "Modified projects: $($buildProjects -join ', ')"
+        return $buildProjects
     }
 }
 
