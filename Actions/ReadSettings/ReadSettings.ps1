@@ -51,7 +51,7 @@ function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
         return $projects
     }
     elseif ($filesChanged -like '.github/*.json') {
-        Write-Host "Changes to Repo Settings, building all projects"
+        Write-Host "Changes to repo Settings, building all projects"
         return $projects
     }
     elseif ($filesChanged.Count -ge 250) {
@@ -65,7 +65,7 @@ function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
         $buildProjects = @($projects | Where-Object {
                 $checkProject = $_
                 $buildProject = $false
-                if (Test-Path -path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
+                if (Test-Path -Path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
                     $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -token $token -includeAlGoFolder -includeApps -includeTestApps
                     $projectFolders | ForEach-Object {
                         if ($filesChanged -like "$_/*") { $buildProject = $true }
@@ -90,7 +90,7 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    import-module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $settings = ReadSettings -baseFolder $baseFolder -project $project
