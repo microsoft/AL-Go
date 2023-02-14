@@ -140,7 +140,7 @@ function YamlTest {
     $yamlLines.Count | Should -be $actualYaml.Count
 }
 
-function TestActionsAreComingFromALGoActions {
+function TestActionsAreComingFromMicrosoftALGOActions {
     param(
         [Parameter(Mandatory)]
         [string]$YamlPath
