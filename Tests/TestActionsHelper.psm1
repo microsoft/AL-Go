@@ -140,15 +140,19 @@ function YamlTest {
     $yamlLines.Count | Should -be $actualYaml.Count
 }
 
-function TestALGOActionsAreComingFromMicrosoft {
+function TestActionsAreComingFromALGoActions {
     param(
         [Parameter(Mandatory)]
         [string]$YamlPath
     )
 
     $yaml = Get-Content -Path $YamlPath -Raw
-    $pattern = '\w*/AL-Go-Actions/\w*@\w*'
-    $actions = [regex]::matches($yaml, $pattern)
+
+    # Test all AL-GO Actions are coming from microsoft/AL-Go-Actions@<main|preview>
+    $alGoActionsFromForksPattern = '\w*/AL-Go-Actions/\w*@\w*'
+    $alGoActionsFromALGORepo = '\w*/AL-Go/Actions/\w*@\w*'
+
+    $actions = [regex]::matches($yaml, "($alGoActionsFromForksPattern)|($alGoActionsFromALGORepo)")
 
     $mainAction = "microsoft/AL-Go-Actions/\w*@main"
     $previewAction = "microsoft/AL-Go-Actions/\w*@preview"
@@ -165,9 +169,9 @@ function TestAllWorkflowsInPath {
         [string]$Path
     )
 
-    $workflows = Get-ChildItem -Path $Path -Filter "*.yaml" -Recurse
+    $workflows = Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml')
     $workflows | ForEach-Object {
-        TestALGOActionsAreComingFromMicrosoft -YamlPath $_.FullName
+        TestActionsAreComingFromMicrosoftALGOActions -YamlPath $_.FullName
     }
 }
 
