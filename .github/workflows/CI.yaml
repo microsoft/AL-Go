@@ -20,3 +20,8 @@ jobs:
       - name: Run Tests
         run: |
           . (Join-Path "." "Tests/runtests.ps1")
+
+      - name: Test AL-GO Action Origins
+        if: github.repository_owner == 'microsoft'
+        run: |
+          . (Join-Path "." "Tests/ActionOriginTest/ActionOrigin.Test.ps1")
