@@ -15,9 +15,14 @@ permissions:
   actions: read
   pull-requests: read
 
+env:
+  workflowDepth: 1
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
 jobs:
   PregateCheck:
-    if: ${{ github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name}}
+    if: github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name
     runs-on: [ windows-latest ]
     steps:
       - uses: actions/checkout@v3
@@ -33,7 +38,7 @@ jobs:
 
   Initialization:
     needs: [ PregateCheck ]
-    if: ${{ !failure() }}
+    if: (!failure())
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -109,7 +114,7 @@ jobs:
 
   Build:
     needs: [ Initialization ]
-    if: ${{ needs.Initialization.outputs.projectCount > 0 && !failure() }}
+    if: (!failure()) && needs.Initialization.outputs.projectCount > 0
     runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
     defaults:
       run:

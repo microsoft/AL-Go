@@ -28,4 +28,3 @@ $response.files | ForEach-Object {
   }
 }
 Write-Host "Verification completed successfully."
-
