@@ -6,6 +6,10 @@ on:
       - '**.md'
     branches: [ 'main' ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: powershell
@@ -38,7 +42,7 @@ jobs:
 
   Initialization:
     needs: [ PregateCheck ]
-    if: (!failure())
+    if: (!failure() && !cancelled())
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -114,7 +118,7 @@ jobs:
 
   Build:
     needs: [ Initialization ]
-    if: (!failure()) && needs.Initialization.outputs.projectCount > 0
+    if: (!cancelled() && !failure() && needs.Initialization.outputs.projectCount > 0)
     runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
     defaults:
       run:
