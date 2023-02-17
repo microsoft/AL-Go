@@ -9,8 +9,6 @@ on:
       - '!.github/workflows/CICD.yaml'
     branches: [ 'main', 'release/*', 'feature/*' ]
 
-run-name: 'CI/CD: ${{github.event.head_commit.message}}'
-
 defaults:
   run:
     shell: powershell
