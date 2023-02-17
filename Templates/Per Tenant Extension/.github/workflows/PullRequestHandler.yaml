@@ -7,7 +7,7 @@ on:
     branches: [ 'main' ]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 defaults:
@@ -118,7 +118,7 @@ jobs:
 
   Build:
     needs: [ Initialization ]
-    if: (!cancelled() && !failure() && needs.Initialization.outputs.projectCount > 0)
+    if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.projectCount > 0
     runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
     defaults:
       run:
