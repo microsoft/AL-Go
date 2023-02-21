@@ -87,6 +87,22 @@ function ConvertTo-HashTable() {
     $ht
 }
 
+function ConvertTo-JsonArray() {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)] 
+        $array
+    )
+    if ($array.Count -le 1) {
+        $arrayJson = "[$($array | ConvertTo-Json -Compress)]"
+    }
+    else {
+        $arrayJson = $array | ConvertTo-Json -Compress
+    }
+
+    return $arrayJson
+}
+
 function OutputError {
     Param(
         [string] $message
@@ -1772,7 +1788,6 @@ Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
         [string[]] $projects,
-        [ref] $buildOrder,
         [ref] $buildAlso,
         [ref] $projectDependencies
     )
@@ -1807,6 +1822,7 @@ Function AnalyzeProjectDependencies {
     #     }
     # }
     $no = 1
+    $buildOrder = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1875,9 +1891,45 @@ Function AnalyzeProjectDependencies {
         }
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
-        $buildOrder.value."$no" = @($thisJob)
+
+        $buildDimensions = New-BuildDimensions -projects $thisJob -baseFolder $baseFolder
+        $buildOrder += @{ 'buildDimensions' = $buildDimensions ; 'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
+
         $no++
     }
+
+    if ($buildOrder.Count -eq 0) {
+        # No projects found, return empty build order
+        $buildOrder += @{ 'buildDimensions' = @() ; 'projects' = @() ; 'projectsCount' = 0 }
+    }
+
+    return @(, $buildOrder)
+}
+
+function New-BuildDimensions(
+    [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
+    $projects = @(),
+    $baseFolder = '.'
+)
+{
+    $buildDimensions = @()
+    
+    $projects | ForEach-Object {
+        $project = $_
+        
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        $buildModes = @($projectSettings.buildModes)
+        
+        $buildModes | ForEach-Object {
+            $buildMode = $_
+            $buildDimensions += [PSCustomObject] @{
+                project = $project
+                buildMode = $buildMode
+            }
+        }
+    }
+    
+    return $buildDimensions
 }
 
 function GetBaseFolder {
