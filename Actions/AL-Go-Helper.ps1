@@ -1804,7 +1804,7 @@ Function AnalyzeProjectDependencies {
         $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
         $unknownDependencies = @()
         $apps = @()
-        # $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
+        $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
         $appDependencies."$project" = @{
             "apps" = $apps
             "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
