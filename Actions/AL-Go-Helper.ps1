@@ -1785,11 +1785,21 @@ Function AnalyzeProjectDependencies {
     $projects | ForEach-Object {
         $project = $_
         Write-Host "- $project"
-        $apps = @()
-        $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
+
+        # Read project settings
+        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project 
+        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) | ForEach-Object { Resolve-Path (Join-Path $project $_) -Relative } | Where-Object { Test-Path (Join-Path $_ app.json)}
+        
+        if ($folders.Count -eq 0) {
+            Write-Host "No apps or tests folders found for project $project. Scanning for apps in the project folder."
+            $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
+        }
+
+        Write-Host "Folders containing apps are $($folders -join ',' )"
+
         $unknownDependencies = @()
         $apps = @()
-        $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
+        Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
         $appDependencies."$project" = @{
             "apps" = $apps
             "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
