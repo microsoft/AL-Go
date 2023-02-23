@@ -683,7 +683,7 @@ function AnalyzeRepo {
         }
     }
 
-    Write-Host "Checking appFolders and testFolders"
+    Write-Host "Checking appFolders, testFolders and bcptTestFolders"
     $dependencies = [ordered]@{}
     $appIdFolders = [ordered]@{}
     1..3 | ForEach-Object {
@@ -940,8 +940,6 @@ function AnalyzeRepo {
     }
 
     Write-Host "Checking project dependencies"
-
-
 
     Write-Host "Checking appDependencyProbingPaths"
     if ($settings.appDependencyProbingPaths) {
@@ -1785,11 +1783,24 @@ Function AnalyzeProjectDependencies {
     $projects | ForEach-Object {
         $project = $_
         Write-Host "- $project"
-        $apps = @()
-        $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
+
+        # Read project settings
+        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
+
+        # Filter out app folders that doesn't contain an app.json file
+        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Resolve-Path (Join-Path $project $_) -Relative } | Where-Object { Test-Path (Join-Path $_ app.json)}
+
+        # Default to scanning the project folder if no app folders are specified
+        if (-not $folders) {
+            Write-Host "No apps or tests folders found for project $project. Scanning for apps in the project folder."
+            $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
+        }
+
+        Write-Host "Folders containing apps are $($folders -join ',' )"
+
         $unknownDependencies = @()
         $apps = @()
-        $sortedFolders = Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps)
+        Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps) | Out-Null
         $appDependencies."$project" = @{
             "apps" = $apps
             "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
