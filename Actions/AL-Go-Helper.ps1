@@ -1788,8 +1788,8 @@ Function AnalyzeProjectDependencies {
 
         # Read project settings
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project 
-        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) | ForEach-Object { Resolve-Path (Join-Path $project $_) -Relative } | Where-Object { Test-Path (Join-Path $_ app.json)}
-        
+        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)| ForEach-Object { Resolve-Path (Join-Path $project $_) -Relative } | Where-Object { Test-Path (Join-Path $_ app.json)}
+
         if ($folders.Count -eq 0) {
             Write-Host "No apps or tests folders found for project $project. Scanning for apps in the project folder."
             $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
