@@ -66,6 +66,22 @@ else {
     $IsMacOS = $false
 }
 
+# Copy a HashTable to ensure non case sensitivity (Issue #385)
+function Copy-HashTable() {
+    [CmdletBinding()]
+    Param(
+        [parameter(ValueFromPipeline)]
+        [hashtable] $object
+    )
+    $ht = @{}
+    if ($object) {
+        $object.Keys | ForEach-Object { 
+            $ht[$_] = $object[$_]
+        }
+    }
+    $ht
+}
+
 function ConvertTo-HashTable() {
     [CmdletBinding()]
     Param(
@@ -612,7 +628,7 @@ function AnalyzeRepo {
         [string] $repository = $ENV:GITHUB_REPOSITORY
     )
 
-    $settings = $settings | ConvertTo-Json -Depth 99 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $settings = $settings | Copy-HashTable
     
     if (!$runningLocal) {
         Write-Host "::group::Analyzing repository"
