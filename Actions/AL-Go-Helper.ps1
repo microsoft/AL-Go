@@ -1501,8 +1501,7 @@ function CreateDevEnv {
                 }
                 elseif ($kind -eq "cloud") {
                     $adminCenterApiCredentialsSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.adminCenterApiCredentialsSecretName
-                    if ($adminCenterApiCredentialsSecret) { $adminCenterApiCredentials = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | 
-                    }
+                    if ($adminCenterApiCredentialsSecret) { $adminCenterApiCredentials = $adminCenterApiCredentialsSecret.SecretValue | Get-PlainText | ConvertFrom-Json | ConvertTo-HashTable }
                     $legalParameters = @("RefreshToken","CliendId","ClientSecret","deviceCode","tenantId")
                     $adminCenterApiCredentials.Keys | ForEach-Object {
                         if (-not ($legalParameters -contains $_)) {
