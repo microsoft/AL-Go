@@ -46,31 +46,31 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseBranch=$releaseBranch"
     Write-Host "releaseBranch=$releaseBranch"
 
-    $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
+    try {
+        $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
 
-    $latestReleaseTag = ""
-    if ($latestRelease -and ([bool]($latestRelease.PSobject.Properties.name -match "tag_name"))){
-        $latestReleaseTag = $latestRelease.tag_name
+        $latestReleaseTag = ""
+        if ($latestRelease -and ([bool]($latestRelease.PSobject.Properties.name -match "tag_name"))){
+            $latestReleaseTag = $latestRelease.tag_name
+        }
+    
+        $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag | ConvertFrom-Json
+        $releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
     }
-
-    $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag | ConvertFrom-Json
-    $releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
-
+    catch {
+        OutputWarning -message "Couldn't create release notes.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+        OutputWarning -message "You can modify the release note from the release page later."
+        $releaseNotes = ""
+    }
     Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseNotes=$releaseNotes"
     Write-Host "releaseNotes=$releaseNotes"
 
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputWarning -message "Couldn't create release notes.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    OutputWarning -message "You can modify the release note from the release page later."
-    $releaseNotes = ""
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseNotes=$releaseNotes"
-    Write-Host "releaseNotes=$releaseNotes"
+    OutputError -message "CreateReleaseNotes action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
 }
-
-return $releaseNotes
