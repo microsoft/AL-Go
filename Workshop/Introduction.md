@@ -85,5 +85,6 @@ Open Source apps can be public - other apps should be private
 ### Shared cost
 - Billing goes to organization instead of your personal plan
 
+
 ---
-[Previous](index.md)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Next](WhatIsAL-GoForGitHub.md)
+[Index](Index.md)&nbsp;&nbsp;[next](GetStarted.md)
