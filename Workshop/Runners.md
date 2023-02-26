@@ -38,4 +38,4 @@ Click Actions ->Runners -> New runner
 - We will remove both after the workshop
 
 ---
-[index](index.md)&nbsp;&nbsp;[previous](GetStarted.md)&nbsp;&nbsp;[next](.md)
+[index](index.md)&nbsp;&nbsp;[previous](GetStarted.md)&nbsp;&nbsp;[next](GitHubSettings.md)
