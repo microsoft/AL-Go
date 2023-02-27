@@ -236,10 +236,10 @@ jobs:
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          Project: ${{ matrix.project }}
-          ProjectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
+          project: ${{ matrix.project }}
+          projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
           settingsJson: ${{ env.Settings }}
-          SecretsJson: ${{ env.RepoSecrets }}
+          secretsJson: ${{ env.RepoSecrets }}
           buildMode: ${{ matrix.buildMode }}
 
       - name: Calculate Artifact names
