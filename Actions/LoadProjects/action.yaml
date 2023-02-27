@@ -11,7 +11,7 @@ outputs:
     value: ${{ steps.loadProjects.outputs.ProjectsJson }}
   ProjectDependenciesJson:
     description: An object that holds the project dependencies in compressed JSON format
-    value: $ {{ steps.loadProjects.outputs.ProjectDependenciesJson }}
+    value: ${{ steps.loadProjects.outputs.ProjectDependenciesJson }}
   BuildOrderJson: 
     description: TODO
     value: ${{ steps.LoadProjects.outputs.BuildOrderJson }}
