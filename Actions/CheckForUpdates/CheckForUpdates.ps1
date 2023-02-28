@@ -250,14 +250,16 @@ try {
                         if ($depth -gt 1) {
                             # When there are multiple build jobs, we need to add build job specific project list (and count) to the output of the Initialization job
                             $initializationOutputs = $yaml.Get('jobs:/Initialization:/outputs:/')
-                            $addOutput = @()
-                            1..$depth | ForEach-Object {
-                                $addOutput += @(
-                                  "projects$($_): `${{ steps.BuildOrder.outputs.projects$($_)Json }}"
-                                  "projects$($_)Count: `${{ steps.BuildOrder.outputs.projects$($_)Count }}"
-                                )
+                            if ($initializationOutputs) {
+                                $addOutput = @()
+                                1..$depth | ForEach-Object {
+                                    $addOutput += @(
+                                      "projects$($_): `${{ steps.BuildOrder.outputs.projects$($_)Json }}"
+                                      "projects$($_)Count: `${{ steps.BuildOrder.outputs.projects$($_)Count }}"
+                                    )
+                                }
+                                $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content + $addOutput)
                             }
-                            $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content + $addOutput)
 
                             $newBuild = @()
                             # Also, duplicate the build job for each dependency depth
