@@ -39,3 +39,11 @@ Set-EnvVariable -name "BuildMode" -value $buildMode
   $value = "$($projectName)-$($branchName)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
   Set-EnvVariable -name $name -value $value
 }
+
+# Set this build artifacts name
+'Apps', 'TestApps' | ForEach-Object {
+  $name = "ThisBuild$($_)ArtifactsName"
+  $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
+  
+  Set-EnvVariable -name $name -value $value
+}

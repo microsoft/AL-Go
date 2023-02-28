@@ -18,6 +18,12 @@ inputs:
     description: Name of the branch the workflow is running on
     required: true
 outputs:
+  ThisBuildAppsArtifactsName:
+    description: Artifact name for apps being built in the current workflow run 
+    value: ${{ steps.calculateartifactnames.outputs.ThisBuildAppsArtifactsName }}
+  ThisBuildTestAppsArtifactsName:
+    description: Artifact name for test apps being built in the current workflow run 
+    value: ${{ steps.calculateartifactnames.outputs.ThisBuildTestAppsArtifactsName }}
   AppsArtifactsName:
     description: Artifacts name for Apps
     value: ${{ steps.calculateartifactnames.outputs.AppsArtifactsName }}
