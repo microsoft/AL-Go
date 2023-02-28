@@ -140,5 +140,41 @@ function YamlTest {
     $yamlLines.Count | Should -be $actualYaml.Count
 }
 
+function TestActionsAreComingFromMicrosoftALGOActions {
+    param(
+        [Parameter(Mandatory)]
+        [string]$YamlPath
+    )
+
+    $yaml = Get-Content -Path $YamlPath -Raw
+
+    # Test all AL-GO Actions are coming from microsoft/AL-Go-Actions@<main|preview>
+    $alGoActionsFromForksPattern = '\w*/AL-Go-Actions/\w*@\w*'
+    $alGoActionsFromALGORepo = '\w*/AL-Go/Actions/\w*@\w*'
+
+    $actions = [regex]::matches($yaml, "($alGoActionsFromForksPattern)|($alGoActionsFromALGORepo)")
+
+    $mainAction = "microsoft/AL-Go-Actions/\w*@main"
+    $previewAction = "microsoft/AL-Go-Actions/\w*@preview"
+
+    $actions | ForEach-Object {
+        $action = $_.Value
+        $action | Should -Match "$mainAction|$previewAction"
+    }
+}
+
+function TestAllWorkflowsInPath {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    $workflows = Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml')
+    $workflows | ForEach-Object {
+        TestActionsAreComingFromMicrosoftALGOActions -YamlPath $_.FullName
+    }
+}
+
 Export-ModuleMember -Function GetActionScript
 Export-ModuleMember -Function YamlTest
+Export-ModuleMember -Function TestAllWorkflowsInPath

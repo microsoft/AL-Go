@@ -48,6 +48,7 @@ Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameCheckin
 
 $repository = "$githubOwner/$repoName"
 $branch = "main"
+$releaseVersion = [System.Version]$release.Substring(1)
 
 if ($appSourceApp) {
     $orgTemplate = 'https://github.com/microsoft/al-go-appSource'
@@ -82,6 +83,8 @@ if ($appSourceApp) {
 $settings | Set-JsonContentLF -path $settingsFile
 Add-Content -path (Join-Path $repoPath '.AL-Go\localdevenv.ps1') -Encoding UTF8 -Value "`n`n# Dummy comment" |
 CommitAndPush -commitMessage "Update settings.json"
+
+# Expected Run: CI/CD triggered on push
 $runs++
 
 # Add Existing App
@@ -91,28 +94,41 @@ if ($appSourceApp) {
 
 # Run CI/CD and wait
 $run = Run-CICD -wait -branch $branch
-$runs++
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
+
+# Expected Run: CI/CD triggered on workflow_dispatch
+$runs++ 
 
 # Update AL-Go System Files
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
+
+# Expected Run: Update AL-Go System Files triggered on workflow_dispatch
 $runs++
 
 # Wait for PR handler to start
 Start-Sleep -seconds 100
 MergePRandPull -branch $branch
-$runs++
-if ([System.Version]$release.Substring(1) -ge [System.Version]"2.2") {
-    $runs++
+if ($releaseVersion -ge [System.Version]"2.2") {
+    # Expected Run: Pull Request Handler triggered by pull_request_target
+    $runs++ 
+    
+    if ($releaseVersion -le [System.Version]"2.4") {
+        # Expected Run: CICD triggered by workflow_run (after Pull Request Handler has finished)
+        $runs++ 
+    }
 }
+# Expected Run: CICD run on push (after PR is merged)
+$runs++
 
 # Run CI/CD and wait
 $run = Run-CICD -wait -branch $branch
+
+# Expected Run: CICD run on workflow_dispatch
 $runs++
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0' -appVersion ''
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs
+Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 Set-Location $prevLocation
 

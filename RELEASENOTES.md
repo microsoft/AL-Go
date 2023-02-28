@@ -3,6 +3,15 @@
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
 ### Issues
+- Issue [#391](https://github.com/microsoft/AL-Go/issues/391) Create release action - CreateReleaseBranch error
+
+### Changes to Pull Request Process
+In v2.4 and earlier, the PullRequestHandler would trigger the CI/CD workflow to run the PR build.
+Now, the PullRequestHandler will perform the build and the CI/CD workflow is only run on push (or manual dispatch)
+
+## v2.4
+
+### Issues
 - Issue [#171](https://github.com/microsoft/AL-Go/issues/171) create a workspace file when creating a project
 - Issue [#356](https://github.com/microsoft/AL-Go/issues/356) Publish to AppSource fails in multi project repo
 - Issue [#358](https://github.com/microsoft/AL-Go/issues/358) Publish To Environment Action stopped working in v2.3
@@ -24,7 +33,7 @@ This version contains a number of bug fixes to release branches, to ensure that 
 
 Recommended branching strategy:
 
-![Branching Strategy](Scenarios/images/branchingstrategy.png)
+![Branching Strategy](https://raw.githubusercontent.com/microsoft/AL-Go/main/Scenarios/images/branchingstrategy.png)
 
 ### New Settings
 New Project setting: EnableTaskScheduler in container executing tests and when setting up local development environment

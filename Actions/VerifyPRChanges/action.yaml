@@ -1,0 +1,37 @@
+name: PowerShell script
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The token to use for the GitHub API
+    required: false
+    default: ${{ github.token }}
+  baseSHA:
+    description: Base commit of the PR
+    required: false
+    default: ${{ github.event.pull_request.base.sha }}
+  headSHA:
+    description: Head commit of the PR
+    required: false
+    default: ${{ github.event.pull_request.head.sha }}
+  prBaseRepository:
+    description: The name of the repository the PR is going to
+    required: false
+    default: ${{ github.event.pull_request.base.repo.full_name }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _token: ${{ inputs.token }}
+        _baseSHA: ${{ inputs.baseSHA }}
+        _headSHA: ${{ inputs.headSHA }}
+        _prBaseRepository: ${{ inputs.prBaseRepository }}
+      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+branding:
+  icon: terminal
+  color: blue
