@@ -1915,10 +1915,13 @@ function GetBaseFolder {
         [string] $folder
     )
     
-    $CurrentDir = Get-Location
-    Set-Location $folder
-    $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
-    Set-Location $CurrentDir
+    Push-Location $folder
+    try {
+        $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
+    }
+    finally {
+        Pop-Location
+    }
 
     if (!$baseFolder -or !(Test-Path (Join-Path $baseFolder '.github') -PathType Container)) {
         throw "Cannot determine base folder from folder $folder."
