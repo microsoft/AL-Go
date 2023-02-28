@@ -13,7 +13,7 @@ outputs:
     description: An object that holds the project dependencies in compressed JSON format
     value: ${{ steps.loadProjects.outputs.ProjectDependenciesJson }}
   BuildOrderJson: 
-    description: TODO
+    description: An array of objects that determine that build order, including build dimensions
     value: ${{ steps.LoadProjects.outputs.BuildOrderJson }}
 runs:
   using: composite
