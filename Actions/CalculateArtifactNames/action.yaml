@@ -19,10 +19,10 @@ inputs:
     required: true
 outputs:
   ThisBuildAppsArtifactsName:
-    description: Artifact name for apps being built in the current workflow run 
+    description: Artifact name for apps being built in the current workflow run
     value: ${{ steps.calculateartifactnames.outputs.ThisBuildAppsArtifactsName }}
   ThisBuildTestAppsArtifactsName:
-    description: Artifact name for test apps being built in the current workflow run 
+    description: Artifact name for test apps being built in the current workflow run
     value: ${{ steps.calculateartifactnames.outputs.ThisBuildTestAppsArtifactsName }}
   AppsArtifactsName:
     description: Artifacts name for Apps
