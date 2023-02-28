@@ -1915,7 +1915,11 @@ function GetBaseFolder {
         [string] $folder
     )
     
-    $baseFolder = git rev-parse --show-toplevel
+    $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
+
+    if (!(Test-Path (Join-Path $baseFolder '.github') -PathType Container)) {
+        throw "Cannot determine base folder from folder $baseFolder."
+    }
     
     Write-Host "Found basefolder $baseFolder"
     return $baseFolder
