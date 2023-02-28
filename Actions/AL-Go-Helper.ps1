@@ -1915,10 +1915,10 @@ function GetBaseFolder {
         [string] $folder
     )
     
-    $folder = invoke-git rev-parse --show-toplevel
+    $baseFolder = git rev-parse --show-toplevel
     
-    Write-Host "Found basefolder $folder"
-    return $folder
+    Write-Host "Found basefolder $baseFolder"
+    return $baseFolder
 }
 
 function GetProject {
