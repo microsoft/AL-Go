@@ -270,7 +270,7 @@ try {
                                     # Example (depth 1):
                                     #    needs: [ Initialization ]
                                     #    if: needs.Initialization.outputs.projects1Count > 0
-                                    $if = "if: (!failure()) && needs.Initialization.outputs.projects$($_)Count > 0"
+                                    $if = "if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.projects$($_)Count > 0"
                                 }
                                 else {
                                     # Subsequent build jobs needs to have a dependency on all previous build jobs
