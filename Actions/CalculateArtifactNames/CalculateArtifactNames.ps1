@@ -34,7 +34,7 @@ if ($buildMode -eq 'Default') {
 }
 Set-EnvVariable -name "BuildMode" -value $buildMode
 
-'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
+'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog','PowerPlatformSolution' | ForEach-Object {
   $name = "$($_)ArtifactsName"
   $value = "$($projectName)-$($branchName)-$buildMode$_-$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
   Set-EnvVariable -name $name -value $value
