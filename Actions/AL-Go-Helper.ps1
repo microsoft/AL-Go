@@ -1914,20 +1914,11 @@ function GetBaseFolder {
     Param(
         [string] $folder
     )
-
-    if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-        $folder = (Get-Item -Path $folder).Parent.FullName
-        if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-            $folder = (Get-Item -Path $folder).Parent.FullName
-            if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-            $folder = (Get-Item -Path $folder).Parent.FullName
-                if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-                    throw "Cannot determine base folder from folder $folder."
-                }
-            }
-        }
-    }
-    $folder
+    
+    $folder = invoke-git rev-parse --show-toplevel
+    
+    Write-Host "Found basefolder $folder"
+    return $folder
 }
 
 function GetProject {
