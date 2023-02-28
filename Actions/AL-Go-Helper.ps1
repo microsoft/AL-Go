@@ -1920,7 +1920,10 @@ function GetBaseFolder {
         if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
             $folder = (Get-Item -Path $folder).Parent.FullName
             if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-                throw "Cannot determine base folder from folder $folder."
+            $folder = (Get-Item -Path $folder).Parent.FullName
+                if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
+                    throw "Cannot determine base folder from folder $folder."
+                }
             }
         }
     }
