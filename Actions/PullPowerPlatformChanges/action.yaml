@@ -1,0 +1,121 @@
+name: Pull Power Platform Changes
+author: Andersg
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  parentTelemetryScopeJson:
+    description: Specifies the parent telemetry scope for the telemetry signal
+    required: false
+    default: "7b7d"
+  solutionName:
+    description: The Power Platform solution to get the changes from.
+    required: true
+  deploySettings: 
+    description: The deploy settings
+    required: false
+    default: '{}'
+  authSettings: 
+    description: The auth settings
+    required: false
+    default: '{}'
+  directCommit: 
+    type: boolean
+    description: If true, the changes will be committed directly to the branch. If not, the changes will be committed to a branch named after the solution.
+    required: false
+    default: false
+
+runs:
+  using: composite
+  steps:
+      - name: Parse DeployToSettings and AuthContext
+        uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@main
+        with:
+          shell: ${{ inputs.shell }}
+          parentTelemetryScopeJson: ${{inputs.parentTelemetryScopeJson}}
+          deploySettings: ${{ inputs.deploySettings }} 
+          authSettings: ${{ inputs.authSettings }}
+
+      - name: Who am I (username)
+        if: ${{ env.userName != '' }}
+        uses: microsoft/powerplatform-actions/who-am-i@v0
+        with:
+          environment-url: ${{env.environmentUrl}}
+          user-name: ${{env.userName}}
+          password-secret: ${{env.password}}
+
+      - name: Who am I (application ID)
+        if: ${{ env.applicationId != '' }}
+        uses: microsoft/powerplatform-actions/who-am-i@v0
+        with:
+          environment-url: ${{env.environmentUrl}}
+          tenant-id: ${{env.tenantId}}
+          app-id: ${{env.applicationId}}
+          client-secret: ${{env.clientSecret}}
+
+      - name: Set up new branch for changes
+        shell: ${{ inputs.shell }}
+        env:
+          _actor: ${{ inputs.actor }}
+          _token: ${{ inputs.token }}
+          _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+          _directCommit: ${{ inputs.directCommit }}
+        run: ${{ github.action_path }}\GitCloneReponsitory.ps1 -Actor $ENV:_actor -Token $ENV:_token -ParentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -DirectCommit $ENV:_directCommit
+
+      - name: export-solution action (username)
+        if: ${{ env.userName != '' }}
+        uses: microsoft/powerplatform-actions/export-solution@v0
+        with:
+          user-name: ${{env.userName}}
+          password-secret: ${{env.password}}
+          environment-url: ${{env.environmentUrl}}
+          solution-name: ${{inputs.solutionName}}
+          solution-output-file: ${{env.clonedRepoPath}}/${{inputs.solutionName}}.zip
+
+      - name: export-solution action (application ID)
+        if: ${{ env.applicationId != '' }}
+        uses: microsoft/powerplatform-actions/export-solution@v0
+        with:
+          environment-url: ${{env.environmentUrl}}
+          tenant-id: ${{env.tenantId}}
+          app-id: ${{env.applicationId}}
+          client-secret: ${{env.clientSecret}}
+          solution-name: ${{inputs.solutionName}}
+          solution-output-file: ${{env.clonedRepoPath}}/${{inputs.solutionName}}.zip
+
+      - name: unpack-solution action
+        uses: microsoft/powerplatform-actions/unpack-solution@v0
+        with:
+          solution-file: ${{env.clonedRepoPath}}/${{inputs.solutionName}}.zip
+          solution-folder: ${{env.clonedRepoPath}}/${{inputs.solutionName}}
+          solution-type: "Unmanaged"
+          overwrite-files: false
+          process-canvas-apps: true
+
+      - name: Remove zip file
+        shell: ${{ inputs.shell }}
+        env:
+          _solutionName: ${{ inputs.solutionName }}
+        run: rm ${{env.clonedRepoPath}}/${{env._solutionName}}.zip
+
+      - name: Commit to git repository
+        shell: ${{ inputs.shell }}
+        env:
+          _actor: ${{ inputs.actor }}
+          _token: ${{ inputs.token }}
+          _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+          _solutionName: ${{ inputs.solutionName }}
+        run: ${{ github.action_path }}\GitCommitChanges.ps1 -Actor $ENV:_actor -Token $ENV:_token -ParentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -PowerPlatformSolutionName $ENV:_solutionName -EnvironmentName $ENV:environmentName -Location $ENV:clonedRepoPath -ServerUrl $ENV:serverUrl -GitHubBranch $ENV:gitHubBranch
+
+branding:
+  icon: terminal
+  color: blue

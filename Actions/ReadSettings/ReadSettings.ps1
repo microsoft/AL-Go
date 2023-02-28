@@ -126,6 +126,9 @@ try {
         else {
             $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
         }
+        if ($settings.powerPlatformSolutionFolder) {
+            $projects += @($settings.powerPlatformSolutionFolder)
+        }
         if ($projects) {
             AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
             Write-Host "All Projects: $($projects -join ', ')"
