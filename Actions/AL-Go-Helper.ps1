@@ -433,6 +433,7 @@ function ReadSettings {
         "type"                                   = "PTE"
         "unusedALGoSystemFiles"                  = @()
         "projects"                               = @()
+        "powerPlatformSolutionFolder"            = ""
         "country"                                = "us"
         "artifact"                               = ""
         "companyName"                            = ""
@@ -1172,8 +1173,10 @@ function CommitFromNewFolder {
         [string] $commitMessage,
         [string] $branch
     )
+    Get-LocalGroup
+    Get-ChildItem
 
-    invoke-git add *
+    invoke-git add * 
     if ($commitMessage.Length -gt 250) {
         $commitMessage = "$($commitMessage.Substring(0,250))...)"
     }
