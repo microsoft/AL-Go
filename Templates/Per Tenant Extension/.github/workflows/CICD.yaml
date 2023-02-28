@@ -38,7 +38,6 @@ jobs:
       projects: ${{ steps.LoadProjects.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.LoadProjects.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.LoadProjects.outputs.BuildOrderJson }}
-      buildOrderDepth: ${{ steps.LoadProjects.outputs.BuildOrderDepth }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
