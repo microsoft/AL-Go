@@ -103,22 +103,6 @@ function ConvertTo-HashTable() {
     $ht
 }
 
-function ConvertTo-JsonArray() {
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true)] 
-        $array
-    )
-    if ($array.Count -le 1) {
-        $arrayJson = "[$($array | ConvertTo-Json -Compress -Depth 99)]"
-    }
-    else {
-        $arrayJson = $array | ConvertTo-Json -Compress -Depth 99
-    }
-
-    return $arrayJson
-}
-
 function OutputError {
     Param(
         [string] $message
@@ -1963,7 +1947,7 @@ function New-BuildDimensions(
         }
     }
     
-    return $buildDimensions
+    return @(, $buildDimensions) # force array
 }
 
 function GetBaseFolder {

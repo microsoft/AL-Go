@@ -111,9 +111,9 @@ try {
     
     Write-Host "Projects to build: $($buildProjects -join ', ')"
     
-    $projectsJson = ConvertTo-JsonArray $buildProjects
-    $projectDependenciesJson = ConvertTo-JsonArray $projectDependencies
-    $buildOrderJson = ConvertTo-JsonArray $buildOrder 
+    $projectsJson = ConvertTo-Json $buildProjects
+    $projectDependenciesJson = ConvertTo-Json $projectDependencies
+    $buildOrderJson = ConvertTo-Json $buildOrder 
     
     # Set output variables
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
