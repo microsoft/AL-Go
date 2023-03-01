@@ -261,52 +261,54 @@ try {
                                 $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content + $addOutput)
                             }
 
-                            $newBuild = @()
                             # Also, duplicate the build job for each dependency depth
                             $build = $yaml.Get('jobs:/Build:/')
-                            1..$depth | ForEach-Object {
-                                # All build job needs to have a dependency on the Initialization job
-                                $needs = @('Initialization')
-                                if ($_ -eq 1) {
-                                    # First build job needs to have a dependency on the Initialization job only
-                                    # Example (depth 1):
-                                    #    needs: [ Initialization ]
-                                    #    if: needs.Initialization.outputs.projects1Count > 0
-                                    $if = "if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.projects$($_)Count > 0"
-                                }
-                                else {
-                                    # Subsequent build jobs needs to have a dependency on all previous build jobs
-                                    # Example (depth 2):
-                                    #    needs: [ Initialization, Build1 ]
-                                    #    if: always() && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects2Count > 0
-                                    # Another example (depth 3):
-                                    #    needs: [ Initialization, Build2, Build1 ]
-                                    #    if: always() && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects3Count > 0
-                                    $newBuild += @('')
-                                    $ifpart = ""
-                                    ($_-1)..1 | ForEach-Object {
-                                        $needs += @("Build$_")
-                                        $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
+                            if ($build) {
+                                $newBuild = @()
+                                1..$depth | ForEach-Object {
+                                    # All build job needs to have a dependency on the Initialization job
+                                    $needs = @('Initialization')
+                                    if ($_ -eq 1) {
+                                        # First build job needs to have a dependency on the Initialization job only
+                                        # Example (depth 1):
+                                        #    needs: [ Initialization ]
+                                        #    if: needs.Initialization.outputs.projects1Count > 0
+                                        $if = "if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.projects$($_)Count > 0"
                                     }
-                                    $if = "if: (!failure()) && (!cancelled())$ifpart && needs.Initialization.outputs.projects$($_)Count > 0"
+                                    else {
+                                        # Subsequent build jobs needs to have a dependency on all previous build jobs
+                                        # Example (depth 2):
+                                        #    needs: [ Initialization, Build1 ]
+                                        #    if: always() && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects2Count > 0
+                                        # Another example (depth 3):
+                                        #    needs: [ Initialization, Build2, Build1 ]
+                                        #    if: always() && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects3Count > 0
+                                        $newBuild += @('')
+                                        $ifpart = ""
+                                        ($_-1)..1 | ForEach-Object {
+                                            $needs += @("Build$_")
+                                            $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
+                                        }
+                                        $if = "if: (!failure()) && (!cancelled())$ifpart && needs.Initialization.outputs.projects$($_)Count > 0"
+                                    }
+                                    # Replace the if:, the needs: and the strategy/matrix/project: in the build job with the correct values
+                                    $build.Replace('if:', $if)
+                                    $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+                                    $build.Replace('strategy:/matrix:/project:',"project: `${{ fromJson(needs.Initialization.outputs.projects$($_)) }}")
+                                
+                                    # Last build job is called build, all other build jobs are called build1, build2, etc.
+                                    if ($depth -eq $_) {
+                                        $newBuild += @("Build:")
+                                    }
+                                    else {
+                                        $newBuild += @("Build$($_):")
+                                    }
+                                    # Add the content of the calculated build job to the new build job list with an indentation of 2 spaces
+                                    $build.content | ForEach-Object { $newBuild += @("  $_") }
                                 }
-                                # Replace the if:, the needs: and the strategy/matrix/project: in the build job with the correct values
-                                $build.Replace('if:', $if)
-                                $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-                                $build.Replace('strategy:/matrix:/project:',"project: `${{ fromJson(needs.Initialization.outputs.projects$($_)) }}")
-                            
-                                # Last build job is called build, all other build jobs are called build1, build2, etc.
-                                if ($depth -eq $_) {
-                                    $newBuild += @("Build:")
-                                }
-                                else {
-                                    $newBuild += @("Build$($_):")
-                                }
-                                # Add the content of the calculated build job to the new build job list with an indentation of 2 spaces
-                                $build.content | ForEach-Object { $newBuild += @("  $_") }
+                                # Replace the entire build: job with the new build job list
+                                $yaml.Replace('jobs:/Build:', $newBuild)
                             }
-                            # Replace the entire build: job with the new build job list
-                            $yaml.Replace('jobs:/Build:', $newBuild)
                         }
                     }
                     # combine all the yaml file lines into a single string with LF line endings
