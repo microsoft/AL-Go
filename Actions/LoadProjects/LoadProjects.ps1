@@ -77,35 +77,36 @@ try {
     $settings = ReadSettings -baseFolder $baseFolder -project '.' # Load AL-Go settings for the repo
 
     Write-Host "Determining projects to build"
-    $buildProjects = @()
     if ($settings.projects) {
         Write-Host "Projects specified in settings"
-
+        
         $projects = $settings.projects
     }
     else {
         # Get all projects that have a settings.json file
         $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-    }
-    
-    $buildOrder = @()
-
-    if ($projects) {
-        AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
-        Write-Host "Found AL-Go Projects: $($projects -join ', ')"
         
-        $buildProjects += Get-ProjectsToBuild -settings $settings -projects $projects -baseFolder $baseFolder -token $token
         # If the repo has a settings.json file, add it to the list of projects to build
         if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
-            $buildProjects += @(".")
+            $projects += @(".")
         }
+    }
+    
+    Write-Host "Found AL-Go Projects: $($projects -join ', ')"
+    
+    $buildProjects = @()
+    $projectDependencies = @{}
+    $buildOrder = @()
+    
+    if ($projects) {
+        AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
+        
+        $buildProjects += Get-ProjectsToBuild -settings $settings -projects $projects -baseFolder $baseFolder -token $token
         
         $buildAlso = @{}
-        $projectDependencies = @{}
         $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
         
         $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
-        
     }
     
     Write-Host "Projects to build: $($buildProjects -join ', ')"
