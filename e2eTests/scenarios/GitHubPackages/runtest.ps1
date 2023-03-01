@@ -53,7 +53,7 @@ Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameC
 $repository = "$githubOwner/$repoName"
 $branch = "main"
 
-$template = "https://github.com/$($pteTemplate)@main"
+$template = "https://github.com/$pteTemplate"
 
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository

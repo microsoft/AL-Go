@@ -33,6 +33,7 @@ $runAlPipelineOverrides = @(
     "RunTestsInBcContainer"
     "GetBcContainerAppRuntimePackage"
     "RemoveBcContainer"
+    "InstallMissingDependencies"
 )
 
 # Well known AppIds
@@ -1954,17 +1955,20 @@ function GetBaseFolder {
     Param(
         [string] $folder
     )
-
-    if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-        $folder = (Get-Item -Path $folder).Parent.FullName
-        if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-            $folder = (Get-Item -Path $folder).Parent.FullName
-            if (!(Test-Path (Join-Path $folder '.github') -PathType Container)) {
-                throw "Cannot determine base folder from folder $folder."
-            }
-        }
+    
+    Push-Location $folder
+    try {
+        $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
     }
-    $folder
+    finally {
+        Pop-Location
+    }
+
+    if (!$baseFolder -or !(Test-Path (Join-Path $baseFolder '.github') -PathType Container)) {
+        throw "Cannot determine base folder from folder $folder."
+    }
+    
+    return $baseFolder
 }
 
 function GetProject {

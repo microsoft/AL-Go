@@ -337,6 +337,7 @@ function CreateAlGoRepository {
     Set-Location '*'
 
     $templateUrl = "$templateRepo/archive/refs/heads/$templateBranch.zip"
+    Write-Host "Downloading template from $templateUrl"
     $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
     [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
     

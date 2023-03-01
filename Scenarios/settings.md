@@ -181,6 +181,7 @@ This functionality is also available in AL-Go for GitHub, by adding a file to th
 | RunTestsInBcContainer.ps1 | Run the tests specified by the $parameters hashtable |
 | GetBcContainerAppRuntimePackage.ps1 | Get the runtime package specified by the $parameters hashtable |
 | RemoveBcContainer.ps1 | Cleanup based on the $parameters hashtable |
+| InstallMissingDependencies | Install missing dependencies |
 
 ## BcContainerHelper settings
 
