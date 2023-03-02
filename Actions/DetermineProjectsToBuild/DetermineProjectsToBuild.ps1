@@ -8,7 +8,7 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d'
 )
 
-function Get-ProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) {
+function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) {
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
         return $projects
@@ -49,6 +49,52 @@ function Get-ProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) 
     return $filteredProjects
 }
 
+function Get-ProjectsToBuild($baseFolder, $modifiedFiles) {
+    Push-Location $baseFolder
+
+    try {
+        $settings = ReadSettings -baseFolder $baseFolder -project '.' # Read AL-Go settings for the repo
+        
+        Write-Host "Determining projects to build"
+        if ($settings.projects) {
+            Write-Host "Projects specified in settings"
+
+            $projects = $settings.projects
+        }
+        else {
+            # Get all projects that have a settings.json file
+            $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
+            
+            # If the repo has a settings.json file, add it to the list of projects to build
+            if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
+                $projects += @(".")
+            }
+        }
+        
+        Write-Host "Found AL-Go Projects: $($projects -join ', ')"
+        
+        $projectsToBuild = @()
+        $projectDependencies = @{}
+        $buildOrder = @()
+        
+        if ($projects) {
+            AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
+            
+            $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
+            
+            $buildAlso = @{}
+            $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projectsToBuild -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+            
+            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
+        }
+        
+        return $projectsToBuild, $projectDependencies, $buildOrder
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
@@ -59,48 +105,15 @@ $bcContainerHelperPath = $null
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
-
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
+    
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    $settings = ReadSettings -baseFolder $baseFolder -project '.' # Read AL-Go settings for the repo
-
-    Write-Host "Determining projects to build"
-    if ($settings.projects) {
-        Write-Host "Projects specified in settings"
-        
-        $projects = $settings.projects
-    }
-    else {
-        # Get all projects that have a settings.json file
-        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-        
-        # If the repo has a settings.json file, add it to the list of projects to build
-        if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
-            $projects += @(".")
-        }
-    }
+    $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
     
-    Write-Host "Found AL-Go Projects: $($projects -join ', ')"
+    Write-Host "Projects to build: $($projectsToBuild -join ', ')"
     
-    $buildProjects = @()
-    $projectDependencies = @{}
-    $buildOrder = @()
-    
-    if ($projects) {
-        AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
-        
-        $buildProjects += Get-ProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
-        
-        $buildAlso = @{}
-        $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-        
-        $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
-    }
-    
-    Write-Host "Projects to build: $($buildProjects -join ', ')"
-    
-    $projectsJson = ConvertTo-Json $buildProjects -Depth 99 -Compress
+    $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
     $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
     $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
     
@@ -112,7 +125,6 @@ try {
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
-
 }
 catch {
     OutputError -message "DetermineProjectsToBuild action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
