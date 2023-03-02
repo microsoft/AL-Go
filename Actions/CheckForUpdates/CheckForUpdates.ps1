@@ -263,12 +263,12 @@ try {
                                         # First build job needs to have a dependency on the Initialization job only
                                         # Example (depth 1):
                                         #    needs: [ Initialization ]
-                                        #    if: fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+                                        #    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
                                         $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$($_ - 1)].projectsCount > 0"
                                     }
                                     else {
                                         # Subsequent build jobs needs to have a dependency on all previous build jobs
-                                        # Example (depth 3):
+                                        # Example (depth 2):
                                         #    needs: [ Initialization, Build1 ]
                                         #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
                                         # Another example (depth 3):
