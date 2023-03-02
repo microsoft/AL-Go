@@ -1,13 +1,3 @@
-Param(
-    [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
-    [string] $baseFolder,
-    [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-    [string[]] $modifiedFiles = @(),
-
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '7b7d'
-)
-
 function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) {
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
@@ -49,7 +39,13 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
     return $filteredProjects
 }
 
-function Get-ProjectsToBuild($baseFolder, $modifiedFiles) {
+function Get-ProjectsToBuild(
+    [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
+    $baseFolder,
+    [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
+    $modifiedFiles = @()
+) 
+{
     Write-Host "Determining projects to build in $baseFolder"
     
     Push-Location $baseFolder
@@ -78,7 +74,6 @@ function Get-ProjectsToBuild($baseFolder, $modifiedFiles) {
         $buildOrder = @()
         
         if ($projects) {
-            
             $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
             
             $buildAlso = @{}
@@ -95,43 +90,3 @@ function Get-ProjectsToBuild($baseFolder, $modifiedFiles) {
         Pop-Location
     }
 }
-
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
-$telemetryScope = $null
-$bcContainerHelperPath = $null
-
-# IMPORTANT: No code that can fail should be outside the try/catch
-
-try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
-    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
-    
-    $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
-    
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
-    
-    AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
-    
-    $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
-    $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
-    $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
-    
-    # Set output variables
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"    
-    
-    Write-Host "ProjectsJson=$projectsJson"
-    Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
-    Write-Host "BuildOrderJson=$buildOrderJson"
-}
-catch {
-    OutputError -message "DetermineProjectsToBuild action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    exit
-}
-finally {
-    CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
-}
-    
