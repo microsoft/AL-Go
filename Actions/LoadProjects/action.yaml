@@ -22,10 +22,17 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: run
+    - name: Get Modified Files
+      id: getModifiedFiles
+      shell: ${{ inputs.shell }}
+      run: try { ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}  } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+
+    - name: Load Projects
       shell: ${{ inputs.shell }}
       id: loadProjects
-      run: try { ${{ github.action_path }}/LoadProjects.ps1 -token ${{ github.token }} -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { 
+          ${{ github.action_path }}/LoadProjects.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles ${{ fromJson(steps.getModifiedFiles.outputs.modifiedFiles) }} -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} 
+        } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

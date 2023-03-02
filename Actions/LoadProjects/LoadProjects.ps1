@@ -1,62 +1,54 @@
 Param(
-    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token,
+    [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
+    [string] $baseFolder,
+    [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
+    [string[]] $modifiedFiles = @(),
+
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
 
-function Get-ChangedFiles($token) {
-    $headers = @{             
-        "Authorization" = "token $token"
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-    }
-    $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -encoding UTF8 | ConvertFrom-Json
 
-    $url = "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ghEvent.pull_request.head.sha)"
 
-    $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
-    $filesChanged = @($response.files | ForEach-Object { $_.filename })
-
-    return $filesChanged
-}
-
-function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
+function Get-ProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) {
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
         return $projects
     } 
-    
-    if ($env:GITHUB_EVENT_NAME -notin @("pull_request_target", "pull_request")) {
-        Write-Host "Building all projects because this is not a pull request"
+
+    if ($modifiedFiles.Count -eq 0) {
+        Write-Host "No files modified, building all projects"
         return $projects
     }
 
-    $filesChanged = @(Get-ChangedFiles -token $token)
-    if ($filesChanged -like '.github/*.json') {
+    if ($modifiedFiles -like '.github/*.json') {
         Write-Host "Changes to repo Settings, building all projects"
         return $projects
     }
-    elseif ($filesChanged.Count -ge 250) {
+    
+    if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
         return $projects
     }
-    else {
-        Write-Host "Modified files:"
-        $buildProjects = @()
-        $filesChanged | Out-Host
-        $buildProjects = @($projects | Where-Object {
-                $checkProject = $_
-                $buildProject = $false
-                if (Test-Path -Path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
-                    $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -token $token -includeAlGoFolder -includeApps -includeTestApps
-                    $projectFolders | ForEach-Object {
-                        if ($filesChanged -like "$_/*") { $buildProject = $true }
-                    }
+
+    Write-Host "$($modifiedFiles.Count) modified files: $($modifiedFiles -join ', ')"
+
+    Write-Host "Filtering projects to build based on the modified files"
+
+    $filteredProjects = @()
+    $filteredProjects = @($projects | Where-Object {
+            $checkProject = $_
+            $buildProject = $false
+            if (Test-Path -Path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
+                $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -includeAlGoFolder
+                $projectFolders | ForEach-Object {
+                    if ($modifiedFiles -like "$_/*") { $buildProject = $true }
                 }
-                $buildProject
-            })
-        return $buildProjects
-    }
+            }
+            $buildProject
+        })
+
+    return $filteredProjects
 }
 
 $ErrorActionPreference = "Stop"
@@ -67,7 +59,6 @@ $bcContainerHelperPath = $null
 # IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
-    $baseFolder = $env:GITHUB_WORKSPACE
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
@@ -101,7 +92,7 @@ try {
     if ($projects) {
         AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
         
-        $buildProjects += Get-ProjectsToBuild -settings $settings -projects $projects -baseFolder $baseFolder -token $token
+        $buildProjects += Get-ProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
         
         $buildAlso = @{}
         $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
