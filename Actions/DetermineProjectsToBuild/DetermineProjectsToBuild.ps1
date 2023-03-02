@@ -50,15 +50,15 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
 }
 
 function Get-ProjectsToBuild($baseFolder, $modifiedFiles) {
+    Write-Host "Determining projects to build in $baseFolder"
+    
     Push-Location $baseFolder
 
     try {
         $settings = ReadSettings -baseFolder $baseFolder -project '.' # Read AL-Go settings for the repo
         
-        Write-Host "Determining projects to build"
         if ($settings.projects) {
             Write-Host "Projects specified in settings"
-
             $projects = $settings.projects
         }
         else {
@@ -78,7 +78,6 @@ function Get-ProjectsToBuild($baseFolder, $modifiedFiles) {
         $buildOrder = @()
         
         if ($projects) {
-            AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
             
             $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
             
@@ -88,7 +87,9 @@ function Get-ProjectsToBuild($baseFolder, $modifiedFiles) {
             $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
         }
         
-        return $projectsToBuild, $projectDependencies, $buildOrder
+        Write-Host "Projects to build: $($projectsToBuild -join ', ')"
+
+        return $projects, $projectsToBuild, $projectDependencies, $buildOrder
     }
     finally {
         Pop-Location
@@ -108,10 +109,10 @@ try {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
     
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
-
-    $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
     
-    Write-Host "Projects to build: $($projectsToBuild -join ', ')"
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+    
+    AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
     
     $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
     $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
