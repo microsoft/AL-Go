@@ -1,4 +1,4 @@
-name: Load Projects to Build
+name: Determine Projects to Build
 author: Microsoft Corporation
 inputs:
   shell:
@@ -12,13 +12,13 @@ inputs:
 outputs:
   ProjectsJson:
     description: An array of AL-Go projects in compressed JSON format
-    value: ${{ steps.loadProjects.outputs.ProjectsJson }}
+    value: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
   ProjectDependenciesJson:
     description: An object that holds the project dependencies in compressed JSON format
-    value: ${{ steps.loadProjects.outputs.ProjectDependenciesJson }}
+    value: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
   BuildOrderJson: 
     description: An array of objects that determine that build order, including build dimensions
-    value: ${{ steps.LoadProjects.outputs.BuildOrderJson }}
+    value: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
 runs:
   using: composite
   steps:
@@ -27,11 +27,11 @@ runs:
       shell: ${{ inputs.shell }}
       run: try { ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}  } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 
-    - name: Load Projects
+    - name: Determine Projects to Build
       shell: ${{ inputs.shell }}
-      id: loadProjects
+      id: determineProjectsToBuild
       run: try { 
-          ${{ github.action_path }}/LoadProjects.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles ${{ fromJson(steps.getModifiedFiles.outputs.modifiedFiles) }} -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} 
+          ${{ github.action_path }}/DetermineProjectsToBuild.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles ${{ fromJson(steps.getModifiedFiles.outputs.modifiedFiles) }} -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} 
         } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal

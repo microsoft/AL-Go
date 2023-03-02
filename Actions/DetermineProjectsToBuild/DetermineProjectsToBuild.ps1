@@ -8,8 +8,6 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d'
 )
 
-
-
 function Get-ProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) {
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
@@ -65,7 +63,7 @@ try {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    $settings = ReadSettings -baseFolder $baseFolder -project '.' # Load AL-Go settings for the repo
+    $settings = ReadSettings -baseFolder $baseFolder -project '.' # Read AL-Go settings for the repo
 
     Write-Host "Determining projects to build"
     if ($settings.projects) {
@@ -117,7 +115,7 @@ try {
 
 }
 catch {
-    OutputError -message "LoadProjects action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+    OutputError -message "DetermineProjectsToBuild action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     exit
 }
 finally {

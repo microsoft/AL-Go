@@ -11,8 +11,8 @@ function Get-ModifiedFiles($token) {
     
     $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
 
-    if(!$ghEvent) {
-        Write-Host "Could not read GITHUB_EVENT_PATH, returning empty list of changed files"
+    if(!$ghEvent.pull_request) {
+        Write-Host "Not a pull request, returning empty list of changed files"
         return @()
     }
     
