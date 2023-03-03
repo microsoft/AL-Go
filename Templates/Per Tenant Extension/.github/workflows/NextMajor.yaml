@@ -48,7 +48,7 @@ jobs:
           
       - name: Determine Projects To Build
         id: determineProjectsToBuild
-        uses: microsoft/AL-Go-Actions/determineProjectsToBuild@main
+        uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
         with:
           shell: powershell
 
