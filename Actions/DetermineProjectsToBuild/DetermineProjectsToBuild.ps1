@@ -4,7 +4,7 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
         return $projects
     } 
 
-    if ($modifiedFiles.Count -eq 0) {
+    if (!$modifiedFiles) {
         Write-Host "No files modified, building all projects"
         return $projects
     }
