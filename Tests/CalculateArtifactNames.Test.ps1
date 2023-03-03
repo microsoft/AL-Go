@@ -88,6 +88,32 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedEnvVariables | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-22.0.123.0"
     }
 
+    It 'should use the specified suffix if provided' {
+        $buildMode = "Default"
+        $branchName = "releases/1.0"
+        $suffix = "Current"
+        & $scriptPath `
+                -settingsJson $settingsJson `
+                -project $project `
+                -buildMode $buildMode `
+                -branchName $branchName `
+                -suffix $suffix
+
+        # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
+        $currentDate = [DateTime]::UtcNow.ToString('yyyyMMdd')
+        
+        $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
+        $generatedEnvVariables | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
+
+        $env:GITHUB_ENV | Should -FileContentMatch "AppsArtifactsName=ALGOProject-releases_1.0-Apps-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "DependenciesArtifactsName=ALGOProject-releases_1.0-Dependencies-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "TestAppsArtifactsName=ALGOProject-releases_1.0-TestApps-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "TestResultsArtifactsName=ALGOProject-releases_1.0-TestResults-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "BcptTestResultsArtifactsName=ALGOProject-releases_1.0-BcptTestResults-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "BuildOutputArtifactsName=ALGOProject-releases_1.0-BuildOutput-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-Current-$currentDate"
+    }
 
     It 'Compile Action' {
         Invoke-Expression $actionScript
