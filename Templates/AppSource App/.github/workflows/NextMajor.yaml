@@ -133,6 +133,7 @@ jobs:
           project: ${{ matrix.project }}
           buildMode: ${{ matrix.buildMode }}
           branchName: ${{ github.ref_name }}
+          suffix: 'NextMajor'
 
       - name: Upload thisbuild artifacts - apps
         if: env.workflowDepth > 1
