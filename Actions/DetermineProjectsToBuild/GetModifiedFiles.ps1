@@ -29,6 +29,12 @@ function Get-ModifiedFiles($token) {
 }
 
 $modifiedFiles = Get-ModifiedFiles -token $token
+
+# If no files were modified, we still need to set the output variable
+if(!$modifiedFiles) {
+    $modifiedFiles = @()
+}
+
 $modifiedFilesJson = ConvertTo-Json $modifiedFiles -Depth 99 -Compress
     
 # Set output variables
