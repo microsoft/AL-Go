@@ -19,16 +19,16 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
         return $projects
     }
 
-    Write-Host "$($modifiedFiles.Count) modified files: $($modifiedFiles -join ', ')"
+    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
 
     Write-Host "Filtering projects to build based on the modified files"
 
-    $filteredProjects = @()
     $filteredProjects = @($projects | Where-Object {
             $checkProject = $_
             $buildProject = $false
             if (Test-Path -Path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
                 $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -includeAlGoFolder
+
                 $projectFolders | ForEach-Object {
                     if ($modifiedFiles -like "$_/*") { $buildProject = $true }
                 }
@@ -71,20 +71,46 @@ function Get-ProjectsToBuild(
         
         $projectsToBuild = @()
         $projectDependencies = @{}
-        $buildOrder = @()
+        $projectsOrderToBuild = @()
         
         if ($projects) {
             $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
             
             $buildAlso = @{}
-            $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+
+            # Calculate the full projects order
+            $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
             
             $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
+
+            # Create a project order based on the projects to build
+            foreach($depth in $fullProjectsOrder) {
+                $projectsOnDepth = @($depth.projects | Where-Object { $projectsToBuild -contains $_ })
+
+                if ($projectsOnDepth) {
+                    # Create build dimensions for the projects on the current depth
+                    $buildDimensions = New-BuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
+                    $projectsOrderToBuild += @{
+                        projects = $projectsOnDepth
+                        projectsCount = $projectsOnDepth.Count
+                        buildDimensions = $buildDimensions
+                    }
+                }
+            }
+
+            if ($projectsOrderToBuild.Count -eq 0) {
+                Write-Host "Did not find any projects to add to the build order, adding default values"
+                $projectsOrderToBuild += @{
+                    projects = @()
+                    projectsCount = 0
+                    buildDimensions = @()
+                }
+            }
         }
         
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"
 
-        return $projects, $projectsToBuild, $projectDependencies, $buildOrder
+        return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild
     }
     finally {
         Pop-Location

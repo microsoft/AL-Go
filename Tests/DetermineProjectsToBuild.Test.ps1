@@ -3,10 +3,10 @@ $bcContainerHelperPath = $null
 
 Describe "Get-ProjectsToBuild" {
     BeforeAll {
-        . (Join-Path -Path $PSScriptRoot -ChildPath "..\Actions\AL-Go-Helper.ps1" -Resolve)
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
-        $scriptPath = Join-Path $PSScriptRoot "..\Actions\DetermineProjectsToBuild\DetermineProjectsToBuild.ps1" -Resolve
+        $scriptPath = Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.ps1" -Resolve
         . $scriptPath
     }
 
@@ -16,7 +16,7 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'loads a single project in the root folder' {
-        New-Item -Path "$baseFolder\.AL-Go\settings.json" -type File -Force
+        New-Item -Path "$baseFolder/.AL-Go/settings.json" -type File -Force
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -52,8 +52,8 @@ Describe "Get-ProjectsToBuild" {
 
     
     It 'loads two independent projects with no build modes set' {
-        New-Item -Path "$baseFolder\Project1\.AL-Go\settings.json" -type File -Force
-        New-Item -Path "$baseFolder\Project2\.AL-Go\settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -95,8 +95,8 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'loads two independent projects with build modes set' {
-        New-Item -Path "$baseFolder\Project1\.AL-Go\settings.json" -Value $(@{ buildModes = @("Default", "Clean") } | ConvertTo-Json ) -type File -Force
-        New-Item -Path "$baseFolder\Project2\.AL-Go\settings.json" -Value $(@{ buildModes = @("Translated") } | ConvertTo-Json ) -type File -Force
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ buildModes = @("Default", "Clean") } | ConvertTo-Json ) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ buildModes = @("Translated") } | ConvertTo-Json ) -type File -Force
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -142,6 +142,44 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[1].project | Should -BeExactly "Project1" -Because "the project in second buildOrder should be Project1"
         $buildOrder[0].buildDimensions[2].buildMode | Should -BeExactly "Translated" -Because "the buildMode in buildOrder should be 'Translated'"
         $buildOrder[0].buildDimensions[2].project | Should -BeExactly "Project2" -Because "the project in third buildOrder should be Project2"
+    }
+
+    It 'loads only one project, based on the modified files' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+
+        $modifiedFiles = @('Project1/.AL-Go/settings.json')
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+
+        $allProjects | Should -BeExactly @("Project1", "Project2")
+        $projectsToBuild | Should -BeExactly @("Project1")
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable -Because "projectDependencies should should be a hashtable"
+        $projectDependencies['Project1'] | Should -BeExactly @() -Because "projectDependencies should contain no dependencies for Project1"
+        $projectDependencies['Project2'] | Should -BeExactly @() -Because "projectDependencies should contain no dependencies for Project2"
+       
+        # Build order should have the following structure:
+        #[
+        #  {
+        #    "projects":  [
+        #      "Project1",
+        #    ],
+        #    "projectsCount":  1,
+        #    "buildDimensions":  [
+        #       {
+        #         "buildMode": "Default",
+        #         "project": "Project1"
+        #       }
+        #    ]
+        #  }
+        #]
+        $buildOrder.Count | Should -BeExactly 1 -Because "buildOrder should contain only have one level/depth"
+        $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[0].projects | Should -BeExactly @("Project1")
+        $buildOrder[0].projectsCount | Should -BeExactly 1
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default" -Because "the buildMode in buildOrder should be 'Default'"
+        $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1" -Because "the project in first buildOrder should be Project1"
     }
 
     AfterEach {

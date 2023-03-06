@@ -149,9 +149,9 @@ try {
     if ($repoSettings.Keys -contains 'useProjectDependencies' -and $repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
         $buildAlso = @{}
         $projectDependencies = @{}
-        $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+        $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
         
-        $depth = $buildOrder.Count
+        $depth = $projectsOrder.Count
         Write-Host "Calculated dependency depth to be $depth"
     }
 
