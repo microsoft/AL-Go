@@ -77,7 +77,7 @@ function Get-ProjectsToBuild(
             $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
             
             $buildAlso = @{}
-            $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projectsToBuild -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+            $buildOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
             
             $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
         }
