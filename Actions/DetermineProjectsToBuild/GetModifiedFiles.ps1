@@ -22,6 +22,7 @@ $headers = @{
     "Accept" = "application/vnd.github.baptiste-preview+json"
 }
 
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\GitHub-Helper.psm1" -Resolve) -DisableNameChecking
 $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
 
 $filesChanged = @($response.files | ForEach-Object { $_.filename })
