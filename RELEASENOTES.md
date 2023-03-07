@@ -12,10 +12,12 @@ Now, the PullRequestHandler will perform the build and the CI/CD workflow is onl
 ### Build modes per project
 Build modes can now be specified per project
 
-### _DeterminProjectsToBuild_ action
+### _DetermineProjectsToBuild_ action
 A new action has been added to determine the projects to build.
 
-The functionality was stripped from _ReadSettings_ action
+The functionality was stripped from _ReadSettings_ action.
+
+Note that if `useProjectDependencies` is set to `true`, you may need to run _Update AL-Go System Files_ workflow twice.
 
 ## v2.4
 
