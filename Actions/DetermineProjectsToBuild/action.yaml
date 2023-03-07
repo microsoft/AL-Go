@@ -9,6 +9,10 @@ inputs:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
     default: '7b7d'
+  maxBuildDepth:
+    description: Specifies the maximum build depth suppored by the workflow running the action
+    required: false
+    default: '0'
 outputs:
   ProjectsJson:
     description: An array of AL-Go projects in compressed JSON format
@@ -28,7 +32,7 @@ runs:
       run: try { 
           $changedFiles = ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}
 
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} 
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth ${{ inputs.maxBuildDepth }} -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} 
         } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal

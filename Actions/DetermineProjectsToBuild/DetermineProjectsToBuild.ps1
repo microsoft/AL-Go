@@ -43,7 +43,9 @@ function Get-ProjectsToBuild(
     [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
     $baseFolder,
     [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-    $modifiedFiles = @()
+    $modifiedFiles = @(),
+    [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
+    $maxBuildDepth = 0
 ) 
 {
     Write-Host "Determining projects to build in $baseFolder"
@@ -114,6 +116,10 @@ function Get-ProjectsToBuild(
             }
         }
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"
+
+        if($maxBuildDepth -and ($projectsOrderToBuild.Count -gt $maxBuildDepth)) {
+            throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows" 
+        }
 
         return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild
     }

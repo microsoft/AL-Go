@@ -3,6 +3,8 @@ Param(
     [string] $baseFolder,
     [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
     [string[]] $modifiedFiles = @(),
+    [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
+    [int] $maxBuildDepth = 0,
 
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
@@ -24,7 +26,7 @@ try {
     
     #region Action: Determine projects to build
     . (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.ps1" -Resolve)
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
