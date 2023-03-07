@@ -76,12 +76,18 @@ function Get-ProjectsToBuild(
         if ($projects) {
             $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
             
-            $buildAlso = @{}
+            if($settings.useProjectDependencies) {
+                $buildAlso = @{}
 
-            # Calculate the full projects order
-            $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-            
-            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
+                # Calculate the full projects order
+                $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+                
+                $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
+            }
+            else {
+                # Use a flatten build order (all projects on the same level)
+                $fullProjectsOrder = @(@{ 'projects' = $projectsToBuild; 'projectsCount' = $projectsToBuild.Count})
+            }
 
             # Create a project order based on the projects to build
             foreach($depth in $fullProjectsOrder) {
@@ -97,17 +103,16 @@ function Get-ProjectsToBuild(
                     }
                 }
             }
-
-            if ($projectsOrderToBuild.Count -eq 0) {
-                Write-Host "Did not find any projects to add to the build order, adding default values"
-                $projectsOrderToBuild += @{
-                    projects = @()
-                    projectsCount = 0
-                    buildDimensions = @()
-                }
-            }
         }
         
+        if ($projectsOrderToBuild.Count -eq 0) {
+            Write-Host "Did not find any projects to add to the build order, adding default values"
+            $projectsOrderToBuild += @{
+                projects = @()
+                projectsCount = 0
+                buildDimensions = @()
+            }
+        }
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"
 
         return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild
