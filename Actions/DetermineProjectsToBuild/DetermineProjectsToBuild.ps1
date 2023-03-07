@@ -1,3 +1,51 @@
+<#
+.Synopsis
+    Creates buils dimensions for a list of projects.
+
+.Outputs
+    An array of build dimensions for the projects and their corresponding build modes.
+    Each build dimension is a hashtable with the following keys:
+    - project: The name of the AL-Go project
+    - buildMode: The build mode to use for the project
+#>
+function New-BuildDimensions(
+    [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
+    $projects = @(),
+    $baseFolder
+)
+{
+    $buildDimensions = @()
+    
+    $projects | ForEach-Object {
+        $project = $_
+        
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        $buildModes = @($projectSettings.buildModes)
+
+        if(!$buildModes) {
+            Write-Host "No build modes found for project $project, using default build mode 'Default'."
+            $buildModes = @('Default')
+        }
+        
+        $buildModes | ForEach-Object {
+            $buildMode = $_
+            $buildDimensions += @{
+                project = $project
+                buildMode = $buildMode
+            }
+        }
+    }
+    
+    return @(, $buildDimensions) # force array
+}
+
+<#
+.Synopsis
+    Filters AL-Go projects based on modified files.
+
+.Outputs
+    An array of AL-Go projects to build.
+#>
 function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) {
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
@@ -39,6 +87,26 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
     return $filteredProjects
 }
 
+<#
+.Synopsis
+    Analyzes a folder for AL-Go projects and determines the build order of these projects.
+
+.Description
+    Analyzes a folder for AL-Go projects and determines the build order of these projects.
+    The build order is determined by the project dependencies and the projects that have been modified.
+
+.Outputs
+    The function returns the following values:
+    - projects: An array of all projects found in the folder
+    - projectsToBuild: An array of projects that need to be built
+    - projectDependencies: A hashtable with the project dependencies
+    - projectsOrderToBuild: An array of build dimensions, each build dimension contains the following properties:
+        - projects: An array of projects to build
+        - projectsCount: The number of projects to build
+        - buildDimensions: An array of build dimensions, to be used in a build matrix. Properties of the build dimension are:
+            - project: The project to build
+            - buildMode: The build mode to use
+#>
 function Get-ProjectsToBuild(
     [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
     $baseFolder,

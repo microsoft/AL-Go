@@ -1915,37 +1915,6 @@ Function AnalyzeProjectDependencies {
     return @($projectsOrder)
 }
 
-function New-BuildDimensions(
-    [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
-    $projects = @(),
-    $baseFolder
-)
-{
-    $buildDimensions = @()
-    
-    $projects | ForEach-Object {
-        $project = $_
-        
-        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
-        $buildModes = @($projectSettings.buildModes)
-
-        if(!$buildModes) {
-            Write-Host "No build modes found for project $project, using default build mode 'Default'."
-            $buildModes = @('Default')
-        }
-        
-        $buildModes | ForEach-Object {
-            $buildMode = $_
-            $buildDimensions += @{
-                project = $project
-                buildMode = $buildMode
-            }
-        }
-    }
-    
-    return @(, $buildDimensions) # force array
-}
-
 function GetBaseFolder {
     Param(
         [string] $folder
