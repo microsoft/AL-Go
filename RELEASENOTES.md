@@ -18,7 +18,7 @@ Build modes can now be specified per project
 ### New Actions
 - **DetermineProjectsToBuild** is used to determine which projects to build in PullRequestHandler, CI/CD, Current, NextMinor and NextMajor workflows.
 - **CalculateArtifactNames** is used to calculate artifact names in PullRequestHandler, CI/CD, Current, NextMinor and NextMajor workflows.
-- **VerifyPRChanegs** is used to verify whether a PR contains changes, which are not allowed form a fork.
+- **VerifyPRChanges** is used to verify whether a PR contains changes, which are not allowed from a fork.
 
 ## v2.4
 
