@@ -1789,19 +1789,19 @@ Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
         [string[]] $projects,
-        [ref] $buildOrder,
         [ref] $buildAlso,
         [ref] $projectDependencies
     )
 
     $appDependencies = @{}
-    Write-Host "Analyzing projects"
+    Write-Host "Analyzing projects in $baseFolder"
+
     # Loop through all projects
     # Get all apps in the project
     # Get all dependencies for the apps
     $projects | ForEach-Object {
         $project = $_
-        Write-Host "- $project"
+        Write-Host "- Analyzing project: $project"
 
         # Read project settings
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
@@ -1837,6 +1837,7 @@ Function AnalyzeProjectDependencies {
     #     }
     # }
     $no = 1
+    $projectsOrder = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1904,10 +1905,14 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
+        
+        $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
+        
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
-        $buildOrder.value."$no" = @($thisJob)
         $no++
     }
+
+    return @($projectsOrder)
 }
 
 function GetBaseFolder {

@@ -27,8 +27,8 @@ Describe "CheckForUpdates Action Tests" {
         . (Join-Path $scriptRoot "yamlclass.ps1")
         $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
         
-        # Yaml file should have 79 entries
-        $yaml.content.Count | Should -be 79
+        # Yaml file should have 78 entries
+        $yaml.content.Count | Should -be 78
 
         $start = 0; $count = 0
         # Locate lines for permissions section (including permissions: line)
@@ -58,7 +58,7 @@ Describe "CheckForUpdates Action Tests" {
         
         # Locate CheckForUpdates
         $jobsYaml.Find('CheckForUpdates:', [ref] $start, [ref] $count) | Should -be $true
-        $start | Should -be 27
+        $start | Should -be 26
         $count | Should -be 21
         
         # Replace all occurances of 'shell: powershell' with 'shell: pwsh'
@@ -68,7 +68,7 @@ Describe "CheckForUpdates Action Tests" {
         # Replace Permissions
         $yaml.Replace('Permissions:/',@('contents: write','actions: read'))
         $yaml.content[44].Trim() | Should -be 'shell: pwsh'
-        $yaml.content.Count | Should -be 77
+        $yaml.content.Count | Should -be 76
         
         # Get Jobs section (without the jobs: line)
         $jobsYaml = $yaml.Get('jobs:/')

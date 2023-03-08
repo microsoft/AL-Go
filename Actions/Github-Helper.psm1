@@ -111,10 +111,15 @@ function Get-dependencies {
         $probingPathsJson | ForEach-Object {
             $dependency = $_
             $projects = $dependency.projects
+            
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
                 $projects.Split(',') | ForEach-Object {
-                    $downloadName = Join-Path $saveToPath "thisbuild-$($_)-$($mask)"
+                    $project = $_
+                    $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
+                    
+                    $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
+                    
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {

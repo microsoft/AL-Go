@@ -1,0 +1,39 @@
+name: Determine Projects to Build
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  parentTelemetryScopeJson:
+    description: Specifies the parent telemetry scope for the telemetry signal
+    required: false
+    default: '7b7d'
+  maxBuildDepth:
+    description: Specifies the maximum build depth suppored by the workflow running the action
+    required: false
+    default: '0'
+outputs:
+  ProjectsJson:
+    description: An array of AL-Go projects in compressed JSON format
+    value: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
+  ProjectDependenciesJson:
+    description: An object that holds the project dependencies in compressed JSON format
+    value: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
+  BuildOrderJson: 
+    description: An array of objects that determine that build order, including build dimensions
+    value: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+runs:
+  using: composite
+  steps:
+    - name: Determine Projects to Build
+      shell: ${{ inputs.shell }}
+      id: determineProjectsToBuild
+      run: try { 
+          $changedFiles = ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}
+
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth ${{ inputs.maxBuildDepth }} -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} 
+        } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+branding:
+  icon: terminal
+  color: blue
