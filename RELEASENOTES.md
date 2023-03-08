@@ -3,7 +3,7 @@
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
 ### **NOTE:** When upgrading to this version
-When upgrading to this version form earlier versions of AL-Go for GitHub, you will need to run the Update AL-Go System Files workflow twice if you have the UseProjectDependencies set to true.
+When upgrading to this version form earlier versions of AL-Go for GitHub, you will need to run the _Update AL-Go System Files_ workflow twice if you have the `useProjectDependencies` setting set to _true_.
 
 ### Issues
 - Issue [#391](https://github.com/microsoft/AL-Go/issues/391) Create release action - CreateReleaseBranch error
