@@ -10,7 +10,7 @@ When upgrading to this version form earlier versions of AL-Go for GitHub, you wi
 
 ### Changes to Pull Request Process
 In v2.4 and earlier, the PullRequestHandler would trigger the CI/CD workflow to run the PR build.
-Now, the PullRequestHandler will perform the build and the CI/CD workflow is only run on push (or manual dispatch)
+Now, the PullRequestHandler will perform the build and the CI/CD workflow is only run on push (or manual dispatch) and will perform a complete build.
 
 ### Build modes per project
 Build modes can now be specified per project
