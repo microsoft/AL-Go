@@ -15,7 +15,7 @@ When running the **Create Online Dev. Environment** workflow without having the 
 Open Workflow details to get the device Code for authentication in the job summary for the initialize job.
 
 ### Issues
-- Issue [#391](https://github.com/microsoft/AL-Go/issues/391) Create release action - CreateReleaseBranch error
+- Issue #391 Create release action - CreateReleaseBranch error
 
 ### Changes to Pull Request Process
 In v2.4 and earlier, the PullRequestHandler would trigger the CI/CD workflow to run the PR build.
@@ -32,13 +32,13 @@ Build modes can now be specified per project
 ## v2.4
 
 ### Issues
-- Issue [#171](https://github.com/microsoft/AL-Go/issues/171) create a workspace file when creating a project
-- Issue [#356](https://github.com/microsoft/AL-Go/issues/356) Publish to AppSource fails in multi project repo
-- Issue [#358](https://github.com/microsoft/AL-Go/issues/358) Publish To Environment Action stopped working in v2.3
-- Issue [#362](https://github.com/microsoft/AL-Go/issues/362) Support for EnableTaskScheduler
-- Issue [#360](https://github.com/microsoft/AL-Go/issues/360) Creating a release and deploying from a release branch
-- Issue [#371](https://github.com/microsoft/AL-Go/issues/371) 'No previous release found' for builds on release branches
-- Issue [#376](https://github.com/microsoft/AL-Go/issues/376) CICD jobs that are triggered by the pull request trigger run directly to an error if title contains quotes
+- Issue #171 create a workspace file when creating a project
+- Issue #356 Publish to AppSource fails in multi project repo
+- Issue #358 Publish To Environment Action stopped working in v2.3
+- Issue #362 Support for EnableTaskScheduler
+- Issue #360 Creating a release and deploying from a release branch
+- Issue #371 'No previous release found' for builds on release branches
+- Issue #376 CICD jobs that are triggered by the pull request trigger run directly to an error if title contains quotes
 
 ### Release Branches
 **NOTE:** Release Branches are now only named after major.minor if the patch value is 0 in the release tag (which must be semver compatible)
