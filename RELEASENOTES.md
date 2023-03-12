@@ -2,6 +2,15 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### Publish to unknown environment
+You can now run the **Publish To Environment** workflow without creating the environment in GitHub or settings up-front, just by specifying the name of a single environment in the Environment Name when running the workflow.
+Subsequently, if an AuthContext secret hasn't been created for this environment, the Device Code flow authentication will be initiated from the Publish To Environment workflow and you can publish to the new environment without ever creating a secret.
+Open Workflow details to get the device Code for authentication in the job summary for the initialize job.
+
+### Create Online Dev. Environment
+If running the **Create Online Dev. Environment** workflow with having the _adminCenterApiCredentials_ secret created, the workflow will intiate the deviceCode flow and allow you to authenticate to the Business Central Admin Center.
+Open Workflow details to get the device Code for authentication in the job summary for the initialize job.
+
 ## v2.4
 
 ### Issues
