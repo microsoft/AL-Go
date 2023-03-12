@@ -98,6 +98,8 @@ try {
 
     Write-Host "Project: $project"
     if ($project -and $repo.useProjectDependencies -and $projectDependenciesJson -ne "") {
+        Write-Host "Using project dependencies: $projectDependenciesJson"
+
         $projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
         if ($projectDependencies.Keys -contains $project) {
             $projects = @($projectDependencies."$project") -join ","

@@ -21,14 +21,8 @@ Describe "ReadSettings Action Tests" {
             "SettingsJson" = "Settings in compressed Json format"
             "GitHubRunnerJson" = "GitHubRunner in compressed Json format"
             "GitHubRunnerShell" = "Shell for GitHubRunner jobs"
-            "ProjectsJson" = "Projects in compressed Json format"
-            "ProjectCount" = "Number of projects in array"
             "EnvironmentsJson" = "Environments in compressed Json format"
             "EnvironmentCount" = "Number of environments in array"
-            "ProjectDependenciesJson" = "Project Dependencies Json"
-            "BuildOrderJson" = "Build order Json"
-            "BuildOrderDepth" = "Depth in build order"
-            "BuildModes" = "Array of build modes"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

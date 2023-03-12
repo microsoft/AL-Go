@@ -2,6 +2,9 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### **NOTE:** When upgrading to this version
+When upgrading to this version form earlier versions of AL-Go for GitHub, you will need to run the _Update AL-Go System Files_ workflow twice if you have the `useProjectDependencies` setting set to _true_.
+
 ### Publish to unknown environment
 You can now run the **Publish To Environment** workflow without creating the environment in GitHub or settings up-front, just by specifying the name of a single environment in the Environment Name when running the workflow.
 Subsequently, if an AuthContext secret hasn't been created for this environment, the Device Code flow authentication will be initiated from the Publish To Environment workflow and you can publish to the new environment without ever creating a secret.
@@ -10,6 +13,21 @@ Open Workflow details to get the device Code for authentication in the job summa
 ### Create Online Dev. Environment
 When running the **Create Online Dev. Environment** workflow without having the _adminCenterApiCredentials_ secret created, the workflow will intiate the deviceCode flow and allow you to authenticate to the Business Central Admin Center.
 Open Workflow details to get the device Code for authentication in the job summary for the initialize job.
+
+### Issues
+- Issue [#391](https://github.com/microsoft/AL-Go/issues/391) Create release action - CreateReleaseBranch error
+
+### Changes to Pull Request Process
+In v2.4 and earlier, the PullRequestHandler would trigger the CI/CD workflow to run the PR build.
+Now, the PullRequestHandler will perform the build and the CI/CD workflow is only run on push (or manual dispatch) and will perform a complete build.
+
+### Build modes per project
+Build modes can now be specified per project
+
+### New Actions
+- **DetermineProjectsToBuild** is used to determine which projects to build in PullRequestHandler, CI/CD, Current, NextMinor and NextMajor workflows.
+- **CalculateArtifactNames** is used to calculate artifact names in PullRequestHandler, CI/CD, Current, NextMinor and NextMajor workflows.
+- **VerifyPRChanges** is used to verify whether a PR contains changes, which are not allowed from a fork.
 
 ## v2.4
 
