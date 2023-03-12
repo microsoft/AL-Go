@@ -8,7 +8,7 @@ Subsequently, if an AuthContext secret hasn't been created for this environment,
 Open Workflow details to get the device Code for authentication in the job summary for the initialize job.
 
 ### Create Online Dev. Environment
-If running the **Create Online Dev. Environment** workflow with having the _adminCenterApiCredentials_ secret created, the workflow will intiate the deviceCode flow and allow you to authenticate to the Business Central Admin Center.
+When running the **Create Online Dev. Environment** workflow without having the _adminCenterApiCredentials_ secret created, the workflow will intiate the deviceCode flow and allow you to authenticate to the Business Central Admin Center.
 Open Workflow details to get the device Code for authentication in the job summary for the initialize job.
 
 ## v2.4
