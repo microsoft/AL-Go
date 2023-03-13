@@ -1,6 +1,6 @@
-# Create your first AL-Go repository
-
-## Excercise
+# Excercise: Create your first AL-Go repository
+Create your first AL-Go repository, add an app and inspect the build.
+## Video
 Watch a video of the excercise [here](https://youtu.be/rWc81EG_sMk)
 
 ## Steps
@@ -22,10 +22,11 @@ Where the numbers refer to:
 3. Minutes spend on GitHub hosted runners
 4. No. of artifacts generated
 5. Initialize job
-6. Check for Updates job
-7. Build job
-8. Deployment/Delivery job
+6. Build job - one job per project
+7. Check for Updates to AL-Go system files job
+8. Deployment/Delivery job - one job per environment
 9. Finalize job
 
 ---
-[index](index.md)&nbsp;&nbsp;[previous](GitHubSettings.md)&nbsp;&nbsp;[next](.md)
+
+[index](index.md)&nbsp;&nbsp;[previous](GitHubSettings.md)&nbsp;&nbsp;[next](CreateSelfHostedRunners.md)

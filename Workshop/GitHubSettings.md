@@ -1,7 +1,7 @@
-# GitHub Settings
-For the AL-Go for GitHub workshop, we need to change a few settings in GitHub.
+# Excercise: GitHub Settings
+Modify some GitHub Settings for the workshop.
 
-## Excercise
+## Video
 Watch a video of the excercise [here](https://youtu.be/1WliqmobdtM)
 
 ## Steps

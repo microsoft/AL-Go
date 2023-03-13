@@ -1,6 +1,8 @@
-# Let's get started
+# Excercise: Let's get started
 
-## Excercise
+Get started by creating a free test organization for the workshop.
+
+## Video
 Watch a video of the excercise [here](https://youtu.be/DWUqC2_VukM)
 
 ## Steps
@@ -9,4 +11,5 @@ Watch a video of the excercise [here](https://youtu.be/DWUqC2_VukM)
   - We will delete this again at the end
 
 ---
+
 [index](index.md)&nbsp;&nbsp;[previous](Introduction.md)&nbsp;&nbsp;[next](Runners.md)

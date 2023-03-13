@@ -1,5 +1,5 @@
 # Introduction
-
+Introduction to GitHub, AL-Go for GitHub, personal and organizational accounts.
 ## What is GitHub?
 GitHub is a code hosting platform for collaboration and version control.
 
@@ -10,6 +10,9 @@ From open source to business, you can host and review code, manage projects, and
 Owned by Microsoft, who is heavily investing in evolving GitHub.
 
 [See more here](https://github.com/)
+
+---
+
 ## What is AL-Go For GitHub?
 The Plug-and-play DevOps solution for Business Central development on GitHub
 - Open source and free for all (GitHub costs accrue)
@@ -20,6 +23,9 @@ The Plug-and-play DevOps solution for Business Central development on GitHub
 - DevOps becomes a tool, not an investment area
 
 [See more here](https://github.com/microsoft/AL-Go)
+
+---
+
 ## Why GitHub?
 As of June 2022, GitHub reported having over 83 million developers and more than 200 million repositories, including at least 28 million public repositories.
 It is the largest source code host as of November 2021.
@@ -36,6 +42,8 @@ Some provocative comparison statements, which are the opinion of the author:
 
 **Yes, Azure DevOps is more feature rich**<br/>&nbsp;&nbsp;&nbsp;&nbsp;but Microsoft is investing heavily in GitHub…
 
+---
+
 ## Working with GitHub
 
 ### Every user needs a personal GitHub account
@@ -50,6 +58,8 @@ Some provocative comparison statements, which are the opinion of the author:
 - Making a user a member of a single repository works, but it might come with some problems
 - Organize your organizations and repositories wisely.
 
+---
+
 ## Personal vs. Organizational accounts
 | Personal Account | Organizational Account |
 |--|--|
@@ -61,6 +71,11 @@ Some provocative comparison statements, which are the opinion of the author:
 | GitHub Actions execution minutes<br/>- 2000 vs. 3000 min/month | GitHub Actions execution minutes<br />- 2000 vs. 3000 vs. 50.000 min/month |
 
 **Note:** Windows OS consumes 2 minutes per minute
+
+[See more here](https://github.com/)
+
+
+---
 
 ## When to use organizational accounts
 ### Owner of organization owns the code
@@ -75,6 +90,7 @@ Some provocative comparison statements, which are the opinion of the author:
 
 Open Source apps can be public - other apps should be private
 
+---
 
 ## Organizational accounts
 ### Shared runners
