@@ -552,7 +552,7 @@ function DownloadRelease {
     Write-Host "Downloading release $($release.Name), projects $projects, type $mask"
     if ([string]::IsNullOrEmpty($token)) {
         $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
     }
     $headers = @{ 
         "Accept"        = "application/octet-stream"
@@ -706,7 +706,7 @@ function DownloadArtifact {
     Write-Host $artifact.archive_download_url
     if ([string]::IsNullOrEmpty($token)) {
         $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
     }
     $headers = @{ 
         "Authorization" = "token $token"

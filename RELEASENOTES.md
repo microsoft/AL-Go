@@ -16,6 +16,7 @@ Open Workflow details to get the device Code for authentication in the job summa
 
 ### Issues
 - Issue #391 Create release action - CreateReleaseBranch error
+- Issue 434 Building local DevEnv, downloading dependencies: Authentication fails when using "gh auth status"
 
 ### Changes to Pull Request Process
 In v2.4 and earlier, the PullRequestHandler would trigger the CI/CD workflow to run the PR build.
