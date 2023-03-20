@@ -113,11 +113,8 @@ jobs:
         run: |
           if ($env:deviceCode) {
             $adminCenterApiCredentials = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""deviceCode"":""$($env:deviceCode)""}"))
+            Add-Content -path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
           }
-          else {
-            $adminCenterApiCredentials = "$env:adminCenterApiCredentials"
-          }
-          Add-Content -path $env:GITHUB_ENV -value "adminCenterApiCredentials2=$adminCenterApiCredentials"
 
       - name: Create Development Environment
         uses: microsoft/AL-Go-Actions/CreateDevelopmentEnvironment@main
@@ -127,7 +124,7 @@ jobs:
           environmentName: ${{ github.event.inputs.environmentName }}
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }}
           directCommit: ${{ github.event.inputs.directCommit }}
-          adminCenterApiCredentials: ${{ env.adminCenterApiCredentials2 }}
+          adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }}
 
       - name: Finalize the workflow
         if: always()
