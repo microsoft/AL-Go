@@ -199,6 +199,7 @@ jobs:
           path: '.dependencies'
 
       - name: Read settings
+        id: readProjectSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
@@ -218,6 +219,7 @@ jobs:
       - name: Run pipeline
         id: RunPipeline
         uses: microsoft/AL-Go-Actions/RunPipeline@main
+        timeout-minutes: ${{ fromJson(steps.readProjectSettings.outputs.SettingsJson).buildTimeoutInMinutes }}
         env:
           BuildMode: ${{ matrix.buildMode }}
         with:

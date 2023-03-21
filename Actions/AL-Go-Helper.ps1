@@ -483,6 +483,7 @@ function ReadSettings {
         "doNotRunBcptTests"                      = $false
         "doNotPublishApps"                       = $false
         "doNotSignApps"                          = $false
+        "buildTimeoutInMinutes"                  = "60"
         "configPackages"                         = @()
         "appSourceCopMandatoryAffixes"           = @()
         "obsoleteTagMinAllowedMajorMinor"        = ""
