@@ -208,7 +208,6 @@ jobs:
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        timeout-minutes: ${{ fromJson(steps.readProjectSettings.outputs.SettingsJson).buildTimeoutInMinutes }}
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -220,6 +219,7 @@ jobs:
       - name: Run pipeline
         id: RunPipeline
         uses: microsoft/AL-Go-Actions/RunPipeline@main
+        timeout-minutes: ${{ fromJson(steps.readProjectSettings.outputs.SettingsJson).buildTimeoutInMinutes }}
         env:
           BuildMode: ${{ matrix.buildMode }}
         with:
