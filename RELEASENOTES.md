@@ -21,6 +21,9 @@ Build modes can now be specified per project
 - **CalculateArtifactNames** is used to calculate artifact names in PullRequestHandler, CI/CD, Current, NextMinor and NextMajor workflows.
 - **VerifyPRChanges** is used to verify whether a PR contains changes, which are not allowed from a fork.
 
+### New Settings
+- **buildTimeoutInMinutes** (project setting) is used to define a timeout for building an AL-Go project.
+
 ## v2.4
 
 ### Issues
