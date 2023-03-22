@@ -96,6 +96,7 @@ function InvokeWebRequest {
 function Get-dependencies {
     Param(
         $probingPathsJson,
+        $buildMode,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies")
     )
@@ -104,8 +105,15 @@ function Get-dependencies {
         New-Item $saveToPath -ItemType Directory | Out-Null
     }
 
+    if($buildMode -eq "Default") {
+        $buildMode = '';
+    }
+
+    $appsMask = "$($buildMode)Apps";
+    $testAppsMask = "$($buildMode)TestApps";
+
     $downloadedList = @()
-    'Apps','TestApps' | ForEach-Object {
+    $appsMask, $testAppsMask | ForEach-Object {
         $mask = $_
         Write-Host "Locating all $mask artifacts from probing paths"
         $probingPathsJson | ForEach-Object {
@@ -123,7 +131,7 @@ function Get-dependencies {
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
-                            if ($mask -eq 'TestApps') {
+                            if ($mask -eq $testAppsMask) {
                                 $downloadedList += @("($($_.FullName))")
                             }
                             else {
@@ -132,7 +140,7 @@ function Get-dependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -ne 'TestApps') {
+                    elseif ($mask -ne $testAppsMask) {
                         Write-Host "$_ not built, downloading from artifacts"
                         $missingProjects += @($_)
                     }
@@ -151,7 +159,7 @@ function Get-dependencies {
                     $artifacts | ForEach-Object {
                         $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $_
                         if ($download) {
-                            if ($mask -eq 'TestApps') {
+                            if ($mask -eq $testAppsMask) {
                                 $downloadedList += @("($download)")
                             }
                             else {
@@ -186,7 +194,7 @@ function Get-dependencies {
 
                 $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
                 if ($download) {
-                    if ($mask -eq 'TestApps') {
+                    if ($mask -eq $testAppsMask) {
                         $downloadedList += @("($download)")
                     }
                     else {

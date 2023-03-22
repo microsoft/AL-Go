@@ -117,7 +117,7 @@ try {
                 "branch" = $ENV:GITHUB_REF_NAME
                 "authTokenSecret" = $token
             })
-            Get-dependencies -probingPathsJson $thisBuildProbingPaths | where-Object { $_ } | ForEach-Object {
+            Get-dependencies -probingPathsJson $thisBuildProbingPaths -buildMode $buildMode | where-Object { $_ } | ForEach-Object {
                 if ($_.startswith('(')) {
                     $installTestApps += $_    
                 }
