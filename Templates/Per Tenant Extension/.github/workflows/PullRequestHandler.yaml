@@ -33,6 +33,9 @@ jobs:
         with:
           lfs: true
           ref: ${{ github.event.pull_request.head.sha }}
+      
+      - run: |
+          git pull --no-edit --no-rebase --no-ff origin ${{ github.event.pull_request.base.ref }}
 
       - uses: microsoft/AL-Go-Actions/VerifyPRChanges@main
         with:
@@ -58,6 +61,9 @@ jobs:
         with:
           lfs: true
           ref: ${{ github.event.pull_request.head.sha }}
+      
+      - run: |
+          git pull --no-edit --no-rebase --no-ff origin ${{ github.event.pull_request.base.sha }}
 
       - name: Initialize the workflow
         id: init
@@ -105,6 +111,9 @@ jobs:
         with:
           lfs: true
           ref: ${{ github.event.pull_request.head.sha }}
+      
+      - run: |
+          git pull --no-edit --no-rebase --no-ff origin ${{ github.event.pull_request.base.sha }}
     
       - name: Download thisbuild artifacts
         if: env.workflowDepth > 1
@@ -226,12 +235,6 @@ jobs:
     needs: [ Initialization, Build ]
     if: (!cancelled())
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          lfs: true
-          ref: ${{ github.event.pull_request.head.sha }}
-
       - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
