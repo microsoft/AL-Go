@@ -35,11 +35,11 @@ runs:
   using: composite
   steps:
     - name: Install Azure SignTool
+      shell: ${{ inputs.shell }}
       run: dotnet tool install --global AzureSignTool
 
     - name: run
       shell: ${{ inputs.shell }}
-      runs-on: windows-latest # Code signing must run on a Windows agent for Authenticode signing (dll/exe)
       id: SignApp
       env:
         _azureKeyVaultURI: ${{ inputs.azureKeyVaultURI }}
