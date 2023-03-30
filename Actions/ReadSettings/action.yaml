@@ -21,10 +21,6 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  getProjects:
-    description: Indicates whether you want to retrieve the list of project list as well
-    required: false
-    default: 'N'
   getenvironments:
     description: Specifies the pattern of the environments you want to retreive (or empty for no environments)
     required: false
@@ -51,30 +47,12 @@ outputs:
   GitHubRunnerShell:
     description: Shell for GitHubRunner jobs
     value: ${{ steps.readsettings.outputs.GitHubRunnerShell }}
-  ProjectsJson:
-    description: Projects in compressed Json format
-    value: ${{ steps.readsettings.outputs.ProjectsJson }}
-  ProjectCount:
-    description: Number of projects in array
-    value: ${{ steps.readsettings.outputs.ProjectCount }}
   EnvironmentsJson:
     description: Environments in compressed Json format
     value: ${{ steps.readsettings.outputs.EnvironmentsJson }}
   EnvironmentCount:
     description: Number of environments in array
     value: ${{ steps.readsettings.outputs.EnvironmentCount }}
-  ProjectDependenciesJson:
-    description: Project Dependencies Json
-    value: ${{ steps.readsettings.outputs.ProjectDependenciesJson }}
-  BuildOrderJson:
-    description: Build order Json
-    value: ${{ steps.readsettings.outputs.BuildOrderJson }}
-  BuildOrderDepth:
-    description: Depth in build order
-    value: ${{ steps.readsettings.outputs.BuildOrderDepth }}
-  BuildModes:
-    description: Array of build modes
-    value: ${{ steps.readsettings.outputs.BuildModes }}
 runs:
   using: composite
   steps:
@@ -86,12 +64,11 @@ runs:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
-        _getProjects: ${{ inputs.getProjects }}
         _getenvironments: ${{ inputs.getenvironments }}
         _includeProduction: ${{ inputs.includeProduction }}
         _release: ${{ inputs.release }}
         _get: ${{ inputs.get }}
-      run: try { ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getProjects ($ENV:_getProjects -eq 'Y') -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

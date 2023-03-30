@@ -7,8 +7,6 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
-    [Parameter(HelpMessage = "Indicates whether you want to retrieve the list of project list as well", Mandatory = $false)]
-    [bool] $getProjects,
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (or empty for no environments)", Mandatory = $false)]
     [string] $getenvironments = "",
     [Parameter(HelpMessage = "Specifies whether you want to include production environments", Mandatory = $false)]
@@ -18,60 +16,6 @@ Param(
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
     [string] $get = ""
 )
-
-function Get-ChangedFiles($token) {
-    $headers = @{             
-        "Authorization" = "token $token"
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-    }
-    $ghEvent = Get-Content $ENV:GITHUB_EVENT_PATH -encoding UTF8 | ConvertFrom-Json
-
-    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ghEvent.pull_request.head.sha)"
-
-    $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
-    $filesChanged = @($response.files | ForEach-Object { $_.filename })
-
-    return $filesChanged
-}
-
-function Get-ProjectsToBuild($settings, $projects, $baseFolder, $token) {
-    if ($settings.alwaysBuildAllProjects) {
-        Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
-        return $projects
-    } 
-    
-    if ($ENV:GITHUB_EVENT_NAME -notin @("pull_request_target", "pull_request")) {
-        Write-Host "Building all projects because this is not a pull request"
-        return $projects
-    }
-
-    $filesChanged = @(Get-ChangedFiles -token $token)
-    if ($filesChanged -like '.github/*.json') {
-        Write-Host "Changes to repo Settings, building all projects"
-        return $projects
-    }
-    elseif ($filesChanged.Count -ge 250) {
-        Write-Host "More than 250 files modified, building all projects"
-        return $projects
-    }
-    else {
-        Write-Host "Modified files:"
-        $buildProjects = @()
-        $filesChanged | Out-Host
-        $buildProjects = @($projects | Where-Object {
-                $checkProject = $_
-                $buildProject = $false
-                if (Test-Path -Path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
-                    $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -token $token -includeAlGoFolder -includeApps -includeTestApps
-                    $projectFolders | ForEach-Object {
-                        if ($filesChanged -like "$_/*") { $buildProject = $true }
-                    }
-                }
-                $buildProject
-            })
-        return $buildProjects
-    }
-}
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -156,69 +100,6 @@ try {
     $gitHubRunnerShell = $settings.githubRunnerShell
     Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
     Write-Host "GitHubRunnerShell=$githubRunnerShell"
-
-    # Add only default build mode if not specified in settings
-    if (!$settings.buildModes) {
-        $settings.buildModes = @("Default")
-    }
-
-    if ($settings.buildModes.Count -eq 1) {
-        $buildModes = "[$($settings.buildModes | ConvertTo-Json -compress)]"
-    }
-    else {
-        $buildModes = $settings.buildModes | ConvertTo-Json -compress
-    }
-    
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildModes=$buildModes"
-    Write-Host "BuildModes=$buildModes"
-
-    if ($getProjects) {
-        Write-Host "Determining projects to build"
-        $buildProjects = @()
-        if ($settings.projects) {
-            $projects = $settings.projects
-        }
-        else {
-            $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-        }
-
-        if ($projects) {
-            AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($projects -join ', ')"
-            Write-Host "All Projects: $($projects -join ', ')"
-            $buildProjects += Get-ProjectsToBuild -settings $settings -projects $projects -baseFolder $baseFolder -token $token
-            
-            if ($settings.useProjectDependencies) {
-                $buildAlso = @{}
-                $buildOrder = @{}
-                $projectDependencies = @{}
-                AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-                $buildProjects = @($buildProjects | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
-                $projectDependenciesJson = $projectDependencies | ConvertTo-Json -Compress
-                $buildOrderJson = $buildOrder | ConvertTo-Json -Compress
-                Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
-                Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
-                Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderDepth=$($buildOrder.Count)"
-                Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
-                Write-Host "BuildOrderJson=$buildOrderJson"
-                Write-Host "BuildOrderDepth=$($buildOrder.Count)"
-            }
-        }
-        Write-Host "Projects to build: $($buildProjects -join ', ')"
-        if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
-            $buildProjects += @(".")
-        }
-        if ($buildProjects.Count -eq 1) {
-            $projectsJSon = "[$($buildProjects | ConvertTo-Json -compress)]"
-        }
-        else {
-            $projectsJSon = $buildProjects | ConvertTo-Json -compress
-        }
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
-        Add-Content -Path $env:GITHUB_ENV -Value "projects=$projectsJson"
-        Write-Host "ProjectsJson=$projectsJson"
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectCount=$($buildProjects.Count)"
-        Write-Host "ProjectCount=$($buildProjects.Count)"
-    }
 
     if ($getenvironments) {
         $environments = @()

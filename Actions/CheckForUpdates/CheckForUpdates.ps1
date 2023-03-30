@@ -148,10 +148,10 @@ try {
     $depth = 1
     if ($repoSettings.Keys -contains 'useProjectDependencies' -and $repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
         $buildAlso = @{}
-        $buildOrder = @{}
         $projectDependencies = @{}
-        AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildOrder ([ref]$buildOrder) -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-        $depth = $buildOrder.Count
+        $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+        
+        $depth = $projectsOrder.Count
         Write-Host "Calculated dependency depth to be $depth"
     }
 
@@ -243,59 +243,53 @@ try {
                         }
                     }
 
-                    # CICD, Current, NextMinor and NextMajor workflows all include a build step.
+                    # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
                     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
                     if ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
                         $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
-                        if ($depth -gt 1) {
-                            # When there are multiple build jobs, we need to add build job specific project list (and count) to the output of the Initialization job
-                            $initializationOutputs = $yaml.Get('jobs:/Initialization:/outputs:/')
-                            if ($initializationOutputs) {
-                                $addOutput = @()
-                                1..$depth | ForEach-Object {
-                                    $addOutput += @(
-                                      "projects$($_): `${{ steps.BuildOrder.outputs.projects$($_)Json }}"
-                                      "projects$($_)Count: `${{ steps.BuildOrder.outputs.projects$($_)Count }}"
-                                    )
-                                }
-                                $yaml.Replace('jobs:/Initialization:/outputs:/', $initializationOutputs.content + $addOutput)
-                            }
 
+                        if ($depth -gt 1) {
                             # Also, duplicate the build job for each dependency depth
+                            
                             $build = $yaml.Get('jobs:/Build:/')
-                            if ($build) {
+                            if($build)
+                            {
                                 $newBuild = @()
+
                                 1..$depth | ForEach-Object {
+                                    $index = $_-1
+
                                     # All build job needs to have a dependency on the Initialization job
                                     $needs = @('Initialization')
                                     if ($_ -eq 1) {
                                         # First build job needs to have a dependency on the Initialization job only
                                         # Example (depth 1):
                                         #    needs: [ Initialization ]
-                                        #    if: needs.Initialization.outputs.projects1Count > 0
-                                        $if = "if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.projects$($_)Count > 0"
+                                        #    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+                                        $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
                                     }
                                     else {
                                         # Subsequent build jobs needs to have a dependency on all previous build jobs
                                         # Example (depth 2):
                                         #    needs: [ Initialization, Build1 ]
-                                        #    if: always() && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects2Count > 0
+                                        #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
                                         # Another example (depth 3):
                                         #    needs: [ Initialization, Build2, Build1 ]
-                                        #    if: always() && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.projects3Count > 0
+                                        #    if: (!failure()) && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
                                         $newBuild += @('')
                                         $ifpart = ""
                                         ($_-1)..1 | ForEach-Object {
                                             $needs += @("Build$_")
                                             $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
                                         }
-                                        $if = "if: (!failure()) && (!cancelled())$ifpart && needs.Initialization.outputs.projects$($_)Count > 0"
+                                        $if = "if: (!failure()) && (!cancelled())$ifpart && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
                                     }
+
                                     # Replace the if:, the needs: and the strategy/matrix/project: in the build job with the correct values
                                     $build.Replace('if:', $if)
                                     $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-                                    $build.Replace('strategy:/matrix:/project:',"project: `${{ fromJson(needs.Initialization.outputs.projects$($_)) }}")
-                                
+                                    $build.Replace('strategy:/matrix:/include:',"include: `${{ fromJson(needs.Initialization.outputs.buildOrderJson)[$index].buildDimensions }}")
+                                    
                                     # Last build job is called build, all other build jobs are called build1, build2, etc.
                                     if ($depth -eq $_) {
                                         $newBuild += @("Build:")
@@ -306,6 +300,7 @@ try {
                                     # Add the content of the calculated build job to the new build job list with an indentation of 2 spaces
                                     $build.content | ForEach-Object { $newBuild += @("  $_") }
                                 }
+
                                 # Replace the entire build: job with the new build job list
                                 $yaml.Replace('jobs:/Build:', $newBuild)
                             }

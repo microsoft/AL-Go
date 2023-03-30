@@ -732,8 +732,7 @@ function AnalyzeRepo {
             $enumerate = $true
 
             # Check if there are any folders matching $folder
-            # Test-Path $folder -PathType Container will return false if any files matches $folder (beside folders)
-            if (-not ((Test-Path $folder) -and (Get-ChildItem $folder))) {
+            if (Get-Item $folder | Where-Object { $_ -is [System.IO.DirectoryInfo] }) {
                 if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not exist" }
             }
             elseif (-not (Test-Path $appJsonFile -PathType Leaf)) {
@@ -1445,7 +1444,7 @@ function CreateDevEnv {
                             while ($retry) {
                                 try {
                                     $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-                                    $_.authTokenSecret = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim()
+                                    $_.authTokenSecret = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
                                     $retry = $false
                                 }
                                 catch {
@@ -1789,19 +1788,19 @@ Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
         [string[]] $projects,
-        [ref] $buildOrder,
         [ref] $buildAlso,
         [ref] $projectDependencies
     )
 
     $appDependencies = @{}
-    Write-Host "Analyzing projects"
+    Write-Host "Analyzing projects in $baseFolder"
+
     # Loop through all projects
     # Get all apps in the project
     # Get all dependencies for the apps
     $projects | ForEach-Object {
         $project = $_
-        Write-Host "- $project"
+        Write-Host "- Analyzing project: $project"
 
         # Read project settings
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
@@ -1837,6 +1836,7 @@ Function AnalyzeProjectDependencies {
     #     }
     # }
     $no = 1
+    $projectsOrder = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1904,10 +1904,14 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
+        
+        $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
+        
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
-        $buildOrder.value."$no" = @($thisJob)
         $no++
     }
+
+    return @($projectsOrder)
 }
 
 function GetBaseFolder {
