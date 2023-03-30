@@ -307,16 +307,17 @@ try {
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
-                Write-Host "2"
+                Write-Host "2 - $srcFile"
                 $lines = ([string](Get-ContentLF -path $srcFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+                    Write-Host "2.5 - $_"
                     if ($_ -eq "actionsRepo") {
                         $useBranch = $config.branch
                     }
                     else {
                         $useBranch = $branch
                     }
-                    Write-Host "3"
+                    Write-Host "3 - $useBranch"
                     $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
                     $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($useBranch)`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
