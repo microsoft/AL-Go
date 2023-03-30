@@ -23,6 +23,10 @@ inputs:
   pathToFiles:
     description: The path to the files to be signed
     required: true
+  fileExtensionsToSign:
+    description: The file extensions to be signed
+    required: false
+    default: .app
   timestampService:
     description: The URK of the timestamp server
     required: false
@@ -48,11 +52,12 @@ runs:
         _azureKeyVaultTenantID: ${{ inputs.azureKeyVaultTenantID }}
         _azureKeyVaultCertificateName: ${{ inputs.azureKeyVaultCertificateName }}
         _pathToFiles: ${{ inputs.pathToFiles }}
+        _fileExtensionsToSign: ${{ inputs.fileExtensionsToSign }}
         _timestampService: ${{ inputs.timestampService }}
         _digestAlgorithm: ${{ inputs.digestAlgorithm }}
       run: | 
         try { 
-          $Files = Get-ChildItem -Path $ENV:_pathToFiles -Filter *.app -Recurse | Select-Object -ExpandProperty FullName
+          $FileExtensionsToSign = ($ENV:_fileExtensionsToSign -split ',')          
           ${{ github.action_path }}/SignApp.ps1 -AzureKeyVaultURI "$($ENV:_azureKeyVaultURI)" `
                                       -AzureKeyVaultClientID "$($ENV:_azureKeyVaultClientID)" `
                                       -AzureKeyVaultClientSecret "$($ENV:_azureKeyVaultClientSecret)" `
@@ -61,7 +66,8 @@ runs:
                                       -TimestampService "$($ENV:_timestampService)" `
                                       -TimestampDigest "$($ENV:_digestAlgorithm)" `
                                       -FileDigest "$($ENV:_digestAlgorithm)" `
-                                      -Files $Files 
+                                      -PathToFiles "$($ENV:_pathToFiles)" `
+                                      -PathToFiles $FileExtensionsToSign
         } catch { 
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
         }

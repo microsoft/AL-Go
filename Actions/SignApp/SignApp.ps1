@@ -1,5 +1,6 @@
 param(
-    [String[]]$Files,
+    [String]$PathToFiles,
+    [String[]]$FileExtensionsToSign = @(".app"),
     [string]$AzureKeyVaultURI,
     [string]$AzureKeyVaultClientID,
     [string]$AzureKeyVaultClientSecret,
@@ -24,6 +25,7 @@ try {
 
     Register-NavSip
 
+    $Files = Get-FilesWithExtensions -PathToFiles $PathToFiles -Extensions $FileExtensionsToSign
     Write-Host "Signing files:"
     $Files | ForEach-Object { 
         Write-Host "- $_" 
@@ -47,3 +49,5 @@ catch {
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
 }
+
+GetFilesWithExtensions -PathToFiles "C:\Users\aholstrup\Documents\Github\aholstrup\AL-Go" -Extensions @(".app")

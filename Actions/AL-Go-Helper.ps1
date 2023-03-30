@@ -2007,3 +2007,12 @@ function Register-NavSip() {
     Write-Host "navsip.dll exists in $navSip64Path : $pathexists"
 
 }
+
+function Get-FilesWithExtensions($PathToFiles, $Extensions) {
+    $Files = Get-ChildItem -Path $PathToFiles -File -Recurse
+    if ((-not $Extensions) -or ($Extensions -contains "*")) {
+        return $Files | Select-Object -ExpandProperty FullName
+    }
+    $FilteredFiles = $Files | Where-Object { $Extensions -contains $_.Extension }
+    return $FilteredFiles | Select-Object -ExpandProperty FullName
+}
