@@ -297,32 +297,27 @@ try {
                 }
                 invoke-git push -u origin $branch
             }
-            Write-Host "Getting childitem $srcPath"
+        
             Get-ChildItem -Path $srcPath -Recurse -File -Force | ForEach-Object {
                 $srcFile = $_.FullName
                 $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
                 $dstFilePath = [System.IO.Path]::GetDirectoryName($dstFile)
-                Write-Host "1"
 
                 if (!(Test-Path $dstFilePath -PathType Container)) {
                     New-Item $dstFilePath -ItemType Directory | Out-Null
                 }
-                Write-Host "2 - $srcFile"
                 $lines = ([string](Get-ContentLF -path $srcFile)).Split("`n")
                 "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
-                    Write-Host "2.5 - $_"
                     if ($_ -eq "actionsRepo") {
                         $useBranch = $config.branch
                     }
                     else {
                         $useBranch = $branch
                     }
-                    Write-Host "3 - $useBranch"
                     $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
                     $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($useBranch)`$3"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
-                Write-Host "4"
                 if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
                     $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)""`$4" }
                 }
@@ -331,8 +326,6 @@ try {
             if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
                 Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
             }
-            
-            Write-Host "5"
             
             invoke-git add .
             invoke-git commit --allow-empty -m 'checkout'
