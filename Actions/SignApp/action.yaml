@@ -1,0 +1,71 @@
+name: PowerShell script
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  azureKeyVaultURI:
+    description: URI of the Azure Key Vault
+    required: true
+  azureKeyVaultClientID:
+    description: The Client ID of the service principal used to access the Azure Key Vault
+    required: true
+  azureKeyVaultClientSecret:
+    description: The Client Secret of the service principal used to access the Azure Key Vault
+    required: true
+  azureKeyVaultTenantID:
+    description: The Tenant ID of the service principal used to access the Azure Key Vault
+    required: true
+  azureKeyVaultCertificateName:
+    description: The name of the certificate in the Azure Key Vault
+    required: true
+  pathToFiles:
+    description: The path to the files to be signed
+    required: true
+  timestampService:
+    description: The URK of the timestamp server
+    required: false
+    default: http://timestamp.digicert.com
+  digestAlgorithm:
+    description: The digest algorithm to use for signing and timestamping
+    required: false
+    default: SHA256
+runs:
+  using: composite
+  steps:
+    - name: Install Azure SignTool
+      run: dotnet tool install --global AzureSignTool
+
+    - name: run
+      shell: ${{ inputs.shell }}
+      runs-on: windows-latest # Code signing must run on a Windows agent for Authenticode signing (dll/exe)
+      id: SignApp
+      env:
+        _azureKeyVaultURI: ${{ inputs.azureKeyVaultURI }}
+        _azureKeyVaultClientID: ${{ inputs.azureKeyVaultClientID }}
+        _azureKeyVaultClientSecret: ${{ inputs.azureKeyVaultClientSecret }}
+        _azureKeyVaultTenantID: ${{ inputs.azureKeyVaultTenantID }}
+        _azureKeyVaultCertificateName: ${{ inputs.azureKeyVaultCertificateName }}
+        _pathToFiles: ${{ inputs.pathToFiles }}
+        _timestampService: ${{ inputs.timestampService }}
+        _digestAlgorithm: ${{ inputs.digestAlgorithm }}
+      run: | 
+        try { 
+          $Files = Get-ChildItem -Path $ENV:_pathToFiles -Filter *.app -Recurse | Select-Object -ExpandProperty FullName
+          ${{ github.action_path }}/SignApp.ps1 -AzureKeyVaultURI "$($ENV:_azureKeyVaultURI)" `
+                                      -AzureKeyVaultClientID "$($ENV:_azureKeyVaultClientID)" `
+                                      -AzureKeyVaultClientSecret "$($ENV:_azureKeyVaultClientSecret)" `
+                                      -AzureKeyVaultTenantID "$($ENV:_azureKeyVaultTenantID)" `
+                                      -AzureKeyVaultCertificateName "$($ENV:_azureKeyVaultCertificateName)" `
+                                      -TimestampService "$($ENV:_timestampService)" `
+                                      -TimestampDigest "$($ENV:_digestAlgorithm)" `
+                                      -FileDigest "$($ENV:_digestAlgorithm)" `
+                                      -Files $Files 
+        } catch { 
+          Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
+        }
+
+branding:
+  icon: terminal
+  color: blue

@@ -1948,3 +1948,58 @@ function GetProject {
     }
     $project
 }
+
+function Get-NavSipFromArtifacts() {
+    $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+    $navSipTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+
+    try {
+        Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox) -includePlatform -basePath $artifactTempFolder | Out-Null
+        Write-Host "Downloaded artifacts to $artifactTempFolder"
+        $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
+        Write-Host "Found navsip at $($navsip.FullName)"
+        New-Item -Path $navSipTempFolder -ItemType Directory -Force -Verbose
+        Copy-Item -Path $navsip.FullName -Destination "$navSipTempFolder/navsip.dll" -Force -Verbose
+        Write-Host "Copied navsip to $navSipTempFolder"
+    } finally {
+        Remove-Item -Path $artifactTempFolder -Recurse -Force
+    }
+    
+    return Join-Path $navSipTempFolder "navsip.dll" -Resolve
+}
+
+function Register-NavSip() {
+    $navsipPath = Get-NavSipFromArtifacts
+    $navSip32Path = "C:\Windows\System32"
+    $navSip32DllPath = "C:\Windows\System32\navsip.dll"
+    $navSip64Path = "C:\Windows\SysWow64"
+    $navSip64DllPath = "C:\Windows\SysWow64\navsip.dll"
+
+    try {
+        Write-Host "Copy $navsipPath to $navSip64Path"
+        Copy-Item -Path $navsipPath -Destination $navSip64Path -Force
+        Write-Host "Registering $navSip64Path"
+        RegSvr32 /s $navSip64DllPath
+    }
+    catch {
+        Write-Host "Failed to copy $navsipPath to $navSip64Path"
+    }
+    
+    try {
+        Write-Host "Copy $navsipPath to $navSip32Path"
+        Copy-Item -Path $navsipPath -Destination $navSip32Path -Force
+        Write-Host "Registering $navSip32Path"
+        RegSvr32 /s $navSip32DllPath
+    }
+    catch {
+        Write-Host "Failed to copy $navsipPath to $navSip32Path"
+    }
+
+    $pathexists = Test-Path $navSip32DllPath
+    Write-Host "navsip.dll exists in $navSip32Path : $pathexists"
+
+    
+    $pathexists = Test-Path $navSip64DllPath
+    Write-Host "navsip.dll exists in $navSip64Path : $pathexists"
+
+}
