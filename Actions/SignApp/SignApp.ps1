@@ -49,5 +49,3 @@ catch {
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
 }
-
-GetFilesWithExtensions -PathToFiles "C:\Users\aholstrup\Documents\Github\aholstrup\AL-Go" -Extensions @(".app")

@@ -67,7 +67,7 @@ runs:
                                       -TimestampDigest "$($ENV:_digestAlgorithm)" `
                                       -FileDigest "$($ENV:_digestAlgorithm)" `
                                       -PathToFiles "$($ENV:_pathToFiles)" `
-                                      -PathToFiles $FileExtensionsToSign
+                                      -FileExtensionsToSign $FileExtensionsToSign
         } catch { 
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
         }

@@ -1954,6 +1954,7 @@ function GetProject {
 }
 
 function Get-NavSipFromArtifacts() {
+    #TODO: It would be nice with a different approach here - This downloads a lot of unnecessary stuff
     $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
     $navSipTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 
