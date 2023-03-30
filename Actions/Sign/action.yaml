@@ -28,7 +28,7 @@ inputs:
     required: false
     default: .app
   timestampService:
-    description: The URK of the timestamp server
+    description: The URI of the timestamp server
     required: false
     default: http://timestamp.digicert.com
   digestAlgorithm:
@@ -40,11 +40,11 @@ runs:
   steps:
     - name: Install Azure SignTool
       shell: ${{ inputs.shell }}
-      run: dotnet tool install --global AzureSignTool
+      run: dotnet tool install --global AzureSignTool --version 4.0.1
 
     - name: run
       shell: ${{ inputs.shell }}
-      id: SignApp
+      id: Sign
       env:
         _azureKeyVaultURI: ${{ inputs.azureKeyVaultURI }}
         _azureKeyVaultClientID: ${{ inputs.azureKeyVaultClientID }}
@@ -58,7 +58,7 @@ runs:
       run: | 
         try { 
           $FileExtensionsToSign = ($ENV:_fileExtensionsToSign -split ',')          
-          ${{ github.action_path }}/SignApp.ps1 -AzureKeyVaultURI "$($ENV:_azureKeyVaultURI)" `
+          ${{ github.action_path }}/Sign.ps1 -AzureKeyVaultURI "$($ENV:_azureKeyVaultURI)" `
                                       -AzureKeyVaultClientID "$($ENV:_azureKeyVaultClientID)" `
                                       -AzureKeyVaultClientSecret "$($ENV:_azureKeyVaultClientSecret)" `
                                       -AzureKeyVaultTenantID "$($ENV:_azureKeyVaultTenantID)" `

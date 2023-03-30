@@ -1,13 +1,23 @@
 param(
-    [String]$PathToFiles,
-    [String[]]$FileExtensionsToSign = @(".app"),
+    [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
     [string]$AzureKeyVaultURI,
+    [Parameter(HelpMessage = "Azure Key Vault Client ID.", Mandatory = $true)]
     [string]$AzureKeyVaultClientID,
+    [Parameter(HelpMessage = "Azure Key Vault Client Secret.", Mandatory = $true)]
     [string]$AzureKeyVaultClientSecret,
+    [Parameter(HelpMessage = "Azure Key Vault Tenant ID.", Mandatory = $true)]
     [string]$AzureKeyVaultTenantID,
+    [Parameter(HelpMessage = "Azure Key Vault Certificate Name.", Mandatory = $true)]
     [string]$AzureKeyVaultCertificateName,
+    [Parameter(HelpMessage = "Path to the folder containing the files to sign.", Mandatory = $true)]
+    [String]$PathToFiles,
+    [Parameter(HelpMessage = "File extensions to sign.", Mandatory = $false)]
+    [String[]]$FileExtensionsToSign = @(".app"),
+    [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
     [string]$TimestampService = "http://timestamp.digicert.com",
+    [Parameter(HelpMessage = "Timestamp digest algorithm.", Mandatory = $false)]
     [string]$TimestampDigest = "sha256",
+    [Parameter(HelpMessage = "File digest algorithm.", Mandatory = $false)]
     [string]$FileDigest = "sha256"
 )
 
