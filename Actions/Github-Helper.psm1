@@ -96,7 +96,7 @@ function InvokeWebRequest {
 function Get-dependencies {
     Param(
         $probingPathsJson,
-        $buildMode,
+        [string] $buildMode = 'Default',
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies")
     )
@@ -109,13 +109,17 @@ function Get-dependencies {
         $buildMode = '';
     }
 
-    $appsMask = "$($buildMode)Apps";
-    $testAppsMask = "$($buildMode)TestApps";
+    $appsMask = @{ mask = "$($buildMode)Apps"; fallback = 'Apps' }
+    $testAppsMask = @{ mask = "$($buildMode)TestApps"; fallback = 'TestApps' }
 
     $downloadedList = @()
+
     $appsMask, $testAppsMask | ForEach-Object {
-        $mask = $_
+        $mask = $_.mask
+        $fallbackMask = $_.fallback
+
         Write-Host "Locating all $mask artifacts from probing paths"
+
         $probingPathsJson | ForEach-Object {
             $dependency = $_
             $projects = $dependency.projects
@@ -127,9 +131,19 @@ function Get-dependencies {
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
                     
                     $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
-                    
+                    $fallbackDownloadName = Join-Path $saveToPath "thisbuild-$project-$($fallbackMask)"
+
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
+                    }
+                    elseif (Test-Path $fallbackDownloadName -PathType Container) {
+                        $folder = Get-Item $fallbackDownloadName
+                    }
+                    else {
+                        $folder = $null
+                    }
+                    
+                    if ($folder) {
                         Get-ChildItem -Path $folder | ForEach-Object {
                             if ($mask -eq $testAppsMask) {
                                 $downloadedList += @("($($_.FullName))")
