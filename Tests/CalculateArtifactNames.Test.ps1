@@ -33,6 +33,8 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -branchName $branchName
         
         $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-CleanApps"
+        $generatedEnvVariables | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-CleanTestApps"
         $generatedEnvVariables | Should -Contain "AppsArtifactsName=ALGOProject-main-CleanApps-22.0.123.0"
         $generatedEnvVariables | Should -Contain "DependenciesArtifactsName=ALGOProject-main-CleanDependencies-22.0.123.0"
         $generatedEnvVariables | Should -Contain "TestAppsArtifactsName=ALGOProject-main-CleanTestApps-22.0.123.0"
@@ -54,6 +56,8 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -branchName $branchName
         
         $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
+        $generatedEnvVariables | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
         $generatedEnvVariables | Should -Contain "AppsArtifactsName=ALGOProject-main-Apps-22.0.123.0"
         $generatedEnvVariables | Should -Contain "DependenciesArtifactsName=ALGOProject-main-Dependencies-22.0.123.0"
         $generatedEnvVariables | Should -Contain "TestAppsArtifactsName=ALGOProject-main-TestApps-22.0.123.0"
@@ -73,6 +77,8 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -branchName $branchName
         
         $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
+        $generatedEnvVariables | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
         $generatedEnvVariables | Should -Contain "AppsArtifactsName=ALGOProject-releases_1.0-Apps-22.0.123.0"
         $generatedEnvVariables | Should -Contain "DependenciesArtifactsName=ALGOProject-releases_1.0-Dependencies-22.0.123.0"
         $generatedEnvVariables | Should -Contain "TestAppsArtifactsName=ALGOProject-releases_1.0-TestApps-22.0.123.0"
@@ -82,6 +88,32 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedEnvVariables | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-22.0.123.0"
     }
 
+    It 'should use the specified suffix if provided' {
+        $buildMode = "Default"
+        $branchName = "releases/1.0"
+        $suffix = "Current"
+        & $scriptPath `
+                -settingsJson $settingsJson `
+                -project $project `
+                -buildMode $buildMode `
+                -branchName $branchName `
+                -suffix $suffix
+
+        # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
+        $currentDate = [DateTime]::UtcNow.ToString('yyyyMMdd')
+        
+        $generatedEnvVariables = Get-Content $env:GITHUB_ENV
+        $generatedEnvVariables | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
+        $generatedEnvVariables | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
+
+        $env:GITHUB_ENV | Should -FileContentMatch "AppsArtifactsName=ALGOProject-releases_1.0-Apps-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "DependenciesArtifactsName=ALGOProject-releases_1.0-Dependencies-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "TestAppsArtifactsName=ALGOProject-releases_1.0-TestApps-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "TestResultsArtifactsName=ALGOProject-releases_1.0-TestResults-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "BcptTestResultsArtifactsName=ALGOProject-releases_1.0-BcptTestResults-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "BuildOutputArtifactsName=ALGOProject-releases_1.0-BuildOutput-Current-$currentDate"
+        $env:GITHUB_ENV | Should -FileContentMatch "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-Current-$currentDate"
+    }
 
     It 'Compile Action' {
         Invoke-Expression $actionScript
@@ -91,6 +123,8 @@ Describe 'CalculateArtifactNames Action Tests' {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
+            "ThisBuildAppsArtifactsName" = "Artifact name for apps being built in the current workflow run"
+            "ThisBuildTestAppsArtifactsName" = "Artifact name for test apps being built in the current workflow run"
             "AppsArtifactsName" = "Artifacts name for Apps"
             "DependenciesArtifactsName" = "Artifacts name for Dependencies"
             "TestAppsArtifactsName" = "Artifacts name for TestApps"
