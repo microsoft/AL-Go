@@ -56,7 +56,7 @@ try {
                 $projectApps = @((Get-ChildItem -Path $artifacts -Filter "$project-$refname-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
                 if (!($projectApps)) {
                     if ($project -ne '*') {
-                        throw "There is no artifacts present in $artifacts matching $project-$refname-Apps-<version>."
+                        throw "There are no artifacts present in $artifacts matching $project-$refname-Apps-<version>."
                     }
                 }
                 $apps += $projectApps
