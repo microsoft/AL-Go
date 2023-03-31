@@ -144,7 +144,7 @@ function Get-dependencies {
                     }
                     
                     if ($folder) {
-                        Get-ChildItem -Path $folder | ForEach-Object {
+                        Get-ChildItem -Path $folder -Filter *.app | ForEach-Object {
                             if ($mask -eq $testAppsMask) {
                                 $downloadedList += @("($($_.FullName))")
                             }
