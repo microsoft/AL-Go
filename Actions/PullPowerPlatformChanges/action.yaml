@@ -49,18 +49,18 @@ runs:
         if: ${{ env.userName != '' }}
         uses: microsoft/powerplatform-actions/who-am-i@v0
         with:
-          environment-url: ${{env.environmentUrl}}
+          environment-url: ${{env.ppEnvironmentUrl}}
           user-name: ${{env.userName}}
           password-secret: ${{env.password}}
 
       - name: Who am I (application ID)
-        if: ${{ env.applicationId != '' }}
+        if: ${{ env.ppApplicationId != '' }}
         uses: microsoft/powerplatform-actions/who-am-i@v0
         with:
-          environment-url: ${{env.environmentUrl}}
+          environment-url: ${{env.ppEnvironmentUrl}}
           tenant-id: ${{env.tenantId}}
-          app-id: ${{env.applicationId}}
-          client-secret: ${{env.clientSecret}}
+          app-id: ${{env.ppApplicationId}}
+          client-secret: ${{env.ppClientSecret}}
 
       - name: Set up new branch for changes
         shell: ${{ inputs.shell }}
@@ -77,18 +77,18 @@ runs:
         with:
           user-name: ${{env.userName}}
           password-secret: ${{env.password}}
-          environment-url: ${{env.environmentUrl}}
+          environment-url: ${{env.ppEnvironmentUrl}}
           solution-name: ${{inputs.solutionName}}
           solution-output-file: ${{env.clonedRepoPath}}/${{inputs.solutionName}}.zip
 
       - name: export-solution action (application ID)
-        if: ${{ env.applicationId != '' }}
+        if: ${{ env.ppApplicationId != '' }}
         uses: microsoft/powerplatform-actions/export-solution@v0
         with:
-          environment-url: ${{env.environmentUrl}}
+          environment-url: ${{env.ppEnvironmentUrl}}
           tenant-id: ${{env.tenantId}}
-          app-id: ${{env.applicationId}}
-          client-secret: ${{env.clientSecret}}
+          app-id: ${{env.ppApplicationId}}
+          client-secret: ${{env.ppClientSecret}}
           solution-name: ${{inputs.solutionName}}
           solution-output-file: ${{env.clonedRepoPath}}/${{inputs.solutionName}}.zip
 

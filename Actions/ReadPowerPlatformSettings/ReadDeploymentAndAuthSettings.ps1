@@ -36,25 +36,29 @@ function Read-AuthContext {
     $authContextObject = ConvertFrom-Json $authContextString
 
     # Check which set of properties is present and assign to local variables accordingly
-    if ($authContextObject.userName -and $authContextObject.password) {
+    if ($authContextObject.UserName -and $authContextObject.Password) {
         Write-Host "Authenticating with user name and password";
         
-        $userName = $authContextObject.userName
+        $userName = $authContextObject.UserName
         Add-Content -Path $env:GITHUB_ENV -Value "userName=$userName"        
-        $password = $authContextObject.password
+        $password = $authContextObject.Password
         Add-Content -Path $env:GITHUB_ENV -Value "password=$password"
+        $tenantId = $authContextObject.TenantID
+        Add-Content -Path $env:GITHUB_ENV -Value "tenantId=$tenantId"
 
-    } elseif ($authContextObject.applicationId -and $authContextObject.clientSecret) {
+    } elseif ($authContextObject.ppApplicationId -and $authContextObject.ppClientSecret) {
         write-host "Authenticating with application ID and client secret";
 
-        $applicationId = $authContextObject.applicationId
-        Add-Content -Path $env:GITHUB_ENV -Value "applicationId=$applicationId"        
-        $clientSecret = $authContextObject.clientSecret
-        Add-Content -Path $env:GITHUB_ENV -Value "clientSecret=$clientSecret"
+        $ppApplicationId = $authContextObject.ppApplicationId
+        Add-Content -Path $env:GITHUB_ENV -Value "ppApplicationId=$ppApplicationId"        
+        $ppClientSecret = $authContextObject.ppClientSecret
+        Add-Content -Path $env:GITHUB_ENV -Value "ppClientSecret=$ppClientSecret"
+        $tenantId = $authContextObject.TenantID
+        Add-Content -Path $env:GITHUB_ENV -Value "tenantId=$tenantId"
 
     } else {
-        Write-Warning "Invalid input: JSON object must contain either 'userName' and 'password' properties or 'applicationId' and 'clientSecret' properties"
-        return;
+        Write-Warning "Invalid input: JSON object must contain either 'userName' and 'password' properties or 'ppApplicationId' and 'ppClientSecret' properties"
+        throw "Invalid input: JSON object must contain either 'userName' and 'password' properties or 'ppApplicationId' and 'ppClientSecret' properties"
     }
 }
 

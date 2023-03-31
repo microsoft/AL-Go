@@ -35,8 +35,8 @@ try {
     $env:GITHUB_TOKEN = $Token
 
     # Commit from the new folder
-    write-host "Committing changes from the new folder $Location\$PowerPlatformSolutionName"
-    CommitFromNewFolder -ServerUrl $serverUrl -CommitMessage "Update solution: $PowerPlatformSolutionName with latest from environment: $EnvironmentName" -Branch $gitHubBranch
+    write-host "Committing changes from the new folder $Location\$PowerPlatformSolutionName to branch $GitHubBranch"
+    CommitFromNewFolder -ServerUrl $serverUrl -CommitMessage "Update solution: $PowerPlatformSolutionName with latest from environment: $EnvironmentName" -Branch $GitHubBranch
     # TODO: Why can we not find the trackTrace function?
     #TrackTrace -telemetryScope $telemetryScope
 }

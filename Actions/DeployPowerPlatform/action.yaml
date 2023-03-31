@@ -42,22 +42,22 @@ runs:
         authSettings: ${{ inputs.authSettings }}
 
     - name: Who am I (username)
-      if: ${{ env.userName != '' }}
+      if: env.userName != ''
       uses: microsoft/powerplatform-actions/who-am-i@v0
       with:
-        environment-url: ${{env.environmentUrl}}
+        environment-url: ${{env.ppEnvironmentUrl}}
         user-name: ${{env.userName}}
         password-secret: ${{env.password}}
 
     - name: Who am I (application ID)
-      if: ${{ env.applicationId != '' }}
+      if: env.ppApplicationId != ''
       uses: microsoft/powerplatform-actions/who-am-i@v0
       with:
-        environment-url: ${{env.environmentUrl}}
+        environment-url: ${{env.ppEnvironmentUrl}}
         tenant-id: ${{env.tenantId}}
-        app-id: ${{env.applicationId}}
-        client-secret: ${{env.clientSecret}}
-
+        app-id: ${{env.ppApplicationId}}
+        client-secret: ${{env.ppClientSecret}}
+ 
     - name: Find Power Platform solution file
       env:
         _artifactPath: ${{inputs.artifactPath}}
@@ -91,28 +91,28 @@ runs:
         solutionFolder: .artifacts/tempPPSolution/source
         outputFolder: .artifacts/tempPPSolution
         outputFileName: ppsolution
-        companyId: ${{ env.bcCompanyId }}
-        environmentName: ${{ env.bcEnvironment }}
+        companyId: ${{ env.companyId }}
+        environmentName: ${{ env.environmentName }}
 
     - name: Publish solution to Power Platform (userName)
-      if: ${{ env.userName != '' }}
+      if: env.userName != ''
       uses: microsoft/powerplatform-actions/import-solution@v0
       with:
         user-name: ${{env.userName}}
         password-secret: ${{env.password}}
-        environment-url: ${{env.environmentUrl}}
+        environment-url: ${{env.ppEnvironmentUrl}}
         solution-file: .artifacts/tempPPSolution/ppsolution.zip
         force-overwrite: true
         publish-changes: true
 
     - name: Publish solution to Power Platform (ApplicationId)
-      if: ${{ env.applicationId != '' }}
+      if: env.ppApplicationId != ''
       uses: microsoft/powerplatform-actions/import-solution@v0
       with:
-        environment-url: ${{env.environmentUrl}}
+        environment-url: ${{env.ppEnvironmentUrl}}
         tenant-id: ${{env.tenantId}}
-        app-id: ${{env.applicationId}}
-        client-secret: ${{env.clientSecret}}
+        app-id: ${{env.ppApplicationId}}
+        client-secret: ${{env.ppClientSecret}}
         solution-file: .artifacts/tempPPSolution/ppsolution.zip
         force-overwrite: true
         publish-changes: true

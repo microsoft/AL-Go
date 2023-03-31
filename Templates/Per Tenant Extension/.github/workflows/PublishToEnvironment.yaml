@@ -92,6 +92,18 @@ jobs:
           envName: ${{ steps.envName.outputs.envName }}
           environment: ${{ steps.envName.outputs.envName }}
 
+      - name: Deploy AL
+        uses: microsoft/AL-Go-Actions/Deploy@main
+        env:
+          AuthContext: ${{ env.authContext }}
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          type: 'Publish'
+          projects: ${{ env.projects }}
+          environmentName: ${{ env.environmentName }}
+          artifacts: ${{ github.event.inputs.appVersion }}
+
       - name: Get Artifacts
         uses: microsoft/AL-Go-Actions/GetArtifacts@main
         with:
@@ -108,18 +120,6 @@ jobs:
           artifactPath: '.artifacts'
           deploySettings: ${{ env.deployTo }} 
           authSettings: ${{ env.authContext }}
-
-      - name: Deploy AL
-        uses: microsoft/AL-Go-Actions/Deploy@main
-        env:
-          AuthContext: ${{ env.authContext }}
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          type: 'Publish'
-          projects: ${{ env.projects }}
-          environmentName: ${{ env.environmentName }}
-          artifacts: ${{ github.event.inputs.appVersion }}
 
   PostProcess:
     if: always()
