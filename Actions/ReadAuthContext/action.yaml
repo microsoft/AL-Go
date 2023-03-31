@@ -1,4 +1,4 @@
-name: Read Power Platform Settings
+name: Parse the Authentication context
 author: Andersg
 inputs:
   shell:

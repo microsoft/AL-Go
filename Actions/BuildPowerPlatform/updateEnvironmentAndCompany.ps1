@@ -29,14 +29,15 @@ function Update-PowerAppSettings {
         Write-Warning "Could not find PowerApps connections file"
         throw "Could not find PowerApps connections file"
     }
-        
+
+    Write-Host "Number of Business Central connections found: "$currentPowerAppSettings.Count
     $newSettings = "$EnvironmentName,$CompanyId"    
     foreach ($currentSetting in $currentPowerAppSettings) {
         if ($currentSetting -eq $newSettings) {
             Write-Host "No changes needed for: "$currentSetting
             continue
         }
-        
+        write-host "Updating PowerApp settings from: $currentSetting to: $newSettings"        
         Update-PowerAppFiles -oldSetting $currentSetting -newSetting $newSettings -solutionFolder $SolutionFolder
     }
 }
@@ -80,6 +81,12 @@ function Get-CurrentPowerAppSettings {
             # Find the Business Central connection node 
             if ($connectorNode.connectionRef.displayName -eq "Dynamics 365 Business Central") {
                 $currentEnvironmentAndCompany = ($connectorNode.datasets | Get-Member -MemberType NoteProperty).Name
+
+                if ($null -eq $currentEnvironmentAndCompany) {
+                    # Connections sections for Power Automate flow does not have a dataset node
+                    # Note: Flows are handled in a different function
+                    continue;
+                }
 
                 if (!$currentsettingsList.Contains($currentEnvironmentAndCompany)) {
                     $currentSettingsList += $currentEnvironmentAndCompany

@@ -20,7 +20,7 @@ Write-Host "Starting GitCloneRepository.ps1 with parameters: $([environment]::Ne
 
 # IMPORTANT: No code that can fail should be outside the try/catch
 try {    
-    $gitHubBranch = " "    
+    $gitHubBranch = ""    
     if ($DirectCommit -eq "false") {
         $gitHubBranch = [System.IO.Path]::GetRandomFileName()
         Write-Host "Creating a new branch: $gitHubBranch"

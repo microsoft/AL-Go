@@ -86,6 +86,7 @@ try {
         }
         New-Item $artifactsFolder -ItemType Directory | Out-Null
         $artifactsFolderCreated = $true
+        write-host "Downloading artifacts from release $($release.tag_name)"
         DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
         DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Dependencies"
         $apps = @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { $_.FullName })

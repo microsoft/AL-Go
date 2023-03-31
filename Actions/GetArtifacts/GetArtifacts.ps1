@@ -61,7 +61,11 @@ try {
     }
     else {
         write-host "Getting artifacts for version: $artifactVersion"
-        New-Item $artifactsFolder -ItemType Directory | Out-Null
+
+        if (!(Test-Path $artifactsFolder)) {
+            New-Item $artifactsFolder -ItemType Directory | Out-Null
+        }
+
         $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $projects -Version $artifactVersion -branch "main")
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $projects -Version $artifactVersion -branch "main")
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "PowerPlatformSolution" -projects $projects -Version $artifactVersion -branch "main")
@@ -93,7 +97,6 @@ try {
         Expand-Archive -Path $downloadedArtifact -DestinationPath $downloadedArtifactFolder
         Remove-Item -Path $downloadedArtifact -Force
     }
-
 }
 catch {
     OutputError -message "Deploy action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
