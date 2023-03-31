@@ -140,7 +140,7 @@ function Get-ProjectsToBuild(
             if ($settings.powerPlatformSolutionFolder) {
                 $projects += @($settings.powerPlatformSolutionFolder)
             }
-            }
+        }
         
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
         
