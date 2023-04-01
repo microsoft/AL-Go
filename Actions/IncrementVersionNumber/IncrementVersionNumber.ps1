@@ -75,15 +75,12 @@ function Update-ALProjects {
         [bool]$addToVersionNumber        
     )
 
-    # TODO: This might be wrong - The value did not appear to be a set in the original version
-    $ALGoSettingsFile = ".AL-Go/settings.json";
-
     # Find all AL projects
     if (!$project) { $project = '*' }
 
     if ($project -ne '.') {
-        $projects = @(Get-ChildItem -Path $repoBaseFolder -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf } | ForEach-Object { $_.FullName.Substring($repoBaseFolder.length + 1) } | Where-Object { $_ -like $project })
-        if ($projects.Count -eq 1) {
+        $projects = @(Get-ChildItem -Path $repoBaseFolder -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName $ALGoSettingsFile) -PathType Leaf } | ForEach-Object { $_.FullName.Substring($repoBaseFolder.length + 1) } | Where-Object { $_ -like $project })
+        if ($projects.Count -eq 0) {
             if ($project -eq '*') {
                 $projects = @( '.' )
             }
