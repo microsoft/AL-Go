@@ -41,26 +41,17 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       id: Sign
-      env:
-        _azureKeyVaultURI: ${{ inputs.azureKeyVaultURI }}
-        _azureKeyVaultClientID: ${{ inputs.azureKeyVaultClientID }}
-        _azureKeyVaultClientSecret: ${{ inputs.azureKeyVaultClientSecret }}
-        _azureKeyVaultTenantID: ${{ inputs.azureKeyVaultTenantID }}
-        _azureKeyVaultCertificateName: ${{ inputs.azureKeyVaultCertificateName }}
-        _pathToFiles: ${{ inputs.pathToFiles }}
-        _timestampService: ${{ inputs.timestampService }}
-        _digestAlgorithm: ${{ inputs.digestAlgorithm }}
       run: | 
         try { 
-          ${{ github.action_path }}/Sign.ps1 -AzureKeyVaultURI "$($ENV:_azureKeyVaultURI)" `
-                                      -AzureKeyVaultClientID "$($ENV:_azureKeyVaultClientID)" `
-                                      -AzureKeyVaultClientSecret "$($ENV:_azureKeyVaultClientSecret)" `
-                                      -AzureKeyVaultTenantID "$($ENV:_azureKeyVaultTenantID)" `
-                                      -AzureKeyVaultCertificateName "$($ENV:_azureKeyVaultCertificateName)" `
-                                      -TimestampService "$($ENV:_timestampService)" `
-                                      -TimestampDigest "$($ENV:_digestAlgorithm)" `
-                                      -FileDigest "$($ENV:_digestAlgorithm)" `
-                                      -PathToFiles "$($ENV:_pathToFiles)"
+          ${{ github.action_path }}/Sign.ps1 -AzureKeyVaultURI "${{ inputs.azureKeyVaultURI }}" `
+                                      -AzureKeyVaultClientID "${{ inputs.azureKeyVaultClientID }}" `
+                                      -AzureKeyVaultClientSecret "${{ inputs.azureKeyVaultClientSecret }}" `
+                                      -AzureKeyVaultTenantID "${{ inputs.azureKeyVaultTenantID }}" `
+                                      -AzureKeyVaultCertificateName "${{ inputs.azureKeyVaultCertificateName }}" `
+                                      -TimestampService "${{ inputs.timestampService }}" `
+                                      -TimestampDigest "${{ inputs.digestAlgorithm }}" `
+                                      -FileDigest "${{ inputs.digestAlgorithm }}" `
+                                      -PathToFiles "${{ inputs.pathToFiles }}"
         } catch { 
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
         }
