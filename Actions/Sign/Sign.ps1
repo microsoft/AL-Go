@@ -11,8 +11,6 @@ param(
     [string]$AzureKeyVaultCertificateName,
     [Parameter(HelpMessage = "Path to the folder containing the files to sign.", Mandatory = $true)]
     [String]$PathToFiles,
-    [Parameter(HelpMessage = "File extensions to sign.", Mandatory = $false)]
-    [String[]]$FileExtensionsToSign = @(".app"),
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
     [string]$TimestampService = "http://timestamp.digicert.com",
     [Parameter(HelpMessage = "Timestamp digest algorithm.", Mandatory = $false)]
@@ -35,7 +33,7 @@ try {
 
     Register-NavSip
 
-    $Files = Get-FilesWithExtensions -PathToFiles $PathToFiles -Extensions $FileExtensionsToSign
+    $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
     $Files | ForEach-Object { 
         Write-Host "- $_" 

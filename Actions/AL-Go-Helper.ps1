@@ -1993,12 +1993,3 @@ function Register-NavSip() {
         }
     }
 }
-
-function Get-FilesWithExtensions($PathToFiles, $Extensions) {
-    $Files = Get-ChildItem -Path $PathToFiles -File -Recurse
-    if ((-not $Extensions) -or ($Extensions -contains "*")) {
-        return $Files | Select-Object -ExpandProperty FullName
-    }
-    $FilteredFiles = $Files | Where-Object { $Extensions -contains $_.Extension }
-    return $FilteredFiles | Select-Object -ExpandProperty FullName
-}
