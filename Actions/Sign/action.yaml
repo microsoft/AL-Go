@@ -20,9 +20,6 @@ inputs:
   azureKeyVaultCertificateName:
     description: The name of the certificate in the Azure Key Vault
     required: true
-  pathToFiles:
-    description: The path to the files to be signed
-    required: true
   timestampService:
     description: The URI of the timestamp server
     required: false
@@ -31,6 +28,13 @@ inputs:
     description: The digest algorithm to use for signing and timestamping
     required: false
     default: SHA256
+  pathToFiles:
+    description: The path to the files to be signed
+    required: true
+  parentTelemetryScopeJson:
+    description: Specifies the parent telemetry scope for the telemetry signal
+    required: false
+    default: '7b7d'
 runs:
   using: composite
   steps:
@@ -51,7 +55,8 @@ runs:
                                       -TimestampService "${{ inputs.timestampService }}" `
                                       -TimestampDigest "${{ inputs.digestAlgorithm }}" `
                                       -FileDigest "${{ inputs.digestAlgorithm }}" `
-                                      -PathToFiles "${{ inputs.pathToFiles }}"
+                                      -PathToFiles "${{ inputs.pathToFiles }}" `
+                                      -ParentTelemetryScopeJson "${{ inputs.parentTelemetryScopeJson }}"
         } catch { 
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
         }

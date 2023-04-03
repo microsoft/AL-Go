@@ -16,7 +16,9 @@ param(
     [Parameter(HelpMessage = "Timestamp digest algorithm.", Mandatory = $false)]
     [string]$TimestampDigest = "sha256",
     [Parameter(HelpMessage = "File digest algorithm.", Mandatory = $false)]
-    [string]$FileDigest = "sha256"
+    [string]$FileDigest = "sha256",
+    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
+    [string] $ParentTelemetryScopeJson = '7b7d'
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +32,7 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE 
+    $telemetryScope = CreateScope -eventId 'DO0083' -parentTelemetryScopeJson $ParentTelemetryScopeJson
 
     Register-NavSip
 
@@ -48,6 +51,8 @@ try {
         --timestamp-rfc3161 "$TimestampService" `
         --timestamp-digest $TimestampDigest `
         $Files
+    
+    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message "Sign action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
