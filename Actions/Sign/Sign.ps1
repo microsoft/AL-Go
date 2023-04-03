@@ -49,7 +49,6 @@ try {
         --azure-key-vault-certificate $AzureKeyVaultCertificateName `
         --timestamp-rfc3161 "$TimestampService" `
         --timestamp-digest $TimestampDigest `
-        --verbose `
         $Files
 }
 catch {
