@@ -732,7 +732,7 @@ function AnalyzeRepo {
             $enumerate = $true
 
             # Check if there are any folders matching $folder
-            if (Get-Item $folder | Where-Object { $_ -is [System.IO.DirectoryInfo] }) {
+            if (!(Get-Item $folder | Where-Object { $_ -is [System.IO.DirectoryInfo] })) {
                 if (!$doNotIssueWarnings) { OutputWarning -message "$descr $folderName, specified in $ALGoSettingsFile, does not exist" }
             }
             elseif (-not (Test-Path $appJsonFile -PathType Leaf)) {
