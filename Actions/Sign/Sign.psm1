@@ -20,15 +20,15 @@ function Get-NavSipFromArtifacts() {
 }
 
 function Register-NavSip() {
-    $navsipPath = Get-NavSipFromArtifacts
     $navSipDestination = "C:\Windows\System32"
-
+    $navSipDllPath = Join-Path $navSipDestination "navsip.dll"
     try {
+        if (-not (Test-Path $navSipDllPath)) {
+            $navsipPath = Get-NavSipFromArtifacts
+            Write-Host "Copy $navsipPath to $navSipDestination"
+            Copy-Item -Path $navsipPath -Destination $navSipDestination -Force
+        }
 
-        Write-Host "Copy $navsipPath to $navSipDestination"
-        Copy-Item -Path $navsipPath -Destination $navSipDestination -Force
-
-        $navSipDllPath = Join-Path $navSipDestination "navsip.dll" -Resolve
         Write-Host "Unregistering dll $navSipDllPath"
         RegSvr32 /u /s $navSipDllPath
         Write-Host "Registering dll $navSipDllPath"
