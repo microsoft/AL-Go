@@ -9,7 +9,7 @@ param(
     [string]$AzureKeyVaultTenantID,
     [Parameter(HelpMessage = "Azure Key Vault Certificate Name.", Mandatory = $true)]
     [string]$AzureKeyVaultCertificateName,
-    [Parameter(HelpMessage = "Path to the folder containing the files to sign.", Mandatory = $true)]
+    [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
     [String]$PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
     [string]$TimestampService = "http://timestamp.digicert.com",
