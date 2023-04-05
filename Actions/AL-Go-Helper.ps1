@@ -1940,7 +1940,8 @@ function GetProject {
         [string] $projectALGoFolder
     )
 
-    $projectFolder = Join-Path $projectALGoFolder ".." -Resolve
+    $projectFolder = Join-Path $projectALGoFolder '..' -Resolve
+    $baseFolder = Join-Path $baseFolder '.' -Resolve
     if ($projectFolder -eq $baseFolder) {
         $project = '.'
     }
