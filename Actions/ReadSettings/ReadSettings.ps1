@@ -139,6 +139,14 @@ try {
             $includeEnvironment
         })
 
+        if (!($environments)) {
+            # If no environments are defined and the user specified a single environment, use that environment
+            # This allows the user to specify a single environment without having to define it in the settings
+            if ($getenvironments -notcontains '*' -and $getenvironments -notcontains '?' -and $getenvironments -notcontains ',') {
+                $environments = @($getenvironments)
+            }
+        }
+
         $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
         $environments | Select-Object -Unique | ForEach-Object { 
             $environmentName = $_.Split(' ')[0]
