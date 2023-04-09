@@ -6,7 +6,7 @@ Param(
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"artifact":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
-    [string] $secretsJson = '{"insiderSasToken":"xxx"}',
+    [string] $secretsJson = '{"insiderSasToken":""}',
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
@@ -27,7 +27,8 @@ try {
     
     #region Action: Determine projects to build
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
-    $insiderSasToken = ConvertFrom-Json -InputObject $secretsJson | Select-Object -ExpandProperty insiderSasToken
+    $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
     $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
     $projectSettings.artifact = $artifactUrl
