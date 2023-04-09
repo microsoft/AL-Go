@@ -324,26 +324,26 @@ try {
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
                 $parameters.missingDependencies | ForEach-Object {
+                    $appid = $_.Split(':')[0]
+                    $appName = $_.Split(':')[1]
+                    $version = $appName.SubString($appName.LastIndexOf('_')+1)
+                    $version = [System.Version]$version.SubString(0,$version.Length-4)
                     $publishParams = @{
+                        "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
+                        "nuGetToken" = $gitHubPackagesCredential.token
+                        "packageName" = "AL-Go-$appId"
+                        "version" = $version
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
                             "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
                         }
                     }
-                    $appid = $_.Split(':')[0]
-                    $appName = $_.Split(':')[1]
-                    $version = $appName.SubString($appName.LastIndexOf('_')+1)
-                    $version = [System.Version]$version.SubString(0,$version.Length-4)
                     if ($parameters.ContainsKey('containerName')) {
-                        $publishParams = @{
-                            "containerName" = $parameters.containerName
-                            "tenant" = $parameters.tenant
-                        }
-                        Publish-BcNuGetPackageToContainer @publishParams -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version -skipVerification
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
                     }
                     else {
-                        Copy-BcNuGetPackageToFolder @publishParams -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version
+                        Copy-BcNuGetPackageToFolder @publishParams
                     }
 
                 }
