@@ -36,7 +36,7 @@ function Determine-ArtifactUrl {
         $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
         $artifactType = ("$artifactUrl////".Split('/')[3])
         $version = ("$artifactUrl////".Split('/')[4])
-        $country = ("$artifactUrl////".Split('/')[5])
+        $country = ("$artifactUrl////".Split('?')[0].Split('/')[5])
         $sasToken = "$($artifactUrl)?".Split('?')[1]
     }
     else {
