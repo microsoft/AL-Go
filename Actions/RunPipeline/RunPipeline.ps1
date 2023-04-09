@@ -81,7 +81,7 @@ try {
 
     $analyzeRepoParams = @{}
     # If UseCompilerFolder is set, set the parameter on Run-AlPipeline
-    if ($settings."useCompilerFolder") {
+    if ($settings.useCompilerFolder) {
         $runAlPipelineParams += @{
             "useCompilerFolder" = $true
         }
@@ -89,7 +89,7 @@ try {
     $gitHubHostedRunner = $settings.gitHubRunner -like "windows-*" -or $repo.gitHubRunner -like "ubuntu-*"
     if ($gitHubHostedRunner) {
         # If we are running GitHub hosted agents and UseCompilerFolder is set, we need to set the artifactCachePath, and avoid checking the artifact setting in AnalyzeRepo
-        if ($settings."useCompilerFolder") {
+        if ($settings.useCompilerFolder) {
             $runAlPipelineParams += @{
                 "artifactCachePath" = Join-Path $ENV:GITHUB_WORKSPACE ".artifactcache"
             }
