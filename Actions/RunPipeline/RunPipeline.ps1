@@ -79,7 +79,27 @@ try {
         Set-Variable -Name $_ -Value $value
     }
 
-    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken
+    $analyzeRepoParams = @{}
+    # If UseCompilerFolder is set, set the parameter on Run-AlPipeline
+    if ($settings."useCompilerFolder") {
+        $runAlPipelineParams += @{
+            "useCompilerFolder" = $true
+        }
+    }
+    $gitHubHostedRunner = $settings.gitHubRunner -like "windows-*" -or $repo.gitHubRunner -like "ubuntu-*"
+    if ($gitHubHostedRunner) {
+        # If we are running GitHub hosted agents and UseCompilerFolder is set, we need to set the artifactCachePath, and avoid checking the artifact setting in AnalyzeRepo
+        if ($settings."useCompilerFolder") {
+            $runAlPipelineParams += @{
+                "artifactCachePath" = Join-Path $ENV:GITHUB_WORKSPACE ".artifactcache"
+            }
+            $analyzeRepoParams += @{
+                "doNotCheckArtifactSetting" = $true
+            }
+        }
+    }
+
+    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
     if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
@@ -199,7 +219,7 @@ try {
     $additionalCountries = $repo.additionalCountries
 
     $imageName = ""
-    if ($repo.gitHubRunner -ne "windows-latest") {
+    if (-not $gitHubHostedRunner) {
         $imageName = $repo.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
@@ -305,19 +325,27 @@ try {
                 Param([Hashtable]$parameters)
                 $parameters.missingDependencies | ForEach-Object {
                     $publishParams = @{
-                        "containerName" = $parameters.containerName
-                        "tenant" = $parameters.tenant
+                    }
+                    if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
+                        $publishParams += @{
+                            "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
+                        }
                     }
                     $appid = $_.Split(':')[0]
                     $appName = $_.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
-                    if ($parameters.Keys -contains 'CopyInstalledAppsToFolder') {
-                        $publishParams += @{
-                            "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
+                    if ($parameters.ContainsKey('containerName')) {
+                        $publishParams = @{
+                            "containerName" = $parameters.containerName
+                            "tenant" = $parameters.tenant
                         }
+                        Publish-BcNuGetPackageToContainer @publishParams -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version -skipVerification
                     }
-                    Publish-BcNuGetPackageToContainer @publishParams -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version -skipVerification
+                    else {
+                        Copy-BcNuGetPackageToFolder @publishParams -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version
+                    }
+
                 }
             }
         }
