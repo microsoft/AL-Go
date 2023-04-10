@@ -80,6 +80,10 @@ function Add-PropertiesToJsonFile {
     )
 
     if ($wait -and $commit) {
+        $headers = @{ 
+            "Accept" = "application/vnd.github.v3+json"
+            "Authorization" = "token $token"
+        }
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
@@ -464,6 +468,10 @@ function MergePRandPull {
     }
 
     Write-Host "Get Previous runs"
+    $headers = @{ 
+        "Accept" = "application/vnd.github.v3+json"
+        "Authorization" = "token $token"
+    }
     $url = "https://api.github.com/repos/$repository/actions/runs"
     $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
