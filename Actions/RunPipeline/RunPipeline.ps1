@@ -86,7 +86,7 @@ try {
             "useCompilerFolder" = $true
         }
     }
-    $gitHubHostedRunner = $settings.gitHubRunner -like "windows-*" -or $repo.gitHubRunner -like "ubuntu-*"
+    $gitHubHostedRunner = $settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*"
     if ($gitHubHostedRunner) {
         # If we are running GitHub hosted agents and UseCompilerFolder is set, we need to set the artifactCachePath, and avoid checking the artifact setting in AnalyzeRepo
         if ($settings.useCompilerFolder) {
