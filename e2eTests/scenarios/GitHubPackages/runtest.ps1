@@ -27,10 +27,11 @@ Write-Host -ForegroundColor Yellow @'
 #    - app3 with dependency to app1 and app2
 #  - Set GitHubPackagesContext secret in repository1
 #  - Run the "CI/CD" workflow in repository1
-#  - Create a new repository (repository2) based on the PTE template with 1 app
+#  - Create a new repository (repository2) based on the PTE template with 1 app (using CompilerFolder)
 #    - app4 with dependency to app1
 #  - Set GitHubPackagesContext secret in repository2
 #  - Create a new repository (repository) based on the PTE template with 1 app
+#    - app5 with dependencies to app4 and app3
 #  - Set GitHubPackagesContext secret in repository
 #  - Wait for "CI/CD" workflow from repository1 to complete
 #  - Check artifacts generated in repository1
@@ -109,6 +110,7 @@ CreateAlGoRepository `
         Param([string] $path)
         $global:id5 = CreateNewAppInFolder -folder $path -name app5 -objID 50005 -dependencies @( @{ "id" = $global:id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $global:id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path '.AL-Go\settings.json') -properties @{ "country" = "dk" }
+        Add-PropertiesToJsonFile -path (Join-Path $path '.github\AL-Go-Settings.json') -properties @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true }
     }
 SetRepositorySecret -repository $repository -name 'GitHubPackagesContext' -value $githubPackagesContextJson
 $repoPath = (Get-Location).Path

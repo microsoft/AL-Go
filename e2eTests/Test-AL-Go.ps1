@@ -109,6 +109,7 @@ $repoPath = (Get-Location).Path
 
 # Set DoNotPublishApps to true until we have test apps and set useCompilerFolder
 # This causes the CI/CD workflow to use FilesOnly containers or CompilerFolder (if UseCompilerFolder is true)
+Pull -branch $branch
 Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $true; "useCompilerFolder" = $useCompilerFolder }
 
 # Add Existing App
@@ -128,6 +129,7 @@ Run-AddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $b
 $runs++
 
 # Set DoNotPublishApps to false to enable test runs
+Pull -branch $branch
 Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $false }
 
 # Merge and run CI/CD + Tests
