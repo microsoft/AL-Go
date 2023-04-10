@@ -502,6 +502,7 @@ function MergePRandPull {
     if ($wait) {
         WaitWorkflow -repository $repository -runid $run.id
     }
+    Write-Host "Merge commit run: $($run.id)"
     $run
     Pull -branch $branch
 }
