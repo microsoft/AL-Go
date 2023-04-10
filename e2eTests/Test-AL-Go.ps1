@@ -106,7 +106,7 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 # Set DoNotPublishApps to true until we have test apps and set useCompilerFolder
 # This causes the CI/CD workflow to use FilesOnly containers or CompilerFolder (if UseCompilerFolder is true)
-CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
+CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "useCompilerFolder" = $useCompilerFolder; "doNotPublishApps" = $useCompilerFolder } `
 
 $repoPath = (Get-Location).Path
 
@@ -130,14 +130,18 @@ $runs++
 MergePRandPull -branch $branch | Out-Null
 $runs++
 
-# Set DoNotPublishApps to false to enable test runs
 # Wait for CI/CD to finish
-Pull -branch $branch
-$run = Add-PropertiesToJsonFile -commit -wait -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $false }
+$run = Run-CICD -wait -branch $branch
 $runs++
 
+if ($useCompilerFolder) { 
+    $expectedNumberOfTests = 0
+}
+else {
+    $expectedNumberOfTests = 1
+}
 Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
-Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
+Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Create Release
 Run-CreateRelease -appVersion "1.0.$($runs-2).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
@@ -171,6 +175,8 @@ Test-PropertiesInJsonFile -jsonFile "$($project2folder)My App\app.json" -propert
 # Create New Test App
 Run-CreateTestApp @project2Param -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
 $runs++
+if ($expectedNumberOfTests) { $expectedNumberOfTests++ }
+
 Pull -branch $branch
 Test-PropertiesInJsonFile -jsonFile "$($project2folder)My TestApp\app.json" -properties @{ "name" = "My TestApp"; "publisher" = "My Publisher"; 'idRanges[0].from' = 58000; "idRanges[0].to" = 59000; 'idRanges.Count' = 1 }
 
@@ -187,10 +193,10 @@ $runs++
 $run = MergePRandPull -branch $branch -wait
 $runs++
 if ($multiProject) {
-    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
 }
 else {
-    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
 }
 Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
@@ -213,7 +219,7 @@ if (Test-Path "$($project1Folder).AL-Go\*.ps1") { throw "Local PowerShell script
 if (Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml") { throw "AddExistingAppOrTestApp.yaml should have been removed" }
 $run = Run-CICD -wait -branch $branch
 $runs++
-Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests 2 -folder 'artifacts3' -repoVersion '3.0' -appVersion '3.0'
+Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts3' -repoVersion '3.0' -appVersion '3.0'
 
 # Update AL-Go System Files
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
