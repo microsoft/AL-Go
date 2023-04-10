@@ -75,9 +75,21 @@ function Add-PropertiesToJsonFile {
     Param(
         [string] $path,
         [hashTable] $properties,
-        [Switch] $commit
+        [switch] $commit,
+        [switch] $wait
     )
 
+    if ($wait -and $commit) {
+        Write-Host "Get Previous runs"
+        $url = "https://api.github.com/repos/$repository/actions/runs"
+        $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+        if ($previousrunids) {
+            Write-Host "Previous runs: $($previousrunids -join ', ')"
+        }
+        else {
+            Write-Host "No previous runs found"
+        }
+    }
     Write-Host -ForegroundColor Yellow "`nAdd Properties to $([System.IO.Path]::GetFileName($path))"
     Write-Host "Properties"
     $properties | Out-Host
@@ -90,6 +102,18 @@ function Add-PropertiesToJsonFile {
 
     if ($commit) {
         CommitAndPush -commitMessage "Add properties to $([System.IO.Path]::GetFileName($path))"
+        if ($wait) {
+            while ($true) {
+                Start-Sleep -Seconds 10
+                $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
+                if ($run) {
+                    break
+                } 
+                Write-Host "Run not started, waiting..."
+            }
+            WaitWorkflow -repository $repository -runid $run.id
+            $run
+        }
     }
 }
 
@@ -431,12 +455,24 @@ function CommitAndPush {
 function MergePRandPull {
     Param(
         [string] $repository,
-        [string] $branch = "main"
+        [string] $branch = "main",
+        [switch] $wait
     )
 
     if (!$repository) {
         $repository = $defaultRepository
     }
+
+    Write-Host "Get Previous runs"
+    $url = "https://api.github.com/repos/$repository/actions/runs"
+    $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+    if ($previousrunids) {
+        Write-Host "Previous runs: $($previousrunids -join ', ')"
+    }
+    else {
+        Write-Host "No previous runs found"
+    }
+
     $phs = @(invoke-gh -returnValue pr list --repo $repository)
     if ($phs.Count -eq 0) {
         throw "No Pull Request was created"
@@ -447,8 +483,19 @@ function MergePRandPull {
     $prid = $phs.Split("`t")[0]
     Write-Host -ForegroundColor Yellow "`nMerge Pull Request $prid into repository $repository"
     invoke-gh pr merge $prid --squash --delete-branch --repo $repository | Out-Host
+    while ($true) {
+        Start-Sleep -Seconds 10
+        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
+        if ($run) {
+            break
+        } 
+        Write-Host "Run not started, waiting..."
+    }
+    if ($wait) {
+        WaitWorkflow -repository $repository -runid $run.id
+    }
+    $run
     Pull -branch $branch
-    Start-Sleep -Seconds 30
 }
 
 function RemoveRepository {

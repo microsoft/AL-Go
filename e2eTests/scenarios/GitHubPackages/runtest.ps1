@@ -105,12 +105,11 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{ "generateDependencyArtifact" = $true } `
+    -addRepoSettings @{ "generateDependencyArtifact" = $true; "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
     -contentScript {
         Param([string] $path)
         $global:id5 = CreateNewAppInFolder -folder $path -name app5 -objID 50005 -dependencies @( @{ "id" = $global:id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $global:id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path '.AL-Go\settings.json') -properties @{ "country" = "dk" }
-        Add-PropertiesToJsonFile -path (Join-Path $path '.github\AL-Go-Settings.json') -properties @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true }
     }
 SetRepositorySecret -repository $repository -name 'GitHubPackagesContext' -value $githubPackagesContextJson
 $repoPath = (Get-Location).Path

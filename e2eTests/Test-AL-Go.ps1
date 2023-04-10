@@ -104,13 +104,11 @@ $runs = 0
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 
 # Create repo
-CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux
-$repoPath = (Get-Location).Path
-
 # Set DoNotPublishApps to true until we have test apps and set useCompilerFolder
 # This causes the CI/CD workflow to use FilesOnly containers or CompilerFolder (if UseCompilerFolder is true)
-Pull -branch $branch
-Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $true; "useCompilerFolder" = $useCompilerFolder.IsPresent }
+CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
+
+$repoPath = (Get-Location).Path
 
 # Add Existing App
 if ($appSourceApp) {
@@ -129,15 +127,13 @@ Run-AddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $b
 $runs++
 
 # Merge and run CI/CD + Tests
-MergePRandPull -branch $branch
+MergePRandPull -branch $branch | Out-Null
 $runs++
 
 # Set DoNotPublishApps to false to enable test runs
+# Wait for CI/CD to finish
 Pull -branch $branch
-Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $false }
-
-# Run CI/CD and wait
-$run = Run-CICD -wait -branch $branch
+$run = Add-PropertiesToJsonFile -commit -wait -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $false }
 $runs++
 
 Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
@@ -188,9 +184,7 @@ if ($adminCenterApiToken -and -not $multiProject) {
 # Increment version number on one project
 Run-IncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
 $runs++
-MergePRandPull -branch $branch
-$runs++
-$run = Run-CICD -wait -branch $branch
+$run = MergePRandPull -branch $branch
 $runs++
 if ($multiProject) {
     Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 2 -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
@@ -226,7 +220,7 @@ $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | Conve
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 Run-UpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
 $runs++
-MergePRandPull -branch $branch
+MergePRandPull -branch $branch | Out-Null
 $runs += 2
 if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scripts in the .AL-Go folder was not updated by Update AL-Go System Files" }
 if (!(Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml")) { throw "AddExistingAppOrTestApp.yaml was not updated by Update AL-Go System Files" }
