@@ -128,13 +128,13 @@ if ($appSourceApp) {
 Run-AddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch | Out-Null
 $runs++
 
-# Set DoNotPublishApps to false to enable test runs
-Pull -branch $branch
-Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $false }
-
 # Merge and run CI/CD + Tests
 MergePRandPull -branch $branch
 $runs++
+
+# Set DoNotPublishApps to false to enable test runs
+Pull -branch $branch
+Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $false }
 
 # Run CI/CD and wait
 $run = Run-CICD -wait -branch $branch
