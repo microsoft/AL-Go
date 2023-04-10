@@ -10,7 +10,8 @@
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private,
-    [switch] $linux
+    [switch] $linux,
+    [switch] $useCompilerFolder
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -106,6 +107,10 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux
 $repoPath = (Get-Location).Path
 
+# Set DoNotPublishApps to true until we have test apps and set useCompilerFolder
+# This causes the CI/CD workflow to use FilesOnly containers or CompilerFolder (if UseCompilerFolder is true)
+Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $true; "useCompilerFolder" = $useCompilerFolder }
+
 # Add Existing App
 if ($appSourceApp) {
     SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
@@ -121,6 +126,11 @@ if ($appSourceApp) {
 # Add Existing Test App
 Run-AddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch | Out-Null
 $runs++
+
+# Set DoNotPublishApps to false to enable test runs
+Add-PropertiesToJsonFile -commit -path ".github\AL-Go-Settings.json" -properties @{ "doNotPublishApps" = $false }
+
+# Merge and run CI/CD + Tests
 MergePRandPull -branch $branch
 $runs++
 
