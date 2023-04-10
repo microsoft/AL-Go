@@ -420,13 +420,12 @@ function Pull {
 
 function CommitAndPush {
     Param(
-        [string] $serverUrl,
         [string] $commitMessage = "commitmessage"
     )
 
     invoke-git add *
     invoke-git commit --allow-empty -m "'$commitMessage'"
-    invoke-git push $serverUrl
+    invoke-git push
 }
 
 function MergePRandPull {
