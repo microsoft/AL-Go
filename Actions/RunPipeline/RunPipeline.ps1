@@ -343,7 +343,7 @@ try {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
                     }
                     else {
-                        Copy-BcNuGetPackageToFolder @publishParams
+                        Copy-BcNuGetPackageToFolder -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
                     }
 
                 }

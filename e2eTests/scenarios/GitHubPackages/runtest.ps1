@@ -91,6 +91,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository2 `
     -branch $branch `
+    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
     -contentScript {
         Param([string] $path)
         $global:id4 = CreateNewAppInFolder -folder $path -name app4 -objID 50004 -dependencies @( @{ "id" = $global:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
@@ -105,7 +106,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{ "generateDependencyArtifact" = $true; "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
+    -addRepoSettings @{ "generateDependencyArtifact" = $true } `
     -contentScript {
         Param([string] $path)
         $global:id5 = CreateNewAppInFolder -folder $path -name app5 -objID 50005 -dependencies @( @{ "id" = $global:id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $global:id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
