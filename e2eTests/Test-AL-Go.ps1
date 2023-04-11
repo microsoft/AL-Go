@@ -135,6 +135,8 @@ $run = Run-CICD -wait -branch $branch
 $runs++
 
 if ($useCompilerFolder) { 
+    # If using compiler folder duing tests, doNotPublishApps is also set to true (for now), which means that apps are not published and tests are not run
+    # Later we will fix this to include test runs as well, but for now, expected number of tests is 0
     $expectedNumberOfTests = 0
 }
 else {
