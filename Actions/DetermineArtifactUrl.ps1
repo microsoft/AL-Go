@@ -15,7 +15,7 @@ function Determine-ArtifactUrl {
         }
     }
 
-    Write-Host "Checking artifact setting for project $project"
+    Write-Host "Checking artifact setting for project"
     if ($artifact -eq "" -and $projectSettings.updateDependencies) {
         $artifact = Get-BCArtifactUrl -country $projectSettings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$projectSettings.applicationDependency } | Select-Object -First 1
         if (-not $artifact) {
