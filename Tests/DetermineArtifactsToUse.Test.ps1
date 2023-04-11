@@ -76,7 +76,6 @@ Describe "DetermineArtifactsToUse" {
             'applicationDependency' = '20.0.0.0'
             'additionalCountries' = @()
         }
-        Write-Host "------------------------------------------------------"
     }
 
     It 'Default Artifact URL' {
