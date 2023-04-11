@@ -45,7 +45,7 @@ runs:
     - name: Register NavSip
       shell: ${{ inputs.shell }}
       run: | 
-        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "Sign.psm1" -Resolve)
+        Import-Module (Join-Path -Path ${{ github.action_path }} -ChildPath "Sign.psm1" -Resolve)
         Register-NavSip
 
     - name: run
