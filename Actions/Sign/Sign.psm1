@@ -1,4 +1,7 @@
 function Get-NavSipFromArtifacts() {
+    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE 
+
     #TODO: It would be nice with a different approach here - This downloads a lot of unnecessary stuff
     $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
     $navSipTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
