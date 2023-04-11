@@ -2,6 +2,12 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### New Settings
+New Project Setting: `UseCompilerFolder`. Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set **doNotPublishApps** to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. 
+
+### New Actions
+- **DetermineArtifactsToUse** is used to determine which artifacts to use for building a project in CI/CD, PullRequestHandler, Current, NextMinor and NextMajor workflows.
+
 ## v3.0
 
 ### **NOTE:** When upgrading to this version
