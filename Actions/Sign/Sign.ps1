@@ -34,14 +34,14 @@ try {
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
     $telemetryScope = CreateScope -eventId 'DO0083' -parentTelemetryScopeJson $ParentTelemetryScopeJson
 
-    Write-Host ":::group::Install AzureSignTool"
+    Write-Host "::group::Install AzureSignTool"
     dotnet tool install --global AzureSignTool --version 4.0.1
-    Write-Host ":::endgroup::"
+    Write-Host "::endgroup::"
 
-    Write-Host ":::group::Register NavSip"
+    Write-Host "::group::Register NavSip"
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "Sign.psm1" -Resolve)
     Register-NavSip
-    Write-Host ":::endgroup::"
+    Write-Host "::endgroup::"
 
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
