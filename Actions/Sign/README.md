@@ -13,8 +13,6 @@ The tenant id used to authenticate to Azure
 The name of the certificate used to perform the signing
 ### pathToFiles
 The path to the files to be signed
-### fileExtensionsToSign
-The file extensions to be signed
 ### timestampService
 The URI of the timestamp server
 ### digestAlgorithm
