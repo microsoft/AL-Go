@@ -1,8 +1,4 @@
 Param(
-    [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
-    [string] $baseFolder,
-    [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
-    [string] $project = ".",
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"artifact":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
@@ -21,11 +17,11 @@ $bcContainerHelperPath = $null
 try {
     #region Action: Setup
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
     #endregion
     
-    #region Action: Determine projects to build
+    #region Action: Determine artifacts to use
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))

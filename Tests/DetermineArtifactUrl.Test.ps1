@@ -1,14 +1,14 @@
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 $bcContainerHelperPath = $null
 
-# Settings, which affects the behavior of DetermineArtifactsToUse
+# Settings, which affects the behavior of DetermineArtifactUrl
 # - artifact - specifies an artifactUrl (or pattern) to use
 # - updateDependencies - when using updateDependencies, the resulting artifacts will be the first artifact higher than the applicationDependency
 # - country - country to use
 # - applicationDependency - specifies the applicationDependency of the app
 # - additionalCountries - additional countries to use (artifact must exist for all)
 
-Describe "DetermineArtifactsToUse" {
+Describe "DetermineArtifactUrl" {
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
