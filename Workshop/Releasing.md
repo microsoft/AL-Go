@@ -72,7 +72,7 @@ The artifacts in the hotfix build looks like this:
 
 where the branch name main has been replaced by the release branch name.
 
-OK, so I got that, versioning and releasing, pretty smart - but what is this project concept?
+OK, so that is clear, versioning and releasing, pretty smart - but what is this project concept?
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](Projects.md)
