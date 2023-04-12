@@ -29,5 +29,7 @@ Obviously, the CI/CD workflow didn't compile anything as you didn't add any sour
 
 Note the three warnings explaining that no apps have been added.
 
+So, let's add an app...
+
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](AddAnApp.md)
