@@ -56,9 +56,14 @@ If we want to increment the version number of the project and all apps, you can 
 | ![image](https://user-images.githubusercontent.com/10775043/231565483-5f92751e-ed59-40c9-ba80-c90effc9a4e3.png) |
 |-|
 
-Specifying +0.1 will add 1 to the minor version of all apps and to the repo version number. Wait for the workflow to complete, select Pull requests and select the new Pull request and inspect what the workflow did for you
+Specifying **+0.1** will add 1 to the minor version of all apps and to the repo version number. Wait for the workflow to complete, select **Pull requests** and select the **Increment Version Number by 0.1** Pull request and inspect what the workflow is trying to change for you. At this time, we will **NOT** merge the Pull request as changing version numbers like this is typically done during a release.
 
 | ![image](https://user-images.githubusercontent.com/10775043/231566085-3fd6ae4a-e88e-4dfd-be60-3ac95767d14a.png) |
 |-|
 
-Click Conversation, Close the pull request and delete the branch.
+Select **Conversation**, click **Close pull request** and **delete the branch**.
+
+Release? Let's try to release the project and create a release branch...
+
+---
+[Index](Index.md)&nbsp;&nbsp;[next](Releasing.md)
