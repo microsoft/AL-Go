@@ -44,13 +44,12 @@ Select **Conversation** and merge the pull request by clicking **Merge the pull 
 
 When the merge commit is **done**, click the workflow line and **scroll down** to see the artifacts created by this build:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231544822-71bf956d-a050-4d18-b429-69fdb08083f9.png)
- |
+| ![image](https://user-images.githubusercontent.com/10775043/231544822-71bf956d-a050-4d18-b429-69fdb08083f9.png) |
 |-|
 
 Note that my artifacts are created with version **1.0.2.0** - that might not be the same in your repository.
 
-Let's talk about versioning...
+Let's talk about versioning and naming...
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](Versioning.md)
