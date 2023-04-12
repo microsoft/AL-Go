@@ -22,4 +22,12 @@ If you click **Actions**, you will also see that a **CI/CD workflow** was kicked
 | ![image](https://user-images.githubusercontent.com/10775043/231398788-6ab2acc2-f235-4f93-9772-f51be1d982a2.png) |
 |-|
 
+Obviously, the CI/CD workflow didn't compile anything as you didn't add any source code. By clicking the workflow in the list, and scrolling down, you should see:
 
+| ![image](https://user-images.githubusercontent.com/10775043/231409580-489edea8-53c2-47a9-9f89-5babfa341c9c.png) |
+|-|
+
+Note the three warnings explaining that no apps have been added.
+
+---
+[Index](Index.md)&nbsp;&nbsp;[next](AddAnApp.md)
