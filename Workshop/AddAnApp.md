@@ -54,5 +54,7 @@ When the merge commit is **done**, click the workflow and **scroll down** to see
 
 Note that my artifacts are created with version **1.0.2.1** - that might not be the same in your repository.
 
+Let's talk about versioning...
+
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](Versioning.md)
