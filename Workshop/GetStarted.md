@@ -1,4 +1,6 @@
 # Get Started
+With our prerequisites in place, it is time to get started and create our first repository.
+
 In a browser, navigate to https://aka.ms/algopte:
 
 | ![image](https://user-images.githubusercontent.com/10775043/231396338-d4703463-89a6-4c6b-a69c-d57a4c581946.png) |
