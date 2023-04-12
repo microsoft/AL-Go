@@ -103,4 +103,4 @@ Open Source apps can be public - other apps should be private
 
 
 ---
-[Index](Index.md)&nbsp;&nbsp;[next](GetStarted.md)
+[Index](Index.md)&nbsp;&nbsp;[next](Prerequisites.md)
