@@ -48,7 +48,7 @@ When the merge commit is **done**, click the workflow line and **scroll down** t
  |
 |-|
 
-Note that my artifacts are created with version **1.0.2.1** - that might not be the same in your repository.
+Note that my artifacts are created with version **1.0.2.0** - that might not be the same in your repository.
 
 Let's talk about versioning...
 
