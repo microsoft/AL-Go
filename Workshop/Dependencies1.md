@@ -66,6 +66,7 @@ Now, modify **DK/.AL-Go/settings.json** and **US/.AL-Go/settings.json** and add 
     }
   ]
 ```
+
 where specifying a **"."** in **repo**, means to use the same repository for the depdency. **Release_status** **include** means that AL-Go will include the source from the dependent project instead of downloading a specific build. **Stage** the changes, **Commit** them and **sync**.
 
 | ![image](https://user-images.githubusercontent.com/10775043/231878939-470d6693-218f-4cad-9cc9-001497ba1bb8.png) |
@@ -81,6 +82,5 @@ If you inspect the log, you will see that it is checking **appDependencyProbingP
 | ![image](https://user-images.githubusercontent.com/10775043/231883087-64921fdc-45c2-4e4d-8e96-7be99432af41.png) |
 |-|
 
-
-
-
+---
+[Index](Index.md)&nbsp;&nbsp;[next](Dependencies1.md)
