@@ -71,3 +71,16 @@ where specifying a **"."** in **repo**, means to use the same repository for the
 | ![image](https://user-images.githubusercontent.com/10775043/231878939-470d6693-218f-4cad-9cc9-001497ba1bb8.png) |
 |-|
 
+The CI/CD workflow is again kicked off and you can see that all builds complete
+
+| ![image](https://user-images.githubusercontent.com/10775043/231880993-89a18260-430d-4b55-b6bf-e30a27c2ee34.png) |
+|-|
+
+If you inspect the log, you will see that it is checking **appDependencyProbingPaths** and adding the **mysolution.w1** folder to the folders, which needs to be build in this job.
+
+| ![image](https://user-images.githubusercontent.com/10775043/231883087-64921fdc-45c2-4e4d-8e96-7be99432af41.png) |
+|-|
+
+
+
+
