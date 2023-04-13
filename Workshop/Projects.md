@@ -111,6 +111,13 @@ Open the repository (do not open the workspace) and perform the following change
 
 **Stage the changes** in **VS Code**, **Commit** the changes and **Sync**.
 
+Now, we can create a release and inspect that. Run the **Create release** workflow and release v1.0 like this:
+
+| ddd
+
+
+
+
 OK - so that's fine, but what if DK and US have a dependency on W1 - or maybe a dependency on other apps?
 
 ---
