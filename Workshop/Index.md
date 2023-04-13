@@ -7,4 +7,5 @@
 5. [Versioning](Versioning.md) - How is AL-Go for GitHub handling versioning of your apps and your artifacts.
 6. [Releasing](Releasing.md) - How to create a release and issue a hotfix.
 7. [Single-project vs. Multi-project](Projects.md) - What is the difference between a single-project and a multi-project repository?
+8. [Dependencies #1](Dependencies1.md) - Dependencies to another project in the same repo
 
