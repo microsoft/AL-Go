@@ -6,5 +6,5 @@
 4. [Add an app](AddAnApp.md) - Add an app to your repository.
 5. [Versioning](Versioning.md) - How is AL-Go for GitHub handling versioning of your apps and your artifacts.
 6. [Releasing](Releasing.md) - How to create a release and issue a hotfix.
-7. 
+7. [Single-project vs. Multi-project](Projects.md) - What is the difference between a single-project and a multi-project repository?
 
