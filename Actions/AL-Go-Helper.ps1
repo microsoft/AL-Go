@@ -5,6 +5,7 @@ Param(
 $gitHubHelperPath = Join-Path $PSScriptRoot 'Github-Helper.psm1'
 if (Test-Path $gitHubHelperPath) {
     Import-Module $gitHubHelperPath
+    # If we are adding more dependencies here, then localDevEnv and cloudDevEnv needs to be updated
 }
 
 $ErrorActionPreference = "stop"
