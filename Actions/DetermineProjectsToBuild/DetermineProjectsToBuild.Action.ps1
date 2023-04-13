@@ -28,7 +28,7 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.ps1" -Resolve)
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     
-    $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
+    $telemetryScope = CreateScope -eventId 'DO0085' -parentTelemetryScopeJson $parentTelemetryScopeJson
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
     #endregion
 
@@ -46,9 +46,12 @@ try {
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
     #endregion
+
+    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
     OutputError -message "DetermineProjectsToBuild action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+    TrackException -telemetryScope $telemetryScope -errorRecord $_
     exit
 }
 finally {

@@ -27,10 +27,11 @@ Write-Host -ForegroundColor Yellow @'
 #    - app3 with dependency to app1 and app2
 #  - Set GitHubPackagesContext secret in repository1
 #  - Run the "CI/CD" workflow in repository1
-#  - Create a new repository (repository2) based on the PTE template with 1 app
+#  - Create a new repository (repository2) based on the PTE template with 1 app (using CompilerFolder)
 #    - app4 with dependency to app1
 #  - Set GitHubPackagesContext secret in repository2
 #  - Create a new repository (repository) based on the PTE template with 1 app
+#    - app5 with dependencies to app4 and app3
 #  - Set GitHubPackagesContext secret in repository
 #  - Wait for "CI/CD" workflow from repository1 to complete
 #  - Check artifacts generated in repository1
@@ -90,6 +91,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository2 `
     -branch $branch `
+    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
     -contentScript {
         Param([string] $path)
         $global:id4 = CreateNewAppInFolder -folder $path -name app4 -objID 50004 -dependencies @( @{ "id" = $global:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )

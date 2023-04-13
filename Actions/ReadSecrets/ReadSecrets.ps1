@@ -78,7 +78,10 @@ try {
                         throw "JSON Secret $secret contains line breaks. JSON Secrets should be compressed JSON (i.e. NOT contain any line breaks)."
                     }
                     $json.Keys | ForEach-Object {
-                        MaskValue -key "$($secret).$($_)" -value $json."$_"
+                        if ($_ -ne 'Scopes' -and $_ -ne 'TenantId') {
+                            # Mask individual values (but not Scopes and TenantId)
+                            MaskValue -key "$($secret).$($_)" -value $json."$_"
+                        }
                     }
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
