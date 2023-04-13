@@ -13,9 +13,6 @@ Describe "DetermineArtifactUrl" {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
-        $scriptPath = Join-Path $PSScriptRoot "../Actions/DetermineArtifactUrl.ps1" -Resolve
-        . $scriptPath
-
         Mock -CommandName Get-BcArtifactUrl -MockWith { Param([string] $storageAccount, [string] $type = 'sandbox', [string] $version, [string] $country = '*', [string] $select = 'Latest', [string] $sasToken = '')
 
             if ($select -eq 'nextmajor') { $storageAccount = 'bcinsider' }
