@@ -124,4 +124,4 @@ After this is done, select **Code** and click the newly created release to see t
 OK - so that's fine, but normally in a solution like this, DK and US have a dependency on W1 or a common app - you don't have all code duplicated 3 times - how does AL-Go handle dependencies?
 
 ---
-[Index](Index.md)&nbsp;&nbsp;[next](Dependencies.md)
+[Index](Index.md)&nbsp;&nbsp;[next](Dependencies1.md)
