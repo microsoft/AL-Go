@@ -42,6 +42,16 @@ Open the latest merge commit and see that the structure of the **CI/CD** workflo
 ![image](https://user-images.githubusercontent.com/10775043/231813913-1685f87a-a822-4830-a1d3-f35f8422bcb0.png)
 |-|
 
+Looking at the artifacts produced by the build, we can see
+
+| ![image](https://user-images.githubusercontent.com/10775043/231855006-a9f69995-200f-433b-8321-c0652289320d.png) |
+|-|
+
+where the **thisbuild** artifacts are shortlived and only used for depending projects to be able to find build artifacts from other jobs.
+
+
+
+
 
 
 
