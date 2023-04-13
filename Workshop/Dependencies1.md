@@ -82,7 +82,7 @@ If you inspect the log, you will see that it is checking **appDependencyProbingP
 | ![image](https://user-images.githubusercontent.com/10775043/231883087-64921fdc-45c2-4e4d-8e96-7be99432af41.png) |
 |-|
 
-**Note** that this means that the **mysolution.w1** will be build 3 times and every project will have their own copy of the same app (with different package IDs that is).
+**Note** that this means that the **mysolution.w1** will be build 3 times and every project will have their own copy of the same app. The apps will be identical, but they will have different package IDs.
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](Dependencies1.md)
