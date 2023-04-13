@@ -111,9 +111,7 @@ Open the repository (do not open the workspace) and perform the following change
 
 **Stage the changes** in **VS Code**, **Commit** the changes and **Sync**.
 
-But... that's not all. 
+OK - so that's fine, but what if DK and US have a dependency on W1 - or maybe a dependency on other apps?
 
-
-
-
-
+---
+[Index](Index.md)&nbsp;&nbsp;[next](Dependencies.md)
