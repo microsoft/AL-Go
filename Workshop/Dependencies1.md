@@ -5,6 +5,7 @@ In general, dependencies between apps in the same repository is handles 100% aut
 
 This topic describes two ways to handle dependencies to apps within another project in the same repository. In the MySolution example from the multi-project sample [here](Projects.md), we could have a dependency from the DK and US apps to the W1 app.
 
+## useProjectDependencies
 Let's go ahead and add the dependencies and see what happens. Grab the **id**, **name**, **publisher** and **version** from **mysolution.w1** app and add a dependency in **mysolution.dk** and **mysolution.us**.
 
 | ![image](https://user-images.githubusercontent.com/10775043/231805415-2e8f345c-f228-4940-9f77-9a05514bd8c0.png) |
@@ -47,13 +48,26 @@ Looking at the artifacts produced by the build, we can see
 | ![image](https://user-images.githubusercontent.com/10775043/231855006-a9f69995-200f-433b-8321-c0652289320d.png) |
 |-|
 
-where the **thisbuild** artifacts are shortlived and only used for depending projects to be able to find build artifacts from other jobs.
+where the **thisbuild** artifacts are shortlived and only used for **depending projects** to be able to find build artifacts from other jobs in the same workflow.
 
+## include
+The other mechanism is to include the dependency projects in the project we are building. This is done by using the project setting **appDependencyProbingPaths**, which specifies where to search for dependencies in general.
 
+If you already tried to setup **useProjectDependencies**, please remove this setting from **.github/AL-Go-Settings.json** and run **Update AL-Go System Files** to get back to a situation, where AL-Go cannot locate the mysolution.w1 dependency.
 
+Now, modify **DK/.AL-Go/settings.json** and **US/.AL-Go/settings.json** and add this property
 
+```
+  "appDependencyProbingPaths": [
+    {
+      "repo": ".",
+      "release_status": "include",
+      "projects": "W1"
+    }
+  ]
+```
+where specifying a **"."** in **repo**, means to use the same repository for the depdency. **Release_status** **include** means that AL-Go will include the source from the dependent project instead of downloading a specific build. **Stage** the changes, **Commit** them and **sync**.
 
-
-
-
+| ![image](https://user-images.githubusercontent.com/10775043/231878939-470d6693-218f-4cad-9cc9-001497ba1bb8.png) |
+|-|
 
