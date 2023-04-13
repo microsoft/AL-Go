@@ -72,7 +72,7 @@ where specifying a **"."** in **repo**, means to use the same repository for the
 | ![image](https://user-images.githubusercontent.com/10775043/231878939-470d6693-218f-4cad-9cc9-001497ba1bb8.png) |
 |-|
 
-The CI/CD workflow is again kicked off and you can see that all builds complete
+The **CI/CD** workflow is again kicked off and you can see that all builds complete
 
 | ![image](https://user-images.githubusercontent.com/10775043/231880993-89a18260-430d-4b55-b6bf-e30a27c2ee34.png) |
 |-|
@@ -81,6 +81,8 @@ If you inspect the log, you will see that it is checking **appDependencyProbingP
 
 | ![image](https://user-images.githubusercontent.com/10775043/231883087-64921fdc-45c2-4e4d-8e96-7be99432af41.png) |
 |-|
+
+**Note** that this means that the **mysolution.w1** will be build 3 times and every project will have their own copy of the same app (with different package IDs that is).
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](Dependencies1.md)
