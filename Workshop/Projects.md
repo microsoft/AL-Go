@@ -113,12 +113,15 @@ Open the repository (do not open the workspace) and perform the following change
 
 Now, we can create a release and inspect that. Run the **Create release** workflow and release v1.0 like this:
 
-| ddd
+| ![image](https://user-images.githubusercontent.com/10775043/231798204-2b7c4689-596b-42a6-ac5b-62093192e595.png) |
+|-|
 
+After this is done, select **Code** and click the newly created release to see the artifacts (which also reveals a bug)
 
+| ![image](https://user-images.githubusercontent.com/10775043/231798973-1ed29f6d-fb08-4b8e-b2f1-efd415b20bf1.png) |
+|-|
 
-
-OK - so that's fine, but what if DK and US have a dependency on W1 - or maybe a dependency on other apps?
+OK - so that's fine, but normally in a solution like this, DK and US have a dependency on W1 or a common app - you don't have all code duplicated 3 times - how does AL-Go handle dependencies?
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](Dependencies.md)
