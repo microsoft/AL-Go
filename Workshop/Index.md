@@ -9,6 +9,7 @@ This workshop...
 6. [Releasing](Releasing.md) - How to create a release and issue a hotfix.
 7. [Single-project vs. Multi-project](Projects.md) - What is the difference between a single-project and a multi-project repository?
 8. [Dependencies #1](Dependencies1.md) - Dependencies to another project in the same repo
+9. [Dependencies #2](Dependencies2.md) - Dependencies to AL-Go projects in other repositories
 
 ## Topics to be added
 - Dependencies to other repositories (NuGet)
