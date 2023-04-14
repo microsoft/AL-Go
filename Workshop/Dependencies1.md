@@ -53,7 +53,7 @@ where the **thisbuild** artifacts are shortlived and only used for **depending p
 ## include
 The other mechanism is to include the dependency projects in the project we are building. This is done by using the project setting **appDependencyProbingPaths**, which specifies where to search for dependencies in general.
 
-If you already tried to setup **useProjectDependencies**, please remove this setting from **.github/AL-Go-Settings.json** and run **Update AL-Go System Files** to get back to a situation, where AL-Go cannot locate the mysolution.w1 dependency.
+If you already tried to setup **useProjectDependencies**, please remove this setting from **.github/AL-Go-Settings.json** and run **Update AL-Go System Files** to get back to a situation, where AL-Go cannot locate the **mysolution.w1** dependency.
 
 Now, modify **DK/.AL-Go/settings.json** and **US/.AL-Go/settings.json** and add this property
 
@@ -85,4 +85,4 @@ If you inspect the log, you will see that it is checking **appDependencyProbingP
 **Note** that this means that the **mysolution.w1** will be build 3 times and every project will have their own copy of the same app. The apps will be identical, but they will have different package IDs.
 
 ---
-[Index](Index.md)&nbsp;&nbsp;[next](Dependencies1.md)
+[Index](Index.md)&nbsp;&nbsp;[next](Dependencies2.md)
