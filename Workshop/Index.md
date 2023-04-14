@@ -18,6 +18,7 @@ This workshop...
 1. [Performance Testing](PerformanceTesting.md) - Add performance tests to your daily test runs.
 1. [Delevelopment Environments](DevelopmentEnvironments.md) - How to setup a development environment for a project.
 1. [The Development Process](TheDevelopmentProcess.md) - The recommended way to work with feature branches, pull requests, code reviews and branch protection rules.
+1. [Keeping your Repository Up-to-date](KeepUpToDate.md) - Updating AL-Go for GitHub to the latest version by running a workflow.
 
 
 
@@ -27,3 +28,5 @@ This workshop...
 - Settings
 - Versioning strategies
 - Power Platform solution
+- Self Hosted Runners
+- Make it your own
