@@ -1,4 +1,5 @@
 # AL-Go for GitHub Workshop
+This workshop...
 
 1. [Introduction](Introduction.md) - Introduction to GitHub, AL-Go for GitHub, personal and organizational accounts.
 2. [Prerequisites](Prerequisites.md) - Setup pre-requisites for the Workshop.
@@ -8,4 +9,19 @@
 6. [Releasing](Releasing.md) - How to create a release and issue a hotfix.
 7. [Single-project vs. Multi-project](Projects.md) - What is the difference between a single-project and a multi-project repository?
 8. [Dependencies #1](Dependencies1.md) - Dependencies to another project in the same repo
+
+## Topics to be added
+- Dependencies to other repositories (NuGet)
+- Adding a Test app
+- Adding a BCPT Test app
+- Development environments
+- Delivery
+  - Storage
+  - NuGet
+  - AppSource
+- Deployment
+  - sandbox
+  - prod
+- AppSource validation
+
 
