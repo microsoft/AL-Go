@@ -23,5 +23,5 @@ This workshop...
   - sandbox
   - prod
 - AppSource validation
-
+- Versioning strategies
 
