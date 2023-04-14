@@ -63,6 +63,8 @@ Specifying **+0.1** will add 1 to the minor version of all apps and to the repo 
 
 Select **Conversation**, click **Close pull request** and **delete the branch**.
 
+It is possible to modify the behavior of versioning (not alter it totally) by adding a setting called **versioningStrategy** in your repository settings file. More about that later.
+
 Release? Let's try to release the project and create a release branch...
 
 ---
