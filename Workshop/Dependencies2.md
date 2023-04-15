@@ -55,7 +55,24 @@ Add a dependency to the **Licensing** app from the **Common** repository, from t
 | ![image](https://user-images.githubusercontent.com/10775043/232206403-bd93b016-3fe5-44fa-8aae-057323735034.png) |
 |-|
 
-Wait for the build to fail.
+And as expected, the builds will fail
+
+| ![image](https://user-images.githubusercontent.com/10775043/232211698-943bdad0-18e8-4163-94b7-3e77a4bad486.png) |
+|-|
+
+In this example using the **include** mechanism, but also when using **useProjectDependencies**.
+Now modify the **W1/.AL-Go/settings.json** and add an **appDependencyProbingPath** to the common repo:
+
+| ![image](https://user-images.githubusercontent.com/10775043/232215466-427851f0-0b94-417e-b5e5-858bb62a12e9.png) |
+|-|
+
+Inspecting the build after this, will reveal that the W1 project succeeds and the DK and US projects fail. The reason for this is that we are using the **include** mechanism, which includes the source of W1 in DK and US, but it doesn't add the appDependencyProbingPaths from W1.
+
+
+
+
+
+
 
 
 
