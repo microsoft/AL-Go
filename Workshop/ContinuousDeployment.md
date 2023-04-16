@@ -39,7 +39,7 @@ Now, select **Actions** and select the **CI/CD** workflow and click **Run workfl
 Note that you need to update the AuthContext secret every 90 days for now.
 
 ## Using S2S
-For using S2S, you need to do some preparation first. Follow [this](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication) description to setup an AAD App and register it inside your Business Central environment.
+For using **S2S**, you need to do some preparation first. Follow [this](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication) description to setup an **AAD App** and register it inside your **Business Central environment**.
 
 Other than that, you can then create an Authentication context secret by using this PowerShell line from a machine with the BcContainerHelper module installed:
 
@@ -47,11 +47,11 @@ Other than that, you can then create an Authentication context secret by using t
 New-BcAuthContext -clientID $clientID -clientSecret $clientSecret -tenantID $tenantID | New-ALGoAuthContext | Set-Clipboard
 ```
 
-Paste the secret into the AuthContext secret under the environment and you should be good to go.
+Paste the value into the **AuthContext** secret under the environment and you should be good to go.
 
-**Note** environments are only supported in paid SKUs og GitHub or for public repositories. It is possible to define environments in settings as well and use repository or organizational secrets for authenticating to you environment, but this is not part of this workshop.
+**Note** environments are only supported in **paid SKUs** of GitHub or for **public repositories**. It is possible to define environments in settings as well and use repository or organizational secrets for authenticating to you environment, but this is not part of this workshop.
 
-Now you might think, if this only supports sandbox environments, how do you then publish to production (you might think)?
+Now you might think, if this only supports sandbox environments, how do you then publish to production?
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](PublishToProduction.md)
