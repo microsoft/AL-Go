@@ -6,7 +6,7 @@ You will need:
    - Free should be enough to follow the workshop
 1. A GitHub organizational account
    - Free should be enough to follow the workshop
-1. An organization secret called GHTOKENWORKFLOW
+1. An organizational secret called GHTOKENWORKFLOW
    - Containing a personal access token with permissions to modify workflows.
    - The secret should be available to all public repositories (you cannot have organizational secret accessible for private repos in Free GitHub)
 1. An organizational variable called ALGOORGSETTINGS
