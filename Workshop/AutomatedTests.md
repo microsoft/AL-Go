@@ -22,9 +22,23 @@ So, navigate to your single-project repository, locate the .github/AL-Go-Setting
 | ![image](https://user-images.githubusercontent.com/10775043/232327081-6c6f7be3-fa18-41d2-98b3-ff540a953125.png) |
 |-|
 
-Now select **Actions** and locate the **Create a new test app** action and click **Run workflow**.
+Now select **Actions** and locate the **Create a new test app** action and click **Run workflow** and use the following parameters:
+
+| Name | Value |
+| :-- | :-- |
+| Project name | `.` |
+| Name | `app1.test` |
+| Publisher | `<your publisher name>` |
+| ID Range (from..to) | `70000..99999` |
+| Include Sample Code | `Y` |
+| Direct COMMIT | `N` |
 
 | ![image](https://user-images.githubusercontent.com/10775043/232327235-bd4350f7-d05f-423b-a69b-0b0c226180b3.png) |
+|-|
+
+Inspect and **merge** the pull request. Now completion of the merge pull request **will be much slower than before**, as the GitHub hosted runners needs to download the Business Central Generic image and the artifacts every single time. When the workflow is done, you should see that below the artifacts produced by the **CI/CD** workflow, there is a summary field with the test results.
+
+| ![image](https://user-images.githubusercontent.com/10775043/232337935-f20f3e8b-94a7-42cf-a97a-37ce09f9a479.png) |
 |-|
 
 
