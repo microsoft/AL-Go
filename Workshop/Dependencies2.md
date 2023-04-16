@@ -8,7 +8,9 @@ So, let's setup a single-project common repository like this. Navigate to https:
 | ![image](https://user-images.githubusercontent.com/10775043/232203510-095f1f0d-e407-413d-9e17-7a3e3e43b821.png) |
 |-|
 
-And create 2 apps within the repository using the **Create a new app** workflow called **Common** and **Licensing**, using the following parameters:
+Run Update **AL-Go System Files** with **microsoft/AL-Go-PTE@preview** as the template URL and **Y** in Direct COMMIT.
+
+When upgrade is done, create 2 apps within the repository using the **Create a new app** workflow called **Common** and **Licensing**, using the following parameters:
 
 | Name | Value |
 | :-- | :-- |
@@ -55,44 +57,79 @@ Add a dependency to the **Licensing** app from the **Common** repository, from t
 | ![image](https://user-images.githubusercontent.com/10775043/232206403-bd93b016-3fe5-44fa-8aae-057323735034.png) |
 |-|
 
-And as expected, the builds will fail
+And as expected, the builds will fail.
 
 | ![image](https://user-images.githubusercontent.com/10775043/232211698-943bdad0-18e8-4163-94b7-3e77a4bad486.png) |
 |-|
 
-In this example using the **include** mechanism, but also when using **useProjectDependencies**.
-Now modify the **W1/.AL-Go/settings.json** and add an **appDependencyProbingPath** to the common repo:
+In this example using the **include** mechanism, but builds would also fail when using **useProjectDependencies**.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232215466-427851f0-0b94-417e-b5e5-858bb62a12e9.png) |
+In this workshop, I will describe two ways to to make this work.
+
+## Using appDependencyProbingPaths
+
+Now your organization variable ALGoOrgSettings, and add:
+
+```
+    "appDependencyProbingPaths": [
+        {
+            "repo": "freddydkorg/Common",
+            "release_status": "latestBuild"
+        }
+    ]
+```
+
+| ![image](https://user-images.githubusercontent.com/10775043/232247041-b9e20016-b734-4a39-9f87-e28a7af9d354.png) |
 |-|
 
-Inspecting the build after this, will reveal that the W1 project succeeds and the DK and US projects fail. The reason for this is that we are using the **include** mechanism, which includes the source of W1 in DK and US, but it doesn't add the appDependencyProbingPaths from W1.
+This setting means that all repositories in this organization will download the **latest build** from **freddydkorg/Common** and a subsequent build will succeed.
 
+| ![image](https://user-images.githubusercontent.com/10775043/232249808-bed9cb0c-e73d-422e-a629-1373dc128c13.png) |
+|-|
 
+If we had added the**appDependencyProbingPaths** only to the **W1** project, then the **W1** project would **succeed** and the **DK** and **US** projects **fail**. The reason for this is that we are using the **include** mechanism, which includes the source of **W1** in **DK** and **US**, but it doesn't add the **appDependencyProbingPaths** from **W1**.
 
+## Using GitHub Packages
 
+If you already added appDependencyProbingPaths, then please remove these settings before continuing, making your build fail again.
 
+In order to use GitHub Packages for dependency resolution, we need to create an organizational secret called **GitHubPackagesContext**. The format of this secret needs to be **compressed JSON** containing two values: **serverUrl** and **token**. Example:
+```
+{"token":"ghp_XXXX","serverUrl":"https://nuget.pkg.github.com/freddydkorg/index.json"}
+```
 
+Where **ghp_XXX** should be replaced by your **personal access token** with permissions to **Packages** and **freddydkorg** should be replaced by your **organization name**.
 
+You can also use BcContainerHelper and the function **New-ALGoNuGetContext** to create a JSON structure in the right format.
 
+Go to your organization settings and create an **organizational secret** called **GitHubPackagesContext** with the value above.
 
-### Add dependency from mysolution.w1 to licensing
+| ![image](https://user-images.githubusercontent.com/10775043/232253023-7131dba1-1be1-4cac-8786-27715899200b.png) |
+|-|
 
-### cannot build
+Now, navigate to your **Common** repository and run the **CI/CD** Workflow. Inspect the workflow summary after completion:
 
-### Add appDependencyProbingPaths to AlGoOrgSettings
+| ![image](https://user-images.githubusercontent.com/10775043/232253742-7728e4a2-587e-40fa-a547-4c95ba4e9951.png) |
+|-|
 
+Notice the **Deliver to GitHub Packages** job, by creating the **GitHubPackagesContext** secret, you have enabled Continuous Delivery to GitHub Packages.
 
-### add GitHubPackagesContext to secrets
+Now, navigate to your organization and select **Packages** and you will see GitHub Packages created for the two apps in **Common**.
 
-### run CI/CD in common
+| ![image](https://user-images.githubusercontent.com/10775043/232253790-7aee6c91-a858-4dd9-b85c-5f22a67394b5.png) |
+|-|
 
-### run CI/CD in mysolution - magic
+Next, navigate to your **MySolution** repository and run the **CI/CD** workflow and magically, all dependencies are now also resolved.
 
+| ![image](https://user-images.githubusercontent.com/10775043/232286871-845f02ea-a59a-46e8-b720-5ff1d6927ffe.png) |
+|-|
 
-There is more to dependencies later, but let's investigate what actually happened when you adding the GitHubPackagesContext secret?
+And GitHub Packages have been published for the 3 apps in MySolution as well
 
-You enabled continuous delivery - let's have a look at continuous delivery...
+| ![image](https://user-images.githubusercontent.com/10775043/232286814-4d4572f3-fa14-460e-84ba-f18fa071860f.png) |
+|-|
+
+Continuous Delivery is not only GitHub Packages. Let's have a look at continuous delivery...
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](ContinuousDelivery.md)
