@@ -24,7 +24,7 @@ In order to setup **continuous delivery** to a **storage account**, you need to 
 | ![image](https://user-images.githubusercontent.com/10775043/232289028-e73c8395-b39d-49d7-9e5b-52eb8e8c8db4.png) |
 |-|
 
-and when running CI/CD afterwards, you will see that continuous delivery is now setup for a storage account as well
+and when running **CI/CD** afterwards, you will see that continuous delivery is now setup for a storage account as well
 
 | ![image](https://user-images.githubusercontent.com/10775043/232289443-9109d260-8009-470f-950a-b8960ab2a44e.png) |
 |-|
@@ -35,7 +35,7 @@ Continuous delivery to **AppSource** is supported by the AppSource template and 
 ## Custom delivery
 Custom delivery will be handled in an advanced part of this workshop later.
 
-OK, so CD stands for Continuous Delivery, I thought it was Continuous Deployment? Well, it is both, so let's talk about Continuous Deployment...
+OK, so **CD** stands for **Continuous Delivery**, I thought it was **Continuous Deployment**? Well, it is both, so let's talk about **Continuous Deployment**...
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](ContinuousDeployment.md)
