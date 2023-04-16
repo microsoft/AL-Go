@@ -14,11 +14,11 @@ This workshop...
 1. [Continuous Deployment](ContinuousDeployment.md) - Setup AL-Go for GitHub to deploy your apps to a Business Central environment.
 1. [Publish to Production](PublishToProduction.md) - Publish your apps to a production environment securely.
 1. [Automated Tests](AutomatedTests.md) - Add automated testing to your project.
+1. [Scheduled test runs](ScheduledTestRuns.md) - Testing your app against the latest (and future Business Central versions) daily or weekly.
 
 
 
 ## Future topics
-1. [Scheduled test runs](ScheduledTestRuns.md) - Testing your app against the latest (and future Business Central versions) daily or weekly.
 1. [Performance Testing](PerformanceTesting.md) - Add performance tests to your daily test runs.
 1. [Delevelopment Environments](DevelopmentEnvironments.md) - How to setup a development environment for a project.
 1. [The Development Process](TheDevelopmentProcess.md) - The recommended way to work with feature branches, pull requests, code reviews and branch protection rules.
