@@ -18,7 +18,7 @@ Publish to the production environment by running the workflow and specifying whi
 Note that the default version is current - meaning it will use the **current release**. If you want to just use the latest build, you need to use **latest**.
 
 
-But... - you don't do this without running automated tests...
+But... - would you do that without running automated tests?
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](AutomatedTests.md)
