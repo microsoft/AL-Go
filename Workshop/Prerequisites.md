@@ -25,5 +25,7 @@ Later in the workshop, when we want to run tests, we will need to create a conta
 
 **Note** that we are working on making this piece much faster and utilize different ways to run tests in containers, ACIs, VMs or other environments.
 
+With this... - let's get started!
+
 ---
 [index](index.md)&nbsp;&nbsp;[next](GetStarted.md)
