@@ -28,4 +28,4 @@ Later in the workshop, when we want to run tests, we will need to create a conta
 With this... - let's get started!
 
 ---
-[index](index.md)&nbsp;&nbsp;[next](GetStarted.md)
+[index](Index.md)&nbsp;&nbsp;[next](GetStarted.md)
