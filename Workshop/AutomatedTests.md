@@ -41,13 +41,11 @@ Inspect and **merge** the pull request. Now completion of the merge pull request
 | ![image](https://user-images.githubusercontent.com/10775043/232337935-f20f3e8b-94a7-42cf-a97a-37ce09f9a479.png) |
 |-|
 
+As already mentioned, running complete builds with full tests does take more time than containerless compiling. We are working on improving this.
 
+Our recommendation is that you run your full test suite during CI/CD, but it is possible with AL-Go for GitHub, to not run the tests during CI/CD and then postpone them to a nightly test run using a scheduled run of the Test Current workflow.
 
-
-
-
-
-Running tests every time you change your code is nice, but what about running your tests with latest or future versions of Business Central?
+So, let's see what it takes to setup scheduled runs for running the tests with latest or future versions of Business Central?
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](ScheduledTestRuns.md)
