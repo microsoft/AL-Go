@@ -1,6 +1,6 @@
 # Keeping your AL-Go repository up-to-date
 
-TODO: This topic will be finalized later
+This topic will be finalized later
 
 
 ---

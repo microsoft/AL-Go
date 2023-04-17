@@ -1,6 +1,6 @@
 # The Development Process
 
-TODO: This topic will be finalized later
+This topic will be finalized later
 
 
 ---
