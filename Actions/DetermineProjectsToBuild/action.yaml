@@ -29,10 +29,13 @@ runs:
     - name: Determine Projects to Build
       shell: ${{ inputs.shell }}
       id: determineProjectsToBuild
-      run: try { 
+      env:
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _maxBuildDepth: ${{ inputs.maxBuildDepth }}
+      run: |
+        try { 
           $changedFiles = ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}
-
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth ${{ inputs.maxBuildDepth }} -parentTelemetryScopeJson ${{ inputs.parentTelemetryScopeJson }} 
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson
         } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
