@@ -96,7 +96,6 @@ function InvokeWebRequest {
 function Get-dependencies {
     Param(
         $probingPathsJson,
-        [string] $buildMode = 'Default',
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies")
     )
@@ -105,21 +104,10 @@ function Get-dependencies {
         New-Item $saveToPath -ItemType Directory | Out-Null
     }
 
-    if($buildMode -eq "Default") {
-        $buildMode = '';
-    }
-
-    $appsMask = @{ mask = "$($buildMode)Apps"; fallback = 'Apps' }
-    $testAppsMask = @{ mask = "$($buildMode)TestApps"; fallback = 'TestApps' }
-
     $downloadedList = @()
-
-    $appsMask, $testAppsMask | ForEach-Object {
-        $mask = $_.mask
-        $fallbackMask = $_.fallback
-
+    'Apps','TestApps' | ForEach-Object {
+        $mask = $_
         Write-Host "Locating all $mask artifacts from probing paths"
-
         $probingPathsJson | ForEach-Object {
             $dependency = $_
             $projects = $dependency.projects
@@ -131,21 +119,11 @@ function Get-dependencies {
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
                     
                     $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
-                    $fallbackDownloadName = Join-Path $saveToPath "thisbuild-$project-$($fallbackMask)"
-
+                    
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
-                    }
-                    elseif (Test-Path $fallbackDownloadName -PathType Container) {
-                        $folder = Get-Item $fallbackDownloadName
-                    }
-                    else {
-                        $folder = $null
-                    }
-                    
-                    if ($folder) {
-                        Get-ChildItem -Path $folder -Filter *.app | ForEach-Object {
-                            if ($mask -eq $testAppsMask) {
+                        Get-ChildItem -Path $folder | ForEach-Object {
+                            if ($mask -eq 'TestApps') {
                                 $downloadedList += @("($($_.FullName))")
                             }
                             else {
@@ -154,7 +132,7 @@ function Get-dependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -ne $testAppsMask) {
+                    elseif ($mask -ne 'TestApps') {
                         Write-Host "$_ not built, downloading from artifacts"
                         $missingProjects += @($_)
                     }
@@ -173,7 +151,7 @@ function Get-dependencies {
                     $artifacts | ForEach-Object {
                         $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $_
                         if ($download) {
-                            if ($mask -eq $testAppsMask) {
+                            if ($mask -eq 'TestApps') {
                                 $downloadedList += @("($download)")
                             }
                             else {
@@ -208,7 +186,7 @@ function Get-dependencies {
 
                 $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
                 if ($download) {
-                    if ($mask -eq $testAppsMask) {
+                    if ($mask -eq 'TestApps') {
                         $downloadedList += @("($download)")
                     }
                     else {
