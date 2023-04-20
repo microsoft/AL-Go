@@ -13,7 +13,7 @@ Navigate to your single-project repository (**repo1**), select **Settings** and 
 | ![image](https://user-images.githubusercontent.com/10775043/232294280-cc92b21b-f5ae-4381-b63b-e05b72159486.png) |
 |-|
 
-In the environment configuratoin screen, Click **Add secret** under **environment secrets**. Create a secret called AUTHCONTEXT and use one of two mechanisms to create the auth context value.
+In the environment configuration screen, Click **Add secret** under **environment secrets**. Create a secret called AUTHCONTEXT and use one of the two mechanisms described below to create the auth context value:
 
 ## Using Impersonation
 Easiest way to create an authentication context with impersonation for AL-Go for GitHub is to use the following PowerShell line from a machine with the BcContainerHelper module installed:
@@ -24,9 +24,9 @@ New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext | set-Clipboard
 
 This command will display the well-known device login text: To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code XXXXXXX to authenticate.
 
-Complete the login with a Business Central user, which has access to deploy applications in the environment setup for continuous deployment.
+Complete the login with a Business Central user, which has access to deploy applications in the environment setup for continuous deployment. This will generate an Aothorization context for the environment and Copy it automatically to your clipboard.
 
-Paste the secret into the new secret field and click **Add secret**.
+Return to the "Add Secret" dialog from the environment configuration screen, paste the secret into the "Value" field, and click **Add secret**.
 
 | ![image](https://user-images.githubusercontent.com/10775043/232296180-7ef20c2c-6a2a-4127-b524-7646512994e2.png) |
 |-|
@@ -39,17 +39,17 @@ Now, select **Actions** and select the **CI/CD** workflow and click **Run workfl
 Note that you need to update the AuthContext secret every 90 days for now.
 
 ## Using S2S
-For using **S2S**, you need to do some preparation first. Follow [this](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication) description to setup an **AAD App** and register it inside your **Business Central environment**.
+For using **S2S**, you need to do some preparation first. Follow [this](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication) description to setup an **AAD App** and register it inside the **Business Central environment** you want to deploy to.
 
-Other than that, you can then create an Authentication context secret by using this PowerShell line from a machine with the BcContainerHelper module installed:
+Once this is done, you can then create an Authentication context secret by using this PowerShell line from a machine with the BcContainerHelper module installed:
 
 ```
 New-BcAuthContext -clientID $clientID -clientSecret $clientSecret -tenantID $tenantID | New-ALGoAuthContext | Set-Clipboard
 ```
 
-Paste the value into the **AuthContext** secret under the environment and you should be good to go.
+Paste the value from the clipboard into the "Value" field of the **AuthContext** secret for the environment and you should be good to go.
 
-**Note** environments are only supported in **paid SKUs** of GitHub or for **public repositories**. It is possible to define environments in settings as well and use repository or organizational secrets for authenticating to you environment, but this is not part of this workshop.
+**Note** The Environments tab in repository **Settings** is only supported in **paid SKUs** of GitHub or for **public repositories**. It is possible to use repository or organizational secrets for authenticating to environments defined in **Settings**, as an alternative to using environment secrets as we have done here, but this is not part of this workshop.
 
 Now you might think, if this only supports sandbox environments, how do you then publish to production?
 
