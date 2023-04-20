@@ -1,0 +1,30 @@
+name: Fetch Project dependencies
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  project:
+    description: Project for which to fetch dependencies
+    required: true
+  buildMode:
+    description: Project for which to fetch dependencies
+    required: true
+  dependencyProjects:
+    description: Projects that are current project's dependencies
+outputs:
+  FetchedArtifacts: 
+    description: An array of artifacts that were fetched
+    value: ${{ steps.FetchDependencies.outputs.FetchedArtifacts }}
+runs:
+  using: composite
+  steps:
+    - name: Fetch project dependencies
+      shell: ${{ inputs.shell }}
+      id: FetchDependencies
+      run: 
+        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -dependencyProjects ${{ dependencyProjects }} -buildMode ${{ inputs.buildMode }}
+branding:
+  icon: terminal
+  color: blue
