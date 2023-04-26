@@ -64,7 +64,7 @@ try {
     # if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
 
     # Get Repo settings as a hashtable
-    $repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName ''
+    $repoSettings = [hashtable](ReadSettings -project '' -workflowName '' -userName '' -branchName '')
     $unusedALGoSystemFiles = @()
     if ($repoSettings.Keys -contains "unusedALGoSystemFiles") {
         $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
@@ -225,15 +225,12 @@ try {
                     # - Pull Request Handler workflow for security reasons
                     if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler") {
                         if ($repoSettings.Keys -contains "runs-on") {
-                            $runson = $repoSettings."runs-on"
-                            $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $runson ]")
-                            if ($runson -like 'ubuntu-*' -and $repoSettings.Keys -notcontains "shell") {
-                                # Default shell for Ubuntu (Linux) is pwsh
-                                $repoSettings.shell = "pwsh"
-                            }
+                            Write-Host "Setting runs-on to [ $($repoSettings."runs-on") ]"
+                            $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $($repoSettings."runs-on") ]")
                         }
                         if ($repoSettings.Keys -contains "shell") {
-                            $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings."shell")")
+                            Write-Host "Setting shell to $($repoSettings.shell)"
+                            $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings.shell)")
                         }
                     }
 
