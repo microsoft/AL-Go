@@ -191,7 +191,7 @@ jobs:
               repo: context.repo.repo,
               tag_name: '${{ github.event.inputs.tag }}',
               name: '${{ github.event.inputs.name }}',
-              body: bodyMD.replaceAll('\\n','\n'),
+              body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
               draft: ${{ github.event.inputs.draft=='Y' }},
               prerelease: ${{ github.event.inputs.prerelease=='Y' }},
               make_latest: 'legacy',
