@@ -75,7 +75,9 @@ try {
 }
 catch {
     OutputError -message "WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    TrackException -telemetryScope $telemetryScope -errorRecord $_
+    if ($bcContainerHelperPath) {
+        TrackException -telemetryScope $telemetryScope -errorRecord $_
+    }
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

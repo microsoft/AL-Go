@@ -64,13 +64,7 @@ try {
     # if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
 
     # Get Repo settings as a hashtable
-    $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
-    if (Test-Path $RepoSettingsFile) {
-        $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-    }
-    else {
-        $repoSettings = @{}
-    }
+    $repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName ''
     $unusedALGoSystemFiles = @()
     if ($repoSettings.Keys -contains "unusedALGoSystemFiles") {
         $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
