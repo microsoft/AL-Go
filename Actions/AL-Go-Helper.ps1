@@ -1636,11 +1636,17 @@ function CreateDevEnv {
             if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
         }
 
+        $sharedFolder = ""
+        if ($project) {
+            $sharedFolder = $baseFolder
+        }
+
         Run-AlPipeline @runAlPipelineParams `
             -pipelinename $workflowName `
             -imageName "" `
             -memoryLimit $repo.memoryLimit `
             -baseFolder $projectFolder `
+            -sharedFolder $sharedFolder `
             -licenseFile $licenseFileUrl `
             -installApps $installApps `
             -installTestApps $installTestApps `
