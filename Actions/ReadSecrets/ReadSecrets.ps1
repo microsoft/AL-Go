@@ -47,7 +47,7 @@ try {
         }
     }
     [System.Collections.ArrayList]$secretsCollection = @()
-    $secrets.Split(',') | ForEach-Object {
+    $secrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
         $secretNameProperty = "$($secret)SecretName"
         if ($settings.Keys -contains $secretNameProperty) {
