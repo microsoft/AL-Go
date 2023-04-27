@@ -35,7 +35,7 @@ Describe "WorkflowInitialize Action Tests" {
                 [string]$project1Settings
             )
 
-            $tempDir = Join-Path $ENV:TEMP ([GUID]::NewGuid().ToString())
+            $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
             New-Item -Path $tempDir -ItemType Directory | Out-Null
             try {
                 $githubFolder = Join-Path $tempDir '.github'
