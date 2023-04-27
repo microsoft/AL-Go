@@ -495,7 +495,7 @@ function ReadSettings {
         "appDependencyProbingPaths"              = @()
         "useProjectDependencies"                 = $false
         "runs-on"                                = "windows-latest"
-        "shell"                                  = "powershell"
+        "shell"                                  = ""
         "githubRunner"                           = ""
         "githubRunnerShell"                      = ""
         "cacheImageName"                         = "my"
@@ -584,12 +584,22 @@ function ReadSettings {
     # runs-on is used for all jobs except for the build job (basically all jobs which doesn't need a container)
     # gitHubRunner is used for the build job (or basically all jobs that needs a container)
     #
+    # shell defaults to "powershell" unless runs-on is Ubuntu (Linux), then it defaults to pwsh
+    #
     # gitHubRunner defaults to "runs-on", unless runs-on is Ubuntu (Linux) as this won't work.
     # gitHubRunnerShell defaults to "shell"
     #
     # The exception for keeping gitHubRunner to Windows-Latest (when set to Ubuntu-*) will be removed when all jobs supports Ubuntu (Linux)
     # At some point in the future (likely version 3.0), we will switch to Ubuntu (Linux) as default for "runs-on"
     #
+    if ($settings.shell -eq "") {
+        if ($settings."runs-on" -like "ubuntu-*") {
+            $settings.shell = "pwsh"
+        }
+        else {
+            $settings.shell = "powershell"
+        }
+    }
     if ($settings.githubRunner -eq "") {
         if ($settings."runs-on" -like "ubuntu-*") {
             $settings.githubRunner = "windows-latest"
