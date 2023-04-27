@@ -17,34 +17,69 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
+Write-Host "Increment Version Number"
 
-# IMPORTANT: No code that can fail should be outside the try/catch
-
-try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
-    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
-    $repoBaseFolder = (Get-Location).path
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
-
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
+function Update-PowerPlatformSolutionVersion {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$newVersion,
+        [Parameter(Mandatory = $true)]
+        [string]$versionInput,
+        [Parameter(Mandatory = $true)]
+        [bool]$addToVersionNumber
+    )
     
-    $addToVersionNumber = "$versionnumber".StartsWith('+')
-    if ($addToVersionNumber) {
-        $versionnumber = $versionnumber.Substring(1)
-    }
-    try {
-        $newVersion = [System.Version]"$($versionnumber).0.0"
-    }
-    catch {
-        throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
+    write-host "Updating Power Platform solution version"
+    $files = Get-ChildItem -Recurse -File
+    if ($files.Count -eq 0) {
+        Write-Host "Power Platform solution not found"
+        return $false
     }
 
+    foreach ($file in $files) {
+        if ($file.Name -eq "solution.xml" -and $file.Directory.Name -eq "other") {
+            $xml = [xml](Get-Content $file.FullName)
+            
+            if ($addToVersionNumber) {
+                # Find version increments
+                $versionInputParts = $versionInput.Split(".")
+                $majorIncrement = $versionInputParts[0]
+                $minorIncrement = $versionInputParts[1]
+                
+                # Increment version
+                $versionParts = $xml.SelectNodes("//Version")[0].InnerText.Split(".")
+                $versionParts[0] = [int]$versionParts[0] + [int]$majorIncrement
+                $versionParts[1] = [int]$versionParts[1] + [int]$minorIncrement
+                
+                $newVersion = [string]::Join(".", $versionParts)
+            }
+            
+            Write-Host "Updating $($file.FullName) with new version $newVersion"
+            $xml.SelectNodes("//Version")[0].InnerText = $newVersion    
+            $xml.Save($file.FullName)
+        }
+    }
+
+    return $true
+}
+
+function Update-ALProjects {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$repoBaseFolder,
+        [Parameter(Mandatory = $false)]
+        [string]$project = '*',
+        [Parameter(Mandatory = $false)]
+        [System.Version]$newVersion,
+        [Parameter(Mandatory = $true)]
+        [bool]$addToVersionNumber        
+    )
+
+    # Find all AL projects
     if (!$project) { $project = '*' }
 
     if ($project -ne '.') {
-        $projects = @(Get-ChildItem -Path $repoBaseFolder -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf } | ForEach-Object { $_.FullName.Substring($repoBaseFolder.length+1) } | Where-Object { $_ -like $project })
+        $projects = @(Get-ChildItem -Path $repoBaseFolder -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName $ALGoSettingsFile) -PathType Leaf } | ForEach-Object { $_.FullName.Substring($repoBaseFolder.length + 1) } | Where-Object { $_ -like $project })
         if ($projects.Count -eq 0) {
             if ($project -eq '*') {
                 $projects = @( '.' )
@@ -53,11 +88,16 @@ try {
                 throw "Project folder $project not found"
             }
         }
+        elseif ($projects.Count -eq 0) {
+            Write-Host "No AL projects found"
+            return $false;
+        }
     }
     else {
         $projects = @( '.' )
     }
 
+    # Update version number for all AL projects
     $projects | ForEach-Object {
         $project = $_
         try {
@@ -82,7 +122,6 @@ try {
                 Add-Member -InputObject $settingsJson -NotePropertyName "repoVersion" -NotePropertyValue "$($repoVersion.Major).$($repoVersion.Minor)" | Out-Null
             }
             $useRepoVersion = (($settingsJson.PSObject.Properties.Name -eq "versioningStrategy") -and (($settingsJson.versioningStrategy -band 16) -eq 16))
-            $settingsJson
             $settingsJson | Set-JsonContentLF -path "$project\$ALGoSettingsFile"
         }
         catch {
@@ -91,7 +130,9 @@ try {
 
         $folders = @('appFolders', 'testFolders' | ForEach-Object { if ($SettingsJson.PSObject.Properties.Name -eq $_) { $settingsJson."$_" } })
         if (-not ($folders)) {
-            $folders = Get-ChildItem -Path $project | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.Name }
+            $folders = Get-ChildItem -Path $project | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } |
+
+            ForEach-Object { $_.Name }
         }
         $folders | ForEach-Object {
             Write-Host "Modifying app.json in folder $project\$_"
@@ -118,6 +159,49 @@ try {
             }
         }
     }
+    # Return true to indicate that we have updated the version number
+    return $true
+}
+
+
+# IMPORTANT: No code that can fail should be outside the try/catch
+try {
+    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    
+    # Set up git branch and clone repository
+    $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
+    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $repoBaseFolder = (Get-Location).path
+
+    # Set up container and telemetry helper
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+
+    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
+    
+    # Calculate new version number
+    $addToVersionNumber = "$versionnumber".StartsWith('+')
+    if ($addToVersionNumber) {
+        $versionnumber = $versionnumber.Substring(1)
+    }
+    try {
+        $newVersion = [System.Version]"$($versionnumber).0.0"
+    }
+    catch {
+        throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
+    }
+
+    # Update version number for all Power Platform solutions
+    $hasUpdatedPPVerion = Update-PowerPlatformSolutionVersion -newVersion $newVersion -versionInput $versionnumber -addToVersionNumber $addToVersionNumber
+
+    # Update version number for all AL projects
+    $hasUpdateAlProjects = Update-ALProjects -repoBaseFolder $repoBaseFolder -newVersion $newVersion -addToVersionNumber $addToVersionNumber -project $project
+
+    if (!$hasUpdatedPPVerion -and !$hasUpdateAlProjects) {
+        throw "No Power Platform solutions or AL projects found in repository."
+    }   
+
+    # Commit changes to branch
     if ($addToVersionNumber) {
         CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Increment Version number by $($newVersion.Major).$($newVersion.Minor)" -branch $branch
     }
