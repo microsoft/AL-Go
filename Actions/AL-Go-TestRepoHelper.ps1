@@ -113,10 +113,8 @@ function Test-ALGoRepository {
     Write-Host "BaseFolder: $baseFolder"
 
     # Test .json files are formatted correctly
+    # Get-ChildItem needs -force to include folders starting with . (e.x. .github / .AL-Go) on Linux
     Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse -Force | ForEach-Object {
-        Write-Host $_.FullName
-        Write-Host $_.Directory.Name
-
         if ($_.Directory.Name -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
             Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
