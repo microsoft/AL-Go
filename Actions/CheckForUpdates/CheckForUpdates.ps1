@@ -136,6 +136,11 @@ try {
     # $removeFiles will hold an array of files, which needs to be removed
     $removeFiles = @()
 
+    Write-Host "Projects found: $($projects.Count)"
+    $projects | ForEach-Object {
+        Write-Host "- $_"
+    }
+
     # If useProjectDependencies is true, we need to calculate the dependency depth for all projects
     # Dependency depth determines how many build jobs we need to run sequentially
     # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
