@@ -530,7 +530,7 @@ function RemoveRepository {
             Write-Host -ForegroundColor Red "Error removing packages"
             Write-Host -ForegroundColor Red $_.Exception.Message
         }
-        invoke-gh repo delete $repository --confirm | Out-Host
+        invoke-gh repo delete $repository --yes | Out-Host
     }
 
     if ($path) {
