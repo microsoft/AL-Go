@@ -90,7 +90,7 @@ function Test-JsonFile {
         [string] $type
     )
 
-    $settingsFile = $jsonFile.Substring($baseFolder.Length)
+    $settingsFile = $jsonFile.Substring($baseFolder.Length+1)
     Write-Host "Checking AL-Go $type settings file in $settingsFile (type = $type)"
 
     Test-JsonStr -org -jsonStr (Get-Content -Path $jsonFile -Raw -Encoding UTF8) -settingsDescription $settingsFile -type $type
@@ -114,6 +114,9 @@ function Test-ALGoRepository {
 
     # Test .json files are formatted correctly
     Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse | ForEach-Object {
+        
+        Write-Host $_.Directory.Name
+
         if ($_.Directory.Name -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
             Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
