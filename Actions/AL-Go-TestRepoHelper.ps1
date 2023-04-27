@@ -113,7 +113,7 @@ function Test-ALGoRepository {
     Write-Host "BaseFolder: $baseFolder"
 
     # Test .json files are formatted correctly
-    Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse | ForEach-Object {
+    Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse -Force | ForEach-Object {
         Write-Host $_.FullName
         Write-Host $_.Directory.Name
 
