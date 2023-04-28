@@ -215,6 +215,21 @@ jobs:
           settingsJson: ${{ env.Settings }}
           secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,storageContext,gitHubPackagesContext'
 
+      - name: Test 
+        run: |
+          $KeyvaultUriSecretName = "${{ env.codesignKeyvaultUriSecretName }}"
+          $KeyvaultClientIdSecretName = "${{ env.codesignKeyvaultClientIdSecretName }}"
+          $KeyvaultClientSecretSecretName = "${{ env.codesignKeyvaultClientSecretSecretName }}"
+          $KeyvaultTenantIdSecretName = "${{ env.codesignKeyvaultTenantIdSecretName }}"
+          $KeyvaultCertificateSecretName = "${{ env.codesignKeyvaultCertificateSecretName }}"
+
+
+          Write-Host "KeyvaultUriSecretName=$KeyvaultUriSecretName"
+          Write-Host "KeyvaultClientIdSecretName=$KeyvaultClientIdSecretName"
+          Write-Host "KeyvaultClientSecretSecretName=$KeyvaultClientSecretSecretName"
+          Write-Host "KeyvaultTenantIdSecretName=$KeyvaultTenantIdSecretName"
+          Write-Host "KeyvaultCertificateSecretName=$KeyvaultCertificateSecretName"
+
       - name: Determine ArtifactUrl
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
         id: determineArtifactUrl
@@ -246,17 +261,16 @@ jobs:
           buildMode: ${{ matrix.buildMode }}
       
       - name: Sign
+        if: env.doNotSignApps == 'False' && env.codesignKeyvaultCertificateSecretName != ''
         id: sign
-        uses: microsoft/AL-Go-Actions/Sign@preview
-        env:
-          clientSecretName: KEY_VAULT_CLIENT_SECRET
+        uses: microsoft/AL-Go-Actions/Sign@main
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
-          azureKeyVaultURI: ${{ secrets.KEY_VAULT_URL }}
-          azureKeyVaultClientID: ${{ secrets.KEY_VAULT_CLIENT_ID }}
-          azureKeyVaultClientSecret: ${{ secrets[env.KEY_VAULT_CLIENT_SECRET] }}
-          azureKeyVaultTenantID: ${{ secrets.KEY_VAULT_TENANT_ID }}
-          azureKeyVaultCertificateName: ${{ secrets.KEY_VAULT_CERTIFICATE_NAME }}
+          azureKeyVaultURI: ${{ secrets[format('{0}', env.codesignKeyvaultUriSecretName)] }}
+          azureKeyVaultClientID: ${{ secrets[format('{0}', env.codesignKeyvaultClientIdSecretName)] }}
+          azureKeyVaultClientSecret: ${{ secrets[format('{0}', env.codesignKeyvaultClientSecretSecretName)] }}
+          azureKeyVaultTenantID: ${{ secrets[format('{0}', env.codesignKeyvaultTenantIdSecretName)] }}
+          azureKeyVaultCertificateName: ${{ secrets[format('{0}', env.codesignKeyvaultCertificateSecretName)] }}
           pathToFiles: '${{ matrix.project }}/.buildartifacts/Apps/*.app'
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
