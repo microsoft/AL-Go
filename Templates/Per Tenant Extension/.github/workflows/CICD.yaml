@@ -215,21 +215,6 @@ jobs:
           settingsJson: ${{ env.Settings }}
           secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,storageContext,gitHubPackagesContext'
 
-      - name: Test 
-        run: |
-          $KeyvaultUriSecretName = "${{ env.codesignKeyvaultUriSecretName }}"
-          $KeyvaultClientIdSecretName = "${{ env.codesignKeyvaultClientIdSecretName }}"
-          $KeyvaultClientSecretSecretName = "${{ env.codesignKeyvaultClientSecretSecretName }}"
-          $KeyvaultTenantIdSecretName = "${{ env.codesignKeyvaultTenantIdSecretName }}"
-          $KeyvaultCertificateSecretName = "${{ env.codesignKeyvaultCertificateSecretName }}"
-
-
-          Write-Host "KeyvaultUriSecretName=$KeyvaultUriSecretName"
-          Write-Host "KeyvaultClientIdSecretName=$KeyvaultClientIdSecretName"
-          Write-Host "KeyvaultClientSecretSecretName=$KeyvaultClientSecretSecretName"
-          Write-Host "KeyvaultTenantIdSecretName=$KeyvaultTenantIdSecretName"
-          Write-Host "KeyvaultCertificateSecretName=$KeyvaultCertificateSecretName"
-
       - name: Determine ArtifactUrl
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
         id: determineArtifactUrl
