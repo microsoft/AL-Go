@@ -246,16 +246,16 @@ jobs:
           buildMode: ${{ matrix.buildMode }}
       
       - name: Sign
-        if: env.doNotSignApps == 'False' && env.codesignKeyvaultCertificateSecretName != ''
+        if: env.doNotSignApps == 'False' && env.codeSignCertificateSecretName != ''
         id: sign
         uses: microsoft/AL-Go-Actions/Sign@main
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           azureKeyVaultURI: ${{ secrets[format('{0}', env.codesignKeyvaultUriSecretName)] }}
-          azureKeyVaultClientID: ${{ secrets[format('{0}', env.codesignKeyvaultClientIdSecretName)] }}
-          azureKeyVaultClientSecret: ${{ secrets[format('{0}', env.codesignKeyvaultClientSecretSecretName)] }}
-          azureKeyVaultTenantID: ${{ secrets[format('{0}', env.codesignKeyvaultTenantIdSecretName)] }}
-          azureKeyVaultCertificateName: ${{ secrets[format('{0}', env.codesignKeyvaultCertificateSecretName)] }}
+          azureKeyVaultClientID: ${{ secrets[format('{0}', env.codeSignClientIdSecretName)] }}
+          azureKeyVaultClientSecret: ${{ secrets[format('{0}', env.codeSignClientSecretSecretName)] }}
+          azureKeyVaultTenantID: ${{ secrets[format('{0}', env.codeSignTenantIdSecretName)] }}
+          azureKeyVaultCertificateName: ${{ secrets[format('{0}', env.codeSignCertificateSecretName)] }}
           pathToFiles: '${{ matrix.project }}/.buildartifacts/Apps/*.app'
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
