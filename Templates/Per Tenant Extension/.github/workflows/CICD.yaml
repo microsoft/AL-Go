@@ -248,11 +248,13 @@ jobs:
       - name: Sign
         id: sign
         uses: microsoft/AL-Go-Actions/Sign@preview
+        env:
+          clientSecretName: KEY_VAULT_CLIENT_SECRET
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           azureKeyVaultURI: ${{ secrets.KEY_VAULT_URL }}
           azureKeyVaultClientID: ${{ secrets.KEY_VAULT_CLIENT_ID }}
-          azureKeyVaultClientSecret: ${{ secrets.KEY_VAULT_CLIENT_SECRET }}
+          azureKeyVaultClientSecret: ${{ secrets[env.KEY_VAULT_CLIENT_SECRET] }}
           azureKeyVaultTenantID: ${{ secrets.KEY_VAULT_TENANT_ID }}
           azureKeyVaultCertificateName: ${{ secrets.KEY_VAULT_CERTIFICATE_NAME }}
           pathToFiles: '${{ matrix.project }}/.buildartifacts/Apps/*.app'
