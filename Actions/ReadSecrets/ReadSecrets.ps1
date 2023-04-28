@@ -50,12 +50,8 @@ try {
     $secrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
         $secretNameProperty = "$($secret)SecretName"
-        Write-Host "Reading secret $secretNameProperty"
         if ($settings.Keys -contains $secretNameProperty) {
-            $secretName = "$($settings).$($secretNameProperty)"
-            #Write-Host "Setting env:$secretNameProperty = $secretName"
-            #Add-Content -Path $env:GITHUB_ENV -Value "$secretNameProperty=$secretName"
-            $secret = "$($secret)=$($secretName)"
+            $secret = "$($secret)=$($settings."$secretNameProperty")"
         }
         $secretsCollection += $secret
     }
