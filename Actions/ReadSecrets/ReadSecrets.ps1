@@ -52,9 +52,10 @@ try {
         $secretNameProperty = "$($secret)SecretName"
         Write-Host "Reading secret $secretNameProperty"
         if ($settings.Keys -contains $secretNameProperty) {
-            Write-Host "$secretNameProperty - $($settings."$secretNameProperty")"
-            Add-Content -Path $env:GITHUB_ENV -Value "$secretNameProperty=$($settings."$secretNameProperty")"
-            $secret = "$($secret)=$($settings."$secretNameProperty")"
+            $secretName = "$($settings).$($secretNameProperty)"
+            #Write-Host "Setting env:$secretNameProperty = $secretName"
+            #Add-Content -Path $env:GITHUB_ENV -Value "$secretNameProperty=$secretName"
+            $secret = "$($secret)=$($secretName)"
         }
         $secretsCollection += $secret
     }
