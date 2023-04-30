@@ -106,7 +106,7 @@ function ConvertTo-HashTable() {
     elseif ($object -is [PSCustomObject]) {
         $object.PSObject.Properties | ForEach-Object {
             if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $_.Value -is [PSCustomObject])) {
-                $ht[$_.Name] = ConvertTo-HashTable $_.Value
+                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
             }
             else {
                 $ht[$_.Name] = $_.Value
