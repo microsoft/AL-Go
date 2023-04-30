@@ -948,7 +948,7 @@ function AnalyzeRepo {
                     Write-Host "Using token as AuthTokenSecret"
                 }
                 else {
-                    Write-Host "No token available, will attempt to invoke gh auth status --show-token to get access to repository"
+                    Write-Host "No token available, will attempt to invoke gh auth token to get access to repository"
                 }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
             }
@@ -1386,15 +1386,15 @@ function CreateDevEnv {
                             if ($secret) { $_.authTokenSecret = $secret.SecretValue | Get-PlainText }
                         }
                         else {
-                            Write-Host "Not using Azure KeyVault, attempting to retrieve an auth token using gh auth status"
+                            Write-Host "Not using Azure KeyVault, attempting to retrieve an auth token using gh auth token"
                             $retry = $true
                             while ($retry) {
                                 try {
-                                    $_.authTokenSecret = (invoke-gh -silent -returnValue auth token)
+                                    $_.authTokenSecret = invoke-gh -silent -returnValue auth token
                                     $retry = $false
                                 }
                                 catch {
-                                    Write-Host -ForegroundColor Red "Error trying to retrieve GitHub token."
+                                    Write-Host -ForegroundColor Red "Error trying to retrieve GitHub token (are you authenticated in GitHub CLI?)"
                                     Write-Host -ForegroundColor Red $_.Exception.Message
                                     Read-Host "Press ENTER to retry operation (or Ctrl+C to cancel)"
                                 }
