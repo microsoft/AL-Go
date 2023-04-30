@@ -1390,8 +1390,7 @@ function CreateDevEnv {
                             $retry = $true
                             while ($retry) {
                                 try {
-                                    $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-                                    $_.authTokenSecret = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
+                                    $_.authTokenSecret = (invoke-gh -silent -returnValue auth token)
                                     $retry = $false
                                 }
                                 catch {
