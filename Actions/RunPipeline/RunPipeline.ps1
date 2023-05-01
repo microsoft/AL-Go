@@ -169,7 +169,6 @@ try {
     # Analyze InstallApps and InstallTestApps before launching pipeline
 
     # Check if insidersastoken is used (and defined)
-    Write-Host "Code sign certificate secret name: $($repo.codeSignCertificateSecretName)"
     if (!$repo.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$repo.codeSignCertificateSecretName) {
         OutputWarning -message "Using the legacy CodeSignCertificateUrl and CodeSignCertificatePassword parameters. Consider using the new Azure Keyvault signing instead."
         $runAlPipelineParams += @{ 
