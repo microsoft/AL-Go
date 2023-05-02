@@ -71,6 +71,7 @@ try {
                 throw
             }
             Write-Host "Signing files with AzureSignTool failed. Retrying..."
+        }
     }
     
     TrackTrace -telemetryScope $telemetryScope
