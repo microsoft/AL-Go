@@ -358,6 +358,7 @@ try {
     "installTestFramework",
     "installTestLibraries",
     "installPerformanceToolkit",
+    "vsixFile",
     "enableCodeCop",
     "enableAppSourceCop",
     "enablePerTenantExtensionCop",

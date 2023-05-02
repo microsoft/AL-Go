@@ -489,6 +489,7 @@ function ReadSettings {
         "failOn"                                 = "error"
         "treatTestFailuresAsWarnings"            = $false
         "rulesetFile"                            = ""
+        "vsixFile"                               = ""
         "assignPremiumPlan"                      = $false
         "enableTaskScheduler"                    = $false
         "doNotBuildTests"                        = $false
@@ -1650,6 +1651,7 @@ function CreateDevEnv {
         "installTestFramework",
         "installTestLibraries",
         "installPerformanceToolkit",
+        "vsixFile",
         "enableCodeCop",
         "enableAppSourceCop",
         "enablePerTenantExtensionCop",
