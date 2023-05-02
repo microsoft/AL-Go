@@ -49,15 +49,29 @@ try {
         Write-Host "- $_" 
     }
 
-    AzureSignTool sign --file-digest $FileDigest `
-        --azure-key-vault-url $AzureKeyVaultURI `
-        --azure-key-vault-client-id $AzureKeyVaultClientID `
-        --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
-        --azure-key-vault-client-secret $AzureKeyVaultClientSecret `
-        --azure-key-vault-certificate $AzureKeyVaultCertificateName `
-        --timestamp-rfc3161 "$TimestampService" `
-        --timestamp-digest $TimestampDigest `
-        $Files
+    # Testing retries
+    $maxTries = 3
+    While($maxTries -gt 0){
+        try {
+            $maxTries--
+            Write-Host "Signing files with AzureSignTool"
+            AzureSignTool sign --file-digest $FileDigest `
+                --azure-key-vault-url $AzureKeyVaultURI `
+                --azure-key-vault-client-id $AzureKeyVaultClientID `
+                --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
+                --azure-key-vault-client-secret $AzureKeyVaultClientSecret `
+                --azure-key-vault-certificate $AzureKeyVaultCertificateName `
+                --timestamp-rfc3161 "$TimestampService" `
+                --timestamp-digest $TimestampDigest `
+                $Files
+            break
+        }
+        catch {
+            if($maxTries -eq 0){
+                throw
+            }
+            Write-Host "Signing files with AzureSignTool failed. Retrying..."
+    }
     
     TrackTrace -telemetryScope $telemetryScope
 }
