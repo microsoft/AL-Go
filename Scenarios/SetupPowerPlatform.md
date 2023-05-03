@@ -42,6 +42,9 @@ Install-Module -Name PowerShellGet -Repository PSGallery -Force
 > **NOTE:** You have to restart the PowerShell window after updating the PowerShellGet module.
 
 
+<br>
+
+
 ## AL-Go-Settings
 
 The AL-Go-Settings specify which Power Platform environment GitHub should deploy to and when. You can also add information about the Business Central Environment and company you want to connect to. If provided, this information is used at deployment time to ensure that your Power Platform artifacts are connected to the correct Business Central environment and company.
