@@ -28,8 +28,8 @@ The recommended way to get the auth context is to use the BCContainerHelper to g
 ```powershell
 Install-Module BcContainerHelper -force -allowPrerelease;
 
-$ppUserName = Read-Host -Prompt "Enter userName:";
-$ppPassword = Read-Host -AsSecureString -Prompt 'Enter password:';
+$ppUserName = Read-Host -Prompt "Enter userName";
+$ppPassword = Read-Host -AsSecureString -Prompt 'Enter password';
 New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserName -ppPassword $ppPassword
 ```
 
