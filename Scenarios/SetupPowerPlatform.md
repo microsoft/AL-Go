@@ -39,6 +39,8 @@ If you do get an error while trying to install the module you need to update you
 ```powershell
 Install-Module -Name PowerShellGet -Repository PSGallery -Force
 ```
+> **NOTE:** You have to restart the PowerShell window after updating the PowerShellGet module.
+
 
 ## AL-Go-Settings
 
