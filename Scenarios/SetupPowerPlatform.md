@@ -46,7 +46,7 @@ The AL-Go-Settings specify which Power Platform environment GitHub should deploy
 
 <br>
 
-The Al-Go-Settings are located at:  `<repoRoot>/.github/AL-Go-Settings.json`
+The Al-Go-Settings are located at:  `.github/AL-Go-Settings.json`
 
 <br>
 
@@ -68,7 +68,7 @@ The Al-Go-Settings are located at:  `<repoRoot>/.github/AL-Go-Settings.json`
 ```
 
 
-## Set up Service Principal
+### How to set up Service Principal
 
 Setting up a service principal can be done in 2 steps: setting up the principal and adding appropriate roles to the Power Platform environment.
 
