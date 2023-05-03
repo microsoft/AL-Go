@@ -1,13 +1,13 @@
-# Power Platform Repository Setup
+# Connect your GitHub repository to Power Platform
 
-There are 2 steps to connect your build system with your Power Platform tenant and environments:
+There are 2 steps to connect your GitHub repository to your Power Platform tenant and environments:
 
-1. Setup Authentication context
-2. Setup AL-Go-Settings
+1. Setup the authentication context
+2. Setup the AL-Go-Settings
 
 ## Authentication Context
 
-The authentication context specifies how you want to authenticate against your Power Platform environment. You can use UserName/Password or create a service principal and use a client secret to connect.
+The authentication context specifies how the GitHub Environment you have created authenticates against your Power Platform and Business Central environment. You can use UserName/Password to create the authentication context or create a service principal and use a client secret to connect (see a guide [Here](./SetupServicePrincipal.md)).
 
 <br>
 
@@ -15,67 +15,62 @@ The authentication context specifies how you want to authenticate against your P
 
 <br>
 
-The authentication context is a JSON object that you save in your GitHub secrets with the following naming convention: `<environmentName>_AUTHCONTEXT`
+The authentication context is a JSON object that you save in your GitHub secrets with the following naming convention: `<GitHubEnvironmentName>_AUTHCONTEXT`
 
 
 > **NOTE:** The JSON object cannot have any spaces.
 
 <br>
 
-The recommended way to get the auth context is to use the BCContainerHelper to generate the JSON:
+The recommended way to get the auth context is to use the BCContainerHelper to generate the JSON - open a PowerShell window and run the following commands:
+
 > **NOTE:** You need to use the preview version to get the new parameters to ALGoAuthContext.
 
 ```powershell
 Install-Module BcContainerHelper -force -allowPrerelease;
 
-$ppUserName = Read-Host -Prompt "Enter userName:";
-$ppPassword = Read-Host -AsSecureString -Prompt 'Enter password:';
+$ppUserName = Read-Host -Prompt "Enter userName";
+$ppPassword = Read-Host -AsSecureString -Prompt 'Enter password';
 New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserName -ppPassword $ppPassword
 ```
 
+If you do get an error while trying to install the module you need to update your PowerShellGet module to the latest version:
+
+```powershell
+Install-Module -Name PowerShellGet -Repository PSGallery -Force
+```
+> **NOTE:** You have to restart the PowerShell window after updating the PowerShellGet module.
+
+
+<br>
+
+
 ## AL-Go-Settings
 
-The AL-Go-Settings specify which Power Platform environment GitHub should deploy to and when. You can also add information about the Business Central Environment and company you want to connect to. If provided, this information is used at deployment time to ensure that your Power Platform artifacts are connected to the correct Business Central environment and company.
+The AL-Go-settings are used to what resources you have in your repository and which GitHub environment you want to deploy to.
 
 <br>
 
-The Al-Go-Settings are located at:  `<repoRoot>/.github/AL-Go-Settings.json`
+The Al-Go-Settings are located at:  `.github/AL-Go-Settings.json`
 
 <br>
 
-**Example of the deployTo settings format:**
+
+**Example of the Al-go settings format:**
 
 ```json
-"DeployTo<GitEnvironment>": {
-  "environmentName": "<Bc Environment name>",
-  "companyId": "<Bc Company GUID>",
-  "ppEnvironmentUrl": "<Power platform environment URL>"
+{
+  "type": "PTE",
+  "templateUrl": "https://github.com/BusinessCentralDemos/AL-Go-PTE@main",
+  "powerPlatformSolutionFolder": "<PowerPlatformSolutionName>",
+  "environments": [
+    "<GitHubEnvironmentName>"
+  ],
+  "DeployTo<GitHubEnvironmentName>": {
+    "environmentName": "<BusinessCentralEnvironmentName>",
+    "companyId": "<BusinessCentralCompanyId>",
+    "ppEnvironmentUrl": "<PowerPlatformEnvironmentUrl>"
+  }
 }
 ```
-```json
-"DeployToStaging": {
-  "environmentName": "Sandbox",
-   "companyId": "dc50d5e8-f9c9-ed11-94cc-000d3a220b2f",
-   "ppEnvironmentUrl": "https://orgc791aad2.crm.dynamics.com/"
-},
-```
 
-
-## Set up Service Principal
-
-Setting up a service principal can be done in 2 steps: setting up the principal and adding appropriate roles to the Power Platform environment.
-
-### 1. Set up service principal
-
-    a. Create App registration
-    b. Create Client Secret
-
-### 2. Add roles in Power Platform (Super is recommended)
-
-    a. In PPAC, find the environment you want to use
-    b. Go to settings, Application users, and add the new principal and give it the "System admin" role.
-
-### Learn more
-
-- [How to: Use the portal to create an Azure AD application and service principal that can access resources](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
-- [Microsoft Power Platform Build Tools for Azure DevOps - Power Platform | Microsoft Learn](https://docs.microsoft.com/en-us/learn/modules/introduction-power-platform-build-tools/)
