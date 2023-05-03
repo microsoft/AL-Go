@@ -57,11 +57,6 @@ try {
                 --timestamp-rfc3161 "$TimestampService" `
                 --timestamp-digest $TimestampDigest `
                 $file
-        
-        & signtool verify /pa $file
-        if (!$?) {
-            Write-Host "Found issue: $LastExitCode"
-        }
     }
     
     TrackTrace -telemetryScope $telemetryScope
