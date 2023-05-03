@@ -46,16 +46,9 @@ try {
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
     $Files | ForEach-Object { 
-        Write-Host "- $_" 
-    }
-
-    # Testing retries
-    $maxTries = 3
-    While($maxTries -gt 0){
-        try {
-            $maxTries--
-            Write-Host "Signing files with AzureSignTool"
-            AzureSignTool sign --file-digest $FileDigest `
+        $file = $_
+        Write-Host "Signing: $file" 
+        AzureSignTool sign --file-digest $FileDigest `
                 --azure-key-vault-url $AzureKeyVaultURI `
                 --azure-key-vault-client-id $AzureKeyVaultClientID `
                 --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
@@ -63,14 +56,11 @@ try {
                 --azure-key-vault-certificate $AzureKeyVaultCertificateName `
                 --timestamp-rfc3161 "$TimestampService" `
                 --timestamp-digest $TimestampDigest `
-                $Files
-            break
-        }
-        catch {
-            if($maxTries -eq 0){
-                throw
-            }
-            Write-Host "Signing files with AzureSignTool failed. Retrying..."
+                $file
+        
+        & signtool verify /pa $file
+        if (!$?) {
+            Write-Host "Found issue: $LastExitCode"
         }
     }
     
