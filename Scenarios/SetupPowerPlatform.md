@@ -33,6 +33,12 @@ $ppPassword = Read-Host -AsSecureString -Prompt 'Enter password';
 New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserName -ppPassword $ppPassword
 ```
 
+If you do get an error while trying to install the module you need to update your PowerShellGet module to the latest version:
+
+```powershell
+Install-Module -Name PowerShellGet -Repository PSGallery -Force
+```
+
 ## AL-Go-Settings
 
 The AL-Go-Settings specify which Power Platform environment GitHub should deploy to and when. You can also add information about the Business Central Environment and company you want to connect to. If provided, this information is used at deployment time to ensure that your Power Platform artifacts are connected to the correct Business Central environment and company.
