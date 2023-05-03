@@ -65,17 +65,20 @@ The Al-Go-Settings are located at:  `<repoRoot>/.github/AL-Go-Settings.json`
 
 Setting up a service principal can be done in 2 steps: setting up the principal and adding appropriate roles to the Power Platform environment.
 
-### 1. Set up service principal
 
-    a. Create App registration
-    b. Create Client Secret
+1. In Azure AD, create the service principal.
 
-### 2. Add roles in Power Platform (Super is recommended)
+   To create a service principle, you'll have to register an app with Azure AD and set it up for password-based authentication (with a client secret).
 
-    a. In PPAC, find the environment you want to use
-    b. Go to settings, Application users, and add the new principal and give it the "System admin" role.
+   You can do this step using the Azure portal or PowerShell. For more information, see one the following articles:
 
-### Learn more
+   - [Create an Azure AD application and service principal \(using Azure portal\)](/azure/active-directory/develop/howto-create-service-principal-portal)
+   - [Create service principal and client secret using PowerShell](/power-platform/alm/devops-build-tools#create-service-principal-and-client-secret-using-powershell)
 
-- [How to: Use the portal to create an Azure AD application and service principal that can access resources](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
-- [Microsoft Power Platform Build Tools for Azure DevOps - Power Platform | Microsoft Learn](https://docs.microsoft.com/en-us/learn/modules/introduction-power-platform-build-tools/)
+<br>
+
+2. In Power Platform, add the service principal as an app user on the environment.
+
+   Using Power Platform admin center, add the service principal as an application user of the environment and assign it either the **System admin** or **Super** role. **Super** is recommended.  
+
+   For more information, see [Manage app users in Power Platform](/power-platform/admin/manage-application-users).
