@@ -48,6 +48,7 @@ try {
     $Files | ForEach-Object { 
         $file = $_
         Write-Host "Signing: $file" 
+        Register-NavSip
         AzureSignTool sign --file-digest $FileDigest `
                 --azure-key-vault-url $AzureKeyVaultURI `
                 --azure-key-vault-client-id $AzureKeyVaultClientID `
