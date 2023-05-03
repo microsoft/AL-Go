@@ -1,6 +1,6 @@
-# Power Platform Repository Setup
+# Connect your GitHub environment to Power Platform
 
-There are 2 steps to connect your build system with your Power Platform tenant and environments:
+There are 2 steps to connect your GitHub Environment to your Power Platform tenant and environments:
 
 1. Setup Authentication context
 2. Setup AL-Go-Settings
@@ -15,14 +15,15 @@ The authentication context specifies how you want to authenticate against your P
 
 <br>
 
-The authentication context is a JSON object that you save in your GitHub secrets with the following naming convention: `<environmentName>_AUTHCONTEXT`
+The authentication context is a JSON object that you save in your GitHub secrets with the following naming convention: `<GitHubEnvironmentName>_AUTHCONTEXT`
 
 
 > **NOTE:** The JSON object cannot have any spaces.
 
 <br>
 
-The recommended way to get the auth context is to use the BCContainerHelper to generate the JSON:
+The recommended way to get the auth context is to use the BCContainerHelper to generate the JSON - open a PowerShell window and run the following commands:
+
 > **NOTE:** You need to use the preview version to get the new parameters to ALGoAuthContext.
 
 ```powershell
@@ -52,7 +53,7 @@ The Al-Go-Settings are located at:  `<repoRoot>/.github/AL-Go-Settings.json`
 **Example of the deployTo settings format:**
 
 ```json
-"DeployTo<GitEnvironment>": {
+"DeployTo<GitHubEnvironmentName>": {
   "environmentName": "<Bc Environment name>",
   "companyId": "<Bc Company GUID>",
   "ppEnvironmentUrl": "<Power platform environment URL>"
