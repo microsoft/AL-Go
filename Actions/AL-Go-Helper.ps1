@@ -1651,7 +1651,6 @@ function CreateDevEnv {
         "installTestFramework",
         "installTestLibraries",
         "installPerformanceToolkit",
-        "vsixFile",
         "enableCodeCop",
         "enableAppSourceCop",
         "enablePerTenantExtensionCop",
@@ -1665,6 +1664,7 @@ function CreateDevEnv {
         }
 
         Run-AlPipeline @runAlPipelineParams `
+            -vsixFile $repo.vsixFile `
             -pipelinename $workflowName `
             -imageName "" `
             -memoryLimit $repo.memoryLimit `
