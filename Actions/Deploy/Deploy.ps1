@@ -136,23 +136,7 @@ try {
     $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:AuthContext))
 
     try {
-        Write-Host "convertfromjson"
-        Write-Host $authContext.Substring(1,20)
         $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
-        Write-Host $authContextParams.Scopes
-        Write-Host $authContextParams.TenantId
-        $authContextParams.Keys | Out-Host
-        Write-Host "'$($authContextParams.RefreshToken.SubString(0,20))'"
-        Write-Host "'$($authContextParams.RefreshToken.SubString($authContextParams.RefreshToken.Length-20,20))'"
-        if ($authContextParams.RefreshToken -contains '`n') {
-            Write-Host "contains newline"
-        }
-        if ($authContextParams.RefreshToken -contains '`r') {
-            Write-Host "contains carriage return"
-        }
-        if ($authContextParams.RefreshToken -contains ' ') {
-            Write-Host "contains space"
-        }
         $bcAuthContext = New-BcAuthContext @authContextParams
         if ($null -eq $bcAuthContext) {
             throw "Authentication failed"
