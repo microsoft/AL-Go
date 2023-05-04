@@ -1,4 +1,4 @@
-# Connect your GitHub repository to Power Platform
+# (preview) Connect your GitHub repository to Power Platform
 
 There are 2 steps to connect your GitHub repository to your Power Platform tenant and environments:
 
@@ -7,7 +7,7 @@ There are 2 steps to connect your GitHub repository to your Power Platform tenan
 
 ## Authentication Context
 
-The authentication context specifies how the GitHub Environment you have created authenticates against your Power Platform and Business Central environment. You can use UserName/Password to create the authentication context or create a service principal and use a client secret to connect (see a guide [Here](./SetupServicePrincipal.md)).
+The authentication context specifies how the GitHub Environment you have created authenticates against your Power Platform and Business Central environments. You can use UserName/Password to create the authentication context or create a service principal account and use a client secret to connect (see a [Setting up service principal](./SetupServicePrincipal.md) for detailed steps).
 
 <br>
 
@@ -18,13 +18,9 @@ The authentication context specifies how the GitHub Environment you have created
 The authentication context is a JSON object that you save in your GitHub secrets with the following naming convention: `<GitHubEnvironmentName>_AUTHCONTEXT`
 
 
-> **NOTE:** The JSON object cannot have any spaces.
-
-<br>
 
 The recommended way to get the auth context is to use the BCContainerHelper to generate the JSON - open a PowerShell window and run the following commands:
 
-> **NOTE:** You need to use the preview version to get the new parameters to ALGoAuthContext.
 
 ```powershell
 Install-Module BcContainerHelper -force -allowPrerelease;
@@ -34,7 +30,7 @@ $ppPassword = Read-Host -AsSecureString -Prompt 'Enter password';
 New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserName -ppPassword $ppPassword
 ```
 
-If you do get an error while trying to install the module you need to update your PowerShellGet module to the latest version:
+If you get an error while trying to install the module you'll need to update your PowerShellGet module to the latest version:
 
 ```powershell
 Install-Module -Name PowerShellGet -Repository PSGallery -Force
@@ -47,11 +43,11 @@ Install-Module -Name PowerShellGet -Repository PSGallery -Force
 
 ## AL-Go-Settings
 
-The AL-Go-settings are used to what resources you have in your repository and which GitHub environment you want to deploy to.
+The AL-Go-settings are used to define what resources you have in your repository and which GitHub environment you want to deploy to.
 
 <br>
 
-The Al-Go-Settings are located at:  `.github/AL-Go-Settings.json`
+The settings are located at:  `.github/AL-Go-Settings.json`
 
 <br>
 
@@ -73,4 +69,5 @@ The Al-Go-Settings are located at:  `.github/AL-Go-Settings.json`
   }
 }
 ```
+Please note that GitHubEnvironmentName is the name of the environment you are creating in GitHub to represent the Business Central and Power Platform environments you are deploying to. The GitHub environment must have a corresponding authentication context.
 

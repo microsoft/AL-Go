@@ -1,4 +1,4 @@
-# Create a New Business Central and Power Platform Project
+# (preview) Create a New Business Central and Power Platform Project
 
 ## Prerequisites
 - Valid Business Central license
@@ -41,6 +41,6 @@
    <br> 
    <br> 
 
-> **NOTE:** Changes need to be published in Power Platform before they are included in the PULL.
+> **NOTE:** Changes need to be published in Power Platform before they are included in the Pull action.
 
 > **NOTE:** A lot of the Power App source files contain state information and are safe to overwrite in case of conflicts. The connection files and the YAML files under Srs are the ones it makes sense to review.
