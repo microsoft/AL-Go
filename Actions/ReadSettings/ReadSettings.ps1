@@ -117,7 +117,7 @@ try {
             $ghEnvironments = @()
             Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
         }
-        $environments = @($ghEnvironments+@($settings.environments) | Where-Object { $_ -ne "github-pages" })
+        $environments = @($ghEnvironments+@($settings.environments) | Select-Object -unique | Where-Object { $_ -ne "github-pages" })
         $unknownEnvironment = 0
         if (!($environments)) {
             $unknownEnvironment = 1
@@ -141,7 +141,7 @@ try {
             } | Where-Object {
                 Write-Host "Environment: $_"
                 if ($ghEnvironments -contains $_) {
-                    # Environment is GitHub Environment, branches are controlled on GitHub
+                    # Environment is GitHub Environment, default branches are controlled on GitHub
                     $branches = @( '*' )
                 }
                 else {
