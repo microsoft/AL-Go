@@ -53,6 +53,9 @@ outputs:
   EnvironmentCount:
     description: Number of environments in array
     value: ${{ steps.readsettings.outputs.EnvironmentCount }}
+  UnknownEnvironment:
+    description: Determines whether we are publishing to an unknown environment
+    value: ${{ steps.readsettings.outputs.UnknownEnvironment }}
 runs:
   using: composite
   steps:
