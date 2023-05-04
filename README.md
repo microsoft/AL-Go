@@ -29,9 +29,9 @@ The below usage scenarios takes you through how to get started and how to perfor
 14. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
 15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 16. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
-17. [Create a new Business Central and Power Platform project](Scenarios/AddPowerPlatformProject.md)
-18. [Try one of the Business Central and Power Platform samples](Scenarios/TryPowerPlatformSamples.md)
-19. [Power Platform repository setup](Scenarios/SetupPowerPlatform.md)
+17. [(preview) Create a new Business Central and Power Platform project](Scenarios/AddPowerPlatformProject.md)
+18. [(preview) Try one of the Business Central and Power Platform samples](Scenarios/TryPowerPlatformSamples.md)
+19. [(preview) Power Platform repository setup](Scenarios/SetupPowerPlatform.md)
 
 ## Migration scenarios
 A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](Scenarios/MigrateFromAzureDevOpsWithoutHistory.md)<br />
