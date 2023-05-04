@@ -15,6 +15,6 @@ Setting up a service principal can be done in 2 steps: setting up the principal 
 
 2. In Power Platform, add the service principal as an app user on the environment.
 
-   Using Power Platform admin center, add the service principal as an application user of the environment and assign it either the **System admin** or **Super** role. **Super** is recommended.  
+   Using Power Platform admin center, add the service principal as an application user of the environment and assign it either the **System admin** or **Super** role. **System admin** is recommended.  
 
    For more information, see [Manage app users in Power Platform](https://learn.microsoft.com/en-us/power-platform/admin/manage-application-users).
