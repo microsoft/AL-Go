@@ -21,7 +21,16 @@ The authentication context is a JSON object that you save in your GitHub secrets
 
 The recommended way to get the auth context is to use the BCContainerHelper to generate the JSON - open a PowerShell window and run the following commands:
 
+**Getting service principal authentication context:**
+```powershell
+Install-Module BcContainerHelper -force -allowPrerelease;
 
+$ppClientId = Read-Host -Prompt "Enter client id";
+$ppClientSecret = Read-Host -AsSecureString -Prompt 'Enter client secret';
+New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppClientSecret $ppClientSecret -ppApplicationId $ppClientId
+```
+
+**Getting username/password authentication context:**
 ```powershell
 Install-Module BcContainerHelper -force -allowPrerelease;
 
