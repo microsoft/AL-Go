@@ -477,7 +477,7 @@ function ReadSettings {
         "installOnlyReferencedApps"              = $true
         "generateDependencyArtifact"             = $false
         "skipUpgrade"                            = $false
-        "applicationDependency"                  = "20.0.0.0"
+        "applicationDependency"                  = "18.0.0.0"
         "updateDependencies"                     = $false
         "installTestRunner"                      = $false
         "installTestFramework"                   = $false
