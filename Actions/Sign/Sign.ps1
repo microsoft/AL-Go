@@ -57,7 +57,6 @@ try {
             --timestamp-digest $TimestampDigest `
             $Files
     } -MaxRetries 3
-    $file = $_
     
     TrackTrace -telemetryScope $telemetryScope
 }
