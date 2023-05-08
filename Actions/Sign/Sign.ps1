@@ -45,8 +45,11 @@ try {
         Write-Host "- $_" 
     }
 
-    Retry-Command -Command { 
+    Retry-Command -Command {
+        Write-Host "::group::Register NavSip"
         Register-NavSip 
+        Write-Host "::endgroup::"
+
         AzureSignTool sign --file-digest $FileDigest `
             --azure-key-vault-url $AzureKeyVaultURI `
             --azure-key-vault-client-id $AzureKeyVaultClientID `
