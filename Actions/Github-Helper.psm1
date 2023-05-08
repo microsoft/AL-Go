@@ -69,7 +69,21 @@ function InvokeWebRequest {
         if ($outfile) {
             $params += @{ "outfile" = $outfile }
         }
-        Invoke-WebRequest  @params -Uri $uri
+        try {
+            $result = Invoke-WebRequest  @params -Uri $uri
+        }
+        catch [System.Net.WebException] {
+            $response = $_.Exception.Response
+            $responseUri = $response.ResponseUri.AbsoluteUri
+            if ($response.StatusCode -eq 404 -and $responseUri -ne $uri) {
+                Write-Host "::Warning::Repository was moved, using this URL instead: $responseUri"
+                $result = Invoke-WebRequest @params -Uri $responseUri
+            }
+            else {
+                throw
+            }
+        }
+        $result
     }
     catch {
         $message = GetExtendedErrorMessage -errorRecord $_
