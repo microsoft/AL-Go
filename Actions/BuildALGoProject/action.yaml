@@ -57,6 +57,7 @@ runs:
           path: '.dependencies'
 
       - name: Read settings
+        id: readsettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: ${{ inputs.shell }}
@@ -65,12 +66,10 @@ runs:
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        env:
-          secrets: ${{ toJson(secrets) }}
         with:
           shell: ${{ inputs.shell }}
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.readsettings.SettingsJson }}
           secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,storageContext,gitHubPackagesContext'
 
       - name: Determine ArtifactUrl
@@ -79,7 +78,7 @@ runs:
         with:
           shell: ${{ inputs.shell }}
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.readsettings.SettingsJson }}
           secretsJson: ${{ env.RepoSecrets }}
 
       - name: Cache Business Central Artifacts
@@ -99,7 +98,7 @@ runs:
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
           project: ${{ inputs.project }}
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.readsettings.SettingsJson }}
           secretsJson: ${{ env.RepoSecrets }}
           buildMode: ${{ inputs.buildMode }}
 
@@ -109,7 +108,7 @@ runs:
         if: success() || failure()
         with:
           shell: ${{ inputs.shell }}
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.readsettings.SettingsJson }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
           branchName: ${{ github.ref_name }}
