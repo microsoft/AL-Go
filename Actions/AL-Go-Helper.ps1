@@ -453,13 +453,9 @@ function ReadSettings {
         "keyVaultCertificateUrlSecretName"       = ""
         "keyVaultCertificatePasswordSecretName"  = ""
         "keyVaultClientIdSecretName"             = ""
+        "keyVaultCodesignCertificateName"        = ""
         "codeSignCertificateUrlSecretName"       = "codeSignCertificateUrl"
         "codeSignCertificatePasswordSecretName"  = "codeSignCertificatePassword"
-        "codeSignKeyvaultUriSecretName"          = ""
-        "codeSignClientIdSecretName"             = ""
-        "codeSignClientSecretSecretName"         = ""
-        "codeSignTenantIdSecretName"             = ""
-        "codeSignCertificateSecretName"          = ""
         "additionalCountries"                    = @()
         "appDependencies"                        = @()
         "appFolders"                             = @()
