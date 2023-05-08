@@ -2037,7 +2037,6 @@ function Retry-Command {
         try {
             & $Command
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "Command failed with exit code $LASTEXITCODE"
                 throw "Command failed with exit code $LASTEXITCODE"
             }
             break

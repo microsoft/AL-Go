@@ -45,21 +45,19 @@ try {
         Write-Host "- $_" 
     }
 
-    $Files | ForEach-Object {
-        Retry-Command -Command { 
-            Register-NavSip 
-            AzureSignTool sign --file-digest $FileDigest `
-                --azure-key-vault-url $AzureKeyVaultURI `
-                --azure-key-vault-client-id $AzureKeyVaultClientID `
-                --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
-                --azure-key-vault-client-secret $AzureKeyVaultClientSecret `
-                --azure-key-vault-certificate $AzureKeyVaultCertificateName `
-                --timestamp-rfc3161 "$TimestampService" `
-                --timestamp-digest $TimestampDigest `
-                $Files
-        } -MaxRetries 3
-        $file = $_
-    }
+    Retry-Command -Command { 
+        Register-NavSip 
+        AzureSignTool sign --file-digest $FileDigest `
+            --azure-key-vault-url $AzureKeyVaultURI `
+            --azure-key-vault-client-id $AzureKeyVaultClientID `
+            --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
+            --azure-key-vault-client-secret $AzureKeyVaultClientSecret `
+            --azure-key-vault-certificate $AzureKeyVaultCertificateName `
+            --timestamp-rfc3161 "$TimestampService" `
+            --timestamp-digest $TimestampDigest `
+            $Files
+    } -MaxRetries 3
+    $file = $_
     
     TrackTrace -telemetryScope $telemetryScope
 }
