@@ -88,14 +88,25 @@ function ConvertTo-HashTable() {
     [CmdletBinding()]
     Param(
         [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object,
+        $object,
         [switch] $recurse
     )
+
     $ht = @{}
-    if ($object) {
-        $object.PSObject.Properties | ForEach-Object { 
-            if ($recurse -and ($_.Value -is [PSCustomObject])) {
-                $ht[$_.Name] = ConvertTo-HashTable $_.Value
+    if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
+        $object.Keys | ForEach-Object {
+            if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $object."$_" -is [PSCustomObject])) {
+                $ht[$_] = ConvertTo-HashTable $object."$_" -recurse
+            }
+            else {
+                $ht[$_] = $object."$_"
+            }
+        }
+    }
+    elseif ($object -is [PSCustomObject]) {
+        $object.PSObject.Properties | ForEach-Object {
+            if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $_.Value -is [PSCustomObject])) {
+                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
             }
             else {
                 $ht[$_.Name] = $_.Value
@@ -938,7 +949,7 @@ function AnalyzeRepo {
                     Write-Host "Using token as AuthTokenSecret"
                 }
                 else {
-                    Write-Host "No token available, will attempt to invoke gh auth status --show-token to get access to repository"
+                    Write-Host "No token available, will attempt to invoke gh auth token to get access to repository"
                 }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
             }
@@ -1376,16 +1387,15 @@ function CreateDevEnv {
                             if ($secret) { $_.authTokenSecret = $secret.SecretValue | Get-PlainText }
                         }
                         else {
-                            Write-Host "Not using Azure KeyVault, attempting to retrieve an auth token using gh auth status"
+                            Write-Host "Not using Azure KeyVault, attempting to retrieve an auth token using gh auth token"
                             $retry = $true
                             while ($retry) {
                                 try {
-                                    $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-                                    $_.authTokenSecret = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
+                                    $_.authTokenSecret = invoke-gh -silent -returnValue auth token
                                     $retry = $false
                                 }
                                 catch {
-                                    Write-Host -ForegroundColor Red "Error trying to retrieve GitHub token."
+                                    Write-Host -ForegroundColor Red "Error trying to retrieve GitHub token (are you authenticated in GitHub CLI?)"
                                     Write-Host -ForegroundColor Red $_.Exception.Message
                                     Read-Host "Press ENTER to retry operation (or Ctrl+C to cancel)"
                                 }
@@ -1767,8 +1777,18 @@ Function AnalyzeProjectDependencies {
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
 
         # Filter out app folders that doesn't contain an app.json file
-        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Resolve-Path (Join-Path $project $_) -Relative } | Where-Object { Test-Path (Join-Path $_ app.json)}
-
+        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
+            $projectFolder = Join-Path $project $_
+            if (!(Test-Path $projectFolder -PathType Container)) {
+                Write-Host "::Warning::Folder $_ doesn't exist, skipping."
+            }
+            elseif (!(Test-Path (Join-Path $projectFolder 'app.json'))) {
+                Write-Host "::Warning::Folder $_ doesn't contain an app.json file, skipping."
+            }
+            else {
+                Resolve-Path $projectFolder -Relative
+            }
+        }
         # Default to scanning the project folder if no app folders are specified
         if (-not $folders) {
             Write-Host "No apps or tests folders found for project $project. Scanning for apps in the project folder."
