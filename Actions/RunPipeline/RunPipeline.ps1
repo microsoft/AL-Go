@@ -166,10 +166,10 @@ try {
 
     # Analyze app.json version dependencies before launching pipeline
 
-    # Analyze InstallApps and InstallTestApps before launching pipeline
+    # Analyze InstallApps and InstallTestApps before launching pipeline 
 
     # Check if insidersastoken is used (and defined)
-    if (!$repo.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$repo.codeSignCertificateSecretName) {
+    if (!$repo.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$repo.keyVaultCodesignCertificateName) {
         OutputWarning -message "Using the legacy CodeSignCertificateUrl and CodeSignCertificatePassword parameters. Consider using the new Azure Keyvault signing instead."
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
