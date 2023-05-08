@@ -91,8 +91,15 @@ jobs:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
       fail-fast: false
     name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
+    outputs:
+      AppsArtifactsName: ${{ steps.BuildProject.outputs.AppsArtifactsName }}
+      TestAppsArtifactsName: ${{ steps.BuildProject.outputs.TestAppsArtifactsName }}
+      TestResultsArtifactsName: ${{ steps.BuildProject.outputs.TestResultsArtifactsName }}
+      BcptTestResultsArtifactsName: ${{ steps.BuildProject.outputs.BcptTestResultsArtifactsName }}
+      BuildOutputArtifactsName: ${{ steps.BuildProject.outputs.BuildOutputArtifactsName }}
     steps:
       - name: Build Project
+        id: BuildProject
         uses: mazhelez/AL-Go-Actions/BuildALGoProject@extract-build-project-action
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
@@ -100,8 +107,7 @@ jobs:
           project: ${{ matrix.project }}
           buildMode: ${{ matrix.buildMode }}
           projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
-          secret: 'licenseFileUrl,insiderSasToken,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext'
-          publishArtifacts: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetCount > 0 || needs.Initialization.outputs.environmentCount > 0
+          secrets: 'licenseFileUrl,insiderSasToken,keyVaultCertificateUrl,keyVaultCertificatePassword,'
 
   PostProcess:
     runs-on: [ windows-latest ]

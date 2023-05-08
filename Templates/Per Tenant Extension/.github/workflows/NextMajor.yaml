@@ -78,7 +78,7 @@ jobs:
           project: ${{ matrix.project }}
           buildMode: ${{ matrix.buildMode }}
           projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
-          secret: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext'
+          secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext'
 
 
   PostProcess:
