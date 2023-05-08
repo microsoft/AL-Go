@@ -7,7 +7,8 @@ Issue #446 Wrong NewLine character in Release Notes
 Issue #453 DeliverToStorage - override fails reading secrets
 
 ### New Settings
-New Project Setting: `UseCompilerFolder`. Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set `doNotPublishApps` to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. 
+- `UseCompilerFolder`: Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set `doNotPublishApps` to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. 
+- `vsixFile`: vsixFile should be a direct download URL to the version of the AL Language extension you want to use for building the project or repo. By default, AL-Go will use the AL Language extension that comes with the Business Central Artifacts.
 
 ### New Actions
 - **DetermineArtifactUrl** is used to determine which artifacts to use for building a project in CI/CD, PullRequestHandler, Current, NextMinor and NextMajor workflows.
