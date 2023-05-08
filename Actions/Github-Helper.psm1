@@ -76,7 +76,7 @@ function InvokeWebRequest {
             $response = $_.Exception.Response
             $responseUri = $response.ResponseUri.AbsoluteUri
             if ($response.StatusCode -eq 404 -and $responseUri -ne $uri) {
-                Write-Host "::Warning::Repository was moved, using this URL instead: $responseUri"
+                Write-Host "::Warning::Repository ($uri) was renamed or moved, please update your references with the new name. Trying $responseUri, as suggested by GitHub."
                 $result = Invoke-WebRequest @params -Uri $responseUri
             }
             else {
