@@ -25,8 +25,8 @@ runs:
     - name: Fetch project dependencies
       shell: ${{ inputs.shell }}
       id: FetchDependencies
-      run: 
-        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -dependencyProjects ${{ dependencyProjects }} -buildMode ${{ inputs.buildMode }} -buildDimensions ${{ inputs.buildDimensions }} -baseBranch ${{ github.base_ref }} 
+      run:
+        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -dependencyProjects ${{ dependencyProjects }} -buildMode ${{ inputs.buildMode }} -buildDimensions ${{ inputs.buildDimensions }} -baseBranch '${{ github.base_ref }}' 
 branding:
   icon: terminal
   color: blue
