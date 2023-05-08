@@ -2005,3 +2005,35 @@ function Determine-ArtifactUrl {
     }
     return $artifactUrl
 }
+
+function Retry-Command {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ScriptBlock]$Command,
+        [Parameter(Mandatory = $true)]
+        [int]$MaxRetries,
+        [Parameter(Mandatory = $false)]
+        [int]$RetryDelaySeconds = 5
+    )
+
+    $retryCount = 0
+    while ($retryCount -lt $MaxRetries) {
+        try {
+            & $Command
+            if ($LASTEXITCODE -ne 0) {
+                throw "Command failed with exit code $LASTEXITCODE"
+            }
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -eq $MaxRetries) {
+                throw $_
+            }
+            else {
+                Write-Host "Retrying after $RetryDelaySeconds seconds..."
+                Start-Sleep -Seconds $RetryDelaySeconds
+            }
+        }
+    }
+}

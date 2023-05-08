@@ -31,6 +31,7 @@ $bcContainerHelperPath = $null
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "Sign.psm1" -Resolve)
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
     $telemetryScope = CreateScope -eventId 'DO0083' -parentTelemetryScopeJson $ParentTelemetryScopeJson
 
@@ -38,18 +39,16 @@ try {
     dotnet tool install --global AzureSignTool --version 4.0.1
     Write-Host "::endgroup::"
 
-    Write-Host "::group::Register NavSip"
-    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "Sign.psm1" -Resolve)
-    Register-NavSip
-    Write-Host "::endgroup::"
-
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
     $Files | ForEach-Object { 
-        $file = $_
-        Write-Host "Signing: $file" 
-        Register-NavSip
-        AzureSignTool sign --file-digest $FileDigest `
+        Write-Host "- $_" 
+    }
+
+    $Files | ForEach-Object {
+        Retry-Command -Command { 
+            Register-NavSip 
+            AzureSignTool sign --file-digest $FileDigest `
                 --azure-key-vault-url $AzureKeyVaultURI `
                 --azure-key-vault-client-id $AzureKeyVaultClientID `
                 --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
@@ -57,7 +56,9 @@ try {
                 --azure-key-vault-certificate $AzureKeyVaultCertificateName `
                 --timestamp-rfc3161 "$TimestampService" `
                 --timestamp-digest $TimestampDigest `
-                $file
+                $Files
+        } -MaxRetries 3
+        $file = $_
     }
     
     TrackTrace -telemetryScope $telemetryScope

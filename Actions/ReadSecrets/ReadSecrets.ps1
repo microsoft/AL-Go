@@ -41,10 +41,7 @@ try {
     $outSettings = $settings
     $keyVaultName = $settings.keyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-        $credentialsJson = Get-KeyVaultCredentials -dontmask | ConvertTo-HashTable
-        if ($credentialsJson.Keys -contains "keyVaultName") {
-            $keyVaultName = $credentialsJson.keyVaultName
-        }
+        $keyVaultName = Get-KeyVaultName
     }
     [System.Collections.ArrayList]$secretsCollection = @()
     $secrets.Split(',') | Select-Object -Unique | ForEach-Object {
