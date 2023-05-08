@@ -189,6 +189,8 @@ jobs:
     steps:
       - name: Build Project
         uses: mazhelez/AL-Go-Actions/BuildALGoProject@extract-build-project-action
+        env:
+          secrets: ${{ toJson(secrets) }}
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
@@ -197,7 +199,6 @@ jobs:
           projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
           secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,storageContext,gitHubPackagesContext'
           publishArtifacts: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetCount > 0 || needs.Initialization.outputs.environmentCount > 0
-
 
   Deploy:
     needs: [ Initialization, Build ]

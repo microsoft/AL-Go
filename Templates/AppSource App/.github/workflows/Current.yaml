@@ -72,6 +72,8 @@ jobs:
     steps:
       - name: Build Project
         uses: mazhelez/AL-Go-Actions/BuildALGoProject@extract-build-project-action
+        env:
+          secrets: ${{ toJson(secrets) }}
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
@@ -79,6 +81,7 @@ jobs:
           buildMode: ${{ matrix.buildMode }}
           projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
           secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext'
+  
   PostProcess:
     if: always()
     runs-on: [ windows-latest ]
