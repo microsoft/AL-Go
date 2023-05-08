@@ -107,8 +107,7 @@ try {
 
     if ($repo.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
-            OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-            exit
+            OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
         }
     }
 
