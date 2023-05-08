@@ -27,9 +27,21 @@ inputs:
     description: Specifies the telemetry scope for the telemetry signal
     required: false
 outputs:
-    artifacts:
-      description: Paths to the created artifacts
-      value: ${{ steps.calculateartifactnames.outputs.artifacts }} 
+  AppsArtifactsName:
+    description: Artifacts name for Apps
+    value: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
+  DependenciesArtifactsName:
+    description: Artifacts name for Dependencies
+    value: ${{ steps.calculateArtifactsNames.outputs.DependenciesArtifactsName }}
+  TestAppsArtifactsName:
+    description: Artifacts name for TestApps
+    value: ${{ steps.calculateArtifactsNames.outputs.TestAppsArtifactsName }}
+  TestResultsArtifactsName:
+    description: Artifacts name for TestResults
+    value: ${{ steps.calculateArtifactsNames.outputs.TestResultsArtifactsName }}
+  BcptTestResultsArtifactsName:
+    description: Artifacts name for BcptTestResults
+    value: ${{ steps.calculateArtifactsNames.outputs.BcptTestResultsArtifactsName }}
 runs:
   using: composite
   steps:
