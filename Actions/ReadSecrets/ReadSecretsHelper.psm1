@@ -62,17 +62,17 @@ function Get-KeyVaultCredentials {
         [switch] $dontmask
     )
     if ($script:isKeyvaultSet) {
+        $jsonStr = $script:gitHuBSecrets.AZURE_CREDENTIALS
+        if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
+            throw "Secret AZURE_CREDENTIALS cannot contain line breaks"
+        }
         try {
-            $json = $script:gitHuBSecrets.AZURE_CREDENTIALS
-            if ($json.contains("`n")) { 
-                throw "Secret contains line breaks"
-            }
-            $creds = $json | ConvertFrom-Json
-            if (!$dontmask) {
-                "clientId", "clientSecret", "subscriptionId", "tenantId" | ForEach-Object {
-                    MaskValue -key $_ -value $creds."$_"
-                }
-            }
+            $creds = $jsonStr | ConvertFrom-Json
+            # Mask ClientSecret
+            MaskValue -key 'clientSecret' -value $creds.ClientSecret
+            $creds.ClientId | Out-Null
+            $creds.subscriptionId | Out-Null
+            $creds.TenantId | Out-Null
             return $creds
         }
         catch {
