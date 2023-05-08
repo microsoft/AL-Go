@@ -374,8 +374,8 @@ try {
                 
                 # If $directCommit, then changes are made directly to the default branch
                 if (!$directcommit) {
-                    # If not direct commit, create a new branch with a random name, and switch to it
-                    $branch = [System.IO.Path]::GetRandomFileName()
+                    # If not direct commit, create a new branch with and switch to it
+                    $branch = "update-algo-system-files/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmm`"))" # e.g. update-al-go-system-files/2101011200
                     invoke-git checkout -b $branch
                 }
 
