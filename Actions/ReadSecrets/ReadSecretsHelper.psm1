@@ -11,7 +11,7 @@ function IsKeyVaultSet {
 function Get-KeyVaultName {
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_KEYVAULT_URI") {
         $keyVaultUri = $script:gitHuBSecrets.AZURE_KEYVAULT_URI
-        $keyVaultName = $keyVaultUri.Split('.')[0].Replace("https://", "")
+        $keyVaultName = $keyVaultUri.Split('.')[0].Replace("https://", "") # Azure key vault URI is in the format https://<key vault name>.vault.azure.net/
     } else {
         $credentialsJson = Get-KeyVaultCredentials -dontmask | ConvertTo-HashTable
         if ($credentialsJson.Keys -contains "keyVaultName") {
