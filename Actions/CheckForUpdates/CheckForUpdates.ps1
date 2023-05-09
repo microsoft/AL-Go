@@ -375,7 +375,7 @@ try {
                 # If $directCommit, then changes are made directly to the default branch
                 if (!$directcommit) {
                     # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
-                    $branch = "$updateBranch/update-algo-system-files/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. main/update-algo-system-files/210101120000
+                    $branch = "$updateBranch/update-al-go-system-files/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. main/update-al-go-system-files/210101120000
                     invoke-git checkout -b $branch
                 }
 
