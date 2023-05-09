@@ -105,7 +105,7 @@ function ConvertTo-HashTable() {
     }
     elseif ($object -is [PSCustomObject]) {
         $object.PSObject.Properties | ForEach-Object {
-            if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $_.Value -is [PSCustomObject])) {
+            if ($recurse -and ($_.Value -is [System.Collections.Specialized.OrderedDictionary] -or $_.Value -is [hashtable] -or $_.Value -is [PSCustomObject])) {
                 $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
             }
             else {
@@ -1480,8 +1480,7 @@ function CreateDevEnv {
 
         if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
             if ($licenseFileUrl -eq "") {
-                OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-                exit
+                OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             }
         }
 

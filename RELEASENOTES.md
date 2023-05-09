@@ -13,6 +13,10 @@ New Project Setting: `UseCompilerFolder`. Setting useCompilerFolder to true caus
 ### New Actions
 - **DetermineArtifactUrl** is used to determine which artifacts to use for building a project in CI/CD, PullRequestHandler, Current, NextMinor and NextMajor workflows.
 
+### License File
+With the changes to the CRONUS license in Business Central version 22, that license can in most cases be used as a developer license for AppSource Apps and it is no longer mandatory to specify a license file in AppSource App repositories.
+Obviously, if you build and test your app for Business Central versions prior to 21, it will fail if you don't specify a licenseFileUrl secret.
+
 ## v3.0
 
 ### **NOTE:** When upgrading to this version
