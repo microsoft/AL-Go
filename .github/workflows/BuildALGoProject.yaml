@@ -2,32 +2,39 @@ name: 'Build AL-GO project'
 
 on:
   workflow_call:
-  inputs:
-    shell:
-      description: Shell in which you want to run the action (powershell or pwsh)
-      required: false
-      default: powershell
-    project:
-      description: Name of the built project
-      required: true
-    projectDependenciesJson:
-      description: Dependencies of the built project in compressed Json format
-      required: false
-      default: '{}'
-    buildMode:
-      description: Build mode used when building the artifacts
-      required: true
-    secrets:
-      description: A comma-separated string with the names of the secrets, reqired for the action
-      required: false
-      default: ''
-    publishArtifacts:
-      description: Flag indicating whether the artifacts should be published
-      required: false
-      default: 'false'
-    parentTelemetryScopeJson:
-      description: Specifies the telemetry scope for the telemetry signal
-      required: false
+    inputs:
+      shell:
+        description: Shell in which you want to run the action (powershell or pwsh)
+        required: false
+        default: powershell
+        type: string
+      project:
+        description: Name of the built project
+        required: true
+        type: string
+      projectDependenciesJson:
+        description: Dependencies of the built project in compressed Json format
+        required: false
+        default: '{}'
+        type: string
+      buildMode:
+        description: Build mode used when building the artifacts
+        required: true
+        type: string
+      secrets:
+        description: A comma-separated string with the names of the secrets, reqired for the action
+        required: false
+        default: ''
+        type: string
+      publishArtifacts:
+        description: Flag indicating whether the artifacts should be published
+        required: false
+        default: false
+        type: boolean
+      parentTelemetryScopeJson:
+        description: Specifies the telemetry scope for the telemetry signal
+        required: false
+        type: string
 
 jobs:
   BuildALGoProject:
@@ -122,7 +129,7 @@ jobs:
         
         - name: Publish artifacts - apps
           uses: actions/upload-artifact@v3
-          if: inputs.publishArtifacts == 'true'
+          if: inputs.publishArtifacts
           with:
             name: ${{ env.AppsArtifactsName }}
             path: '${{ matrix.project }}/.buildartifacts/Apps/'
@@ -130,7 +137,7 @@ jobs:
 
         - name: Publish artifacts - dependencies
           uses: actions/upload-artifact@v3
-          if: inputs.publishArtifacts == 'true'
+          if: inputs.publishArtifacts
           with:
             name: ${{ env.DependenciesArtifactsName }}
             path: '${{ matrix.project }}/.buildartifacts/Dependencies/'
@@ -138,7 +145,7 @@ jobs:
 
         - name: Publish artifacts - test apps
           uses: actions/upload-artifact@v3
-          if: inputs.publishArtifacts == 'true'
+          if: inputs.publishArtifacts
           with:
             name: ${{ env.TestAppsArtifactsName }}
             path: '${{ matrix.project }}/.buildartifacts/TestApps/'
