@@ -31,6 +31,7 @@ jobs:
       settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
       environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
       environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
+      unknownEnvironment: ${{ steps.ReadSettings.outputs.UnknownEnvironment }}
       deviceCode: ${{ steps.Authenticate.outputs.deviceCode }}
     steps:
       - name: Checkout
@@ -54,7 +55,7 @@ jobs:
 
       - name: EnvName
         id: envName
-        if: steps.ReadSettings.outputs.EnvironmentCount == 1
+        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
         run: |
           $ErrorActionPreference = "STOP"
           Set-StrictMode -version 2.0
@@ -63,7 +64,7 @@ jobs:
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        if: steps.ReadSettings.outputs.EnvironmentCount == 1
+        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -74,7 +75,7 @@ jobs:
 
       - name: Authenticate
         id: Authenticate
-        if: steps.ReadSettings.outputs.EnvironmentCount == 1
+        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
         run: |
           $envName = '${{ steps.envName.outputs.envName }}'
           $secretName = ''
