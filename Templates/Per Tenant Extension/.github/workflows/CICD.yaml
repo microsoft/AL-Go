@@ -185,6 +185,7 @@ jobs:
     secrets: inherit
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+      runsOn: ${{ needs.Initialization.outputs.githubRunner }}
       parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
       project: ${{ matrix.project }}
       buildMode: ${{ matrix.buildMode }}

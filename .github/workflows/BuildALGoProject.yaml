@@ -8,6 +8,11 @@ on:
         required: false
         default: powershell
         type: string
+      runsOn: 
+        description: The type of machine to run the build job on
+        required: false
+        default: windows-latest
+        type: string
       project:
         description: Name of the built project
         required: true
@@ -43,7 +48,7 @@ on:
 
 jobs:
   BuildALGoProject:
-    runs-on: [ windows-latest ]
+    runs-on: ${{ inputs.runsOn }}
     steps:
         - name: Checkout
           uses: actions/checkout@v3
