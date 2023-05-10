@@ -1,6 +1,6 @@
 name: Deploy
 
-run-name: "Deploy from [${{ github.ref_name }}] to branch [${{ inputs.branch }}]"
+run-name: "Deploy from AL-GO branch [${{ github.ref_name }}] to branch [${{ inputs.branch }}] in AL-Go-PTE and AL-Go-Actions"
 
 on:
   workflow_dispatch:
