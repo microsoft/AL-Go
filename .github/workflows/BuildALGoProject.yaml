@@ -1,5 +1,7 @@
 name: 'Build AL-GO project'
 
+run-name: 'Build project ${{ inputs.project }}'
+
 on:
   workflow_call:
     inputs:
