@@ -1,6 +1,6 @@
 name: Deploy
 
-run-name: "Deploy from branch [${{ github.ref_name }}] to branch [${{ inputs.branch }}]"
+run-name: "Deploy from [${{ github.ref_name }}] to [${{ inputs.branch }}]"
 
 on:
   workflow_dispatch:
