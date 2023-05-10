@@ -79,7 +79,7 @@ try {
                     }
                     $json.Keys | ForEach-Object {
                         if (@("Scopes","TenantId","BlobName","ContainerName","StorageAccountName") -notcontains $_) {
-                            # Mask individual values (but not Scopes and TenantId)
+                            # Mask individual values (but not Scopes, TenantId, BlobName, ContainerName and StorageAccountName)
                             MaskValue -key "$($secret).$($_)" -value $json."$_"
                         }
                     }

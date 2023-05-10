@@ -58,9 +58,6 @@ function GetGithubSecret {
 }
 	
 function Get-KeyVaultCredentials {
-    Param(
-        [switch] $dontmask
-    )
     if ($script:isKeyvaultSet) {
         $jsonStr = $script:gitHuBSecrets.AZURE_CREDENTIALS
         if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
@@ -70,6 +67,7 @@ function Get-KeyVaultCredentials {
             $creds = $jsonStr | ConvertFrom-Json
             # Mask ClientSecret
             MaskValue -key 'clientSecret' -value $creds.ClientSecret
+            # Check thet $creds contains the needed properties
             $creds.ClientId | Out-Null
             $creds.subscriptionId | Out-Null
             $creds.TenantId | Out-Null
