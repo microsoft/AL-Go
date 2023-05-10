@@ -27,7 +27,7 @@ on:
         required: true
         type: string
       secrets:
-        description: A comma-separated string with the names of the secrets, reqired for the action
+        description: A comma-separated string with the names of the secrets, required for the workflow.
         required: false
         default: ''
         type: string
