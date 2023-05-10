@@ -61,7 +61,7 @@ jobs:
         - name: Read secrets
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
           env:
-            Secrets: ${{ inputs.secrets }}
+            secrets: ${{ toJson(secrets) }}
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
