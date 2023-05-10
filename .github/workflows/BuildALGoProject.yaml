@@ -69,7 +69,7 @@ jobs:
             secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,storageContext,gitHubPackagesContext'
 
         - name: Determine ArtifactUrl
-          uses: microsoft/AL-Go/DetermineArtifactUrl@main
+          uses: microsoft/AL-Go/Actions/DetermineArtifactUrl@main
           id: determineArtifactUrl
           with:
             shell: ${{ inputs.shell }}
