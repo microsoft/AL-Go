@@ -13,7 +13,7 @@ on:
       runsOn: 
         description: The type of machine to run the build job on
         required: false
-        default: windows-latest
+        default: 'windows-latest'
         type: string
       project:
         description: Name of the built project
@@ -50,7 +50,7 @@ on:
 
 jobs:
   BuildALGoProject:
-    runs-on: [ windows-latest ] # ${{ inputs.runsOn }}
+    runs-on: ${{ inputs.runsOn }}
     steps:
         - name: Checkout
           uses: actions/checkout@v3
