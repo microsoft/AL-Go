@@ -50,7 +50,7 @@ on:
 
 jobs:
   BuildALGoProject:
-    runs-on: ${{ inputs.runsOn }}
+    runs-on: [ windows-latest ] # ${{ inputs.runsOn }}
     steps:
         - name: Checkout
           uses: actions/checkout@v3
