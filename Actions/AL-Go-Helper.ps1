@@ -244,11 +244,15 @@ function DownloadAndImportBcContainerHelper {
         }
         if (Test-Path $repoSettingsPath) {
             $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-            if ($bcContainerHelperVersion -eq "") {
+            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "latest") {
                 if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
                     $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+                    Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
                     if ($bcContainerHelperVersion -like "https://*") {
                         throw "Setting BcContainerHelperVersion to a URL is not allowed."
+                    }
+                    elseif ($bcContainerHelperVersion -ne "" -and $bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+                        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
                     }
                 }
             }
