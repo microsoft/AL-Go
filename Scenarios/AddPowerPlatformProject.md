@@ -9,11 +9,8 @@
 
 > **NOTE:** AL-Go App source does not currently support Power Platform solutions.
 
-<br>  
 
 ## Steps
-<br>  
-
 
 1. Create a new repository based on the AL-Go-PTE template from [BusinessCentralDemos/AL-Go-PTE](https://github.com/BusinessCentralDemos/AL-Go-PTE)
    
@@ -37,10 +34,12 @@
 
 <br> 
    
-4. Use the Pull action to get the latest changes from your Power Platform development environment and either check-in directly or create a PR to review them beforehand.
-   <br> 
-   <br> 
+4. Use the **Pull Power Platform Changes** action to get the latest changes from your Power Platform development environment and either check-in directly or create a PR to review them beforehand.
 
-> **NOTE:** Changes need to be published in Power Platform before they are included in the Pull action.
+   > **NOTE:** Changes need to be published in Power Platform before they are included in the Pull action.
+   
+   > **NOTE:** A lot of the Power App source files contain state information and are safe to overwrite in case of conflicts. The connection files and the YAML files under Srs are the ones it makes sense to review.
 
-> **NOTE:** A lot of the Power App source files contain state information and are safe to overwrite in case of conflicts. The connection files and the YAML files under Srs are the ones it makes sense to review.
+<br> 
+
+5. After your changes are checked into a branch in the repository, you can use the **Push Power Platform changes** to deploy them to an environment. Or use the **CI/CD** flow or **Publish to Environment** action to deploy both the AL and Power Platoform solutions.
