@@ -105,7 +105,7 @@ function ConvertTo-HashTable() {
     }
     elseif ($object -is [PSCustomObject]) {
         $object.PSObject.Properties | ForEach-Object {
-            if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $_.Value -is [PSCustomObject])) {
+            if ($recurse -and ($_.Value -is [System.Collections.Specialized.OrderedDictionary] -or $_.Value -is [hashtable] -or $_.Value -is [PSCustomObject])) {
                 $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
             }
             else {
@@ -244,11 +244,15 @@ function DownloadAndImportBcContainerHelper {
         }
         if (Test-Path $repoSettingsPath) {
             $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-            if ($bcContainerHelperVersion -eq "") {
+            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "latest") {
                 if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
                     $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+                    Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
                     if ($bcContainerHelperVersion -like "https://*") {
                         throw "Setting BcContainerHelperVersion to a URL is not allowed."
+                    }
+                    elseif ($bcContainerHelperVersion -ne "" -and $bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+                        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
                     }
                 }
             }
@@ -490,6 +494,7 @@ function ReadSettings {
         "failOn"                                 = "error"
         "treatTestFailuresAsWarnings"            = $false
         "rulesetFile"                            = ""
+        "vsixFile"                               = ""
         "assignPremiumPlan"                      = $false
         "enableTaskScheduler"                    = $false
         "doNotBuildTests"                        = $false
@@ -690,7 +695,7 @@ function AnalyzeRepo {
         }
     }
     else {
-        throw "The type, specified in $RepoSettingsFile, must be either 'Per Tenant Extension' or 'AppSource App'. It is '$($settings.type)'."
+        throw "The type, specified in $RepoSettingsFile, must be either 'PTE' or 'AppSource App'. It is '$($settings.type)'."
     }
 
     if (-not (@($settings.appFolders)+@($settings.testFolders)+@($settings.bcptTestFolders))) {
@@ -1481,8 +1486,7 @@ function CreateDevEnv {
 
         if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
             if ($licenseFileUrl -eq "") {
-                OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-                exit
+                OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             }
         }
 
@@ -1663,6 +1667,7 @@ function CreateDevEnv {
         }
 
         Run-AlPipeline @runAlPipelineParams `
+            -vsixFile $repo.vsixFile `
             -pipelinename $workflowName `
             -imageName "" `
             -memoryLimit $repo.memoryLimit `

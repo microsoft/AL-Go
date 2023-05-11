@@ -75,8 +75,8 @@ try {
                         throw "JSON Secret $secret contains line breaks. JSON Secrets should be compressed JSON (i.e. NOT contain any line breaks)."
                     }
                     $json.Keys | ForEach-Object {
-                        if ($_ -ne 'Scopes' -and $_ -ne 'TenantId') {
-                            # Mask individual values (but not Scopes and TenantId)
+                        if (@("Scopes","TenantId","BlobName","ContainerName","StorageAccountName") -notcontains $_) {
+                            # Mask individual values (but not Scopes, TenantId, BlobName, ContainerName and StorageAccountName)
                             MaskValue -key "$($secret).$($_)" -value $json."$_"
                         }
                     }

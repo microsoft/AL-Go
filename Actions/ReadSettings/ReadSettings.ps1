@@ -107,46 +107,63 @@ try {
             "Authorization" = "token $token"
             "Accept"        = "application/vnd.github.v3+json"
         }
+        Write-Host "Requesting environments: $getEnvironments"
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
         try {
             Write-Host "Trying to get environments from GitHub API"
-            $environments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+            $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
         } 
         catch {
+            $ghEnvironments = @()
             Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
         }
-        $environments = @($environments+@($settings.environments) | Where-Object { $_ -ne "github-pages" } | Where-Object { 
-            if ($includeProduction) {
-                $_ -like $getEnvironments -or $_ -like "$getEnvironments (PROD)" -or $_ -like "$getEnvironments (Production)" -or $_ -like "$getEnvironments (FAT)" -or $_ -like "$getEnvironments (Final Acceptance Test)"
-            }
-            else {
-                $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
-            }
-        } | Where-Object {
-            $branches = @( 'main' )
-            $environmentName = $_.Split(' ')[0]
-            $deployToName = "DeployTo$environmentName"
-            if (($settings.Contains($deployToName)) -and ($settings."$deployToName".Contains('Branches'))) {
-                $branches = @($settings."$deployToName".Branches)
-            }
-            $branches | Out-Host
-            $includeEnvironment = $false
-            $branches | ForEach-Object {
-                if ($ENV:GITHUB_REF_NAME -like $_) {
-                    $includeEnvironment = $true
-                }
-            }
-            $includeEnvironment
-        })
-
+        $environments = @($ghEnvironments+@($settings.environments) | Select-Object -unique | Where-Object { $_ -ne "github-pages" })
+        $unknownEnvironment = 0
         if (!($environments)) {
+            $unknownEnvironment = 1
             # If no environments are defined and the user specified a single environment, use that environment
             # This allows the user to specify a single environment without having to define it in the settings
             if ($getenvironments -notcontains '*' -and $getenvironments -notcontains '?' -and $getenvironments -notcontains ',') {
                 $environments = @($getenvironments)
             }
         }
-
+        else {
+            if ($environments) {
+                Write-Host "Environments found: $($environments -join ', ')"
+            }
+            $environments = @($environments | Where-Object { 
+                if ($includeProduction) {
+                    $_ -like $getEnvironments -or $_ -like "$getEnvironments (PROD)" -or $_ -like "$getEnvironments (Production)" -or $_ -like "$getEnvironments (FAT)" -or $_ -like "$getEnvironments (Final Acceptance Test)"
+                }
+                else {
+                    $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
+                }
+            } | Where-Object {
+                Write-Host "Environment: $_"
+                if ($ghEnvironments -contains $_) {
+                    # Environment is GitHub Environment, default branches are controlled on GitHub
+                    $branches = @( '*' )
+                }
+                else {
+                    # Environment is in settings, default branches are controlled in settings
+                    $branches = @( 'main' )
+                }
+                $environmentName = $_.Split(' ')[0]
+                $deployToName = "DeployTo$environmentName"
+                if (($settings.Contains($deployToName)) -and ($settings."$deployToName".Contains('Branches'))) {
+                    $branches = @($settings."$deployToName".Branches)
+                }
+                Write-Host "- branches: $($branches -join ', ')"
+                $includeEnvironment = $false
+                $branches | ForEach-Object {
+                    if ($ENV:GITHUB_REF_NAME -like $_) {
+                        $includeEnvironment = $true
+                    }
+                }
+                Write-Host "- include: $includeEnvironment"
+                $includeEnvironment
+            })
+        }
         $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
         $environments | Select-Object -Unique | ForEach-Object { 
             $environmentName = $_.Split(' ')[0]
@@ -163,6 +180,8 @@ try {
         Write-Host "EnvironmentsJson=$environmentsJson"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($environments.Count)"
         Write-Host "EnvironmentCount=$($environments.Count)"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
+        Write-Host "UnknownEnvironment=$unknownEnvironment"
     }
 
     TrackTrace -telemetryScope $telemetryScope
