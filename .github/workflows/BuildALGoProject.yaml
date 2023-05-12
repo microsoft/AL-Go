@@ -78,7 +78,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             settingsJson: ${{ env.Settings }}
-            secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,storageContext,gitHubPackagesContext'
+            secrets: ${{ inputs.secrets }}
 
         - name: Determine ArtifactUrl
           uses: mazhelez/AL-Go/Actions/DetermineArtifactUrl@main
