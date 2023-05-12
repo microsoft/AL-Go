@@ -49,7 +49,7 @@ on:
 
 jobs:
   BuildALGoProject:
-    runs-on: ${{ fromJson(inputs.githubRunner) }}
+    runs-on: ${{ fromJson(inputs.runsOn) }}
 
     steps:
         - name: Checkout
