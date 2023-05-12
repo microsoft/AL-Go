@@ -182,7 +182,7 @@ jobs:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
       fail-fast: false
     name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
-    uses: mazhelez/AL-Go/.github/workflows/BuildALGoProject.yaml@extract-build-project-action
+    uses: mazhelez/AL-Go-Actions/Workflows/BuildALGoProject.yaml@extract-build-project-action
     secrets: inherit
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
