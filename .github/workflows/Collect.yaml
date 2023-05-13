@@ -32,8 +32,7 @@ jobs:
 
       - name: Collect
         run: |
-          $ErrorActionPreference = "Stop"
-          Set-StrictMode -Version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
             $token = '${{ Secrets.OrgPAT }}'
             if (!$token) {

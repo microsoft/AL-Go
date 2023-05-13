@@ -1,5 +1,4 @@
-﻿Set-StrictMode -Version 2.0
-$ErrorActionPreference = "Stop"
+﻿$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
 

@@ -8,8 +8,7 @@ if (Test-Path $gitHubHelperPath) {
     # If we are adding more dependencies here, then localDevEnv and cloudDevEnv needs to be updated
 }
 
-$ErrorActionPreference = "stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
