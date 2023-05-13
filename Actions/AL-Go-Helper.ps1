@@ -1109,7 +1109,6 @@ function CloneIntoNewFolder {
     invoke-git clone $serverUrl
 
     Set-Location *
-    Write-Host "Using branch $ENV:GITHUB_REF_NAME"
     invoke-git checkout $ENV:GITHUB_REF_NAME
 
     if ($branch) {
@@ -1130,7 +1129,6 @@ function CommitFromNewFolder {
     if ($commitMessage.Length -gt 250) {
         $commitMessage = "$($commitMessage.Substring(0,250))...)"
     }
-    Write-Host $commitMessage
     invoke-git commit --allow-empty -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
