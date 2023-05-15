@@ -1,7 +1,7 @@
 ﻿$githubOwner = "githubOwner"
 $token = "token"
 $defaultRepository = "repo"
-$defaultApplication = "21.0.0.0"
+$defaultApplication = "22.0.0.0"
 $defaultRuntime = "10.0"
 $defaultPublisher = "MS Test"
 

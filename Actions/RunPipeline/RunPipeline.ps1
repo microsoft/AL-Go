@@ -34,12 +34,14 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    # Pull docker image in the background
-    $genericImageName = Get-BestGenericImageName
-    Start-Job -ScriptBlock {
-        docker pull --quiet $genericImageName
-    } -ArgumentList $genericImageName | Out-Null
-
+    if ($isWindows) {
+        # Pull docker image in the background
+        $genericImageName = Get-BestGenericImageName
+        Start-Job -ScriptBlock {
+            docker pull --quiet $genericImageName
+        } -ArgumentList $genericImageName | Out-Null
+    }
+  
     $containerName = GetContainerName($project)
 
     $runAlPipelineParams = @{}
@@ -107,8 +109,7 @@ try {
 
     if ($repo.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
-            OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-            exit
+            OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
         }
     }
 
@@ -191,10 +192,7 @@ try {
     }
 
     $previousApps = @()
-    if ($repo.skipUpgrade) {
-        OutputWarning -message "Skipping upgrade tests"
-    }
-    else {
+    if (!$repo.skipUpgrade) {
         Write-Host "::group::Locating previous release"
         try {
             $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
@@ -399,6 +397,7 @@ try {
         -bcAuthContext $authContext `
         -environment $environmentName `
         -artifact $artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -vsixFile $repo.vsixFile `
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
         -baseFolder $projectPath `

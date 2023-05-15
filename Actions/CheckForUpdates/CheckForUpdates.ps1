@@ -64,7 +64,7 @@ try {
     # if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
 
     # Get Repo settings as a hashtable
-    $repoSettings = [hashtable](ReadSettings -project '' -workflowName '' -userName '' -branchName '')
+    $repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable
     $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 
     # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
@@ -374,8 +374,8 @@ try {
                 
                 # If $directCommit, then changes are made directly to the default branch
                 if (!$directcommit) {
-                    # If not direct commit, create a new branch with a random name, and switch to it
-                    $branch = [System.IO.Path]::GetRandomFileName()
+                    # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
+                    $branch = "update-al-go-system-files/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. update-al-go-system-files/main/210101120000
                     invoke-git checkout -b $branch
                 }
 

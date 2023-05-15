@@ -88,14 +88,25 @@ function ConvertTo-HashTable() {
     [CmdletBinding()]
     Param(
         [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object,
+        $object,
         [switch] $recurse
     )
+
     $ht = @{}
-    if ($object) {
-        $object.PSObject.Properties | ForEach-Object { 
-            if ($recurse -and ($_.Value -is [PSCustomObject])) {
-                $ht[$_.Name] = ConvertTo-HashTable $_.Value
+    if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
+        $object.Keys | ForEach-Object {
+            if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $object."$_" -is [PSCustomObject])) {
+                $ht[$_] = ConvertTo-HashTable $object."$_" -recurse
+            }
+            else {
+                $ht[$_] = $object."$_"
+            }
+        }
+    }
+    elseif ($object -is [PSCustomObject]) {
+        $object.PSObject.Properties | ForEach-Object {
+            if ($recurse -and ($_.Value -is [System.Collections.Specialized.OrderedDictionary] -or $_.Value -is [hashtable] -or $_.Value -is [PSCustomObject])) {
+                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
             }
             else {
                 $ht[$_.Name] = $_.Value
@@ -233,11 +244,15 @@ function DownloadAndImportBcContainerHelper {
         }
         if (Test-Path $repoSettingsPath) {
             $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-            if ($bcContainerHelperVersion -eq "") {
+            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "latest") {
                 if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
                     $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+                    Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
                     if ($bcContainerHelperVersion -like "https://*") {
                         throw "Setting BcContainerHelperVersion to a URL is not allowed."
+                    }
+                    elseif ($bcContainerHelperVersion -ne "" -and $bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+                        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
                     }
                 }
             }
@@ -479,6 +494,7 @@ function ReadSettings {
         "failOn"                                 = "error"
         "treatTestFailuresAsWarnings"            = $false
         "rulesetFile"                            = ""
+        "vsixFile"                               = ""
         "assignPremiumPlan"                      = $false
         "enableTaskScheduler"                    = $false
         "doNotBuildTests"                        = $false
@@ -633,8 +649,8 @@ function AnalyzeRepo {
     Param(
         [hashTable] $settings,
         $token,
-        [string] $baseFolder,
-        [string] $project,
+        [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
+        [string] $project = '.',
         [string] $insiderSasToken,
         [switch] $doNotCheckArtifactSetting,
         [switch] $doNotIssueWarnings,
@@ -679,7 +695,7 @@ function AnalyzeRepo {
         }
     }
     else {
-        throw "The type, specified in $RepoSettingsFile, must be either 'Per Tenant Extension' or 'AppSource App'. It is '$($settings.type)'."
+        throw "The type, specified in $RepoSettingsFile, must be either 'PTE' or 'AppSource App'. It is '$($settings.type)'."
     }
 
     if (-not (@($settings.appFolders)+@($settings.testFolders)+@($settings.bcptTestFolders))) {
@@ -938,7 +954,7 @@ function AnalyzeRepo {
                     Write-Host "Using token as AuthTokenSecret"
                 }
                 else {
-                    Write-Host "No token available, will attempt to invoke gh auth status --show-token to get access to repository"
+                    Write-Host "No token available, will attempt to invoke gh auth token to get access to repository"
                 }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
             }
@@ -1094,6 +1110,7 @@ function CloneIntoNewFolder {
     invoke-git clone $serverUrl
 
     Set-Location *
+    invoke-git checkout $ENV:GITHUB_REF_NAME
 
     if ($branch) {
         invoke-git checkout -b $branch
@@ -1116,7 +1133,7 @@ function CommitFromNewFolder {
     invoke-git commit --allow-empty -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
-        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
+        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
     }
     else {
         invoke-git push $serverUrl
@@ -1376,16 +1393,15 @@ function CreateDevEnv {
                             if ($secret) { $_.authTokenSecret = $secret.SecretValue | Get-PlainText }
                         }
                         else {
-                            Write-Host "Not using Azure KeyVault, attempting to retrieve an auth token using gh auth status"
+                            Write-Host "Not using Azure KeyVault, attempting to retrieve an auth token using gh auth token"
                             $retry = $true
                             while ($retry) {
                                 try {
-                                    $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-                                    $_.authTokenSecret = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
+                                    $_.authTokenSecret = invoke-gh -silent -returnValue auth token
                                     $retry = $false
                                 }
                                 catch {
-                                    Write-Host -ForegroundColor Red "Error trying to retrieve GitHub token."
+                                    Write-Host -ForegroundColor Red "Error trying to retrieve GitHub token (are you authenticated in GitHub CLI?)"
                                     Write-Host -ForegroundColor Red $_.Exception.Message
                                     Read-Host "Press ENTER to retry operation (or Ctrl+C to cancel)"
                                 }
@@ -1471,8 +1487,7 @@ function CreateDevEnv {
 
         if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
             if ($licenseFileUrl -eq "") {
-                OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-                exit
+                OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             }
         }
 
@@ -1653,6 +1668,7 @@ function CreateDevEnv {
         }
 
         Run-AlPipeline @runAlPipelineParams `
+            -vsixFile $repo.vsixFile `
             -pipelinename $workflowName `
             -imageName "" `
             -memoryLimit $repo.memoryLimit `
@@ -1767,8 +1783,18 @@ Function AnalyzeProjectDependencies {
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
 
         # Filter out app folders that doesn't contain an app.json file
-        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Resolve-Path (Join-Path $project $_) -Relative } | Where-Object { Test-Path (Join-Path $_ app.json)}
-
+        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
+            $projectFolder = Join-Path $project $_
+            if (!(Test-Path $projectFolder -PathType Container)) {
+                Write-Host "::Warning::Folder $_ doesn't exist, skipping."
+            }
+            elseif (!(Test-Path (Join-Path $projectFolder 'app.json'))) {
+                Write-Host "::Warning::Folder $_ doesn't contain an app.json file, skipping."
+            }
+            else {
+                Resolve-Path $projectFolder -Relative
+            }
+        }
         # Default to scanning the project folder if no app folders are specified
         if (-not $folders) {
             Write-Host "No apps or tests folders found for project $project. Scanning for apps in the project folder."

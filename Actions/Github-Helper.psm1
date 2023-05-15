@@ -69,7 +69,21 @@ function InvokeWebRequest {
         if ($outfile) {
             $params += @{ "outfile" = $outfile }
         }
-        Invoke-WebRequest  @params -Uri $uri
+        try {
+            $result = Invoke-WebRequest  @params -Uri $uri
+        }
+        catch [System.Net.WebException] {
+            $response = $_.Exception.Response
+            $responseUri = $response.ResponseUri.AbsoluteUri
+            if ($response.StatusCode -eq 404 -and $responseUri -ne $uri) {
+                Write-Host "::Warning::Repository ($uri) was renamed or moved, please update your references with the new name. Trying $responseUri, as suggested by GitHub."
+                $result = Invoke-WebRequest @params -Uri $responseUri
+            }
+            else {
+                throw
+            }
+        }
+        $result
     }
     catch {
         $message = GetExtendedErrorMessage -errorRecord $_
@@ -551,8 +565,7 @@ function DownloadRelease {
     if ($projects -eq "") { $projects = "*" }
     Write-Host "Downloading release $($release.Name), projects $projects, type $mask"
     if ([string]::IsNullOrEmpty($token)) {
-        $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
+        $token = invoke-gh -silent -returnValue auth token
     }
     $headers = @{ 
         "Accept"        = "application/octet-stream"
@@ -673,7 +686,7 @@ function GetArtifacts {
     do {
         $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page)"
         Write-Host $uri
-        $artifactsJson = InvokeWebRequest -UseBasicParsing -Headers $headers -Uri $uri
+        $artifactsJson = InvokeWebRequest -Headers $headers -Uri $uri
         $artifacts = $artifactsJson | ConvertFrom-Json
         $page++
         $allArtifacts += @($artifacts.artifacts | Where-Object { $_.name -like "*-$branch-$mask-$version" })
@@ -705,8 +718,7 @@ function DownloadArtifact {
     Write-Host "Downloading artifact $($artifact.Name)"
     Write-Host $artifact.archive_download_url
     if ([string]::IsNullOrEmpty($token)) {
-        $authstatus = (invoke-gh -silent -returnValue auth status --show-token) -join " "
-        $token = $authStatus.SubString($authstatus.IndexOf('Token: ')+7).Trim().Split(' ')[0]
+        $token = invoke-gh -silent -returnValue auth token
     }
     $headers = @{ 
         "Authorization" = "token $token"
@@ -715,4 +727,4 @@ function DownloadArtifact {
     $outFile = Join-Path $path "$($artifact.Name).zip"
     InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
     $outFile
-}    
+}

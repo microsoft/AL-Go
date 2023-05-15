@@ -142,6 +142,9 @@ try {
         try {
             $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
             $bcAuthContext = New-BcAuthContext @authContextParams
+            if ($null -eq $bcAuthContext) {
+                throw "Authentication failed"
+            }
         } catch {
             throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
         }
