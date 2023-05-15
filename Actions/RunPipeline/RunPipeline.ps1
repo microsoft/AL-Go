@@ -34,12 +34,14 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    # Pull docker image in the background
-    $genericImageName = Get-BestGenericImageName
-    Start-Job -ScriptBlock {
-        docker pull --quiet $genericImageName
-    } -ArgumentList $genericImageName | Out-Null
-
+    if ($isWindows) {
+        # Pull docker image in the background
+        $genericImageName = Get-BestGenericImageName
+        Start-Job -ScriptBlock {
+            docker pull --quiet $genericImageName
+        } -ArgumentList $genericImageName | Out-Null
+    }
+  
     $containerName = GetContainerName($project)
 
     $runAlPipelineParams = @{}
@@ -395,6 +397,7 @@ try {
         -bcAuthContext $authContext `
         -environment $environmentName `
         -artifact $artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -vsixFile $repo.vsixFile `
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
         -baseFolder $projectPath `

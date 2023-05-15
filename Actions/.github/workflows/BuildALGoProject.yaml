@@ -87,6 +87,7 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+            project: ${{ matrix.project }}
             settingsJson: ${{ env.Settings }}
             secretsJson: ${{ env.RepoSecrets }}
 

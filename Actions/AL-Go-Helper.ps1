@@ -244,11 +244,15 @@ function DownloadAndImportBcContainerHelper {
         }
         if (Test-Path $repoSettingsPath) {
             $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-            if ($bcContainerHelperVersion -eq "") {
+            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "latest") {
                 if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
                     $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+                    Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
                     if ($bcContainerHelperVersion -like "https://*") {
                         throw "Setting BcContainerHelperVersion to a URL is not allowed."
+                    }
+                    elseif ($bcContainerHelperVersion -ne "" -and $bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+                        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
                     }
                 }
             }
@@ -489,6 +493,7 @@ function ReadSettings {
         "failOn"                                 = "error"
         "treatTestFailuresAsWarnings"            = $false
         "rulesetFile"                            = ""
+        "vsixFile"                               = ""
         "assignPremiumPlan"                      = $false
         "enableTaskScheduler"                    = $false
         "doNotBuildTests"                        = $false
@@ -643,8 +648,8 @@ function AnalyzeRepo {
     Param(
         [hashTable] $settings,
         $token,
-        [string] $baseFolder,
-        [string] $project,
+        [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
+        [string] $project = '.',
         [string] $insiderSasToken,
         [switch] $doNotCheckArtifactSetting,
         [switch] $doNotIssueWarnings,
@@ -1104,6 +1109,7 @@ function CloneIntoNewFolder {
     invoke-git clone $serverUrl
 
     Set-Location *
+    invoke-git checkout $ENV:GITHUB_REF_NAME
 
     if ($branch) {
         invoke-git checkout -b $branch
@@ -1126,7 +1132,7 @@ function CommitFromNewFolder {
     invoke-git commit --allow-empty -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
-        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
+        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
     }
     else {
         invoke-git push $serverUrl
@@ -1661,6 +1667,7 @@ function CreateDevEnv {
         }
 
         Run-AlPipeline @runAlPipelineParams `
+            -vsixFile $repo.vsixFile `
             -pipelinename $workflowName `
             -imageName "" `
             -memoryLimit $repo.memoryLimit `
