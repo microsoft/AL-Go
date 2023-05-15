@@ -232,8 +232,9 @@ jobs:
           path: .artifactcache
           key: ${{ steps.determineArtifactUrl.outputs.ArtifactUrl }}
 
-      - name: Run pipeline
+      - name: Build AL Project
         id: RunPipeline
+        if: matrix.project != env.powerPlatformSolutionFolder
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         env:
           BuildMode: ${{ matrix.buildMode }}
@@ -245,6 +246,19 @@ jobs:
           settingsJson: ${{ env.Settings }}
           secretsJson: ${{ env.RepoSecrets }}
           buildMode: ${{ matrix.buildMode }}
+
+      - name: Build PowerPlatform Solution
+        id: BuildPowerPlatform
+        if: matrix.project == env.powerPlatformSolutionFolder && matrix.buildMode == 'default'
+        uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
+        with:
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          solutionFolder: ${{ matrix.project }}
+          outputFolder: ${{ matrix.project }}/.buildartifacts/PowerPlatformSolution/
+          outputFileName: ${{ matrix.project }}
+          appRevision: ${{ env.appRevision }}
+          appBuild: ${{ env.appBuild }}
 
       - name: Calculate Artifact names
         id: calculateArtifactsNames
@@ -331,6 +345,14 @@ jobs:
           path: '${{ matrix.project }}/bcptTestResults.json'
           if-no-files-found: ignore
 
+      - name: Publish artifacts - Power Platform Solution
+        uses: actions/upload-artifact@v3
+        if: github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetCount > 0 || needs.Initialization.outputs.environmentCount > 0
+        with:
+          name: ${{ env.PowerPlatformSolutionArtifactsName }}
+          path: '${{ matrix.project }}/.buildartifacts/PowerPlatformSolution/'
+          if-no-files-found: ignore
+
       - name: Analyze Test Results
         id: analyzeTestResults
         if: success() || failure()
@@ -395,10 +417,10 @@ jobs:
           $envName = '${{ steps.envName.outputs.envName }}'
           $deployToSettingStr = [System.Environment]::GetEnvironmentVariable("DeployTo$envName")
           if ($deployToSettingStr) {
-            $deployToSetting = $deployToSettingStr | ConvertFrom-Json
+            $deployToSettings = $deployToSettingStr | ConvertFrom-Json
           }
           else {
-            $deployToSetting = [PSCustomObject]@{}
+            $deployToSettings = [PSCustomObject]@{}
           }
           $authContext = $null
           "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
@@ -413,8 +435,8 @@ jobs:
             Write-Host "::Error::No AuthContext provided"
             exit 1
           }
-          if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "EnvironmentName") {
-            $environmentName = $deployToSetting.EnvironmentName
+          if (("$deployToSettings" -ne "") -and $deployToSettings.PSObject.Properties.name -eq "EnvironmentName") {
+            $environmentName = $deployToSettings.environmentName
           }
           else {
             $environmentName = $null
@@ -427,14 +449,14 @@ jobs:
                 }
               }            
             }
-          }
-          if (!($environmentName)) {
-            $environmentName = '${{ steps.envName.outputs.envName }}'
+            if (!($environmentName)) {
+              $environmentName = '${{ steps.envName.outputs.envName }}'
+            }
+            $deployToSettings | Add-Member -MemberType NoteProperty -name 'environmentName' -value $environmentName
           }
           $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
-
-          if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "projects") {
-            $projects = $deployToSetting.projects
+          if (("$deployToSettings" -ne "") -and $deployToSettings.PSObject.Properties.name -eq "projects") {
+            $projects = $deployToSettings.projects
           }
           else {
             $projects = [System.Environment]::GetEnvironmentVariable("$($envName)-projects")
@@ -444,25 +466,40 @@ jobs:
                 $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('projects')))
               }
             }
+            $deployToSettings | Add-Member -MemberType NoteProperty -Name 'projects' -Value $projects
           }
+          $powerPlatformSolutionFolder = [System.Environment]::GetEnvironmentVariable('PowerPlatformSolutionFolder')
+          $deployPP = $false
           if ($projects -eq '' -or $projects -eq '*') {
             $projects = '*'
+            $deployPP = ("$powerPlatformSolutionFolder" -ne "")
           }
           else {
             $buildProjects = '${{ needs.Initialization.outputs.projects }}' | ConvertFrom-Json
-            $projects = ($projects.Split(',') | Where-Object { $buildProjects -contains $_ }) -join ','
+            $projects = ($projects.Split(',') | Where-Object { 
+              $deployALProject = $buildProjects -contains $_
+              if ($_ -eq $powerPlatformSolutionFolder) {
+                $deployPP = $true
+                $deployALProject = $false
+              }
+              $deployALProject
+            }) -join ','
           }
 
           Add-Content -Path $env:GITHUB_OUTPUT -Value "authContext=$authContext"
           Write-Host "authContext=$authContext"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "deployTo=$($deployToSettings | ConvertTo-Json -depth 99 -compress)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "environmentName=$environmentName"
           Write-Host "environmentName=$([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName)))"
           Write-Host "environmentName (as Base64)=$environmentName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "projects=$projects"
           Write-Host "projects=$projects"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "deployPP=$deployPP"
+          Write-Host "deployPP=$deployPP"
 
-      - name: Deploy
+      - name: Deploy AL
         uses: microsoft/AL-Go-Actions/Deploy@main
+        if: ${{ steps.authContext.outputs.projects }}
         env:
           AuthContext: ${{ steps.authContext.outputs.authContext }}
         with:
@@ -471,6 +508,16 @@ jobs:
           projects: ${{ steps.authContext.outputs.projects }}
           environmentName: ${{ steps.authContext.outputs.environmentName }}
           artifacts: '.artifacts'
+
+      - name: Deploy PowerPlatform
+        if: ${{ steps.authContext.outputs.deployPP == 'true' }}
+        uses: microsoft/AL-Go-Actions/DeployPowerPlatform@main
+        with:
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          artifactPath: '.artifacts'
+          deploySettings: ${{ steps.authContext.outputs.deployTo }} 
+          authSettings: ${{ steps.authContext.outputs.authContext }}
 
   Deliver:
     needs: [ Initialization, Build ]

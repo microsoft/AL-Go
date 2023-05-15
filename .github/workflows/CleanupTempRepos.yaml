@@ -70,5 +70,5 @@ jobs:
                   # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
                   '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" "/orgs/$repoOwner/packages/nuget/$($_.name)" --input -
               }
-              invoke-gh repo delete "https://github.com/$repo" --confirm | Out-Host
+              invoke-gh repo delete "https://github.com/$repo" --yes | Out-Host
           }

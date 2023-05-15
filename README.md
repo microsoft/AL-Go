@@ -6,7 +6,7 @@ The goal is that people who have created their GitHub repositories based on the 
 The roadmap for AL-Go for GitHub can be found here: [https://aka.ms/ALGoRoadmap](https://aka.ms/ALGoRoadmap)
 
 The template repositories to use as starting point are:
-- [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [https://aka.ms/algopte](https://aka.ms/algopte) is the GitHub repository template for Per Tenant Extenstions. When creating a Per Tenant Extensions, this is your starting point.
+- [https://github.com/BusinessCentralDemos/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) is the GitHub repository template for Per Tenant Extenstions. When creating a Per Tenant Extensions, this is your starting point.
 - [https://github.com/microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) or [https://aka.ms/algoappsource](https://aka.ms/algoappsource) is the GitHub repository template for AppSource apps. When creating an AppSource App, this is your starting point.
 
 
@@ -29,6 +29,9 @@ The below usage scenarios takes you through how to get started and how to perfor
 14. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
 15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 16. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
+17. [(preview) Create a new Business Central and Power Platform project](Scenarios/AddPowerPlatformProject.md)
+18. [(preview) Try one of the Business Central and Power Platform samples](Scenarios/TryPowerPlatformSamples.md)
+19. [(preview) Power Platform repository setup](Scenarios/SetupPowerPlatform.md)
 
 ## Migration scenarios
 A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](Scenarios/MigrateFromAzureDevOpsWithoutHistory.md)<br />

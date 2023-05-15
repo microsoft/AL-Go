@@ -94,6 +94,8 @@ jobs:
 
       - name: Analyze Artifacts
         id: analyzeartifacts
+        env:
+          _appVersion: ${{ github.event.inputs.appVersion }}
         run: |
           $ErrorActionPreference = "STOP"
           Set-StrictMode -version 2.0
@@ -126,17 +128,19 @@ jobs:
             }
             $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
             Write-Host "Analyzing artifacts for project $project"
-            $appVersion = '${{ github.event.inputs.appVersion }}'
+            $appVersion = "$ENV:_appVersion"
             if ($appVersion -eq "latest") {
               Write-Host "Grab latest"
-              $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*" } | Select-Object -First 1
+              $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*" -or $_.name -like "$project-$refname-PowerPlatformSolution-*" } | Select-Object -First 1
             }
             else {
-              Write-Host "Search for $project-$refname-Apps-$appVersion"
-              $artifact = $allArtifacts | Where-Object { $_.name -eq "$project-$refname-Apps-$appVersion" } | Select-Object -First 1
+              Write-Host "Search for $project-$refname-Apps-$appVersion or $project-$refname-PowerPlatformSolution-$appVersion"
+              $artifact = $allArtifacts | Where-Object { $_.name -eq "$project-$refname-Apps-$appVersion" -or $_.name -eq "$project-$refname-PowerPlatformSolution-$appVersion" } | Select-Object -First 1
             }
+
             if ($artifact) {
-              $artifactsVersion = $artifact.name.SubString($artifact.name.LastIndexOf('-Apps-')+6)
+              $startIndex = $artifact.name.LastIndexOf('-') + 1
+              $artifactsVersion = $artifact.name.SubString($startIndex)
             }
             else {
               Write-Host "::Error::No artifacts found for this project"
@@ -152,13 +156,15 @@ jobs:
               $sha = $artifact.workflow_run.head_sha
             }
 
-            $allArtifacts | Where-Object { ($_.name -like "$project-$refname-Apps-$($artifactsVersion)" -or $_.name -like "$project-$refname-TestApps-$($artifactsVersion)" -or $_.name -like "$project-$refname-Dependencies-$($artifactsVersion)") } | ForEach-Object {
+            write-host "looking for $project-$refname-Apps-$artifactsVersion or $project-$refname-TestApps-$artifactsVersion or $project-$refname-Dependencies-$artifactsVersion or $project-$refname-PowerPlatformSolution-$artifactsVersion"
+            $allArtifacts | Where-Object { ($_.name -like "$project-$refname-Apps-$artifactsVersion" -or $_.name -like "$project-$refname-TestApps-$artifactsVersion" -or $_.name -like "$project-$refname-Dependencies-$artifactsVersion" -or $_.name -like "$project-$refname-PowerPlatformSolution-$artifactsVersion") } | ForEach-Object {
               $atype = $_.name.SubString(0,$_.name.Length-$artifactsVersion.Length-1)
               $atype = $atype.SubString($atype.LastIndexOf('-')+1)
               $include += $( [ordered]@{ "name" = $_.name; "url" = $_.archive_download_url; "atype" = $atype; "project" = $thisproject } )
             }
+
             if ($include.Count -eq 0) {
-              Write-Host "::Error::No artifacts found"
+              Write-Host "::Error::No artifacts found for version $artifactsVersion"
               exit 1
             }
           }
