@@ -27,7 +27,7 @@ Install-Module BcContainerHelper -force -allowPrerelease;
 
 $ppClientId = Read-Host -Prompt "Enter client id";
 $ppClientSecret = Read-Host -AsSecureString -Prompt 'Enter client secret';
-New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppClientSecret $ppClientSecret -ppApplicationId $ppClientId
+New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppClientSecret $ppClientSecret -ppApplicationId $ppClientId | Set-Clipboard
 ```
 
 **Getting username/password authentication context:**
@@ -36,7 +36,7 @@ Install-Module BcContainerHelper -force -allowPrerelease;
 
 $ppUserName = Read-Host -Prompt "Enter userName";
 $ppPassword = Read-Host -AsSecureString -Prompt 'Enter password';
-New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserName -ppPassword $ppPassword
+New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserName -ppPassword $ppPassword | Set-Clipboard
 ```
 
 If you get an error while trying to install the module you'll need to update your PowerShellGet module to the latest version:
