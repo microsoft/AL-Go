@@ -46,9 +46,6 @@ on:
         description: Specifies the telemetry scope for the telemetry signal
         required: false
         type: string
-    secrets:
-      insiderSasToken:
-        required: true
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
