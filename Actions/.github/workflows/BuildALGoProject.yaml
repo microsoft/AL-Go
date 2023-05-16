@@ -82,7 +82,7 @@ jobs:
             secrets: ${{ inputs.secrets }}
 
         - name: Determine ArtifactUrl
-          uses: mazhelez/AL-Go/Actions/DetermineArtifactUrl@main
+          uses: mazhelez/AL-Go-Actions/DetermineArtifactUrl@main
           id: determineArtifactUrl
           with:
             shell: ${{ inputs.shell }}
