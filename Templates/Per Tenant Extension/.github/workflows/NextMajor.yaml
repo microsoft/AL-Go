@@ -68,15 +68,7 @@ jobs:
       fail-fast: false
     name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
     uses: mazhelez/AL-Go-Actions/.github/workflows/BuildALGoProject.yaml@extract-build-project-action
-    secrets:
-      licenseFileUrl: ${{ secrets.licenseFileUrl }}
-      insiderSasToken: ${{ secrets.insiderSasToken }}
-      codeSignCertificateUrl: ${{ secrets.codeSignCertificateUrl }}
-      codeSignCertificatePassword: ${{ secrets.codeSignCertificatePassword }}
-      keyVaultCertificateUrl: ${{ secrets.keyVaultCertificateUrl }}
-      keyVaultCertificatePassword: ${{ secrets.keyVaultCertificatePassword }}
-      keyVaultClientId: ${{ secrets.keyVaultClientId }}
-      gitHubPackagesContext: ${{ secrets.gitHubPackagesContext }}
+    secrets: inherit
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
       runsOn: ${{ needs.Initialization.outputs.githubRunner }}
@@ -84,6 +76,7 @@ jobs:
       project: ${{ matrix.project }}
       buildMode: ${{ matrix.buildMode }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
+      secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
 
   PostProcess:

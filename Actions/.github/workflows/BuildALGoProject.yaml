@@ -42,24 +42,8 @@ on:
         required: false
         type: string
     secrets:
-      licenseFileUrl:
-        required: false
       insiderSasToken:
-        required: false
-      codeSignCertificateUrl:
-        required: false
-      codeSignCertificatePassword:
-        required: false
-      keyVaultCertificateUrl: 
-        required: false
-      keyVaultCertificatePassword:
-        required: false
-      keyVaultClientId:
-        required: false
-      storageContext:
-        required: false
-      gitHubPackagesContext:
-        required: false
+        required: true
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
