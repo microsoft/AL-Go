@@ -53,10 +53,13 @@ try {
                 $project = $_.Replace('\','_').Replace('/','_')
                 $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
                 Write-Host "project '$project'"
-                $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-$refname-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
-                if (!($apps)) {
-                    throw "There is no artifacts present in $artifacts matching $project-$refname-Apps-<version>."
+                $projectApps = @((Get-ChildItem -Path $artifacts -Filter "$project-$refname-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+                if (!($projectApps)) {
+                    if ($project -ne '*') {
+                        throw "There are no artifacts present in $artifacts matching $project-$refname-Apps-<version>."
+                    }
                 }
+                $apps += $projectApps
                 $apps += @((Get-ChildItem -Path $artifacts -Filter "$project-$refname-Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
             }
         }
@@ -126,64 +129,66 @@ try {
         }
     }
 
-    Write-Host "Apps to deploy"
-    $apps | Out-Host
+    if ($apps) {
+        Write-Host "Apps to deploy"
+        $apps | Out-Host
 
-    Set-Location $ENV:GITHUB_WORKSPACE
-    if (-not ($ENV:AuthContext)) {
-        throw "An environment secret for environment($environmentName) called AUTHCONTEXT containing authentication information for the environment was not found.You must create an environment secret."
-    }
-    $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:AuthContext))
-
-    try {
-        $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
-        $bcAuthContext = New-BcAuthContext @authContextParams
-        if ($null -eq $bcAuthContext) {
-            throw "Authentication failed"
+        Set-Location $ENV:GITHUB_WORKSPACE
+        if (-not ($ENV:AuthContext)) {
+            throw "An environment secret for environment($environmentName) called AUTHCONTEXT containing authentication information for the environment was not found.You must create an environment secret."
         }
-    } catch {
-        throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
-    }
-
-    $envName = $environmentName.Split(' ')[0]
-    Write-Host "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
-    $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
-    if ($response.Status -eq "DoesNotExist") {
-        OutputError -message "Environment with name $envName does not exist in the current authorization context."
-        exit
-    }
-    if ($response.Status -ne "Ready") {
-        OutputError -message "Environment with name $envName is not ready (Status is $($response.Status))."
-        exit
-    }
-
-    try {
-        if ($response.environmentType -eq 1) {
-            if ($bcAuthContext.ClientSecret) {
-                Write-Host "Using S2S, publishing apps using automation API"
-                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
+        $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:AuthContext))
+    
+        try {
+            $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
+            $bcAuthContext = New-BcAuthContext @authContextParams
+            if ($null -eq $bcAuthContext) {
+                throw "Authentication failed"
+            }
+        } catch {
+            throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
+        }
+    
+        $envName = $environmentName.Split(' ')[0]
+        Write-Host "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
+        $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
+        if ($response.Status -eq "DoesNotExist") {
+            OutputError -message "Environment with name $envName does not exist in the current authorization context."
+            exit
+        }
+        if ($response.Status -ne "Ready") {
+            OutputError -message "Environment with name $envName is not ready (Status is $($response.Status))."
+            exit
+        }
+    
+        try {
+            if ($response.environmentType -eq 1) {
+                if ($bcAuthContext.ClientSecret) {
+                    Write-Host "Using S2S, publishing apps using automation API"
+                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
+                }
+                else {
+                    Write-Host "Publishing apps using development endpoint"
+                    Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint -checkAlreadyInstalled
+                }
             }
             else {
-                Write-Host "Publishing apps using development endpoint"
-                Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint -checkAlreadyInstalled
+                if ($type -eq 'CD') {
+                    Write-Host "Ignoring environment $environmentName, which is a production environment"
+                }
+                else {
+                    # Check for AppSource App - cannot be deployed
+                    Write-Host "Publishing apps using automation API"
+                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
+                }
             }
         }
-        else {
-            if ($type -eq 'CD') {
-                Write-Host "Ignoring environment $environmentName, which is a production environment"
-            }
-            else {
-                # Check for AppSource App - cannot be deployed
-                Write-Host "Publishing apps using automation API"
-                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
-            }
+        catch {
+            OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
+            exit
         }
+    
     }
-    catch {
-        OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
-        exit
-    }
-
     if ($artifactsFolderCreated) {
         Remove-Item $artifactsFolder -Recurse -Force
     }
