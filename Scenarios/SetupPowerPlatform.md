@@ -3,7 +3,7 @@
 There are 2 steps to connect your GitHub repository to your Power Platform tenant and environments:
 
 1. Setup the authentication context
-2. Setup the AL-Go-Settings
+2. Setup the AL-Go Repository settings (.github/AL-Go-Settings.json)
 
 ## Authentication Context
 
@@ -62,3 +62,6 @@ The settings are located at:  `.github/AL-Go-Settings.json`
 ```
 
 Please note that GitHubEnvironmentName is the name of the environment you are creating in GitHub to represent the Business Central and Power Platform environments you are deploying to. The GitHub environment must have a corresponding authentication context.
+
+---
+[back](../README.md)

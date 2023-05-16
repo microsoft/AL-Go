@@ -32,3 +32,6 @@
     > **NOTE:** Changes need to be published in Power Platform before they are included in the Pull action. A lot of the Power App source files contain state information and are safe to overwrite in case of conflicts. The connection files and the YAML files under Srs are the ones it makes sense to review.
 
 1. After your changes are checked into a branch in the repository, you can use the **Push Power Platform changes** to deploy them to an environment. Or use the **CI/CD** flow or **Publish to Environment** action to deploy both the AL and Power Platform solutions.
+
+---
+[back](../README.md)

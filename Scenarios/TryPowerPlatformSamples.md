@@ -20,3 +20,6 @@ Alternatively, you can manually deploy the AL extension and Power Platform solut
 > **NOTE:** If you choose this method, you have to manually update the Business Central data references within the Power App and Power Automate flow components.
 
 Choose the method that suits you best and get started with exploring the capabilities of Business Central and Power Platform!
+
+---
+[back](../README.md)
