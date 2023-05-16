@@ -27,6 +27,11 @@ on:
         description: Build mode used when building the artifacts
         required: true
         type: string
+      secrets:
+        description: A comma-separated string with the names of the secrets, required for the workflow.
+        required: false
+        default: ''
+        type: string
       publishThisBuildArtifacts:
         description: Flag indicating whether this build artifacts should be published
         required: false
@@ -75,7 +80,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             settingsJson: ${{ env.Settings }}
-            secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,storageContext,gitHubPackagesContext'
+            secrets: ${{ inputs.secrets }}
 
         - name: Determine ArtifactUrl
           uses: mazhelez/AL-Go-Actions/DetermineArtifactUrl@main
