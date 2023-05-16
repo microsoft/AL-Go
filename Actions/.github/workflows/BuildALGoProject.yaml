@@ -47,8 +47,24 @@ on:
         required: false
         type: string
     secrets:
+      licenseFileUrl:
+        required: false
       insiderSasToken:
-        required: true
+        required: false
+      codeSignCertificateUrl:
+        required: false
+      codeSignCertificatePassword:
+        required: false
+      keyVaultCertificateUrl: 
+        required: false
+      keyVaultCertificatePassword:
+        required: false
+      keyVaultClientId:
+        required: false
+      storageContext:
+        required: false
+      gitHubPackagesContext:
+        required: false
 
 jobs:
   BuildALGoProject:
