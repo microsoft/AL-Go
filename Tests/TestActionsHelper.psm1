@@ -140,7 +140,7 @@ function YamlTest {
     $yamlLines.Count | Should -be $actualYaml.Count
 }
 
-function TestActionsAreComingFromMicrosoftALGOActions {
+function TestActionsReferences {
     param(
         [Parameter(Mandatory)]
         [string]$YamlPath
@@ -148,33 +148,57 @@ function TestActionsAreComingFromMicrosoftALGOActions {
 
     $yaml = Get-Content -Path $YamlPath -Raw
 
-    # Test all AL-GO Actions are coming from microsoft/AL-Go-Actions@<main|preview>
-    $alGoActionsFromForksPattern = '\w*/AL-Go-Actions/\w*@\w*'
-    $alGoActionsFromALGORepo = '\w*/AL-Go/Actions/\w*@\w*'
+    # Test all referenced actions are coming from microsoft/AL-Go-Actions@<main|preview> or actions/ (by GitHub)
+    $actionReferencePattern = 'uses:\s*(.*)@(.*)'
 
-    $actions = [regex]::matches($yaml, "($alGoActionsFromForksPattern)|($alGoActionsFromALGORepo)")
+    $actionReferences = [regex]::matches($yaml, $actionReferencePattern)
 
-    $mainAction = "microsoft/AL-Go-Actions/\w*@main"
-    $previewAction = "microsoft/AL-Go-Actions/\w*@preview"
+    $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
+    $gitHubActionPattern = "^actions/*"
 
-    $actions | ForEach-Object {
-        $action = $_.Value
-        $action | Should -Match "$mainAction|$previewAction"
+    $actionReferences | ForEach-Object {
+        $origin = $_.Groups[1].Value
+        $version = $_.Groups[2].Value
+
+        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern)"
+
+        if($origin -match $alGoActionPattern) {
+            $version | Should -Match "main|preview"
+        }
     }
 }
 
-function TestAllWorkflowsInPath {
+function TestWorkflowReferences {
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        [string]$YamlPath
     )
 
-    $workflows = Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml')
-    $workflows | ForEach-Object {
-        TestActionsAreComingFromMicrosoftALGOActions -YamlPath $_.FullName
+    $yaml = Get-Content -Path $YamlPath -Raw
+
+    # Test all referenced workflows are coming from .github/workflows/
+    $alGoWorkflowReferencePatterns = 'uses:\s*(.*).(yaml|yml)'
+
+    $workflowReferences = [regex]::matches($yaml, $alGoWorkflowReferencePatterns)
+
+    $localWorkflowsPattern = '^./.github/workflows/*'
+
+    $workflowReferences | ForEach-Object {
+        $workflowPath = $_.Groups[1].Value
+        $workflowPath | Should -Match "$localWorkflowsPattern"
     }
+}
+
+function GetWorkflowsInPath {
+    param(
+        [Parameter(Mandatory, ValueFromPipeline = $true)]
+        [string]$Path
+    )
+    return (Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml'))
 }
 
 Export-ModuleMember -Function GetActionScript
 Export-ModuleMember -Function YamlTest
-Export-ModuleMember -Function TestAllWorkflowsInPath
+Export-ModuleMember -Function GetWorkflowsInPath
+Export-ModuleMember -Function TestActionsReferences
+Export-ModuleMember -Function TestWorkflowReferences
