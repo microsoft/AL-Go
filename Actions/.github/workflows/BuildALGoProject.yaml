@@ -68,7 +68,6 @@ on:
 
 jobs:
   BuildALGoProject:
-    name: 'Build project ${{ inputs.project }} in ${{ inputs.buildMode }} mode'
     runs-on: ${{ fromJson(inputs.runsOn) }}
     steps:
         - name: Checkout
