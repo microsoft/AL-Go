@@ -11,12 +11,14 @@
 ## Steps
 
 1. Create a new repository based on the AL-Go-PTE template from [microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE)
-![Screen shot from GitHub showing how ot create a new repository based on the Al-go PTE template](images/p1.png)
+
+    ![Screen shot from GitHub showing how ot create a new repository based on the Al-go PTE template](images/p1.png)
 
 1. Once the repository is set up, configure your Business Central and Power Platform authentication and deployment settings (See [Power Platform Repository setup](./SetupPowerPlatform.md) for detailed steps).  
 
 1. If you already have a solution ready in your Power App repository, use the new "Pull Power Platform changes" action to have your solution and artifacts pulled into your repository.
-![Screen shot from GitHub showing how to pull Power Platform changes](images/p2.png)
+
+    ![Screen shot from GitHub showing how to pull Power Platform changes](images/p2.png)
 
 1. If you do not already have a solution ready in your Power App repository, follow these steps:
 
