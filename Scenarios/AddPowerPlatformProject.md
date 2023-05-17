@@ -10,7 +10,7 @@
 
 ## Steps
 
-1. Create a new repository based on the AL-Go-PTE template from [microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE)
+1. Create a new repository based on the AL-Go-PTE template from [microsoft/AL-Go-PTE-PPPreview](https://github.com/microsoft/AL-Go-PTE-PPPreview)
 
     ![Screen shot from GitHub showing how ot create a new repository based on the Al-go PTE template](images/p1.png)
 
