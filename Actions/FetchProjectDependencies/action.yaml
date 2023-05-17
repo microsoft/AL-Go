@@ -15,6 +15,9 @@ inputs:
     description: Projects that are current project's dependencies
   buildDimensions:
     description: The current build dimensions (a JSON-formatted array of objects {project, buildMode})
+  destinationPath:
+    default: ${{ github.workspace }}/dependencies
+    description: The destination path where the dependencies will be stored
 outputs:
   FetchedArtifacts: 
     description: An array of artifacts that were fetched
@@ -26,7 +29,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: FetchDependencies
       run:
-        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -dependencyProjects ${{ dependencyProjects }} -buildMode ${{ inputs.buildMode }} -buildDimensions ${{ inputs.buildDimensions }} -baseBranch '${{ github.base_ref }}' 
+        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -dependencyProjects ${{ dependencyProjects }} -buildMode ${{ inputs.buildMode }} -buildDimensions ${{ inputs.buildDimensions }} -baseBranch '${{ github.base_ref }}' -destinationPath ${{ inputs.destinationPath }}
 branding:
   icon: terminal
   color: blue

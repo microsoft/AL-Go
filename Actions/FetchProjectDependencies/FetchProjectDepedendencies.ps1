@@ -4,7 +4,8 @@ Param(
     [string] $buildMode = 'Default',
     [string[]] $dependencyProjects = @(),
     [array] $buildDimensions = @(),
-    [string] $baseBranch
+    [string] $baseBranch,
+    [string] $destinationPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,18 +26,24 @@ $fetchedArtifacts= @()
 $fetchArtifacts= @( $dependencyProjects | ForEach-Object {
     $dependencyProject = $_
     $fetchFrom = 'latestBuild'
+    $fetchBuildMode = $buildMode
 
-    $buildDimensions | ForEach-Object {
-        $buildDimension = $_
-        if($buildDimension.project -eq $dependencyProject) {
-            # The dependency project is also built in the current workflow run
-            $fetchFrom = 'currentBuild'
-        }
+    # Check if the dependency project is also built in the current workflow run with the same build mode
+    $currentBuild = $buildDimensions | Where-Object { ($_.project -eq $dependencyProject) -and ($_.buildMode -eq $buildMode)  }
+
+    if(!$currentBuild) {
+        # Check if the dependency project is also built in the current workflow run with the default build mode
+        $currentBuild = $buildDimensions | Where-Object { ($_.project -eq $dependencyProject) -and ($_.buildMode -eq 'Default')  }
+    }
+    
+    if($currentBuild) {
+        $fetchFrom = 'currentBuild'
+        $fetchBuildMode = $currentBuild.buildMode
     }
     
     return @{
         dependencyProject = $dependencyProject
-        buildMode = $buildMode
+        buildMode = $fetchBuildMode
         fetchFrom = $fetchFrom
     }
 })
@@ -49,18 +56,18 @@ foreach($fetchArtifact in $fetchArtifacts) {
     
     switch ($fetchFrom) {
         'currentBuild' {
-            Write-Host "Project '$dependencyProject' is also built in the current worfklow run, fetching artifact from current build"
+            Write-Host "Project '$dependencyProject' is also built in the current worfklow run with build mode $buildMode, fetching artifact from current build"
 
-            Deownload-DependencyProjectArtifact -project $dependencyProject -buildMode $buildMode -workflowRunId $env:GITHUB_RUN_ID
+            Download-DependencyProjectArtifact -project $dependencyProject -buildMode $buildMode -workflowRunId $env:GITHUB_RUN_ID
         }
         'latestBuild' {
             Write-Host "Project '$dependencyProject' is not built in the current worfklow run, fetching artifact from latest build from branch '$baseBranch'"
         
-            Deownload-DependencyProjectArtifact -project $dependencyProject -buildMode $buildMode -baseBranch $baseBranch
+            Download-DependencyProjectArtifact -project $dependencyProject -buildMode $buildMode -baseBranch $baseBranch
         }
     }
 }
-function Deownload-DependencyProjectArtifact {
+function Download-DependencyProjectArtifact {
     pparam(
         [Parameter(HelpMessage = "The project for which to fetch dependencies", Mandatory = $true)]
         [string] $project,
