@@ -46,6 +46,7 @@ try {
         $artifacts = $artifactsFolder
     }
 
+    $searchArtifacts = $false
     if ($artifacts -like "$($ENV:GITHUB_WORKSPACE)*") {
         if (Test-Path $artifacts -PathType Container) {
             $projects.Split(',') | ForEach-Object {
@@ -69,28 +70,44 @@ try {
     elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
         # latest released version
         $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-        if ($artifacts -eq "current") {
-            $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+        if ($releases) {
+            if ($artifacts -eq "current") {
+                $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
+            }
+            elseif ($artifacts -eq "prerelease") {
+                $release = $releases | Where-Object { -not ($_.draft) } | Select-Object -First 1
+            }
+            elseif ($artifacts -eq "draft") {
+                $release = $releases | Select-Object -First 1
+            }
+            if (!($release)) {
+                throw "Unable to locate $artifacts release"
+            }
+            New-Item $artifactsFolder -ItemType Directory | Out-Null
+            $artifactsFolderCreated = $true
+            DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
+            DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Dependencies"
+            $apps = @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { $_.FullName })
+            if (!$apps) {
+                throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+            }
         }
-        elseif ($artifacts -eq "prerelease") {
-            $release = $releases | Where-Object { -not ($_.draft) } | Select-Object -First 1
-        }
-        elseif ($artifacts -eq "draft") {
-            $release = $releases | Select-Object -First 1
-        }
-        if (!($release)) {
-            throw "Unable to locate $artifacts release"
-        }
-        New-Item $artifactsFolder -ItemType Directory | Out-Null
-        $artifactsFolderCreated = $true
-        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
-        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Dependencies"
-        $apps = @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { $_.FullName })
-        if (!$apps) {
-            throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+        else {
+            if ($artifacts -eq "current") {
+                Write-Host "::Warning::Current release was specified, but no releases were found. Searching for latest build artifacts instead."
+                $artifacts = "latest"
+                $searchArtifacts = $true
+            }
+            else {
+                throw "Artifact $artifacts was not found on any release."
+            }
         }
     }
     else {
+        $searchArtifacts = $true
+    }
+
+    if ($searchArtifacts) {
         New-Item $artifactsFolder -ItemType Directory | Out-Null
         $baseFolderCreated = $true
         $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $projects -Version $artifacts -branch "main")
@@ -121,6 +138,9 @@ try {
     try {
         $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
         $bcAuthContext = New-BcAuthContext @authContextParams
+        if ($null -eq $bcAuthContext) {
+            throw "Authentication failed"
+        }
     } catch {
         throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
     }

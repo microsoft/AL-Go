@@ -98,6 +98,16 @@ jobs:
           settingsJson: ${{ env.Settings }}
           secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext'
 
+      - name: Determine ArtifactUrl
+        uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
+        id: determineArtifactUrl
+        with:
+          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          project: ${{ matrix.project }}
+          settingsJson: ${{ env.Settings }}
+          secretsJson: ${{ env.RepoSecrets }}
+
       - name: Run pipeline
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         env:

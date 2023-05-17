@@ -1,6 +1,7 @@
 function Test-Property {
     Param(
         [HashTable] $json,
+        [string] $settingsDescription,
         [string] $key,
         [switch] $must,
         [switch] $should,
@@ -11,52 +12,88 @@ function Test-Property {
     $exists = $json.Keys -contains $key
     if ($exists) {
         if ($maynot) {
-            Write-Host "::Error::Property '$key' may not exist in $settingsFile"
+            throw "Property '$key' may not exist in $settingsDescription"
         }
         elseif ($shouldnot) {
-            Write-Host "::Warning::Property '$key' should not exist in $settingsFile"
+            Write-Host "::Warning::Property '$key' should not exist in $settingsDescription"
         }
     }
     else {
         if ($must) {
-            Write-Host "::Error::Property '$key' must exist in $settingsFile"
+            throw "Property '$key' must exist in $settingsDescription"
         }
         elseif ($should) {
-            Write-Host "::Warning::Property '$key' should exist in $settingsFile"
+            Write-Host "::Warning::Property '$key' should exist in $settingsDescription"
         }
     }
 }
 
 function Test-Json {
     Param(
-        [string] $jsonFile,
-        [string] $baseFolder,
-        [switch] $repo
+        [hashtable] $json,
+        [string] $settingsDescription,
+        [ValidateSet('Repo','Project','Workflow','Variable')]
+        [string] $type
     )
 
-    $settingsFile = $jsonFile.Substring($baseFolder.Length)
-    if ($repo) {
-        Write-Host "Checking AL-Go Repo Settings file $settingsFile"
+    if ($type -eq 'Repo') {
+        # Test for things that should / should not exist in a repo settings file
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -should
     }
-    else {
-        Write-Host "Checking AL-Go Settings file $settingsFile"
+    if ($type -eq 'Project') {
+        # Test for things that should / should not exist in a project settings file
+    }
+    if ($type -eq 'Workflow') {
+        # Test for things that should / should not exist in a workflow settings file
+    }
+    if ($type -eq 'Variable') {
+        # Test for things that should / should not exist in a settings variable
+    }
+    if ($type -eq 'Project' -or $type -eq 'Workflow') {
+        # templateUrl should not be in Project or Workflow settings
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -maynot
+
+        # schedules and runs-on should not be in Project or Workflow settings        
+        'nextMajorSchedule','nextMinorSchedule','currentSchedule','githubRunner','runs-on' | ForEach-Object {
+            Test-Property -settingsDescription $settingsDescription -json $json -key $_ -shouldnot
+        }
+    }
+}
+
+function Test-JsonStr {
+    Param(
+        [string] $jsonStr,
+        [string] $settingsDescription,
+        [ValidateSet('Repo','Project','Workflow','Variable')]
+        [string] $type
+    )
+
+    if ($jsonStr -notlike '{*') {
+        throw "Settings in $settingsDescription is not recognized as JSON (does not start with '{'))"
     }
 
     try {
-        $json = Get-Content -Path $jsonFile -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-        if ($repo) {
-            Test-Property -settingsFile $settingsFile -json $json -key 'templateUrl' -should
-        }
-        else {
-            Test-Property -settingsFile $settingsFile -json $json -key 'templateUrl' -maynot
-            'nextMajorSchedule','nextMinorSchedule','currentSchedule','githubRunner','runs-on' | ForEach-Object {
-                Test-Property -settingsFile $settingsFile -json $json -key $_ -shouldnot
-            }
-        }
+        $json = $jsonStr | ConvertFrom-Json | ConvertTo-HashTable
+        Test-Json -json $json -settingsDescription $settingsDescription -type:$type
     }
     catch {
-        Write-Host "::Error::$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"
+        throw "$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"
     }
+
+}
+
+function Test-JsonFile {
+    Param(
+        [string] $jsonFile,
+        [string] $baseFolder,
+        [ValidateSet('Repo','Project','Workflow')]
+        [string] $type
+    )
+
+    $settingsFile = $jsonFile.Substring($baseFolder.Length+1)
+    Write-Host "Checking AL-Go $type settings file in $settingsFile (type = $type)"
+
+    Test-JsonStr -org -jsonStr (Get-Content -Path $jsonFile -Raw -Encoding UTF8) -settingsDescription $settingsFile -type $type
 }
 
 function Test-ALGoRepository {
@@ -64,15 +101,31 @@ function Test-ALGoRepository {
         [string] $baseFolder
     )
     
+    if ($ENV:ALGoOrgSettings) {
+        Write-Host "Checking AL-Go Org Settings variable (ALGoOrgSettings)"
+        Test-JsonStr -jsonStr "$ENV:ALGoOrgSettings" -settingsDescription 'ALGoOrgSettings variable' -type 'Variable'
+    }
+    if ($ENV:ALGoRepoSettings) {
+        Write-Host "Checking AL-Go Repo Settings variable (ALGoRepoSettings)"
+        Test-JsonStr -jsonStr "$ENV:ALGoRepoSettings" -settingsDescription 'ALGoRepoSettings variable' -type 'Variable'
+    }
+
     Write-Host "BaseFolder: $baseFolder"
 
     # Test .json files are formatted correctly
-    Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse | ForEach-Object {
-        if ($_.DirectoryName -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
-            Test-Json -jsonFile $_.FullName -baseFolder $baseFolder
+    # Get-ChildItem needs -force to include folders starting with . (e.x. .github / .AL-Go) on Linux
+    Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse -Force | ForEach-Object {
+        if ($_.Directory.Name -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
+            Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
-        elseif ($_.DirectoryName -eq '.github' -and $_.BaseName -like '*ettings') {
-            Test-Json -jsonFile $_.FullName -baseFolder $baseFolder -repo:($_.BaseName -eq 'AL-Go-Settings')
+        elseif ($_.Directory.Name -eq '.github' -and $_.BaseName -like '*ettings') {
+            if ($_.BaseName -eq 'AL-Go-Settings') {
+                $type = 'Repo'
+            }
+            else {
+                $type = 'Workflow'
+            }
+            Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type $type
         }
     }
 }

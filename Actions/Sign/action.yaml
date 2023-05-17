@@ -1,0 +1,62 @@
+name: Sign
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  azureKeyVaultURI:
+    description: URI of the Azure Key Vault
+    required: true
+  azureKeyVaultClientID:
+    description: The Client ID of the service principal used to access the Azure Key Vault
+    required: true
+  azureKeyVaultClientSecret:
+    description: The Client Secret of the service principal used to access the Azure Key Vault
+    required: true
+  azureKeyVaultTenantID:
+    description: The Tenant ID of the service principal used to access the Azure Key Vault
+    required: true
+  azureKeyVaultCertificateName:
+    description: The name of the certificate in the Azure Key Vault
+    required: true
+  timestampService:
+    description: The URI of the timestamp server
+    required: false
+    default: http://timestamp.digicert.com
+  digestAlgorithm:
+    description: The digest algorithm to use for signing and timestamping
+    required: false
+    default: SHA256
+  pathToFiles:
+    description: The path to the files to be signed
+    required: true
+  parentTelemetryScopeJson:
+    description: Specifies the parent telemetry scope for the telemetry signal
+    required: false
+    default: '7b7d'
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: Sign
+      run: | 
+        try { 
+          ${{ github.action_path }}/Sign.ps1 -AzureKeyVaultURI "${{ inputs.azureKeyVaultURI }}" `
+                                      -AzureKeyVaultClientID "${{ inputs.azureKeyVaultClientID }}" `
+                                      -AzureKeyVaultClientSecret "${{ inputs.azureKeyVaultClientSecret }}" `
+                                      -AzureKeyVaultTenantID "${{ inputs.azureKeyVaultTenantID }}" `
+                                      -AzureKeyVaultCertificateName "${{ inputs.azureKeyVaultCertificateName }}" `
+                                      -TimestampService "${{ inputs.timestampService }}" `
+                                      -TimestampDigest "${{ inputs.digestAlgorithm }}" `
+                                      -FileDigest "${{ inputs.digestAlgorithm }}" `
+                                      -PathToFiles "${{ inputs.pathToFiles }}" `
+                                      -ParentTelemetryScopeJson "${{ inputs.parentTelemetryScopeJson }}"
+        } catch { 
+          Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
+        }
+
+branding:
+  icon: terminal
+  color: blue

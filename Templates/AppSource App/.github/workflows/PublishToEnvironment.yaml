@@ -31,6 +31,8 @@ jobs:
       settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
       environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
       environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
+      unknownEnvironment: ${{ steps.ReadSettings.outputs.UnknownEnvironment }}
+      deviceCode: ${{ steps.Authenticate.outputs.deviceCode }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -51,14 +53,69 @@ jobs:
           getEnvironments: ${{ github.event.inputs.environmentName }}
           includeProduction: 'Y'
 
+      - name: EnvName
+        id: envName
+        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
+        run: |
+          $ErrorActionPreference = "STOP"
+          Set-StrictMode -version 2.0
+          $envName = '${{ fromJson(steps.ReadSettings.outputs.environmentsJson).matrix.include[0].environment }}'.split(' ')[0]
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
+
+      - name: Read secrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          settingsJson: ${{ env.Settings }}
+          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+
+      - name: Authenticate
+        id: Authenticate
+        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
+        run: |
+          $envName = '${{ steps.envName.outputs.envName }}'
+          $secretName = ''
+          $authContext = $null
+          "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
+            if (!($authContext)) {
+              $authContext = [System.Environment]::GetEnvironmentVariable($_)
+              if ($authContext) {
+                Write-Host "Using $_ secret as AuthContext"
+                $secretName = $_
+              }
+            }            
+          }
+          if ($authContext) {
+            Write-Host "AuthContext provided in secret $secretName!"
+            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AuthContext was provided in a secret called $secretName. Using this information for authentication."
+          }
+          else {
+            Write-Host "No AuthContext provided for $envName, initiating Device Code flow"
+            $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
+            $webClient = New-Object System.Net.WebClient
+            $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
+            . $ALGoHelperPath
+            $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+            $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
+            CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Environment $('${{ steps.envName.outputs.envName }}'.Split(' ')[0]) and could not locate a secret called ${{ steps.envName.outputs.envName }}_AuthContext`n`n$($authContext.message)"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
+          }
+
   Deploy:
     needs: [ Initialization ]
-    if: ${{ needs.Initialization.outputs.environmentCount > 0 }}
+    if: needs.Initialization.outputs.environmentCount > 0
     strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
     environment:
       name: ${{ matrix.environment }}
+    env:
+      deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -99,6 +156,9 @@ jobs:
             $deployToSetting = [PSCustomObject]@{}
           }
           $authContext = $null
+          if ($env:deviceCode) {
+            $authContext = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""deviceCode"":""$($env:deviceCode)""}"))
+          }
           "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
             if (!($authContext)) {
               $authContext = [System.Environment]::GetEnvironmentVariable($_)
@@ -150,7 +210,6 @@ jobs:
             $projects = ($projects.Split(',') | Where-Object { $buildProjects -contains $_ }) -join ','
           }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "authContext=$authContext"
-          Write-Host "authContext=$authContext"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "environmentName=$environmentName"
           Write-Host "environmentName=$([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName)))"
           Write-Host "environmentName (as Base64)=$environmentName"

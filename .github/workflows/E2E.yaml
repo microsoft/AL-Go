@@ -129,11 +129,15 @@ jobs:
                   $visibility = $_
                   @('appSourceApp','PTE') | ForEach-Object {
                     $type = $_
-                    @('multiProject','singleProject') | ForEach-Object {
-                      $style = $_
-                      @('linux','windows') | ForEach-Object {
-                        $os = $_
-                        @{ "visibility" = $visibility; "type" = $type; "style" = $style; "os" = $os }
+                    @('linux','windows') | ForEach-Object {
+                      $os = $_
+                      @('multiProject','singleProject') | ForEach-Object {
+                        $style = $_
+                        @{ "visibility" = $visibility; "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
+                        if ($visibility -eq "public" -and $type -eq "PTE") {
+                          # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
+                          @{ "visibility" = $visibility; "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
+                        }
                       }
                     }
                   }
@@ -235,7 +239,7 @@ jobs:
       - name: Run tests
         run: |
           try {
-            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private')
+            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -InsiderSasToken '${{ Secrets.InsiderSasToken }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -licenseFileUrl ${{ steps.calculateParams.outputs.licenseFileUrl }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
           }
           catch {
             Write-Host $_.Exception.Message

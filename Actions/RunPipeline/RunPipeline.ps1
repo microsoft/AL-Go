@@ -34,12 +34,14 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    # Pull docker image in the background
-    $genericImageName = Get-BestGenericImageName
-    Start-Job -ScriptBlock {
-        docker pull --quiet $genericImageName
-    } -ArgumentList $genericImageName | Out-Null
-
+    if ($isWindows) {
+        # Pull docker image in the background
+        $genericImageName = Get-BestGenericImageName
+        Start-Job -ScriptBlock {
+            docker pull --quiet $genericImageName
+        } -ArgumentList $genericImageName | Out-Null
+    }
+  
     $containerName = GetContainerName($project)
 
     $runAlPipelineParams = @{}
@@ -79,7 +81,27 @@ try {
         Set-Variable -Name $_ -Value $value
     }
 
-    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken
+    $analyzeRepoParams = @{}
+    # If UseCompilerFolder is set, set the parameter on Run-AlPipeline
+    if ($settings.useCompilerFolder) {
+        $runAlPipelineParams += @{
+            "useCompilerFolder" = $true
+        }
+    }
+    $gitHubHostedRunner = $settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*"
+    if ($gitHubHostedRunner) {
+        # If we are running GitHub hosted agents and UseCompilerFolder is set, we need to set the artifactCachePath, and avoid checking the artifact setting in AnalyzeRepo
+        if ($settings.useCompilerFolder) {
+            $runAlPipelineParams += @{
+                "artifactCachePath" = Join-Path $ENV:GITHUB_WORKSPACE ".artifactcache"
+            }
+            $analyzeRepoParams += @{
+                "doNotCheckArtifactSetting" = $true
+            }
+        }
+    }
+
+    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
     if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
@@ -87,8 +109,7 @@ try {
 
     if ($repo.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
-            OutputError -message "When building an AppSource App, you need to create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-            exit
+            OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
         }
     }
 
@@ -171,10 +192,7 @@ try {
     }
 
     $previousApps = @()
-    if ($repo.skipUpgrade) {
-        OutputWarning -message "Skipping upgrade tests"
-    }
-    else {
+    if (!$repo.skipUpgrade) {
         Write-Host "::group::Locating previous release"
         try {
             $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
@@ -199,7 +217,7 @@ try {
     $additionalCountries = $repo.additionalCountries
 
     $imageName = ""
-    if ($repo.gitHubRunner -ne "windows-latest") {
+    if (-not $gitHubHostedRunner) {
         $imageName = $repo.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
@@ -304,20 +322,28 @@ try {
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
                 $parameters.missingDependencies | ForEach-Object {
-                    $publishParams = @{
-                        "containerName" = $parameters.containerName
-                        "tenant" = $parameters.tenant
-                    }
                     $appid = $_.Split(':')[0]
                     $appName = $_.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
-                    if ($parameters.Keys -contains 'CopyInstalledAppsToFolder') {
+                    $publishParams = @{
+                        "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
+                        "nuGetToken" = $gitHubPackagesCredential.token
+                        "packageName" = "AL-Go-$appId"
+                        "version" = $version
+                    }
+                    if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
                             "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
                         }
                     }
-                    Publish-BcNuGetPackageToContainer @publishParams -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -PackageName "AL-Go-$appId" -version $version -skipVerification
+                    if ($parameters.ContainsKey('containerName')) {
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
+                    }
+                    else {
+                        Copy-BcNuGetPackageToFolder -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                    }
+
                 }
             }
         }
@@ -371,6 +397,7 @@ try {
         -bcAuthContext $authContext `
         -environment $environmentName `
         -artifact $artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -vsixFile $repo.vsixFile `
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
         -baseFolder $projectPath `
