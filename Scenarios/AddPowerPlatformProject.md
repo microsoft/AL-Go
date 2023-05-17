@@ -10,8 +10,8 @@
 
 ## Steps
 
-1. Create a new repository based on the AL-Go-PTE template from [microsoft/AL-Go-PTE-PPPreview](https://github.com/microsoft/AL-Go-PTE-PPPreview)
 
+1. Create a new repository based on the [PREVIEW] AL-Go-PTE template with Power Platform support from [microsoft/AL-Go-PTE-PPPreview](https://github.com/microsoft/AL-Go-PTE-PPPreview)
     ![Screen shot from GitHub showing how ot create a new repository based on the Al-go PTE template](images/p1.png)
 
 1. Once the repository is set up, configure your Business Central and Power Platform authentication and deployment settings (See [Power Platform Repository setup](./SetupPowerPlatform.md) for detailed steps).  
