@@ -2,6 +2,9 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### Codesigning from Azure Key Vaults
+With this set up in your Al-GO project you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module. For more information see: [Code Signing in Al-Go](https://github.com/microsoft/AL-Go/blob/main/Scenarios/CodesigningInAlGo.md)
+
 ## v3.1
 
 ### Issues
