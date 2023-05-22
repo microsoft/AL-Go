@@ -38,8 +38,6 @@ This gives you access to all the source code for the Power Platform solution and
 
 ![Screen shot from Power Apps showing how to set up a the Business Central connection reference](images/p3.png)
 
-
-
 Choose the method that suits you best and get started with exploring the capabilities of Business Central and Power Platform!
 
 ---
