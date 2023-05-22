@@ -2,8 +2,8 @@
 
 The easiest way to get started with Business Central and Power Apps is to find one of our sample apps:
 
-- [Take Order](https://github.com/microsoft/businesscentralsamples-takeorder)
-- [Warehouse helper](https://github.com/microsoft/businesscentralsamples-warehousehelper) 
+- [Take Order](https://github.com/microsoft/bcsamples-takeorder)
+- [Warehouse helper](https://github.com/microsoft/bcsamples-warehousehelper) 
 
 > **NOTE:** Other samples might be available here:  [https://github.com/topics/bcsamples](https://github.com/topics/bcsamples).
 
