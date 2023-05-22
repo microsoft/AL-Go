@@ -647,8 +647,8 @@ function AnalyzeRepo {
     Param(
         [hashTable] $settings,
         $token,
-        [string] $baseFolder,
-        [string] $project,
+        [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
+        [string] $project = '.',
         [string] $insiderSasToken,
         [switch] $doNotCheckArtifactSetting,
         [switch] $doNotIssueWarnings,
@@ -1108,6 +1108,7 @@ function CloneIntoNewFolder {
     invoke-git clone $serverUrl
 
     Set-Location *
+    invoke-git checkout $ENV:GITHUB_REF_NAME
 
     if ($branch) {
         invoke-git checkout -b $branch
@@ -1130,7 +1131,7 @@ function CommitFromNewFolder {
     invoke-git commit --allow-empty -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
-        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY
+        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
     }
     else {
         invoke-git push $serverUrl

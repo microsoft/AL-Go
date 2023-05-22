@@ -1,5 +1,7 @@
 name: 'Create a new test app'
 
+run-name: "Create a new test app in [${{ github.ref_name }}]"
+
 on:
   workflow_dispatch:
     inputs:
