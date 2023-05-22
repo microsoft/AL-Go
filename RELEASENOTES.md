@@ -2,6 +2,10 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### Issues
+
+Issue 542 Deploy Workflow fails
+
 ## v3.1
 
 ### Issues
