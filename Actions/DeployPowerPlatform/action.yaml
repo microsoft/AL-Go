@@ -34,7 +34,7 @@ runs:
   using: composite
   steps:
     - name: Parse DeployToSettings and AuthContext
-      uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@main
+      uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@PPPreview
       with:
         shell: ${{ inputs.shell }}
         parentTelemetryScopeJson: ${{inputs.parentTelemetryScopeJson}}
@@ -42,12 +42,12 @@ runs:
         authSettings: ${{ inputs.authSettings }}
 
     - name: Who am I (username)
-      if: env.userName != ''
+      if: env.ppUserName != ''
       uses: microsoft/powerplatform-actions/who-am-i@v0
       with:
         environment-url: ${{env.ppEnvironmentUrl}}
-        user-name: ${{env.userName}}
-        password-secret: ${{env.password}}
+        user-name: ${{env.ppUserName}}
+        password-secret: ${{env.ppPassword}}
 
     - name: Who am I (application ID)
       if: env.ppApplicationId != ''
@@ -84,7 +84,7 @@ runs:
         process-canvas-apps: true
 
     - name: Rebuild solution
-      uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
+      uses: microsoft/AL-Go-Actions/BuildPowerPlatform@PPPreview
       with:
         shell: ${{ inputs.shell }}
         parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
@@ -95,11 +95,11 @@ runs:
         environmentName: ${{ env.environmentName }}
 
     - name: Publish solution to Power Platform (userName)
-      if: env.userName != ''
+      if: env.ppUserName != ''
       uses: microsoft/powerplatform-actions/import-solution@v0
       with:
-        user-name: ${{env.userName}}
-        password-secret: ${{env.password}}
+        user-name: ${{env.ppUserName}}
+        password-secret: ${{env.ppPassword}}
         environment-url: ${{env.ppEnvironmentUrl}}
         solution-file: .artifacts/tempPPSolution/ppsolution.zip
         force-overwrite: true
