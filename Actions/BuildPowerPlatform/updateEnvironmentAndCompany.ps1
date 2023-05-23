@@ -56,7 +56,8 @@ function Update-PowerAppFiles {
             
             $fileContent = Get-Content $file.FullName
             if (Select-String -Pattern $oldSetting -InputObject $fileContent) {
-                Set-Content -Path $file.FullName -Value $fileContent.Replace($oldSetting, $newSetting)
+                $fileContent = $fileContent -creplace $oldSetting, $newSetting                
+                Set-Content -Path $file.FullName -Value $fileContent
                 Write-Host "Updated: $file.FullName"
             }
         }
@@ -90,6 +91,11 @@ function Get-CurrentPowerAppSettings {
 
                 if (!$currentsettingsList.Contains($currentEnvironmentAndCompany)) {
                     $currentSettingsList += $currentEnvironmentAndCompany
+
+                    # The Business Central environment can be be inconsistant - Either starting with a capital letter or all caps.
+                    # Add both variants to ensure we find all connections
+                    $currentSettingsParts = $currentEnvironmentAndCompany.Split(",");
+                    $currentSettingsList += "$($currentSettingsParts[0].ToUpperInvariant()),$($currentSettingsParts[1])"
                 } 
             }
         }
