@@ -2041,7 +2041,7 @@ function Retry-Command {
     $retryCount = 0
     while ($retryCount -lt $MaxRetries) {
         try {
-            & $Command
+            Invoke-Command $Command
             if ($LASTEXITCODE -ne 0) {
                 throw "Command failed with exit code $LASTEXITCODE"
             }
