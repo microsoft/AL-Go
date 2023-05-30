@@ -2032,8 +2032,8 @@ function Retry-Command {
     param(
         [Parameter(Mandatory = $true)]
         [ScriptBlock]$Command,
-        [Parameter(Mandatory = $true)]
-        [int]$MaxRetries,
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
         [Parameter(Mandatory = $false)]
         [int]$RetryDelaySeconds = 5
     )
