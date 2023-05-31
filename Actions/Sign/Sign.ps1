@@ -1,6 +1,6 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
-    [string]$AzureKeyVaultURI,
+    [string]$AzureKeyVaultName,
     [Parameter(HelpMessage = "Azure Key Vault Client ID.", Mandatory = $true)]
     [string]$AzureKeyVaultClientID,
     [Parameter(HelpMessage = "Azure Key Vault Client Secret.", Mandatory = $true)]
@@ -44,6 +44,8 @@ try {
     $Files | ForEach-Object { 
         Write-Host "- $_" 
     }
+
+    $AzureKeyVaultURI = "https://$AzureKeyVaultName.vault.azure.net/"
 
     Retry-Command -Command {
         Write-Host "::group::Register NavSip"

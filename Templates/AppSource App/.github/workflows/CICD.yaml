@@ -252,10 +252,10 @@ jobs:
         uses: microsoft/AL-Go-Actions/Sign@main
         with:
           shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
-          azureKeyVaultURI: ${{ secrets.AZURE_KEYVAULT_URI }}
-          azureKeyVaultClientID: ${{ secrets.AZURE_CLIENT_ID }}
-          azureKeyVaultClientSecret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          azureKeyVaultTenantID: ${{ secrets.AZURE_TENANT_ID }}
+          azureKeyVaultName: ${{ fromJSON(secrets.AZURE_CREDENTALS).keyVaultName }}
+          azureKeyVaultClientID: ${{ fromJSON(secrets.AZURE_CREDENTALS).clientId }}
+          azureKeyVaultClientSecret: ${{ fromJSON(secrets.AZURE_CREDENTALS).clientSecret }}
+          azureKeyVaultTenantID: ${{ fromJSON(secrets.AZURE_CREDENTALS).tenantId }}
           azureKeyVaultCertificateName: ${{ env.keyVaultCodesignCertificateName }}
           pathToFiles: '${{ matrix.project }}/.buildartifacts/Apps/*.app'
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
