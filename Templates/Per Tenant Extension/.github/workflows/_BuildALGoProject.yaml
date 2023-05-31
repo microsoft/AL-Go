@@ -42,6 +42,11 @@ on:
         required: false
         default: false
         type: boolean
+      artifactsNameSuffix:
+        description: Suffix to add to the artifacts names
+        required: false
+        default: ''
+        type: string
       parentTelemetryScopeJson:
         description: Specifies the telemetry scope for the telemetry signal
         required: false
@@ -120,6 +125,7 @@ jobs:
             project: ${{ inputs.project }}
             buildMode: ${{ inputs.buildMode }}
             branchName: ${{ github.ref_name }}
+            suffix: ${{ inputs.artifactsNameSuffix }}
 
         - name: Upload thisbuild artifacts - apps
           if: inputs.publishThisBuildArtifacts
