@@ -67,6 +67,7 @@ foreach($fetchArtifact in $fetchArtifacts) {
         }
     }
 }
+
 function Download-DependencyProjectArtifact {
     pparam(
         [Parameter(HelpMessage = "The project for which to fetch dependencies", Mandatory = $true)]
@@ -81,11 +82,45 @@ function Download-DependencyProjectArtifact {
     $projectName = $project.Replace('\','_').Replace('/','_')
     $branchName = $baseBranch.Replace('\','_').Replace('/','_')
 
+    $buildModeMask = $buildMode
+    if($buildMode -eq 'Default') {
+        $buildModeMask = ''
+    }
+
     if($workflowRunId) {
-        $artifactName = "thisbuild-$($projectName)-$($buildMode)Apps"
+        $artifactName = "thisbuild-$($projectName)-$($buildModeMask)Apps"
+        $fallbackArtifactName = "$($projectName)-Apps"
     } else {
         $artifactName = "$($projectName)-$($branchName)-$($buildMode)Apps-*"
+        $artifactName = "$($projectName)-$($branchName)-Apps-*"
     }
+
+    $token = $env:gitHubToken
+
+    if(!$token) {
+        $token = gh auth token
+    }
+
+    $token | gh auth login --with-token
+
+    $page = 0
+    $pageSize = 100
+    $artifacts = @()
+
+    do {
+        $page++
+
+        $res += (gh api `
+            -H "Accept: application/vnd.github+json" `
+            -H "X-GitHub-Api-Version: 2022-11-28" `
+            /repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/artifacts?per_page=$pageSize`&page=$page) | ConvertFrom-Json
+
+        $artifacts += @($res.artifacts)
+    } while ($artifacts.Count -eq ($page * $pageSize))
+
+    $artifact = $artifacts | Where-Object { $_.name -like $artifactName }
+
+
 
     return $artifactsName
 }

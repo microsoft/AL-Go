@@ -28,6 +28,8 @@ runs:
     - name: Fetch project dependencies
       shell: ${{ inputs.shell }}
       id: FetchDependencies
+      env:
+        gitHubToken: ${{ github.token }}
       run:
         ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -dependencyProjects ${{ dependencyProjects }} -buildMode ${{ inputs.buildMode }} -buildDimensions ${{ inputs.buildDimensions }} -baseBranch '${{ github.base_ref }}' -destinationPath ${{ inputs.destinationPath }}
 branding:
