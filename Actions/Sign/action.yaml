@@ -8,9 +8,6 @@ inputs:
   azureCredentialsJson:
     description: Azure Credentials secret
     required: true
-  settingsJson:
-    description: Settings from repository in compressed Json format
-    required: true
   timestampService:
     description: The URI of the timestamp server
     required: false
@@ -35,7 +32,6 @@ runs:
       run: | 
         try { 
           ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "${{ inputs.azureCredentialsJson }}" `
-                                      -SettingsJson "${{ inputs.settingsJson }}" `
                                       -TimestampService "${{ inputs.timestampService }}" `
                                       -TimestampDigest "${{ inputs.digestAlgorithm }}" `
                                       -FileDigest "${{ inputs.digestAlgorithm }}" `

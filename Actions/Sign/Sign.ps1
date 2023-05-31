@@ -1,8 +1,6 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
-    [string]$AzureCredentialsJson,
-    [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
-    [string]$SettingsJson,
+    [string]$AzureCredentialsJson
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
     [String]$PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
@@ -40,13 +38,7 @@ try {
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
-    $Settings = ConvertFrom-Json $SettingsJson
-
-    if ($Settings.AzureKeyVaultName -eq $null) {
-        $AzureKeyVaultName = $AzureCredentials.AzureKeyVaultName
-    } else {
-        $AzureKeyVaultName = $Settings.AzureKeyVaultName
-    }
+    $AzureKeyVaultName = $AzureCredentials.AzureKeyVaultName
 
     Retry-Command -Command {
         Write-Host "::group::Register NavSip"
