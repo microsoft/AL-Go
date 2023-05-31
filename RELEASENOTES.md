@@ -6,9 +6,8 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 
 Issue 542 Deploy Workflow fails
 
-### Codesigning from Azure Key Vaults
-
-With this set up in your Al-GO project you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module. For more information see: [Code Signing in Al-Go](https://github.com/microsoft/AL-Go/blob/main/Scenarios/CodesigningInAlGo.md)
+### New Settings
+- `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
 
 ## v3.1
 
