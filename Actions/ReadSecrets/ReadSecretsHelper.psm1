@@ -1,25 +1,11 @@
 $script:gitHubSecrets = $env:secrets | ConvertFrom-Json
 $script:keyvaultConnectionExists = $false
 $script:azureRm210 = $false
-$script:isKeyvaultSet = ($script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS") -or ($script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_KEYVAULT_URI")
+$script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
 $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
 function IsKeyVaultSet {
     return $script:isKeyvaultSet
-}
-
-function Get-KeyVaultName {
-    if ($script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_KEYVAULT_URI") {
-        $keyVaultUri = $script:gitHuBSecrets.AZURE_KEYVAULT_URI
-        $keyVaultName = $keyVaultUri.Split('.')[0].Replace("https://", "") # Azure key vault URI is in the format https://<key vault name>.vault.azure.net/
-    } else {
-        $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
-        if ($credentialsJson.Keys -contains "keyVaultName") {
-            $keyVaultName = $credentialsJson.keyVaultName
-        }
-    }
-    
-    return $keyVaultName
 }
 
 function MaskValue {
@@ -70,7 +56,7 @@ function GetGithubSecret {
 
     return $null
 }
-
+	
 function Get-KeyVaultCredentials {
     if ($script:isKeyvaultSet) {
         $jsonStr = $script:gitHuBSecrets.AZURE_CREDENTIALS
@@ -184,13 +170,9 @@ function GetKeyVaultSecret {
     if (-not $script:keyvaultConnectionExists) {
             
         InstallKeyVaultModuleIfNeeded
-
-        if ($script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_KEYVAULT_URI") {
-            ConnectAzureKeyVaultIfNeeded -subscriptionId $script:gitHuBSecrets.AZURE_KEYVAULT_SUBSCRIPTION_ID -tenantId $script:gitHuBSecrets.AZURE_TENANT_ID -clientId $script:gitHuBSecrets.AZURE_CLIENT_ID -clientSecret $script:gitHuBSecrets.AZURE_CLIENT_SECRET
-        } else {
-            $credentialsJson = Get-KeyVaultCredentials
-            ConnectAzureKeyVaultIfNeeded -subscriptionId $credentialsJson.subscriptionId -tenantId $credentialsJson.tenantId -clientId $credentialsJson.clientId -clientSecret $credentialsJson.clientSecret
-        }
+            
+        $credentialsJson = Get-KeyVaultCredentials
+        ConnectAzureKeyVaultIfNeeded -subscriptionId $credentialsJson.subscriptionId -tenantId $credentialsJson.tenantId -clientId $credentialsJson.clientId -clientSecret $credentialsJson.clientSecret
     }
 
     $value = ""
