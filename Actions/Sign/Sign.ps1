@@ -1,14 +1,8 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
-    [string]$AzureKeyVaultName,
-    [Parameter(HelpMessage = "Azure Key Vault Client ID.", Mandatory = $true)]
-    [string]$AzureKeyVaultClientID,
-    [Parameter(HelpMessage = "Azure Key Vault Client Secret.", Mandatory = $true)]
-    [string]$AzureKeyVaultClientSecret,
-    [Parameter(HelpMessage = "Azure Key Vault Tenant ID.", Mandatory = $true)]
-    [string]$AzureKeyVaultTenantID,
-    [Parameter(HelpMessage = "Azure Key Vault Certificate Name.", Mandatory = $true)]
-    [string]$AzureKeyVaultCertificateName,
+    [string]$AzureCredentialsJson,
+    [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
+    [string]$SettingsJson,
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
     [String]$PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
@@ -45,7 +39,14 @@ try {
         Write-Host "- $_" 
     }
 
-    $AzureKeyVaultURI = "https://$AzureKeyVaultName.vault.azure.net/"
+    $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
+    $Settings = ConvertFrom-Json $SettingsJson
+
+    if ($Settings.AzureKeyVaultName -eq $null) {
+        $AzureKeyVaultName = $AzureCredentials.AzureKeyVaultName
+    } else {
+        $AzureKeyVaultName = $Settings.AzureKeyVaultName
+    }
 
     Retry-Command -Command {
         Write-Host "::group::Register NavSip"
@@ -53,11 +54,11 @@ try {
         Write-Host "::endgroup::"
 
         AzureSignTool sign --file-digest $FileDigest `
-            --azure-key-vault-url $AzureKeyVaultURI `
-            --azure-key-vault-client-id $AzureKeyVaultClientID `
-            --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
-            --azure-key-vault-client-secret $AzureKeyVaultClientSecret `
-            --azure-key-vault-certificate $AzureKeyVaultCertificateName `
+            --azure-key-vault-url "https://$AzureKeyVaultName.vault.azure.net/" `
+            --azure-key-vault-client-id $AzureCredentials.clientId `
+            --azure-key-vault-tenant-id $AzureCredentials.tenantId `
+            --azure-key-vault-client-secret $AzureCredentials.clientSecret `
+            --azure-key-vault-certificate $Settings.AzureyVaultCertificateName `
             --timestamp-rfc3161 "$TimestampService" `
             --timestamp-digest $TimestampDigest `
             $Files

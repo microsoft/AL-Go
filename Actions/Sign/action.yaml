@@ -5,20 +5,11 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  azureKeyVaultName:
-    description: URI of the Azure Key Vault
+  azureCredentialsJson:
+    description: Azure Credentials secret
     required: true
-  azureKeyVaultClientID:
-    description: The Client ID of the service principal used to access the Azure Key Vault
-    required: true
-  azureKeyVaultClientSecret:
-    description: The Client Secret of the service principal used to access the Azure Key Vault
-    required: true
-  azureKeyVaultTenantID:
-    description: The Tenant ID of the service principal used to access the Azure Key Vault
-    required: true
-  azureKeyVaultCertificateName:
-    description: The name of the certificate in the Azure Key Vault
+  settingsJson:
+    description: Settings from repository in compressed Json format
     required: true
   timestampService:
     description: The URI of the timestamp server
@@ -43,11 +34,8 @@ runs:
       id: Sign
       run: | 
         try { 
-          ${{ github.action_path }}/Sign.ps1 -AzureKeyVaultName "${{ inputs.azureKeyVaultName }}" `
-                                      -AzureKeyVaultClientID "${{ inputs.azureKeyVaultClientID }}" `
-                                      -AzureKeyVaultClientSecret "${{ inputs.azureKeyVaultClientSecret }}" `
-                                      -AzureKeyVaultTenantID "${{ inputs.azureKeyVaultTenantID }}" `
-                                      -AzureKeyVaultCertificateName "${{ inputs.azureKeyVaultCertificateName }}" `
+          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "${{ inputs.azureCredentialsJson }}" `
+                                      -SettingsJson "${{ inputs.settingsJson }}" `
                                       -TimestampService "${{ inputs.timestampService }}" `
                                       -TimestampDigest "${{ inputs.digestAlgorithm }}" `
                                       -FileDigest "${{ inputs.digestAlgorithm }}" `
