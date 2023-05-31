@@ -14,6 +14,11 @@ on:
         description: JSON-formatted string og the types of machine to run the build job on
         required: true
         type: string
+      checkoutRef:
+        description: Ref to checkout
+        required: false
+        default: ${{ github.ref }}
+        type: string
       project:
         description: Name of the built project
         required: true
@@ -58,7 +63,7 @@ jobs:
         - name: Checkout
           uses: actions/checkout@v3
           with:
-            ref: ${{ github.ref }}
+            ref: ${{ inputs.checkoutRef }}
             lfs: true
       
         - name: Download thisbuild artifacts
