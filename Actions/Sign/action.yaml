@@ -28,10 +28,12 @@ runs:
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      env:
+        _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
       id: Sign
       run: | 
         try { 
-          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "${{ inputs.azureCredentialsJson }}" `
+          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "$ENV:_azureCredentialsJson" `
                                       -TimestampService "${{ inputs.timestampService }}" `
                                       -TimestampDigest "${{ inputs.digestAlgorithm }}" `
                                       -FileDigest "${{ inputs.digestAlgorithm }}" `
