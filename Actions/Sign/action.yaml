@@ -8,6 +8,9 @@ inputs:
   azureCredentialsJson:
     description: Azure Credentials secret
     required: true
+  settingsJson:
+    description: Settings from repository in compressed Json format
+    required: true
   timestampService:
     description: The URI of the timestamp server
     required: false
@@ -30,15 +33,21 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
+        _settingsJson: ${{ inputs.settingsJson }}
+        _timestampService: ${{ inputs.timestampService }}
+        _digestAlgorithm: ${{ inputs.digestAlgorithm }}
+        _pathToFiles: ${{ inputs.pathToFiles }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
       id: Sign
       run: | 
         try { 
           ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "$ENV:_azureCredentialsJson" `
-                                      -TimestampService "${{ inputs.timestampService }}" `
-                                      -TimestampDigest "${{ inputs.digestAlgorithm }}" `
-                                      -FileDigest "${{ inputs.digestAlgorithm }}" `
-                                      -PathToFiles "${{ inputs.pathToFiles }}" `
-                                      -ParentTelemetryScopeJson "${{ inputs.parentTelemetryScopeJson }}"
+                                      -settingsJson "$ENV:_settingsJson" `
+                                      -TimestampService "$ENV:_timestampService" `
+                                      -TimestampDigest "$ENV:_digestAlgorithm" `
+                                      -FileDigest "$ENV:_digestAlgorithm" `
+                                      -PathToFiles "$ENV:_pathToFiles" `
+                                      -ParentTelemetryScopeJson "$ENV:_parentTelemetryScopeJson"
         } catch { 
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
         }

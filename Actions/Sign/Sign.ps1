@@ -1,6 +1,8 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
     [string]$AzureCredentialsJson,
+    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
+    [string] $settingsJson,
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
     [String]$PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
@@ -38,7 +40,14 @@ try {
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
-    $AzureKeyVaultName = $AzureCredentials.AzureKeyVaultName
+    $settings = ConvertFrom-Json $settingsJson
+    if ($AzureCredentials.AzureKeyVaultName) {
+        $AzureKeyVaultName = $AzureCredentials.AzureKeyVaultName
+    } elseif ($settings.AzureKeyVaultName) {
+        $AzureKeyVaultName = $settings.AzureKeyVaultName
+    } else {
+        throw "AzureKeyVaultName is not specified in AzureCredentials nor in settings"
+    }
 
     Retry-Command -Command {
         Write-Host "::group::Register NavSip"
