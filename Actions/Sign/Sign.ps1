@@ -59,7 +59,7 @@ try {
             --azure-key-vault-client-id $AzureCredentials.clientId `
             --azure-key-vault-tenant-id $AzureCredentials.tenantId `
             --azure-key-vault-client-secret $AzureCredentials.clientSecret `
-            --azure-key-vault-certificate $Settings.AzureyVaultCertificateName `
+            --azure-key-vault-certificate $Settings.keyVaultCodesignCertificateName `
             --timestamp-rfc3161 "$TimestampService" `
             --timestamp-digest $TimestampDigest `
             $Files
