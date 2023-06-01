@@ -2,7 +2,7 @@ param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
     [string]$AzureCredentialsJson,
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
-    [string] $settingsJson,
+    [string]$settingsJson,
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
     [String]$PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
