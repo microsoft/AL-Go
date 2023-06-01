@@ -46,7 +46,7 @@ try {
     } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {
         $AzureKeyVaultName = $settings.AzureKeyVaultName
     } else {
-        throw "AzureKeyVaultName is not specified in AzureCredentials nor in settings"
+        throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
     Retry-Command -Command {
