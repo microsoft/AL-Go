@@ -4,6 +4,15 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 
 ### Issues
 
+Issue 542 Deploy Workflow fails
+
+### New Settings
+- `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
+
+## v3.1
+
+### Issues
+
 Issue #446 Wrong NewLine character in Release Notes
 Issue #453 DeliverToStorage - override fails reading secrets
 Issue #434 Use gh auth token to get authentication token instead of gh auth status

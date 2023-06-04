@@ -689,7 +689,7 @@ function GetArtifacts {
         $artifactsJson = InvokeWebRequest -Headers $headers -Uri $uri
         $artifacts = $artifactsJson | ConvertFrom-Json
         $page++
-        $allArtifacts += @($artifacts.artifacts | Where-Object { $_.name -like "*-$branch-$mask-$version" })
+        $allArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like "*-$branch-$mask-$version" })
         $result = @()
         $allArtifactsFound = $true
         $projects.Split(',') | ForEach-Object {

@@ -120,6 +120,17 @@ jobs:
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
 
+        - name: Sign
+          if: env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
+          id: sign
+          uses: microsoft/AL-Go-Actions/Sign@main
+          with:
+            shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+            azureCredentialsJson: ${{ secrets.AZURE_CREDENTIALS }}
+            settingsJson: ${{ env.Settings }}
+            pathToFiles: '${{ matrix.project }}/.buildartifacts/Apps/*.app'
+            parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+
         - name: Calculate Artifact names
           id: calculateArtifactsNames
           uses: mazhelez/AL-Go-Actions/CalculateArtifactNames@main
