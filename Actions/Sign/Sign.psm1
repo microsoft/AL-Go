@@ -3,11 +3,10 @@ function Get-NavSipFromArtifacts
     [string] $NavSipDestination
 ) 
 {
-    #TODO: It would be nice with a different approach here - This downloads a lot of unnecessary stuff
     $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 
     try {
-        Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox) -includePlatform -basePath $artifactTempFolder | Out-Null
+        Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox -country core) -basePath $artifactTempFolder | Out-Null
         Write-Host "Downloaded artifacts to $artifactTempFolder"
         $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
         Write-Host "Found navsip at $($navsip.FullName)"

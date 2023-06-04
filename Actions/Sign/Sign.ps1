@@ -1,14 +1,8 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
-    [string]$AzureKeyVaultURI,
-    [Parameter(HelpMessage = "Azure Key Vault Client ID.", Mandatory = $true)]
-    [string]$AzureKeyVaultClientID,
-    [Parameter(HelpMessage = "Azure Key Vault Client Secret.", Mandatory = $true)]
-    [string]$AzureKeyVaultClientSecret,
-    [Parameter(HelpMessage = "Azure Key Vault Tenant ID.", Mandatory = $true)]
-    [string]$AzureKeyVaultTenantID,
-    [Parameter(HelpMessage = "Azure Key Vault Certificate Name.", Mandatory = $true)]
-    [string]$AzureKeyVaultCertificateName,
+    [string]$AzureCredentialsJson,
+    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
+    [string]$settingsJson,
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
     [String]$PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
@@ -31,16 +25,12 @@ $bcContainerHelperPath = $null
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "Sign.psm1" -Resolve)
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
     $telemetryScope = CreateScope -eventId 'DO0083' -parentTelemetryScopeJson $ParentTelemetryScopeJson
 
     Write-Host "::group::Install AzureSignTool"
     dotnet tool install --global AzureSignTool --version 4.0.1
-    Write-Host "::endgroup::"
-
-    Write-Host "::group::Register NavSip"
-    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "Sign.psm1" -Resolve)
-    Register-NavSip
     Write-Host "::endgroup::"
 
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
@@ -49,15 +39,31 @@ try {
         Write-Host "- $_" 
     }
 
-    AzureSignTool sign --file-digest $FileDigest `
-        --azure-key-vault-url $AzureKeyVaultURI `
-        --azure-key-vault-client-id $AzureKeyVaultClientID `
-        --azure-key-vault-tenant-id $AzureKeyVaultTenantID `
-        --azure-key-vault-client-secret $AzureKeyVaultClientSecret `
-        --azure-key-vault-certificate $AzureKeyVaultCertificateName `
-        --timestamp-rfc3161 "$TimestampService" `
-        --timestamp-digest $TimestampDigest `
-        $Files
+    $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
+    $settings = ConvertFrom-Json $settingsJson
+    if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
+        $AzureKeyVaultName = $AzureCredentials.keyVaultName
+    } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {
+        $AzureKeyVaultName = $settings.keyVaultName
+    } else {
+        throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
+    }
+
+    Retry-Command -Command {
+        Write-Host "::group::Register NavSip"
+        Register-NavSip 
+        Write-Host "::endgroup::"
+
+        AzureSignTool sign --file-digest $FileDigest `
+            --azure-key-vault-url "https://$AzureKeyVaultName.vault.azure.net/" `
+            --azure-key-vault-client-id $AzureCredentials.clientId `
+            --azure-key-vault-tenant-id $AzureCredentials.tenantId `
+            --azure-key-vault-client-secret $AzureCredentials.clientSecret `
+            --azure-key-vault-certificate $Settings.keyVaultCodesignCertificateName `
+            --timestamp-rfc3161 "$TimestampService" `
+            --timestamp-digest $TimestampDigest `
+            $Files
+    } -MaxRetries 3
     
     TrackTrace -telemetryScope $telemetryScope
 }
