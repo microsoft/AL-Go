@@ -52,6 +52,11 @@ on:
         required: false
         default: ''
         type: string
+      signArtifacts:
+        description: Flag indicating whether the apps should be signed
+        required: false
+        default: false
+        type: boolean
       parentTelemetryScopeJson:
         description: Specifies the telemetry scope for the telemetry signal
         required: false
@@ -121,7 +126,7 @@ jobs:
             buildMode: ${{ inputs.buildMode }}
 
         - name: Sign
-          if: env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
+          if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
           id: sign
           uses: microsoft/AL-Go-Actions/Sign@main
           with:
