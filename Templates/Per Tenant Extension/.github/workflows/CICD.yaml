@@ -183,12 +183,12 @@ jobs:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
       fail-fast: false
     name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
-    timeout-minutes: $ {{ fromJson(needs.Initialization.outputs.projectsBuildTimeoutJson)[matrix.project]['buildTimeout'] }}
     uses: ./.github/workflows/_BuildALGoProject.yaml
     secrets: inherit
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
       runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+      timeoutMinutes: ${{ fromJson(needs.Initialization.outputs.projectsBuildTimeoutJson)[matrix.project]['buildTimeout'] }}
       parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
       project: ${{ matrix.project }}
       buildMode: ${{ matrix.buildMode }}

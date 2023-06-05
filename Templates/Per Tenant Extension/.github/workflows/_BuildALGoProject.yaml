@@ -14,6 +14,11 @@ on:
         description: JSON-formatted string og the types of machine to run the build job on
         required: true
         type: string
+      timeoutMinutes:
+        description: Timeout in minutes for the build job
+        required: false
+        type: number
+        default: 180
       checkoutRef:
         description: Ref to checkout
         required: false
@@ -64,6 +69,7 @@ on:
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
+    timeout-minutes: ${{ inputs.timeoutMinutes }}
     steps:
         - name: Checkout
           uses: actions/checkout@v3
