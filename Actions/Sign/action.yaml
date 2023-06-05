@@ -1,0 +1,57 @@
+name: Sign
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  azureCredentialsJson:
+    description: Azure Credentials secret
+    required: true
+  settingsJson:
+    description: Settings from repository in compressed Json format
+    required: true
+  timestampService:
+    description: The URI of the timestamp server
+    required: false
+    default: http://timestamp.digicert.com
+  digestAlgorithm:
+    description: The digest algorithm to use for signing and timestamping
+    required: false
+    default: SHA256
+  pathToFiles:
+    description: The path to the files to be signed
+    required: true
+  parentTelemetryScopeJson:
+    description: Specifies the parent telemetry scope for the telemetry signal
+    required: false
+    default: '7b7d'
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
+        _settingsJson: ${{ inputs.settingsJson }}
+        _timestampService: ${{ inputs.timestampService }}
+        _digestAlgorithm: ${{ inputs.digestAlgorithm }}
+        _pathToFiles: ${{ inputs.pathToFiles }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+      id: Sign
+      run: | 
+        try { 
+          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "$ENV:_azureCredentialsJson" `
+                                      -settingsJson "$ENV:_settingsJson" `
+                                      -TimestampService "$ENV:_timestampService" `
+                                      -TimestampDigest "$ENV:_digestAlgorithm" `
+                                      -FileDigest "$ENV:_digestAlgorithm" `
+                                      -PathToFiles "$ENV:_pathToFiles" `
+                                      -ParentTelemetryScopeJson "$ENV:_parentTelemetryScopeJson"
+        } catch { 
+          Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
+        }
+
+branding:
+  icon: terminal
+  color: blue

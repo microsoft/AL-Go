@@ -138,6 +138,9 @@ try {
     try {
         $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
         $bcAuthContext = New-BcAuthContext @authContextParams
+        if ($null -eq $bcAuthContext) {
+            throw "Authentication failed"
+        }
     } catch {
         throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
     }
@@ -162,7 +165,7 @@ try {
             }
             else {
                 Write-Host "Publishing apps using development endpoint"
-                Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint -checkAlreadyInstalled
+                Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
             }
         }
         else {

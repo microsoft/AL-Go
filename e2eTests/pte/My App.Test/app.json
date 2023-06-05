@@ -17,7 +17,7 @@
 
                     ],
     "platform":  "1.0.0.0",
-    "application":  "19.0.0.0",
+    "application":  "22.0.0.0",
     "idRanges":  [
                      {
                          "from":  60000,

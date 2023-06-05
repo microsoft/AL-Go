@@ -21,7 +21,8 @@ jobs:
         run: |
           . (Join-Path "." "Tests/runtests.ps1")
 
-      - name: Test AL-GO Action Origins
+      - name: Test AL-GO Workflows
         if: github.repository_owner == 'microsoft'
         run: |
-          . (Join-Path "." "Tests/ActionOriginTest/ActionOrigin.Test.ps1")
+          . (Join-Path "." "Tests/WorkflowSanitation/WorkflowFileExtensions.Test.ps1")
+          . (Join-Path "." "Tests/WorkflowSanitation/WorkflowReferences.Test.ps1")

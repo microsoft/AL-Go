@@ -110,7 +110,7 @@ jobs:
           }
           do {
             $repoArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page" | ConvertFrom-Json
-            $allArtifacts += $repoArtifacts.Artifacts
+            $allArtifacts += $repoArtifacts.Artifacts | Where-Object { !$_.expired }
             $page++
           }
           while ($repoArtifacts.Artifacts.Count -gt 0)
@@ -191,7 +191,7 @@ jobs:
               repo: context.repo.repo,
               tag_name: '${{ github.event.inputs.tag }}',
               name: '${{ github.event.inputs.name }}',
-              body: bodyMD.replaceAll('\\n','\n'),
+              body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
               draft: ${{ github.event.inputs.draft=='Y' }},
               prerelease: ${{ github.event.inputs.prerelease=='Y' }},
               make_latest: 'legacy',

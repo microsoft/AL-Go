@@ -64,28 +64,17 @@ try {
     # if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
 
     # Get Repo settings as a hashtable
-    $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
-    if (Test-Path $RepoSettingsFile) {
-        $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-    }
-    else {
-        $repoSettings = @{}
-    }
-    $unusedALGoSystemFiles = @()
-    if ($repoSettings.Keys -contains "unusedALGoSystemFiles") {
-        $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
-    }
+    $repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable
+    $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 
     # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
     $updateSettings = $true
-    if ($repoSettings.Keys -contains "templateUrl") {
-        if ($templateUrl.StartsWith('@')) {
-            $templateUrl = "$($repoSettings.templateUrl.Split('@')[0])$templateUrl"
-        }
-        if ($repoSettings.templateUrl -eq $templateUrl) {
-            # No need to update settings file
-            $updateSettings = $false
-        }
+    if ($templateUrl.StartsWith('@')) {
+        $templateUrl = "$($repoSettings.templateUrl.Split('@')[0])$templateUrl"
+    }
+    if ($repoSettings.templateUrl -eq $templateUrl) {
+        # No need to update settings file
+        $updateSettings = $false
     }
 
     AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
@@ -123,11 +112,11 @@ try {
         @{ "dstPath" = ".github"; "srcPath" = ".github"; "pattern" = "*.copy.md"; "type" = "releasenotes" }
     )
     # Get the list of projects in the current repository
-    if ($repoSettings.Keys -contains 'projects') {
+    if ($repoSettings.projects) {
         $projects = $repoSettings.projects
     }
     else {
-        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
+        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 -Force | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
     }
     # To support single project repositories, we check for the .AL-Go folder in the root
     if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
@@ -142,11 +131,16 @@ try {
     # $removeFiles will hold an array of files, which needs to be removed
     $removeFiles = @()
 
+    Write-Host "Projects found: $($projects.Count)"
+    $projects | ForEach-Object {
+        Write-Host "- $_"
+    }
+
     # If useProjectDependencies is true, we need to calculate the dependency depth for all projects
     # Dependency depth determines how many build jobs we need to run sequentially
     # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
     $depth = 1
-    if ($repoSettings.Keys -contains 'useProjectDependencies' -and $repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
+    if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
         $buildAlso = @{}
         $projectDependencies = @{}
         $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
@@ -230,16 +224,13 @@ try {
                     # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself
                     # - Pull Request Handler workflow for security reasons
                     if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler") {
-                        if ($repoSettings.Keys -contains "runs-on") {
-                            $runson = $repoSettings."runs-on"
-                            $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $runson ]")
-                            if ($runson -like 'ubuntu-*' -and $repoSettings.Keys -notcontains "shell") {
-                                # Default shell for Ubuntu (Linux) is pwsh
-                                $repoSettings.shell = "pwsh"
-                            }
+                        if ($repoSettings."runs-on" -ne "windows-latest") {
+                            Write-Host "Setting runs-on to [ $($repoSettings."runs-on") ]"
+                            $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $($repoSettings."runs-on") ]")
                         }
-                        if ($repoSettings.Keys -contains "shell") {
-                            $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings."shell")")
+                        if ($repoSettings.shell -ne "powershell") {
+                            Write-Host "Setting shell to $($repoSettings.shell)"
+                            $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings.shell)")
                         }
                     }
 
@@ -383,8 +374,8 @@ try {
                 
                 # If $directCommit, then changes are made directly to the default branch
                 if (!$directcommit) {
-                    # If not direct commit, create a new branch with a random name, and switch to it
-                    $branch = [System.IO.Path]::GetRandomFileName()
+                    # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
+                    $branch = "update-al-go-system-files/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. update-al-go-system-files/main/210101120000
                     invoke-git checkout -b $branch
                 }
 
