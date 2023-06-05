@@ -38,6 +38,7 @@ jobs:
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+      projectsBuildTimeoutJson: ${{ steps.determineProjectsToBuild.outputs.ProjectsBuildTimeoutJson }}
       workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
     steps:
       - name: Checkout
@@ -182,6 +183,7 @@ jobs:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
       fail-fast: false
     name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
+    timeout-minutes: $ {{ fromJson(needs.Initialization.outputs.projectsBuildTimeoutJson)[matrix.project]['buildTimeout'] }}
     uses: ./.github/workflows/_BuildALGoProject.yaml
     secrets: inherit
     with:
