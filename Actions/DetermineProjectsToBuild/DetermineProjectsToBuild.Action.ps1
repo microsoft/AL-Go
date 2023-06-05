@@ -27,6 +27,7 @@ try {
     #region Action: Determine projects to build
     . (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.ps1" -Resolve)
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+    $projectsBuildTimeout = MapProjectSettings -projects $projectsToBuild -settings "buildTimeout"
     
     $telemetryScope = CreateScope -eventId 'DO0085' -parentTelemetryScopeJson $parentTelemetryScopeJson
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
@@ -36,15 +37,18 @@ try {
     $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
     $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
     $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
+    $projectsBuildTimeoutJson = ConvertTo-Json $projectsBuildTimeout -Depth 99 -Compress
     
     # Set output variables
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"    
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsBuildTimeoutJson=$projectsBuildTimeoutJson"    
     
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
+    Write-Host "ProjectsBuildTimeoutJson=$projectsBuildTimeoutJson"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

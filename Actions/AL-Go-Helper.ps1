@@ -502,7 +502,7 @@ function ReadSettings {
         "doNotRunBcptTests"                      = $false
         "doNotPublishApps"                       = $false
         "doNotSignApps"                          = $false
-        "buildTimeoutInMinutes"                  = "180"
+        "buildTimeout"                           = 180
         "configPackages"                         = @()
         "appSourceCopMandatoryAffixes"           = @()
         "obsoleteTagMinAllowedMajorMinor"        = ""
@@ -629,6 +629,48 @@ function ReadSettings {
         $settings.githubRunnerShell = $settings.shell
     }
     $settings
+}
+
+<#
+    .SYNOPSIS
+    Converts project settings to a map
+    .EXAMPLE
+    $buildTimeoutMap = MapProjectSettings -projects "." -settings "buildTimeout"
+    Value of `$buildTimeoutMap`: `@{ "." = @{ "buildTimeout" = "10" } }`
+    .EXAMPLE
+    $buildTimeoutMap = MapProjectSettings -projects "." -settings "buildTimeout", "deployTimeout"
+    Value of `$buildTimeoutMap`: `@{ "." = @{ "buildTimeout" = "10"; "deployTimeout" = "20" } }`
+    .EXAMPLE
+    $buildTimeoutMap = MapProjectSettings -projects "p1", "p2" -settings "buildTimeout", "deployTimeout"
+    Value of `$buildTimeoutMap`: `@{ "p1" = @{ "buildTimeout" = "10"; "deployTimeout" = "20" }; "p2" = @{ "buildTimeout" = "30"; "deployTimeout" = "20" } }`
+
+#>
+funtion MapProjectSettings
+{
+    Param(
+        [Parameter(Mandatory = $true)]
+        $projects,
+        [Parameter(Mandatory = $true)]
+        $settings
+    )
+
+    $projectSettingsMap = @{} # A map of project to settings
+    $projects | ForEach-Object {
+        $project = $_
+        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
+        
+        $settingsMap = @{} # A map of setting to value
+        $settings | ForEach-Object {
+            $setting = $_
+            if ($projectSettings.$setting) {
+                $settingsMap.Add($setting, $projectSettings.$setting)
+            }
+        }
+        
+        $projectSettingsMap.Add($project, $settingsMap)
+    }
+
+    return $projectSettingsMap
 }
 
 function ExcludeUnneededApps {
