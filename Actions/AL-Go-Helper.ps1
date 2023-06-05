@@ -645,7 +645,7 @@ function ReadSettings {
     Value of `$buildTimeoutMap`: `@{ "p1" = @{ "buildTimeout" = "10"; "deployTimeout" = "20" }; "p2" = @{ "buildTimeout" = "30"; "deployTimeout" = "20" } }`
 
 #>
-funtion MapProjectSettings
+function MapProjectSettings
 {
     Param(
         [Parameter(Mandatory = $true)]
