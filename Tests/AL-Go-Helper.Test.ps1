@@ -324,4 +324,42 @@ Describe "AL-Go-Helper tests" {
         Pop-Location
         Remove-Item -Path $tempName -Recurse -Force
     }
+
+    It 'MapProjectSettings' {
+        Mock ReadSettings -ParameterFilter { $project -eq 'project1' } -MockWith { return @{ "setting1" = "value11"; "setting2" = "value12" } }
+        Mock ReadSettings -ParameterFilter { $project -eq 'project2' } -MockWith { return @{ "setting1" = "value21"; "setting2" = "value22" } }
+
+        $settingsMap = MapProjectSettings -projects 'project1' -settings 'setting1','setting2' -baseFolder 'dummyFolder'
+
+        $settingsMap.project1 | Should -Not -BeNullOrEmpty
+        $settingsMap.Keys | Should -Not -Contain 'project2'
+        $settingsMap.project1.setting1 | Should -Be 'value11'
+        $settingsMap.project1.setting2 | Should -Be 'value12'
+
+        $settingsMap = MapProjectSettings -projects 'project1','project2' -settings 'setting1','setting2' -baseFolder 'dummyFolder'
+        $settingsMap.project1 | Should -Not -BeNullOrEmpty
+        $settingsMap.project2 | Should -Not -BeNullOrEmpty
+        $settingsMap.project1.setting1 | Should -Be 'value11'
+        $settingsMap.project1.setting2 | Should -Be 'value12'
+        $settingsMap.project2.setting1 | Should -Be 'value21'
+        $settingsMap.project2.setting2 | Should -Be 'value22'
+
+        $settingsMap = MapProjectSettings -projects 'project1','project2' -settings 'setting1' -baseFolder 'dummyFolder'
+        $settingsMap.project1 | Should -Not -BeNullOrEmpty
+        $settingsMap.project2 | Should -Not -BeNullOrEmpty
+        $settingsMap.project1.setting1 | Should -Be 'value11'
+        $settingsMap.project1.Keys | Should -Not -Contain 'setting2'
+        $settingsMap.project2.setting1 | Should -Be 'value21'
+        $settingsMap.project2.Keys | Should -Not -Contain 'setting2'
+
+        $settingsMap = MapProjectSettings -projects 'project1','project2' -settings 'setting1','setting2','setting3' -baseFolder 'dummyFolder'
+        $settingsMap.project1 | Should -Not -BeNullOrEmpty
+        $settingsMap.project2 | Should -Not -BeNullOrEmpty
+        $settingsMap.project1.setting1 | Should -Be 'value11'
+        $settingsMap.project1.setting2 | Should -Be 'value12'
+        $settingsMap.project1.Keys | Should -Not -Contain 'setting3'
+        $settingsMap.project2.setting1 | Should -Be 'value21'
+        $settingsMap.project2.setting2 | Should -Be 'value22'
+        $settingsMap.project2.Keys | Should -Not -Contain 'setting3'
+    }
 }

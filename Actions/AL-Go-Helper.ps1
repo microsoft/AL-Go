@@ -649,20 +649,23 @@ function MapProjectSettings
 {
     Param(
         [Parameter(Mandatory = $true)]
-        $projects,
+        [array] $projects,
         [Parameter(Mandatory = $true)]
-        $settings
+        [array] $settings,
+        [Parameter(Mandatory = $true)]
+        [string] $baseFolder
     )
 
     $projectSettingsMap = @{} # A map of project to settings
     $projects | ForEach-Object {
         $project = $_
+        Write-Host "Mapping settings for project $project, settings: $settings"
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
         
         $settingsMap = @{} # A map of setting to value
         $settings | ForEach-Object {
             $setting = $_
-            if ($projectSettings.$setting) {
+            if ($projectSettings.Keys -contains $setting) {
                 $settingsMap.Add($setting, $projectSettings.$setting)
             }
         }
