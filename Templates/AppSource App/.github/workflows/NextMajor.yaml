@@ -26,6 +26,7 @@ jobs:
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+      projectsBuildTimeoutJson: ${{ steps.determineProjectsToBuild.outputs.ProjectsBuildTimeoutJson }}
       workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
     steps:
       - name: Checkout
@@ -72,6 +73,7 @@ jobs:
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
       runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+      timeoutMinutes: ${{ fromJson(needs.Initialization.outputs.projectsBuildTimeoutJson)[matrix.project]['buildTimeout'] }}
       parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
       project: ${{ matrix.project }}
       buildMode: ${{ matrix.buildMode }}
