@@ -25,6 +25,9 @@ outputs:
   ArtifactUrl:
     description: The ArtifactUrl to use for building this project
     value: ${{ steps.determineArtifactUrl.outputs.ArtifactUrl }}
+  ArtifactCacheKey:
+    description: The Artifact Cache Key to use for building this project (if using CompilerFolder)
+    value: ${{ steps.determineArtifactUrl.outputs.ArtifactCacheKey }}
 runs:
   using: composite
   steps:

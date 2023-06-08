@@ -11,3 +11,5 @@ Specifies the parent telemetry scope for the telemetry signal
 ## Outputs
 ### ArtifactUrl:
 The ArtifactUrl to use
+### ArtifactCacheKey:
+The Cache Key to use for caching the artifacts when using CompilerFolder

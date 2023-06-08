@@ -57,6 +57,11 @@ on:
         required: false
         default: false
         type: boolean
+      useArtifactCache:
+        description: Flag determining whether to use the Artifacts Cache
+        required: false
+        default: false
+        type: boolean
       parentTelemetryScopeJson:
         description: Specifies the telemetry scope for the telemetry signal
         required: false
@@ -105,11 +110,11 @@ jobs:
             secretsJson: ${{ env.RepoSecrets }}
 
         - name: Cache Business Central Artifacts
-          if: env.useCompilerFolder == 'True' && steps.determineArtifactUrl.outputs.ArtifactUrl && !contains(env.artifact,'INSIDERSASTOKEN')
+          if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && steps.determineArtifactUrl.outputs.ArtifactCacheKey
           uses: actions/cache@v3
           with:
             path: .artifactcache
-            key: ${{ steps.determineArtifactUrl.outputs.ArtifactUrl }}
+            key: ${{ steps.determineArtifactUrl.outputs.ArtifactCacheKey }}
 
         - name: Run pipeline
           id: RunPipeline
