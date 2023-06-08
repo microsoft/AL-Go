@@ -110,7 +110,7 @@ jobs:
             secretsJson: ${{ env.RepoSecrets }}
 
         - name: Cache Business Central Artifacts
-          if: env.useCompilerFolder == 'True' && input.useArtifactCache && steps.determineArtifactUrl.outputs.ArtifactCacheKey
+          if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && steps.determineArtifactUrl.outputs.ArtifactCacheKey
           uses: actions/cache@v3
           with:
             path: .artifactcache
