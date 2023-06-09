@@ -63,7 +63,6 @@ else {
     }
 }
 $template = "https://github.com/$template"
-$runs = 0
 
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
@@ -71,6 +70,9 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
 $repoPath = (Get-Location).Path
+
+# Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)
+$runs = Get-NumberOfRuns -repository $repository
 
 # Add AppFolders and TestFolders
 $settingsFile = Join-Path $repoPath '.AL-Go\settings.json'
