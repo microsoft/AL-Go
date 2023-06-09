@@ -1,8 +1,7 @@
-﻿function Test-NumberOfRuns {
+﻿function Get-NumberOfRuns {
     Param(
         [string] $repository,
-        [string] $workflowName,
-        [int] $expectedNumberOfRuns
+        [string] $workflowName
     )
 
     $returnFields = "conclusion,displayTitle,workflowName,headBranch,event,databaseId"
@@ -15,8 +14,19 @@
         $runs = gh run list --limit 1000 --repo $repository --json $returnFields | ConvertFrom-Json | Where-Object { $_.workflowName -ne "workflow_run" }
     }
     $runs | Out-Host
-    if ($runs.Count -ne $expectedNumberOfRuns) {
-        throw "Expected number of runs was $expectedNumberOfRuns. Actual number was $($runs.Count)"
+    $runs.Count
+}
+
+function Test-NumberOfRuns {
+    Param(
+        [string] $repository,
+        [string] $workflowName,
+        [int] $expectedNumberOfRuns
+    )
+
+    $count = Get-NumberOfRuns -repository $repository -workflowName $workflowName
+    if ($count -ne $expectedNumberOfRuns) {
+        throw "Expected number of runs was $expectedNumberOfRuns. Actual number was $($count)"
     }
 }
 
