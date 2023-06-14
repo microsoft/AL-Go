@@ -325,7 +325,6 @@ try {
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', "$($templateUrl)@$($templateBranch)")
                 if ($directALGo) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
-                    # Also if we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
                     $lines = $srcContent.Split("`n")
                     
                     # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
@@ -337,9 +336,6 @@ try {
                     # Original branch is always main
                     $originalBranch = "main"
 
-                    # Modify the file to use owner and branch from the template
-                    $useBranch = $templateBranch
-                    $useOwner = $templateOwner
                     # Modify the file to use repository names based on whether or not we are using the direct AL-Go repo
                     $templateRepos = @{
                         "actionsRepo" = "AL-Go/Actions"
@@ -350,7 +346,7 @@ try {
                     # Replace the owner and repo names in the workflow
                     "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                        $replace = "`$1$($useOwner)/$($templateRepos."$_")`$2$($useBranch)`$3"
+                        $replace = "`$1$($templateOwner)/$($templateRepos."$_")`$2$($templateBranch)`$3"
                         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                     }
                     $srcContent = $lines -join "`n"
