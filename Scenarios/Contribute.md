@@ -1,19 +1,19 @@
 # Contributing to AL-Go
 
-This section describes how to contribute to AL-Go. How to set up your own environment.
+This section describes how to contribute to AL-Go, how to set up your own environment.
 
 You can do this in two ways:
 - Use a fork of AL-Go for GitHub in your own **local GitHub account** in development mode
 - Use 3 public repositories in your own **local GitHub account** (AL-Go-PTE, AL-Go-AppSource and AL-Go-Actions, much like in production)
 
-## Use AL-Go for GitHub in development mode
+## Use AL-Go for GitHub in "development mode"
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **local GitHub account**.
 2. You can optionally also create a branch in the AL-Go fork for the feature you are working on.
 
 **yourGitHubUserName/AL-Go@yourBranch** can now be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this fork.
 
-## Use 3 public repositories
+## Use 3 public repositories in "production mode"
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **local GitHub account**.
 2. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
