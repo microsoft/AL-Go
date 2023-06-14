@@ -323,7 +323,7 @@ try {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
-                $modifyUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and !$useMSUpdateCode
+                $modifyUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and $useMSUpdateCode
                 if ($directALGo -or $modifyUpdateCode) {
                     $lines = $srcContent.Split("`n")
                     $originalOwnerAndRepo = @{
