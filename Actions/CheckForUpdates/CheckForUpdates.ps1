@@ -11,6 +11,8 @@ Param(
     [string] $templateBranch = "",
     [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
     [bool] $update,
+    [Parameter(HelpMessage = "Set this input to Y in order to make subsequent runs of Update AL-Go System Files use the update code from your own actions repo", Mandatory = $false)]
+    [bool] $useOwnUpdateCode,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
@@ -321,7 +323,8 @@ try {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
-                if ($directALGo) {
+                $useMsUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and !$useOwnUpdateCode
+                if ($directALGo -or $useMsUpdateCode) {
                     $lines = $srcContent.Split("`n")
                     $originalOwnerAndRepo = @{
                         "actionsRepo" = "microsoft/AL-Go-Actions"
@@ -329,14 +332,32 @@ try {
                         "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
                     }
                     $originalBranch = "main"
-                    $templateRepos = @{
-                        "actionsRepo" = "AL-Go/Actions"
-                        "perTenantExtensionRepo" = "AL-Go"
-                        "appSourceAppRepo" = "AL-Go"
+                    if ($useMsUpdateCode) {
+                        $templateRepos = @{
+                            "actionsRepo" = "AL-Go-Actions"
+                            "perTenantExtensionRepo" = "AL-Go-PTE"
+                            "appSourceAppRepo" = "AL-Go-AppSource"
+                        }
+                        if ($templateBranch -eq 'preview') {
+                            $useBranch = 'preview'
+                        }
+                        else {
+                            $useBranch = 'main'
+                        }
+                        $useOwner = 'microsoft'
+                    }
+                    else {
+                        $templateRepos = @{
+                            "actionsRepo" = "AL-Go/Actions"
+                            "perTenantExtensionRepo" = "AL-Go"
+                            "appSourceAppRepo" = "AL-Go"
+                        }
+                        $useBranch = $templateBranch
+                        $useOwner = $templateOwner
                     }
                     "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                        $replace = "`$1$($templateOwner)/$($templateRepos."$_")`$2$($templateBranch)`$3"
+                        $replace = "`$1$($useOwner)/$($templateRepos."$_")`$2$($useBranch)`$3"
                         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                     }
                     $srcContent = $lines -join "`n"
