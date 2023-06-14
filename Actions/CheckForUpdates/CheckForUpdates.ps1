@@ -81,6 +81,7 @@ try {
 
     $templateBranch = $templateUrl.Split('@')[1]
     $templateUrl = $templateUrl.Split('@')[0]
+    $templateOwner = $templateUrl.Split('/')[3]
 
     # Build the $archiceUrl instead of using the GitHub API
     # The GitHub API has a rate limit of 60 requests per hour, which is not enough for a large number of repositories using AL-Go
@@ -313,6 +314,27 @@ try {
                 else {
                     # For non-workflow files, just read the file content
                     $srcContent = Get-ContentLF -Path $srcFile
+                }
+
+                if ($directALGo) {
+                    $lines = $srcContent.Split("`n")
+                    $originalOwnerAndRepo = @{
+                        "actionsRepo" = "microsoft/AL-Go-Actions"
+                        "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
+                        "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
+                    }
+                    $originalBranch = "main"
+                    $templateRepos = @{
+                        "actionsRepo" = "AL-Go/Actions"
+                        "perTenantExtensionRepo" = "AL-Go-PTExxxxx"
+                        "appSourceAppRepo" = "AL-Go-AppSourcexxxxxx"
+                    }
+                    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+                        $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
+                        $replace = "`$1$($templateOwner)/$($templateRepos."$_")`$2$($templateBranch)`$3"
+                        $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+                    }
+                    $srcContent = $lines -join "`n"
                 }
 
                 $dstFile = Join-Path $dstFolder $fileName
