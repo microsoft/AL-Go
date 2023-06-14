@@ -1,6 +1,6 @@
 # Contributing to AL-Go
 
-This section describes how to contribute to AL-Go, how to set up your own environment (your own set of actions and your own templates)
+This section describes how to contribute to AL-Go. How to set up your own environment (your own set of actions and your own templates)
 
 You can do this in two ways:
 - Use a fork of AL-Go for GitHub in your own **local GitHub account** in development mode
