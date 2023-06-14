@@ -1,6 +1,19 @@
 # Contributing to AL-Go
 
-This section describes how to contribute to AL-Go. How to set up your own environment (your own set of actions and your own templates)
+This section describes how to contribute to AL-Go. How to set up your own environment.
+
+You can do this in two ways:
+- Use a fork of AL-Go for GitHub in your own **local GitHub account** in development mode
+- Use 3 public repositories in your own **local GitHub account** (AL-Go-PTE, AL-Go-AppSource and AL-Go-Actions, much like in production)
+
+## Use AL-Go for GitHub in development mode
+
+1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **local GitHub account**.
+2. You can optionally also create a branch in the AL-Go fork for the feature you are working on.
+
+**yourGitHubUserName/AL-Go@yourBranch** can now be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this fork.
+
+## Use 3 public repositories
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **local GitHub account**.
 2. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
@@ -14,7 +27,9 @@ Now you should have 3 new public repositories:
 - [https://github.com/yourGitHubUserName/AL-Go-AppSource](https://github.com/yourGitHubUserName/AL-Go-AppSource)
 - [https://github.com/yourGitHubUserName/AL-Go-PTE](https://github.com/yourGitHubUserName/AL-Go-PTE)
 
-These URLs can be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this area for your AL project.
+You can optionally also create a branch in the AL-Go fork for the feature you are working on and then select that branch when running Deploy (both as **Use workflow from** and as **Branch to deploy to**).
+
+**yourGitHubUserName/AL-Go-PTE@yourBranch** or **yourGitHubUserName/AL-Go-AppSource@yourBranch** can now be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this area for your AL project.
 
 Now you can clone these repos and work with them, fix issues etc. and when you are done with the functionality you want to contribute with, run the **Collect** workflow in your local fork of the AL-Go repository. This collects the changes from your local 3 repositories and creates a Pull Request against your local fork (or commits directly)
 
