@@ -11,8 +11,8 @@ Param(
     [string] $templateBranch = "",
     [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
     [bool] $update,
-    [Parameter(HelpMessage = "Set this input to Y in order to make subsequent runs of Update AL-Go System Files use the update code from your own actions repo", Mandatory = $false)]
-    [bool] $useOwnUpdateCode,
+    [Parameter(HelpMessage = "Set this to N to use private update code. By default subsequent updates will use the Microsoft Update Code from microsoft/AL-Go-Actions/UpdateALGoSystemFiles", Mandatory = $false)]
+    [bool] $useMSUpdateCode = $true,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
@@ -323,8 +323,8 @@ try {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
-                $useMsUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and !$useOwnUpdateCode
-                if ($directALGo -or $useMsUpdateCode) {
+                $modifyUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and !$useMSUpdateCode
+                if ($directALGo -or $modifyUpdateCode) {
                     $lines = $srcContent.Split("`n")
                     $originalOwnerAndRepo = @{
                         "actionsRepo" = "microsoft/AL-Go-Actions"
@@ -332,7 +332,7 @@ try {
                         "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
                     }
                     $originalBranch = "main"
-                    if ($useMsUpdateCode) {
+                    if ($modifyUpdateCode) {
                         $templateRepos = @{
                             "actionsRepo" = "AL-Go-Actions"
                             "perTenantExtensionRepo" = "AL-Go-PTE"

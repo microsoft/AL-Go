@@ -33,10 +33,10 @@ inputs:
     description: Set this input to Y in order to update AL-Go System Files if needed
     required: false
     default: 'N'
-  useOwnUpdateCode:
-    description: Set this input to Y in order to make subsequent runs of Update AL-Go System Files use the update code from your own actions repo
+  useMSUpdateCode:
+    description: Set this to N to use private update code. By default subsequent updates will use the Microsoft Update Code from microsoft/AL-Go-Actions/UpdateALGoSystemFiles
     required: false
-    default: 'N'
+    default: 'Y'
   updateBranch:
     description: Set the branch to update
     required: false
@@ -57,10 +57,10 @@ runs:
         _templateUrl: ${{ inputs.templateUrl }}
         _templateBranch: ${{ inputs.templateBranch }}
         _update: ${{ inputs.update }}
-        _useOwnUpdateCode: ${{ inputs.useOwnUpdateCode }}
+        _useMSUpdateCode: ${{ inputs.useMSUpdateCode }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
-      run: try { ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -templateUrl $ENV:_templateUrl -templateBranch $ENV:_templateBranch -update ($ENV:_update -eq 'Y') -useOwnUpdateCode ($ENV:_useOwnUpdateCode -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -templateUrl $ENV:_templateUrl -templateBranch $ENV:_templateBranch -update ($ENV:_update -eq 'Y') -useMSUpdateCode ($ENV:_useMSUpdateCode -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
