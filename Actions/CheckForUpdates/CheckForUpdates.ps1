@@ -324,6 +324,7 @@ try {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
+                $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
                 $modifyUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and $useMSUpdateCode
                 if ($directALGo -or $modifyUpdateCode) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
@@ -340,33 +341,31 @@ try {
                     # Original branch is always main
                     $originalBranch = "main"
                     
-                    # Modify the file to use owner and branch from the template
-                    $useBranch = $templateBranch
-                    $useOwner = $templateOwner
-                    # Modify the file to use repository names based on whether or not we are using the direct AL-Go repo
-                    if ($directALGo) {
-                        $templateRepos = @{
-                            "actionsRepo" = "AL-Go/Actions"
-                            "perTenantExtensionRepo" = "AL-Go"
-                            "appSourceAppRepo" = "AL-Go"
-                        }
-                    }
-                    else {
+                    # If we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
+                    # use preview branch for preview template
+                    if ($modifyUpdateCode) {
                         $templateRepos = @{
                             "actionsRepo" = "AL-Go-Actions"
                             "perTenantExtensionRepo" = "AL-Go-PTE"
                             "appSourceAppRepo" = "AL-Go-AppSource"
                         }
-                    }
-                    # If we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
-                    # use preview branch for preview template
-                    if ($modifyUpdateCode) {
                         $useOwner = 'microsoft'
                         if ($templateBranch -eq 'preview') {
                             $useBranch = 'preview'
                         }
                         else {
                             $useBranch = 'main'
+                        }
+                    }
+                    else {
+                        # Modify the file to use owner and branch from the template
+                        $useBranch = $templateBranch
+                        $useOwner = $templateOwner
+                        # Modify the file to use repository names based on whether or not we are using the direct AL-Go repo
+                        $templateRepos = @{
+                            "actionsRepo" = "AL-Go/Actions"
+                            "perTenantExtensionRepo" = "AL-Go"
+                            "appSourceAppRepo" = "AL-Go"
                         }
                     }
                     # Replace the owner and repo names in the workflow
