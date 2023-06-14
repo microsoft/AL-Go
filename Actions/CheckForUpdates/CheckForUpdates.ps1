@@ -56,6 +56,9 @@ try {
         $templateUrl = "https://github.com/$templateUrl"
     }
 
+    # DirectALGo is used to determine if the template is a direct link to an AL-Go repository
+    $directALGo = $templateUrl.ToLowerInvariant().contains("/al-go@")
+
     # TemplateUrl is now always a full url + @ and a branch name
 
     # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
@@ -69,9 +72,6 @@ try {
 
     # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
     $updateSettings = $true
-    if ($templateUrl.StartsWith('@')) {
-        $templateUrl = "$($repoSettings.templateUrl.Split('@')[0])$templateUrl"
-    }
     if ($repoSettings.templateUrl -eq $templateUrl) {
         # No need to update settings file
         $updateSettings = $false
@@ -107,9 +107,19 @@ try {
     # - All files in .github/workflows
     # - All files in .github that ends with .copy.md
     # - All PowerShell scripts in .AL-Go folders (all projects)
+    $srcGitHubPath = '.github'
+    $srcALGoPath = '.AL-Go'
+    if ($directALGo) {
+        $typePath = $repoSettings.type
+        if ($typePath -eq "PTE") {
+            $typePath = "Per Tenant Extension"
+        }
+        $srcGitHubPath = Join-Path "Templates/$typePath" $srcGitHubPath
+        $srcALGoPath = Join-Path "Templates/$typePath" $srcALGoPath
+    }
     $checkfiles = @(
-        @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path ".github" "workflows"; "pattern" = "*"; "type" = "workflow" },
-        @{ "dstPath" = ".github"; "srcPath" = ".github"; "pattern" = "*.copy.md"; "type" = "releasenotes" }
+        @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path $srcGitHubPath 'workflows'; "pattern" = "*"; "type" = "workflow" },
+        @{ "dstPath" = ".github"; "srcPath" = $srcGitHubPath; "pattern" = "*.copy.md"; "type" = "releasenotes" }
     )
     # Get the list of projects in the current repository
     if ($repoSettings.projects) {
@@ -123,7 +133,7 @@ try {
         $projects += @(".")
     }
     $projects | ForEach-Object {
-        $checkfiles += @(@{ "dstPath" = Join-Path $_ ".AL-Go"; "srcPath" = ".AL-Go"; "pattern" = "*.ps1"; "type" = "script" })
+        $checkfiles += @(@{ "dstPath" = Join-Path $_ ".AL-Go"; "srcPath" = $srcALGoPath; "pattern" = "*.ps1"; "type" = "script" })
     }
 
     # $updateFiles will hold an array of files, which needs to be updated
