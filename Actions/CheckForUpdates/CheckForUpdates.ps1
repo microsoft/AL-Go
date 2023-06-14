@@ -57,7 +57,12 @@ try {
     }
 
     # DirectALGo is used to determine if the template is a direct link to an AL-Go repository
-    $directALGo = $templateUrl.ToLowerInvariant().contains("/al-go@")
+    $directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
+    if ($directALGo) {
+        if ($templateUrl -like 'https://github.com/microsoft/AL-Go@*') {
+            throw "You cannot use microsoft/AL-Go as a template repository. Please use a fork of AL-Go instead."
+        }
+    }
 
     # TemplateUrl is now always a full url + @ and a branch name
 
