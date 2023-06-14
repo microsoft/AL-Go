@@ -118,6 +118,7 @@ try {
     $srcGitHubPath = '.github'
     $srcALGoPath = '.AL-Go'
     if ($directALGo) {
+        # When using a direct link to an AL-Go repository, the files are in a subfolder of the template repository
         $typePath = $repoSettings.type
         if ($typePath -eq "PTE") {
             $typePath = "Per Tenant Extension"
@@ -325,36 +326,50 @@ try {
 
                 $modifyUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and $useMSUpdateCode
                 if ($directALGo -or $modifyUpdateCode) {
+                    # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
+                    # Also if we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
                     $lines = $srcContent.Split("`n")
+                    
+                    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
                     $originalOwnerAndRepo = @{
                         "actionsRepo" = "microsoft/AL-Go-Actions"
                         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
                         "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
                     }
+
+                    # Original branch is always main
                     $originalBranch = "main"
-                    if ($modifyUpdateCode) {
+                    
+                    # Modify the file to use owner and branch from the template
+                    $useBranch = $templateBranch
+                    $useOwner = $templateOwner
+                    # Modify the file to use repository names based on whether or not we are using the direct AL-Go repo
+                    if ($directALGo) {
+                        $templateRepos = @{
+                            "actionsRepo" = "AL-Go/Actions"
+                            "perTenantExtensionRepo" = "AL-Go"
+                            "appSourceAppRepo" = "AL-Go"
+                        }
+                    }
+                    else {
                         $templateRepos = @{
                             "actionsRepo" = "AL-Go-Actions"
                             "perTenantExtensionRepo" = "AL-Go-PTE"
                             "appSourceAppRepo" = "AL-Go-AppSource"
                         }
+                    }
+                    # If we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
+                    # use preview branch for preview template
+                    if ($modifyUpdateCode) {
+                        $useOwner = 'microsoft'
                         if ($templateBranch -eq 'preview') {
                             $useBranch = 'preview'
                         }
                         else {
                             $useBranch = 'main'
                         }
-                        $useOwner = 'microsoft'
                     }
-                    else {
-                        $templateRepos = @{
-                            "actionsRepo" = "AL-Go/Actions"
-                            "perTenantExtensionRepo" = "AL-Go"
-                            "appSourceAppRepo" = "AL-Go"
-                        }
-                        $useBranch = $templateBranch
-                        $useOwner = $templateOwner
-                    }
+                    # Replace the owner and repo names in the workflow
                     "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
                         $replace = "`$1$($useOwner)/$($templateRepos."$_")`$2$($useBranch)`$3"
