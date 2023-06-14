@@ -326,24 +326,25 @@ try {
 
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', "$($templateUrl)@$($templateBranch)")
                 $useMSUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and !$useCustomUpdateCode
+                Write-Host "UseMsUpdateCode: $useMSUpdateCode"
                 if ($directALGo -or $useMSUpdateCode) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
                     # Also if we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
                     $lines = $srcContent.Split("`n")
                     
-                    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
-                    $originalOwnerAndRepo = @{
-                        "actionsRepo" = "microsoft/AL-Go-Actions"
-                        "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
-                        "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
-                    }
-
-                    # Original branch is always main
-                    $originalBranch = "main"
-                    
                     # If we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
                     # use preview branch for preview template
                     if ($useMSUpdateCode) {
+                        # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
+                        $originalOwnerAndRepo = @{
+                            "actionsRepo" = "$templateOwner/AL-Go-Actions"
+                            "perTenantExtensionRepo" = "$templateOwner/AL-Go-PTE"
+                            "appSourceAppRepo" = "$templateOwner/AL-Go-AppSource"
+                        }
+
+                        # Original branch is always main
+                        $originalBranch = $templateBranch
+
                         $templateRepos = @{
                             "actionsRepo" = "AL-Go-Actions"
                             "perTenantExtensionRepo" = "AL-Go-PTE"
@@ -358,6 +359,16 @@ try {
                         }
                     }
                     else {
+                        # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
+                        $originalOwnerAndRepo = @{
+                            "actionsRepo" = "microsoft/AL-Go-Actions"
+                            "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
+                            "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
+                        }
+
+                        # Original branch is always main
+                        $originalBranch = "main"
+
                         # Modify the file to use owner and branch from the template
                         $useBranch = $templateBranch
                         $useOwner = $templateOwner
