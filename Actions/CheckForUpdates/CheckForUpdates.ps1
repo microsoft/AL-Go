@@ -326,8 +326,8 @@ try {
                     $originalBranch = "main"
                     $templateRepos = @{
                         "actionsRepo" = "AL-Go/Actions"
-                        "perTenantExtensionRepo" = "AL-Go-PTExxxxx"
-                        "appSourceAppRepo" = "AL-Go-AppSourcexxxxxx"
+                        "perTenantExtensionRepo" = "AL-Go"
+                        "appSourceAppRepo" = "AL-Go"
                     }
                     "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
