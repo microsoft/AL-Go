@@ -324,7 +324,7 @@ try {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
-                $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
+                $srcContent = $srcContent.Replace('{TEMPLATEURL}', "$($templateUrl)@$($templateBranch)")
                 $modifyUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and $useMSUpdateCode
                 if ($directALGo -or $modifyUpdateCode) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
