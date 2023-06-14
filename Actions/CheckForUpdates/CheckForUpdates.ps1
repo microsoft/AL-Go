@@ -11,8 +11,8 @@ Param(
     [string] $templateBranch = "",
     [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
     [bool] $update,
-    [Parameter(HelpMessage = "Set this to N to use private update code. By default subsequent updates will use the Microsoft Update Code from microsoft/AL-Go-Actions/UpdateALGoSystemFiles", Mandatory = $false)]
-    [bool] $useMSUpdateCode = $true,
+    [Parameter(HelpMessage = "Set this to Y to use custom update code in subsequent runs of the Update AL-Go System Files. By default AL-Go will use the update code from microsoft/AL-Go-Actions/UpdateALGoSystemFiles", Mandatory = $false)]
+    [bool] $useCustomUpdateCode,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
@@ -325,8 +325,8 @@ try {
                 }
 
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', "$($templateUrl)@$($templateBranch)")
-                $modifyUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and $useMSUpdateCode
-                if ($directALGo -or $modifyUpdateCode) {
+                $useMSUpdateCode = $fileName -eq 'UpdateGitHubGoSystemFiles.yaml' -and !$useCustomUpdateCode
+                if ($directALGo -or $useMSUpdateCode) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
                     # Also if we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
                     $lines = $srcContent.Split("`n")
@@ -343,7 +343,7 @@ try {
                     
                     # If we are using the MS Update code, we need to change the owner and repo names to microsoft/AL-Go-Actions in the workflow
                     # use preview branch for preview template
-                    if ($modifyUpdateCode) {
+                    if ($useMSUpdateCode) {
                         $templateRepos = @{
                             "actionsRepo" = "AL-Go-Actions"
                             "perTenantExtensionRepo" = "AL-Go-PTE"
