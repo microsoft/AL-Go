@@ -5,20 +5,11 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  azureKeyVaultURI:
-    description: URI of the Azure Key Vault
+  azureCredentialsJson:
+    description: Azure Credentials secret
     required: true
-  azureKeyVaultClientID:
-    description: The Client ID of the service principal used to access the Azure Key Vault
-    required: true
-  azureKeyVaultClientSecret:
-    description: The Client Secret of the service principal used to access the Azure Key Vault
-    required: true
-  azureKeyVaultTenantID:
-    description: The Tenant ID of the service principal used to access the Azure Key Vault
-    required: true
-  azureKeyVaultCertificateName:
-    description: The name of the certificate in the Azure Key Vault
+  settingsJson:
+    description: Settings from repository in compressed Json format
     required: true
   timestampService:
     description: The URI of the timestamp server
@@ -40,19 +31,23 @@ runs:
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      env:
+        _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
+        _settingsJson: ${{ inputs.settingsJson }}
+        _timestampService: ${{ inputs.timestampService }}
+        _digestAlgorithm: ${{ inputs.digestAlgorithm }}
+        _pathToFiles: ${{ inputs.pathToFiles }}
+        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
       id: Sign
       run: | 
         try { 
-          ${{ github.action_path }}/Sign.ps1 -AzureKeyVaultURI "${{ inputs.azureKeyVaultURI }}" `
-                                      -AzureKeyVaultClientID "${{ inputs.azureKeyVaultClientID }}" `
-                                      -AzureKeyVaultClientSecret "${{ inputs.azureKeyVaultClientSecret }}" `
-                                      -AzureKeyVaultTenantID "${{ inputs.azureKeyVaultTenantID }}" `
-                                      -AzureKeyVaultCertificateName "${{ inputs.azureKeyVaultCertificateName }}" `
-                                      -TimestampService "${{ inputs.timestampService }}" `
-                                      -TimestampDigest "${{ inputs.digestAlgorithm }}" `
-                                      -FileDigest "${{ inputs.digestAlgorithm }}" `
-                                      -PathToFiles "${{ inputs.pathToFiles }}" `
-                                      -ParentTelemetryScopeJson "${{ inputs.parentTelemetryScopeJson }}"
+          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "$ENV:_azureCredentialsJson" `
+                                      -settingsJson "$ENV:_settingsJson" `
+                                      -TimestampService "$ENV:_timestampService" `
+                                      -TimestampDigest "$ENV:_digestAlgorithm" `
+                                      -FileDigest "$ENV:_digestAlgorithm" `
+                                      -PathToFiles "$ENV:_pathToFiles" `
+                                      -ParentTelemetryScopeJson "$ENV:_parentTelemetryScopeJson"
         } catch { 
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
         }

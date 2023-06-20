@@ -110,7 +110,7 @@ jobs:
           }
           do {
             $repoArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page" | ConvertFrom-Json
-            $allArtifacts += $repoArtifacts.Artifacts
+            $allArtifacts += $repoArtifacts.Artifacts | Where-Object { !$_.expired }
             $page++
           }
           while ($repoArtifacts.Artifacts.Count -gt 0)

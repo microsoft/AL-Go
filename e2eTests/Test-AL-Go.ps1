@@ -98,7 +98,6 @@ else {
 }
 
 $template = "https://github.com/$($template)@main"
-$runs = 0
 
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
@@ -106,9 +105,11 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 # Set DoNotPublishApps to true until we have test apps and set useCompilerFolder
 # This causes the CI/CD workflow to use FilesOnly containers or CompilerFolder (if UseCompilerFolder is true)
-CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "useCompilerFolder" = $useCompilerFolder.IsPresent; "doNotPublishApps" = $useCompilerFolder.IsPresent } `
-
+CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "useCompilerFolder" = $useCompilerFolder.IsPresent; "doNotPublishApps" = $useCompilerFolder.IsPresent }
 $repoPath = (Get-Location).Path
+
+# Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)
+$runs = Get-NumberOfRuns -repository $repository
 
 # Add Existing App
 if ($appSourceApp) {

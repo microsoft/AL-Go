@@ -14,15 +14,18 @@ on:
       runTestMatrix:
         description: Run the end to end test scenario for the full test matrix
         required: false
-        default: 'Y'
+        type: boolean
+        default: true
       runScenarios:
         description: Run the end to end scenario tests
         required: false
-        default: 'Y'
+        type: boolean
+        default: true
       runUpgradeTests:
         description: Run the end to end upgrade tests
         required: false
-        default: 'Y'
+        type: boolean
+        default: true
       bcContainerHelperVersion:
         description: Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)
         required: false
@@ -174,7 +177,7 @@ jobs:
   Scenario:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    if: github.event.inputs.runScenarios == 'Y'
+    if: github.event.inputs.runScenarios == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - uses: actions/checkout@v3
@@ -205,7 +208,7 @@ jobs:
   TestAlGo:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    if: github.event.inputs.runTestMatrix == 'Y'
+    if: github.event.inputs.runTestMatrix == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.testruns) }}
     steps:
       - uses: actions/checkout@v3
@@ -251,7 +254,7 @@ jobs:
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    if: github.event.inputs.runUpgradeTests == 'Y'
+    if: github.event.inputs.runUpgradeTests == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.releases) }}
     steps:
       - uses: actions/checkout@v3
