@@ -39,7 +39,7 @@ runs:
       env:
         gitHubToken: ${{ github.token }}
       run:
-        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -buildMode ${{ inputs.buildMode }} -projectsDependenciesJson '${{ inputs.projectsDependenciesJson }}' -baseBranch '${{ github.base_ref }}' -baseFolder ${{ github.workspace }} -destinationPath ${{ inputs.destinationPath }} -token ${{ github.token }}
+        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project '${{ inputs.project }}' -buildMode '${{ inputs.buildMode }}' -projectsDependenciesJson '${{ inputs.projectsDependenciesJson }}' -baseBranch '${{ github.base_ref }}' -baseFolder '${{ github.workspace }}'' -destinationPath '${{ inputs.destinationPath }}' -token '${{ github.token }}'
 branding:
   icon: terminal
   color: blue
