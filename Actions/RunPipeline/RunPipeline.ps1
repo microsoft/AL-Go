@@ -15,7 +15,9 @@ Param(
     [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","codeSignCertificatePassword":"","keyVaultCertificateUrl":"","keyVaultCertificatePassword":"","keyVaultClientId":"","storageContext":"","applicationInsightsConnectionString":""}',
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [ValidateSet('Default', 'Translated', 'Clean')]
-    [string] $buildMode = 'Default'
+    [string] $buildMode = 'Default',
+    [string] $installAppsJson = '[]',
+    [string] $installTestAppsJson = '[]'
 )
 
 $ErrorActionPreference = "Stop"
@@ -117,44 +119,12 @@ try {
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
 
-    Write-Host "Project: $project"
-    if ($project -and $repo.useProjectDependencies -and $projectDependenciesJson -ne "") {
-        Write-Host "Using project dependencies: $projectDependenciesJson"
-
-        $projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-        if ($projectDependencies.Keys -contains $project) {
-            $projects = @($projectDependencies."$project") -join ","
-        }
-        else {
-            $projects = ''
-        }
-        if ($projects) {
-            Write-Host "Project dependencies: $projects"
-            $thisBuildProbingPaths = @(@{
-                "release_status" = "thisBuild"
-                "version" = "latest"
-                "projects" = $projects
-                "repo" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-                "branch" = $ENV:GITHUB_REF_NAME
-                "authTokenSecret" = $token
-            })
-            Get-dependencies -probingPathsJson $thisBuildProbingPaths -buildMode $buildMode | where-Object { $_ } | ForEach-Object {
-                if ($_.startswith('(')) {
-                    $installTestApps += $_    
-                }
-                else {
-                    $installApps += $_    
-                }
-            }
-        }
-        else {
-            Write-Host "No project dependencies"
-        }
-    }
+    $installApps += $installAppsJson | ConvertFrom-Json
+    $installTestApps += $installTestAppsJson | ConvertFrom-Json
 
     if ($repo.appDependencyProbingPaths) {
         Write-Host "::group::Downloading dependencies"
-        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths | ForEach-Object {
+        Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths | ForEach-Object {
             if ($_.startswith('(')) {
                 $installTestApps += $_    
             }

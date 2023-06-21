@@ -1,129 +1,76 @@
 Param(
     [Parameter(HelpMessage = "The project for which to fetch dependencies", Mandatory = $true)]
     [string] $project,
+    [string] $baseFolder,
     [string] $buildMode = 'Default',
-    [string[]] $dependencyProjects = @(),
-    [array] $buildDimensions = @(),
+    [string] $projectsDependenciesJson,
     [string] $baseBranch,
-    [string] $destinationPath
+    [string] $destinationPath,
+    [string] $token
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-Write-Host "Fetching dependencies for project '$project'. Dependencies: $($dependencyProjects -join ', '), BuildMode: $buildMode, BaseBranch: $baseBranch"
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+Write-Host "Fetching dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, BaseBranch: $baseBranch"
+
+$projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+if ($projectsDependencies.Keys -contains $project) {
+    $dependencyProjects = @($projectsDependencies."$project") -join ","
+}
 
 if(!$dependencyProjects -or $dependencyProjects.Count -eq 0) {
     Write-Host "No dependencies to fetch for project '$project'"
 
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedArtifacts=[]"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedAppArtifacts=[]"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedTestAppArtifacts=[]"
     return
 }
 
-$fetchedArtifacts= @()
+$fetchedApps= @()
+$fetchedTestApps= @()
 
-# Determine if we need to fetch the artifact from the current build or from the latest build on the same branch
-$fetchArtifacts= @( $dependencyProjects | ForEach-Object {
+$dependeciesProbingPaths = @($dependencyProjects | ForEach-Object {
     $dependencyProject = $_
-    $fetchFrom = 'latestBuild'
-    $fetchBuildMode = $buildMode
+    $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
 
-    # Check if the dependency project is also built in the current workflow run with the same build mode
-    $currentBuild = $buildDimensions | Where-Object { ($_.project -eq $dependencyProject) -and ($_.buildMode -eq $buildMode)  }
+    $dependencyBuildMode = $buildMode
+    if(!($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
+        # Fetch the default build mode if the specified build mode is not supported for the dependency project
+        $dependencyBuildMode = 'Default';
+    }
 
-    if(!$currentBuild) {
-        # Check if the dependency project is also built in the current workflow run with the default build mode
-        $currentBuild = $buildDimensions | Where-Object { ($_.project -eq $dependencyProject) -and ($_.buildMode -eq 'Default')  }
-    }
-    
-    if($currentBuild) {
-        $fetchFrom = 'currentBuild'
-        $fetchBuildMode = $currentBuild.buildMode
-    }
-    
     return @{
-        dependencyProject = $dependencyProject
-        buildMode = $fetchBuildMode
-        fetchFrom = $fetchFrom
+        "release_status" = "thisBuild"
+        "version" = "latest"
+        "buildMode" = $dependencyBuildMode
+        "projects" = $dependencyProject
+        "repo" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+        "branch" = $ENV:GITHUB_REF_NAME
+        "baseBranch" = $ENV:GITHUB_BASE_REF_NAME
+        "authTokenSecret" = $token
     }
 })
 
-# Fetch the artifacts
-foreach($fetchArtifact in $fetchArtifacts) {
-    $dependencyProject = $fetchArtifact.dependencyProject
-    $buildMode = $fetchArtifact.buildMode
-    $fetchFrom = $fetchArtifact.fetchFrom
-    
-    switch ($fetchFrom) {
-        'currentBuild' {
-            Write-Host "Project '$dependencyProject' is also built in the current worfklow run with build mode $buildMode, fetching artifact from current build"
+$dependeciesProbingPaths | ForEach-Object {
+    $dependencyProbingPath = $_
+    $downloadedDependencies = Get-Dependencies -probingPathsJson $dependencyProbingPath -saveToPath $destinationPath | Where-Object { $_ }
 
-            Download-DependencyProjectArtifact -project $dependencyProject -buildMode $buildMode -workflowRunId $env:GITHUB_RUN_ID
+    $downloadedDependencies | ForEach-Object {
+        # naming convention: app, (testapp)
+        if ($_.startswith('(')) {
+            $fetchedTestApps += $_    
         }
-        'latestBuild' {
-            Write-Host "Project '$dependencyProject' is not built in the current worfklow run, fetching artifact from latest build from branch '$baseBranch'"
-        
-            Download-DependencyProjectArtifact -project $dependencyProject -buildMode $buildMode -baseBranch $baseBranch
+        else {
+            $fetchedApps += $_    
         }
     }
 }
 
-function Download-DependencyProjectArtifact {
-    pparam(
-        [Parameter(HelpMessage = "The project for which to fetch dependencies", Mandatory = $true)]
-        [string] $project,
-        [string] $buildMode = 'Default',
-        [Parameter(ParameterSetName = 'WorkflowRunId')]
-        [string] $workflowRunId,
-        [Parameter(ParameterSetName = 'BaseBranch')]
-        [string] $baseBranch
-    )
-    
-    $projectName = $project.Replace('\','_').Replace('/','_')
-    $branchName = $baseBranch.Replace('\','_').Replace('/','_')
+$fetchedAppsJson = ConvertTo-Json $fetchedApps -Depth 99 -Compress
+$fetchedTestAppsJson = ConvertTo-Json $fetchedTestApps -Depth 99 -Compress
 
-    $buildModeMask = $buildMode
-    if($buildMode -eq 'Default') {
-        $buildModeMask = ''
-    }
-
-    if($workflowRunId) {
-        $artifactName = "thisbuild-$($projectName)-$($buildModeMask)Apps"
-        $fallbackArtifactName = "$($projectName)-Apps"
-    } else {
-        $artifactName = "$($projectName)-$($branchName)-$($buildMode)Apps-*"
-        $artifactName = "$($projectName)-$($branchName)-Apps-*"
-    }
-
-    $token = $env:gitHubToken
-
-    if(!$token) {
-        $token = gh auth token
-    }
-
-    $token | gh auth login --with-token
-
-    $page = 0
-    $pageSize = 100
-    $artifacts = @()
-
-    do {
-        $page++
-
-        $res += (gh api `
-            -H "Accept: application/vnd.github+json" `
-            -H "X-GitHub-Api-Version: 2022-11-28" `
-            /repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/artifacts?per_page=$pageSize`&page=$page) | ConvertFrom-Json
-
-        $artifacts += @($res.artifacts)
-    } while ($artifacts.Count -eq ($page * $pageSize))
-
-    $artifact = $artifacts | Where-Object { $_.name -like $artifactName }
-
-
-
-    return $artifactsName
-}
-
-$fetchedArtifactsJson = ConvertTo-Json $fetchedArtifacts -Depth 99 -Compress
-Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedArtifacts=$fetchedArtifactsJson"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedApps=$fetchedAppsJson"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedTestApps=$fetchedTestAppsJson"

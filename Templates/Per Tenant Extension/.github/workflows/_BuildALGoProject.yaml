@@ -75,12 +75,6 @@ jobs:
           with:
             ref: ${{ inputs.checkoutRef }}
             lfs: true
-      
-        - name: Download thisbuild artifacts
-          if: inputs.publishThisBuildArtifacts
-          uses: actions/download-artifact@v3
-          with:
-            path: '.dependencies'
 
         - name: Read settings
           uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -116,6 +110,15 @@ jobs:
             path: .artifactcache
             key: ${{ steps.determineArtifactUrl.outputs.ArtifactCacheKey }}
 
+        - name: Fetch project dependencies
+          id: FetchProjectDependencies
+          if: inputs.publishThisBuildArtifacts
+          uses: mazhelez/AL-Go-Actions/FetchProjectDependencies@fetch-artifacts-per-build-mode
+          with:
+            shell: ${{ inputs.shell }}
+            project: ${{ inputs.project }}
+            projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
+
         - name: Run pipeline
           id: RunPipeline
           uses: microsoft/AL-Go-Actions/RunPipeline@main
@@ -129,6 +132,8 @@ jobs:
             settingsJson: ${{ env.Settings }}
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
+            installAppsJson: ${{ steps.FetchProjectDependencies.outputs.FetchedApps }}
+            installTestAppsJson: ${{ steps.FetchProjectDependencies.outputs.FetchedTestApps }}
 
         - name: Sign
           if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''

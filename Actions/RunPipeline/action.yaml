@@ -37,6 +37,14 @@ inputs:
     description: Specifies a mode to use for the build steps
     required: false
     default: 'Default'
+  installAppsJson:
+    description: A JSON-formatted list of apps to install
+    required: false
+    default: '[]'
+  installTestAppsJson:
+    description: A JSON-formatted list of test apps to install
+    required: false
+    default: '[]'
 runs:
   using: composite
   steps:
@@ -51,7 +59,9 @@ runs:
         _settingsJson: ${{ inputs.settingsJson }}
         _secretsJson: ${{ inputs.secretsJson }}
         _buildMode: ${{ inputs.buildMode }}
-      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -projectDependenciesJson $ENV:_projectDependenciesJson -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson -buildMode $ENV:_buildMode } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+        _installAppsJson: ${{ inputs.installAppsJson }}
+        _installTestAppsJson: ${{ inputs.installTestAppsJson }}
+      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -projectDependenciesJson $ENV:_projectDependenciesJson -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson   } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

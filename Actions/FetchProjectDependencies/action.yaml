@@ -1,5 +1,6 @@
 name: Fetch Project dependencies
 author: Microsoft Corporation
+description: Fetches the dependencies of a project
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -9,29 +10,36 @@ inputs:
     description: Project for which to fetch dependencies
     required: true
   buildMode:
-    description: Project for which to fetch dependencies
+    description: Build mode used when building the artifacts
     required: true
-  dependencyProjects:
-    description: Projects that are current project's dependencies
-  buildDimensions:
-    description: The current build dimensions (a JSON-formatted array of objects {project, buildMode})
+  projectsDependenciesJson:
+    description: An object that matches eash project with its dependency projects
+    required: true
   destinationPath:
-    default: ${{ github.workspace }}/dependencies
+    default: ${{ github.workspace }}/.dependencies
     description: The destination path where the dependencies will be stored
 outputs:
-  FetchedArtifacts: 
-    description: An array of artifacts that were fetched
+  FetchedApps: 
+    description: A JSON-formatted array of paths to .app files of the apps that were fetched
+    value: ${{ steps.FetchDependencies.outputs.FetchedArtifacts }}
+  FetchedTestApps: 
+    description: A JSON-formatted array of paths to .app files of the test apps that were fetched
     value: ${{ steps.FetchDependencies.outputs.FetchedArtifacts }}
 runs:
   using: composite
   steps:
+    - name: Download artifacts from current build
+      uses: actions/download-artifact@v3
+      with:
+        path: ${{ inputs.destinationPath}}
+
     - name: Fetch project dependencies
       shell: ${{ inputs.shell }}
       id: FetchDependencies
       env:
         gitHubToken: ${{ github.token }}
       run:
-        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -dependencyProjects ${{ dependencyProjects }} -buildMode ${{ inputs.buildMode }} -buildDimensions ${{ inputs.buildDimensions }} -baseBranch '${{ github.base_ref }}' -destinationPath ${{ inputs.destinationPath }}
+        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project ${{ inputs.project }} -buildMode ${{ inputs.buildMode }} -projectsDependenciesJson ${{ inputs.projectsDependenciesJson }} -baseBranch '${{ github.base_ref }}' -baseFolder ${{ github.workspace }} -destinationPath ${{ inputs.destinationPath }} -token ${{ github.token }}
 branding:
   icon: terminal
   color: blue

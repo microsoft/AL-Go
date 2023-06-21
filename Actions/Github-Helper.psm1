@@ -107,7 +107,7 @@ function InvokeWebRequest {
     }
 }
 
-function Get-dependencies {
+function Get-Dependencies {
     Param(
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
@@ -125,6 +125,11 @@ function Get-dependencies {
         $probingPathsJson | ForEach-Object {
             $dependency = $_
             $projects = $dependency.projects
+            $buildMode = $dependency.buildMode
+
+            if($buildMode -ne "Default") {
+                $mask = "$buildMode$mask"
+            }
             
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
@@ -153,7 +158,7 @@ function Get-dependencies {
                 }
                 if ($missingProjects) {
                     $dependency.release_status = 'latestBuild'
-                    $dependency.branch = "main"
+                    $dependency.branch = $dependency.baseBranch
                     $dependency.projects = $missingProjects -join ","
                 }
             }
