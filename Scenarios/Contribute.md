@@ -11,7 +11,7 @@ You can do this in two ways:
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **personal GitHub account**.
 2. You can optionally also create a branch in the AL-Go fork for the feature you are working on.
 
-**yourGitHubUserName/AL-Go@yourBranch** can now be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this fork.
+**https://github.com/<yourGitHubUserName>/AL-Go@<yourBranch>** can now be used as a template in your AL-Go project when running _Update AL-Go System Files_ to use the actions/workflows from this fork.
 
 ## Use 3 public repositories in "production mode"
 
