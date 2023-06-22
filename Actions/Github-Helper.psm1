@@ -151,7 +151,7 @@ function Get-Dependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -ne 'TestApps') {
+                    elseif ($mask -notlike '*TestApps') {
                         Write-Host "$_ not built, downloading from artifacts"
                         $missingProjects += @($_)
                     }
