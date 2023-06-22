@@ -117,6 +117,7 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             project: ${{ inputs.project }}
+            buildMode: ${{ inputs.buildMode }}
             projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
 
         - name: Run pipeline
