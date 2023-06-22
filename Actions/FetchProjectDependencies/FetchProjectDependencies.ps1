@@ -69,6 +69,9 @@ $dependeciesProbingPaths | ForEach-Object {
     }
 }
 
+Write-Host "Fetched dependencies apps: $($fetchedApps -join ', ')"
+Write-Host "Fetched dependencies test apps: $($fetchedTestApps -join ', ')"
+
 $fetchedAppsJson = ConvertTo-Json $fetchedApps -Depth 99 -Compress
 $fetchedTestAppsJson = ConvertTo-Json $fetchedTestApps -Depth 99 -Compress
 
