@@ -21,10 +21,10 @@ inputs:
 outputs:
   FetchedApps: 
     description: A JSON-formatted array of paths to .app files of the apps that were fetched
-    value: ${{ steps.FetchDependencies.outputs.FetchedArtifacts }}
+    value: ${{ steps.FetchDependencies.outputs.FetchedApps }}
   FetchedTestApps: 
     description: A JSON-formatted array of paths to .app files of the test apps that were fetched
-    value: ${{ steps.FetchDependencies.outputs.FetchedArtifacts }}
+    value: ${{ steps.FetchDependencies.outputs.FetchedTestApps }}
 runs:
   using: composite
   steps:
