@@ -1785,16 +1785,17 @@ Function AnalyzeProjectDependencies {
         # Filter out app folders that doesn't contain an app.json file
         $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
             $projectFolder = Join-Path $project $_
+
+            $appJsonFilePath = Join-Path $projectFolder 'app.json'
+
+            if(Test-Path $appJsonFilePath)
             if (!(Test-Path $projectFolder -PathType Container)) {
-                Write-Host "::Warning::Folder $_ doesn't exist, skipping."
+                return Resolve-Path $projectFolder -Relative
             }
-            elseif (!(Test-Path (Join-Path $projectFolder 'app.json'))) {
-                Write-Host "::Warning::Folder $_ doesn't contain an app.json file, skipping."
-            }
-            else {
-                Resolve-Path $projectFolder -Relative
-            }
+
+            Write-Host "::Warning::Folder $_ doesn't exist or doesn't contain an app.json file, skipping."
         }
+        
         # Default to scanning the project folder if no app folders are specified
         if (-not $folders) {
             Write-Host "No apps or tests folders found for project $project. Scanning for apps in the project folder."
