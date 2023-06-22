@@ -18,7 +18,7 @@ Write-Host "Fetching dependencies for project '$project'. BuildMode: $buildMode,
 
 $projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
 if ($projectsDependencies.Keys -contains $project) {
-    $dependencyProjects = @($projectsDependencies."$project") -join ","
+    $dependencyProjects = @($projectsDependencies."$project")
 }
 
 if(!$dependencyProjects -or $dependencyProjects.Count -eq 0) {
