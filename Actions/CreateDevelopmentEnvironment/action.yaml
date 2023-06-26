@@ -31,6 +31,10 @@ inputs:
     description: Reuse environment if it exists
     required: false
     default: 'N'
+  updateBranch:
+    description: Set the branch to update
+    required: false
+    default: ${{ github.ref_name }}
   directCommit:
     description: Direct Commit (Y/N)
     required: false
@@ -47,8 +51,9 @@ runs:
         _environmentName: ${{ inputs.environmentName }}
         _adminCenterApiCredentials: ${{ inputs.adminCenterApiCredentials }}
         _reUseExistingEnvironment: ${{ inputs.reUseExistingEnvironment }}
+        _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
-      run: try { ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -environmentName $ENV:_environmentName -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -reUseExistingEnvironment ($ENV:_reUseExistingEnvironment -eq 'Y') -directCommit ($ENV:_directCommit -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -environmentName $ENV:_environmentName -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -reUseExistingEnvironment ($ENV:_reUseExistingEnvironment -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
