@@ -90,7 +90,7 @@ try {
     $branch = ''
     if (!$directcommit) {
         # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
-        $branch = "add-existing-app/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. increment-version-number/main/210101120000
+        $branch = "add-existing-app/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. add-existing-app/main/210101120000
     }
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     $repoBaseFolder = (Get-Location).path
