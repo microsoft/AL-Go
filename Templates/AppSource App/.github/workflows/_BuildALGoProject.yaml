@@ -67,8 +67,9 @@ on:
         required: false
         type: string
 jobs:
-  I:
+  BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
+    name: Build ${{ inputs.project }} - ${{ inputs.buildMode }}
     steps:
         - name: Checkout
           uses: actions/checkout@v3
