@@ -2,10 +2,23 @@
 
 This section describes how to contribute to AL-Go. How to set up your own environment (your own set of actions and your own templates)
 
-1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **local GitHub account**.
+You can do this in two ways:
+- Use a fork of AL-Go for GitHub in your own **personal GitHub account** in development mode
+- Use 3 public repositories in your own **personal GitHub account** (AL-Go-PTE, AL-Go-AppSource and AL-Go-Actions, much like in production)
+
+## Use a fork of AL-Go for GitHub in "development mode"
+
+1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **personal GitHub account**.
+2. You can optionally also create a branch in the AL-Go fork for the feature you are working on.
+
+**https://github.com/<yourGitHubUserName>/AL-Go@<yourBranch>** can now be used as a template in your AL-Go project when running _Update AL-Go System Files_ to use the actions/workflows from this fork.
+
+## Use 3 public repositories in "production mode"
+
+1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **personal GitHub account**.
 2. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
-3. In your local fork of AL-Go, create a New Repository Secret called **OrgPAT** with your personal access token as content. See **https://github.com/yourGitHubUserName/AL-Go/settings/secrets/actions**.
-4. In your local fork of AL-Go, navigate to **Actions**, select the **Deploy** workflow and choose **Run Workflow**.
+3. In your personal fork of AL-Go, create a New Repository Secret called **OrgPAT** with your personal access token as content. See **https://github.com/yourGitHubUserName/AL-Go/settings/secrets/actions**.
+4. In your personal fork of AL-Go, navigate to **Actions**, select the **Deploy** workflow and choose **Run Workflow**.
 5. Using the default settings press **Run workflow**.
 
 Now you should have 3 new public repositories:
@@ -14,17 +27,19 @@ Now you should have 3 new public repositories:
 - [https://github.com/yourGitHubUserName/AL-Go-AppSource](https://github.com/yourGitHubUserName/AL-Go-AppSource)
 - [https://github.com/yourGitHubUserName/AL-Go-PTE](https://github.com/yourGitHubUserName/AL-Go-PTE)
 
-These URLs can be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this area for your AL project.
+You can optionally also create a branch in the AL-Go fork for the feature you are working on and then select that branch when running Deploy (both as **Use workflow from** and as **Branch to deploy to**).
 
-Now you can clone these repos and work with them, fix issues etc. and when you are done with the functionality you want to contribute with, run the **Collect** workflow in your local fork of the AL-Go repository. This collects the changes from your local 3 repositories and creates a Pull Request against your local fork (or commits directly)
+**yourGitHubUserName/AL-Go-PTE@yourBranch** or **yourGitHubUserName/AL-Go-AppSource@yourBranch** can now be used in your AL project when running Update AL-Go System Files to use the actions/workflows from this area for your AL project.
+
+Now you can clone these repos and work with them, fix issues etc. and when you are done with the functionality you want to contribute with, run the **Collect** workflow in your personal fork of the AL-Go repository. This collects the changes from your personal 3 repositories and creates a Pull Request against your personal fork (or commits directly)
 
 Please ensure that all unit tests run and create a Pull Request against [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go). You are very welcome to run the end to end tests as well, but we will also run the end to end tests as part of the code review process.
 
-> **Note**: You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your local fork of the AL-Go repository** you publish to the 3 repositories.
+> **Note**: You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your personal fork of the AL-Go repository** you publish to the 3 repositories.
 
-> **Note**: You can also collect from a different branch in the 3 public repositories by specifying a branch name under **Branch to collect** from when running the **Collect** workflow. The branch you specify in **Use workflow from** indicates which branch in in **your local fork of the AL-Go repository** you want to submit the changes against.
+> **Note**: You can also collect from a different branch in the 3 public repositories by specifying a branch name under **Branch to collect** from when running the **Collect** workflow. The branch you specify in **Use workflow from** indicates which branch in in **your personal fork of the AL-Go repository** you want to submit the changes against.
 
-> **Not recommended**: You can also run the deploy and collect actions locally by running the Deploy and Collect scripts in the Internal folder with a .json file as a parameter specifying which repositories to deploy to and collect from. The `fredddk.json` file in the internal folder is a sample of this.
+> **Not recommended**: You can also run the deploy and collect actions personally by running the Deploy and Collect scripts in the Internal folder with a .json file as a parameter specifying which repositories to deploy to and collect from. The `fredddk.json` file in the internal folder is a sample of this.
 
 ## Unit tests
 The Tests folder, in the AL-Go repository, contains a number of unit-tests and you can run these after collecting your changes from the 3 template repositories. Open Tests/runtests.ps1 in VS Code and select Run. Unit tests are quick and will run on every PR and every Push. We will be adding a lot of unit tests going forward.
@@ -38,7 +53,7 @@ In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end
   - GitHubPackages - create 3 repositories using GitHub Packages as dependency resolver and check that artifacts are built properly
   - buildModes - create a repository, set buildModes and test that generated artifacts are as expected.
 
-In your local fork, you can now run the end to end tests, if the following pre-requisites are available:
+In your personal fork, you can now run the end to end tests, if the following pre-requisites are available:
 - You need the following secrets:
   - E2EPAT needs to be a Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_
   - AdminCenterApiCredentials needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
