@@ -645,6 +645,75 @@ function ExcludeUnneededApps {
     }
 }
 
+function ResolveProjectFolders {
+    Param(
+        [string] $project,
+        [string] $baseFolder,
+        [ref] $projectSettings
+    )
+    $projectPath = Join-Path $baseFolder $project -Resolve
+
+    Push-Location $projectPath
+
+    try {
+        # Filter out app folders that doesn't contain an app.json file
+        'appFolders', 'testFolders', 'bcptTestFolders' | ForEach-Object {
+            $folders = $projectSettings.Value.$_
+            
+            $resolvedPaths = @()
+            foreach($folder in $folders) {
+                $aLProjectFolder = Join-Path $projectPath $folder
+                $resolvedPaths += Resolve-Path $aLProjectFolder -ErrorAction Ignore | Where-Object { Test-Path (Join-Path $_ 'app.json') }
+            }
+
+            # Get the name of the folder for each resolved path
+            $projectSettings.Value.$_ = $resolvedPaths | ForEach-Object { $(Get-Item $_).Name }
+        }
+
+
+        # If no app folders are specified in AL-Go settings, check for AL apps in the project folder
+        if (-not (@($projectSettings.Value.appFolders) + @($projectSettings.Value.testFolders) + @($projectSettings.Value.bcptTestFolders))) {
+            Get-ChildItem -Path $projectPath -Recurse| Where-Object { $_.PSIsContainer -and (Test-Path -Path (Join-Path $_.FullName "app.json")) } | ForEach-Object {
+                $aLProjectFolder = $_
+                $appJson = Get-Content (Join-Path $aLProjectFolder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
+
+                $isTestApp = $false
+                $isBcptTestApp = $false
+                
+                # if an AL app has a dependency to a test app, it is a test app
+                # if an AL app has a dependency to an app from the performance toolkit apps, it is a bcpt test app
+                if ($appJson.PSObject.Properties.Name -eq "dependencies") {
+                    $appJson.dependencies | ForEach-Object {
+                        $id = $_.Id
+                        if ($_.PSObject.Properties.Name -eq "AppId") {
+                            $id = $_.AppId
+                        }
+
+                        # Check if the app is a test app or a bcpt app
+                        if ($performanceToolkitApps.Contains($id)) { 
+                            $isBcptTestApp = $true
+                        }
+                        elseif ($testRunnerApps.Contains($id)) { 
+                            $isTestApp = $true
+                        }
+                    }
+                    
+                }
+
+                switch ($true) {
+                    $isTestApp { $projectSettings.Value.testFolders += @($aLProjectFolder.Name) }
+                    $isBcptTestApp { $projectSettings.Value.bcptTestFolders += @($aLProjectFolder.Name) }
+                    Default { $projectSettings.Value.appFolders += @($aLProjectFolder.Name) }
+                }
+            }
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+}
+
 function AnalyzeRepo {
     Param(
         [hashTable] $settings,
@@ -666,7 +735,6 @@ function AnalyzeRepo {
     }
 
     $projectPath = Join-Path $baseFolder $project -Resolve
-    Set-Location $projectPath
 
     # Check applicationDependency
     [Version]$settings.applicationDependency | Out-null
@@ -698,39 +766,7 @@ function AnalyzeRepo {
         throw "The type, specified in $RepoSettingsFile, must be either 'PTE' or 'AppSource App'. It is '$($settings.type)'."
     }
 
-    if (-not (@($settings.appFolders)+@($settings.testFolders)+@($settings.bcptTestFolders))) {
-        Get-ChildItem -Path $projectPath | Where-Object { $_.PSIsContainer -and (Test-Path -Path (Join-Path $_.FullName "app.json")) } | ForEach-Object {
-            $folder = $_
-            $appJson = Get-Content (Join-Path $folder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
-            $isTestApp = $false
-            $isBcptTestApp = $false
-            if ($appJson.PSObject.Properties.Name -eq "dependencies") {
-                $appJson.dependencies | ForEach-Object {
-                    if ($_.PSObject.Properties.Name -eq "AppId") {
-                        $id = $_.AppId
-                    }
-                    else {
-                        $id = $_.Id
-                    }
-                    if ($performanceToolkitApps.Contains($id)) { 
-                        $isBcptTestApp = $true
-                    }
-                    elseif ($testRunnerApps.Contains($id)) { 
-                        $isTestApp = $true
-                    }
-                }
-            }
-            if ($isBcptTestApp) {
-                $settings.bcptTestFolders += @($_.Name)
-            }
-            elseif ($isTestApp) {
-                $settings.testFolders += @($_.Name)
-            }
-            else {
-                $settings.appFolders += @($_.Name)
-            }
-        }
-    }
+    ResolveProjectFolders -baseFolder $baseFolder -project $project -settings ([ref] $settings)
 
     Write-Host "Checking appFolders, testFolders and bcptTestFolders"
     $dependencies = [ordered]@{}
@@ -1779,28 +1815,11 @@ Function AnalyzeProjectDependencies {
         $project = $_
         Write-Host "- Analyzing project: $project"
 
-        # Read project settings
-        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
 
-        # Filter out app folders that doesn't contain an app.json file
-        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
-            $projectFolder = Join-Path $project $_
+        $projectSettings = ReadSettings -path $project -baseFolder $baseFolder
+        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref]$projectSettings)
 
-            $appJsonFilePath = Join-Path $projectFolder 'app.json'
-
-            if(Test-Path $appJsonFilePath)
-            if (!(Test-Path $projectFolder -PathType Container)) {
-                return Resolve-Path $projectFolder -Relative
-            }
-
-            Write-Host "::Warning::Folder $_ doesn't exist or doesn't contain an app.json file, skipping."
-        }
-        
-        # Default to scanning the project folder if no app folders are specified
-        if (-not $folders) {
-            Write-Host "No apps or tests folders found for project $project. Scanning for apps in the project folder."
-            $folders = @(Get-ChildItem -Path (Join-Path $baseFolder $project) -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.FullName.Substring($baseFolder.Length+1) } )
-        }
+        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
 
         Write-Host "Folders containing apps are $($folders -join ',' )"
 
