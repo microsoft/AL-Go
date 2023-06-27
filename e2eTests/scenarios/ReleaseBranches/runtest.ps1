@@ -84,7 +84,7 @@ $run = Run-CICD -repository $repository -branch $branch -wait
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 # Check that no previous release was found
-Test-LogContainsFromRun -runid $run.id -jobName 'Build . - Default  BuildALGoProject' -stepName 'Run pipeline' -expectedText 'No previous release found'
+Test-LogContainsFromRun -runid $run.id -jobName 'Build . - Default  . - Default' -stepName 'Run pipeline' -expectedText 'No previous release found'
 
 # Release version 1.0
 $tag1 = '1.0.0'
