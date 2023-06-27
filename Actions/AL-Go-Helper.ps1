@@ -1822,7 +1822,7 @@ Function AnalyzeProjectDependencies {
 
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
-        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref]$projectSettings)
+        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
         $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
 
