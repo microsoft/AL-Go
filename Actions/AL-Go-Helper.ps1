@@ -766,7 +766,7 @@ function AnalyzeRepo {
         throw "The type, specified in $RepoSettingsFile, must be either 'PTE' or 'AppSource App'. It is '$($settings.type)'."
     }
 
-    ResolveProjectFolders -baseFolder $baseFolder -project $project -settings ([ref] $settings)
+    ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $settings)
 
     Write-Host "Checking appFolders, testFolders and bcptTestFolders"
     $dependencies = [ordered]@{}
