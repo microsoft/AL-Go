@@ -168,8 +168,9 @@ try {
     )
 
     if ($collect) {
-        $baseRepoBranch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
-        if ($baseRepoBranch) {
+        $baseRepoBranch = ''
+        if (!$directCommit) {
+            $baseRepoBranch = "collect-from-$($config.branch)/$alGoBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. collect-from-nopr/main/210101120000
             Set-Location $baseRepoPath
             invoke-git checkout -b $baseRepoBranch
         }

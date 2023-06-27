@@ -20,6 +20,8 @@ Param(
     [bool] $sampleCode,
     [Parameter(HelpMessage = "Include Sample BCPT Suite (Y/N)", Mandatory = $false)]
     [bool] $sampleSuite,
+    [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
+    [string] $updateBranch,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
     [bool] $directCommit
 )
@@ -34,7 +36,11 @@ $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToSt
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $branch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
+    $branch = ''
+    if (!$directcommit) {
+        # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
+        $branch = "create-$($type.replace(' ','-').ToLowerInvariant())/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-pte/main/210101120000
+    }
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     $baseFolder = (Get-Location).Path
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
