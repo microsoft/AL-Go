@@ -1821,7 +1821,7 @@ Function AnalyzeProjectDependencies {
         Write-Host "- Analyzing project: $project"
 
 
-        $projectSettings = ReadSettings -path $project -baseFolder $baseFolder
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref]$projectSettings)
 
         $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
