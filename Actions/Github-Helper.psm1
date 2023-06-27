@@ -298,7 +298,12 @@ function invoke-gh {
             $arguments += "$_ "
         }
     }
-    cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+    try {
+        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+    }
+    catch [System.Management.Automation.MethodInvocationException] {
+        throw "It looks like GitHub CLI is not installed. Please install GitHub CLI from https://cli.github.com/"
+    }
 }
 
 function invoke-git {
@@ -320,7 +325,12 @@ function invoke-git {
             $arguments += "$_ "
         }
     }
-    cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+    try {
+        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+    }
+    catch [System.Management.Automation.MethodInvocationException] {
+        throw "It looks like Git is not installed. Please install Git from https://git-scm.com/download"
+    }
 }
 
 # Convert a semantic version object to a semantic version string
