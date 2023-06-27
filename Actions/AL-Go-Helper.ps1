@@ -668,12 +668,16 @@ function ResolveProjectFolders {
 
             # Get the name of the folder for each resolved path
             $projectSettings.Value.$_ = $resolvedPaths | ForEach-Object { $(Get-Item $_).Name }
+            
+            if(!$projectSettings.Value.$_) {
+                $projectSettings.Value.$_ = @()
+            }
         }
 
 
         # If no app folders are specified in AL-Go settings, check for AL apps in the project folder
-        if (-not (@($projectSettings.Value.appFolders) + @($projectSettings.Value.testFolders) + @($projectSettings.Value.bcptTestFolders))) {
-            Get-ChildItem -Path $projectPath -Recurse| Where-Object { $_.PSIsContainer -and (Test-Path -Path (Join-Path $_.FullName "app.json")) } | ForEach-Object {
+        if (!$projectSettings.Value.appFolders -and !$projectSettings.Value.testFolders -and !$projectSettings.Value.bcptTestFolders) {
+            Get-ChildItem -Path $projectPath -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path -Path (Join-Path $_.FullName "app.json")) } | ForEach-Object {
                 $aLProjectFolder = $_
                 $appJson = Get-Content (Join-Path $aLProjectFolder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
 
@@ -790,6 +794,7 @@ function AnalyzeRepo {
         else {
             throw "Internal error"
         }
+
         $folders | ForEach-Object {
             $folderName = $_
             $folder = Join-Path $projectPath $folderName
@@ -810,58 +815,43 @@ function AnalyzeRepo {
                 $enumerate = $false
             }
             if ($enumerate) {
-                $expandFolders = @(Get-Item $appJsonFile -ErrorAction SilentlyContinue | ForEach-Object { Resolve-Path -Relative $_.Directory })
-                if ($appFolder) {
-                    $settings.appFolders = @($settings.appFolders | Where-Object { $_ -ne $folderName }) + $expandFolders
+                if ($dependencies.Contains($folderName)) {
+                    throw "$descr $folderName, specified in $ALGoSettingsFile, is specified more than once."
                 }
-                elseif ($testFolder) {
-                    $settings.testFolders = @($settings.testFolders | Where-Object { $_ -ne $folderName }) + $expandFolders
-                }
-                elseif ($bcptTestFolder) {
-                    $settings.bcptTestFolders = @($settings.bcptTestFolders | Where-Object { $_ -ne $folderName }) + $expandFolders
-                }
-                $expandFolders | ForEach-Object {
-                    $folderName = $_
-                    $folder = Join-Path $projectPath $folderName
-                    $appJsonFile = Join-Path $folder "app.json"
-                    if ($dependencies.Contains($folderName)) {
-                        throw "$descr $folderName, specified in $ALGoSettingsFile, is specified more than once."
+                $dependencies.Add($folderName, @())
+                try {
+                    $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
+                    if ($appIdFolders.Contains($appJson.Id)) {
+                        throw "$descr $folderName contains a duplicate AppId ($($appIdFolders."$($appJson.Id)"))"
                     }
-                    $dependencies.Add($folderName, @())
-                    try {
-                        $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
-                        if ($appIdFolders.Contains($appJson.Id)) {
-                            throw "$descr $folderName contains a duplicate AppId ($($appIdFolders."$($appJson.Id)"))"
-                        }
-                        $appIdFolders.Add($appJson.Id, $folderName)
-                        if ($appJson.PSObject.Properties.Name -eq 'Dependencies') {
-                            $appJson.dependencies | ForEach-Object {
-                                if ($_.PSObject.Properties.Name -eq "AppId") {
-                                    $id = $_.AppId
-                                }
-                                else {
-                                    $id = $_.Id
-                                }
-                                if ($id -eq $applicationAppId) {
-                                    if ([Version]$_.Version -gt [Version]$settings.applicationDependency) {
-                                        $settings.applicationDependency = $appDep
-                                    }
-                                }
-                                else {
-                                    $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
+                    $appIdFolders.Add($appJson.Id, $folderName)
+                    if ($appJson.PSObject.Properties.Name -eq 'Dependencies') {
+                        $appJson.dependencies | ForEach-Object {
+                            if ($_.PSObject.Properties.Name -eq "AppId") {
+                                $id = $_.AppId
+                            }
+                            else {
+                                $id = $_.Id
+                            }
+                            if ($id -eq $applicationAppId) {
+                                if ([Version]$_.Version -gt [Version]$settings.applicationDependency) {
+                                    $settings.applicationDependency = $appDep
                                 }
                             }
-                        }
-                        if ($appJson.PSObject.Properties.Name -eq 'Application') {
-                            $appDep = $appJson.application
-                            if ([Version]$appDep -gt [Version]$settings.applicationDependency) {
-                                $settings.applicationDependency = $appDep
+                            else {
+                                $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
                             }
                         }
                     }
-                    catch {
-                        throw "$descr $folderName, specified in $ALGoSettingsFile, contains a corrupt app.json file. Error is $($_.Exception.Message)."
+                    if ($appJson.PSObject.Properties.Name -eq 'Application') {
+                        $appDep = $appJson.application
+                        if ([Version]$appDep -gt [Version]$settings.applicationDependency) {
+                            $settings.applicationDependency = $appDep
+                        }
                     }
+                }
+                catch {
+                    throw "$descr $folderName, specified in $ALGoSettingsFile, contains a corrupt app.json file. Error is $($_.Exception.Message)."
                 }
             }
         }
@@ -1820,11 +1810,14 @@ Function AnalyzeProjectDependencies {
         $project = $_
         Write-Host "- Analyzing project: $project"
 
-
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
-        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
+        # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
+        $projectPath = Join-Path $baseFolder $project
+        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
+            return (Resolve-Path (Join-Path $projectPath $_) -Relative)
+        }
 
         Write-Host "Folders containing apps are $($folders -join ',' )"
 
