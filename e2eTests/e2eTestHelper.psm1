@@ -230,7 +230,7 @@ function DownloadWorkflowLog {
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
     $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
-    $tempFileName = [System.IO.Path]::GetTempFileName()
+    $tempFileName = "$([System.IO.Path]::GetTempFileName()).zip"
     [System.IO.File]::WriteAllBytes($tempFileName, $log.Content)
     Expand-Archive -Path $tempFileName -DestinationPath $path
 }
