@@ -122,19 +122,6 @@ try {
     $installApps += $installAppsJson | ConvertFrom-Json
     $installTestApps += $installTestAppsJson | ConvertFrom-Json
 
-    if ($repo.appDependencyProbingPaths) {
-        Write-Host "::group::Downloading dependencies"
-        Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths | ForEach-Object {
-            if ($_.startswith('(')) {
-                $installTestApps += $_    
-            }
-            else {
-                $installApps += $_    
-            }
-        }
-        Write-Host "::endgroup::"
-    }
-
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline 

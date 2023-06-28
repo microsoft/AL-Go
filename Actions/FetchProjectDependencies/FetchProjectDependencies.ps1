@@ -15,22 +15,33 @@ Set-StrictMode -Version 2.0
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 Write-Host "Fetching dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, BaseBranch: $baseBranch"
+$fetchedApps= @()
+$fetchedTestApps= @()
+
+Write-Host "::group::Downloading project dependencies from probing paths"
+
+$projectSettings = ReadSettings -baseFolder $baseFolder -project $project
+
+if ($projectSettings.appDependencyProbingPaths) {
+    Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths | ForEach-Object {
+        # naming convention: app, (testapp)
+        if ($_.startswith('(')) {
+            $fetchedTestApps += $_    
+        }
+        else {
+            $fetchedApps += $_    
+        }
+    }
+}
+
+Write-Host "::endgroup::"
+
+Write-Host "::group::Downloading project dependencies from current build"
 
 $projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
 if ($projectsDependencies.Keys -contains $project) {
     $dependencyProjects = @($projectsDependencies."$project")
 }
-
-if(!$dependencyProjects -or $dependencyProjects.Count -eq 0) {
-    Write-Host "No dependencies to fetch for project '$project'"
-
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedAppArtifacts=[]"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "FetchedTestAppArtifacts=[]"
-    return
-}
-
-$fetchedApps= @()
-$fetchedTestApps= @()
 
 $dependeciesProbingPaths = @($dependencyProjects | ForEach-Object {
     $dependencyProject = $_
@@ -68,6 +79,8 @@ $dependeciesProbingPaths | ForEach-Object {
         }
     }
 }
+
+Write-Host "::endgroup::"
 
 Write-Host "Fetched dependencies apps: $($fetchedApps -join ', ')"
 Write-Host "Fetched dependencies test apps: $($fetchedTestApps -join ', ')"
