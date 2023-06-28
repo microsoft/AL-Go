@@ -1808,11 +1808,17 @@ Function AnalyzeProjectDependencies {
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
-
+        
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
-        $projectPath = Join-Path $baseFolder $project
-        $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
-            return (Resolve-Path (Join-Path $projectPath $_) -Relative)
+        Push-Location $baseFolder
+        try {
+            $projectPath = Join-Path $baseFolder $project
+            $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
+                return (Resolve-Path (Join-Path $projectPath $_) -Relative)
+            }
+        }
+        finally {
+            Pop-Location
         }
 
         Write-Host "Folders containing apps are $($folders -join ',' )"
