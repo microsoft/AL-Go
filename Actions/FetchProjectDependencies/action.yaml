@@ -37,9 +37,15 @@ runs:
       shell: ${{ inputs.shell }}
       id: FetchDependencies
       env:
-        gitHubToken: ${{ github.token }}
+        _project: ${{ inputs.project }}
+        _buildMode: ${{ inputs.buildMode }}
+        _projectsDependenciesJson: ${{ inputs.projectsDependenciesJson }}
+        _baseBranch: ${{ github.base_ref }}
+        _baseFolder: ${{ github.workspace }}
+        _destinationPath: ${{ inputs.destinationPath }}
+        _gitHubToken: ${{ github.token }}
       run:
-        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project '${{ inputs.project }}' -buildMode '${{ inputs.buildMode }}' -projectsDependenciesJson '${{ inputs.projectsDependenciesJson }}' -baseBranch '${{ github.base_ref }}' -baseFolder '${{ github.workspace }}' -destinationPath '${{ inputs.destinationPath }}' -token '${{ github.token }}'
+        ${{ github.action_path }}/FetchProjectDependencies.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectsDependenciesJson $ENV:_projectsDependenciesJson -baseBranch $ENV:_baseBranch -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationFolder -token $ENV:_gitHubToken
 branding:
   icon: terminal
   color: blue
