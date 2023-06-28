@@ -667,11 +667,7 @@ function ResolveProjectFolders {
             }
 
             # Get the name of the folder for each resolved path
-            $projectSettings.Value.$_ = $resolvedPaths | ForEach-Object { $(Get-Item $_).Name }
-            
-            if(!$projectSettings.Value.$_) {
-                $projectSettings.Value.$_ = @()
-            }
+            $projectSettings.Value.$_ = @($resolvedPaths | ForEach-Object { $(Get-Item $_).Name })
         }
 
 
