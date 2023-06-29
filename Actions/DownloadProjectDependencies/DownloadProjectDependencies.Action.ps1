@@ -49,12 +49,10 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
         }
     })
     
-    $downloadedDependencies = @()
-    $dependeciesProbingPaths | ForEach-Object {
-        $dependencyProbingPath = $_
-        $downloadedDependencies += Get-Dependencies -probingPathsJson $dependencyProbingPath -saveToPath $destinationPath | Where-Object { $_ }
-    
-    }
+    $downloadedDependencies = @($dependeciesProbingPaths | ForEach-Object {
+        return Get-Dependencies -probingPathsJson $_ -saveToPath $destinationPath | Where-Object { $_ }
+    })
+
     return $downloadedDependencies
 }
 
