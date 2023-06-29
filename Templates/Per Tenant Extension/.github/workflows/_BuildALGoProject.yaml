@@ -110,10 +110,9 @@ jobs:
             path: .artifactcache
             key: ${{ steps.determineArtifactUrl.outputs.ArtifactCacheKey }}
 
-        - name: Fetch project dependencies
-          id: FetchProjectDependencies
-          if: inputs.publishThisBuildArtifacts
-          uses: mazhelez/AL-Go-Actions/FetchProjectDependencies@fetch-artifacts-per-build-mode
+        - name: Download Project Dependencies
+          id: DownloadProjectDependencies
+          uses: mazhelez/AL-Go-Actions/DownloadProjectDependencies@fetch-artifacts-per-build-mode
           with:
             shell: ${{ inputs.shell }}
             project: ${{ inputs.project }}
@@ -133,8 +132,8 @@ jobs:
             settingsJson: ${{ env.Settings }}
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
-            installAppsJson: ${{ steps.FetchProjectDependencies.outputs.FetchedApps }}
-            installTestAppsJson: ${{ steps.FetchProjectDependencies.outputs.FetchedTestApps }}
+            installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.FetchedApps }}
+            installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.FetchedTestApps }}
 
         - name: Sign
           if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
