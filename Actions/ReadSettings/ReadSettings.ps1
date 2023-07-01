@@ -147,8 +147,7 @@ try {
                     if ($branchPolicy) {
                         $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments//$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
                         Write-Host "Getting Branches for $envName from GitHub API"
-                        $branches @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
-                        $branches = @( '*' )
+                        $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                     }
                     else {
                         $branches = @( 'main' )
