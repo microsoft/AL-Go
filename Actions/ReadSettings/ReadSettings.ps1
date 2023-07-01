@@ -110,8 +110,8 @@ try {
         Write-Host "Requesting environments: $getEnvironments"
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
         try {
-            Write-Host "Trying to get environments from GitHub API"
-            $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | ForEach-Object { $_.Name })
+            Write-Host "Trying to get environments from GitHub API with branch policies set"
+            $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | Where-Object { $_.name -match $getEnvironments })
         } 
         catch {
             $ghEnvironments = @()
@@ -139,10 +139,20 @@ try {
                     $_ -like $getEnvironments -and $_ -notlike '* (PROD)' -and $_ -notlike '* (Production)' -and $_ -notlike '* (FAT)' -and $_ -notlike '* (Final Acceptance Test)'
                 }
             } | Where-Object {
-                Write-Host "Environment: $_"
-                if ($ghEnvironments -contains $_) {
-                    # Environment is GitHub Environment, default branches are controlled on GitHub
-                    $branches = @( '*' )
+                $envName = $_
+                Write-Host "Environment: $envName"
+                $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $envName }
+                if ($ghEnvironment) {
+                    $branchPolicy = ($_.protection_rules | Where-Object { $_.type -eq "branch_policy" })
+                    if ($branchPolicy) {
+                        $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments//$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
+                        Write-Host "Getting Branches for $envName from GitHub API"
+                        $branches @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
+                        $branches = @( '*' )
+                    }
+                    else {
+                        $branches = @( 'main' )
+                    }
                 }
                 else {
                     # Environment is in settings, default branches are controlled in settings
