@@ -148,7 +148,7 @@ try {
                     $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
                     if ($branchPolicy) {
                         Write-Host "GitHub Environment $envName has branch policies, getting branches from GitHub API"
-                        $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments//$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
+                        $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
                         Write-Host "Getting Branches for $envName from GitHub API"
                         Write-Host "BranchesUrl: $branchesUrl"
                         $result = InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors
