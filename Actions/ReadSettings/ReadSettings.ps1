@@ -109,14 +109,15 @@ try {
         }
         Write-Host "Requesting environments: $getEnvironments"
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-        try {
+        #try {
             Write-Host "Trying to get environments from GitHub API with branch policies set"
             $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | Where-Object { $_.name -match $getEnvironments })
-        } 
-        catch {
-            $ghEnvironments = @()
-            Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
-        }
+            $ghEnvironments | Out-Host
+        #} 
+        #catch {
+        #    $ghEnvironments = @()
+        #    Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
+        #}
         $environments = @(@($ghEnvironments | ForEach-Object { $_.name })+@($settings.environments) | Select-Object -unique | Where-Object { $_ -ne "github-pages" })
         $unknownEnvironment = 0
         if (!($environments)) {
