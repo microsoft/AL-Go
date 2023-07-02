@@ -149,11 +149,8 @@ try {
                     if ($branchPolicy) {
                         Write-Host "GitHub Environment $envName has branch policies, getting branches from GitHub API"
                         $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
-                        Write-Host "Getting Branches for $envName from GitHub API"
-                        Write-Host "BranchesUrl: $branchesUrl"
-                        $result = InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors
-                        $result | Out-Host
-                        $branches = @(($result | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
+                        Write-Host "Getting branches for $envName from GitHub API"
+                        $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                     }
                     else {
                         Write-Host "GitHub Environment $envName dot not have branch policies, using main as default"
