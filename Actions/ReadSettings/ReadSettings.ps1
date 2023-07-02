@@ -115,7 +115,7 @@ try {
             $result = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors
             Write-Host $result
             Write-Host $getEnvironments
-            $ghEnvironments = @($result | ConvertFrom-Json).environments | Where-Object { $_.name -like $getEnvironments })
+            $ghEnvironments = @(($result | ConvertFrom-Json).environments | Where-Object { $_.name -like $getEnvironments })
             $ghEnvironments | Out-Host
         #} 
         #catch {
