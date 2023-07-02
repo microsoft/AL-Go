@@ -7,7 +7,7 @@
 1. After running the **Publish to Environment** workflow, you should see that the app was deployed to the **MYPROD** environment only.
 ![Run workflow](images/5b.png)
 
-**NOTE:** If your Business Central environment name contains spaces or special characters, you might need to map your GitHub Environment Name to your Business Central Environment Name using the DeployTo setting with an EnvironmentName setting:
+**NOTE:** If your Business Central environment name contains spaces or special characters, you might need to map your GitHub environment name to your Business Central environment name using the DeployTo setting with an EnvironmentName setting:
 
 ```json
 "DeployTo<GitHubEnvironmentName>": {
