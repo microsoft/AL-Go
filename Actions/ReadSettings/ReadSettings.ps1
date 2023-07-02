@@ -104,8 +104,9 @@ try {
     if ($getenvironments) {
         $environments = @()
         $headers = @{ 
-            "Authorization" = "token $token"
-            "Accept"        = "application/vnd.github.v3+json"
+            "Authorization"        = "token $token"
+            "Accept"               = "application/vnd.github.v3+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
         }
         Write-Host "Requesting environments: $getEnvironments"
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
@@ -149,7 +150,10 @@ try {
                         Write-Host "GitHub Environment $envName has branch policies, getting branches from GitHub API"
                         $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments//$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
                         Write-Host "Getting Branches for $envName from GitHub API"
-                        $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
+                        Write-Host "BranchesUrl: $branchesUrl"
+                        $result = InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors
+                        $result | Out-Host
+                        $branches = @(($result | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                     }
                     else {
                         Write-Host "GitHub Environment $envName dot not have branch policies, using main as default"
