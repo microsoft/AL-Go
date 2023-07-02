@@ -132,8 +132,8 @@ jobs:
             settingsJson: ${{ env.Settings }}
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
-            installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.FetchedApps }}
-            installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.FetchedTestApps }}
+            installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
+            installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
         - name: Sign
           if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
