@@ -109,19 +109,15 @@ try {
         }
         Write-Host "Requesting environments: $getEnvironments"
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-        #try {
-            Write-Host "Trying to get environments from GitHub API with branch policies set"
-            Write-Host $url
-            $result = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors
-            Write-Host $result
-            Write-Host $getEnvironments
-            $ghEnvironments = @(($result | ConvertFrom-Json).environments | Where-Object { $_.name -like $getEnvironments })
-            $ghEnvironments | Out-Host
-        #} 
-        #catch {
-        #    $ghEnvironments = @()
-        #    Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
-        #}
+        try {
+            Write-Host "Trying to get environments from GitHub API"
+            $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | Where-Object { $_.name -like $getEnvironments })
+        } 
+        catch {
+            $ghEnvironments = @()
+            Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
+        }
+        Write-Host "Requesting environments from settings"
         $environments = @(@($ghEnvironments | ForEach-Object { $_.name })+@($settings.environments) | Select-Object -unique | Where-Object { $_ -ne "github-pages" })
         $unknownEnvironment = 0
         if (!($environments)) {
@@ -148,18 +144,20 @@ try {
                 Write-Host "Environment: $envName"
                 $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $envName }
                 if ($ghEnvironment) {
-                    $branchPolicy = ($_.protection_rules | Where-Object { $_.type -eq "branch_policy" })
+                    $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
                     if ($branchPolicy) {
+                        Write-Host "GitHub Environment $envName has branch policies, getting branches from GitHub API"
                         $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments//$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
                         Write-Host "Getting Branches for $envName from GitHub API"
                         $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                     }
                     else {
+                        Write-Host "GitHub Environment $envName dot not have branch policies, using main as default"
                         $branches = @( 'main' )
                     }
                 }
                 else {
-                    # Environment is in settings, default branches are controlled in settings
+                    Write-Host "Environment $envName was defined in settings, using main as default"
                     $branches = @( 'main' )
                 }
                 $environmentName = $_.Split(' ')[0]
