@@ -111,7 +111,11 @@ try {
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
         #try {
             Write-Host "Trying to get environments from GitHub API with branch policies set"
-            $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments | Where-Object { $_.name -match $getEnvironments })
+            Write-Host $url
+            $result = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors
+            Write-Host $result
+            Write-Host $getEnvironments
+            $ghEnvironments = @($result | ConvertFrom-Json).environments | Where-Object { $_.name -like $getEnvironments })
             $ghEnvironments | Out-Host
         #} 
         #catch {
