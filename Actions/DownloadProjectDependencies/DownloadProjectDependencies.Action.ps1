@@ -22,7 +22,7 @@ function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinatio
 }
 
 function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
-    Write-Host "Downloading dependencies for project '$dependencyProject'"
+    Write-Host "Downloading dependencies for project '$project'"
     
     $dependencyProjects = @()
     if ($projectsDependencies.Keys -contains $project) {
