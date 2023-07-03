@@ -22,18 +22,21 @@ function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinatio
 }
 
 function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
-    $projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
     if ($projectsDependencies.Keys -contains $project) {
         $dependencyProjects = @($projectsDependencies."$project")
     }
     
+    # For each dependency project, calculate the corresponding probing path
     $dependeciesProbingPaths = @($dependencyProjects | ForEach-Object {
         $dependencyProject = $_
+
+        Write-Host "Downloading dependencies for project '$dependencyProject'"
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
     
         $dependencyBuildMode = $buildMode
         if(!($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
             # Download the default build mode if the specified build mode is not supported for the dependency project
+            Write-Host "Build mode '$dependencyBuildMode' is not supported for project '$dependencyProject'. Using the default build mode."
             $dependencyBuildMode = 'Default';
         }
     
@@ -49,6 +52,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
         }
     })
     
+    # For each probing path, download the dependencies
     $downloadedDependencies = @($dependeciesProbingPaths | ForEach-Object {
         return Get-Dependencies -probingPathsJson $_ -saveToPath $destinationPath | Where-Object { $_ }
     })
@@ -66,7 +70,8 @@ Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMo
 $downloadedDependencies = @()
 
 Write-Host "::group::Downloading project dependencies from current build"
-$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependenciesJson -buildMode $buildMode -destinationPath $destinationPath
+$projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -destinationPath $destinationPath
 Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading project dependencies from probing paths"
