@@ -22,15 +22,20 @@ function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinatio
 }
 
 function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
+    Write-Host "Downloading dependencies for project '$dependencyProject'"
+    
+    $dependencyProjects = @()
     if ($projectsDependencies.Keys -contains $project) {
         $dependencyProjects = @($projectsDependencies."$project")
     }
+
+    Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
     
     # For each dependency project, calculate the corresponding probing path
     $dependeciesProbingPaths = @($dependencyProjects | ForEach-Object {
         $dependencyProject = $_
 
-        Write-Host "Downloading dependencies for project '$dependencyProject'"
+        Write-Host "Reading for project '$dependencyProject'"
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
     
         $dependencyBuildMode = $buildMode
@@ -53,9 +58,11 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
     })
     
     # For each probing path, download the dependencies
-    $downloadedDependencies = @($dependeciesProbingPaths | ForEach-Object {
-        return Get-Dependencies -probingPathsJson $_ -saveToPath $destinationPath | Where-Object { $_ }
-    })
+    $downloadedDependencies = @()
+    $dependeciesProbingPaths | ForEach-Object {
+        $dependency = Get-Dependencies -probingPathsJson $_ -saveToPath $destinationPath | Where-Object { $_ }
+        $downloadedDependencies += $dependency
+    }
 
     return $downloadedDependencies
 }
@@ -65,7 +72,7 @@ Set-StrictMode -Version 2.0
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder"
+Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
 
 $downloadedDependencies = @()
 
