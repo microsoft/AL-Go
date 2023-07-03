@@ -153,7 +153,7 @@ try {
                         $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                     }
                     else {
-                        Write-Host "GitHub Environment $envName dot not have branch policies, using main as default"
+                        Write-Host "GitHub Environment $envName does not have branch policies, using main as default"
                         $branches = @( 'main' )
                     }
                 }
