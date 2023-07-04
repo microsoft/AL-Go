@@ -545,7 +545,8 @@ function GetReleaseNotes {
         [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $tag_name,
-        [string] $previous_tag_name
+        [string] $previous_tag_name,
+        [string] $target_commitish
     )
     
     Write-Host "Generating release note $api_url/repos/$repository/releases/generate-notes"
@@ -554,8 +555,11 @@ function GetReleaseNotes {
         tag_name = $tag_name;
     }
 
-    if (-not [string]::IsNullOrEmpty($previous_tag_name)) {
+    if ($previous_tag_name) {
         $postParams["previous_tag_name"] = $previous_tag_name
+    }
+    if ($target_commitish) {
+        $postParams["target_commitish"] = $target_commitish
     }
 
     InvokeWebRequest -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" 

@@ -5,6 +5,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 ### Issues
 
 Issue 542 Deploy Workflow fails
+Issue 559 Changelog includes wrong commits
 Publish to AppSource fails if publisher name or app name contains national or special characters
 
 ### New Settings
