@@ -44,8 +44,6 @@ try {
   
     $containerName = GetContainerName($project)
 
-    Write-Host "xxxxxxxx $ENV:GITHUB_ACTION_PATH"
-    
     $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
     $branch = $ap[$ap.Count-2]
     $owner = $ap[$ap.Count-4]
