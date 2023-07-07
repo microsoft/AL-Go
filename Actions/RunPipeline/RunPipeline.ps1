@@ -44,7 +44,25 @@ try {
   
     $containerName = GetContainerName($project)
 
-    $runAlPipelineParams = @{}
+    Write-Host "xxxxxxxx $ENV:GITHUB_ACTION_PATH"
+    
+    $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
+    $branch = $ap[$ap.Count-2]
+    $owner = $ap[$ap.Count-4]
+
+    if ($owner -ne "microsoft") {
+        $verstr = "dev"
+    }
+    else {
+        $verstr = $branch
+    }
+
+    $runAlPipelineParams = @{
+        "sourceRepositoryUrl" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+        "sourceCommit" = $ENV:GITHUB_SHA
+        "buildBy" = "AL-Go for GitHub,$verstr"
+        "buildUrl" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID"
+    }
     if ($project  -eq ".") { $project = "" }
     $baseFolder = $ENV:GITHUB_WORKSPACE
     if ($bcContainerHelperConfig.useVolumes -and $bcContainerHelperConfig.hostHelperFolder -eq "HostHelperFolder") {
