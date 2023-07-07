@@ -9,3 +9,5 @@ The GitHub token running the action
 Specifies the parent telemetry scope for the telemetry signal
 ### tag_name (required)
 This release tag name
+### target_commitish (default last)
+Last commit to include in release notes

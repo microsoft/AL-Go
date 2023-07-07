@@ -5,10 +5,10 @@ Param(
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d',
-    [Parameter(HelpMessage = "A GitHub token with permissions to modify workflows", Mandatory = $false)]
-    [string] $workflowToken,
     [Parameter(HelpMessage = "Tag name", Mandatory = $true)]
-    [string] $tag_name
+    [string] $tag_name,
+    [Parameter(HelpMessage = "Last commit to include in release notes", Mandatory = $false)]
+    [string] $target_commitish
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,7 +54,7 @@ try {
             $latestReleaseTag = $latestRelease.tag_name
         }
     
-        $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag | ConvertFrom-Json
+        $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag -target_commitish $target_commitish | ConvertFrom-Json
         $releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
     }
     catch {
