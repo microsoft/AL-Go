@@ -195,7 +195,7 @@ function Update-WorkSpaces
                 $workspaceFile = $_.FullName
                 $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
-                    $workspace.folders += @(@{ "path" = $appName })
+                    $workspace.folders = Add-NewAppFolder($workspace.folders, $appName)
                 }
                 $workspace | Set-JsonContentLF -Path $workspaceFile
             }
@@ -203,6 +203,41 @@ function Update-WorkSpaces
                 throw "Updating the workspace file $workspaceFileName failed.$([environment]::Newline) $($_.Exception.Message)"
             }
         }
+}
+
+function Add-NewAppFolder
+(
+    [System.Object[]] $workspaceFolders,
+    [string] $appName
+)
+{
+    # Determine the index of either .github or .AL-Go
+    $githubIndex = $workspaceFolders | Where-Object { $_.Path -eq '.github' } | Select-Object -First 1
+    $alGoIndex = $workspaceFolders | Where-Object { $_.Path -eq '.Al-Go' } | Select-Object -First 1
+
+    if ($githubIndex -ge 0 -and $alGoIndex -ge 0) {
+        $index = [Math]::Min($githubIndex, $alGoIndex)
+    }
+    elseif ($alGoIndex -lt 0) {
+        $index = $githubIndex
+    }
+    else {
+        $index = $alGoIndex
+    }
+
+    $newAppFolder = @(@{ "path" = $appName })
+
+    # If found, insert the new app folder before the index. Otherwise, append it.
+    if ($index -ge 0) {
+        $folders1 = $array[$workspaceFolders[0..($index-1)]]
+        $folders2 = $array[$workspaceFolders[$index..$workspaceFolders.Length-1]]
+        $workspaceFolders = $folders1 + $newAppFolder + $folders2
+    }
+    else {
+        $workspaceFolders += $newAppFolder
+    }
+
+    return $workspaceFolders
 }
 
 Export-ModuleMember -Function New-SampleApp
