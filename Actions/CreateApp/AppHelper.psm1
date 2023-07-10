@@ -236,7 +236,7 @@ function Add-NewAppFolder
     $newAppFolder = @(@{ "path" = $appName })
 
     # If found, insert the new app folder ahead of the index. Otherwise, append it.
-    if (index -eq 0) {
+    if ($index -eq 0) {
         $workspaceFolders = $newAppFolder + $workspaceFolders
     }
     elseif ($index -gt 0) {
