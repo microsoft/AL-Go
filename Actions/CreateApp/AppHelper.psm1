@@ -211,24 +211,35 @@ function Add-NewAppFolder
     [string] $appName
 )
 {
-    # Determine the index of either .github or .AL-Go
-    $githubIndex = $workspaceFolders | Where-Object { $_.Path -eq '.github' } | Select-Object -First 1
-    $alGoIndex = $workspaceFolders | Where-Object { $_.Path -eq '.Al-Go' } | Select-Object -First 1
+    # Find the .github and Al-Go folders
+    $githubFolder = $workspaceFolders | Where-Object { $_.Path -eq '.github' } | Select-Object -First 1
+    $alGoFolder = $workspaceFolders | Where-Object { $_.Path -eq '.Al-Go' } | Select-Object -First 1
 
-    if ($githubIndex -ge 0 -and $alGoIndex -ge 0) {
+    # Determine the index of either .github or .AL-Go
+    $githubIndex = $workspaceFolders.IndexOf($githubFolder)
+    $alGoIndex = $workspaceFolders.IndexOf($alGoFolder)
+
+    # Get the lowest valid index between the two
+    if ($null -ne $githubFolder -and $null -ne $alGoFolder) {
         $index = [Math]::Min($githubIndex, $alGoIndex)
     }
-    elseif ($alGoIndex -lt 0) {
+    elseif ($null -ne $githubFolder) {
         $index = $githubIndex
     }
-    else {
+    elseif ($null -ne $alGoFolder) {
         $index = $alGoIndex
+    }
+    else {
+        $index = -1
     }
 
     $newAppFolder = @(@{ "path" = $appName })
 
-    # If found, insert the new app folder before the index. Otherwise, append it.
-    if ($index -ge 0) {
+    # If found, insert the new app folder ahead of the index. Otherwise, append it.
+    if (index -eq 0) {
+        $workspaceFolders = $newAppFolder + $workspaceFolders
+    }
+    elseif ($index -gt 0) {
         $folders1 = $array[$workspaceFolders[0..($index-1)]]
         $folders2 = $array[$workspaceFolders[$index..$workspaceFolders.Length-1]]
         $workspaceFolders = $folders1 + $newAppFolder + $folders2
