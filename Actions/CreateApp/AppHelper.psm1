@@ -195,7 +195,7 @@ function Update-WorkSpaces
                 $workspaceFile = $_.FullName
                 $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
-                    $workspace.folders = Add-NewAppFolder($workspace.folders, $appName)
+                    $workspace.folders = Add-NewAppFolder $workspace.folders $appName
                 }
                 $workspace | Set-JsonContentLF -Path $workspaceFile
             }
