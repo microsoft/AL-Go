@@ -195,7 +195,7 @@ function Update-WorkSpaces
                 $workspaceFile = $_.FullName
                 $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
-                    $workspace.folders = Add-NewAppFolder $workspace.folders $appName
+                    $workspace.folders = Add-NewAppFolderToWorkspaceFolders $workspace.folders $appName
                 }
                 $workspace | Set-JsonContentLF -Path $workspaceFile
             }
@@ -205,50 +205,30 @@ function Update-WorkSpaces
         }
 }
 
-function Add-NewAppFolder
+function Add-NewAppFolderToWorkspaceFolders
 (
-    [System.Object[]] $workspaceFolders,
-    [string] $appName
+    [PSCustomObject[]] $workspaceFolders,
+    [string] $appFolder
 )
 {
-    # Find the .github and Al-Go folders
-    $githubFolder = $workspaceFolders | Where-Object { $_.Path -eq '.github' } | Select-Object -First 1
-    $alGoFolder = $workspaceFolders | Where-Object { $_.Path -eq '.Al-Go' } | Select-Object -First 1
+    $newAppFolder = [PSCustomObject]@{ "path" = $appFolder }
+    $afterFolder = $workspaceFolders | Where-Object { $_.path -ne '.github' -and $_.path -ne '.AL-Go' } | Select-Object -Last 1
 
-    # Determine the index of either .github or .AL-Go
-    $githubIndex = $workspaceFolders.IndexOf($githubFolder)
-    $alGoIndex = $workspaceFolders.IndexOf($alGoFolder)
-
-    # Get the lowest valid index between the two
-    if ($null -ne $githubFolder -and $null -ne $alGoFolder) {
-        $index = [Math]::Min($githubIndex, $alGoIndex)
-    }
-    elseif ($null -ne $githubFolder) {
-        $index = $githubIndex
-    }
-    elseif ($null -ne $alGoFolder) {
-        $index = $alGoIndex
+    if ($afterFolder) {
+        $workspaceFolders = @($workspaceFolders | ForEach-Object {
+            $_
+            if ($afterFolder -and $_.path -eq $afterFolder.path) {
+                Write-Host "Adding new path to workspace folders after $($afterFolder.Path)"
+                $newAppFolder
+                $afterFolder = $null
+            }
+        })
     }
     else {
-        $index = -1
+        Write-Host "Inserting new path in workspace folders"
+        $workspaceFolders = @($newAppFolder) + $workspaceFolders
     }
-
-    $newAppFolder = @(@{ "path" = $appName })
-
-    # If found, insert the new app folder ahead of the index. Otherwise, append it.
-    if ($index -eq 0) {
-        $workspaceFolders = $newAppFolder + $workspaceFolders
-    }
-    elseif ($index -gt 0) {
-        $folders1 = $array[$workspaceFolders[0..($index-1)]]
-        $folders2 = $array[$workspaceFolders[$index..$workspaceFolders.Length-1]]
-        $workspaceFolders = $folders1 + $newAppFolder + $folders2
-    }
-    else {
-        $workspaceFolders += $newAppFolder
-    }
-
-    return $workspaceFolders
+    $workspaceFolders
 }
 
 Export-ModuleMember -Function New-SampleApp
