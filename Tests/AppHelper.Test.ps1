@@ -73,4 +73,44 @@ Describe 'AppHelper.psm1 Tests' {
 
         (Join-Path $sampleAppFolder ".vscode/launch.json") | Should -Exist
     }
+
+    It 'Insert new app folder ahead of .AL-Go' {
+        $appName = -join (((48..57)+(65..90)+(97..122)) * 80 |Get-Random -Count 8 | ForEach-Object {[char]$_})
+        $workspaceFolders = '[{"path":".AL-Go"}]' | ConvertFrom-Json
+        $workspaceFolders = Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder $appName
+
+        (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be ('[{"path":"{0}"},{"path":".AL-Go"}]' -f $appName)
+    }
+
+    It 'Insert new app folder ahead of .AL-Go and .github' {
+        $appName = -join (((48..57)+(65..90)+(97..122)) * 80 |Get-Random -Count 8 | ForEach-Object {[char]$_})
+        $workspaceFolders = '[{"path":".AL-Go"},{"path":".github"}]' | ConvertFrom-Json
+        $workspaceFolders = Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder $appName
+
+        (ConvertTo-Json -InputObject $workspaceFolders -Compress)  |Should -Be ('[{"path":"{0}"},{"path":".AL-Go"},{"path":".github"}]' -f $appName)
+    }
+
+    It 'Insert new app folder after onefolder ahead of .AL-Go and .github' {
+        $appName = -join (((48..57)+(65..90)+(97..122)) * 80 |Get-Random -Count 8 | ForEach-Object {[char]$_})
+        $workspaceFolders = '[{"path":"oneFolder"},{"path":".AL-Go"},{"path":".github"}]' | ConvertFrom-Json
+        $workspaceFolders = Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder $appName
+
+        (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be ('[{"path":"onefolder"},{"path":"{0}"},{"path":".AL-Go"},{"path":".github"}]' -f $appName)
+    }
+
+    It 'Insert new app folder after .AL-Go, .github and onefolder' {
+        $appName = -join (((48..57)+(65..90)+(97..122)) * 80 |Get-Random -Count 8 | ForEach-Object {[char]$_})
+        $workspaceFolders = '[{"path":".AL-Go"},{"path":".github"},{"path":"oneFolder"}]' | ConvertFrom-Json
+        $workspaceFolders = Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder $appName
+
+        (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be ('[{"path":".AL-Go"},{"path":".github"},{"path":"onefolder"},{"path":"{0}"}]' -f $appName)
+    }
+
+    It 'Insert new app folder in empty list' {
+        $appName = -join (((48..57)+(65..90)+(97..122)) * 80 |Get-Random -Count 8 | ForEach-Object {[char]$_})
+        $workspaceFolders = '[]' | ConvertFrom-Json
+        $workspaceFolders = Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder $appName
+
+        (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be ('[{"path":"{0}"}]' -f $appName)
+    }
 }
