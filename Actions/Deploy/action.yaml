@@ -24,6 +24,13 @@ inputs:
   environmentName:
     description: Name of environment to deploy to
     required: true
+  environmentType:
+    description: Type of environment to deploy to
+    required: false
+    default: 'SaaS'
+  forceSync:
+    description: Type of environment to deploy to
+    required: false
   artifacts:
     description: Artifacts to deploy
     required: true

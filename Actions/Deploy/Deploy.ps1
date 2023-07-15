@@ -134,54 +134,69 @@ try {
         throw "An environment secret for environment($environmentName) called AUTHCONTEXT containing authentication information for the environment was not found.You must create an environment secret."
     }
     $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:AuthContext))
-
-    try {
-        $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
-        $bcAuthContext = New-BcAuthContext @authContextParams
-        if ($null -eq $bcAuthContext) {
-            throw "Authentication failed"
-        }
-    } catch {
-        throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
-    }
-
     $envName = $environmentName.Split(' ')[0]
-    Write-Host "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
-    $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
-    if ($response.Status -eq "DoesNotExist") {
-        OutputError -message "Environment with name $envName does not exist in the current authorization context."
-        exit
-    }
-    if ($response.Status -ne "Ready") {
-        OutputError -message "Environment with name $envName is not ready (Status is $($response.Status))."
-        exit
-    }
 
-    try {
-        if ($response.environmentType -eq 1) {
-            if ($bcAuthContext.ClientSecret) {
-                Write-Host "Using S2S, publishing apps using automation API"
-                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
-            }
-            else {
-                Write-Host "Publishing apps using development endpoint"
-                Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
-            }
-        }
-        else {
-            if ($type -eq 'CD') {
-                Write-Host "Ignoring environment $environmentName, which is a production environment"
-            }
-            else {
-                # Check for AppSource App - cannot be deployed
-                Write-Host "Publishing apps using automation API"
-                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
-            }
-        }
+    # Support two ways of customizing deployment
+    # 1. Custom deploy script for specific environments (.githuub/deployTo<environment>.ps1)
+    # 2. Custom deploy script for all environments (.github/deploy.ps1)
+    $customDeployToScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/deployTo$($envName).ps1"
+    $customDeployScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/deploy.ps1"
+    if (Test-Path -Path $customDeployToScript -PathType Leaf) {
+        Write-Host "Invoking custom deployment script $customDeployToScript"
+        . $customDeployToScript -authContext $authContext -environmentName $envName -apps $apps
     }
-    catch {
-        OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
-        exit
+    elseif (Test-Path -Path $customDeployScript -PathType Leaf) {
+        Write-Host "Invoking custom deployment script $customDeployScript"
+        . $customDeployScript -authContext $authContext -environmentName $envName -apps $apps
+    }
+    else {
+        try {
+            $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
+            $bcAuthContext = New-BcAuthContext @authContextParams
+            if ($null -eq $bcAuthContext) {
+                throw "Authentication failed"
+            }
+        } catch {
+            throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
+        }
+
+        Write-Host "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
+        $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$envName/deployment/url"
+        if ($response.Status -eq "DoesNotExist") {
+            OutputError -message "Environment with name $envName does not exist in the current authorization context."
+            exit
+        }
+        if ($response.Status -ne "Ready") {
+            OutputError -message "Environment with name $envName is not ready (Status is $($response.Status))."
+            exit
+        }
+
+        try {
+            if ($response.environmentType -eq 1) {
+                if ($bcAuthContext.ClientSecret) {
+                    Write-Host "Using S2S, publishing apps using automation API"
+                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
+                }
+                else {
+                    Write-Host "Publishing apps using development endpoint"
+                    Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $envName -appFile $apps -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
+                }
+            }
+            else {
+                if ($type -eq 'CD') {
+                    Write-Host "Ignoring environment $environmentName, which is a production environment"
+                }
+                else {
+                    # Check for AppSource App - cannot be deployed
+                    Write-Host "Publishing apps using automation API"
+                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $envName -appFiles $apps
+                }
+            }
+        }
+        catch {
+            OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
+            exit
+        }
     }
 
     if ($artifactsFolderCreated) {
