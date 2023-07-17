@@ -213,12 +213,11 @@ function Add-NewAppFolderToWorkspaceFolders
 {
     $newAppFolder = [PSCustomObject]@{ "path" = $appFolder }
 
-    if ($workspaceFolders){
-        $afterFolder = $workspaceFolders | Where-Object { $_.path -ne '.github' -and $_.path -ne '.AL-Go' } | Select-Object -Last 1
-    }
-    else {
+    if (-not $workspaceFolders){
         return  @($newAppFolder)
     }
+
+    $afterFolder = $workspaceFolders | Where-Object { $_.path -ne '.github' -and $_.path -ne '.AL-Go' } | Select-Object -Last 1
 
     if ($afterFolder) {
         $workspaceFolders = @($workspaceFolders | ForEach-Object {
