@@ -212,7 +212,13 @@ function Add-NewAppFolderToWorkspaceFolders
 )
 {
     $newAppFolder = [PSCustomObject]@{ "path" = $appFolder }
-    $afterFolder = $workspaceFolders | Where-Object { $_.path -ne '.github' -and $_.path -ne '.AL-Go' } | Select-Object -Last 1
+
+    if ($workspaceFolders){
+        $afterFolder = $workspaceFolders | Where-Object { $_.path -ne '.github' -and $_.path -ne '.AL-Go' } | Select-Object -Last 1
+    }
+    else {
+        return  @($newAppFolder)
+    }
 
     if ($afterFolder) {
         $workspaceFolders = @($workspaceFolders | ForEach-Object {
@@ -236,3 +242,4 @@ Export-ModuleMember -Function New-SampleTestApp
 Export-ModuleMember -Function New-SamplePerformanceTestApp
 Export-ModuleMember -Function Confirm-IdRanges
 Export-ModuleMember -Function Update-WorkSpaces
+Export-ModuleMember -Function Add-NewAppFolderToWorkspaceFolders
