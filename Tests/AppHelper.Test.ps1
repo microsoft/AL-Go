@@ -108,4 +108,11 @@ Describe 'AppHelper.psm1 Tests' {
 
         (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be '{"path":"newfolder"}'
     }
+
+    It 'Insert new app folder in null object' {
+        $workspaceFolders = $null
+        $workspaceFolders = Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder'
+
+        (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be '{"path":"newfolder"}'
+    }
 }
