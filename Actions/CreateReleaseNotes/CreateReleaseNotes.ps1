@@ -49,8 +49,15 @@ try {
     try {
         $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
 
+        Write-Host $latestrelease.target_commitish
+        if ($latestRelease -and $latestRelease.PSobject.Properties.name -eq "target_commitish") {
+            if ($latestRelease.target_commitish -eq $target_commitish) {
+                throw "The latest release is based on the same commit as this release is targetting."
+            }
+        }
+
         $latestReleaseTag = ""
-        if ($latestRelease -and ([bool]($latestRelease.PSobject.Properties.name -match "tag_name"))){
+        if ($latestRelease -and $latestRelease.PSobject.Properties.name -eq "tag_name") {
             $latestReleaseTag = $latestRelease.tag_name
         }
     
