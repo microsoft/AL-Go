@@ -237,7 +237,7 @@ try {
         $imageName = $repo.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
-            Flush-ContainerHelperCache -keepdays $repo.cacheKeepDays
+            Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $repo.cacheKeepDays
             Write-Host "::endgroup::"
         }
     }
