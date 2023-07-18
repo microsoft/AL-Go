@@ -41,10 +41,10 @@ try {
 
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\BCPTTestResults.json"
     if (Test-Path $bcptTestResultsFile) {
-        # TODO Display BCPT Test Results
+        Add-Content -path $ENV:GITHUB_STEP_SUMMARY -value "## BCPT test results`n`n"
     }
     else {
-        #Add-Content -path $ENV:GITHUB_STEP_SUMMARY -value "*BCPT test results not found*`n`n"
+        Add-Content -path $ENV:GITHUB_STEP_SUMMARY -value "*BCPT test results not found*`n`n"
     }
 
     TrackTrace -telemetryScope $telemetryScope
