@@ -7,7 +7,10 @@ The easiest way to get started with Business Central and Power Apps is to find o
 
 > **NOTE:** Other samples might be available here:  [https://github.com/topics/bcsamples](https://github.com/topics/bcsamples).
 
-From the sample app repository, you have two options:
+From the sample app repositories, you have two options:
+
+- [Manual installation](#manual-installation) 
+- [Fork the repository](#fork-the-repository)
 
 
 ## Manual Installation
@@ -26,9 +29,14 @@ If you just want to try the apps and not the ALM functionality, follow these ste
 5. Update the flow so it is pointing to your Business Central environment and company. Clear the current values and use the dropdown to select your settings.
 ![Screen shot from Power Automate showing where to update the Business Central connection reference](images/p5.png)
 
-6. Update the Power App data sources so they are pointing to your Business Central environment. If you hover over the data source, you can see the connection information under the Dataset name. Delete the connections and add a new one pointing to your environment and company using the "+ Add data" button.
-![Screen shot from Power Apps showing where to update the Business Central connection reference](images/p6.png)
+6. Update the Power App data sources to point to your Business Central environment. When you hover over the data source, the connection information is displayed under the 'Dataset name'. 
 
+    Delete the existing connections. Then, add new ones that point to your environment and company. You can do this by using the '+ Add data' button.
+    ![Screen shot from Power Apps showing where to update the Business Central connection reference](images/p6.png)
+
+    > **Note:** After the data sources have been updated and you verified that the app is working, use the 'Publish' action in the upper right corner to make the changes available when running the app outside the editor.
+
+If you experience any issues while setting up the app, please log them in the 'Issues' tab of the sample repository - [Take order issues](https://github.com/microsoft/bcsamples-takeorder/issues), [Warehouse Helper issues](https://github.com/microsoft/bcsamples-warehousehelper/issues) - or post the issue in the [Business Central partner community](https://www.yammer.com/dynamicsnavdev/#/threads/inGroup?type=in_group&feedId=64329121792) for assistance. 
 
 ## Fork the Repository
 
