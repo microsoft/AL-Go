@@ -321,7 +321,7 @@ try {
                 }
                 if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
                     # replace defaultBcContainerHelperVersion (even if a version is set)
-                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)"" # `$5" }
+                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$defaultBcContainerHelperVersion"" # `$5" }
                 }
                 [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
             }
