@@ -9,6 +9,7 @@ Issue 558 CI/CD attempts to deploy from feature branch
 Issue 559 Changelog includes wrong commits
 Publish to AppSource fails if publisher name or app name contains national or special characters
 Issue 598 Cleanup during flush if build pipeline doesn't cleanup properly
+Issue 608 When creating a release, throw error if no new artifacts have been added
 
 ### New Settings
 - `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
