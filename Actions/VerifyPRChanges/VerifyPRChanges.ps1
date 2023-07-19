@@ -31,6 +31,6 @@ function ValidateFiles
 }
 
 git fetch
-$filesChanged = git diff HEAD..origin/$baseRef --name-only
+$filesChanged = git diff $baseSHA..origin/$baseRef --name-only
 
 ValidateFiles -Files $filesChanged
