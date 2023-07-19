@@ -13,6 +13,10 @@ inputs:
     description: Base commit of the PR
     required: false
     default: ${{ github.event.pull_request.base.sha }}
+  baseRef:
+    description: Base ref of the PR
+    required: false
+    default: ${{ github.event.pull_request.base.ref }}
   headSHA:
     description: Head commit of the PR
     required: false
@@ -29,9 +33,10 @@ runs:
       env:
         _token: ${{ inputs.token }}
         _baseSHA: ${{ inputs.baseSHA }}
+        _baseRef: ${{ inputs.baseRef }}
         _headSHA: ${{ inputs.headSHA }}
         _prBaseRepository: ${{ inputs.prBaseRepository }}
-      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -baseSHA $ENV:_baseSHA -baseRef $ENV:_baseRef -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
