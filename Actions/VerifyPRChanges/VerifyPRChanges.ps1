@@ -3,6 +3,7 @@ Param(
   [string] $token,
   [Parameter(HelpMessage = "Base commit of the PR", Mandatory = $false)]
   [string] $baseSHA,
+  [Parameter(HelpMessage = "Base ref of the PR", Mandatory = $false)]
   [string] $baseRef,
   [Parameter(HelpMessage = "Head commit of the PR", Mandatory = $false)]
   [string] $headSHA,
