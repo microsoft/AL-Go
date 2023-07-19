@@ -36,8 +36,7 @@ jobs:
 
       - uses: microsoft/AL-Go-Actions/VerifyPRChanges@main
         with:
-          baseSHA: ${{ github.event.pull_request.base.sha }}
-          headSHA: ${{ github.event.pull_request.head.sha }}
+          pullRequestId: ${{ github.event.pull_request.number }}
           prbaseRepository: ${{ github.event.pull_request.base.repo.full_name }}
 
   Initialization:
