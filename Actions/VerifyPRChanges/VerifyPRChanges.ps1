@@ -14,7 +14,8 @@ function ValidateFiles
 {
   $Files | ForEach-Object {
     $filename = $_.filename
-    Write-Host "- $filename $_.status"
+    $status = $_.status
+    Write-Host "- $filename $status"
     $extension = [System.IO.Path]::GetExtension($filename)
     $name = [System.IO.Path]::GetFileName($filename)
     if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $name -eq "CODEOWNERS" -or $filename.StartsWith(".github/")) {
