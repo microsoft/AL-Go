@@ -39,7 +39,7 @@ $hasMoreData = $true
 
 Write-Host "Files Changed:"
 while ($hasMoreData) {
-  $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=100&page=1"
+  $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=100&page=$pageNumber"
   $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url
 
   $changedFiles = $response | ConvertFrom-Json
