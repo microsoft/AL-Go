@@ -20,10 +20,6 @@ inputs:
   project:
     description: Project to analyze
     required: true
-outputs:
-  TestResultMD:
-    description: MarkDown of test result
-    value: ${{ steps.AnalyzeTests.outputs.TestResultMD }}
 runs:
   using: composite
   steps:
