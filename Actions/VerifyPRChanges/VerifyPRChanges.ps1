@@ -23,6 +23,10 @@ function ValidateFiles
   } 
 }
 
+#TODO: Revert
+$prBaseRepository = "microsoft/AlAppExtensions"
+$pullRequestId = "24106"
+
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 $headers = @{             
