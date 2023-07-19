@@ -45,7 +45,8 @@ while ($hasMoreData) {
   $changedFiles = $response | ConvertFrom-Json
   ValidateFiles -Files $changedFiles
 
-  if ($response.Headers.ContainsKey("Link") -and ($response.Headers["Link"] -match 'rel=\"next\"')) {
+  #if ($response.Headers.ContainsKey("Link") -and ($response.Headers["Link"] -match 'rel=\"next\"')) {
+  if ($changedFiles.Count -eq 100) { 
     $pageNumber += 1
   } else {
     $hasMoreData = $false
