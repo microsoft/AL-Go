@@ -52,7 +52,7 @@ function Test-Json {
     )
 
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'shell'
-    Test-Shell -json $json -settingsDescription $settingsDescription -property 'gitHubRunnerShell'
+#    Test-Shell -json $json -settingsDescription $settingsDescription -property 'gitHubRunnerShell'
 
     if ($type -eq 'Repo') {
         # Test for things that should / should not exist in a repo settings file

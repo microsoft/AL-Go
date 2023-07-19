@@ -627,6 +627,10 @@ function ReadSettings {
     if ($settings.githubRunnerShell -eq "") {
         $settings.githubRunnerShell = $settings.shell
     }
+    # Check that gitHubRunnerShell and Shell is valid
+    if ($settings.githubRunnerShell -ne "powershell" -and $settings.githubRunnerShell -ne "pwsh") {
+        throw "Invalid value for githubRunnerShell: $($settings.githubRunnerShell)"
+    }
     $settings
 }
 
