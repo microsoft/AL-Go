@@ -12,6 +12,7 @@ Param(
 
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
+git fetch
 $diff = git diff HEAD..origin/$baseRef --name-only
 
 Write-Host $diff
