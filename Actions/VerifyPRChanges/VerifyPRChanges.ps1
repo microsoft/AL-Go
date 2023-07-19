@@ -12,6 +12,6 @@ Param(
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 git fetch 
-$diff = git diff HEAD..main --name-only
+$diff = git diff HEAD..origin/main --name-only
 
 Write-Host $diff
