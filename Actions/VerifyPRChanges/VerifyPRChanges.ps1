@@ -12,7 +12,24 @@ Param(
 
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
-git fetch
-$diff = git diff HEAD..origin/$baseRef --name-only
 
-Write-Host $diff
+function ValidateFiles
+(
+  [Object[]] $Files
+)
+{
+  $Files | ForEach-Object {
+    $filename = $_
+    Write-Host "- $filename"
+    $extension = [System.IO.Path]::GetExtension($filename)
+    $name = [System.IO.Path]::GetFileName($filename)
+    if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $name -eq "CODEOWNERS" -or $filename.StartsWith(".github/")) {
+      throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
+    }
+  } 
+}
+
+git fetch
+$filesChanged = git diff HEAD..origin/$baseRef --name-only
+
+ValidateFiles -Files $filesChanged
