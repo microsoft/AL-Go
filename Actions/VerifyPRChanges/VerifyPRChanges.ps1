@@ -38,7 +38,8 @@ function ValidatePullRequest
   $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId"
   $pullRequestDetails = Invoke-WebRequest -UseBasicParsing -Headers $Headers -Uri $url | ConvertFrom-Json
 
-  if ($pullRequestDetails.changed_files -gt 1000) {
+  #List Pull Request files has a max of 3000 files. https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#list-pull-requests-files
+  if ($pullRequestDetails.changed_files -gt 3000) {
     throw "Pull request contains changes to $($pullRequestDetails.changed_files) files. You cannot change more than 1000 files from a fork."
   }
 }
