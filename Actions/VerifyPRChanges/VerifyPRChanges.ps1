@@ -52,16 +52,16 @@ function ValidatePullRequestFiles
 )
 {
   $pageNumber = 1
+  $resultsPerPage = 100
   $hasMoreData = $true
   Write-Host "Files Changed:"
   while ($hasMoreData) {
-    $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=100&page=$pageNumber"
-    $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url
+    $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=$resultsPerPage&page=$pageNumber"
+    $changedFiles = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
 
-    $changedFiles = $response | ConvertFrom-Json
     ValidateFiles -Files $changedFiles
 
-    if ($response.Headers.ContainsKey("Link") -and ($response.Headers["Link"] -match 'rel=\"next\"')) {
+    if ($changedFiles -and ($changedFiles.Count -eq $resultsPerPage)) {
       $pageNumber += 1
     } else {
       $hasMoreData = $false
