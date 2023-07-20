@@ -127,6 +127,7 @@ function Get-Dependencies {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
 
+            # change the mask to include the build mode
             if($buildMode -ne "Default") {
                 $mask = "$buildMode$mask"
             }

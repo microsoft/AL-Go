@@ -35,7 +35,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
     $dependeciesProbingPaths = @($dependencyProjects | ForEach-Object {
         $dependencyProject = $_
 
-        Write-Host "Reading for project '$dependencyProject'"
+        Write-Host "Reading settings for project '$dependencyProject'"
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
     
         $dependencyBuildMode = $buildMode
@@ -44,6 +44,14 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             Write-Host "Build mode '$dependencyBuildMode' is not supported for project '$dependencyProject'. Using the default build mode."
             $dependencyBuildMode = 'Default';
         }
+
+        $currentBranch = $ENV:GITHUB_REF_NAME
+
+        $baseBranch = $ENV:GITHUB_BASE_REF_NAME
+        # $ENV:GITHUB_BASE_REF_NAME is specified only for pull requests, so if it is not specified, use the current branch
+        if(!$baseBranch) {
+            $baseBranch = $currentBranch
+        }
     
         return @{
             "release_status" = "thisBuild"
@@ -51,8 +59,8 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             "buildMode" = $dependencyBuildMode
             "projects" = $dependencyProject
             "repo" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-            "branch" = $ENV:GITHUB_REF_NAME
-            "baseBranch" = $ENV:GITHUB_BASE_REF_NAME
+            "branch" = $currentBranch
+            "baseBranch" = $baseBranch
             "authTokenSecret" = $token
         }
     })
