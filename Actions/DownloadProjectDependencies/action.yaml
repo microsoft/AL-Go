@@ -15,9 +15,6 @@ inputs:
   projectsDependenciesJson:
     description: A JSON object that matches eash project with its dependency projects
     required: true
-  destinationPath:
-    default: ${{ github.workspace }}/.dependencies
-    description: The destination path where the dependencies will be stored
 outputs:
   DownloadedApps: 
     description: A JSON-formatted array of paths to .app files of the apps that were downloaded
@@ -31,7 +28,7 @@ runs:
     - name: Download artifacts from current build
       uses: actions/download-artifact@v3
       with:
-        path: ${{ inputs.destinationPath}}
+        path: ${{ github.workspace }}/.dependencies
 
     - name: Download project dependencies
       shell: ${{ inputs.shell }}
@@ -41,7 +38,7 @@ runs:
         _buildMode: ${{ inputs.buildMode }}
         _projectsDependenciesJson: ${{ inputs.projectsDependenciesJson }}
         _baseFolder: ${{ github.workspace }}
-        _destinationPath: ${{ inputs.destinationPath }}
+        _destinationPath: ${{ github.workspace }}/.dependencies
         _gitHubToken: ${{ github.token }}
       run:
         try { 
