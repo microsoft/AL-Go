@@ -2,9 +2,12 @@ Param(
   [Parameter(HelpMessage = "The token to use for the GitHub API", Mandatory = $false)]
   [string] $token,
   [Parameter(HelpMessage = "Base commit of the PR", Mandatory = $false)]
-  [string] $pullRequestId,
+  [string] $baseSHA,
+  [Parameter(HelpMessage = "Head commit of the PR", Mandatory = $false)]
+  [string] $headSHA,
   [Parameter(HelpMessage = "The name of the repository the PR is going to", Mandatory = $false)]
-  [string] $prBaseRepository
+  [string] $prBaseRepository,
+  [string] $pullRequestId
 )
 
 function ValidateFiles
