@@ -16,13 +16,16 @@ function ValidateFiles
   [Object[]] $Files
 )
 {
+  $disallowedExtensions = @('.ps1', '.psm1', '.yml', '.yaml')
+  $disallowedFiles = @('CODEOWNERS')
+
   $Files | ForEach-Object {
     $filename = $_.filename
     $status = $_.status
     Write-Host "- $filename $status"
     $extension = [System.IO.Path]::GetExtension($filename)
     $name = [System.IO.Path]::GetFileName($filename)
-    if ($extension -eq '.ps1' -or $extension -eq '.yaml' -or $extension -eq '.yml' -or $name -eq "CODEOWNERS" -or $filename.StartsWith(".github/")) {
+    if (($extension -in $disallowedExtensions) -or ($name -in $disallowedFiles) -or $filename.StartsWith(".github/")) {
       throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
     }
   } 
@@ -59,6 +62,11 @@ function ValidatePullRequestFiles
   while ($hasMoreData) {
     $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=$resultsPerPage&page=$pageNumber"
     $changedFiles = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url | ConvertFrom-Json
+
+    # Finish check if there are no more files to be validated
+    if (-not $changedFiles) {
+      break
+    }
 
     ValidateFiles -Files $changedFiles
 
