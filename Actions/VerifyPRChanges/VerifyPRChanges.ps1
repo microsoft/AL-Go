@@ -7,6 +7,7 @@ Param(
   [string] $headSHA,
   [Parameter(HelpMessage = "The name of the repository the PR is going to", Mandatory = $false)]
   [string] $prBaseRepository,
+  [Parameter(HelpMessage = "The id of the pull request", Mandatory = $false)]
   [string] $pullRequestId
 )
 
