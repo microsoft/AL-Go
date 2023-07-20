@@ -81,6 +81,20 @@ Describe 'VerifyPRChanges Action Tests' {
         } | Should -Throw
     }
 
+    It 'should fail if the PR is from a fork and changes a yml file' {
+        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":".github/workflows/test.yaml","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+
+       { 
+        & $scriptPath `
+                -baseSHA "123" `
+                -headSHA "456" `
+                -prBaseRepository "microsoft/AL-Go" `
+                -pullRequestId "123456" `
+                -token "ABC" 
+        } | Should -Throw
+    }
+
     It 'should succeed if the PR is from a fork and changes an .al file' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"ALModule/Test.Codeunit.al","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
