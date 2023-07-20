@@ -27,32 +27,54 @@ function ValidateFiles
   } 
 }
 
-#TODO: Revert
-$prBaseRepository = "microsoft/AlAppExtensions"
-$pullRequestId = "24106"
+function ValidatePullRequest
+(
+  [string[]] $PullRequestRepository,
+  [string[]] $PullRequestId,
+  [object] $Headers
+)
+{
+  $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId"
+  $pullRequestDetails = Invoke-WebRequest -UseBasicParsing -Headers $Headers -Uri $url | ConvertFrom-Json
+
+  if ($pullRequestDetails.changed_files -gt 1000) {
+    throw "Pull request contains changes to $($pullRequestDetails.changed_files) files. You cannot change more than 1000 files from a fork."
+  }
+}
+
+function ValidatePullRequestFiles
+(
+  [string[]] $PullRequestRepository,
+  [string[]] $PullRequestId,
+  [object] $Headers
+)
+{
+  $pageNumber = 1
+  $hasMoreData = $true
+  Write-Host "Files Changed:"
+  while ($hasMoreData) {
+    $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=100&page=$pageNumber"
+    $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url
+
+    $changedFiles = $response | ConvertFrom-Json
+    ValidateFiles -Files $changedFiles
+
+    if ($response.Headers.ContainsKey("Link") -and ($response.Headers["Link"] -match 'rel=\"next\"')) {
+      $pageNumber += 1
+    } else {
+      $hasMoreData = $false
+    }
+  }
+  Write-Host "Verification completed successfully."
+}
 
 $ErrorActionPreference = "STOP"
 Set-StrictMode -version 2.0
 $headers = @{             
-  "Authorization" = "token $token"
+  #"Authorization" = "token $token"
   "Accept"        = "application/vnd.github.baptiste-preview+json"
 }
-$pageNumber = 1
-$hasMoreData = $true
 
-Write-Host "Files Changed:"
-while ($hasMoreData) {
-  $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=100&page=$pageNumber"
-  $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url
 
-  $changedFiles = $response | ConvertFrom-Json
-  ValidateFiles -Files $changedFiles
-
-  #if ($response.Headers.ContainsKey("Link") -and ($response.Headers["Link"] -match 'rel=\"next\"')) {
-  if ($changedFiles.Count -eq 100) { 
-    $pageNumber += 1
-  } else {
-    $hasMoreData = $false
-  }
-}
-Write-Host "Verification completed successfully."
+ValidatePullRequest -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
+ValidatePullRequestFiles -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
