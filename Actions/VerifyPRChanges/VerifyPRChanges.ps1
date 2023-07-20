@@ -32,7 +32,7 @@ function ValidatePullRequest
 (
   [string[]] $PullRequestRepository,
   [string[]] $PullRequestId,
-  [object] $Headers,
+  [hashtable] $Headers,
   [int] $MaxAllowedChangedFiles = 3000
 )
 {
@@ -49,7 +49,7 @@ function ValidatePullRequestFiles
 (
   [string[]] $PullRequestRepository,
   [string[]] $PullRequestId,
-  [object] $Headers
+  [hashtable] $Headers
 )
 {
   $pageNumber = 1
