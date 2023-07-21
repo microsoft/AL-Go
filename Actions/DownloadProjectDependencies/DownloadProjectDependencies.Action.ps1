@@ -68,7 +68,16 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
     # For each probing path, download the dependencies
     $downloadedDependencies = @()
     $dependeciesProbingPaths | ForEach-Object {
-        $dependency = Get-Dependencies -probingPathsJson $_ -saveToPath $destinationPath | Where-Object { $_ }
+        $probingPath = $_
+
+        $buildMode = $probingPath.buildMode
+        $project = $probingPath.projects
+        $branch = $probingPath.branch
+        $baseBranch = $probingPath.baseBranch
+
+        Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch"
+
+        $dependency = Get-Dependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ }
         $downloadedDependencies += $dependency
     }
 
