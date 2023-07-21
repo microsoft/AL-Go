@@ -121,16 +121,17 @@ function Get-Dependencies {
     $downloadedList = @()
     'Apps','TestApps' | ForEach-Object {
         $mask = $_
-        Write-Host "Locating all $mask artifacts from probing paths"
         $probingPathsJson | ForEach-Object {
             $dependency = $_
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
-
+            
             # change the mask to include the build mode
             if($buildMode -ne "Default") {
                 $mask = "$buildMode$mask"
             }
+
+            Write-Host "Locating $mask artifacts for projects: $projects"
             
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
