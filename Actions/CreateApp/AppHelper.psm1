@@ -195,7 +195,7 @@ function Update-WorkSpaces
                 $workspaceFile = $_.FullName
                 $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
-                    $workspace.folders += @(@{ "path" = $appName })
+                    $workspace.folders = Add-NewAppFolderToWorkspaceFolders $workspace.folders $appName
                 }
                 $workspace | Set-JsonContentLF -Path $workspaceFile
             }
@@ -205,8 +205,40 @@ function Update-WorkSpaces
         }
 }
 
+function Add-NewAppFolderToWorkspaceFolders
+(
+    [PSCustomObject[]] $workspaceFolders,
+    [string] $appFolder
+)
+{
+    $newAppFolder = [PSCustomObject]@{ "path" = $appFolder }
+
+    if (-not $workspaceFolders){
+        return  @($newAppFolder)
+    }
+
+    $afterFolder = $workspaceFolders | Where-Object { $_.path -ne '.github' -and $_.path -ne '.AL-Go' } | Select-Object -Last 1
+
+    if ($afterFolder) {
+        $workspaceFolders = @($workspaceFolders | ForEach-Object {
+            $_
+            if ($afterFolder -and $_.path -eq $afterFolder.path) {
+                Write-Host "Adding new path to workspace folders after $($afterFolder.Path)"
+                $newAppFolder
+                $afterFolder = $null
+            }
+        })
+    }
+    else {
+        Write-Host "Inserting new path in workspace folders"
+        $workspaceFolders = @($newAppFolder) + $workspaceFolders
+    }
+    $workspaceFolders
+}
+
 Export-ModuleMember -Function New-SampleApp
 Export-ModuleMember -Function New-SampleTestApp
 Export-ModuleMember -Function New-SamplePerformanceTestApp
 Export-ModuleMember -Function Confirm-IdRanges
 Export-ModuleMember -Function Update-WorkSpaces
+Export-ModuleMember -Function Add-NewAppFolderToWorkspaceFolders

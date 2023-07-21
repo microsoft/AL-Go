@@ -168,8 +168,9 @@ try {
     )
 
     if ($collect) {
-        $baseRepoBranch = "$(if (!$directCommit) { [System.IO.Path]::GetRandomFileName() })"
-        if ($baseRepoBranch) {
+        $baseRepoBranch = ''
+        if (!$directCommit) {
+            $baseRepoBranch = "collect-from-$($config.branch)/$alGoBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. collect-from-nopr/main/210101120000
             Set-Location $baseRepoPath
             invoke-git checkout -b $baseRepoBranch
         }
@@ -319,7 +320,8 @@ try {
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
                 if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
-                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)""`$4" }
+                    # replace defaultBcContainerHelperVersion (even if a version is set)
+                    $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)"" # `$5" }
                 }
                 [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
             }

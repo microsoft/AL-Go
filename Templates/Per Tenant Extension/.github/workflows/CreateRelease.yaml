@@ -176,6 +176,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           tag_name: ${{ github.event.inputs.tag }}
+          target_commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
 
       - name: Create release
         uses: actions/github-script@v6

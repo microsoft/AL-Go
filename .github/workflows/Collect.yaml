@@ -1,5 +1,7 @@
 name: Collect
 
+run-name: "Collect from [${{ inputs.branch }}] to [${{ github.ref_name }}]"
+
 on:
   workflow_dispatch:
     inputs:

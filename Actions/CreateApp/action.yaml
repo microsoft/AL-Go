@@ -44,6 +44,10 @@ inputs:
     description: Include Sample BCPT Suite (Y/N)
     required: false
     default: 'N'
+  updateBranch:
+    description: Set the branch to update
+    required: false
+    default: ${{ github.ref_name }}
   directCommit:
     description: Direct Commit (Y/N)
     required: false
@@ -64,8 +68,9 @@ runs:
         _idrange: ${{ inputs.idrange }}
         _sampleCode: ${{ inputs.sampleCode }}
         _sampleSuite: ${{ inputs.sampleSuite }}
+        _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
-      run: try { ${{ github.action_path }}/CreateApp.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -type $ENV:_type -name $ENV:_name -publisher $ENV:_publisher -idrange $ENV:_idrange -sampleCode ($ENV:_sampleCode -eq 'Y') -sampleSuite ($ENV:_sampleSuite -eq 'Y') -directCommit ($ENV:_directCommit -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/CreateApp.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -type $ENV:_type -name $ENV:_name -publisher $ENV:_publisher -idrange $ENV:_idrange -sampleCode ($ENV:_sampleCode -eq 'Y') -sampleSuite ($ENV:_sampleSuite -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y') } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

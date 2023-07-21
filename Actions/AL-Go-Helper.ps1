@@ -627,6 +627,13 @@ function ReadSettings {
     if ($settings.githubRunnerShell -eq "") {
         $settings.githubRunnerShell = $settings.shell
     }
+    # Check that gitHubRunnerShell and Shell is valid
+    if ($settings.githubRunnerShell -ne "powershell" -and $settings.githubRunnerShell -ne "pwsh") {
+        throw "Invalid value for setting: gitHubRunnerShell: $($settings.githubRunnerShell)"
+    }
+    if ($settings.shell -ne "powershell" -and $settings.shell -ne "pwsh") {
+        throw "Invalid value for setting: shell: $($settings.githubRunnerShell)"
+    }
     $settings
 }
 
@@ -1133,7 +1140,12 @@ function CommitFromNewFolder {
     invoke-git commit --allow-empty -m "'$commitMessage'"
     if ($branch) {
         invoke-git push -u $serverUrl $branch
-        invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+        try {
+            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+        }
+        catch {
+            OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch.")
+        }
     }
     else {
         invoke-git push $serverUrl
