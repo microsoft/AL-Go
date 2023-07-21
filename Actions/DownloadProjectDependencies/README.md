@@ -12,10 +12,7 @@ The build mode to use to downloaded to most appropriate dependencies.
 If a dependency project isn't built in the provided build mode, then the artifacts from the default mode will be used. 
 
 ### projectsDependenciesJson
-A JSON-formatted object that maps a project to an array of its dependencies
-
-### destinationPath
-Path where to download the artifacts
+A JSON-formatted object that maps a project to an array of its dependencies.
 
 ## Outputs
 ### DownloadedApps:
