@@ -28,6 +28,21 @@ function Test-Property {
     }
 }
 
+function Test-Shell {
+    Param(
+        [HashTable] $json,
+        [string] $settingsDescription,
+        [string] $property
+    )
+
+    if ($json.Keys -contains $property) {
+        $shell = $json.$property
+        if ($shell -ne 'powershell' -and $shell -ne 'pwsh') {
+            throw "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription"
+        }
+    }
+}
+
 function Test-Json {
     Param(
         [hashtable] $json,
@@ -35,6 +50,9 @@ function Test-Json {
         [ValidateSet('Repo','Project','Workflow','Variable')]
         [string] $type
     )
+
+    Test-Shell -json $json -settingsDescription $settingsDescription -property 'shell'
+    Test-Shell -json $json -settingsDescription $settingsDescription -property 'gitHubRunnerShell'
 
     if ($type -eq 'Repo') {
         # Test for things that should / should not exist in a repo settings file
