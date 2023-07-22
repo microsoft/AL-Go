@@ -98,6 +98,7 @@ try {
     # Download the template repository and unpack to a temp folder
     $headers = @{             
         "Accept" = "application/vnd.github.baptiste-preview+json"
+        "token" = $token
     }
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry

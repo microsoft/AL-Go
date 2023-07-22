@@ -21,6 +21,10 @@ inputs:
     description: The name of the repository the PR is going to
     required: false
     default: ${{ github.event.pull_request.base.repo.full_name }}
+  pullRequestId:
+    description: The id of the pull request
+    required: false
+    default: ${{ github.event.pull_request.number }}
 runs:
   using: composite
   steps:
@@ -31,7 +35,8 @@ runs:
         _baseSHA: ${{ inputs.baseSHA }}
         _headSHA: ${{ inputs.headSHA }}
         _prBaseRepository: ${{ inputs.prBaseRepository }}
-      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+        _pullRequestId: ${{ inputs.pullRequestId }}
+      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -baseSHA $ENV:_baseSHA -headSHA $ENV:_headSHA -prBaseRepository $ENV:_prBaseRepository -pullRequestId $ENV:_pullRequestId } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
