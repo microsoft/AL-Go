@@ -37,8 +37,8 @@ function Test-Shell {
 
     if ($json.Keys -contains $property) {
         $shell = $json.$property
-        if ($shell -ne 'powershell' -or $shell -ne 'pwsh') {
-            throw "$property must be 'powershell' or 'pwsh' in $settingsDescription"
+        if ($shell -ne 'powershell' -and $shell -ne 'pwsh') {
+            throw "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription"
         }
     }
 }
