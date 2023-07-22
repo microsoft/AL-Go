@@ -338,7 +338,7 @@ jobs:
     needs: [ CreateRelease, UploadArtifacts ]
     steps:
       - name: Read settings
-        uses: microsoft/AL-Go/Actions/ReadSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         if: github.event.inputs.useGhTokenWorkflow == 'true'
         with:
           shell: powershell
@@ -346,7 +346,7 @@ jobs:
           get: keyVaultName,ghTokenWorkflowSecretName
 
       - name: Read secrets
-        uses: microsoft/AL-Go/Actions/ReadSecrets@main
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
         if: github.event.inputs.useGhTokenWorkflow == 'true'
         env:
           secrets: ${{ toJson(secrets) }}
