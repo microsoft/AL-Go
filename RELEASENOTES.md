@@ -2,6 +2,17 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### Issues
+
+Issue 542 Deploy Workflow fails
+Issue 558 CI/CD attempts to deploy from feature branch
+Issue 559 Changelog includes wrong commits
+Publish to AppSource fails if publisher name or app name contains national or special characters
+Issue 598 Cleanup during flush if build pipeline doesn't cleanup properly
+
+### New Settings
+- `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
+
 ## v3.1
 
 ### Issues
@@ -29,6 +40,11 @@ All these actions now uses the selected branch in the **Run workflow** dialog as
 
 - `UseCompilerFolder`: Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set `doNotPublishApps` to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. 
 - `vsixFile`: vsixFile should be a direct download URL to the version of the AL Language extension you want to use for building the project or repo. By default, AL-Go will use the AL Language extension that comes with the Business Central Artifacts.
+
+### New Workflows
+
+- **_BuildALGoProject** is a reusable workflow that unites the steps for building an AL-Go projects. It has been reused in the following workflows: _CI/CD_, _Pull Request Build_, _NextMinor_, _NextMajor_ and _Current_.
+The workflow appears under the _Actions_ tab in GitHub, but it is not actionable in any way.  
 
 ### New Actions
 

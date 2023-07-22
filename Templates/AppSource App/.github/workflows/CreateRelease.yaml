@@ -109,7 +109,7 @@ jobs:
           }
           do {
             $repoArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page" | ConvertFrom-Json
-            $allArtifacts += $repoArtifacts.Artifacts
+            $allArtifacts += $repoArtifacts.Artifacts | Where-Object { !$_.expired }
             $page++
           }
           while ($repoArtifacts.Artifacts.Count -gt 0)
@@ -175,6 +175,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           tag_name: ${{ github.event.inputs.tag }}
+          target_commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
 
       - name: Create release
         uses: actions/github-script@v6

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       templateUrl:
-        description: Template Repository URL (current is https://github.com/microsoft/AL-Go-AppSource@main)
+        description: Template Repository URL (current is {TEMPLATEURL})
         required: false
         default: ''
       directCommit:
