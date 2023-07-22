@@ -43,8 +43,7 @@ Write-Host -ForegroundColor Yellow @'
 #
 '@
   
-$ErrorActionPreference = "stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""
 

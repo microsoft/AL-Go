@@ -12,8 +12,7 @@ Param(
     [switch] $fromVSCode
 )
 
-$ErrorActionPreference = "stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 try {
 $webClient = New-Object System.Net.WebClient

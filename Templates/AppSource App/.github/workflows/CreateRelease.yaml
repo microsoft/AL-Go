@@ -95,8 +95,7 @@ jobs:
       - name: Analyze Artifacts
         id: analyzeartifacts
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $projects = '${{ steps.determineProjects.outputs.ProjectsJson }}' | ConvertFrom-Json
           Write-Host "projects:"
           $projects | ForEach-Object { Write-Host "- $_" }
@@ -231,8 +230,7 @@ jobs:
 
       - name: Download artifact
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           Write-Host "Downloading artifact ${{ matrix.name}}"
           $headers = @{ 
               "Authorization" = "token ${{ github.token }}"
@@ -263,8 +261,7 @@ jobs:
         id: nuGetContext
         if: ${{ env.nuGetContext }}
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $nuGetContext = ''
           if ('${{ matrix.atype }}' -eq 'Apps') {
             $nuGetContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('nuGetContext')))
@@ -288,8 +285,7 @@ jobs:
         id: storageContext
         if: ${{ env.storageContext }}
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $storageContext = ''
           if ('${{ matrix.atype }}' -eq 'Apps') {
             $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('storageContext')))
@@ -321,8 +317,7 @@ jobs:
 
       - name: Create Release Branch
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           git checkout -b ${{ needs.CreateRelease.outputs.releaseBranch }}
           git config user.name ${{ github.actor}}
           git config user.email ${{ github.actor}}@users.noreply.github.com
