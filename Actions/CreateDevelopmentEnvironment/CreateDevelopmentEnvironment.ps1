@@ -7,6 +7,8 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Name of the online environment", Mandatory = $true)]
     [string] $environmentName,
+    [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
+    [string] $project = '.',
     [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $false)]
     [string] $adminCenterApiCredentials,
     [Parameter(HelpMessage = "Reuse environment if it exists", Mandatory = $false)]
@@ -49,7 +51,7 @@ try {
         -environmentName $environmentName `
         -reUseExistingEnvironment:$reUseExistingEnvironment `
         -baseFolder $repoBaseFolder `
-        -project '.' `
+        -project $project `
         -bcContainerHelperPath $bcContainerHelperPath `
         -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
 
