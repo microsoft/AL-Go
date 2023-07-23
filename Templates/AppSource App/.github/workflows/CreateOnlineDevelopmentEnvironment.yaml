@@ -1,6 +1,6 @@
 name: ' Create Online Dev. Environment'
 
-run-name: "Create Online Dev. Environment for [${{ github.ref_name }}]"
+run-name: "Create Online Dev. Environment for [${{ github.ref_name }} / ${{ github.event.inputs.project }}]"
 
 on:
   workflow_dispatch:
