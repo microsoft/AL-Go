@@ -53,6 +53,7 @@ jobs:
           eventId: "DO0093"
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
