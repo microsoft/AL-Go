@@ -1,21 +1,174 @@
+$ErrorActionPreference = "stop"
 function ReadBcptFile {
     Param(
         [string] $path
     )
 
+    if (-not (Test-Path -Path $path -PathType Leaf)) {
+        return $null
+    }
 
+    # Read BCPT file
+    $bcptResult = Get-Content -Path $path -Encoding UTF8 | ConvertFrom-Json
+    $suites = @{}
+    # Sort by bcptCode, codeunitID, operation
+    $bcptResult | ForEach-Object {
+        $bcptCode = $_.bcptCode
+        $codeunitID = $_.codeunitID
+        $codeunitName = $_.codeunitName
+        $operation = $_.operation
+
+        # Create Suite if it doesn't exist
+        if(-not $suites.containsKey($bcptCode)) {
+            $suites."$bcptCode" = @{}
+        }
+        # Create Codeunit under Suite if it doesn't exist
+        if (-not $suites."$bcptCode".ContainsKey("$codeunitID")) {
+            $suites."$bcptCode"."$codeunitID" = @{
+                "codeunitName" = $codeunitName
+                "operations" = @{}
+            }
+        }
+        # Create Operation under Codeunit if it doesn't exist
+        if (-not $suites."$bcptCode"."$codeunitID"."operations".ContainsKey($operation)) {
+            $suites."$bcptCode"."$codeunitID"."operations"."$operation" = @{
+                "measurements" = @()
+            }
+        }
+        # Add measurement to measurements under operation
+        $suites."$bcptCode"."$codeunitID"."operations"."$operation".measurements += @(@{
+            "sessionId" = $_.sessionId
+            "durationMin" = $_.durationMin
+            "numberOfSQLStmts" = $_.numberOfSQLStmts
+            "status" = $_.status
+        })
+    }
+
+    # calculate statistics on measurements, skipping the $skipMeasurements longest measurements
+#    $suites.Keys | ForEach-Object {
+#        $suite = $suites."$_"
+#        $suite.Keys | ForEach-Object {
+#            $codeunit = $suite."$_"
+#            $codeunit."operations".Keys | ForEach-Object {
+#                $operation = $codeunit."operations"."$_"
+#                # Get measurements to use for statistics
+#                $measurements = @($operation."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
+#                # Calculate statistics and store them in the operation
+#                $operation."durationMin" = $measurements | Measure-Object -property 'durationMin' -AllStats
+#                $operation."numberOfSQLStmts" = $measurements | Measure-Object -property 'numberOfSQLStmts' -AllStats
+#            }
+#        }
+#    }
+
+    $suites
 }
-
 
 function GetBcptSummaryMD {
     Param(
         [string] $path,
-        [string] $baseLinePath
+        [string] $baseLinePath,
+        [int] $skipMeasurements = 1,
+        [int] $warningThreasHold = 5,
+        [int] $errorThreasHold = 10
     )
 
+    $bcpt = ReadBcptFile -path $path
+    $baseLine = ReadBcptFile -path $baseLinePath
+
     $summarySb = [System.Text.StringBuilder]::new()
+    $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|$(if ($baseLine){'Status|'})Duration|$(if ($baseLine){'Duration (BaseLine)|'})SQL Stmts|$(if ($baseLine){'SQL Stmts (BaseLine)|'})\n|:---|:---|:---|:---|$(if ($baseLine){'---:|'}):--:|$(if ($baseLine){'---:|'})---:|$(if ($baseLine){'---:|'})\n") | Out-Null
 
+    $lastSuiteName = ''
+    $lastCodeunitID = ''
+    $lastCodeunitName = ''
+    $lastOperationName = ''
 
+    # calculate statistics on measurements, skipping the $skipMeasurements longest measurements
+    $bcpt.Keys | ForEach-Object {
+        $suiteName = $_
+        Write-Host $suiteName
+        $suite = $bcpt."$suiteName"
+        $suite.Keys | ForEach-Object {
+            $codeUnitID = $_
+            $codeunit = $suite."$codeunitID"
+            $codeUnitName = $codeunit.codeunitName
+            $codeunit."operations".Keys | ForEach-Object {
+                $operationName = $_
+                Write-Host $operationName
+                $operation = $codeunit."operations"."$operationName"
+                # Get measurements to use for statistics
+                $measurements = @($operation."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
+                # Calculate statistics and store them in the operation
+                $durationMin = ($measurements | Measure-Object -property 'durationMin' -AllStats).Average
+                $numberOfSQLStmts = ($measurements | Measure-Object -property 'numberOfSQLStmts' -AllStats).Average
+
+                try {
+                    $baseLineMeasurements = @($baseLine."$suiteName"."$codeUnitID"."operations"."$operationName"."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
+                    if ($baseLineMeasurements.Count -eq 0) {
+                        throw "No base line measurements"
+                    }
+                    $baseLineDurationMin = ($baseLineMeasurements | Measure-Object -property 'durationMin' -AllStats).Average
+                    $baseLineNumberOfSQLStmts = ($baseLineMeasurements | Measure-Object -property 'numberOfSQLStmts' -AllStats).Average
+                }
+                catch {
+                    $baseLineDurationMin = $durationMin
+                    $baseLineNumberOfSQLStmts = $numberOfSQLStmts
+                }
+
+                $pctDurationMin = ($durationMin-$baseLineDurationMin)*100/$baseLineDurationMin
+                if ($pctDurationMin -le 0) {
+                    $durationMinStr = "**$($durationMin.ToString("N2"))**|"
+                    $baseLineDurationMinStr = "$($baseLineDurationMin.ToString("N2"))|"
+                }
+                else {
+                    $durationMinStr = "$($durationMin.ToString("N2"))|"
+                    $baseLineDurationMinStr = "**$($baseLineDurationMin.ToString("N2"))**|"
+                }
+
+                $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseLineNumberOfSQLStmts)*100/$baseLineNumberOfSQLStmts
+                if ($pctNumberOfSQLStmts -le 0) {
+                    $numberOfSQLStmtsStr = "**$($numberOfSQLStmts.ToString("N0"))**|"
+                    $baseLineNumberOfSQLStmtsStr = "$($baseLineNumberOfSQLStmts.ToString("N0"))|"
+                }
+                else {
+                    $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("N0"))|"
+                    $baseLineNumberOfSQLStmtsStr = "**$($baseLineNumberOfSQLStmts.ToString("N0"))**|"
+                }
+
+                if (-not $baseLine) {
+                    $statusStr = ''
+                    $baselinedurationMinStr = ''
+                    $baseLineNumberOfSQLStmtsStr = ''
+                }
+                elseif ($pctDurationMin -gt $errorThreasHold -or $pctNumberOfSQLStmts -gt $errorThreasHold) {
+                    $statusStr = ":x:|"
+                }
+                elseif ($pctDurationMin -gt $warningThreasHold -or $pctNumberOfSQLStmts -gt $warningThreasHold) {
+                    $statusStr = ":warning:|"
+                }
+                else {
+                    $statusStr = ":heavy_check_mark:|"
+                }
+
+                $thisSuiteName = ''; if ($suiteName -ne $lastSuiteName) { $thisSuiteName = $suiteName }
+                $thisCodeunitID = ''; if ($codeunitID -ne $lastCodeunitID) { $thisCodeunitID = $codeunitID }
+                $thisCodeunitName = ''; if ($codeunitName -ne $lastCodeunitName) { $thisCodeunitName = $codeunitName }
+                $thisOperationName = ''; if ($operationName -ne $lastOperationName) { $thisOperationName = $operationName }
+
+                $summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseLineDurationMinStr$numberOfSQLStmtsStr$baseLineNumberOfSQLStmtsStr\n") | Out-Null
+
+                $lastSuiteName = $suiteName
+                $lastCodeunitID = $codeUnitID
+                $lastCodeunitName = $codeUnitName
+                $lastOperationName = $operationName
+            }
+        }
+    }
+
+    if (-not $baseLine) {
+        $summarySb.Append('\n> No baseline provided. Copy a set of BCPT results to $baseLinePath in order to establish a baseline.') | Out-Null
+    }
+    
     $summarySb.ToString()
 }
 
