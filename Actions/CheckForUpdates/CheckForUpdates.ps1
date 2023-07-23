@@ -325,10 +325,6 @@ try {
 
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', "$($templateUrl)@$($templateBranch)")
                 if ($directALGo) {
-                    if ($fileName -eq 'CreateOnlineDevelopmentEnvironment.yaml') {
-                        Write-Host $srcContent
-                    }
-
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
                     $lines = $srcContent.Split("`n")
                     
@@ -348,7 +344,6 @@ try {
                         "appSourceAppRepo" = "AL-Go"
                     }
 
-                    Write-Host "Replace URLs to actions repos first"
                     # Replace URL's to actions repository first
                     $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
                     $replace = "`$1https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`$2"
@@ -356,15 +351,11 @@ try {
 
                     # Replace the owner and repo names in the workflow
                     "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
-                        Write-Host "Replace $($_)"
                         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
                         $replace = "`$1$($templateOwner)/$($templateRepos."$_")`$2$($templateBranch)`$3"
                         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                     }
                     $srcContent = $lines -join "`n"
-                    if ($fileName -eq 'CreateOnlineDevelopmentEnvironment.yaml') {
-                        Write-Host $srcContent
-                    }
                 }
 
                 $dstFile = Join-Path $dstFolder $fileName
