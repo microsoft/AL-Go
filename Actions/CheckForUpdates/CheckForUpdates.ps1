@@ -330,9 +330,9 @@ try {
                     
                     # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
                     $originalOwnerAndRepo = @{
-                        "actionsRepo" = "microsoft\/AL-Go-Actions"
-                        "perTenantExtensionRepo" = "microsoft\/AL-Go-PTE"
-                        "appSourceAppRepo" = "microsoft\/AL-Go-AppSource"
+                        "actionsRepo" = "microsoft/AL-Go-Actions"
+                        "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
+                        "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
                     }
                     # Original branch is always main
                     $originalBranch = "main"
