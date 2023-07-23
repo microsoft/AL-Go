@@ -325,6 +325,10 @@ try {
 
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', "$($templateUrl)@$($templateBranch)")
                 if ($directALGo) {
+                    if ($fileName -eq 'CreateOnlineDevelopmentEnvironment.yaml') {
+                        Write-Host $srcContent
+                    }
+
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
                     $lines = $srcContent.Split("`n")
                     
@@ -358,6 +362,9 @@ try {
                         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                     }
                     $srcContent = $lines -join "`n"
+                    if ($fileName -eq 'CreateOnlineDevelopmentEnvironment.yaml') {
+                        Write-Host $srcContent
+                    }
                 }
 
                 $dstFile = Join-Path $dstFolder $fileName
