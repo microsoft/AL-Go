@@ -344,6 +344,11 @@ try {
                         "appSourceAppRepo" = "AL-Go"
                     }
 
+                    # Replace URL's to actions repository first
+                    $regex = "^https://raw.githubusercontent.com/microsoft/AL-Go-Actions/$originalBranch(.*)$"
+                    $replace = "https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`$1"
+                    $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+
                     # Replace the owner and repo names in the workflow
                     "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
                         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
