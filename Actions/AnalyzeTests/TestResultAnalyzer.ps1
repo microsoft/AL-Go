@@ -266,7 +266,7 @@ function GetTestResultSummaryMD {
         }
         else {
             $failuresSummaryMD = "<i>No test failures</i>"
-            $failuresDb.Append($failuresSummaryMD) | Out-Null
+            $failuresSb.Append($failuresSummaryMD) | Out-Null
         }
     }
     else {
