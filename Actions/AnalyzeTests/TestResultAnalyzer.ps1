@@ -4,6 +4,10 @@ function ReadBcptFile {
         [string] $path
     )
 
+    if (-not $path) {
+        return $null
+    }
+
     if (-not (Test-Path -Path $path -PathType Leaf)) {
         return $null
     }
@@ -50,7 +54,7 @@ function ReadBcptFile {
 function GetBcptSummaryMD {
     Param(
         [string] $path,
-        [string] $baseLinePath,
+        [string] $baseLinePath = '',
         [int] $skipMeasurements = 1,
         [int] $warningThreasHold = 5,
         [int] $errorThreasHold = 10
@@ -70,7 +74,6 @@ function GetBcptSummaryMD {
     # calculate statistics on measurements, skipping the $skipMeasurements longest measurements
     $bcpt.Keys | ForEach-Object {
         $suiteName = $_
-        Write-Host $suiteName
         $suite = $bcpt."$suiteName"
         $suite.Keys | ForEach-Object {
             $codeUnitID = $_
@@ -78,21 +81,20 @@ function GetBcptSummaryMD {
             $codeUnitName = $codeunit.codeunitName
             $codeunit."operations".Keys | ForEach-Object {
                 $operationName = $_
-                Write-Host $operationName
                 $operation = $codeunit."operations"."$operationName"
                 # Get measurements to use for statistics
-                $measurements = @($operation."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
+                $measurements = @($operation."measurements" | Sort-Object -Descending { $_.durationMin } | Select-Object -Skip $skipMeasurements)
                 # Calculate statistics and store them in the operation
-                $durationMin = ($measurements | Measure-Object -property 'durationMin' -Average).Average
-                $numberOfSQLStmts = ($measurements | Measure-Object -property 'numberOfSQLStmts' -Average).Average
+                $durationMin = ($measurements | ForEach-Object { $_.durationMin } | Measure-Object -Average).Average
+                $numberOfSQLStmts = ($measurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Average).Average
 
                 try {
-                    $baseLineMeasurements = @($baseLine."$suiteName"."$codeUnitID"."operations"."$operationName"."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
+                    $baseLineMeasurements = @($baseLine."$suiteName"."$codeUnitID"."operations"."$operationName"."measurements" | Sort-Object -Descending { $_.durationMin } | Select-Object -Skip $skipMeasurements)
                     if ($baseLineMeasurements.Count -eq 0) {
                         throw "No base line measurements"
                     }
-                    $baseLineDurationMin = ($baseLineMeasurements | Measure-Object -property 'durationMin' -Average).Average
-                    $baseLineNumberOfSQLStmts = ($baseLineMeasurements | Measure-Object -property 'numberOfSQLStmts' -Average).Average
+                    $baseLineDurationMin = ($baseLineMeasurements | ForEach-Object { $_.durationMin } | Measure-Object -Average).Average
+                    $baseLineNumberOfSQLStmts = ($baseLineMeasurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Average).Average
                 }
                 catch {
                     $baseLineDurationMin = $durationMin
