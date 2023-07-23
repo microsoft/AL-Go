@@ -44,22 +44,6 @@ function ReadBcptFile {
         })
     }
 
-    # calculate statistics on measurements, skipping the $skipMeasurements longest measurements
-#    $suites.Keys | ForEach-Object {
-#        $suite = $suites."$_"
-#        $suite.Keys | ForEach-Object {
-#            $codeunit = $suite."$_"
-#            $codeunit."operations".Keys | ForEach-Object {
-#                $operation = $codeunit."operations"."$_"
-#                # Get measurements to use for statistics
-#                $measurements = @($operation."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
-#                # Calculate statistics and store them in the operation
-#                $operation."durationMin" = $measurements | Measure-Object -property 'durationMin' -AllStats
-#                $operation."numberOfSQLStmts" = $measurements | Measure-Object -property 'numberOfSQLStmts' -AllStats
-#            }
-#        }
-#    }
-
     $suites
 }
 
@@ -99,16 +83,16 @@ function GetBcptSummaryMD {
                 # Get measurements to use for statistics
                 $measurements = @($operation."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
                 # Calculate statistics and store them in the operation
-                $durationMin = ($measurements | Measure-Object -property 'durationMin' -AllStats).Average
-                $numberOfSQLStmts = ($measurements | Measure-Object -property 'numberOfSQLStmts' -AllStats).Average
+                $durationMin = ($measurements | Measure-Object -property 'durationMin' -Average).Average
+                $numberOfSQLStmts = ($measurements | Measure-Object -property 'numberOfSQLStmts' -Average).Average
 
                 try {
                     $baseLineMeasurements = @($baseLine."$suiteName"."$codeUnitID"."operations"."$operationName"."measurements" | Sort-Object -Descending -Property 'durationMin' | Select-Object -Skip $skipMeasurements)
                     if ($baseLineMeasurements.Count -eq 0) {
                         throw "No base line measurements"
                     }
-                    $baseLineDurationMin = ($baseLineMeasurements | Measure-Object -property 'durationMin' -AllStats).Average
-                    $baseLineNumberOfSQLStmts = ($baseLineMeasurements | Measure-Object -property 'numberOfSQLStmts' -AllStats).Average
+                    $baseLineDurationMin = ($baseLineMeasurements | Measure-Object -property 'durationMin' -Average).Average
+                    $baseLineNumberOfSQLStmts = ($baseLineMeasurements | Measure-Object -property 'numberOfSQLStmts' -Average).Average
                 }
                 catch {
                     $baseLineDurationMin = $durationMin
