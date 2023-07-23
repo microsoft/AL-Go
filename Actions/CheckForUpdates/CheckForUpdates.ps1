@@ -330,9 +330,9 @@ try {
                     
                     # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
                     $originalOwnerAndRepo = @{
-                        "actionsRepo" = "microsoft/AL-Go-Actions"
-                        "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
-                        "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
+                        "actionsRepo" = "microsoft\/AL-Go-Actions"
+                        "perTenantExtensionRepo" = "microsoft\/AL-Go-PTE"
+                        "appSourceAppRepo" = "microsoft\/AL-Go-AppSource"
                     }
                     # Original branch is always main
                     $originalBranch = "main"
@@ -344,13 +344,15 @@ try {
                         "appSourceAppRepo" = "AL-Go"
                     }
 
+                    Write-Host "Replace URLs to actions repos first"
                     # Replace URL's to actions repository first
-                    $regex = "^https://raw.githubusercontent.com/microsoft/AL-Go-Actions/$originalBranch(.*)$"
+                    $regex = "^https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
                     $replace = "https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`$1"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
 
                     # Replace the owner and repo names in the workflow
                     "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+                        Write-Host "Replace $($_)"
                         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
                         $replace = "`$1$($templateOwner)/$($templateRepos."$_")`$2$($templateBranch)`$3"
                         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
