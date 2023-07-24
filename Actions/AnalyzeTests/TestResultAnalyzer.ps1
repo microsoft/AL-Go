@@ -1,14 +1,9 @@
-$ErrorActionPreference = "stop"
 function ReadBcptFile {
     Param(
         [string] $path
     )
 
-    if (-not $path) {
-        return $null
-    }
-
-    if (-not (Test-Path -Path $path -PathType Leaf)) {
+    if ((-not $path) -or (-not (Test-Path -Path $path -PathType Leaf))) {
         return $null
     }
 
@@ -47,7 +42,6 @@ function ReadBcptFile {
             "status" = $_.status
         })
     }
-
     $suites
 }
 
