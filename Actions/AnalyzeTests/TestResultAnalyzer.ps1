@@ -152,7 +152,7 @@ function GetBcptSummaryMD {
     }
 
     if (-not $baseLine) {
-        $summarySb.Append('\n> No baseline provided. Copy a set of BCPT results to $baseLinePath in order to establish a baseline.') | Out-Null
+        $summarySb.Append("\n<i>No baseline provided. Copy a set of BCPT results to $([System.IO.Path]::GetFileName($baseLinePath)) in the project folder in order to establish a baseline.</i>") | Out-Null
     }
     
     $summarySb.ToString()
