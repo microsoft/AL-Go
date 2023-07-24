@@ -36,10 +36,8 @@ function ReadBcptFile {
         }
         # Add measurement to measurements under operation
         $suites."$bcptCode"."$codeunitID"."operations"."$operation".measurements += @(@{
-            "sessionId" = $_.sessionId
             "durationMin" = $_.durationMin
             "numberOfSQLStmts" = $_.numberOfSQLStmts
-            "status" = $_.status
         })
     }
     $suites
@@ -168,7 +166,7 @@ function GetTestResultSummaryMD {
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()
     if (Test-Path -Path $path -PathType Leaf) {
-        $testResults = [xml](Get-Content "$project\TestResults.xml" -Encoding UTF8)
+        $testResults = [xml](Get-Content -path "$project\TestResults.xml" -Encoding UTF8)
         $totalTests = 0
         $totalTime = 0.0
         $totalFailed = 0

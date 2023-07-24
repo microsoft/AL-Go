@@ -6,7 +6,7 @@ Param(
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project to analyze", Mandatory = $false)]
-    [string] $project
+    [string] $project = '.'
 )
 
 $ErrorActionPreference = "Stop"
