@@ -60,6 +60,8 @@ function GetBcptSummaryMD {
         [int] $errorThreasHold = 10
     )
 
+    # TODO: grab skipMeasurements and thresholds from settings
+
     $bcpt = ReadBcptFile -path $path
     $baseLine = ReadBcptFile -path $baseLinePath
 
@@ -128,9 +130,11 @@ function GetBcptSummaryMD {
                 }
                 elseif ($pctDurationMin -gt $errorThreasHold -or $pctNumberOfSQLStmts -gt $errorThreasHold) {
                     $statusStr = ":x:|"
+                    # TODO: issue error
                 }
                 elseif ($pctDurationMin -gt $warningThreasHold -or $pctNumberOfSQLStmts -gt $warningThreasHold) {
                     $statusStr = ":warning:|"
+                    # TODO: issue warning
                 }
                 else {
                     $statusStr = ":heavy_check_mark:|"

@@ -28,8 +28,8 @@ try {
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -path $testResultsFile
 
-    $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\BCPTTestResults.json"
-    $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\BCPTBaseLine.json"
+    $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
+    $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
     $bcptSummaryMD = GetBcptSummaryMD -path $bcptTestResultsFile -baseLinePath $bcptBaseLineFile
 
     # If summary fits, we will display it in the GitHub summary
