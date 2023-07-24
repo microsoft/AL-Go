@@ -139,7 +139,7 @@ jobs:
             shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
             azureCredentialsJson: ${{ secrets.AZURE_CREDENTIALS }}
             settingsJson: ${{ env.Settings }}
-            pathToFiles: '${{ matrix.project }}/.buildartifacts/Apps/*.app'
+            pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
             parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
         - name: Calculate Artifact names
