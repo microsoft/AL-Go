@@ -134,10 +134,10 @@ function GetBcptSummaryMD {
                     $statusStr = ":heavy_check_mark:|"
                 }
 
-                $thisSuiteName = ''; if ($suiteName -ne $lastSuiteName) { $thisSuiteName = $suiteName }
-                $thisCodeunitID = ''; if ($codeunitID -ne $lastCodeunitID) { $thisCodeunitID = $codeunitID }
-                $thisCodeunitName = ''; if ($codeunitName -ne $lastCodeunitName) { $thisCodeunitName = $codeunitName }
                 $thisOperationName = ''; if ($operationName -ne $lastOperationName) { $thisOperationName = $operationName }
+                $thisCodeunitName = ''; if ($codeunitName -ne $lastCodeunitName) { $thisCodeunitName = $codeunitName; $thisOperationName = $operationName }
+                $thisCodeunitID = ''; if ($codeunitID -ne $lastCodeunitID) { $thisCodeunitID = $codeunitID; $thisOperationName = $operationName }
+                $thisSuiteName = ''; if ($suiteName -ne $lastSuiteName) { $thisSuiteName = $suiteName; $thisOperationName = $operationName }
 
                 $summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseLineDurationMinStr$numberOfSQLStmtsStr$baseLineNumberOfSQLStmtsStr\n") | Out-Null
 
