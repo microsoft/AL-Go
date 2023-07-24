@@ -670,7 +670,14 @@ function ResolveProjectFolders {
             $resolvedPaths = @()
             foreach($folder in $folders) {
                 $aLProjectFolder = Join-Path $projectPath $folder
-                $resolvedPaths += Resolve-Path $aLProjectFolder -ErrorAction Ignore | Where-Object { Test-Path (Join-Path $_ 'app.json') }
+                $resolvedALProjectsPaths = Resolve-Path $aLProjectFolder -ErrorAction Ignore | Where-Object { Test-Path (Join-Path $_ 'app.json') }
+
+                if($resolvedALProjectsPaths) {
+                    $resolvedPaths += @($resolvedALProjectsPaths)
+                }
+                else {
+                    OutputWarning "The folder '$aLProjectFolder' cannot be resolved or does not contain an app.json file. Skipping."
+                }
             }
 
             # Get the name of the folder for each resolved path
