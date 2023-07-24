@@ -110,11 +110,11 @@ Describe "ResolveProjectFolders" {
         AddDependency -app 'testApp2' -dependencyAppId $anyAppId -dependencyAppName 'Any'
 
         AddDependency -app 'bcptApp1' -dependencyAppId $apps['app1'].id -dependencyAppName $apps['app1'].name
-        AddDependency -app 'bcptApp1' -dependencyAppId '75f1590f-55c5-4501-ae63-bada5534e852' -dependencyAppName 'Performance ToolKit'
+        AddDependency -app 'bcptApp1' -dependencyAppId $performanceToolkitAppId -dependencyAppName 'Performance ToolKit'
 
         AddDependency -app 'bcptApp2' -dependencyAppId $apps['app1'].id -dependencyAppName $apps['app1'].name
         AddDependency -app 'bcptApp2' -dependencyAppId $apps['app2'].id -dependencyAppName $apps['app2'].name
-        AddDependency -app 'bcptApp2' -dependencyAppId '75f1590f-55c5-4501-ae63-bada5534e852' -dependencyAppName 'Performance ToolKit'
+        AddDependency -app 'bcptApp2' -dependencyAppId $performanceToolkitAppId -dependencyAppName 'Performance ToolKit'
     }
 
     It 'When no app folders specified, scans all folders and finds all apps' {
