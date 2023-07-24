@@ -113,7 +113,7 @@ jobs:
 
         - name: Download Project Dependencies
           id: DownloadProjectDependencies
-          uses: mazhelez/AL-Go-Actions/DownloadProjectDependencies@fetch-artifacts-per-build-mode
+          uses: microsoft/AL-Go-Actions/DownloadProjectDependencies@fetch-artifacts-per-build-mode
           with:
             shell: ${{ inputs.shell }}
             project: ${{ inputs.project }}
