@@ -676,7 +676,7 @@ function ResolveProjectFolders {
                     $resolvedPaths += @($resolvedALProjectsPaths)
                 }
                 else {
-                    OutputWarning "The folder '$aLProjectFolder' cannot be resolved or does not contain an app.json file. Skipping."
+                    OutputWarning "The folder '$folder' for project '$project' cannot be resolved or does not contain an app.json file. Skipping."
                 }
             }
 
