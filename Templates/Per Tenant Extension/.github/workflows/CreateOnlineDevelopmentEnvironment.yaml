@@ -20,6 +20,9 @@ on:
         description: Direct COMMIT (Y/N)
         required: false
         default: 'N'
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for Pull Request/COMMIT
+        type: boolean
 
 permissions:
   contents: write
@@ -119,7 +122,19 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
-          secrets: 'adminCenterApiCredentials'
+          secrets: 'adminCenterApiCredentials,ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+
+      - name: CalculateToken
+        id: CalculateToken
+        env:
+          useGhTokenWorkflow: ${{ github.event.inputs.useGhTokenWorkflow }}
+        run: |
+          if ($env:useGhTokenWorkflow -eq 'true') {
+            $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GHTOKENWORKFLOW))
+          } else {
+            $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 
       - name: Set AdminCenterApiCredentials
         run: |
@@ -132,6 +147,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/CreateDevelopmentEnvironment@main
         with:
           shell: powershell
+          token: ${{ steps.CalculateToken.outputs.ghToken }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           environmentName: ${{ github.event.inputs.environmentName }}
           project: ${{ github.event.inputs.project }}
