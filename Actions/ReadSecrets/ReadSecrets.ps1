@@ -47,9 +47,11 @@ try {
         $useBase64 = $false
     }
     
-    Write-Host "-------------"
-    Write-Host $settings.repoName
-    Write-Host "-------------"
+    if ($settings.ContainsKey('repoName')) {
+        Write-Host "-------------"
+        Write-Host $settings.repoName
+        Write-Host "-------------"
+    }
 
     $outSettings = $settings
     $keyVaultName = $settings.keyVaultName
