@@ -25,6 +25,10 @@ The problem using GITHUB_TOKEN is that is doesn't trigger a pull request build o
 This is by design: https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
 Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use the GhTokenWorkflow instead of the GITHUB_TOKEN - making sure that workflows are triggered
 
+### Settings environment variable
+Up until v3.1 the settings were transferred around as environment variables.
+Due to size constraints in environment variables, we have removed the settings environment variable and are using the GITHUB_OUTPUT construct instead.
+
 ## v3.1
 
 ### Issues
