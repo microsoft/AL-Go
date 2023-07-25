@@ -83,21 +83,26 @@ function YamlTest {
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
-                $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
-                if ($type -eq "System.String" -or $type -eq "System.Int32") {
-                    $parameterString += " -$($name) `$ENV:_$($name)"
-                    if (!$required) {
-                        $yaml.AppendLine("    default: *") | Out-Null
-                    }
-                }
-                elseif ($type -eq "System.Boolean") {
-                    $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
-                    if (!$required) {
-                        $yaml.AppendLine("    default: 'N'") | Out-Null
-                    }
+                if ($name -eq 'settingsJson') {
+                    $parameterString += " -$($name) '`${{ inputs.$($name) }}'"
                 }
                 else {
-                    throw "Unknown parameter type: $type. Only String, Int and Bool allowed"
+                    $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
+                    if ($type -eq "System.String" -or $type -eq "System.Int32") {
+                        $parameterString += " -$($name) `$ENV:_$($name)"
+                        if (!$required) {
+                            $yaml.AppendLine("    default: *") | Out-Null
+                        }
+                    }
+                    elseif ($type -eq "System.Boolean") {
+                        $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
+                        if (!$required) {
+                            $yaml.AppendLine("    default: 'N'") | Out-Null
+                        }
+                    }
+                    else {
+                        throw "Unknown parameter type: $type. Only String, Int and Bool allowed"
+                    }
                 }
             }
         }
