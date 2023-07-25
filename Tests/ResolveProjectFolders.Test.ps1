@@ -123,16 +123,16 @@ Describe "ResolveProjectFolders" {
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
 
         $projectSettings.appFolders | Should -HaveCount 2
-        $projectSettings.appFolders | Should -Contain '.\app1'
-        $projectSettings.appFolders | Should -Contain '.\nestedApp\app2'
+        $projectSettings.appFolders | Should -Contain $(Join-Path '.' 'app1')
+        $projectSettings.appFolders | Should -Contain $(Join-Path '.' 'nestedApp\app2')
 
         $projectSettings.testFolders | Should -HaveCount 2
-        $projectSettings.testFolders | Should -Contain '.\testApp1'
-        $projectSettings.testFolders | Should -Contain '.\testApp2'
+        $projectSettings.testFolders | Should -Contain $(Join-Path '.' 'testApp1')
+        $projectSettings.testFolders | Should -Contain $(Join-Path '.' 'testApp2')
 
         $projectSettings.bcptTestFolders | Should -HaveCount 2
-        $projectSettings.bcptTestFolders | Should -Contain '.\bcptApp1'
-        $projectSettings.bcptTestFolders | Should -Contain '.\bcptApp2'
+        $projectSettings.bcptTestFolders | Should -Contain $(Join-Path '.' 'bcptApp1')
+        $projectSettings.bcptTestFolders | Should -Contain $(Join-Path '.' 'bcptApp2')
     }
 
     It 'When only appFolders specified, scan only app folders and resolves them' {
@@ -141,7 +141,7 @@ Describe "ResolveProjectFolders" {
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
         
         $projectSettings.appFolders | Should -HaveCount 1
-        $projectSettings.appFolders | Should -Contain '.\app1'
+        $projectSettings.appFolders | Should -Contain $(Join-Path '.' 'app1')
 
         $projectSettings.testFolders | Should -HaveCount 0
 
@@ -154,14 +154,14 @@ Describe "ResolveProjectFolders" {
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
         
         $projectSettings.appFolders | Should -HaveCount 1
-        $projectSettings.appFolders | Should -Contain '.\app1'
+        $projectSettings.appFolders | Should -Contain $(Join-Path '.' 'app1')
 
         $projectSettings.testFolders | Should -HaveCount 0
 
         $projectSettings.bcptTestFolders | Should -HaveCount 0
     }
 
-    It 'When only non-existing apps are specified, scans all folders and finds all apps' {
+    It 'When only non-existing apps are specified, no app folders are resolved' {
         $projectSettings = @{ 'appFolders' = @('nonExistingApp'); 'testFolders' = @('nonExistingTestApp'); 'bcptTestFolders' = @()}
 
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
@@ -173,18 +173,18 @@ Describe "ResolveProjectFolders" {
         $projectSettings.bcptTestFolders | Should -HaveCount 0
     }
 
-    It 'When only appFolders specified, scan only app folders and resolves them' {
+    It 'When app folders are specified, only the specified app folders are resolved' {
         $projectSettings = @{ 'appFolders' = @('nestedApp\app2'); 'testFolders' = @('testApp1'); 'bcptTestFolders' = @('bcptApp2')}
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
 
         $projectSettings.appFolders | Should -HaveCount 1
-        $projectSettings.appFolders | Should -Contain '.\nestedApp\app2'
+        $projectSettings.appFolders | Should -Contain $(Join-Path '.' 'nestedApp\app2')
 
         $projectSettings.testFolders | Should -HaveCount 1
-        $projectSettings.testFolders | Should -Contain '.\testApp1'
+        $projectSettings.testFolders | Should -Contain $(Join-Path '.' 'testApp1')
 
         $projectSettings.bcptTestFolders | Should -HaveCount 1
-        $projectSettings.bcptTestFolders | Should -Contain '.\bcptApp2'
+        $projectSettings.bcptTestFolders | Should -Contain $(Join-Path '.' 'bcptApp2')
     }
     
     AfterAll {
