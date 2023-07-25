@@ -11,8 +11,7 @@ Param(
     [string] $target_commitish
 )
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 

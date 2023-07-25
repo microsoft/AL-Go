@@ -8,8 +8,7 @@ if (Test-Path $gitHubHelperPath) {
     # If we are adding more dependencies here, then localDevEnv and cloudDevEnv needs to be updated
 }
 
-$ErrorActionPreference = "stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
@@ -17,7 +16,7 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
-$defaultBcContainerHelperVersion = "" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
+$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 
 $runAlPipelineOverrides = @(
