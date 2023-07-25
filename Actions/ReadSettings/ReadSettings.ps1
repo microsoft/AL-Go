@@ -89,7 +89,6 @@ try {
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
     Write-Host "SettingsJson=$outSettingsJson"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress

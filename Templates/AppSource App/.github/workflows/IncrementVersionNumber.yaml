@@ -48,6 +48,7 @@ jobs:
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
+        id: ReadSettings
         if: github.event.inputs.useGhTokenWorkflow == 'true'
         with:
           shell: powershell
@@ -62,7 +63,7 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
       - name: CalculateToken

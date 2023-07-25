@@ -85,6 +85,7 @@ jobs:
 
         - name: Read settings
           uses: microsoft/AL-Go-Actions/ReadSettings@main
+          id: ReadSettings
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
@@ -97,7 +98,7 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            settingsJson: ${{ env.Settings }}
+            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
             secrets: ${{ inputs.secrets }}
 
         - name: Determine ArtifactUrl
@@ -107,7 +108,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            settingsJson: ${{ env.Settings }}
+            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
             secretsJson: ${{ env.RepoSecrets }}
 
         - name: Cache Business Central Artifacts
@@ -127,7 +128,7 @@ jobs:
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
             projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
-            settingsJson: ${{ env.Settings }}
+            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
 
@@ -138,7 +139,7 @@ jobs:
           with:
             shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
             azureCredentialsJson: ${{ secrets.AZURE_CREDENTIALS }}
-            settingsJson: ${{ env.Settings }}
+            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
             pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
             parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
@@ -148,7 +149,7 @@ jobs:
           if: success() || failure()
           with:
             shell: ${{ inputs.shell }}
-            settingsJson: ${{ env.Settings }}
+            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
             project: ${{ inputs.project }}
             buildMode: ${{ inputs.buildMode }}
             branchName: ${{ github.ref_name }}

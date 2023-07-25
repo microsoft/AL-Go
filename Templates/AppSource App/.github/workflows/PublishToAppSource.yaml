@@ -54,6 +54,7 @@ jobs:
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
+        id: ReadSettings
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
@@ -64,7 +65,7 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           shell: powershell
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
           secrets: 'appSourceContext'
 
       - name: DeliveryContext
