@@ -353,6 +353,11 @@ function CreateAlGoRepository {
     $path = Join-Path $tempPath ([GUID]::NewGuid().ToString())
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
+    $waitMinutes = Get-Random -Minimum 0 -Maximum 4
+    if ($waitMinutes) {
+        Write-Host "Waiting $waitMinutes minutes"
+        Start-Sleep -seconds ($waitMinutes*60)
+    }
     if ($private) {
         Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
         invoke-gh repo create $repository --private --clone
