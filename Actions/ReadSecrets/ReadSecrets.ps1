@@ -128,6 +128,7 @@ try {
     Write-Host "- SettingsJson=$outSettingsJson"
     if ($useBase64) {
         $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
+        Write-Host "::add-mask::$outSettingsJson"
     }
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
 
