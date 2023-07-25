@@ -125,13 +125,11 @@ try {
 
     Write-Host "OUTPUTS:"
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    if ($useBase64) {
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson)))"
-    }
-    else {
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-    }
     Write-Host "- SettingsJson=$outSettingsJson"
+    if ($useBase64) {
+        $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
+    }
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"

@@ -53,13 +53,11 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "- ArtifactCacheKey=$artifactCacheKey"
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    if ($useBase64) {
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson)))"
-    }
-    else {
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-    }
     Write-Host "- SettingsJson=$outSettingsJson"
+    if ($useBase64) {
+        $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
+    }
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
 
 #    Write-Host "ENV:"
 #    Add-Content -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
