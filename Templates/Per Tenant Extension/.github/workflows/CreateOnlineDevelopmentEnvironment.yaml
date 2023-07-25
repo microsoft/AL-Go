@@ -1,10 +1,14 @@
 name: ' Create Online Dev. Environment'
 
-run-name: "Create Online Dev. Environment for [${{ github.ref_name }}]"
+run-name: "Create Online Dev. Environment for [${{ github.ref_name }} / ${{ github.event.inputs.project }}]"
 
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects
+        required: false
+        default: '.'
       environmentName:
         description: Name of the online environment
         required: true
@@ -33,11 +37,13 @@ env:
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
 jobs:
-  Initialize:
+  Initialization:
     runs-on: [ windows-latest ]
     outputs:
       deviceCode: ${{ steps.authenticate.outputs.deviceCode }}
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
+      githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -50,6 +56,7 @@ jobs:
           eventId: "DO0093"
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
@@ -89,11 +96,14 @@ jobs:
           }
 
   CreateDevelopmentEnvironment:
-    runs-on: [ windows-latest ]
+    runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
+    defaults:
+      run:
+        shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
     name: Create Development Environment
-    needs: [ Initialize ]
+    needs: [ Initialization ]
     env:
-      deviceCode: ${{ needs.Initialize.outputs.deviceCode }}
+      deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -102,7 +112,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -110,7 +120,7 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           settingsJson: ${{ env.Settings }}
           secrets: 'adminCenterApiCredentials,ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
@@ -138,8 +148,9 @@ jobs:
         with:
           shell: powershell
           token: ${{ steps.CalculateToken.outputs.ghToken }}
-          parentTelemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           environmentName: ${{ github.event.inputs.environmentName }}
+          project: ${{ github.event.inputs.project }}
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }}
           directCommit: ${{ github.event.inputs.directCommit }}
           adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }}
@@ -150,4 +161,4 @@ jobs:
         with:
           shell: powershell
           eventId: "DO0093"
-          telemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
