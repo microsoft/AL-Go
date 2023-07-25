@@ -42,6 +42,7 @@ try {
     Write-Host "ArtifactUrl=$artifactUrl"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "ArtifactCacheKey=$artifactCacheKey"
+
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
     Write-Host "SettingsJson=$outSettingsJson"

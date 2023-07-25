@@ -113,11 +113,12 @@ try {
         }) -join ', ')"
     }
 
-    $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
-
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$OutSettingsJson"
+    Write-Host "SettingsJson=$outSettingsJson"
+
+    $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
+    Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
     TrackTrace -telemetryScope $telemetryScope
 }

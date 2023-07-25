@@ -41,13 +41,13 @@ runs:
       id: Sign
       run: | 
         try { 
-          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson "$ENV:_azureCredentialsJson" `
-                                      -settingsJson "$ENV:_settingsJson" `
-                                      -TimestampService "$ENV:_timestampService" `
-                                      -TimestampDigest "$ENV:_digestAlgorithm" `
-                                      -FileDigest "$ENV:_digestAlgorithm" `
-                                      -PathToFiles "$ENV:_pathToFiles" `
-                                      -ParentTelemetryScopeJson "$ENV:_parentTelemetryScopeJson"
+          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson $ENV:_azureCredentialsJson `
+                                      -settingsJson $ENV:_settingsJson `
+                                      -TimestampService $ENV:_timestampService `
+                                      -TimestampDigest $ENV:_digestAlgorithm `
+                                      -FileDigest $ENV:_digestAlgorithm `
+                                      -PathToFiles $ENV:_pathToFiles `
+                                      -ParentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
         } catch { 
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
         }

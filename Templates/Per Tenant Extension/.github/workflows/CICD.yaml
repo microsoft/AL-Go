@@ -97,7 +97,7 @@ jobs:
       - name: Determine Delivery Targets
         id: DetermineDeliveryTargets
         env:
-          SettingsJson: ${{ steps.ReadSecrets.outputs.SettingsJson }}
+          _SettingsJson: ${{ steps.ReadSecrets.outputs.SettingsJson }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $deliveryTargets = @('GitHubPackages','NuGet','Storage')
@@ -127,7 +127,7 @@ jobs:
             $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($contextName)))
             if ($deliveryContext) {
               $settingName = "DeliverTo$_"
-              $settings = $ENV:SettingsJson | ConvertFrom-Json
+              $settings = $ENV:_SettingsJson | ConvertFrom-Json
               if (($settings.PSObject.Properties.Name -eq $settingName) -and ($settings."$settingName".PSObject.Properties.Name -eq "Branches")) {
                 Write-Host "Branches:"
                 $settings."$settingName".Branches | ForEach-Object {

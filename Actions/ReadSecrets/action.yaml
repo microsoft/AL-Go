@@ -19,12 +19,13 @@ inputs:
 outputs:
   SettingsJson:
     description: Settings in compressed Json format
-    value: ${{ steps.determineArtifactUrl.outputs.SettingsJson }}
+    value: ${{ steps.readSecrets.outputs.SettingsJson }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      id: readSecrets
       env:
         _settingsJson: ${{ inputs.settingsJson }}
         _secrets: ${{ inputs.secrets }}
