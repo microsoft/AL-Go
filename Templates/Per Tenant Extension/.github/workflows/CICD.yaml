@@ -144,13 +144,13 @@ jobs:
             }
             $include
           })
+          Write-Host "OUTPUTS:"
           $deliveryTargetsJson = $deliveryTargets | ConvertTo-Json -Depth 99 -compress
           if ($deliveryTargets.Count -lt 2) { $deliveryTargetsJson = "[$($deliveryTargetsJson)]" }
           Add-Content -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetsJson=$deliveryTargetsJson"
-          Write-Host "DeliveryTargetsJson=$deliveryTargetsJson"
+          Write-Host "- DeliveryTargetsJson=$deliveryTargetsJson"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetCount=$($deliveryTargets.Count)"
-          Write-Host "DeliveryTargetCount=$($deliveryTargets.Count)"
-          Add-Content -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
+          Write-Host "- DeliveryTargetCount=$($deliveryTargets.Count)"
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
