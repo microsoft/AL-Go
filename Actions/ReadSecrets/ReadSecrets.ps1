@@ -44,6 +44,10 @@ try {
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     }
     
+    Write-Host "-------------"
+    Write-Host $settings.repoName
+    Write-Host "-------------"
+
     $outSettings = $settings
     $keyVaultName = $settings.keyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
