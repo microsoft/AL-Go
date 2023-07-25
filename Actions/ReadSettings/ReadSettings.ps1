@@ -93,7 +93,6 @@ try {
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     if ($useBase64) {
         Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
     }
     else {
         Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettings"

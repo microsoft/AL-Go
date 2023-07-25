@@ -42,6 +42,7 @@ try {
         $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
     }
     catch {
+        Write-Host $settingsJson
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
         $useBase64 = $false
     }
