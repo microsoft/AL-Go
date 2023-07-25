@@ -18,6 +18,7 @@ Describe "ReadSecrets Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
+            "SettingsJson" = "Settings in compressed Json format"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

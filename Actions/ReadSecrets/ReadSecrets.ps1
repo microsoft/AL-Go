@@ -117,7 +117,7 @@ try {
     Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$OutSettingsJson"
 
     TrackTrace -telemetryScope $telemetryScope
 }

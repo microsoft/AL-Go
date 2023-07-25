@@ -22,6 +22,9 @@ inputs:
     required: false
     default: '{"insiderSasToken":""}'
 outputs:
+  SettingsJson:
+    description: Settings in compressed Json format
+    value: ${{ steps.determineArtifactUrl.outputs.SettingsJson }}
   ArtifactUrl:
     description: The ArtifactUrl to use for building this project
     value: ${{ steps.determineArtifactUrl.outputs.ArtifactUrl }}

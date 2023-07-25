@@ -93,6 +93,7 @@ jobs:
 
         - name: Read secrets
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
+          id: ReadSecrets
           env:
             secrets: ${{ toJson(secrets) }}
           with:
@@ -108,7 +109,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
+            settingsJson: ${{ steps.ReadSecrets.outputs.SettingsJson }}
             secretsJson: ${{ env.RepoSecrets }}
 
         - name: Cache Business Central Artifacts
@@ -128,7 +129,7 @@ jobs:
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
             projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
-            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
+            settingsJson: ${{ steps.determineArtifactUrl.outputs.SettingsJson }}
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
 
@@ -139,7 +140,7 @@ jobs:
           with:
             shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
             azureCredentialsJson: ${{ secrets.AZURE_CREDENTIALS }}
-            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
+            settingsJson: ${{ steps.determineArtifactUrl.outputs.SettingsJson }}
             pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
             parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
@@ -149,7 +150,7 @@ jobs:
           if: success() || failure()
           with:
             shell: ${{ inputs.shell }}
-            settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
+            settingsJson: ${{ steps.determineArtifactUrl.outputs.SettingsJson }}
             project: ${{ inputs.project }}
             buildMode: ${{ inputs.buildMode }}
             branchName: ${{ github.ref_name }}

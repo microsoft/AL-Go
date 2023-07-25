@@ -86,6 +86,7 @@ jobs:
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        id: ReadSecrets
         env:
           secrets: ${{ toJson(secrets) }}
         with:
@@ -96,7 +97,7 @@ jobs:
       - name: Determine Delivery Targets
         id: DetermineDeliveryTargets
         env:
-          settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
+          settingsJson: ${{ steps.ReadSecrets.outputs.SettingsJson }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $deliveryTargets = @('GitHubPackages','NuGet','Storage')
@@ -346,6 +347,7 @@ jobs:
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        id: ReadSecrets
         env:
           secrets: ${{ toJson(secrets) }}
         with:
