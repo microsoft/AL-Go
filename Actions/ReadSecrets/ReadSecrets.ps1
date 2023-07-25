@@ -46,12 +46,6 @@ try {
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
         $useBase64 = $false
     }
-    
-    if ($settings.ContainsKey('repoName')) {
-        Write-Host "-------------"
-        Write-Host $settings.repoName
-        Write-Host "-------------"
-    }
 
     $outSettings = $settings
     $keyVaultName = $settings.keyVaultName
