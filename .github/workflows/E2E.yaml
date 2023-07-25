@@ -101,7 +101,7 @@ jobs:
       - name: Setup Repositories
         id: setup
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
   
   Analyze:
@@ -119,7 +119,7 @@ jobs:
       - name: Analyze
         id: Analyze
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
           SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -repository "microsoft/AL-Go"
@@ -187,7 +187,7 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
           Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
           Write-Host "repoName='$repoName'"
@@ -218,7 +218,7 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $adminCenterApiCredentials = ''
           $licenseFileUrl = ''
           if ('${{ matrix.type }}' -eq 'PTE' -and '${{ matrix.style }}' -eq 'singleProject' -and '${{ matrix.os }}' -eq 'windows') {
@@ -264,7 +264,7 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
             $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
@@ -306,5 +306,5 @@ jobs:
 
       - name: Remove Repositories
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

@@ -56,7 +56,7 @@ jobs:
 
       - name: Remove Temp Repositories
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
           $owner = '${{ needs.Check.outputs.githubowner }}'
           $token = '${{ Secrets.E2EPAT }}'
