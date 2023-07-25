@@ -85,6 +85,9 @@ function YamlTest {
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
                 if ($name -eq 'settingsJson') {
                     $parameterString += " -$($name) '`${{ inputs.$($name) }}'"
+                    if (!$required) {
+                        $yaml.AppendLine("    default: *") | Out-Null
+                    }
                 }
                 else {
                     $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
