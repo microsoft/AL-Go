@@ -58,6 +58,7 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          useBase64: 'Y'
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main

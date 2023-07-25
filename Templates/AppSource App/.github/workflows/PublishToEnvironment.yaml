@@ -131,6 +131,7 @@ jobs:
         id: ReadSettings
         with:
           shell: powershell
+          useBase64: 'Y'
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main

@@ -165,6 +165,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           get: templateUrl
+          useBase64: 'Y'
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
@@ -225,6 +226,7 @@ jobs:
         id: ReadSettings
         with:
           shell: powershell
+          useBase64: 'Y'
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -342,6 +344,7 @@ jobs:
         id: ReadSettings
         with:
           shell: powershell
+          useBase64: 'Y'
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main

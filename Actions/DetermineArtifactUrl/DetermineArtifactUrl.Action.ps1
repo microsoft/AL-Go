@@ -28,11 +28,13 @@ try {
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
 
     # Support potentially base64 encoded settings
+    $useBase64 = $true
     try {
         $projectSettings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
     }
     catch {
         $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+        $useBase64 = $false
     }
     $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
@@ -51,7 +53,12 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "- ArtifactCacheKey=$artifactCacheKey"
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
+    if ($useBase64) {
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
+    }
+    else {
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettings"
+    }
     Write-Host "- SettingsJson=$outSettingsJson"
 
 #    Write-Host "ENV:"

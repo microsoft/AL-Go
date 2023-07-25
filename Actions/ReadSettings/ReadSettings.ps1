@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
     [bool] $release,
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
-    [string] $get = ""
+    [string] $get = "",
+    [Parameter(HelpMessage = "Specifies whether or not to use base64 encoding for the settings output", Mandatory = $false)]
+    [bool] $useBase64
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -89,7 +91,13 @@ try {
 
     Write-Host "OUTPUTS:"
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
+    if ($useBase64) {
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
+    }
+    else {
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettings"
+    }
     Write-Host "- SettingsJson=$outSettingsJson"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress

@@ -37,11 +37,13 @@ try {
 
     $outSecrets = [ordered]@{}
     # Support potentially base64 encoded settings
+    $useBase64 = $true
     try {
         $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
     }
     catch {
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+        $useBase64 = $false
     }
     
     Write-Host "-------------"
@@ -126,7 +128,12 @@ try {
 
     Write-Host "OUTPUTS:"
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
+    if ($useBase64) {
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
+    }
+    else {
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettings"
+    }
     Write-Host "- SettingsJson=$outSettingsJson"
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
