@@ -41,9 +41,10 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"    
     
-    Write-Host "ProjectsJson=$projectsJson"
-    Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
-    Write-Host "BuildOrderJson=$buildOrderJson"
+    Write-Host "OUTPUTS:"
+    Write-Host "- ProjectsJson=$projectsJson"
+    Write-Host "- ProjectDependenciesJson=$projectDependenciesJson"
+    Write-Host "- BuildOrderJson=$buildOrderJson"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

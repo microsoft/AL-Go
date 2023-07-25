@@ -166,11 +166,12 @@ jobs:
             }
           }
           $artifacts = @{ "include" = $include }
+          Write-Host "OUTPUTS:"
           $artifactsJson = $artifacts | ConvertTo-Json -compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "artifacts=$artifactsJson"
-          Write-Host "artifacts=$artifactsJson"
+          Write-Host "- artifacts=$artifactsJson"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "commitish=$sha"
-          Write-Host "commitish=$sha"
+          Write-Host "- commitish=$sha"
 
       - name: Prepare release notes
         id: createreleasenotes

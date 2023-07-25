@@ -66,11 +66,12 @@ try {
         $correlationId = [guid]::Empty.ToString()
     }
 
+    Write-Host "OUTPUTS:"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "telemetryScopeJson=$scopeJson"
-    Write-Host "telemetryScopeJson=$scopeJson"
+    Write-Host "- telemetryScopeJson=$scopeJson"
 
     Add-Content -Path $env:GITHUB_OUTPUT -Value "correlationId=$correlationId"
-    Write-Host "correlationId=$correlationId"
+    Write-Host "- correlationId=$correlationId"
 }
 catch {
     OutputError -message "WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
