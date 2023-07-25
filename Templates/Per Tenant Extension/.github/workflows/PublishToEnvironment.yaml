@@ -57,8 +57,7 @@ jobs:
         id: envName
         if: steps.ReadSettings.outputs.UnknownEnvironment == 1
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ fromJson(steps.ReadSettings.outputs.environmentsJson).matrix.include[0].environment }}'.split(' ')[0]
           Add-Content -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
@@ -123,8 +122,7 @@ jobs:
       - name: EnvName
         id: envName
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ matrix.environment }}'.split(' ')[0]
           Add-Content -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
@@ -145,8 +143,7 @@ jobs:
       - name: AuthContext
         id: authContext
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ steps.envName.outputs.envName }}'
           $deployToSettingStr = [System.Environment]::GetEnvironmentVariable("DeployTo$envName")
           if ($deployToSettingStr) {

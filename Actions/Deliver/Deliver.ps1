@@ -20,8 +20,7 @@ Param(
     [bool] $goLive
 )
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
@@ -336,17 +335,28 @@ try {
             EnsureAzStorageModule
             try {
                 $storageAccount = $storageContext | ConvertFrom-Json | ConvertTo-HashTable
-                Write-Host "Json OK"
-                if ($storageAccount.Keys -contains 'sastoken') {
-                    $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
-                }
-                else {
-                    $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
-                }
-                Write-Host "StorageContext OK"
+                # Check that containerName and blobName are present
+                $storageAccount.containerName | Out-Null
+                $storageAccount.blobName | Out-Null
             }
             catch {
-                throw "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey, which points to an existing container in a storage account.`nError was: $($_.Exception.Message)"
+                throw "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey.`nError was: $($_.Exception.Message)"
+            }
+            if ($storageAccount.Keys -contains 'sastoken') {
+                try {
+                    $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
+                }
+                catch {
+                    throw "Unable to create AzStorageContext based on StorageAccountName and sastoken.`nError was: $($_.Exception.Message)"
+                }
+            }
+            else {
+                try {
+                    $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
+                }
+                catch {
+                    throw "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey.`nError was: $($_.Exception.Message)"
+                }
             }
 
             $storageContainerName =  $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).replace('{branch}',$refname).ToLowerInvariant()

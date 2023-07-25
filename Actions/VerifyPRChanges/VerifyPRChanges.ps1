@@ -79,8 +79,8 @@ function ValidatePullRequestFiles
   Write-Host "Verification completed successfully."
 }
 
-$ErrorActionPreference = "STOP"
-Set-StrictMode -version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 $headers = @{             
   "Authorization" = "token $token"
   "Accept"        = "application/vnd.github.baptiste-preview+json"
