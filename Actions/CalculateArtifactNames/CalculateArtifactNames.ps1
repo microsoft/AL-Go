@@ -21,10 +21,10 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 # Support potentially base64 encoded settings
 try {
-    $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
+    $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json
 }
 catch {
-    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $settings = $settingsJson | ConvertFrom-Json
 }
 
 if ($project -eq ".") { 

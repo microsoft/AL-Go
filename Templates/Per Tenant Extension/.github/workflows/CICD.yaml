@@ -27,7 +27,6 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
       environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
       environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
       deliveryTargets: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
@@ -126,7 +125,7 @@ jobs:
             $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($contextName)))
             if ($deliveryContext) {
               $settingName = "DeliverTo$_"
-              $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${{ steps.ReadSecrets.outputs.SettingsJson }}')) | ConvertFrom-Json | ConvertTo-HashTable
+              $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${{ steps.ReadSecrets.outputs.SettingsJson }}')) | ConvertFrom-Json
               if (($settings.PSObject.Properties.Name -eq $settingName) -and ($settings."$settingName".PSObject.Properties.Name -eq "Branches")) {
                 Write-Host "Branches:"
                 $settings."$settingName".Branches | ForEach-Object {
