@@ -9,6 +9,7 @@ Issue 558 CI/CD attempts to deploy from feature branch
 Issue 559 Changelog includes wrong commits
 Publish to AppSource fails if publisher name or app name contains national or special characters
 Issue 598 Cleanup during flush if build pipeline doesn't cleanup properly
+Issue 608 When creating a release, throw error if no new artifacts have been added
 Issue 528 Give better error messages when uploading to storage accounts
 Create Online Development environment workflow failed in AppSource template unless AppSourceCopMandatoryAffixes is defined in repository settings file
 Create Online Development environment workflow didn't have a project parameter and only worked for single project repositories
