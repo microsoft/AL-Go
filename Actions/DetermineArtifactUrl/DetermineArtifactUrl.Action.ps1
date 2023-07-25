@@ -26,7 +26,14 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
-    $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+
+    # Support potentially base64 encoded settings
+    try {
+        $projectSettings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    catch {
+        $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    }
     $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
     $artifactCacheKey = ''
@@ -44,7 +51,7 @@ try {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "- ArtifactCacheKey=$artifactCacheKey"
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
     Write-Host "- SettingsJson=$outSettingsJson"
 
 #    Write-Host "ENV:"

@@ -1,16 +1,16 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
-    [string]$AzureCredentialsJson,
+    [string] $AzureCredentialsJson,
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
-    [string]$settingsJson,
+    [string] $settingsJson,
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
-    [String]$PathToFiles,
+    [String] $PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
-    [string]$TimestampService = "http://timestamp.digicert.com",
+    [string] $TimestampService = "http://timestamp.digicert.com",
     [Parameter(HelpMessage = "Timestamp digest algorithm.", Mandatory = $false)]
-    [string]$TimestampDigest = "sha256",
+    [string] $TimestampDigest = "sha256",
     [Parameter(HelpMessage = "File digest algorithm.", Mandatory = $false)]
-    [string]$FileDigest = "sha256",
+    [string] $FileDigest = "sha256",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $ParentTelemetryScopeJson = '7b7d'
 )
@@ -39,7 +39,13 @@ try {
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
-    $settings = ConvertFrom-Json $settingsJson
+    # Support potentially base64 encoded settings
+    try {
+        $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json
+    }
+    catch {
+        $settings = $settingsJson | ConvertFrom-Json
+    }
     if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
         $AzureKeyVaultName = $AzureCredentials.keyVaultName
     } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {

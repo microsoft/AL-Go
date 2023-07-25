@@ -19,8 +19,13 @@ function Set-EnvVariable([string] $name, [string] $value) {
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-Write-Host $settingsJson
-$settings = $settingsJson | ConvertFrom-Json
+# Support potentially base64 encoded settings
+try {
+    $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
+}
+catch {
+    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+}
 
 if ($project -eq ".") { 
   $project = $settings.repoName 

@@ -36,7 +36,13 @@ try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
-    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    # Support potentially base64 encoded settings
+    try {
+        $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    catch {
+        $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    }
     
     $outSettings = $settings
     $keyVaultName = $settings.keyVaultName
@@ -116,7 +122,7 @@ try {
 
     Write-Host "OUTPUTS:"
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$OutSettingsJson"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettings)))"
     Write-Host "- SettingsJson=$outSettingsJson"
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress

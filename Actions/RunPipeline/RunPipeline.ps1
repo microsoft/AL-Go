@@ -33,6 +33,14 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
+    # Support potentially base64 encoded settings
+    try {
+        $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    catch {
+        $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    }
+
     if ($isWindows) {
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
@@ -82,7 +90,6 @@ try {
     $workflowName = "$env:GITHUB_WORKFLOW".Trim()
 
     Write-Host "use settings and secrets"
-    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision

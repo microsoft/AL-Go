@@ -33,7 +33,6 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
-        _settingsJson: ${{ inputs.settingsJson }}
         _timestampService: ${{ inputs.timestampService }}
         _digestAlgorithm: ${{ inputs.digestAlgorithm }}
         _pathToFiles: ${{ inputs.pathToFiles }}
@@ -42,7 +41,7 @@ runs:
       run: | 
         try { 
           ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson $ENV:_azureCredentialsJson `
-                                      -settingsJson $ENV:_settingsJson `
+                                      -settingsJson '${{ inputs.settingsJson }}' `
                                       -TimestampService $ENV:_timestampService `
                                       -TimestampDigest $ENV:_digestAlgorithm `
                                       -FileDigest $ENV:_digestAlgorithm `

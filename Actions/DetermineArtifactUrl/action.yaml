@@ -40,10 +40,9 @@ runs:
       env:
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
-        _settingsJson: ${{ inputs.settingsJson }}
         _secretsJson: ${{ inputs.secretsJson }}
       run: try { 
-          ${{ github.action_path }}/DetermineArtifactUrl.Action.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson  -project $ENV:_project -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson
+          ${{ github.action_path }}/DetermineArtifactUrl.Action.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson  -project $ENV:_project -settingsJson '${{ inputs.settingsJson }}' -secretsJson $ENV:_secretsJson
         } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
