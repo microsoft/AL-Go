@@ -662,31 +662,13 @@ function ResolveProjectFolders {
 
     Push-Location $projectPath
 
-    try {
-        # Filter out app folders that doesn't contain an app.json file
-        'appFolders', 'testFolders', 'bcptTestFolders' | ForEach-Object {
-            $folders = $projectSettings.Value.$_
-            
-            $resolvedPaths = @()
-            foreach($folder in $folders) {
-                $aLProjectFolder = Join-Path $projectPath $folder
-                $resolvedALProjectsPaths = Resolve-Path $aLProjectFolder -ErrorAction Ignore | Where-Object { Test-Path (Join-Path $_ 'app.json') }
-
-                if($resolvedALProjectsPaths) {
-                    $resolvedPaths += @($resolvedALProjectsPaths)
-                }
-                else {
-                    OutputWarning "The folder '$folder' for project '$project' cannot be resolved or does not contain an app.json file. Skipping."
-                }
-            }
-
-            # Get the name of the folder for each resolved path
-            $projectSettings.Value.$_ = @($resolvedPaths | ForEach-Object { $(Get-Item $_).Name })
-        }
-
+    try{
+        $appFolders = $projectSettings.Value.appFolders
+        $testFolders = $projectSettings.Value.testFolders
+        $bcptTestFolders = $projectSettings.Value.bcptTestFolders
 
         # If no app folders are specified in AL-Go settings, check for AL apps in the project folder
-        if (!$projectSettings.Value.appFolders -and !$projectSettings.Value.testFolders -and !$projectSettings.Value.bcptTestFolders) {
+        if (!$appFolders -and !$testFolders -and !$bcptTestFolders) {
             Get-ChildItem -Path $projectPath -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path -Path (Join-Path $_.FullName "app.json")) } | ForEach-Object {
                 $aLProjectFolder = $_
                 $appJson = Get-Content (Join-Path $aLProjectFolder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
@@ -714,18 +696,46 @@ function ResolveProjectFolders {
                     
                 }
 
+                # Folders are relative to the project folder
+                $appFolder = Resolve-Path -Path $aLProjectFolder.FullName -Relative
                 switch ($true) {
-                    $isTestApp { $projectSettings.Value.testFolders += @($aLProjectFolder.Name) }
-                    $isBcptTestApp { $projectSettings.Value.bcptTestFolders += @($aLProjectFolder.Name) }
-                    Default { $projectSettings.Value.appFolders += @($aLProjectFolder.Name) }
+                    $isTestApp { $testFolders += @($appFolder) }
+                    $isBcptTestApp { $bcptTestFolders += @($appFolder) }
+                    Default { $appFolders += @($appFolder) }
                 }
             }
         }
+
+        # Filter out app folders that doesn't contain an app.json file
+        function FilterFolders($projectPath, $folders) {
+            if(!$folders) {
+                return @()
+            }
+
+            $resolvedPaths = @()
+
+            foreach($folder in $folders) {
+                $aLProjectFolder = Join-Path $projectPath $folder
+                $resolvedALProjectsPaths = Resolve-Path $aLProjectFolder -Relative -ErrorAction Ignore | Where-Object { Test-Path (Join-Path $_ 'app.json') }
+
+                if($resolvedALProjectsPaths) {
+                    $resolvedPaths += @($resolvedALProjectsPaths)
+                }
+                else {
+                    OutputWarning "The folder '$folder' for project '$project' cannot be resolved or does not contain an app.json file. Skipping."
+                }
+            }
+
+            return $resolvedPaths
+        }
+
+        $projectSettings.Value.appFolders = @(FilterFolders $projectPath $appFolders)
+        $projectSettings.Value.testFolders = @(FilterFolders $projectPath $testFolders)
+        $projectSettings.Value.bcptTestFolders = @(FilterFolders $projectPath $bcptTestFolders)
     }
     finally {
         Pop-Location
     }
-
 }
 
 function AnalyzeRepo {

@@ -20,8 +20,9 @@ Describe "ResolveProjectFolders" {
             ├───app1
             │       app.json
             │
-            ├───app2
-            │       app.json
+            ├───nestedApp
+            │   ├───app2
+            │           app.json
             │
             ├───bcptApp1
             │       app.json
@@ -46,7 +47,7 @@ Describe "ResolveProjectFolders" {
         $ALGoSettings = @{
             "appFolders" = @(
                 "app1",
-                "app2"
+                "nestedApp\app2"
             );
             "testFolders" = @(
                 "testApp1",
@@ -64,7 +65,7 @@ Describe "ResolveProjectFolders" {
         # Create the app folders
         $appFolders = @(
             "app1",
-            "app2",
+            "nestedApp\app2",
             "bcptApp1",
             "bcptApp2",
             "testApp1",
@@ -106,14 +107,14 @@ Describe "ResolveProjectFolders" {
         AddDependency -app 'testApp1' -dependencyAppId $anyAppId -dependencyAppName 'Any'
 
         AddDependency -app 'testApp2' -dependencyAppId $apps['app1'].id -dependencyAppName $apps['app1'].name
-        AddDependency -app 'testApp2' -dependencyAppId $apps['app2'].id -dependencyAppName $apps['app2'].name
+        AddDependency -app 'testApp2' -dependencyAppId $apps['nestedApp\app2'].id -dependencyAppName $apps['nestedApp\app2'].name
         AddDependency -app 'testApp2' -dependencyAppId $anyAppId -dependencyAppName 'Any'
 
         AddDependency -app 'bcptApp1' -dependencyAppId $apps['app1'].id -dependencyAppName $apps['app1'].name
         AddDependency -app 'bcptApp1' -dependencyAppId $performanceToolkitAppId -dependencyAppName 'Performance ToolKit'
 
         AddDependency -app 'bcptApp2' -dependencyAppId $apps['app1'].id -dependencyAppName $apps['app1'].name
-        AddDependency -app 'bcptApp2' -dependencyAppId $apps['app2'].id -dependencyAppName $apps['app2'].name
+        AddDependency -app 'bcptApp2' -dependencyAppId $apps['nestedApp\app2'].id -dependencyAppName $apps['nestedApp\app2'].name
         AddDependency -app 'bcptApp2' -dependencyAppId $performanceToolkitAppId -dependencyAppName 'Performance ToolKit'
     }
 
@@ -122,25 +123,25 @@ Describe "ResolveProjectFolders" {
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
 
         $projectSettings.appFolders | Should -HaveCount 2
-        $projectSettings.appFolders | Should -Contain 'app1'
-        $projectSettings.appFolders | Should -Contain 'app2'
+        $projectSettings.appFolders | Should -Contain '.\app1'
+        $projectSettings.appFolders | Should -Contain '.\nestedApp\app2'
 
         $projectSettings.testFolders | Should -HaveCount 2
-        $projectSettings.testFolders | Should -Contain 'testApp1'
-        $projectSettings.testFolders | Should -Contain 'testApp2'
+        $projectSettings.testFolders | Should -Contain '.\testApp1'
+        $projectSettings.testFolders | Should -Contain '.\testApp2'
 
         $projectSettings.bcptTestFolders | Should -HaveCount 2
-        $projectSettings.bcptTestFolders | Should -Contain 'bcptApp1'
-        $projectSettings.bcptTestFolders | Should -Contain 'bcptApp2'
+        $projectSettings.bcptTestFolders | Should -Contain '.\bcptApp1'
+        $projectSettings.bcptTestFolders | Should -Contain '.\bcptApp2'
     }
 
-    It 'WHen only appFolders specified, scan only app folders and resolves them' {
+    It 'When only appFolders specified, scan only app folders and resolves them' {
         $projectSettings = @{ 'appFolders' = @('app1'); 'testFolders' = @(); 'bcptTestFolders' = @()}
 
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
         
         $projectSettings.appFolders | Should -HaveCount 1
-        $projectSettings.appFolders | Should -Contain 'app1'
+        $projectSettings.appFolders | Should -Contain '.\app1'
 
         $projectSettings.testFolders | Should -HaveCount 0
 
@@ -153,7 +154,7 @@ Describe "ResolveProjectFolders" {
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
         
         $projectSettings.appFolders | Should -HaveCount 1
-        $projectSettings.appFolders | Should -Contain 'app1'
+        $projectSettings.appFolders | Should -Contain '.\app1'
 
         $projectSettings.testFolders | Should -HaveCount 0
 
@@ -165,31 +166,25 @@ Describe "ResolveProjectFolders" {
 
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
         
-        $projectSettings.appFolders | Should -HaveCount 2
-        $projectSettings.appFolders | Should -Contain 'app1'
-        $projectSettings.appFolders | Should -Contain 'app2'
+        $projectSettings.appFolders | Should -HaveCount 0
 
-        $projectSettings.testFolders | Should -HaveCount 2
-        $projectSettings.testFolders | Should -Contain 'testApp1'
-        $projectSettings.testFolders | Should -Contain 'testApp2'
+        $projectSettings.testFolders | Should -HaveCount 0
 
-        $projectSettings.bcptTestFolders | Should -HaveCount 2
-        $projectSettings.bcptTestFolders | Should -Contain 'bcptApp1'
-        $projectSettings.bcptTestFolders | Should -Contain 'bcptApp2'
+        $projectSettings.bcptTestFolders | Should -HaveCount 0
     }
 
     It 'When only appFolders specified, scan only app folders and resolves them' {
-        $projectSettings = @{ 'appFolders' = @('app2'); 'testFolders' = @('testApp1'); 'bcptTestFolders' = @('bcptApp2')}
+        $projectSettings = @{ 'appFolders' = @('nestedApp\app2'); 'testFolders' = @('testApp1'); 'bcptTestFolders' = @('bcptApp2')}
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
 
         $projectSettings.appFolders | Should -HaveCount 1
-        $projectSettings.appFolders | Should -Contain 'app2'
+        $projectSettings.appFolders | Should -Contain '.\nestedApp\app2'
 
         $projectSettings.testFolders | Should -HaveCount 1
-        $projectSettings.testFolders | Should -Contain 'testApp1'
+        $projectSettings.testFolders | Should -Contain '.\testApp1'
 
         $projectSettings.bcptTestFolders | Should -HaveCount 1
-        $projectSettings.bcptTestFolders | Should -Contain 'bcptApp2'
+        $projectSettings.bcptTestFolders | Should -Contain '.\bcptApp2'
     }
     
     AfterAll {
