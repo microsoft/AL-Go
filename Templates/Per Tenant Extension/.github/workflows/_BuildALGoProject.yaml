@@ -90,6 +90,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
+            useBase64: 'Y'
 
         - name: Read secrets
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
