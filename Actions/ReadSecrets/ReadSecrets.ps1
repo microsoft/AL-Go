@@ -38,10 +38,6 @@ try {
     $outSecrets = [ordered]@{}
     $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     
-    Write-Host "----------"
-    Write-Host $settings.repoName
-    Write-Host "----------"
-    
     $outSettings = $settings
     $keyVaultName = $settings.keyVaultName
     if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
@@ -118,9 +114,10 @@ try {
         }) -join ', ')"
     }
 
+    Write-Host "OUTPUTS:"
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$OutSettingsJson"
-    Write-Host "SettingsJson=$outSettingsJson"
+    Write-Host "- SettingsJson=$outSettingsJson"
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
