@@ -30,7 +30,7 @@ try {
     $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
     $artifactCacheKey = ''
-    $projectSettings.artifact = $artifactUrl
+
     if ($projectSettings.useCompilerFolder) {
         $artifactCacheKey = $artifactUrl.Split('?')[0]
     }
@@ -40,13 +40,14 @@ try {
     # Set output variables
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
     Write-Host "ArtifactUrl=$artifactUrl"
+
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "ArtifactCacheKey=$artifactCacheKey"
-    $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
-    Write-Host "SettingsJson=$outSettingsJson"
+
+    #TODO settings.artifact isn't set
     Add-Content -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
     Write-Host "Artifact=$artifactUrl"
+
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

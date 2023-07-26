@@ -69,7 +69,7 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
           secrets: 'adminCenterApiCredentials'
 
       - name: Check AdminCenterApiCredentials / Initiate Device Login (open to see code)
@@ -108,6 +108,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadALGoSettings@main
         with:
           shell: powershell
@@ -120,8 +121,8 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
-          secrets: 'adminCenterApiCredentials,ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+          settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
+          secrets: 'adminCenterApiCredentials,ghTokenWorkflow'
 
       - name: CalculateToken
         id: CalculateToken

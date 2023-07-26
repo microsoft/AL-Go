@@ -93,10 +93,12 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          templateUrl: ${{ env.templateUrl }}
+          templateUrl: ${{ fromJson(steps.ReadSettings.outputs.SettingsJson).templateUrl }}
 
       - name: Analyze Artifacts
         id: analyzeartifacts
+        env:
+          _settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $projects = '${{ steps.determineProjects.outputs.ProjectsJson }}' | ConvertFrom-Json
@@ -118,13 +120,16 @@ jobs:
           while ($repoArtifacts.Artifacts.Count -gt 0)
           Write-Host "Repo Artifacts count: $($repoArtifacts.total_count)"
           Write-Host "Downloaded Artifacts count: $($allArtifacts.Count)"
+
+          $settings = $env:_settings | ConvertFrom-Json
+
           $projects | ForEach-Object {
             $thisProject = $_
             if ($thisProject -and ($thisProject -ne '.')) {
               $project = $thisProject.Replace('\','_').Replace('/','_')
             }
             else {
-              $project = $env:repoName
+              $project = $($settings.repoName)
             }
             $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
             Write-Host "Analyzing artifacts for project $project"
@@ -216,6 +221,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadALGoSettings@main
         with:
           shell: powershell
@@ -228,7 +234,7 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
+          settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
           secrets: 'nuGetContext,storageContext'
 
       - name: Download artifact
@@ -333,6 +339,7 @@ jobs:
     needs: [ CreateRelease, UploadArtifacts ]
     steps:
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadALGoSettings@main
         if: github.event.inputs.useGhTokenWorkflow == 'true'
         with:
@@ -348,8 +355,8 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
-          secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+          settingsJson: ${{ steps.ReadSettings.outputs.SettingsJson }}
+          secrets: 'ghTokenWorkflow'
 
       - name: CalculateToken
         id: CalculateToken

@@ -116,6 +116,7 @@ try {
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
+    #TODO: Move to where it's actially used (appDependencyProbingPaths)
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
 

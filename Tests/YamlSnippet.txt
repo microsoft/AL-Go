@@ -64,6 +64,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadALGoSettings@main
         with:
           shell: powershell
@@ -75,4 +76,4 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          templateUrl: ${{ env.templateUrl }}
+          templateUrl: ${{ fromJson(steps.ReadSettings.outputs.SettingsJson).templateUrl }}
