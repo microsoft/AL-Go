@@ -38,7 +38,7 @@ Describe "AnalyzeTests Action Tests" {
                     }
                 }
             }
-            $filename = Join-Path $ENV:TEMP "$([GUID]::NewGuid().ToString()).json"
+            $filename = Join-Path ([System.IO.Path]::GetTempPath()) "$([GUID]::NewGuid().ToString()).json"
             $bcpt | ConvertTo-Json -Depth 100 | Set-Content -Path $filename -Encoding UTF8
             return $filename
         }
