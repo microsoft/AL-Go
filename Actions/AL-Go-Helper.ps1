@@ -959,6 +959,11 @@ function AnalyzeRepo {
 
     Write-Host "Checking appDependencyProbingPaths"
     if ($settings.appDependencyProbingPaths) {
+        # Probing paths are stored in an env var appDependencyProbingPathsJson as a JSON array of objects, because they may contain secrets.
+        if($env:appDependencyProbingPathsJson) {
+            $settings.appDependencyProbingPaths = $env:appDependencyProbingPathsJson | ConvertFrom-Json
+        }
+
         $settings.appDependencyProbingPaths = @($settings.appDependencyProbingPaths | ForEach-Object {
             if ($_.GetType().Name -eq "PSCustomObject") {
                 $_

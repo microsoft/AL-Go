@@ -92,12 +92,18 @@ try {
         }
     }
 
+    # Assign the auth token secret in the appDependencyProbingPaths
     if ($outSettings.Keys -contains 'appDependencyProbingPaths') {
-        $outSettings.appDependencyProbingPaths | ForEach-Object {
+        $appDependencyProbingPaths = @($outSettings.appDependencyProbingPaths | ForEach-Object {
             if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
                 $_.authTokenSecret = GetSecret -secret $_.authTokenSecret -keyVaultName $keyVaultName
             } 
-        }
+            return $_
+        })
+
+        # Set the app probing paths as an environment variable. Do not store them in the settings as they may contain secrets
+        $appDependencyProbingPathsJson = ConvertTo-Json -InputObject $appDependencyProbingPaths -Depth 99 -Compress
+        Add-Content -Path $env:GITHUB_ENV -Value "appProbingPathsJson=$appDependencyProbingPathsJson"
     }
 
     if ($secretsCollection) {
@@ -115,10 +121,6 @@ try {
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
-
-    #TODO: Move to where it's actially used (appDependencyProbingPaths)
-    $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
 
     TrackTrace -telemetryScope $telemetryScope
 }
