@@ -40,16 +40,16 @@ function GetBcptTestResultFile {
     return $filename
 }
 
-$bcptFilename = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 3 -noOfMeasurements 4
-$bcptBaseLine = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 4 -noOfOperations 6 -noOfMeasurements 4 -durationOffset -1 -numberOfSQLStmtsOffset -1
-
 Describe "AnalyzeTests Action Tests" {
     BeforeAll {
         $actionName = "AnalyzeTests"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
-        $scriptPath = Join-Path $scriptRoot $scriptName
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+
+        $bcptFilename = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 3 -noOfMeasurements 4
+        $bcptBaseLine1 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 4 -noOfOperations 6 -noOfMeasurements 4 -durationOffset 1 -numberOfSQLStmtsOffset 1
+        $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 2 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 1
     }
 
     It 'Compile Action' {
@@ -76,17 +76,51 @@ Describe "AnalyzeTests Action Tests" {
     It 'Test GetBcptSummaryMD (no baseline)' {
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
         $md = GetBcptSummaryMD -path $bcptFilename
+        Write-Host $md.Replace('\n',"`n")
         $md | should -Match 'No baseline provided'
+        $columns = 6
+        $rows = 8
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
         [regex]::Matches($md, '\|Operation.\|').Count | should -Be 6
-        [regex]::Matches($md, '\|').Count | should -Be (7*8)
-        
-#         -Contain 'No baseline provided'
-#        $md | should -Contain '|SUITE1|'
-
-#        $md.Replace('\n',"`n") | Set-Content -Path "C:\temp\bcpt.md" -Encoding UTF8
-
+        [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
     }
 
+    It 'Test GetBcptSummaryMD (with worse baseline)' {
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine1
+        Write-Host $md.Replace('\n',"`n")
+        $md | should -Not -Match 'No baseline provided'
+        $columns = 9
+        $rows = 8
+        [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
+        [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
+        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 6
+        [regex]::Matches($md, '\|\:heavy_check_mark\:\|').Count | should -Be 6
+        [regex]::Matches($md, '\|\:warning\:\|').Count | should -Be 0
+        [regex]::Matches($md, '\|\:x\:\|').Count | should -Be 0
+        [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
+    }
+
+    It 'Test GetBcptSummaryMD (with better baseline)' {
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2
+        Write-Host $md.Replace('\n',"`n")
+        $md | should -Not -Match 'No baseline provided'
+        $columns = 9
+        $rows = 8
+        [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
+        [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
+        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 6
+        [regex]::Matches($md, '\|\:heavy_check_mark\:\|').Count | should -Be 2
+        [regex]::Matches($md, '\|\:warning\:\|').Count | should -Be 2
+        [regex]::Matches($md, '\|\:x\:\|').Count | should -Be 2
+        [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
+    }
+
+    AfterAll {
+        Remove-Item -Path $bcptFilename -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $bcptBaseLine1 -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $bcptBaseLine2 -Force -ErrorAction SilentlyContinue
+    }
 }
