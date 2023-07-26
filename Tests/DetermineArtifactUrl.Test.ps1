@@ -8,7 +8,7 @@ $bcContainerHelperPath = $null
 # - applicationDependency - specifies the applicationDependency of the app
 # - additionalCountries - additional countries to use (artifact must exist for all)
 
-Describe "DetermineArtifactUrl" {
+Describe "DetermineArtifactUrl functionality test" {
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
@@ -115,5 +115,29 @@ Describe "DetermineArtifactUrl" {
 
     AfterAll {
         CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+    }
+}
+
+Describe "DetermineArtifactUrl Action Test" {
+    BeforeAll {
+        $actionName = "DetermineArtifactUrl"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $scriptName = "$actionName.ps1"
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+    }
+
+    It 'Compile Action' {
+        Invoke-Expression $actionScript
+    }
+
+    It 'Test action.yaml matches script' {
+        $permissions = [ordered]@{
+        }
+        $outputs = [ordered]@{
+            "SettingsJson" = "Settings (with modified artifact setting) in compressed Json format (base64 encoded)"
+            "ArtifactUrl" = "The ArtifactUrl to use for building this project"
+            "ArtifactCacheKey" = "The Artifact Cache Key to use for building this project (if using CompilerFolder)"
+        }
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
 }

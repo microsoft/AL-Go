@@ -3,7 +3,7 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
-    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
+    [Parameter(HelpMessage = "Settings from repository in compressed Json format (base64 encoded)", Mandatory = $false)]
     [string] $settingsJson = '{"artifact":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
     [string] $secretsJson = '{"insiderSasToken":""}'
@@ -27,12 +27,14 @@ try {
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
 
-    # Support potentially base64 encoded settings
     $useBase64 = $true
     try {
         $projectSettings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
     }
     catch {
+        # Older versions of the action did not base64 encode the settings
+        # In order to support in-place upgrade of the action in preview we need to support non-base64 encoded settings as well
+        # This action will return the settings in non-base64 encoded format if the settings are not base64 encoded
         $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
         $useBase64 = $false
     }
@@ -59,10 +61,6 @@ try {
         Write-Host "::add-mask::$outSettingsJson"
     }
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-
-#    Write-Host "ENV:"
-#    Add-Content -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
-#    Write-Host "Artifact=$artifactUrl"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

@@ -43,7 +43,7 @@ inputs:
     default: 'N'
 outputs:
   SettingsJson:
-    description: Settings in compressed Json format
+    description: Settings in compressed Json format (base64 encoded if requested)
     value: ${{ steps.readsettings.outputs.SettingsJson }}
   GitHubRunnerJson:
     description: GitHubRunner in compressed Json format

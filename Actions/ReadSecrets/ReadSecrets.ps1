@@ -1,6 +1,6 @@
 Param(
 
-    [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
+    [Parameter(HelpMessage = "Settings from repository in compressed Json format (base64 encoded)", Mandatory = $false)]
     [string] $settingsJson = '{"keyVaultName": ""}',
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
@@ -36,13 +36,14 @@ try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
-    # Support potentially base64 encoded settings
     $useBase64 = $true
     try {
         $settings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
     }
     catch {
-        Write-Host $settingsJson
+        # Older versions of the action did not base64 encode the settings
+        # In order to support in-place upgrade of the action in preview we need to support non-base64 encoded settings as well
+        # This action will return the settings in non-base64 encoded format if the settings are not base64 encoded
         $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
         $useBase64 = $false
     }
@@ -123,6 +124,8 @@ try {
         }) -join ', ')"
     }
 
+    #region Action: Output
+    # Set output variables
     Write-Host "OUTPUTS:"
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Write-Host "- SettingsJson=$outSettingsJson"
@@ -134,6 +137,8 @@ try {
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
+
+    #endregion
 
     TrackTrace -telemetryScope $telemetryScope
 }

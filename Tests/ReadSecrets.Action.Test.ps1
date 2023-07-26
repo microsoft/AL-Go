@@ -18,7 +18,7 @@ Describe "ReadSecrets Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-            "SettingsJson" = "Settings in compressed Json format"
+            "SettingsJson" = "Settings (with modified appDependencyProbingPaths setting) in compressed Json format (base64 encoded)"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

@@ -18,7 +18,7 @@ Describe "ReadSettings Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-            "SettingsJson" = "Settings in compressed Json format"
+            "SettingsJson" = "Settings in compressed Json format (base64 encoded if requested)"
             "GitHubRunnerJson" = "GitHubRunner in compressed Json format"
             "GitHubRunnerShell" = "Shell for GitHubRunner jobs"
             "EnvironmentsJson" = "Environments in compressed Json format"

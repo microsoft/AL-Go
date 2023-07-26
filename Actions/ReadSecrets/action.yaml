@@ -6,7 +6,7 @@ inputs:
     required: false
     default: powershell
   settingsJson:
-    description: Settings from template repository in compressed Json format
+    description: Settings from repository in compressed Json format (base64 encoded)
     required: false
     default: '{"keyVaultName": ""}'
   secrets:
@@ -18,7 +18,7 @@ inputs:
     default: '7b7d'
 outputs:
   SettingsJson:
-    description: Settings in compressed Json format
+    description: Settings (with modified appDependencyProbingPaths setting) in compressed Json format (base64 encoded)
     value: ${{ steps.readSecrets.outputs.SettingsJson }}
 runs:
   using: composite

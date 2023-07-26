@@ -84,6 +84,9 @@ function YamlTest {
                 $yaml.AppendLine("    description: $description") | Out-Null
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
                 if ($name -eq 'settingsJson') {
+                    # settingsJson is a special case. It is a json string that is base64 encoded
+                    # We do not want to add the settings to environment variables as it takes up a lot of space
+                    # Being base64 encoded, settings won't have a problem with special characters (which is one of the reasons for using environment variables)
                     $parameterString += " -$($name) '`${{ inputs.$($name) }}'"
                     if (!$required) {
                         $yaml.AppendLine("    default: *") | Out-Null
