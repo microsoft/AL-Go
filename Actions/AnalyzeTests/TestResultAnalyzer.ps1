@@ -1,4 +1,4 @@
-$statusOK = ":white_check_mark:"
+$statusOK = ":heavy_check_mark:"
 $statusWarning = ":warning:"
 $statusError = ":x:"
 $statusSkipped = ":white_circle:"
