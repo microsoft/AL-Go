@@ -131,7 +131,7 @@ function GetBcptSummaryMD {
                 else {
                     if (!$baseLineFound) {
                         # Baseline provided, but not found for this operation
-                        $statusStr = ''
+                        $statusStr = $statusSkipped
                         $baselinedurationMinStr = 'N/A|'
                         $baseLineNumberOfSQLStmtsStr = 'N/A|'
                     }
