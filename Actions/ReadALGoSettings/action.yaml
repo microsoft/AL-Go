@@ -1,5 +1,5 @@
-name: 'ReadSettings (deprecated: use ReadALGoSettings)'
-author: Freddy Kristiansen
+name: Read AL-Go Settings
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -71,7 +71,7 @@ runs:
         _includeProduction: ${{ inputs.includeProduction }}
         _release: ${{ inputs.release }}
         _get: ${{ inputs.get }}
-      run: try { ${{ github.action_path }}/ReadALGOSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get -outputToEnv } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/ReadALGOSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

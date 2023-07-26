@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
     [bool] $release,
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
-    [string] $get = ""
+    [string] $get = "",
+    [Parameter(HelpMessage = "Specifies whether to output the settings to the GITHUB_ENV file", Mandatory = $false)]
+    [switch] $outputToEnv
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -79,17 +81,24 @@ try {
         $setting = $_.Trim()
         $settingValue = $settings."$setting"
         $outSettings += @{ "$setting" = $settingValue }
-        if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
-            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
-        }
-        else {
-            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
+
+        if($outputToEnv) {
+            if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
+                Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
+            }
+            else {
+                Add-Content -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
+            }
         }
     }
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+
+    if($outputToEnv) {
+        Add-Content -Path $env:GITHUB_ENV -Value "SettingsJson=$outSettingsJson"
+    }
+    
     Write-Host "SettingsJson=$outSettingsJson"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
@@ -188,7 +197,11 @@ try {
         }
         $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
         Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentsJson=$environmentsJson"
-        Add-Content -Path $env:GITHUB_ENV -Value "environments=$environmentsJson"
+        
+        if($outputToEnv) {
+            Add-Content -Path $env:GITHUB_ENV -Value "EnvironmentsJson=$environmentsJson"
+        }
+        
         Write-Host "EnvironmentsJson=$environmentsJson"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($environments.Count)"
         Write-Host "EnvironmentCount=$($environments.Count)"
