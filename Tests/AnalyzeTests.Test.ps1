@@ -31,7 +31,7 @@ Describe "AnalyzeTests Action Tests" {
                                 "codeunitID" = $codeunitID
                                 "codeunitName" = $codeunitName
                                 "operation" = $operationName
-                                "durationMin" = $codeunitNo*100+$operationNo*10+$no+$durationOffset
+                                "durationMin" = $operationNo*10+$no+$durationOffset
                                 "numberOfSQLStmts" = $operationNo+$numberOfSQLStmtsOffset
                             })
                         }
