@@ -1,47 +1,48 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
-function GetBcptTestResultFile {
-    Param(
-        [int] $noOfSuites = 1,
-        [int] $noOfCodeunits = 1,
-        [int] $noOfOperations = 1,
-        [int] $noOfMeasurements = 1,
-        [int] $durationOffset = 0,
-        [int] $numberOfSQLStmtsOffset = 0
-    )
-
-    $bcpt = @()
-    1..$noOfSuites | ForEach-Object {
-        $suiteName = "SUITE$_"
-        1..$noOfCodeunits | ForEach-Object {
-            $codeunitID = $_
-            $codeunitName = "Codeunit$_"
-            1..$noOfOperations | ForEach-Object {
-                $operationNo = $_
-                $operationName = "Operation$operationNo"
-                1..$noOfMeasurements | ForEach-Object {
-                    $no = $_
-                    $bcpt += @(@{
-                        "id" = [GUID]::NewGuid().ToString()
-                        "bcptCode" = $suiteName
-                        "codeunitID" = $codeunitID
-                        "codeunitName" = $codeunitName
-                        "operation" = $operationName
-                        "durationMin" = $codeunitNo*100+$operationNo*10+$no+$durationOffset
-                        "numberOfSQLStmts" = $operationNo+$numberOfSQLStmtsOffset
-                    })
-                }
-            }
-        }
-    }
-    $filename = Join-Path $ENV:TEMP "$([GUID]::NewGuid().ToString()).json"
-    $bcpt | ConvertTo-Json -Depth 100 | Set-Content -Path $filename -Encoding UTF8
-    return $filename
-}
-
 Describe "AnalyzeTests Action Tests" {
     BeforeAll {
+
+        function GetBcptTestResultFile {
+            Param(
+                [int] $noOfSuites = 1,
+                [int] $noOfCodeunits = 1,
+                [int] $noOfOperations = 1,
+                [int] $noOfMeasurements = 1,
+                [int] $durationOffset = 0,
+                [int] $numberOfSQLStmtsOffset = 0
+            )
+        
+            $bcpt = @()
+            1..$noOfSuites | ForEach-Object {
+                $suiteName = "SUITE$_"
+                1..$noOfCodeunits | ForEach-Object {
+                    $codeunitID = $_
+                    $codeunitName = "Codeunit$_"
+                    1..$noOfOperations | ForEach-Object {
+                        $operationNo = $_
+                        $operationName = "Operation$operationNo"
+                        1..$noOfMeasurements | ForEach-Object {
+                            $no = $_
+                            $bcpt += @(@{
+                                "id" = [GUID]::NewGuid().ToString()
+                                "bcptCode" = $suiteName
+                                "codeunitID" = $codeunitID
+                                "codeunitName" = $codeunitName
+                                "operation" = $operationName
+                                "durationMin" = $codeunitNo*100+$operationNo*10+$no+$durationOffset
+                                "numberOfSQLStmts" = $operationNo+$numberOfSQLStmtsOffset
+                            })
+                        }
+                    }
+                }
+            }
+            $filename = Join-Path $ENV:TEMP "$([GUID]::NewGuid().ToString()).json"
+            $bcpt | ConvertTo-Json -Depth 100 | Set-Content -Path $filename -Encoding UTF8
+            return $filename
+        }
+        
         $actionName = "AnalyzeTests"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
