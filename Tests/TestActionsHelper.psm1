@@ -47,6 +47,7 @@ function YamlTest {
         $outputs = @{}
     )
 
+    Write-Host "Testing $actionName action.yaml matches script"
     $emptyActionScript = "function emptyAction {`n[CmdletBinding()]`nParam()`n}`n"
     Invoke-Expression $emptyActionScript
     $emptyCmd = get-command emptyAction
