@@ -1,7 +1,7 @@
 $statusOK = ":heavy_check_mark:"
 $statusWarning = ":warning:"
 $statusError = ":x:"
-$statusSkipped = ":white_circle:"
+$statusSkipped = ":question:"
 
 function ReadBcptFile {
     Param(
