@@ -1,3 +1,8 @@
+$statusOK = ":white_check_mark:"
+$statusWarning = ":warning:"
+$statusError = ":x:"
+$statusSkipped = ":white_circle:"
+
 function ReadBcptFile {
     Param(
         [string] $path
@@ -48,8 +53,8 @@ function GetBcptSummaryMD {
         [string] $path,
         [string] $baseLinePath = '',
         [int] $skipMeasurements = 1,
-        [int] $warningThreasHold = 5,
-        [int] $errorThreasHold = 10
+        [int] $warningThreshold = 5,
+        [int] $errorThreshold = 10
     )
 
     # TODO: grab skipMeasurements and thresholds from settings
@@ -82,6 +87,7 @@ function GetBcptSummaryMD {
                 $durationMin = ($measurements | ForEach-Object { $_.durationMin } | Measure-Object -Average).Average
                 $numberOfSQLStmts = ($measurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Average).Average
 
+                $baseLineFound = $true
                 try {
                     $baseLineMeasurements = @($baseLine."$suiteName"."$codeUnitID"."operations"."$operationName"."measurements" | Sort-Object -Descending { $_.durationMin } | Select-Object -Skip $skipMeasurements)
                     if ($baseLineMeasurements.Count -eq 0) {
@@ -91,6 +97,7 @@ function GetBcptSummaryMD {
                     $baseLineNumberOfSQLStmts = ($baseLineMeasurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Average).Average
                 }
                 catch {
+                    $baseLineFound = $false
                     $baseLineDurationMin = $durationMin
                     $baseLineNumberOfSQLStmts = $numberOfSQLStmts
                 }
@@ -115,21 +122,41 @@ function GetBcptSummaryMD {
                     $baseLineNumberOfSQLStmtsStr = "**$($baseLineNumberOfSQLStmts.ToString("N0"))**|"
                 }
 
-                if (-not $baseLine) {
+                if (!$baseLine) {
+                    # No baseline provided
                     $statusStr = ''
                     $baselinedurationMinStr = ''
                     $baseLineNumberOfSQLStmtsStr = ''
                 }
-                elseif ($pctDurationMin -gt $errorThreasHold -or $pctNumberOfSQLStmts -gt $errorThreasHold) {
-                    $statusStr = ":x:|"
-                    # TODO: issue error
-                }
-                elseif ($pctDurationMin -gt $warningThreasHold -or $pctNumberOfSQLStmts -gt $warningThreasHold) {
-                    $statusStr = ":warning:|"
-                    # TODO: issue warning
-                }
                 else {
-                    $statusStr = ":heavy_check_mark:|"
+                    if (!$baseLineFound) {
+                        # Baseline provided, but not found for this operation
+                        $statusStr = ''
+                        $baselinedurationMinStr = 'N/A|'
+                        $baseLineNumberOfSQLStmtsStr = 'N/A|'
+                    }
+                    else {
+                        $statusStr = $statusOK
+                        if ($pctDurationMin -ge $errorThreshold) {
+                            $statusStr = $statusError
+                            OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($errorThreshold)% for duration"
+                        }
+                        if ($pctNumberOfSQLStmts -ge $errorThreshold) {
+                            $statusStr = $statusError
+                            OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($errorThreshold)% for number of SQL statements"
+                        }
+                        if ($statusStr -eq $statusOK) {
+                            if ($pctDurationMin -ge $warningThreshold) {
+                                $statusStr = $statusWarning
+                                OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the warning threshold of $($warningThreshold)% for duration"
+                            }
+                            if ($pctNumberOfSQLStmts -ge $warningThreshold) {
+                                $statusStr = $statusWarning
+                                OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the warning threshold of $($warningThreshold)% for number of SQL statements"
+                            }
+                        }
+                    }
+                    $statusStr += '|'
                 }
 
                 $thisOperationName = ''; if ($operationName -ne $lastOperationName) { $thisOperationName = $operationName }
@@ -201,15 +228,15 @@ function GetTestResultSummaryMD {
                 Write-Host "- $appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds"
                 $summarySb.Append("|$appName|$appTests|") | Out-Null
                 if ($appPassed -gt 0) {
-                    $summarySb.Append("$($appPassed):white_check_mark:") | Out-Null
+                    $summarySb.Append("$($appPassed)$statusOK") | Out-Null
                 }
                 $summarySb.Append("|") | Out-Null
                 if ($appFailed -gt 0) {
-                    $summarySb.Append("$($appFailed):x:") | Out-Null
+                    $summarySb.Append("$($appFailed)$statusError") | Out-Null
                 }
                 $summarySb.Append("|") | Out-Null
                 if ($appSkipped -gt 0) {
-                    $summarySb.Append("$($appSkipped):white_circle:") | Out-Null
+                    $summarySb.Append("$($appSkipped)$statusSkipped") | Out-Null
                 }
                 $summarySb.Append("|$($appTime)s|\n") | Out-Null
                 if ($appFailed -gt 0) {

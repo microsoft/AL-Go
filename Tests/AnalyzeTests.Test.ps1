@@ -47,9 +47,11 @@ Describe "AnalyzeTests Action Tests" {
         $scriptName = "$actionName.ps1"
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
-        $bcptFilename = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 3 -noOfMeasurements 4
+        $bcptFilename = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 5 -noOfMeasurements 4
+        # BaseLine1 has overall highter duration and more SQL statements than bcptFilename (+ one more opearion)
         $bcptBaseLine1 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 4 -noOfOperations 6 -noOfMeasurements 4 -durationOffset 1 -numberOfSQLStmtsOffset 1
-        $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 2 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 1
+        # BaseLine2 has overall lower duration and less SQL statements than bcptFilename (+ one less opearion)
+        $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 4 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 1
     }
 
     It 'Compile Action' {
@@ -65,57 +67,70 @@ Describe "AnalyzeTests Action Tests" {
     }
 
     It 'Test ReadBcptFile' {
+        . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
         $bcpt = ReadBcptFile -path $bcptFilename
         $bcpt.Count | should -Be 1
         $bcpt."SUITE1".Count | should -Be 2
-        $bcpt."SUITE1"."1".operations.Count | should -Be 3
+        $bcpt."SUITE1"."1".operations.Count | should -Be 5
         $bcpt."SUITE1"."1".operations."operation2".measurements.Count | should -Be 4
     }
 
     It 'Test GetBcptSummaryMD (no baseline)' {
+        . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
         $md = GetBcptSummaryMD -path $bcptFilename
         Write-Host $md.Replace('\n',"`n")
         $md | should -Match 'No baseline provided'
         $columns = 6
-        $rows = 8
+        $rows = 12
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
-        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 6
+        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 10
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
     }
 
     It 'Test GetBcptSummaryMD (with worse baseline)' {
+        . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
         $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine1
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 9
-        $rows = 8
+        $rows = 12
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
-        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 6
-        [regex]::Matches($md, '\|\:heavy_check_mark\:\|').Count | should -Be 6
-        [regex]::Matches($md, '\|\:warning\:\|').Count | should -Be 0
-        [regex]::Matches($md, '\|\:x\:\|').Count | should -Be 0
+        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 10
+        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 10
+        [regex]::Matches($md, "\|$statusWarning\|").Count | should -Be 0
+        [regex]::Matches($md, "\|$statusError\|").Count | should -Be 0
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
     }
 
     It 'Test GetBcptSummaryMD (with better baseline)' {
+        . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
-        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2
+
+        $script:errorCount = 0
+        Mock OutputError { Param([string] $message) Write-Host "ERROR: $message"; $script:errorCount++ }
+        $script:warningCount = 0
+        Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
+
+        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2 -warningThreshold 6 -errorThreshold 12
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 9
-        $rows = 8
+        $rows = 12
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
-        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 6
-        [regex]::Matches($md, '\|\:heavy_check_mark\:\|').Count | should -Be 2
-        [regex]::Matches($md, '\|\:warning\:\|').Count | should -Be 2
-        [regex]::Matches($md, '\|\:x\:\|').Count | should -Be 2
+        [regex]::Matches($md, '\|Operation.\|').Count | should -Be 10
+        [regex]::Matches($md, '\|N\/A\|').Count | should -Be 4
+        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 2
+        [regex]::Matches($md, "\|$statusWarning\|").Count | should -Be 4
+        [regex]::Matches($md, "\|$statusError\|").Count | should -Be 2
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
+        $script:errorCount | Should -be 2
+        $script:warningCount | Should -be 4
     }
 
     AfterAll {
