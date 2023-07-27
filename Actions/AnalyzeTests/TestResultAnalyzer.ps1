@@ -53,8 +53,10 @@ function GetBcptSummaryMD {
         [string] $path,
         [string] $baseLinePath = '',
         [int] $skipMeasurements = 1,
-        [int] $warningThreshold = 5,
-        [int] $errorThreshold = 10
+        [int] $warningDurationThreshold = 10,
+        [int] $errorDurationThreshold = 25,
+        [int] $warningNumberOfSqlStmtsThreshold = 5,
+        [int] $errorNumberOfSqlStmtsThreshold = 10
     )
 
     # TODO: grab skipMeasurements and thresholds from settings
@@ -139,32 +141,32 @@ function GetBcptSummaryMD {
                     }
                     else {
                         $statusStr = $statusOK
-                        if ($pctDurationMin -ge $errorThreshold) {
+                        if ($pctDurationMin -ge $errorDurationThreshold) {
                             $statusStr = $statusError
                             if ($operationName -eq "Scenario") {
 
                                 # TODO: Determine when to give errors and warnings
 
-                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($errorThreshold)% for duration"
+                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($errorDurationThreshold)% for duration"
                             }
                         }
-                        if ($pctNumberOfSQLStmts -ge $errorThreshold) {
+                        if ($pctNumberOfSQLStmts -ge $errorNumberOfSQLStmtsThreshold) {
                             $statusStr = $statusError
                             if ($operationName -eq "Scenario") {
-                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($errorThreshold)% for number of SQL statements"
+                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($errorNumberOfSQLStmtsThreshold)% for number of SQL statements"
                             }
                         }
                         if ($statusStr -eq $statusOK) {
-                            if ($pctDurationMin -ge $warningThreshold) {
+                            if ($pctDurationMin -ge $warningDurationThreshold) {
                                 $statusStr = $statusWarning
                                 if ($operationName -eq "Scenario") {
-                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the warning threshold of $($warningThreshold)% for duration"
+                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the warning threshold of $($warningDurationThreshold)% for duration"
                                 }
                             }
-                            if ($pctNumberOfSQLStmts -ge $warningThreshold) {
+                            if ($pctNumberOfSQLStmts -ge $warningNumberOfSQLStmtsThreshold) {
                                 $statusStr = $statusWarning
                                 if ($operationName -eq "Scenario") {
-                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the warning threshold of $($warningThreshold)% for number of SQL statements"
+                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the warning threshold of $($warningNumberOfSQLStmtsThreshold)% for number of SQL statements"
                                 }
                             }
                         }
