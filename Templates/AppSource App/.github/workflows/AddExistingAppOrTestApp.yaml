@@ -47,7 +47,7 @@ jobs:
           eventId: "DO0090"
 
       - name: Read settings
-        uses: microsoft/AL-Go-Actions/ReadALGoSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         if: github.event.inputs.useGhTokenWorkflow == 'true'
         with:
           shell: powershell

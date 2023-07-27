@@ -57,7 +57,7 @@ jobs:
           eventId: "DO0092"
 
       - name: Read settings
-        uses: microsoft/AL-Go-Actions/ReadALGoSettings@main
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}

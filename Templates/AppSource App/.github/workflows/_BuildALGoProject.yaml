@@ -84,7 +84,7 @@ jobs:
             path: '.dependencies'
 
         - name: Read settings
-          uses: microsoft/AL-Go-Actions/ReadALGoSettings@main
+          uses: microsoft/AL-Go-Actions/ReadSettings@main
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
