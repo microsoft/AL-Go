@@ -62,6 +62,8 @@ function GetBcptSummaryMD {
     $bcpt = ReadBcptFile -path $path
     $baseLine = ReadBcptFile -path $baseLinePath
 
+    $failuresSummaryMD = ""
+
     $summarySb = [System.Text.StringBuilder]::new()
     $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|$(if ($baseLine){'Status|'})Duration|$(if ($baseLine){'Duration (BaseLine)|'})SQL Stmts|$(if ($baseLine){'SQL Stmts (BaseLine)|'})\n|:---|:---|:---|:---|$(if ($baseLine){'---:|'}):--:|$(if ($baseLine){'---:|'})---:|$(if ($baseLine){'---:|'})\n") | Out-Null
 
@@ -278,7 +280,6 @@ function GetTestResultSummaryMD {
                 }
             }
         }
-        $failuresSummaryMD = ""
         if ($totalFailed -gt 0) {
             $failuresSummaryMD = "<i>$totalFailed failing tests, download test results to see details</i>"
             $failuresSb.Insert(0,"<details><summary>$failuresSummaryMD</summary>") | Out-Null
