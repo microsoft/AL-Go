@@ -38,16 +38,12 @@ try {
 
     #region Action: Output
     # Set output variables
+
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
     Write-Host "ArtifactUrl=$artifactUrl"
 
     Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "ArtifactCacheKey=$artifactCacheKey"
-
-    #TODO settings.artifact isn't set
-    Add-Content -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
-    Write-Host "Artifact=$artifactUrl"
-
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope
