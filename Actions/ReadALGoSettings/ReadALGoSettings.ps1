@@ -15,7 +15,7 @@ Param(
     [bool] $release,
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
     [string] $get = "",
-    [Parameter(HelpMessage = "Specifies whether to output the settings to the GITHUB_ENV file", Mandatory = $false)]
+    [Parameter(HelpMessage = "Specifies whether to output the settings to the GITHUB_ENV file. Deprecated. Should be removed as the script should not output settings to GITHUB_ENV.", Mandatory = $false)]
     [switch] $outputToEnv
 )
 
