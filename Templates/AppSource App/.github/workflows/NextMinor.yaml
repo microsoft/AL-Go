@@ -50,7 +50,7 @@ jobs:
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
         run: |
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
           
       - name: Determine Projects To Build
         id: determineProjectsToBuild

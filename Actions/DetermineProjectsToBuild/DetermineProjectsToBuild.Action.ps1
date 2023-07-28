@@ -37,9 +37,9 @@ try {
     $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
     
     # Set output variables
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"    
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"    
     
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
