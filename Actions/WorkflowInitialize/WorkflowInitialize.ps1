@@ -67,10 +67,10 @@ try {
     }
 
     Write-Host "OUTPUTS:"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "telemetryScopeJson=$scopeJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "telemetryScopeJson=$scopeJson"
     Write-Host "- telemetryScopeJson=$scopeJson"
 
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "correlationId=$correlationId"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "correlationId=$correlationId"
     Write-Host "- correlationId=$correlationId"
 }
 catch {

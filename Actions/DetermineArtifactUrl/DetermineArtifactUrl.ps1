@@ -50,9 +50,9 @@ try {
     #region Action: Output
     # Set output variables
     Write-Host "OUTPUTS:"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
     Write-Host "- ArtifactUrl=$artifactUrl"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "- ArtifactCacheKey=$artifactCacheKey"
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
     Write-Host "- SettingsJson=$outSettingsJson"
@@ -60,7 +60,7 @@ try {
         $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
         Write-Host "::add-mask::$outSettingsJson"
     }
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

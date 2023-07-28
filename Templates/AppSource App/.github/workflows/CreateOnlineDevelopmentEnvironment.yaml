@@ -92,7 +92,7 @@ jobs:
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
             CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
             Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($ENV:adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
           }
 
   CreateDevelopmentEnvironment:
@@ -136,13 +136,13 @@ jobs:
           } else {
             $ghToken = '${{ secrets.GITHUB_TOKEN }}'
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 
       - name: Set AdminCenterApiCredentials
         run: |
           if ($env:deviceCode) {
             $adminCenterApiCredentials = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""deviceCode"":""$($env:deviceCode)""}"))
-            Add-Content -path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
           }
 
       - name: Create Development Environment

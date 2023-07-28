@@ -95,7 +95,7 @@ try {
                     }
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
-                Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
+                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
                 $outSecrets += @{ "$envVar" = $base64value }
                 Write-Host "$envVar successfully read from secret $secret"
                 $secretsCollection.Remove($_)
@@ -133,10 +133,10 @@ try {
         $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
         Write-Host "::add-mask::$outSettingsJson"
     }
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
     #endregion
 
