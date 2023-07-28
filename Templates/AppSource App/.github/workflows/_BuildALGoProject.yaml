@@ -178,7 +178,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: inputs.publishArtifacts
           with:
-            name: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
+            name: ${{ env.AppsArtifactsName }}
             path: '${{ inputs.project }}/.buildartifacts/Apps/'
             if-no-files-found: ignore
 
