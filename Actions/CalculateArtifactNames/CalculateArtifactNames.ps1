@@ -14,7 +14,7 @@ Param(
 function Set-EnvVariable([string] $name, [string] $value) {
     Write-Host "Assigning $value to $name"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value" -Encoding UTF8
-    Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
+    Add-Content -Path $env:GITHUB_ENV -Value "$name=$value" -Encoding UTF8
 }
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
