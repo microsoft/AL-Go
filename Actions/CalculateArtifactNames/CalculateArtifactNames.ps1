@@ -13,7 +13,7 @@ Param(
 
 function Set-EnvVariable([string] $name, [string] $value) {
     Write-Host "Assigning $value to $name"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value" -Encoding UTF8
     Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
 }
 
