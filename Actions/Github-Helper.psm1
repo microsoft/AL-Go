@@ -107,7 +107,7 @@ function InvokeWebRequest {
     }
 }
 
-function Get-dependencies {
+function Get-Dependencies {
     Param(
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
@@ -121,10 +121,17 @@ function Get-dependencies {
     $downloadedList = @()
     'Apps','TestApps' | ForEach-Object {
         $mask = $_
-        Write-Host "Locating all $mask artifacts from probing paths"
         $probingPathsJson | ForEach-Object {
             $dependency = $_
             $projects = $dependency.projects
+            $buildMode = $dependency.buildMode
+            
+            # change the mask to include the build mode
+            if($buildMode -ne "Default") {
+                $mask = "$buildMode$mask"
+            }
+
+            Write-Host "Locating $mask artifacts for projects: $projects"
             
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
@@ -146,14 +153,14 @@ function Get-dependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -ne 'TestApps') {
+                    elseif ($mask -notlike '*TestApps') {
                         Write-Host "$_ not built, downloading from artifacts"
                         $missingProjects += @($_)
                     }
                 }
                 if ($missingProjects) {
                     $dependency.release_status = 'latestBuild'
-                    $dependency.branch = "main"
+                    $dependency.branch = $dependency.baseBranch
                     $dependency.projects = $missingProjects -join ","
                 }
             }

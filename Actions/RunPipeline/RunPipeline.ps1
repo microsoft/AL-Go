@@ -7,15 +7,17 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
-    [Parameter(HelpMessage = "Project Dependencies in compressed Json format", Mandatory = $false)]
-    [string] $projectDependenciesJson = "",
     [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"appBuild":"", "appRevision":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
     [string] $secretsJson = '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","codeSignCertificatePassword":"","keyVaultCertificateUrl":"","keyVaultCertificatePassword":"","keyVaultClientId":"","storageContext":"","applicationInsightsConnectionString":""}',
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [ValidateSet('Default', 'Translated', 'Clean')]
-    [string] $buildMode = 'Default'
+    [string] $buildMode = 'Default',
+    [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
+    [string] $installAppsJson = '[]',
+    [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
+    [string] $installTestAppsJson = '[]'
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -132,53 +134,8 @@ try {
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
 
-    Write-Host "Project: $project"
-    if ($project -and $repo.useProjectDependencies -and $projectDependenciesJson -ne "") {
-        Write-Host "Using project dependencies: $projectDependenciesJson"
-
-        $projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-        if ($projectDependencies.Keys -contains $project) {
-            $projects = @($projectDependencies."$project") -join ","
-        }
-        else {
-            $projects = ''
-        }
-        if ($projects) {
-            Write-Host "Project dependencies: $projects"
-            $thisBuildProbingPaths = @(@{
-                "release_status" = "thisBuild"
-                "version" = "latest"
-                "projects" = $projects
-                "repo" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-                "branch" = $ENV:GITHUB_REF_NAME
-                "authTokenSecret" = $token
-            })
-            Get-dependencies -probingPathsJson $thisBuildProbingPaths | where-Object { $_ } | ForEach-Object {
-                if ($_.startswith('(')) {
-                    $installTestApps += $_    
-                }
-                else {
-                    $installApps += $_    
-                }
-            }
-        }
-        else {
-            Write-Host "No project dependencies"
-        }
-    }
-
-    if ($repo.appDependencyProbingPaths) {
-        Write-Host "::group::Downloading dependencies"
-        Get-dependencies -probingPathsJson $repo.appDependencyProbingPaths | ForEach-Object {
-            if ($_.startswith('(')) {
-                $installTestApps += $_    
-            }
-            else {
-                $installApps += $_    
-            }
-        }
-        Write-Host "::endgroup::"
-    }
+    $installApps += $installAppsJson | ConvertFrom-Json
+    $installTestApps += $installTestAppsJson | ConvertFrom-Json
 
     # Analyze app.json version dependencies before launching pipeline
 
