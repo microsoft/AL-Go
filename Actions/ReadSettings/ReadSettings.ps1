@@ -89,8 +89,6 @@ try {
         }
     }
 
-    $useBase64 = $false # test with UTF8 encoding
-
     Write-Host "OUTPUTS:"
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Write-Host "- SettingsJson=$outSettingsJson"
