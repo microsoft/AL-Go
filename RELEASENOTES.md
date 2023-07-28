@@ -14,6 +14,7 @@ Issue 528 Give better error messages when uploading to storage accounts
 Create Online Development environment workflow failed in AppSource template unless AppSourceCopMandatoryAffixes is defined in repository settings file
 Create Online Development environment workflow didn't have a project parameter and only worked for single project repositories
 Create Online Development environment workflow didn't work if runs-on was set to Linux
+Issue 629 Invalid characters in the file path installing app
 
 ### New Settings
 - `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
