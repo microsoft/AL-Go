@@ -80,16 +80,16 @@ try {
         $settingValue = $settings."$setting"
         $outSettings += @{ "$setting" = $settingValue }
         if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
-            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
         }
         else {
-            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
         }
     }
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
     Write-Host "SettingsJson=$outSettingsJson"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
@@ -188,7 +188,7 @@ try {
         }
         $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
         Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsJson=$environmentsJson"
-        Add-Content -Path $env:GITHUB_ENV -Value "environments=$environmentsJson"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "environments=$environmentsJson"
         Write-Host "EnvironmentsJson=$environmentsJson"
         Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($environments.Count)"
         Write-Host "EnvironmentCount=$($environments.Count)"

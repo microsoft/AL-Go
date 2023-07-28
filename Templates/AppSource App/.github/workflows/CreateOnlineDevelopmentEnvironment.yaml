@@ -139,7 +139,7 @@ jobs:
         run: |
           if ($env:deviceCode) {
             $adminCenterApiCredentials = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""deviceCode"":""$($env:deviceCode)""}"))
-            Add-Content -path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
           }
 
       - name: Create Development Environment

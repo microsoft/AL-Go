@@ -149,7 +149,7 @@ jobs:
           Write-Host "DeliveryTargetsJson=$deliveryTargetsJson"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetCount=$($deliveryTargets.Count)"
           Write-Host "DeliveryTargetCount=$($deliveryTargets.Count)"
-          Add-Content -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
