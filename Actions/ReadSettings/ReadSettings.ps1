@@ -96,6 +96,9 @@ try {
         $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
         Write-Host "::add-mask::$outSettingsJson"
     }
+    else {
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "SettingsJson=$outSettingsJson"
+    }
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
