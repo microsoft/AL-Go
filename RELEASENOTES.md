@@ -16,15 +16,15 @@ Create Online Development environment workflow didn't have a project parameter a
 Create Online Development environment workflow didn't work if runs-on was set to Linux
 Special characters are not supported in RepoName, Project names or other settings - Use UTF8 encoding to handle special characters in GITHUB_OUTPUT and GITHUB_ENV
 
-### New Settings
-- `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
-
 ### Issue 555
 AL-Go contains several workflows, which create a Pull Request or pushes code directly.
 All (except Update AL-Go System Files) earlier used the GITHUB_TOKEN to create the PR or commit.
 The problem using GITHUB_TOKEN is that is doesn't trigger a pull request build or a commit build.
 This is by design: https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
 Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use the GhTokenWorkflow instead of the GITHUB_TOKEN - making sure that workflows are triggered
+
+### New Settings
+- `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
 
 ### Settings environment variable
 Up until v3.1 the settings were transferred around as environment variables.
