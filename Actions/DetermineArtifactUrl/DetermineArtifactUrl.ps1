@@ -38,15 +38,18 @@ try {
 
     #region Action: Output
     # Set output variables
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
-    Write-Host "ArtifactUrl=$artifactUrl"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
-    Write-Host "ArtifactCacheKey=$artifactCacheKey"
+    Write-Host "OUTPUTS:"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
+    Write-Host "- ArtifactUrl=$artifactUrl"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
+    Write-Host "- ArtifactCacheKey=$artifactCacheKey"
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
-    Write-Host "SettingsJson=$outSettingsJson"
-    Add-Content -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
-    Write-Host "Artifact=$artifactUrl"
+    Write-Host "- SettingsJson=$outSettingsJson"
+    if ($useBase64) {
+        $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
+        Write-Host "::add-mask::$outSettingsJson"
+    }
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope
