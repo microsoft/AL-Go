@@ -29,7 +29,7 @@ try {
         $testResults = [xml](Get-Content "$project\TestResults.xml")
         $testResultSummary = GetTestResultSummary -testResults $testResults -includeFailures 50
 
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "TestResultMD=$testResultSummary"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TestResultMD=$testResultSummary"
         Write-Host "TestResultMD=$testResultSummary"
     
         Add-Content -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultSummary.Replace("\n","`n"))`n"

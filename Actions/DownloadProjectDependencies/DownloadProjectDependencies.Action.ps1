@@ -124,5 +124,5 @@ Write-Host "Downloaded dependencies test apps: $($DownloadedTestApps -join ', ')
 $DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
 $DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
 
-Add-Content -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
-Add-Content -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"

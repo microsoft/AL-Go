@@ -38,14 +38,14 @@ try {
 
     #region Action: Output
     # Set output variables
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
     Write-Host "ArtifactUrl=$artifactUrl"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "ArtifactCacheKey=$artifactCacheKey"
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
     Write-Host "SettingsJson=$outSettingsJson"
-    Add-Content -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
     Write-Host "Artifact=$artifactUrl"
     #endregion
 
