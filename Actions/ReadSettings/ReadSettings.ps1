@@ -99,7 +99,7 @@ try {
     else {
         Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "SettingsJson=$outSettingsJson"
     }
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Settings=$outSettingsJson"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
