@@ -14,7 +14,7 @@ Issue 528 Give better error messages when uploading to storage accounts
 Create Online Development environment workflow failed in AppSource template unless AppSourceCopMandatoryAffixes is defined in repository settings file
 Create Online Development environment workflow didn't have a project parameter and only worked for single project repositories
 Create Online Development environment workflow didn't work if runs-on was set to Linux
-Issue 629 Invalid characters in the file path installing app
+Special characters are not supported in RepoName, Project names or other settings - Use UTF8 encoding to handle special characters in GITHUB_OUTPUT and GITHUB_ENV
 
 ### New Settings
 - `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
@@ -29,6 +29,9 @@ Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use 
 ### Settings environment variable
 Up until v3.1 the settings were transferred around as environment variables.
 Due to size constraints in environment variables, we have removed the settings environment variable and are using the GITHUB_OUTPUT construct instead.
+
+### New Actions
+- `DownloadProjectDependencies`: Downloads the dependency apps for a given project and build mode.
 
 ## v3.1
 

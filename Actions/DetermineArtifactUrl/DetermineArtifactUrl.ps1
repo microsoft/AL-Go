@@ -3,7 +3,7 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
-    [Parameter(HelpMessage = "Settings from repository in compressed Json format (base64 encoded)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
     [string] $settingsJson = '{"artifact":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
     [string] $secretsJson = '{"insiderSasToken":""}'
@@ -26,18 +26,7 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
-
-    $useBase64 = $true
-    try {
-        $projectSettings = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($settingsJson)) | ConvertFrom-Json | ConvertTo-HashTable
-    }
-    catch {
-        # Older versions of the action did not base64 encode the settings
-        # In order to support in-place upgrade of the action in preview we need to support non-base64 encoded settings as well
-        # This action will return the settings in non-base64 encoded format if the settings are not base64 encoded
-        $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
-        $useBase64 = $false
-    }
+    $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
     $artifactCacheKey = ''
@@ -49,18 +38,15 @@ try {
 
     #region Action: Output
     # Set output variables
-    Write-Host "OUTPUTS:"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
-    Write-Host "- ArtifactUrl=$artifactUrl"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
-    Write-Host "- ArtifactCacheKey=$artifactCacheKey"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
+    Write-Host "ArtifactUrl=$artifactUrl"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
+    Write-Host "ArtifactCacheKey=$artifactCacheKey"
     $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Write-Host "- SettingsJson=$outSettingsJson"
-    if ($useBase64) {
-        $outSettingsJson = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($outSettingsJson))
-        Write-Host "::add-mask::$outSettingsJson"
-    }
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
+    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+    Write-Host "SettingsJson=$outSettingsJson"
+    Add-Content -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
+    Write-Host "Artifact=$artifactUrl"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope
