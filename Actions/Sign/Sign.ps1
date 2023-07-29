@@ -46,7 +46,6 @@ try {
     catch {
         # Older versions of the action did not base64 encode the settings
         # In order to support in-place upgrade of the action in preview we need to support non-base64 encoded settings as well
-        # This action will return the settings in non-base64 encoded format if the settings are not base64 encoded
         $settings = $settingsJson | ConvertFrom-Json
     }
     if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
