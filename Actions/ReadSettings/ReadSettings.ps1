@@ -97,6 +97,7 @@ try {
         Write-Host "::add-mask::$outSettingsJson"
     }
     else {
+        # Older versions of the action doesn't use the settingsJson output variable, but instead the Settings ENV variable
         Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$outSettingsJson"
     }
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
