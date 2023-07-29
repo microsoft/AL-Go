@@ -136,7 +136,7 @@ try {
     else {
         Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "SettingsJson=$outSettingsJson"
     }
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Settings=$outSettingsJson"
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
