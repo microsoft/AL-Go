@@ -132,7 +132,6 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
             settingsJson: ${{ steps.determineArtifactUrl.outputs.SettingsJson }}
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
