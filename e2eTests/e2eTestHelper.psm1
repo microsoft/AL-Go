@@ -301,7 +301,7 @@ function CreateNewAppInFolder {
     )
 
     $al = @(
-        "pageextension $objID CustListExt$name extends ""Customer List"""
+        "pageextension $objID ""CustListExt$name"" extends ""Customer List"""
         "{"
         "  trigger OnOpenPage();"
         "  begin"
@@ -346,6 +346,16 @@ function CreateAlGoRepository {
     if (!$template.Contains('@')) {
         $template += '@main'
     }
+    $waitMinutes = Get-Random -Minimum 0 -Maximum 4
+    $templateFolder = ''
+    if ($template.Contains('|')) {
+        # In order to run tests on the direct AL-Go Development branch, specify the folder in which the template is located after a | character in template
+        # example: "https://github.com/freddydk/AL-Go@branch|Templates/Per Tenant Extension"
+        $templateFolder = $template.Split('|')[1]
+        $templateOwner = $template.Split('/')[3]
+        $template = $template.Split('|')[0]
+        $waitMinutes = 0 # Do not wait when running tests on direct AL-Go Development branch
+    }
     $templateBranch = $template.Split('@')[1]
     $templateRepo = $template.Split('@')[0]
 
@@ -353,6 +363,10 @@ function CreateAlGoRepository {
     $path = Join-Path $tempPath ([GUID]::NewGuid().ToString())
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
+    if ($waitMinutes) {
+        Write-Host "Waiting $waitMinutes minutes"
+        Start-Sleep -seconds ($waitMinutes*60)
+    }
     if ($private) {
         Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
         invoke-gh repo create $repository --private --clone
@@ -371,9 +385,31 @@ function CreateAlGoRepository {
     
     $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
     Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
-    Copy-Item (Join-Path (Get-Item "$tempRepoPath\*").FullName '*') -Destination . -Recurse -Force
+    Copy-Item (Join-Path (Get-Item "$tempRepoPath/*/$templateFolder").FullName '*') -Destination . -Recurse -Force
     Remove-Item -Path $tempRepoPath -Force -Recurse
     Remove-Item -Path $zipFileName -Force
+    if ($templateFolder) {
+        # This is a direct AL-Go development repository
+        # Replace URL's + references to microsoft/AL-Go-Actions with $templateOwner/AL-Go/Actions
+        Get-ChildItem -Path . -File -Recurse | ForEach-Object {
+            $file = $_.FullName
+            $lines = ([string](Get-Content -Encoding UTF8 -Raw -path $file)).Replace("`r","").Split("`n")
+        
+            # Replace URL's to actions repository first
+            $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/main(.*)$"
+            $replace = "`$1https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`$2"
+            $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+        
+            # Replace AL-Go-Action references
+            $regex = "^(.*)microsoft\/AL-Go-Actions(.*)main(.*)$"
+            $replace = "`$1$($templateOwner)/AL-Go/Actions`$2$($templateBranch)`$3"
+            Write-Host $replace
+            $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+        
+            [System.IO.File]::WriteAllText($file, "$($lines -join "`n")`n")
+        }
+    }
+
     if ($projects) {
         # Make Repo multi-project
         $projects | ForEach-Object {
@@ -523,7 +559,7 @@ function RemoveRepository {
             @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
                 Write-Host "+ package $($_.name)"
                 # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
-                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name) --input -
+                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name) --input
             }
         }
         catch {
