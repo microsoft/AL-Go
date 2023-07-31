@@ -84,7 +84,7 @@ try {
                     }
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
-                Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
+                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
                 $outSecrets += @{ "$envVar" = $base64value }
                 Write-Host "$envVar successfully read from secret $secret"
                 $secretsCollection.Remove($_)
@@ -103,7 +103,7 @@ try {
 
         # Set the app probing paths as an environment variable. Do not store them in the settings as they may contain secrets
         $appDependencyProbingPathsJson = ConvertTo-Json -InputObject $appDependencyProbingPaths -Depth 99 -Compress
-        Add-Content -Path $env:GITHUB_ENV -Value "appProbingPathsJson=$appDependencyProbingPathsJson"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "appProbingPathsJson=$appDependencyProbingPathsJson"
     }
 
     if ($secretsCollection) {
@@ -120,7 +120,7 @@ try {
     }
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
     TrackTrace -telemetryScope $telemetryScope
 }

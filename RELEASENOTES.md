@@ -14,6 +14,7 @@ Issue 528 Give better error messages when uploading to storage accounts
 Create Online Development environment workflow failed in AppSource template unless AppSourceCopMandatoryAffixes is defined in repository settings file
 Create Online Development environment workflow didn't have a project parameter and only worked for single project repositories
 Create Online Development environment workflow didn't work if runs-on was set to Linux
+Special characters are not supported in RepoName, Project names or other settings - Use UTF8 encoding to handle special characters in GITHUB_OUTPUT and GITHUB_ENV
 
 ### Issue 555
 AL-Go contains several workflows, which create a Pull Request or pushes code directly.

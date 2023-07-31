@@ -42,7 +42,7 @@ try {
             }
         }
     }
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseBranch=$releaseBranch"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releaseBranch=$releaseBranch"
     Write-Host "releaseBranch=$releaseBranch"
 
     $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
@@ -66,7 +66,7 @@ try {
         OutputWarning -message "You can modify the release note from the release page later."
         $releaseNotes = ""
     }
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "releaseNotes=$releaseNotes"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releaseNotes=$releaseNotes"
     Write-Host "releaseNotes=$releaseNotes"
 
     TrackTrace -telemetryScope $telemetryScope

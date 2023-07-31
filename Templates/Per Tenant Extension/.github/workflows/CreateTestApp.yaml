@@ -88,7 +88,7 @@ jobs:
           } else {
             $ghToken = '${{ secrets.GITHUB_TOKEN }}'
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 
       - name: Creating a new test app
         uses: microsoft/AL-Go-Actions/CreateApp@main

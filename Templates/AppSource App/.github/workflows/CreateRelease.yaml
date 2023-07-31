@@ -166,9 +166,9 @@ jobs:
           }
           $artifacts = @{ "include" = $include }
           $artifactsJson = $artifacts | ConvertTo-Json -compress
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "artifacts=$artifactsJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "artifacts=$artifactsJson"
           Write-Host "artifacts=$artifactsJson"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "commitish=$sha"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "commitish=$sha"
           Write-Host "commitish=$sha"
 
       - name: Prepare release notes
@@ -269,7 +269,7 @@ jobs:
           if ('${{ matrix.atype }}' -eq 'Apps') {
             $nuGetContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('nuGetContext')))
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "nuGetContext=$nuGetContext"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "nuGetContext=$nuGetContext"
 
       - name: Deliver to NuGet
         uses: microsoft/AL-Go-Actions/Deliver@main
@@ -293,7 +293,7 @@ jobs:
           if ('${{ matrix.atype }}' -eq 'Apps') {
             $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('storageContext')))
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "storageContext=$storageContext"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "storageContext=$storageContext"
 
       - name: Deliver to Storage
         uses: microsoft/AL-Go-Actions/Deliver@main
@@ -361,7 +361,7 @@ jobs:
           } else {
             $ghToken = '${{ secrets.GITHUB_TOKEN }}'
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 
       - name: Update Version Number
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main

@@ -62,7 +62,7 @@ jobs:
           $templateUrl = $ENV:templateUrl
           if ($templateUrl) {
             Write-Host "Using Template Url: $templateUrl"
-            Add-Content -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
           }
 
       - name: Calculate DirectCommit
@@ -77,7 +77,7 @@ jobs:
             Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit = Y"
             $directCommit = 'Y'
           }
-          Add-Content -Path $env:GITHUB_ENV -Value "DirectCommit=$directCommit"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "DirectCommit=$directCommit"
 
       - name: Update AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main

@@ -228,7 +228,7 @@ try {
     $buildOutputFile = Join-Path $projectPath "BuildOutput.txt"
     $containerEventLogFile = Join-Path $projectPath "ContainerEventLog.evtx"
 
-    "containerName=$containerName" | Add-Content $ENV:GITHUB_ENV
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerName=$containerName"
 
     Set-Location $projectPath
     $runAlPipelineOverrides | ForEach-Object {

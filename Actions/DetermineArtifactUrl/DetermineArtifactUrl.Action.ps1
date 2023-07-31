@@ -39,10 +39,10 @@ try {
     #region Action: Output
     # Set output variables
 
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
     Write-Host "ArtifactUrl=$artifactUrl"
 
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
     Write-Host "ArtifactCacheKey=$artifactCacheKey"
     #endregion
 
