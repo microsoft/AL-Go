@@ -29,6 +29,9 @@ Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use 
 ### New Actions
 - `DownloadProjectDependencies`: Downloads the dependency apps for a given project and build mode.
 
+### Business Central Performance Toolkit Test Result Viewer
+- In the summary after a Test Run, you now also have the result of performance tests.
+
 ## v3.1
 
 ### Issues
