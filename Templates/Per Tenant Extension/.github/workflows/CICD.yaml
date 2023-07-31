@@ -63,7 +63,7 @@ jobs:
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
         run: |
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
           
       - name: Determine Projects To Build
         id: determineProjectsToBuild
@@ -75,15 +75,14 @@ jobs:
       - name: Determine Delivery Target Secrets
         id: DetermineDeliveryTargetSecrets
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $deliveryTargetSecrets = @('GitHubPackagesContext','NuGetContext','StorageContext','AppSourceContext')
           $namePrefix = 'DeliverTo'
           Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") | ForEach-Object {
             $deliveryTarget = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
             $deliveryTargetSecrets += @("$($deliveryTarget)Context")
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "Secrets=$($deliveryTargetSecrets -join ',')"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$($deliveryTargetSecrets -join ',')"
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -97,8 +96,7 @@ jobs:
       - name: Determine Delivery Targets
         id: DetermineDeliveryTargets
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $deliveryTargets = @('GitHubPackages','NuGet','Storage')
           if ($env:type -eq "AppSource App") {
             $continuousDelivery = $false
@@ -147,11 +145,11 @@ jobs:
           })
           $deliveryTargetsJson = $deliveryTargets | ConvertTo-Json -Depth 99 -compress
           if ($deliveryTargets.Count -lt 2) { $deliveryTargetsJson = "[$($deliveryTargetsJson)]" }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetsJson=$deliveryTargetsJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetsJson=$deliveryTargetsJson"
           Write-Host "DeliveryTargetsJson=$deliveryTargetsJson"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetCount=$($deliveryTargets.Count)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetCount=$($deliveryTargets.Count)"
           Write-Host "DeliveryTargetCount=$($deliveryTargets.Count)"
-          Add-Content -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
@@ -217,10 +215,9 @@ jobs:
       - name: EnvName
         id: envName
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ matrix.environment }}'.split(' ')[0]
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -239,8 +236,7 @@ jobs:
       - name: AuthContext
         id: authContext
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ steps.envName.outputs.envName }}'
           $deployToSettingStr = [System.Environment]::GetEnvironmentVariable("DeployTo$envName")
           if ($deployToSettingStr) {
@@ -302,12 +298,12 @@ jobs:
             $projects = ($projects.Split(',') | Where-Object { $buildProjects -contains $_ }) -join ','
           }
 
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "authContext=$authContext"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "authContext=$authContext"
           Write-Host "authContext=$authContext"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "environmentName=$environmentName"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "environmentName=$environmentName"
           Write-Host "environmentName=$([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName)))"
           Write-Host "environmentName (as Base64)=$environmentName"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "projects=$projects"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "projects=$projects"
           Write-Host "projects=$projects"
 
       - name: Deploy
@@ -356,11 +352,10 @@ jobs:
       - name: DeliveryContext
         id: deliveryContext
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $contextName = '${{ matrix.deliveryTarget }}Context'
           $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($contextName)))
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "deliveryContext=$deliveryContext"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliveryContext=$deliveryContext"
           Write-Host "deliveryContext=$deliveryContext"
 
       - name: Deliver

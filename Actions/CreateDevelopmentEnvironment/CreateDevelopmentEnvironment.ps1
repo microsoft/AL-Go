@@ -7,6 +7,8 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Name of the online environment", Mandatory = $true)]
     [string] $environmentName,
+    [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
+    [string] $project = '.',
     [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $false)]
     [string] $adminCenterApiCredentials,
     [Parameter(HelpMessage = "Reuse environment if it exists", Mandatory = $false)]
@@ -17,8 +19,7 @@ Param(
     [bool] $directCommit    
 )
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
@@ -49,6 +50,7 @@ try {
         -environmentName $environmentName `
         -reUseExistingEnvironment:$reUseExistingEnvironment `
         -baseFolder $repoBaseFolder `
+        -project $project `
         -bcContainerHelperPath $bcContainerHelperPath `
         -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
 

@@ -28,6 +28,9 @@ on:
         description: Direct COMMIT (Y/N)
         required: false
         default: 'N'
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for Pull Request/COMMIT
+        type: boolean
 
 permissions:
   contents: write
@@ -55,10 +58,42 @@ jobs:
           shell: powershell
           eventId: "DO0095"
 
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        if: github.event.inputs.useGhTokenWorkflow == 'true'
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          get: keyVaultName,ghTokenWorkflowSecretName
+
+      - name: Read secrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        if: github.event.inputs.useGhTokenWorkflow == 'true'
+        env:
+          secrets: ${{ toJson(secrets) }}
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          settingsJson: ${{ env.Settings }}
+          secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+
+      - name: CalculateToken
+        id: CalculateToken
+        env:
+          useGhTokenWorkflow: ${{ github.event.inputs.useGhTokenWorkflow }}
+        run: |
+          if ($env:useGhTokenWorkflow -eq 'true') {
+            $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GHTOKENWORKFLOW))
+          } else {
+            $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+          }
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
+
       - name: Creating a new test app
         uses: microsoft/AL-Go-Actions/CreateApp@main
         with:
           shell: powershell
+          token: ${{ steps.CalculateToken.outputs.ghToken }}
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           project: ${{ github.event.inputs.project }}
           type: 'Test App'
