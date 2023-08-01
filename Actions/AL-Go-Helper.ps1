@@ -523,6 +523,7 @@ function ReadSettings {
         "environments"                           = @()
         "buildModes"                             = @()
         "useCompilerFolder"                      = $false
+        "secretlessPRBuild"                      = $false
     }
 
     # Read settings from files and merge them into the settings object

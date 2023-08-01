@@ -229,6 +229,15 @@ try {
                         else {
                             $CICDPullRequestBranches = $defaultCICDPullRequestBranches
                         }
+
+                        if ($repoSettings.secretlessPRBuild) {
+                            $prTrigger = "pull_request"
+                        } else {
+                            $prTrigger = "pull_request_target"
+                        }
+
+                        Write-Host "PR Trigger: $prTrigger"
+
                         # update the branches: line with the new branches
                         $yaml.Replace('on:/pull_request_target:/branches:', "branches: [ '$($cicdPullRequestBranches -join "', '")' ]")
                     }
