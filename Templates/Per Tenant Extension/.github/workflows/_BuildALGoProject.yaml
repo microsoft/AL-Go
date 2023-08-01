@@ -83,7 +83,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            get: 'useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps'
+            get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps
 
         - name: Read secrets
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
