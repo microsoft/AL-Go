@@ -96,7 +96,7 @@ else {
     $projectSettingsFiles = @(".AL-Go\settings.json")
 }
 
-$template = "https://github.com/$($template)@main"
+$template = "https://github.com/$template"
 
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
