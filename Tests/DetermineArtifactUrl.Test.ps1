@@ -135,9 +135,6 @@ Describe "DetermineArtifactUrl Action Test" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-            "SettingsJson" = "Settings (with modified artifact setting) in compressed Json format (base64 encoded)"
-            "ArtifactUrl" = "The ArtifactUrl to use for building this project"
-            "ArtifactCacheKey" = "The Artifact Cache Key to use for building this project (if using CompilerFolder)"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

@@ -38,15 +38,14 @@ try {
 
     #region Action: Output
     # Set output variables
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
-    Write-Host "ArtifactUrl=$artifactUrl"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
-    Write-Host "ArtifactCacheKey=$artifactCacheKey"
-    $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
-    Write-Host "SettingsJson=$outSettingsJson"
+    Write-Host "SETTINGS:"
+    $outSettings | ConvertTo-Json -Depth 99 | Out-Host
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($outSettings | ConvertTo-Json -Depth 99 -Compress)"
+
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
     Write-Host "Artifact=$artifactUrl"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifactCacheKey=$artifactCacheKey"
+    Write-Host "ArtifactCacheKey=$artifactCacheKey"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

@@ -83,6 +83,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
+            get: 'useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps'
 
         - name: Read secrets
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -103,11 +104,11 @@ jobs:
             secretsJson: ${{ env.RepoSecrets }}
 
         - name: Cache Business Central Artifacts
-          if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && steps.determineArtifactUrl.outputs.ArtifactCacheKey
+          if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.ArtifactCacheKey
           uses: actions/cache@v3
           with:
             path: .artifactcache
-            key: ${{ steps.determineArtifactUrl.outputs.ArtifactCacheKey }}
+            key: ${{ env.ArtifactCacheKey }}
 
         - name: Download Project Dependencies
           id: DownloadProjectDependencies
