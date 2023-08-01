@@ -17,10 +17,6 @@ inputs:
     description: Settings from repository in compressed Json format
     required: false
     default: '{"appBuild":0,"appRevision":0}'
-  secretsJson:
-    description: Secrets from repository in compressed Json format
-    required: false
-    default: '{"insiderSasToken":""}'
 outputs:
   ArtifactUrl:
     description: The ArtifactUrl to use for building this project
@@ -38,9 +34,8 @@ runs:
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
         _settingsJson: ${{ inputs.settingsJson }}
-        _secretsJson: ${{ inputs.secretsJson }}
       run: try { 
-          ${{ github.action_path }}/DetermineArtifactUrl.Action.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson  -project $ENV:_project -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson
+          ${{ github.action_path }}/DetermineArtifactUrl.Action.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson  -project $ENV:_project -settingsJson $ENV:_settingsJson
         } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
