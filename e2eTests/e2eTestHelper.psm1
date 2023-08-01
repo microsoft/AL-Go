@@ -343,9 +343,6 @@ function CreateAlGoRepository {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    if (!$template.Contains('@')) {
-        $template += '@main'
-    }
     $waitMinutes = Get-Random -Minimum 0 -Maximum 4
     $templateFolder = ''
     if ($template.Contains('|')) {
@@ -355,6 +352,9 @@ function CreateAlGoRepository {
         $templateOwner = $template.Split('/')[3]
         $template = $template.Split('|')[0]
         $waitMinutes = 0 # Do not wait when running tests on direct AL-Go Development branch
+    }
+    if (!$template.Contains('@')) {
+        $template += '@main'
     }
     $templateBranch = $template.Split('@')[1]
     $templateRepo = $template.Split('@')[0]
@@ -393,7 +393,7 @@ function CreateAlGoRepository {
         # Replace URL's + references to microsoft/AL-Go-Actions with $templateOwner/AL-Go/Actions
         Get-ChildItem -Path . -File -Recurse | ForEach-Object {
             $file = $_.FullName
-            $lines = ([string](Get-Content -Encoding UTF8 -Raw -path $file)).Replace("`r","").Split("`n")
+            $lines = Get-Content -Encoding UTF8 -path $file
         
             # Replace URL's to actions repository first
             $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/main(.*)$"
@@ -403,7 +403,6 @@ function CreateAlGoRepository {
             # Replace AL-Go-Action references
             $regex = "^(.*)microsoft\/AL-Go-Actions(.*)main(.*)$"
             $replace = "`$1$($templateOwner)/AL-Go/Actions`$2$($templateBranch)`$3"
-            Write-Host $replace
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
         
             [System.IO.File]::WriteAllText($file, "$($lines -join "`n")`n")
