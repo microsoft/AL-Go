@@ -223,16 +223,16 @@ try {
 
                     if ($baseName -eq "PullRequestHandler") {
                         # The PullRequestHandler workflow can have a RepoSetting called SecretlessPRBuild which will run PR Builds from forks in secretless environments 
+                        $triggerSection = $yaml.Get('on:/')
                         if (($repoSettings.Keys -contains 'SecretlessPRBuild') -and ($repoSettings.SecretlessPRBuild)) {
                             # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
                             $prTrigger = "pull_request"
+                            $triggerSection.ReplaceAll("pull_request_target", $prTrigger)
                         } else {
                             # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
                             $prTrigger = "pull_request_target"
+                            $triggerSection.ReplaceAll("pull_request", $prTrigger)
                         }
-                        $triggerSection = $yaml.Get('on:/')
-                        $triggerSection.ReplaceAll("pull_request_target", $prTrigger)
-                        $triggerSection.ReplaceAll("pull_request", $prTrigger)
                         $yaml.Replace('on:/', $triggerSection.Content)   
 
                         # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
