@@ -232,9 +232,13 @@ try {
 
                         if ($repoSettings.secretlessPRBuild) {
                             $prTrigger = "pull_request"
+                            $yaml.Replace('on:/pull_request_target', "pull_request")
                         } else {
                             $prTrigger = "pull_request_target"
+                            $yaml.Replace('on:/pull_request', "pull_request_target")
                         }
+
+                        
 
                         Write-Host "PR Trigger: $prTrigger"
 
