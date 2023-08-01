@@ -8,9 +8,6 @@ inputs:
   azureCredentialsJson:
     description: Azure Credentials secret
     required: true
-  settingsJson:
-    description: Settings from repository in compressed Json format
-    required: false
   timestampService:
     description: The URI of the timestamp server
     required: false

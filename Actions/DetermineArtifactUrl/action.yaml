@@ -13,9 +13,6 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  settingsJson:
-    description: Settings from repository in compressed Json format (base64 encoded)
-    required: false
   secretsJson:
     description: Secrets from repository in compressed Json format
     required: false

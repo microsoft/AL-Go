@@ -5,9 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  settingsJson:
-    description: Settings from repository in compressed Json format
-    required: false
   project:
     description: Name of the built project
     required: true

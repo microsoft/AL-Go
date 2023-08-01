@@ -38,11 +38,14 @@ try {
     $outSecrets = [ordered]@{}
     $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
     $outSettings = $settings
-    $keyVaultName = $settings.keyVaultName
-    if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-        $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
-        if ($credentialsJson.Keys -contains "keyVaultName") {
-            $keyVaultName = $credentialsJson.keyVaultName
+    $keyVaultName = ""
+    if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
+        $keyVaultName = $settings.keyVaultName
+        if ([string]::IsNullOrEmpty($keyVaultName)) {
+            $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
+            if ($credentialsJson.Keys -contains "keyVaultName") {
+                $keyVaultName = $credentialsJson.keyVaultName
+            }
         }
     }
     [System.Collections.ArrayList]$secretsCollection = @()
