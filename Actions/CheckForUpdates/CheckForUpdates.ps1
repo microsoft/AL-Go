@@ -225,13 +225,15 @@ try {
                         # The PullRequestHandler workflow can have a RepoSetting called SecretlessPRBuild which will run PR Builds from forks in secretless environments 
                         if (($repoSettings.Keys -contains 'SecretlessPRBuild') -and ($repoSettings.SecretlessPRBuild)) {
                             # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
-                            $prTrigger = "pull_request:"
-                            $yaml.Replace('on:/pull_request_target:', $prTrigger)
+                            $prTrigger = "pull_request"
                         } else {
                             # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
-                            $prTrigger = "pull_request_target:"
-                            $yaml.Replace('on:/pull_request:', $prTrigger)
+                            $prTrigger = "pull_request_target"
                         }
+                        $triggerSection = $yaml.Get('on:/')
+                        $triggerSection.ReplaceAll("pull_request_target", $prTrigger)
+                        $triggerSection.ReplaceAll("pull_request", $prTrigger)
+                        $yaml.Replace('on:/', $triggerSection.Content)   
 
                         # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                         if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
@@ -242,7 +244,7 @@ try {
                         }
 
                         # update the branches: line with the new branches
-                        $yaml.Replace("on:/$($prTrigger)/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+                        $yaml.Replace("on:/$($prTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
                     }
 
                     # Repo Setting runs-on and shell determines which GitHub runner is used for all non-build jobs (build jobs are run using the GitHubRunner/GitHubRunnerShell repo settings)
