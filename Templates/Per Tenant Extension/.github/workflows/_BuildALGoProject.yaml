@@ -91,7 +91,7 @@ jobs:
             project: ${{ inputs.project }}
 
         - name: Read secrets
-          if: github.event.name != 'pull_request'
+          if: github.event_name != 'pull_request'
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
           env:
             secrets: ${{ toJson(secrets) }}
