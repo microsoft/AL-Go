@@ -25,7 +25,6 @@ runs:
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      id: determineArtifactUrl
       env:
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
