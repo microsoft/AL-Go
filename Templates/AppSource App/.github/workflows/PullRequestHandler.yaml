@@ -26,7 +26,7 @@ env:
 
 jobs:
   PregateCheck:
-    if: github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name
+    if: (github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name) && (github.event_name != 'pull_request')
     runs-on: [ windows-latest ]
     steps:
       - uses: actions/checkout@v3
