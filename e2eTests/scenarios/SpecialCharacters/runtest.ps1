@@ -99,4 +99,4 @@ Pop-Location
 
 Set-Location $prevLocation
 
-#RemoveRepository -repository $repository -path $repoPath
+RemoveRepository -repository $repository -path $repoPath
