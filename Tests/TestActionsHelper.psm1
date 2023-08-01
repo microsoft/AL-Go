@@ -70,6 +70,7 @@ function YamlTest {
     $yaml.AppendLine("    required: false") | Out-Null
     $yaml.AppendLine("    default: powershell") | Out-Null
     $parameterString = ""
+    $warningLines = @()
     $envLines = [System.Text.StringBuilder]::new()
     if ($cmd.Parameters.Count -gt 0) {
         $cmd.Parameters.GetEnumerator() | ForEach-Object {
@@ -82,16 +83,16 @@ function YamlTest {
                 $type = $value.ParameterType.ToString()
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
+                $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
                 if ($name -eq 'settingsJson') {
-                    # settingsJson is a special case. It is a json string that is base64 encoded
-                    # We do not want to add the settings to environment variables as it takes up a lot of space
-                    # Being base64 encoded, settings won't have a problem with special characters (which is one of the reasons for using environment variables)
-                    $parameterString += " -$($name) `$ENV:Settings"
+                    # settingsJson is a special case. It will no longer be a parameter, but an environment variable
+                    # Actions can use $env:Settings to get to the settings in json format
                     $yaml.AppendLine("    required: false") | Out-Null
+                    # Add a warning to the action that it is using an old version of AL-Go for GitHub
+                    $warningLines += @('if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }')
                 }
                 else {
                     $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
-                    $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
                     if ($type -eq "System.String" -or $type -eq "System.Int32") {
                         $parameterString += " -$($name) `$ENV:_$($name)"
                         if (!$required) {
@@ -131,7 +132,17 @@ function YamlTest {
         $yaml.AppendLine("      env:") | Out-Null
         $yaml.Append($envLines.ToString())
     }
-    $yaml.AppendLine("      run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
+    if ($warningLines) {
+        $yaml.AppendLine("      run: |") | Out-Null
+        # Add the warning lines
+        $warningLines | ForEach-Object {
+            $yaml.AppendLine("        $_") | Out-Null
+        }
+        $yaml.AppendLine("        try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
+    }
+    else {
+        $yaml.AppendLine("      run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
+    }
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null
     $yaml.Append("  color: blue") | Out-Null
