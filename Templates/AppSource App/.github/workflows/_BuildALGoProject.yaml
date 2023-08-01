@@ -234,7 +234,7 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            Project: ${{ inputs.project }}
+            project: ${{ inputs.project }}
 
         - name: Cleanup
           if: always()
@@ -242,4 +242,4 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            Project: ${{ inputs.project }}
+            project: ${{ inputs.project }}
