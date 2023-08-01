@@ -6,7 +6,7 @@ inputs:
     required: false
     default: powershell
   settingsJson:
-    description: Settings from template repository in compressed Json format
+    description: Settings from repository in compressed Json format
     required: false
   secrets:
     description: Comma separated list of Secrets to get
