@@ -77,8 +77,5 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for direct AL-Go development) |
 |$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for direct AL-Go development) |
 
-Where E2EgitHubOwner is of type string and the other global variables is of type SecureString.
-Running end to end tests in VS Code will use your 3 deployed template repositories for running the tests.
-
 ---
 [back](../README.md)
