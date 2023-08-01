@@ -37,7 +37,6 @@ try {
 
     $outSecrets = [ordered]@{}
     $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
-    $settingsJson | Out-Host
     $outSettings = $settings
     $keyVaultName = ""
     if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
