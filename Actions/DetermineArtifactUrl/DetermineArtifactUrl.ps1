@@ -39,8 +39,8 @@ try {
     #region Action: Output
     # Set output variables
     Write-Host "SETTINGS:"
-    $outSettings | ConvertTo-Json -Depth 99 | Out-Host
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($outSettings | ConvertTo-Json -Depth 99 -Compress)"
+    $projectSettings | ConvertTo-Json -Depth 99 | Out-Host
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($projectSettings | ConvertTo-Json -Depth 99 -Compress)"
 
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
     Write-Host "Artifact=$artifactUrl"
