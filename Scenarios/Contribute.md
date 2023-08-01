@@ -67,7 +67,7 @@ You can run the *Cleanup after failed E2E* workflow to cleanup these repositorie
 
 You can also run the end to end tests directly from VS Code, by providing the following global variables:
 
-|Variable|Tyoe|Description|
+|Variable|Type|Description|
 |---|---|---|
 |$global:E2EgitHubOwner| String | The GitHub owner of the test repositories (like `freddydk` or `microsoft`) |
 |$global:SecureE2EPAT| SecureString | A personal access token with workflow permissions |
