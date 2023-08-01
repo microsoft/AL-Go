@@ -226,11 +226,11 @@ try {
                         if (($repoSettings.Keys -contains 'SecretlessPRBuild') -and ($repoSettings.SecretlessPRBuild)) {
                             # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
                             $prTrigger = "pull_request:"
-                            $yaml.Replace('on:/pull_request_target:', $prTrigger)
+                            $yaml.Replace('on:/pull_request_target:/', $prTrigger)
                         } else {
                             # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
                             $prTrigger = "pull_request_target:"
-                            $yaml.Replace('on:/pull_request:', $prTrigger)
+                            $yaml.Replace('on:/pull_request:/', $prTrigger)
                         }
 
                         # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
