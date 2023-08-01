@@ -1,7 +1,4 @@
 Param(
-
-    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
-    [string] $settingsJson,
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
@@ -36,7 +33,7 @@ try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
-    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $outSettings = $settings
     $keyVaultName = ""
     if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {

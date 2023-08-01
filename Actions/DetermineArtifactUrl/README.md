@@ -2,7 +2,7 @@
 Determines the artifactUrl to use for a given project
 ## Parameters
 ### settingsJson
-Settings from repository in compressed Json format
+OBSOLETE: Settings from repository in compressed Json format
 ### secretsJson
 Secrets from repository in compressed Json format
 ### parentTelemetryScopeJson (default {})

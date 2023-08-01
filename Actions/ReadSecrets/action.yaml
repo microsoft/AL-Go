@@ -6,7 +6,7 @@ inputs:
     required: false
     default: powershell
   settingsJson:
-    description: Settings from repository in compressed Json format
+    description: 'OBSOLETE: Settings from repository in compressed Json format'
     required: false
   secrets:
     description: Comma separated list of Secrets to get
@@ -23,7 +23,7 @@ runs:
       env:
         _secrets: ${{ inputs.secrets }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-      run: try { ${{ github.action_path }}/ReadSecrets.ps1 -settingsJson $ENV:Settings -secrets $ENV:_secrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/ReadSecrets.ps1 -secrets $ENV:_secrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

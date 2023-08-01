@@ -1,6 +1,4 @@
 Param(
-    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
-    [string] $settingsJson,
     [Parameter(HelpMessage = "Name of the built project", Mandatory = $true)]
     [string] $project,
     [Parameter(HelpMessage = "Build mode used when building the artifacts", Mandatory = $true)]
@@ -19,8 +17,8 @@ function Set-EnvVariable([string] $name, [string] $value) {
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-Write-Host $settingsJson
-$settings = $settingsJson | ConvertFrom-Json
+Write-Host $env:Settings
+$settings = $env:Settings | ConvertFrom-Json
 
 if ($project -eq ".") { 
   $project = $settings.repoName 

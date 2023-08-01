@@ -8,6 +8,9 @@ inputs:
   azureCredentialsJson:
     description: Azure Credentials secret
     required: true
+  settingsJson:
+    description: 'OBSOLETE: Settings from repository in compressed Json format'
+    required: true
   timestampService:
     description: The URI of the timestamp server
     required: false
@@ -30,15 +33,16 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
+        _settingsJson: ${{ inputs.settingsJson }}
         _timestampService: ${{ inputs.timestampService }}
         _digestAlgorithm: ${{ inputs.digestAlgorithm }}
         _pathToFiles: ${{ inputs.pathToFiles }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
       id: Sign
-      run: | 
+      run: |
+        if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }
         try { 
           ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson $ENV:_azureCredentialsJson `
-                                      -settingsJson $ENV:Settings `
                                       -TimestampService $ENV:_timestampService `
                                       -TimestampDigest $ENV:_digestAlgorithm `
                                       -FileDigest $ENV:_digestAlgorithm `
