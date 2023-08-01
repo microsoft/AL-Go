@@ -82,22 +82,31 @@ function YamlTest {
                 $type = $value.ParameterType.ToString()
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
-                $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
-                $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
-                if ($type -eq "System.String" -or $type -eq "System.Int32") {
-                    $parameterString += " -$($name) `$ENV:_$($name)"
-                    if (!$required) {
-                        $yaml.AppendLine("    default: *") | Out-Null
-                    }
-                }
-                elseif ($type -eq "System.Boolean") {
-                    $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
-                    if (!$required) {
-                        $yaml.AppendLine("    default: 'N'") | Out-Null
-                    }
+                if ($name -eq 'settingsJson') {
+                    # settingsJson is a special case. It is a json string that is base64 encoded
+                    # We do not want to add the settings to environment variables as it takes up a lot of space
+                    # Being base64 encoded, settings won't have a problem with special characters (which is one of the reasons for using environment variables)
+                    $parameterString += " -$($name) `$ENV:Settings"
+                    $yaml.AppendLine("    required: false") | Out-Null
                 }
                 else {
-                    throw "Unknown parameter type: $type. Only String, Int and Bool allowed"
+                    $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
+                    $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
+                    if ($type -eq "System.String" -or $type -eq "System.Int32") {
+                        $parameterString += " -$($name) `$ENV:_$($name)"
+                        if (!$required) {
+                            $yaml.AppendLine("    default: *") | Out-Null
+                        }
+                    }
+                    elseif ($type -eq "System.Boolean") {
+                        $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
+                        if (!$required) {
+                            $yaml.AppendLine("    default: 'N'") | Out-Null
+                        }
+                    }
+                    else {
+                        throw "Unknown parameter type: $type. Only String, Int and Bool allowed"
+                    }
                 }
             }
         }
