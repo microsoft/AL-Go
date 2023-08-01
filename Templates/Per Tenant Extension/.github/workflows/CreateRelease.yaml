@@ -228,7 +228,6 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
           secrets: 'nuGetContext,storageContext'
 
       - name: Download artifact
@@ -348,7 +347,6 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
       - name: CalculateToken

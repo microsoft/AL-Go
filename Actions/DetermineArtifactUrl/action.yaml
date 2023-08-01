@@ -14,9 +14,8 @@ inputs:
     required: false
     default: '.'
   settingsJson:
-    description: Settings from repository in compressed Json format
+    description: Settings from repository in compressed Json format (base64 encoded)
     required: false
-    default: '{"appBuild":0,"appRevision":0}'
   secretsJson:
     description: Secrets from repository in compressed Json format
     required: false
@@ -31,17 +30,14 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Determine ArtifactUrl
+    - name: run
       shell: ${{ inputs.shell }}
       id: determineArtifactUrl
       env:
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
-        _settingsJson: ${{ inputs.settingsJson }}
         _secretsJson: ${{ inputs.secretsJson }}
-      run: try { 
-          ${{ github.action_path }}/DetermineArtifactUrl.Action.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson  -project $ENV:_project -settingsJson $ENV:_settingsJson -secretsJson $ENV:_secretsJson
-        } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/DetermineArtifactUrl.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson -project $ENV:_project -settingsJson $ENV:Settings -secretsJson $ENV:_secretsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

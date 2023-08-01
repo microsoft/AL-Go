@@ -91,8 +91,7 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            settingsJson: ${{ env.Settings }}
-            secrets: ${{ inputs.secrets }}
+              secrets: ${{ inputs.secrets }}
 
         - name: Determine ArtifactUrl
           uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
@@ -101,8 +100,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            settingsJson: ${{ env.Settings }}
-            secretsJson: ${{ env.RepoSecrets }}
+              secretsJson: ${{ env.RepoSecrets }}
 
         - name: Cache Business Central Artifacts
           if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && steps.determineArtifactUrl.outputs.ArtifactCacheKey
@@ -129,8 +127,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            settingsJson: ${{ env.Settings }}
-            secretsJson: ${{ env.RepoSecrets }}
+              secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
             installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
             installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
@@ -142,8 +139,7 @@ jobs:
           with:
             shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
             azureCredentialsJson: ${{ secrets.AZURE_CREDENTIALS }}
-            settingsJson: ${{ env.Settings }}
-            pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
+              pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
             parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
         - name: Calculate Artifact names
@@ -152,8 +148,7 @@ jobs:
           if: success() || failure()
           with:
             shell: ${{ inputs.shell }}
-            settingsJson: ${{ env.Settings }}
-            project: ${{ inputs.project }}
+              project: ${{ inputs.project }}
             buildMode: ${{ inputs.buildMode }}
             branchName: ${{ github.ref_name }}
             suffix: ${{ inputs.artifactsNameSuffix }}

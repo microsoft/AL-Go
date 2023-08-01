@@ -36,7 +36,7 @@ try {
         $getSettings = $get.Split(',').Trim()
     }
     else {
-        $getSettings = @($settings.Keys)
+        $getSettings = @()
     }
 
     if ($ENV:GITHUB_EVENT_NAME -in @("pull_request_target", "pull_request")) {
@@ -49,27 +49,25 @@ try {
     }
 
     if ($settings.versioningstrategy -ne -1) {
-        if ($getSettings -contains 'appBuild' -or $getSettings -contains 'appRevision') {
-            switch ($settings.versioningStrategy -band 15) {
-                0 { # Use RUN_NUMBER and RUN_ATTEMPT
-                    $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
-                    $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
-                }
-                1 { # Use RUN_ID and RUN_ATTEMPT
-                    OutputError -message "Versioning strategy 1 is no longer supported"
-                }
-                2 { # USE DATETIME
-                    $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
-                    $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
-                }
-                15 { # Use maxValue
-                    $settings.appBuild = [Int32]::MaxValue
-                    $settings.appRevision = 0
-                }
-                default {
-                    OutputError -message "Unknown version strategy $versionStrategy"
-                    exit
-                }
+        switch ($settings.versioningStrategy -band 15) {
+            0 { # Use RUN_NUMBER and RUN_ATTEMPT
+                $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
+                $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
+            }
+            1 { # Use RUN_ID and RUN_ATTEMPT
+                OutputError -message "Versioning strategy 1 is no longer supported"
+            }
+            2 { # USE DATETIME
+                $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
+                $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
+            }
+            15 { # Use maxValue
+                $settings.appBuild = [Int32]::MaxValue
+                $settings.appRevision = 0
+            }
+            default {
+                OutputError -message "Unknown version strategy $versionStrategy"
+                exit
             }
         }
     }
@@ -87,10 +85,9 @@ try {
         }
     }
 
-    $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
-    Write-Host "SettingsJson=$outSettingsJson"
+    Write-Host "SETTINGS:"
+    $outSettings | ConvertTo-Json -Depth 99 | Out-Host
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($outSettings | ConvertTo-Json -Depth 99 -Compress)"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
