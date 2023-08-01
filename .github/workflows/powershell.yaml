@@ -1,8 +1,3 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-#
 # https://github.com/microsoft/action-psscriptanalyzer
 # For more information on PSScriptAnalyzer in general, see
 # https://github.com/PowerShell/PSScriptAnalyzer
@@ -14,17 +9,13 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  schedule:
-    - cron: '00 01 * * 2'
 
 permissions:
   contents: read
+  security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
 
 jobs:
   build:
-    permissions:
-      contents: read # for actions/checkout to fetch code
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
     name: PSScriptAnalyzer
     runs-on: ubuntu-latest
     steps:
@@ -33,8 +24,6 @@ jobs:
       - name: Run PSScriptAnalyzer
         uses: microsoft/psscriptanalyzer-action@v1.1
         with:
-          # Check https://github.com/microsoft/action-psscriptanalyzer for more info about the options.
-          # The below set up runs PSScriptAnalyzer to your entire repository and runs some basic security rules.
           path: .\
           recurse: true
           excludeRule: '"PSAvoidUsingInvokeExpression", "PSUseShouldProcessForStateChangingFunctions", "PSAvoidUsingWriteHost", "PSAvoidUsingCmdletAliases"'
