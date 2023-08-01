@@ -8,9 +8,6 @@ inputs:
   azureCredentialsJson:
     description: Azure Credentials secret
     required: true
-  settingsJson:
-    description: 'OBSOLETE: Settings from repository in compressed Json format'
-    required: true
   timestampService:
     description: The URI of the timestamp server
     required: false
@@ -26,6 +23,9 @@ inputs:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
     default: '7b7d'
+  settingsJson:
+    description: 'OBSOLETE: Settings from repository in compressed Json format'
+    required: true
 runs:
   using: composite
   steps:
@@ -33,11 +33,11 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
-        _settingsJson: ${{ inputs.settingsJson }}
         _timestampService: ${{ inputs.timestampService }}
         _digestAlgorithm: ${{ inputs.digestAlgorithm }}
         _pathToFiles: ${{ inputs.pathToFiles }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _settingsJson: ${{ inputs.settingsJson }}
       id: Sign
       run: |
         if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }

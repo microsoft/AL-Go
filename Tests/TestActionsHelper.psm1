@@ -84,33 +84,34 @@ function YamlTest {
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
                 $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
-                if ($name -eq 'settingsJson') {
-                    # settingsJson is a special case. It will no longer be a parameter, but an environment variable
-                    # Actions can use $env:Settings to get to the settings in json format
-                    $yaml.AppendLine("    required: false") | Out-Null
-                    # Add a warning to the action that it is using an old version of AL-Go for GitHub
-                    $warningLines += @('if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }')
+                $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
+                if ($type -eq "System.String" -or $type -eq "System.Int32") {
+                    $parameterString += " -$($name) `$ENV:_$($name)"
+                    if (!$required) {
+                        $yaml.AppendLine("    default: *") | Out-Null
+                    }
+                }
+                elseif ($type -eq "System.Boolean") {
+                    $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
+                    if (!$required) {
+                        $yaml.AppendLine("    default: 'N'") | Out-Null
+                    }
                 }
                 else {
-                    $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
-                    if ($type -eq "System.String" -or $type -eq "System.Int32") {
-                        $parameterString += " -$($name) `$ENV:_$($name)"
-                        if (!$required) {
-                            $yaml.AppendLine("    default: *") | Out-Null
-                        }
-                    }
-                    elseif ($type -eq "System.Boolean") {
-                        $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
-                        if (!$required) {
-                            $yaml.AppendLine("    default: 'N'") | Out-Null
-                        }
-                    }
-                    else {
-                        throw "Unknown parameter type: $type. Only String, Int and Bool allowed"
-                    }
+                    throw "Unknown parameter type: $type. Only String, Int and Bool allowed"
                 }
             }
         }
+    }
+    if (@('CalculateArtifactNames','DetermineArtifactUrl','ReadSecrets','RunPipeline','Sign') -contains $actionName) {
+        # settingsJson is a special case. It will no longer be a parameter, but an environment variable
+        # Actions can use $env:Settings to get to the settings in json format
+        $yaml.AppendLine("  SettingsJson:") | Out-Null
+        $yaml.AppendLine("    description: 'OBSOLETE: Settings from repository in compressed Json format'") | Out-Null
+        $yaml.AppendLine("    required: false") | Out-Null
+        $envLines.AppendLine("        _SettingsJson: `${{ inputs.SettingsJson }}")
+        # Add a warning to the action that it is using an old version of AL-Go for GitHub
+        $warningLines += @('if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }')
     }
     if ($outputs -and $outputs.Count -gt 0) {
         $yaml.AppendLine("outputs:") | Out-Null
