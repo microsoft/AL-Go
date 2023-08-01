@@ -221,8 +221,19 @@ try {
                         }
                     }
 
-                    # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                     if ($baseName -eq "PullRequestHandler") {
+                        # The PullRequestHandler workflow can have a RepoSetting called SecretlessPRBuild which will run PR Builds from forks in secretless environments 
+                        if (($repoSettings.Keys -contains 'SecretlessPRBuild') -and ($repoSettings.SecretlessPRBuild)) {
+                            # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
+                            $prTrigger = "pull_request"
+                            $yaml.Replace('on:/pull_request_target', $prTrigger)
+                        } else {
+                            # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
+                            $prTrigger = "pull_request_target"
+                            $yaml.Replace('on:/pull_request', $prTrigger)
+                        }
+
+                        # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                         if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
                             $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
                         }
@@ -230,20 +241,8 @@ try {
                             $CICDPullRequestBranches = $defaultCICDPullRequestBranches
                         }
 
-                        if ($repoSettings.secretlessPRBuild) {
-                            $prTrigger = "pull_request"
-                            $yaml.Replace('on:/pull_request_target', "pull_request")
-                        } else {
-                            $prTrigger = "pull_request_target"
-                            $yaml.Replace('on:/pull_request', "pull_request_target")
-                        }
-
-                        
-
-                        Write-Host "PR Trigger: $prTrigger"
-
                         # update the branches: line with the new branches
-                        $yaml.Replace('on:/pull_request_target:/branches:', "branches: [ '$($cicdPullRequestBranches -join "', '")' ]")
+                        $yaml.Replace("on:/$($prTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
                     }
 
                     # Repo Setting runs-on and shell determines which GitHub runner is used for all non-build jobs (build jobs are run using the GitHubRunner/GitHubRunnerShell repo settings)
