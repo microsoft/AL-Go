@@ -13,12 +13,11 @@ Param(
 
 function Set-EnvVariable([string] $name, [string] $value) {
     Write-Host "Assigning $value to $name"
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "$name=$value"
-    Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "$name=$value"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$name=$value"
 }
 
-$ErrorActionPreference = "STOP"
-Set-StrictMode -version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Write-Host $settingsJson
 $settings = $settingsJson | ConvertFrom-Json

@@ -8,8 +8,7 @@
     
 )
 
-$ErrorActionPreference = "stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
