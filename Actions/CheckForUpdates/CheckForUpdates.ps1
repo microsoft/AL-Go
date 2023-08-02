@@ -233,7 +233,7 @@ try {
                             $prTrigger = "pull_request_target"
                             $triggerSection.ReplaceAll("pull_request:", "$($prTrigger):")
                         }
-                        $yaml.Replace('on:/', $triggerSection.Content)   
+                        $yaml.Replace('on:/', $triggerSection.Content)
 
                         # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                         if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
