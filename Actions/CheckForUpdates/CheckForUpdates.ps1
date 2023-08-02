@@ -221,18 +221,14 @@ try {
                     }
 
                     if ($baseName -eq "PullRequestHandler") {
-                        # The PullRequestHandler workflow can have a RepoSetting called SecretlessPRBuild which will run PR Builds from forks in secretless environments
-                        $triggerSection = $yaml.Get('on:/')
-                        if (($repoSettings.Keys -contains 'SecretlessPRBuild') -and ($repoSettings.SecretlessPRBuild)) {
-                            # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
-                            $prTrigger = "pull_request"
-                            $triggerSection.ReplaceAll("pull_request_target:", "$($prTrigger):")
-                        } else {
-                            # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
-                            $prTrigger = "pull_request_target"
-                            $triggerSection.ReplaceAll("pull_request:", "$($prTrigger):")
+                        # The PullRequestHandler workflow can have a RepoSetting called PRBuildTrigger which specifies the trigger to use for Pull Requests
+                        $triggerSection = $yaml.Get('on:/pull')
+                        $prTrigger = "pull_request_target" # Default trigger: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
+                        if ($repoSettings.Keys -contains 'PRBuildTrigger') {
+                            $prTrigger = $repoSettings.PRBuildTrigger
                         }
-                        $yaml.Replace('on:/', $triggerSection.Content)
+                        $triggerSection.content = "$($prTrigger):"
+                        $yaml.Replace('on:/pull', $triggerSection.Content)
 
                         # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                         if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
