@@ -12,6 +12,7 @@ Issue 598 Cleanup during flush if build pipeline doesn't cleanup properly
 
 ### New Settings
 - `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
+- `SecretlessPRBuild`:  With this setting you can ensure that PR Builds triggered by forked repositories don't have access to secrets
 
 ## v3.1
 
