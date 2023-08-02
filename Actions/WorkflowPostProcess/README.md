@@ -1,11 +1,18 @@
 # PostProcess action
-finalizing a workflow
-## Parameters
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### workflowName (required)
-Name of workflow initiating the deployment
-### telemetryScope
-Telemetry scope generated during the workflow initialization
+Finalize a workflow
+
+## INPUT
+
+### ENV variables
+none
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| eventId | Yes | The event id of the initiating workflow | |
+| telemetryScopeJson | | Telemetry scope generated during the workflow initialization | {} |
+
+
+## OUTPUT
+none
