@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: Branch to deploy to (NOTE: Use preview when deploying preview releases on microsoft/al-go)
+        description: 'Branch to deploy to (NOTE: Use preview when deploying preview releases on microsoft/al-go)'
         required: true
       copyToMain:
-        description: Additionally deploy templates to main+preview branch? (Y/N) - (NOTE: Say Y if this is a release to PROD on microsoft/al-go)
+        description: 'Additionally deploy templates to main+preview branch? (Y/N) - (NOTE: Say Y if this is a release to PROD on microsoft/al-go)'
         required: false
         default: 'N'
       defaultBcContainerHelperVersion:
-        description: Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)
+        description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
         required: false
         default: ''
 
