@@ -11,8 +11,6 @@ none
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | token | | The token to use for the GitHub API |github.token |
-| baseSHA | | Base commit of the PR | github.event.pull_request.base.sha |
-| headSHA | | Head commit of the PR | github.event.pull_request.head.sha |
 | prBaseRepository | | The name of the repository the PR is going to | github.event.pull_request.base.repo.full_name |
 | pullRequestId | | The id of the pull request | github.event.pull_request.number |
 
