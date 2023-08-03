@@ -7,11 +7,11 @@
     [switch] $directCommit
 )
 
-Write-Host "::WARNING::The collect mechanism is deprecated. Use the new direct AL-Go development mechanism instead."
-
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+Write-Host "::WARNING::The collect mechanism is deprecated. Use the new direct AL-Go development mechanism instead."
 
 $oldPath = Get-Location
 try {
@@ -106,10 +106,9 @@ try {
     $perTenantExtensionRepoPath = Join-Path $baseFolder $config.perTenantExtensionRepo
 
     Write-Host "This script will collect the changes in $($config.branch) from three repositories:"
-    Write-Host
-    Write-Host "https://github.com/$($config.githubOwner)/$($config.actionsRepo)  (folder $actionsRepoPath)"
-    Write-Host "https://github.com/$($config.githubOwner)/$($config.perTenantExtensionRepo)   (folder $perTenantExtensionRepoPath)"
-    Write-Host "https://github.com/$($config.githubOwner)/$($config.appSourceAppRepo)   (folder $appSourceAppRepoPath)"
+    Write-Host "- https://github.com/$($config.githubOwner)/$($config.actionsRepo)  (folder $actionsRepoPath)"
+    Write-Host "- https://github.com/$($config.githubOwner)/$($config.perTenantExtensionRepo)   (folder $perTenantExtensionRepoPath)"
+    Write-Host "- https://github.com/$($config.githubOwner)/$($config.appSourceAppRepo)   (folder $appSourceAppRepoPath)"
     Write-Host
     Write-Host "To the $algoBranch branch from $srcOwnerAndRepo (folder $baseRepoPath)"
     Write-Host
