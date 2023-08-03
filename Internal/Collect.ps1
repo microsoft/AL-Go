@@ -7,6 +7,8 @@
     [switch] $directCommit
 )
 
+Write-Host "::WARNING::The collect mechanism is deprecated. Use the new direct AL-Go development mechanism instead."
+
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
