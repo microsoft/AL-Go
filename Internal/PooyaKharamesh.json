@@ -1,9 +1,0 @@
-{
-    "githubOwner": "PooyaKharamesh",
-    "actionsRepo": "AL-Go-Actions",
-    "perTenantExtensionRepo": "AL-Go-PTE",
-    "appSourceAppRepo": "AL-Go-AppSource",
-    "branch": "main",
-    "localFolder": "AL-Go-SubRepos",
-    "basefolder": "c:\\repo"
-}

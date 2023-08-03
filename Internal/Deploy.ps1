@@ -1,6 +1,9 @@
 ﻿Param(
-    [string] $configName = "",
+    [Parameter(Mandatory=$true)]
+    [Hashtable] $config,
+    [Parameter(Mandatory=$true)]
     [string] $githubOwner,
+    [Parameter(Mandatory=$true)]
     [string] $token,
     [string] $algoBranch,
     [switch] $github,
@@ -14,21 +17,19 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 $oldPath = Get-Location
 try {
 
-    if ($github) {
-        if (!$githubOwner -or !$token) { throw "When running deploy in a workflow, you need to set githubOwner and token" }
+    # Authenticate to GIT and GH
+    invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
+    invoke-git config --global user.name "$githubOwner"
+    invoke-git config --global hub.protocol https
+    invoke-git config --global core.autocrlf false
+    $ENV:GITHUB_TOKEN = ''
 
-        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
-        invoke-git config --global user.name "$githubOwner"
-        invoke-git config --global hub.protocol https
-        invoke-git config --global core.autocrlf false
-        $ENV:GITHUB_TOKEN = ''
-    }
     Write-Host "Authenticating with GitHub using token"
     $token | invoke-gh auth login --with-token
-    if ($github) {
-        $ENV:GITHUB_TOKEN = $token
-    }
+    $ENV:GITHUB_TOKEN = $token
 
+    # All references inside microsoft/AL-Go and forks of it are to microsoft/AL-Go-Actions@main, microsoft/AL-Go-PTE@main and microsoft/AL-Go-AppSource@main
+    # When deploying to new repos, the originalOwnerAndRepo should be changed to the new owner and repo
     $originalOwnerAndRepo = @{
         "actionsRepo"            = "microsoft/AL-Go-Actions"
         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
@@ -36,97 +37,75 @@ try {
     }
     $originalBranch = "main"
 
-    Set-Location $PSScriptRoot
-    $baseRepoPath = invoke-git -returnValue rev-parse --show-toplevel
+    $baseRepoPath = $ENV:GITHUB_WORKSPACE
     Write-Host "Base repo path: $baseRepoPath"
+    Set-Location $baseRepoPath
+
+    # Whoami
     $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
 
-    if ($configName -eq "") { $configName = $user.login }
-    if ([System.IO.Path]::GetExtension($configName) -eq "") { $configName += ".json" }
-    $config = Get-Content $configName -Encoding UTF8 | ConvertFrom-Json
-
-    Write-Host "Using config file: $configName"
+    # Dump configuration
+    Write-Host "Configuration:"
     $config | ConvertTo-Json | Out-Host
 
-    Set-Location $baseRepoPath
+    # Get Source Branch
+    $algoBranch = invoke-git -returnValue branch --show-current
+    Write-Host "Source branch: $algoBranch"
 
-    if ($algoBranch) {
-        invoke-git checkout $algoBranch
-    }
-    else {
-        $algoBranch = invoke-git -returnValue branch --show-current
-        Write-Host "Source branch: $algoBranch"
-    }
-
+    # Calculate Source SHA + Source Owner+Repo
+    $srcSHA = invoke-git -returnValue rev-parse HEAD
     $srcUrl = invoke-git -returnValue config --get remote.origin.url
     if ($srcUrl.EndsWith('.git')) { $srcUrl = $srcUrl.Substring(0, $srcUrl.Length - 4) }
     $uri = [Uri]::new($srcUrl)
     $srcOwnerAndRepo = $uri.LocalPath.Trim('/')
+    Write-Host "Source SHA: $srcSHA"
     Write-Host "Source Owner+Repo: $srcOwnerAndRepo"
 
-    if (($config.PSObject.Properties.Name -eq "baseFolder") -and ($config.baseFolder)) {
-        $baseFolder = Join-Path $config.baseFolder $config.localFolder 
-    }
-    else {
-        $baseFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) $config.localFolder
+    # baseFolder is the location in which we are going to clone AL-Go-Actions, AL-Go-PTE and AL-Go-AppSource
+    $baseFolder = [System.IO.Path]::GetTempPath()
+    New-Item $baseFolder -ItemType Directory | Out-Null
+
+    # CopyToMain is set when we release to f.ex. v3.2, where we create a new branch on AL-Go-PTE called v3.2, but also copies the changes to the main and the preview branch
+    # This way, preview and main will always be up to date with the latest release
+    $copyToMain = $config.ContainsKey('copyToMain') -and $config.copyToMain
+    if ($copyToMain -and ($config.branch -eq 'preview' -or $config.branch -eq 'main')) {
+        throw "You cannot use copyToMain when deploying to the preview or main branch. copyToMain is only for release branches"
     }
 
-    $copyToMain = $false
-    if ($config.PSObject.Properties.Name -eq "copyToMain") {
-        $copyToMain = $config.copyToMain
-    }
-
-    if (!(Test-Path $baseFolder)) {
-        New-Item $baseFolder -ItemType Directory | Out-Null
-    }
-    Set-Location $baseFolder
-
-    $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
-        if (Test-Path $_) {
-            Set-Location $_
-            if (Test-Path ".git") {
-                $status = invoke-git -returnValue status --porcelain
-                if ($status) {
-                    throw "Git repo $_ is not clean, please resolve manually"
-                }
-            }
-            Set-Location $baseFolder
-        }
-    }
-
-    $actionsRepoPath = Join-Path $baseFolder $config.actionsRepo
     $appSourceAppRepoPath = Join-Path $baseFolder $config.appSourceAppRepo
     $perTenantExtensionRepoPath = Join-Path $baseFolder $config.perTenantExtensionRepo
-
-    Write-Host "This script will deploy the $algoBranch branch from $srcOwnerAndRepo (folder $baseRepoPath) to work repos"
-    Write-Host
-    Write-Host "Destination is the $($config.branch) branch in the followingrepositories:"
-    Write-Host "https://github.com/$($config.githubOwner)/$($config.actionsRepo)  (folder $actionsRepoPath)"
-    Write-Host "https://github.com/$($config.githubOwner)/$($config.perTenantExtensionRepo)   (folder $perTenantExtensionRepoPath)"
-    Write-Host "https://github.com/$($config.githubOwner)/$($config.appSourceAppRepo)  (folder $appSourceAppRepoPath)"
-    Write-Host
-    Write-Host "Run the collect.ps1 to collect your modifications in these work repos and copy back"
-    Write-Host
-
-    if (-not $github) {
-        Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
+    $repos = @(
+        @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = $config.branch }
+        @{ "repo" = $config.appSourceAppRepo; "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App"; "dstPath" = $appSourceAppRepoPath; "branch" = $config.branch }
+    )
+   
+    $dstOwnerAndRepo = @{
+        "perTenantExtensionRepo" = "$($config.githubOwner)/$($config.perTenantExtensionRepo)"
+        "appSourceAppRepo" = "$($config.githubOwner)/$($config.appSourceAppRepo)"
     }
 
-    $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
-        if (Test-Path $_) {
-            Remove-Item $_ -Force -Recurse
+    if ($config.branch -eq 'preview') {
+        # When deploying to preview, we are NOT going to deploy to a branch in the AL-Go-Actions repository
+        # Instead, we are going to have AL-Go-PTE and AL-Go-Actions point directly to the SHA in AL-Go
+        $dstOwnerAndRepo += @{
+            "actionsRepo" = "$srcOwnerAndRepo/Actions@$srcSHA"
+        }
+    }
+    else {
+        # When deploying to a release branch, we are going to deploy to a branch in the AL-Go-Actions repository
+        $actionsRepoPath = Join-Path $baseFolder $config.actionsRepo
+        $repos += @(
+            @{ "repo" = $config.actionsRepo; "srcPath" = Join-Path $baseRepoPath "Actions"; "dstPath" = $actionsRepoPath; "branch" = $config.branch }
+        )
+        $dstOwnerAndRepo = @{
+            "actionsRepo" = "$($config.githubOwner)/$($config.actionsRepo)@$($config.branch)"
         }
     }
 
-    $repos = @(
-        @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath;            "branch" = $config.branch }
-        @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = $config.branch }
-        @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = $config.branch }
-    )
-
     $additionalRepos = @()
-    if ($copyToMain -and $config.branch -ne "main") {
+    if ($copyToMain) {
+        # This is only true for release branches (not preview or main)
         Write-Host "Copy template repositories to main branch"
         $additionalRepos = @(
             @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "main" }
@@ -138,6 +117,10 @@ try {
         )
     }
 
+    Write-Host 'Deploying to the following repos:'
+    $additionalRepos + $repos | ForEach-Object {
+        Write-Host "- from $($srcOwnerAndRepo)/$($_.srcPath)@$($algoBranch) to $($config.githubOwner)/$($_.repo)@$($_.branch)"
+    }
     $additionalRepos + $repos | ForEach-Object {
         Set-Location $baseFolder
         $repo = $_.repo
@@ -199,16 +182,28 @@ try {
             $lines = ([string](Get-ContentLF -path $srcFile)).Split("`n")
             "actionsRepo", "perTenantExtensionRepo", "appSourceAppRepo" | ForEach-Object {
                 if ($_ -eq "actionsRepo") {
-                    $useBranch = $config.branch
+                    $useRepo = $dstOwnerAndRepo."$_".Split('@')[0]
+                    $useBranch = $dstOwnerAndRepo."$_".Split('@')[1]
                 }
                 else {
+                    $useRepo = $dstOwnerAndRepo."$_"
                     $useBranch = $branch
                 }
+
+                # Replace URL's to actions repository first if we are deploying to a preview branch
+                # When deploying to a release branch, these URLs are replaced by the following code
+                if ($config.branch -eq 'preview') {
+                    $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
+                    $replace = "`$1https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`$2"
+                    $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+                }
+                
+                # Replace the owner and repo names in the workflow
                 $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                $replace = "`$1$($config.githubOwner)/$($config."$_")`$2$($useBranch)`$3"
+                $replace = "`$1$useRepo`$2$($useBranch)`$3"
                 $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
             }
-            if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.PSObject.Properties.Name -eq "defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
+            if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.ContainsKey("defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
                 # replace defaultBcContainerHelperVersion (even if a version is set)
                 $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)"" # `$5" }
             }
