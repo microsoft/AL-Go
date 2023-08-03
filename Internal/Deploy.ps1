@@ -203,7 +203,7 @@ try {
                 $replace = "`$1$useRepo`$2$($useBranch)`$3"
                 $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
             }
-            if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.ContainsKey("defaultBcContainerHelperVersion") -and ($config.defaultBcContainerHelperVersion)) {
+            if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.ContainsKey("defaultBcContainerHelperVersion") -and $config.defaultBcContainerHelperVersion)) {
                 # replace defaultBcContainerHelperVersion (even if a version is set)
                 $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)"" # `$5" }
             }
