@@ -63,7 +63,7 @@ try {
     Write-Host "Source Owner+Repo: $srcOwnerAndRepo"
 
     # baseFolder is the location in which we are going to clone AL-Go-Actions, AL-Go-PTE and AL-Go-AppSource
-    $baseFolder = [System.IO.Path]::GetTempPath()
+    $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
     New-Item $baseFolder -ItemType Directory | Out-Null
 
     # CopyToMain is set when we release to f.ex. v3.2, where we create a new branch on AL-Go-PTE called v3.2, but also copies the changes to the main and the preview branch
