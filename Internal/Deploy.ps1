@@ -104,7 +104,7 @@ try {
 
     $additionalRepos = @()
     if ($copyToMain) {
-        # This is only true for release branches (not preview or main)
+        # copyToMain can only be set to true for release branches (not preview or main)
         Write-Host "Copy template repositories to main branch"
         $additionalRepos = @(
             @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "main" }
