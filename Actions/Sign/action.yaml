@@ -23,9 +23,6 @@ inputs:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
     default: '7b7d'
-  settingsJson:
-    description: 'OBSOLETE: Settings from repository in compressed Json format'
-    required: true
 runs:
   using: composite
   steps:
@@ -37,10 +34,8 @@ runs:
         _digestAlgorithm: ${{ inputs.digestAlgorithm }}
         _pathToFiles: ${{ inputs.pathToFiles }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-        _settingsJson: ${{ inputs.settingsJson }}
       id: Sign
       run: |
-        if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }
         try { 
           ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson $ENV:_azureCredentialsJson `
                                       -TimestampService $ENV:_timestampService `

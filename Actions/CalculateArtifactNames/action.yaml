@@ -18,9 +18,6 @@ inputs:
     description: Suffix to add to the artifacts names
     required: false
     default: ''
-  settingsJson:
-    description: 'OBSOLETE: Settings from repository in compressed Json format'
-    required: false
 outputs:
   ThisBuildAppsArtifactsName:
     description: Artifact name for apps being built in the current workflow run
@@ -63,9 +60,7 @@ runs:
         _buildMode: ${{ inputs.buildMode }}
         _branchName: ${{ inputs.branchName }}
         _suffix: ${{ inputs.suffix }}
-        _settingsJson: ${{ inputs.settingsJson }}
       run: |
-        if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }
         try { ${{ github.action_path }}/CalculateArtifactNames.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -branchName $ENV:_branchName -suffix $ENV:_suffix } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
 branding:
   icon: terminal

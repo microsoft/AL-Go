@@ -17,7 +17,6 @@ function Set-EnvVariable([string] $name, [string] $value) {
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-Write-Host $env:Settings
 $settings = $env:Settings | ConvertFrom-Json
 
 if ($project -eq ".") { 

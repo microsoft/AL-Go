@@ -103,16 +103,6 @@ function YamlTest {
             }
         }
     }
-    if (@('CalculateArtifactNames','DetermineArtifactUrl','ReadSecrets','RunPipeline','Sign') -contains $actionName) {
-        # settingsJson is a special case. It will no longer be a parameter, but an environment variable
-        # Actions can use $env:Settings to get to the settings in json format
-        $yaml.AppendLine("  SettingsJson:") | Out-Null
-        $yaml.AppendLine("    description: 'OBSOLETE: Settings from repository in compressed Json format'") | Out-Null
-        $yaml.AppendLine("    required: false") | Out-Null
-        $envLines.AppendLine("        _SettingsJson: `${{ inputs.SettingsJson }}")
-        # Add a warning to the action that it is using an old version of AL-Go for GitHub
-        $warningLines += @('if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }')
-    }
     if ($outputs -and $outputs.Count -gt 0) {
         $yaml.AppendLine("outputs:") | Out-Null
         $outputs.Keys | ForEach-Object {

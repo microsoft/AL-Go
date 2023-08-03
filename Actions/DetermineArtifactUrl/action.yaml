@@ -17,9 +17,6 @@ inputs:
     description: Secrets from repository in compressed Json format
     required: false
     default: '{"insiderSasToken":""}'
-  settingsJson:
-    description: 'OBSOLETE: Settings from repository in compressed Json format'
-    required: false
 runs:
   using: composite
   steps:
@@ -29,9 +26,7 @@ runs:
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
         _secretsJson: ${{ inputs.secretsJson }}
-        _settingsJson: ${{ inputs.settingsJson }}
       run: |
-        if ($ENV:_settingsJson) { Write-Host "::Warning::Running on old AL-Go for GitHub system files. Please Update ASAP." }
         try { ${{ github.action_path }}/DetermineArtifactUrl.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson -project $ENV:_project -secretsJson $ENV:_secretsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
