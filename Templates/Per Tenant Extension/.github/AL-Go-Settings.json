@@ -1,5 +1,4 @@
 {
   "type": "PTE",
-  "templateUrl": "https://github.com/microsoft/AL-Go-PTE@main",
-  "new setting": "test"
+  "templateUrl": "https://github.com/microsoft/AL-Go-PTE@main"
 }
