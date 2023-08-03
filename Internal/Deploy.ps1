@@ -6,7 +6,6 @@
     [Parameter(Mandatory=$true)]
     [string] $token,
     [string] $algoBranch,
-    [switch] $github,
     [switch] $directCommit
 )
 
@@ -98,7 +97,7 @@ try {
         $repos += @(
             @{ "repo" = $config.actionsRepo; "srcPath" = Join-Path $baseRepoPath "Actions"; "dstPath" = $actionsRepoPath; "branch" = $config.branch }
         )
-        $dstOwnerAndRepo = @{
+        $dstOwnerAndRepo += @{
             "actionsRepo" = "$($config.githubOwner)/$($config.actionsRepo)@$($config.branch)"
         }
     }
@@ -121,6 +120,7 @@ try {
     $additionalRepos + $repos | ForEach-Object {
         Write-Host "- from $($srcOwnerAndRepo)/$($_.srcPath)@$($algoBranch) to $($config.githubOwner)/$($_.repo)@$($_.branch)"
     }
+
     $additionalRepos + $repos | ForEach-Object {
         Set-Location $baseFolder
         $repo = $_.repo
@@ -131,12 +131,7 @@ try {
         Write-Host -ForegroundColor Yellow "Deploying to $repo"
 
         try {
-            if ($github) {
-                $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
-            }
-            else {
-                $serverUrl = "https://github.com/$($config.githubOwner)/$repo.git"
-            }
+            $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
             if (Test-Path $repo) {
                 Remove-Item $repo -Recurse -Force
             }
@@ -150,9 +145,7 @@ try {
                 invoke-git checkout -b $branch
                 invoke-git commit --allow-empty -m 'init'
                 invoke-git branch -M $branch
-                if ($github) {
-                    invoke-git remote set-url origin $serverUrl
-                }
+                invoke-git remote set-url origin $serverUrl
                 invoke-git push -u origin $branch
             }
         }
@@ -165,9 +158,7 @@ try {
             invoke-git checkout -b $branch
             invoke-git commit --allow-empty -m 'init'
             invoke-git branch -M $branch
-            if ($github) {
-                invoke-git remote set-url origin $serverUrl
-            }
+            invoke-git remote set-url origin $serverUrl
             invoke-git push -u origin $branch
         }
         
