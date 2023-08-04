@@ -10,7 +10,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $scriptPath = Join-Path $scriptRoot $scriptName
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
-        $settingsJson = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
+        $env:Settings = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
         $project = "ALGOProject"
     }
 
@@ -27,7 +27,6 @@ Describe 'CalculateArtifactNames Action Tests' {
         $buildMode = "Clean"
         $branchName = "main"
         & $scriptPath `
-                -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
@@ -50,7 +49,6 @@ Describe 'CalculateArtifactNames Action Tests' {
         $buildMode = "Default"
         $branchName = "main"
         & $scriptPath `
-                -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
@@ -71,7 +69,6 @@ Describe 'CalculateArtifactNames Action Tests' {
         $buildMode = "Default"
         $branchName = "releases/1.0"
         & $scriptPath `
-                -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
@@ -93,7 +90,6 @@ Describe 'CalculateArtifactNames Action Tests' {
         $branchName = "releases/1.0"
         $suffix = "Current"
         & $scriptPath `
-                -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName `
@@ -121,7 +117,6 @@ Describe 'CalculateArtifactNames Action Tests' {
         $branchName = "releases/1.0"
         $suffix = "Current"
         & $scriptPath `
-                -settingsJson $settingsJson `
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName `

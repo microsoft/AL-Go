@@ -1,19 +1,32 @@
 # Run pipeline
 Run pipeline in AL-Go repository
-## Parameters
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-## insiderSasToken (default '')
-Insider Sas token from https://aka.ms/collaborate
-## licenseFileUrl (default '')
-Secure URL for license file
-## appVersion (required)
-Major and Minor part of app Version number
-## appBuild (required)
-Build part of app Version number
-## appRevision (required)
-Revision part of app Version number
+
+## INPUT
+
+### ENV variables
+| Name | Description |
+| :-- | :-- |
+| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| actor | | The GitHub actor running the action | github.actor |
+| token | | The GitHub token running the action | github.token |
+| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
+| project | | Project name if the repository is setup for multiple projects | . |
+| secretsJson | | Secrets from repository in compressed Json format | {} |
+| buildMode | | Specifies a mode to use for the build steps | Default |
+| installAppsJson | | A JSON-formatted list of apps to install | [] |
+| installTestAppsJson | | A JSON-formatted list of test apps to install | [] |
+
+## OUTPUT
+
+## ENV variables
+| Name | Description |
+| :-- | :-- |
+| containerName | Container name of a container used during build |
+
+## OUTPUT variables
+none
