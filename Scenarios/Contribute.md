@@ -27,7 +27,7 @@ Now you should have 3 new public repositories:
 - [https://github.com/yourGitHubUserName/AL-Go-AppSource](https://github.com/yourGitHubUserName/AL-Go-AppSource)
 - [https://github.com/yourGitHubUserName/AL-Go-PTE](https://github.com/yourGitHubUserName/AL-Go-PTE)
 
-> **Note:** Deploying to a branch called preview will only update the two template repositories (and use your AL-Go project with the current SHA as actions repository).
+> **Note:** Deploying to a branch called **preview** will only update the two template repositories (and use your AL-Go project with the current SHA as actions repository).
 
 You can optionally also create a branch in the AL-Go fork for the feature you are working on and then select that branch when running Deploy (both as **Use workflow from** and as **Branch to deploy to**).
 
