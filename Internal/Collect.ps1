@@ -73,15 +73,10 @@ try {
     Write-Host "Source Owner+Repo: $srcOwnerAndRepo"
 
     if (($config.PSObject.Properties.Name -eq "baseFolder") -and ($config.baseFolder)) {
-        $baseFolder = Join-Path $config.baseFolder $config.localFolder 
+        $baseFolder = Join-Path $config.baseFolder $config.localFolder
     }
     else {
         $baseFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) $config.localFolder
-    }
-
-    $copyToMain = $false
-    if ($config.PSObject.Properties.Name -eq "copyToMain") {
-        $copyToMain = $config.copyToMain
     }
 
     if (!(Test-Path $baseFolder)) {
@@ -149,7 +144,7 @@ try {
         $repo = $_.repo
         $srcPath = $_.srcPath
         $dstPath = $_.dstPath
-        
+
         Write-Host "Removing $srcPath content"
         Get-ChildItem -Path $srcPath -Force | Where-Object { !($_.PSIsContainer -and $_.Name -eq ".git") } | ForEach-Object {
             $name = $_.FullName
@@ -161,7 +156,7 @@ try {
                 Remove-Item $name -Force
             }
         }
-            
+
         Write-Host -ForegroundColor Yellow "Collecting from $repo"
         Get-ChildItem -Path $dstPath -Recurse -File -Force | Where-Object { $_.name -notlike '*.copy.md' } | ForEach-Object {
             $dstFile = $_.FullName

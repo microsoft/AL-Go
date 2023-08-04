@@ -78,7 +78,7 @@ try {
         @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = $config.branch }
         @{ "repo" = $config.appSourceAppRepo; "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App"; "dstPath" = $appSourceAppRepoPath; "branch" = $config.branch }
     )
-   
+
     $dstOwnerAndRepo = @{
         "perTenantExtensionRepo" = "$($config.githubOwner)/$($config.perTenantExtensionRepo)"
         "appSourceAppRepo" = "$($config.githubOwner)/$($config.appSourceAppRepo)"
@@ -161,7 +161,7 @@ try {
             invoke-git remote set-url origin $serverUrl
             invoke-git push -u origin $branch
         }
-        
+
         Get-ChildItem -Path $srcPath -Recurse -File -Force | ForEach-Object {
             $srcFile = $_.FullName
             $dstFile = $dstPath + $srcFile.Substring($srcPath.Length)
@@ -188,7 +188,7 @@ try {
                     $replace = "`$1https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`$2"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
-                
+
                 # Replace the owner and repo names in the workflow
                 $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
                 $replace = "`$1$useRepo`$2$($useBranch)`$3"
@@ -203,7 +203,7 @@ try {
         if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
-            
+
         invoke-git add .
         invoke-git commit --allow-empty -m 'checkout'
         invoke-git push $serverUrl
