@@ -1,52 +1,38 @@
 # AL-Go Actions
+This repository contains a set of GitHub actions used by the AL-Go for GitHub templates.
+
+Please go to https://aka.ms/AL-Go to learn more.
+
 ## Actions
-### [Create a new app](CreateApp)
-Create a new app and add it to your AL-Go repository
-### [Add existing app](AddExistingApp)
-Add an existing app to a AL-Go repository
-### [Check for updates](CheckForUpdates)
-Check for updates to AL-Go system files
-### [Deploy](Deploy)
-Deploy App to online environment
-### [Increment version number](IncrementVersionNumber)
-Increment version number in AL-Go repository
-### [Pipeline cleanup](PipelineCleanup)
-Perform cleanup after running pipeline in AL-Go repository
-### [Read secrets](ReadSecrets)
-Read secrets from GitHub secrets or Azure Keyvault for AL-Go workflows
-### [Read settings](ReadSettings)
-Read settings for AL-Go workflows
-### [Register customer environment](RegisterCustomerEnvironment)
-Register customer environment for AL-Go continuous deployment
-### [Run pipeline](RunPipeline)
-Run pipeline in AL-Go repository
-
-
-# Project
-
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
-
-As the maintainer of this project, please make a few updates:
-
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+| Name | Description |
+| :-- | :-- |
+| [Add existing app](AddExistingApp) | Add an existing app to an AL-Go for GitHub repository |
+| [Analyze Tests](AnalyzeTests) | Analyze results of tests from the RunPipeline action |
+| [Calculate Artifact Names](CalculateArtifactNames) | Calculate Artifact Names for AL-Go workflows |
+| [Check for updates](CheckForUpdates) | Check for updates to AL-Go system files and perform the update if requested |
+| [Create a new app](CreateApp) | Create a new app and add it to an AL-Go repository |
+| [Create Development Environment](CreateDevelopmentEnvironment) | Create an online development environment |
+| [Creates release notes](CreateReleaseNotes) | Creates release notes for a release, based on a given tag and the tag from the latest release |
+| [Deliver](Deliver) | Deliver App to deliveryTarget (AppSource, Storage, or...) |
+| [Deploy](Deploy) | Deploy Apps to online environment |
+| [Determine artifactUrl](DetermineArtifactUrl) | Determines the artifactUrl to use for a given project |
+| [Determine projects to build](DetermineProjectsToBuild) | Scans for AL-Go projects and determines which one to build |
+| [Download project dependencies](DownloadProjectDependencies) | Downloads artifacts from AL-Go projects, that are dependencies of a given AL-Go project |
+| [Increment version number](IncrementVersionNumber) | Increment version number in AL-Go repository |
+| [Pipeline Cleanup](PipelineCleanup) | Perform cleanup after running pipeline in AL-Go repository |
+| [Read secrets](ReadSecrets) | Read secrets from GitHub secrets or Azure Keyvault for AL-Go workflows |
+| [Read settings](ReadSettings) | Read settings for AL-Go workflows |
+| [Run pipeline](RunPipeline) | Run pipeline in AL-Go repository |
+| [Sign](Sign) | Sign apps with a certificate stored in Azure Key Vault |
+| [Verify Pull Request changes](VerifyPRChanges) | Verify Pull Request Changes for AL-Go workflows |
+| [Initialize workflow](WorkflowInitialize) | Initialize a workflow |
+| [PostProcess action](WorkflowPostProcess) | Finalize a workflow |
 
 ## Contributing
 
-This project welcomes contributions and suggestions. Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit [https://cla.opensource.microsoft.com](https://cla.opensource.microsoft.com).
+Please read [this](https://github.com/microsoft/AL-Go/blob/main/Scenarios/Contribute.md) description on how to contribute to AL-Go for GitHub.
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+We do not accept Pull Requests on the Actions repository directly.
 
 ## Trademarks
 

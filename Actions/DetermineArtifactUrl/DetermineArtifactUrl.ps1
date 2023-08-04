@@ -3,8 +3,6 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
-    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $false)]
-    [string] $settingsJson = '{"artifact":""}',
     [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
     [string] $secretsJson = '{"insiderSasToken":""}'
 )
@@ -26,7 +24,7 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
     $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
-    $projectSettings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $projectSettings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
     $artifactCacheKey = ''
@@ -38,15 +36,14 @@ try {
 
     #region Action: Output
     # Set output variables
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactUrl=$artifactUrl"
-    Write-Host "ArtifactUrl=$artifactUrl"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactCacheKey=$artifactCacheKey"
-    Write-Host "ArtifactCacheKey=$artifactCacheKey"
-    $outSettingsJson = $projectSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
-    Write-Host "SettingsJson=$outSettingsJson"
+    Write-Host "SETTINGS:"
+    $projectSettings | ConvertTo-Json -Depth 99 | Out-Host
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($projectSettings | ConvertTo-Json -Depth 99 -Compress)"
+
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
     Write-Host "Artifact=$artifactUrl"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifactCacheKey=$artifactCacheKey"
+    Write-Host "ArtifactCacheKey=$artifactCacheKey"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

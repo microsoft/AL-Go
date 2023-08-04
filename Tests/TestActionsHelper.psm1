@@ -70,6 +70,7 @@ function YamlTest {
     $yaml.AppendLine("    required: false") | Out-Null
     $yaml.AppendLine("    default: powershell") | Out-Null
     $parameterString = ""
+    $warningLines = @()
     $envLines = [System.Text.StringBuilder]::new()
     if ($cmd.Parameters.Count -gt 0) {
         $cmd.Parameters.GetEnumerator() | ForEach-Object {
@@ -82,8 +83,8 @@ function YamlTest {
                 $type = $value.ParameterType.ToString()
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
-                $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
                 $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
+                $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
                 if ($type -eq "System.String" -or $type -eq "System.Int32") {
                     $parameterString += " -$($name) `$ENV:_$($name)"
                     if (!$required) {
@@ -122,7 +123,17 @@ function YamlTest {
         $yaml.AppendLine("      env:") | Out-Null
         $yaml.Append($envLines.ToString())
     }
-    $yaml.AppendLine("      run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
+    if ($warningLines) {
+        $yaml.AppendLine("      run: |") | Out-Null
+        # Add the warning lines
+        $warningLines | ForEach-Object {
+            $yaml.AppendLine("        $_") | Out-Null
+        }
+        $yaml.AppendLine("        try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
+    }
+    else {
+        $yaml.AppendLine("      run: try { `${{ github.action_path }}/$actionName.ps1$parameterString } catch { Write-Host ""::Error::Unexpected error when running action (`$(`$_.Exception.Message.Replace(""*"",'').Replace(""*"",' ')))""; exit 1 }") | Out-Null
+    }
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null
     $yaml.Append("  color: blue") | Out-Null
