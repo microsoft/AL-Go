@@ -15,7 +15,6 @@ Write-Host "::WARNING::The collect mechanism is deprecated. Use the new direct A
 
 $oldPath = Get-Location
 try {
-
     if ($github) {
         if (!$githubOwner -or !$token) { throw "When running deploy in a workflow, you need to set githubOwner and token" }
 
