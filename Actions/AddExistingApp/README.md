@@ -1,17 +1,22 @@
 # Add existing app
-Add an existing app to a AL-Go repository
-## Parameters
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-### project
-Project name if the repository is setup for multiple projects
-### type (required)
-Type of apps in the repository (Per Tenant Extension, AppSource App)
-### url (required)
-Direct Download Url of .app or .zip file
-### directCommit (default N)
-Direct Commit (Y/N)
+Add an existing app to an AL-Go for GitHub repository
+
+## INPUT
+
+### ENV variables
+none
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| actor | | The GitHub actor running the action | github.actor |
+| token | | The GitHub token running the action | github.token |
+| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
+| project | | Project name if the repository is setup for multiple projects | . |
+| url | Yes | Direct Download Url of .app or .zip file to add to the repository | |
+| updateBranch | | Which branch should the app be added to | github.ref_name |
+| directCommit | | Y if the action should create a direct commit against the branch or N to create a Pull Request | N |
+
+## OUTPUT
+none

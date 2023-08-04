@@ -83,6 +83,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
+            get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps
 
         - name: Read secrets
           if: github.event_name != 'pull_request'
@@ -92,7 +93,6 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            settingsJson: ${{ env.Settings }}
             secrets: ${{ inputs.secrets }}
 
         - name: Determine ArtifactUrl
@@ -102,15 +102,14 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            settingsJson: ${{ env.Settings }}
             secretsJson: ${{ env.RepoSecrets }}
 
         - name: Cache Business Central Artifacts
-          if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && steps.determineArtifactUrl.outputs.ArtifactCacheKey
+          if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.ArtifactCacheKey
           uses: actions/cache@v3
           with:
             path: .artifactcache
-            key: ${{ steps.determineArtifactUrl.outputs.ArtifactCacheKey }}
+            key: ${{ env.ArtifactCacheKey }}
 
         - name: Download Project Dependencies
           id: DownloadProjectDependencies
@@ -130,7 +129,6 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            settingsJson: ${{ env.Settings }}
             secretsJson: ${{ env.RepoSecrets }}
             buildMode: ${{ inputs.buildMode }}
             installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
@@ -143,7 +141,6 @@ jobs:
           with:
             shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
             azureCredentialsJson: ${{ secrets.AZURE_CREDENTIALS }}
-            settingsJson: ${{ env.Settings }}
             pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
             parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
@@ -153,7 +150,6 @@ jobs:
           if: success() || failure()
           with:
             shell: ${{ inputs.shell }}
-            settingsJson: ${{ env.Settings }}
             project: ${{ inputs.project }}
             buildMode: ${{ inputs.buildMode }}
             branchName: ${{ github.ref_name }}
@@ -240,7 +236,7 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            Project: ${{ inputs.project }}
+            project: ${{ inputs.project }}
 
         - name: Cleanup
           if: always()
@@ -248,4 +244,4 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            Project: ${{ inputs.project }}
+            project: ${{ inputs.project }}

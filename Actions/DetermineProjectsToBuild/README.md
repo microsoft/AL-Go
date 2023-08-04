@@ -1,14 +1,28 @@
 # Determine projects to build
-Scans for AL-Go projects and determines which one to build.
-If the action 
+Scans for AL-Go projects and determines which one to build
+
 The action also computes build dimensions, based on the projects and the build modes for each of them
 
-## Outputs
-### ProjectsJson:
-An array of AL-Go projects in compressed JSON format
+## INPUT
 
-### ProjectDependenciesJson:
-An object that holds the project dependencies in compressed JSON format
-  
-### BuildOrderJson: 
-An array of objects that determine that build order, including build dimensions
+### ENV variables
+none
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
+| maxBuildDepth | | Specifies the maximum build depth suppored by the workflow running the action | 0 |
+
+## OUTPUT
+
+### ENV variables
+none
+
+### OUTPUT variables
+| Name | Description |
+| :-- | :-- |
+| ProjectsJson | An array of AL-Go projects in compressed JSON format |
+| ProjectDependenciesJson | An object that holds the project dependencies in compressed JSON format |
+| BuildOrderJson |An array of objects that determine that build order, including build dimensions |

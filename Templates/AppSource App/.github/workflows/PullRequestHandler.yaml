@@ -42,7 +42,6 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}

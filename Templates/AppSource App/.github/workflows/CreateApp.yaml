@@ -61,7 +61,7 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          get: type,keyVaultName,ghTokenWorkflowSecretName
+          get: type,ghTokenWorkflowSecretName
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -71,7 +71,6 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
           secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
 
       - name: CalculateToken
