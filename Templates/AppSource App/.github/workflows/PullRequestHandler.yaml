@@ -35,10 +35,6 @@ jobs:
           ref: refs/pull/${{ github.event.number }}/merge
 
       - uses: microsoft/AL-Go-Actions/VerifyPRChanges@main
-        with:
-          baseSHA: ${{ github.event.pull_request.base.sha }}
-          headSHA: ${{ github.event.pull_request.head.sha }}
-          prbaseRepository: ${{ github.event.pull_request.base.repo.full_name }}
 
   Initialization:
     needs: [ PregateCheck ]
@@ -46,7 +42,6 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-      settings: ${{ steps.ReadSettings.outputs.SettingsJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
@@ -78,7 +73,7 @@ jobs:
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
         run: |
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
           
       - name: Determine Projects To Build
         id: determineProjectsToBuild

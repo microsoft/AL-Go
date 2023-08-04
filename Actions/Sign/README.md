@@ -1,19 +1,22 @@
 # Sign
-Sign files with a certificate stored in Azure Key Vault
-## Parameters
-### azureKeyVaultURI
-The URI of the Azure Key Vault the certificate is stored in
-### azureKeyVaultClientID
-The Client ID of the service principal used to access the keyvault 
-### azureKeyVaultClientSecret
-The Client ID of the service principal used to access the keyvault 
-### azureKeyVaultTenantID
-The tenant id used to authenticate to Azure
-### azureKeyVaultCertificateName
-The name of the certificate used to perform the signing
-### pathToFiles
-The path to the files to be signed
-### timestampService
-The URI of the timestamp server
-### digestAlgorithm
-The digest algorithm to use for signing and timestamping
+Sign apps with a certificate stored in Azure Key Vault
+
+## INPUT
+
+### ENV variables
+| Name | Description |
+| :-- | :-- |
+| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
+| azureCredentialsJson | Yes | Azure Credentials secret | |
+| timestampService | | The URI of the timestamp server | http://timestamp.digicert.com |
+| digestAlgorithm | | The digest algorithm to use for signing and timestamping | SHA256 |
+| pathToFiles | Yes | The path to the files to be signed |
+
+## OUTPUT
+none

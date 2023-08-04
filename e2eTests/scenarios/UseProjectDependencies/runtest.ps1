@@ -39,8 +39,7 @@ Write-Host -ForegroundColor Yellow @'
 #
 '@
   
-$ErrorActionPreference = "stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""
 
@@ -50,7 +49,7 @@ Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameC
 $repository = "$githubOwner/$repoName"
 $branch = "main"
 
-$template = "https://github.com/$($pteTemplate)@main"
+$template = "https://github.com/$pteTemplate"
 
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository

@@ -17,8 +17,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
        { 
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -31,8 +29,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
        { 
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -45,8 +41,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
        { 
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -59,8 +53,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
        { 
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -73,8 +65,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
        { 
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -87,8 +77,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
        { 
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -101,8 +89,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
         Mock Write-Host {}
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -115,8 +101,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
         Mock Write-Host {}
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -129,8 +113,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
         Mock Write-Host {}
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 
@@ -142,8 +124,6 @@ Describe 'VerifyPRChanges Action Tests' {
 
        { 
         & $scriptPath `
-                -baseSHA "123" `
-                -headSHA "456" `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
                 -token "ABC" 

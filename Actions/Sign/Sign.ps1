@@ -1,22 +1,21 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
-    [string]$AzureCredentialsJson,
-    [Parameter(HelpMessage = "Settings from repository in compressed Json format", Mandatory = $true)]
-    [string]$settingsJson,
+    [string] $AzureCredentialsJson,
+    [Parameter(HelpMessage = "'OBSOLETE: Settings from repository in compressed Json format'", Mandatory = $true)]
+    [string] $settingsJson,
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
-    [String]$PathToFiles,
+    [String] $PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
-    [string]$TimestampService = "http://timestamp.digicert.com",
+    [string] $TimestampService = "http://timestamp.digicert.com",
     [Parameter(HelpMessage = "Timestamp digest algorithm.", Mandatory = $false)]
-    [string]$TimestampDigest = "sha256",
+    [string] $TimestampDigest = "sha256",
     [Parameter(HelpMessage = "File digest algorithm.", Mandatory = $false)]
-    [string]$FileDigest = "sha256",
+    [string] $FileDigest = "sha256",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $ParentTelemetryScopeJson = '7b7d'
 )
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 

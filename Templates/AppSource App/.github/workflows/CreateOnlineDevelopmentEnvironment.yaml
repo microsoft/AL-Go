@@ -1,10 +1,14 @@
 name: ' Create Online Dev. Environment'
 
-run-name: "Create Online Dev. Environment for [${{ github.ref_name }}]"
+run-name: "Create Online Dev. Environment for [${{ github.ref_name }} / ${{ github.event.inputs.project }}]"
 
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects
+        required: false
+        default: '.'
       environmentName:
         description: Name of the online environment
         required: true
@@ -16,6 +20,9 @@ on:
         description: Direct COMMIT (Y/N)
         required: false
         default: 'N'
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for Pull Request/COMMIT
+        type: boolean
 
 permissions:
   contents: write
@@ -30,11 +37,13 @@ env:
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
 jobs:
-  Initialize:
+  Initialization:
     runs-on: [ windows-latest ]
     outputs:
       deviceCode: ${{ steps.authenticate.outputs.deviceCode }}
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
+      githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -47,6 +56,7 @@ jobs:
           eventId: "DO0093"
 
       - name: Read settings
+        id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
@@ -59,14 +69,12 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
           secrets: 'adminCenterApiCredentials'
 
       - name: Check AdminCenterApiCredentials / Initiate Device Login (open to see code)
         id: authenticate
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:adminCenterApiCredentials))
           if ($adminCenterApiCredentials) {
             Write-Host "AdminCenterApiCredentials provided in secret $($ENV:adminCenterApiCredentialsSecretName)!"
@@ -82,15 +90,18 @@ jobs:
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
             CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
             Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($ENV:adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
           }
 
   CreateDevelopmentEnvironment:
-    runs-on: [ windows-latest ]
+    runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
+    defaults:
+      run:
+        shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
     name: Create Development Environment
-    needs: [ Initialize ]
+    needs: [ Initialization ]
     env:
-      deviceCode: ${{ needs.Initialize.outputs.deviceCode }}
+      deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -99,7 +110,8 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          get: ghTokenWorkflowSecretName
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -107,23 +119,36 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
-          settingsJson: ${{ env.Settings }}
-          secrets: 'adminCenterApiCredentials'
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          secrets: 'adminCenterApiCredentials,ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+
+      - name: CalculateToken
+        id: CalculateToken
+        env:
+          useGhTokenWorkflow: ${{ github.event.inputs.useGhTokenWorkflow }}
+        run: |
+          if ($env:useGhTokenWorkflow -eq 'true') {
+            $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GHTOKENWORKFLOW))
+          } else {
+            $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+          }
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 
       - name: Set AdminCenterApiCredentials
         run: |
           if ($env:deviceCode) {
             $adminCenterApiCredentials = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""deviceCode"":""$($env:deviceCode)""}"))
-            Add-Content -path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
           }
 
       - name: Create Development Environment
         uses: microsoft/AL-Go-Actions/CreateDevelopmentEnvironment@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
+          token: ${{ steps.CalculateToken.outputs.ghToken }}
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           environmentName: ${{ github.event.inputs.environmentName }}
+          project: ${{ github.event.inputs.project }}
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }}
           directCommit: ${{ github.event.inputs.directCommit }}
           adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }}
@@ -134,4 +159,4 @@ jobs:
         with:
           shell: powershell
           eventId: "DO0093"
-          telemetryScopeJson: ${{ needs.Initialize.outputs.telemetryScopeJson }}
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

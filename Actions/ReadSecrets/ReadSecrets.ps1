@@ -1,15 +1,11 @@
 Param(
-
-    [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
-    [string] $settingsJson = '{"keyVaultName": ""}',
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
@@ -37,13 +33,16 @@ try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
-    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $outSettings = $settings
-    $keyVaultName = $settings.keyVaultName
-    if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-        $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
-        if ($credentialsJson.Keys -contains "keyVaultName") {
-            $keyVaultName = $credentialsJson.keyVaultName
+    $keyVaultName = ""
+    if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
+        $keyVaultName = $settings.keyVaultName
+        if ([string]::IsNullOrEmpty($keyVaultName)) {
+            $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
+            if ($credentialsJson.Keys -contains "keyVaultName") {
+                $keyVaultName = $credentialsJson.keyVaultName
+            }
         }
     }
     [System.Collections.ArrayList]$secretsCollection = @()
@@ -85,7 +84,7 @@ try {
                     }
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
-                Add-Content -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
+                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
                 $outSecrets += @{ "$envVar" = $base64value }
                 Write-Host "$envVar successfully read from secret $secret"
                 $secretsCollection.Remove($_)
@@ -114,11 +113,15 @@ try {
         }) -join ', ')"
     }
 
+    #region Action: Output
+
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+
+    #endregion
 
     TrackTrace -telemetryScope $telemetryScope
 }

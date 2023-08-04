@@ -17,8 +17,7 @@ Param(
     [string] $get = ""
 )
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
@@ -37,7 +36,7 @@ try {
         $getSettings = $get.Split(',').Trim()
     }
     else {
-        $getSettings = @($settings.Keys)
+        $getSettings = @()
     }
 
     if ($ENV:GITHUB_EVENT_NAME -in @("pull_request_target", "pull_request")) {
@@ -50,55 +49,54 @@ try {
     }
 
     if ($settings.versioningstrategy -ne -1) {
-        if ($getSettings -contains 'appBuild' -or $getSettings -contains 'appRevision') {
-            switch ($settings.versioningStrategy -band 15) {
-                0 { # Use RUN_NUMBER and RUN_ATTEMPT
-                    $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
-                    $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
-                }
-                1 { # Use RUN_ID and RUN_ATTEMPT
-                    OutputError -message "Versioning strategy 1 is no longer supported"
-                }
-                2 { # USE DATETIME
-                    $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
-                    $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
-                }
-                15 { # Use maxValue
-                    $settings.appBuild = [Int32]::MaxValue
-                    $settings.appRevision = 0
-                }
-                default {
-                    OutputError -message "Unknown version strategy $versionStrategy"
-                    exit
-                }
+        switch ($settings.versioningStrategy -band 15) {
+            0 { # Use RUN_NUMBER and RUN_ATTEMPT
+                $settings.appBuild = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
+                $settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
+            }
+            1 { # Use RUN_ID and RUN_ATTEMPT
+                OutputError -message "Versioning strategy 1 is no longer supported"
+            }
+            2 { # USE DATETIME
+                $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
+                $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
+            }
+            15 { # Use maxValue
+                $settings.appBuild = [Int32]::MaxValue
+                $settings.appRevision = 0
+            }
+            default {
+                OutputError -message "Unknown version strategy $versionStrategy"
+                exit
             }
         }
     }
 
     $outSettings = @{}
-    $getSettings | ForEach-Object {
-        $setting = $_.Trim()
+    $settings.Keys | ForEach-Object {
+        $setting = $_
         $settingValue = $settings."$setting"
         $outSettings += @{ "$setting" = $settingValue }
-        if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
-            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
-        }
-        else {
-            Add-Content -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
+        if ($getSettings -contains $setting) {
+            if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
+                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
+            }
+            else {
+                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
+            }
         }
     }
 
-    $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "SettingsJson=$outSettingsJson"
-    Add-Content -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
-    Write-Host "SettingsJson=$outSettingsJson"
+    Write-Host "SETTINGS:"
+    $outSettings | ConvertTo-Json -Depth 99 | Out-Host
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($outSettings | ConvertTo-Json -Depth 99 -Compress)"
 
     $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
     Write-Host "GitHubRunnerJson=$githubRunner"
 
     $gitHubRunnerShell = $settings.githubRunnerShell
-    Add-Content -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
     Write-Host "GitHubRunnerShell=$githubRunnerShell"
 
     if ($getenvironments) {
@@ -188,12 +186,12 @@ try {
             $json.matrix.include += @{ "environment" = $_; "os" = "$($runson | ConvertTo-Json -compress)" }
         }
         $environmentsJson = $json | ConvertTo-Json -Depth 99 -compress
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentsJson=$environmentsJson"
-        Add-Content -Path $env:GITHUB_ENV -Value "environments=$environmentsJson"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsJson=$environmentsJson"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "environments=$environmentsJson"
         Write-Host "EnvironmentsJson=$environmentsJson"
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($environments.Count)"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($environments.Count)"
         Write-Host "EnvironmentCount=$($environments.Count)"
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
         Write-Host "UnknownEnvironment=$unknownEnvironment"
     }
 

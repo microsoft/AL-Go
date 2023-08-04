@@ -81,9 +81,9 @@ jobs:
           if ($githubOwner -eq $ENV:GITHUB_REPOSITORY_OWNER) {
             $maxParallel = 8
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "maxParallel=$maxParallel"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "maxParallel=$maxParallel"
           Write-Host "maxParallel=$maxParallel"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
 
   SetupRepositories:
@@ -101,7 +101,7 @@ jobs:
       - name: Setup Repositories
         id: setup
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           . (Join-Path "." "e2eTests/SetupRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
   
   Analyze:
@@ -119,7 +119,7 @@ jobs:
       - name: Analyze
         id: Analyze
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
           SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -repository "microsoft/AL-Go"
@@ -150,7 +150,7 @@ jobs:
             "max-parallel" = $maxParallel
             "fail-fast" = $false
           } | ConvertTo-Json -depth 99 -compress
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "testruns=$testrunsJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "testruns=$testrunsJson"
           Write-Host "testruns=$testrunsJson"
 
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
@@ -161,7 +161,7 @@ jobs:
             "max-parallel" = $maxParallel
             "fail-fast" = $false
           } | ConvertTo-Json -depth 99 -compress
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
           Write-Host "releases=$releasesJson"
 
           $scenariosJson = @{
@@ -171,7 +171,7 @@ jobs:
             "max-parallel" = $maxParallel
             "fail-fast" = $false
           } | ConvertTo-Json -depth 99 -compress
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
           Write-Host "scenarios=$scenariosJson"
 
   Scenario:
@@ -187,9 +187,9 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
           Write-Host "repoName='$repoName'"
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
@@ -218,7 +218,7 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $adminCenterApiCredentials = ''
           $licenseFileUrl = ''
           if ('${{ matrix.type }}' -eq 'PTE' -and '${{ matrix.style }}' -eq 'singleProject' -and '${{ matrix.os }}' -eq 'windows') {
@@ -231,11 +231,11 @@ jobs:
           else {
             $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template='$template'"
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
           Write-Host "repoName='$repoName'"
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
@@ -264,7 +264,7 @@ jobs:
       - name: Calculate parameters
         id: calculateParams
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           if ('${{ matrix.type }}' -eq 'appSourceApp') {
             $licenseFileUrl = '${{ secrets.licenseFileUrl }}'
             $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
@@ -275,11 +275,11 @@ jobs:
             $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
             $contentPath = 'pte'
           }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "template='$template'"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "contentPath='$contentPath'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "licenseFileUrl='$licenseFileUrl'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "contentPath='$contentPath'"
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
           Write-Host "repoName='$repoName'"
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
@@ -306,5 +306,5 @@ jobs:
 
       - name: Remove Repositories
         run: |
-          $errorActionPreference = "STOP"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

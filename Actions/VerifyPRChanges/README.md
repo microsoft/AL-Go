@@ -1,13 +1,18 @@
-# Read settings
-Verify PR Changes for AL-Go workflows
-## Parameters
-### token (default github.token)
-The GitHub token running the action
-### baseSHA (default github.event.pull_request.base.sha)
-Base commit of the PR
-### headSHA (default github.event.pull_request.head.sha)
-Head commit of the PR
-### prBaseRepository (default github.event.pull_request.base.repo.full_name)
-The name of the repository the PR is going to
-### pullRequestId (default github.event.pull_request.number)
-The id of the pull request
+# Verify Pull Request changes
+Verify Pull Request Changes for AL-Go workflows
+
+## INPUT
+
+### ENV variables
+none
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| token | | The token to use for the GitHub API |github.token |
+| prBaseRepository | | The name of the repository the PR is going to | github.event.pull_request.base.repo.full_name |
+| pullRequestId | | The id of the pull request | github.event.pull_request.number |
+
+## OUTPUT
+none
