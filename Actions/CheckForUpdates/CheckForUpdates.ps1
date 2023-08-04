@@ -221,9 +221,9 @@ try {
                     }
 
                     if ($baseName -eq "PullRequestHandler") {
-                        # The PullRequestHandler workflow can have a RepoSetting called PRBuildTrigger which specifies the trigger to use for Pull Requests
+                        # The PullRequestHandler workflow can have a RepoSetting called CICDPullrequestTrigger which specifies the trigger to use for Pull Requests
                         $triggerSection = $yaml.Get('on:/pull')
-                        $triggerSection.content = "$($repoSettings.PRBuildTrigger):"
+                        $triggerSection.content = "$($repoSettings.CICDPullrequestTrigger):"
                         $yaml.Replace('on:/pull', $triggerSection.Content)
 
                         # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
@@ -235,7 +235,7 @@ try {
                         }
 
                         # update the branches: line with the new branches
-                        $yaml.Replace("on:/$($repoSettings.PRBuildTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+                        $yaml.Replace("on:/$($repoSettings.CICDPullrequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
                     }
 
                     # Repo Setting runs-on and shell determines which GitHub runner is used for all non-build jobs (build jobs are run using the GitHubRunner/GitHubRunnerShell repo settings)
