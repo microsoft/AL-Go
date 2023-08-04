@@ -38,9 +38,6 @@ inputs:
     required: false
     default: ''
 outputs:
-  SettingsJson:
-    description: Settings in compressed Json format
-    value: ${{ steps.readsettings.outputs.SettingsJson }}
   GitHubRunnerJson:
     description: GitHubRunner in compressed Json format
     value: ${{ steps.readsettings.outputs.GitHubRunnerJson }}

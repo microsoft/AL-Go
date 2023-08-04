@@ -66,14 +66,16 @@ End to end testing will create a lot of repositories called tmpXYZ, where XYZ is
 You can run the *Cleanup after failed E2E* workflow to cleanup these repositories.
 
 You can also run the end to end tests directly from VS Code, by providing the following global variables:
-- $global:E2EgitHubOwner
-- $global:SecureE2EPAT
-- $global:SecureAdminCenterApiToken
-- $global:SecureLicenseFileUrl
-- $global:SecureInsiderSasToken
 
-Where E2EgitHubOwner is of type string and the other global variables is of type SecureString.
-Running end to end tests in VS Code will use your 3 deployed template repositories for running the tests.
+|Variable|Type|Description|
+|---|---|---|
+|$global:E2EgitHubOwner| String | The GitHub owner of the test repositories (like `freddydk` or `microsoft`) |
+|$global:SecureE2EPAT| SecureString | A personal access token with workflow permissions |
+|$global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
+|$global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
+|$global:SecureInsiderSasToken | SecureString | The Insider SAS Token from https://aka.ms/collaborate  |
+|$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for direct AL-Go development) |
+|$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for direct AL-Go development) |
 
 ---
 [back](../README.md)

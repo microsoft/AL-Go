@@ -1,7 +1,4 @@
 Param(
-
-    [Parameter(HelpMessage = "Settings from template repository in compressed Json format", Mandatory = $false)]
-    [string] $settingsJson = '{"keyVaultName": ""}',
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $secrets = "",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
@@ -36,13 +33,16 @@ try {
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
 
     $outSecrets = [ordered]@{}
-    $settings = $settingsJson | ConvertFrom-Json | ConvertTo-HashTable
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $outSettings = $settings
-    $keyVaultName = $settings.keyVaultName
-    if ([string]::IsNullOrEmpty($keyVaultName) -and (IsKeyVaultSet)) {
-        $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
-        if ($credentialsJson.Keys -contains "keyVaultName") {
-            $keyVaultName = $credentialsJson.keyVaultName
+    $keyVaultName = ""
+    if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
+        $keyVaultName = $settings.keyVaultName
+        if ([string]::IsNullOrEmpty($keyVaultName)) {
+            $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
+            if ($credentialsJson.Keys -contains "keyVaultName") {
+                $keyVaultName = $credentialsJson.keyVaultName
+            }
         }
     }
     [System.Collections.ArrayList]$secretsCollection = @()
@@ -113,11 +113,15 @@ try {
         }) -join ', ')"
     }
 
+    #region Action: Output
+
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
 
     $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+
+    #endregion
 
     TrackTrace -telemetryScope $telemetryScope
 }

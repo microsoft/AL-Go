@@ -64,7 +64,6 @@ jobs:
           secrets: ${{ toJson(secrets) }}
         with:
           shell: powershell
-          settingsJson: ${{ env.Settings }}
           secrets: 'appSourceContext'
 
       - name: DeliveryContext

@@ -102,7 +102,7 @@ try {
             $project = $thisProject.Replace('\','_').Replace('/','_')
         }
         else {
-            $project = $env:repoName
+            $project = $settings.repoName
         }
         # projectName is the project name stripped for special characters
         $projectName = $project -replace "[^a-z0-9]", "-"
@@ -296,14 +296,14 @@ try {
                 $parameters.dependencyAppFiles = @(Get-Item -Path (Join-Path $dependenciesFolder[0] "*.app") | ForEach-Object { $_.FullName })
             }
             if ($nuGetAccount.Keys -contains 'PackageName') {
-                $parameters.packageId = $nuGetAccount.PackageName.replace('{project}',$projectName).replace('{owner}',$ENV:GITHUB_REPOSITORY_OWNER).replace('{repo}',$env:repoName)
+                $parameters.packageId = $nuGetAccount.PackageName.replace('{project}',$projectName).replace('{owner}',$ENV:GITHUB_REPOSITORY_OWNER).replace('{repo}',$settings.repoName)
             }
             else {
                 if ($thisProject -and ($thisProject -eq '.')) {
-                    $parameters.packageId = "$($ENV:GITHUB_REPOSITORY_OWNER)-$($env:repoName)"
+                    $parameters.packageId = "$($ENV:GITHUB_REPOSITORY_OWNER)-$($settings.repoName)"
                 }
                 else {
-                    $parameters.packageId = "$($ENV:GITHUB_REPOSITORY_OWNER)-$($env:repoName)-$ProjectName"
+                    $parameters.packageId = "$($ENV:GITHUB_REPOSITORY_OWNER)-$($settings.repoName)-$ProjectName"
                 }
             }
             if ($type -eq 'CD') {

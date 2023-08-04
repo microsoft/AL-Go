@@ -117,3 +117,25 @@ Describe "DetermineArtifactUrl" {
         CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
     }
 }
+
+
+Describe "DetermineArtifactUrl Action Test" {
+    BeforeAll {
+        $actionName = "DetermineArtifactUrl"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $scriptName = "$actionName.ps1"
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+    }
+
+    It 'Compile Action' {
+        Invoke-Expression $actionScript
+    }
+
+    It 'Test action.yaml matches script' {
+        $permissions = [ordered]@{
+        }
+        $outputs = [ordered]@{
+        }
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+    }
+}
