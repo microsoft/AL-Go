@@ -1,4 +1,8 @@
-$script:gitHubSecrets = $env:secrets | ConvertFrom-Json
+Param(
+    [PSCustomObject] $_gitHubSecrets
+)
+
+$script:gitHubSecrets = $_gitHubSecrets
 $script:keyvaultConnectionExists = $false
 $script:azureRm210 = $false
 $script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"

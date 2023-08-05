@@ -1,4 +1,6 @@
 Param(
+    [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
+    [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
@@ -30,7 +32,7 @@ try {
        Write-Host "Other process terminated abnormally"
     }
 
-    Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
+    Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable

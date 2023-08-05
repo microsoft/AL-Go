@@ -5,13 +5,13 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  getSecrets:
-    description: Comma separated list of Secrets to get
-    required: true
   gitHubSecrets:
     description: All GitHub Secrets in compressed JSON format
     required: false
     default: '{}'
+  getSecrets:
+    description: Comma separated list of Secrets to get
+    required: true
   parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
@@ -25,9 +25,8 @@ runs:
         _getSecrets: ${{ inputs.getSecrets }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
       run: |
-        $secrets = '${{ inputs.gitHubSecrets }}' | ConvertFrom-Json
-        $secrets | ConvertTo-Json | Out-Host
-        try { ${{ github.action_path }}/ReadSecrets.ps1 -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+        $gitHubSecrets = '${{ inputs.gitHubSecrets }}' | ConvertFrom-Json
+        try { ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets $githubSecrets -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

@@ -83,29 +83,11 @@ jobs:
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$($deliveryTargetSecrets -join ',')"
 
-      - name: Read GitHub secrets
-        id: readGitHubSecrets
-        env:
-          getSecrets: ${{ steps.DetermineDeliveryTargetSecrets.outputs.Secrets }}
-        run: |
-          $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
-          $settings = $env:Settings | ConvertFrom-Json
-          $secrets = @{}
-          $env:getSecrets.Split(',') | ForEach-Object {
-            $secretName = $_
-            if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
-            if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
-              $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
-            }
-          }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
-
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        env:
-          secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
         with:
           shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: ${{ steps.DetermineDeliveryTargetSecrets.outputs.Secrets }}
 
       - name: Determine Delivery Targets
@@ -239,29 +221,11 @@ jobs:
         with:
           shell: powershell
 
-      - name: Read GitHub secrets
-        id: readGitHubSecrets
-        env:
-          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
-        run: |
-          $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
-          $settings = $env:Settings | ConvertFrom-Json
-          $secrets = @{}
-          $env:getSecrets.Split(',') | ForEach-Object {
-            $secretName = $_
-            if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
-            if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
-              $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
-            }
-          }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
-
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        env:
-          secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
         with:
           shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
 
       - name: AuthContext
@@ -371,29 +335,11 @@ jobs:
         with:
           shell: powershell
 
-      - name: Read GitHub secrets
-        id: readGitHubSecrets
-        env:
-          getSecrets: '${{ matrix.deliveryTarget }}Context'
-        run: |
-          $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
-          $settings = $env:Settings | ConvertFrom-Json
-          $secrets = @{}
-          $env:getSecrets.Split(',') | ForEach-Object {
-            $secretName = $_
-            if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
-            if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
-              $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
-            }
-          }
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
-
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        env:
-          secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
         with:
           shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ matrix.deliveryTarget }}Context'
 
       - name: DeliveryContext
