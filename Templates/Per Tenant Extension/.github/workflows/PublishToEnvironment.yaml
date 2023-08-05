@@ -66,7 +66,7 @@ jobs:
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
         run: |
           $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
-          $settings = $env:settings | ConvertFrom-Json
+          $settings = $env:Settings | ConvertFrom-Json
           $secrets = @{}
           $env:getSecrets.Split(',') | ForEach-Object {
             $secretName = $_
@@ -152,7 +152,7 @@ jobs:
           getSecrets: 'ghTokenWorkflow'
         run: |
           $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
-          $settings = $env:settings | ConvertFrom-Json
+          $settings = $env:Settings | ConvertFrom-Json
           $secrets = @{}
           $env:getSecrets.Split(',') | ForEach-Object {
             $secretName = $_

@@ -70,7 +70,7 @@ jobs:
           getSecrets: 'ghTokenWorkflow'
         run: |
           $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
-          $settings = $env:settings | ConvertFrom-Json
+          $settings = $env:Settings | ConvertFrom-Json
           $secrets = @{}
           $env:getSecrets.Split(',') | ForEach-Object {
             $secretName = $_
