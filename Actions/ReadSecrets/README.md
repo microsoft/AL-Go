@@ -13,7 +13,7 @@ Read secrets from GitHub secrets or Azure Keyvault for AL-Go workflows
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| secrets | Yes | Comma separated list of secrets to get | |
+| getSecrets | Yes | Comma separated list of secrets to get | |
 
 ## OUTPUT
 

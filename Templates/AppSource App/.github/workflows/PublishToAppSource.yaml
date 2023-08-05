@@ -58,13 +58,30 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
+      - name: Read GitHub secrets
+        id: readGitHubSecrets
+        env:
+          getSecrets: 'appSourceContext'
+        run: |
+          $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
+          $settings = $env:settings | ConvertFrom-Json
+          $secrets = @{}
+          $env:getSecrets.Split(',') | ForEach-Object {
+            $secretName = $_
+            if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
+            if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
+              $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
+            }
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
+
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         env:
-          secrets: ${{ toJson(secrets) }}
+          secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
         with:
           shell: powershell
-          secrets: 'appSourceContext'
+          getSecrets: 'appSourceContext'
 
       - name: DeliveryContext
         id: deliveryContext

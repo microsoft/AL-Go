@@ -60,15 +60,32 @@ jobs:
           $envName = '${{ fromJson(steps.ReadSettings.outputs.environmentsJson).matrix.include[0].environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
+      - name: Read GitHub secrets
+        id: readGitHubSecrets
+        env:
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+        run: |
+          $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
+          $settings = $env:settings | ConvertFrom-Json
+          $secrets = @{}
+          $env:getSecrets.Split(',') | ForEach-Object {
+            $secretName = $_
+            if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
+            if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
+              $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
+            }
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
+
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         if: steps.ReadSettings.outputs.UnknownEnvironment == 1
         env:
-          secrets: ${{ toJson(secrets) }}
+          secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
       - name: Authenticate
         id: Authenticate
@@ -129,10 +146,28 @@ jobs:
         with:
           shell: powershell
 
+      - name: Read GitHub secrets
+        id: readGitHubSecrets
+        env:
+          getSecrets: 'ghTokenWorkflow'
+        run: |
+          $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
+          $settings = $env:settings | ConvertFrom-Json
+          $secrets = @{}
+          $env:getSecrets.Split(',') | ForEach-Object {
+            $secretName = $_
+            if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
+            if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
+              $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
+            }
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
+
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
+
         env:
-          secrets: ${{ toJson(secrets) }}
+          secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
         with:
           shell: powershell
           secrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'

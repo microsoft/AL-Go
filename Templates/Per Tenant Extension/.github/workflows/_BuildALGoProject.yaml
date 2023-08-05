@@ -85,14 +85,31 @@ jobs:
             project: ${{ inputs.project }}
             get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps
 
+        - name: Read GitHub secrets
+          id: readGitHubSecrets
+          env:
+            getSecrets: ${{ inputs.secrets }}
+          run: |
+            $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
+            $settings = $env:settings | ConvertFrom-Json
+            $secrets = @{}
+            $env:getSecrets.Split(',') | ForEach-Object {
+              $secretName = $_
+              if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
+              if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
+                $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
+              }
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
+
         - name: Read secrets
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
           env:
-            secrets: ${{ toJson(secrets) }}
+            secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-            secrets: ${{ inputs.secrets }}
+            getSecrets: ${{ inputs.secrets }}
 
         - name: Determine ArtifactUrl
           uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main

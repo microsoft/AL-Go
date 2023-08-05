@@ -64,17 +64,34 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          get: ghTokenWorkflowSecretName
+
+      - name: Read GitHub secrets
+        if: github.event.inputs.useGhTokenWorkflow == 'true'
+        id: readGitHubSecrets
+        env:
+          getSecrets: 'ghTokenWorkflow'
+        run: |
+          $gitHubSecrets = '${{ toJson(secrets) }}' | ConvertFrom-Json
+          $settings = $env:settings | ConvertFrom-Json
+          $secrets = @{}
+          $env:getSecrets.Split(',') | ForEach-Object {
+            $secretName = $_
+            if ($settings.PSObject.Properties.Name -eq "$($secretName)SecretName") { $secretName = $settings."$($secretName)SecretName" }
+            if ($secretName -and $gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
+              $secrets += @{ $secretName = $gitHubSecrets."$secretName" }
+            }
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "gitHubSecrets=$($secrets | ConvertTo-Json -compress)"
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         if: github.event.inputs.useGhTokenWorkflow == 'true'
         env:
-          secrets: ${{ toJson(secrets) }}
+          secrets: ${{ steps.readGitHubSecrets.outputs.gitHubSecrets }}
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          secrets: 'ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+          getSecrets: 'ghTokenWorkflow'
 
       - name: CalculateToken
         id: CalculateToken

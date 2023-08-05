@@ -1,6 +1,6 @@
 Param(
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
-    [string] $secrets = "",
+    [string] $getSecrets = "",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
@@ -46,7 +46,7 @@ try {
         }
     }
     [System.Collections.ArrayList]$secretsCollection = @()
-    $secrets.Split(',') | Select-Object -Unique | ForEach-Object {
+    $getSecrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
         $secretNameProperty = "$($secret)SecretName"
         if ($settings.Keys -contains $secretNameProperty) {
