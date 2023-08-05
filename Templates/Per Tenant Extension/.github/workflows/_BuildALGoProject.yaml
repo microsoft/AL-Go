@@ -100,7 +100,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            secretsJson: ${{ env.RepoSecrets }}
+            secretsJson: ${{ env.Secrets }}
 
         - name: Cache Business Central Artifacts
           if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.ArtifactCacheKey
@@ -127,7 +127,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            secretsJson: ${{ env.RepoSecrets }}
+            secretsJson: ${{ env.Secrets }}
             buildMode: ${{ inputs.buildMode }}
             installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
             installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}

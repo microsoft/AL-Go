@@ -20,7 +20,7 @@ Read secrets from GitHub secrets or Azure Keyvault for AL-Go workflows
 ### ENV variables
 | Name | Description |
 | :-- | :-- |
-| RepoSecrets | A compressed json construct with all secrets base64 encoded. The secret value + the base64 value of the secret value are masked in the log |
+| Secrets | A compressed json construct with all secrets base64 encoded. The secret value + the base64 value of the secret value are masked in the log |
 | Settings | ReadSecrets makes changes to the Settings environment variables if there are appDependencyProbingPaths defined |
 
 > **NOTE:** This method will also create individual environment variables for every secret encoded with base64.
