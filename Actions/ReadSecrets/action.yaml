@@ -24,9 +24,7 @@ runs:
       env:
         _getSecrets: ${{ inputs.getSecrets }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-      run: |
-        $gitHubSecrets = '${{ inputs.gitHubSecrets }}' | ConvertFrom-Json
-        try { ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets $githubSecrets -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
