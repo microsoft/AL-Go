@@ -8,6 +8,10 @@ inputs:
   getSecrets:
     description: Comma separated list of Secrets to get
     required: true
+  gitHubSecrets:
+    description: All GitHub Secrets in compressed JSON format
+    required: false
+    default: '{}'
   parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
@@ -20,7 +24,10 @@ runs:
       env:
         _getSecrets: ${{ inputs.getSecrets }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-      run: try { ${{ github.action_path }}/ReadSecrets.ps1 -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: |
+        $secrets = '${{ inputs.gitHubSecrets }}' | ConvertFrom-Json
+        $secrets | ConvertTo-Json | Out-Host
+        try { ${{ github.action_path }}/ReadSecrets.ps1 -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue
