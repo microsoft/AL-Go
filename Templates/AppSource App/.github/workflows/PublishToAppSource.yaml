@@ -69,10 +69,14 @@ jobs:
         id: deliveryContext
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $contextName = 'appSourceContext'
-          $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($contextName)))
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliveryContext=$deliveryContext"
-          Write-Host "deliveryContext=$deliveryContext"
+          $secrets = $env:Secrets | ConvertFrom-Json
+          if ($secrets.PSObject.Properties.Name -contains "appSourceContext") {
+            $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext))
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliveryContext=$deliveryContext"
+          }
+          else {
+            throw "appSourceContext secret is missing"
+          }
 
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main

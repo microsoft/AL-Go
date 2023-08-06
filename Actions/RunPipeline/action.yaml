@@ -21,10 +21,6 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  secretsJson:
-    description: Secrets from repository in compressed Json format
-    required: false
-    default: '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","CodeSignCertificatePw":"","keyVaultCertificateUrl":"","KeyVaultCertificatePw":"","keyVaultClientId":"","applicationInsightsConnectionString": ""}'
   buildMode:
     description: Specifies a mode to use for the build steps
     required: false
@@ -47,11 +43,10 @@ runs:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
-        _secretsJson: ${{ inputs.secretsJson }}
         _buildMode: ${{ inputs.buildMode }}
         _installAppsJson: ${{ inputs.installAppsJson }}
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
-      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -secretsJson $ENV:_secretsJson -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

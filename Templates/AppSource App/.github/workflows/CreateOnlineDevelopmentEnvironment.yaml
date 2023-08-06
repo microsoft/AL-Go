@@ -74,10 +74,12 @@ jobs:
         id: authenticate
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:adminCenterApiCredentials))
-          if ($adminCenterApiCredentials) {
-            Write-Host "AdminCenterApiCredentials provided in secret $($ENV:adminCenterApiCredentialsSecretName)!"
-            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "Admin Center Api Credentials was provided in a secret called $($ENV:adminCenterApiCredentialsSecretName). Using this information for authentication."
+          $secrets = $env:Secrets | ConvertFrom-Json
+          $settings = $env:Settings | ConvertFrom-Json
+          if ($secrets.PSObject.Properties.Name -eq 'adminCenterApiCredentials') {
+            $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.adminCenterApiCredentials))
+            Write-Host "AdminCenterApiCredentials provided in secret $($settings.adminCenterApiCredentialsSecretName)!"
+            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "Admin Center Api Credentials was provided in a secret called $($settings.adminCenterApiCredentialsSecretName). Using this information for authentication."
           }
           else {
             Write-Host "AdminCenterApiCredentials not provided, initiating Device Code flow"
@@ -88,7 +90,7 @@ jobs:
             $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
             CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
-            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($ENV:adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
+            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($settings.adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
             Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
           }
 
@@ -124,10 +126,15 @@ jobs:
         env:
           useGhTokenWorkflow: ${{ github.event.inputs.useGhTokenWorkflow }}
         run: |
+          $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+          $secrets = $env:Secrets | ConvertFrom-Json
           if ($env:useGhTokenWorkflow -eq 'true') {
-            $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GHTOKENWORKFLOW))
-          } else {
-            $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+            if ($secrets.PSObject.Properties.Name -eq 'GHTOKENWORKFLOW') {
+              $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.GHTOKENWORKFLOW))
+            }
+            else {
+              Write-Host "::Warning::GHTOKENWORKFLOW secret not found. Using GITHUB_TOKEN."
+            }
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 

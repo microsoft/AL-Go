@@ -75,15 +75,16 @@ jobs:
         run: |
           $envName = '${{ steps.envName.outputs.envName }}'
           $secretName = ''
+          $secrets = $env:Secrets | ConvertFrom-Json
           $authContext = $null
           "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
             if (!($authContext)) {
-              $authContext = [System.Environment]::GetEnvironmentVariable($_)
-              if ($authContext) {
+              if ($secrets.PSObject.Properties.name -eq $_) {
                 Write-Host "Using $_ secret as AuthContext"
+                $authContext = $secrets."$_"
                 $secretName = $_
               }
-            }            
+            }
           }
           if ($authContext) {
             Write-Host "AuthContext provided in secret $secretName!"
@@ -139,23 +140,22 @@ jobs:
         id: authContext
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $settings = $env:Settings | ConvertFrom-Json
           $envName = '${{ steps.envName.outputs.envName }}'
-          $deployToSettingStr = [System.Environment]::GetEnvironmentVariable("DeployTo$envName")
-          if ($deployToSettingStr) {
-            $deployToSetting = $deployToSettingStr | ConvertFrom-Json
+          $settingsName = "DeployTo$envName"
+          if ($settings.PSObject.Properties.name -eq $settingsName) {
+            $deployToSetting = $settings."$settingsName" | ConvertFrom-Json
           }
           else {
             $deployToSetting = [PSCustomObject]@{}
           }
+          $secrets = $env:Secrets | ConvertFrom-Json
           $authContext = $null
-          if ($env:deviceCode) {
-            $authContext = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""deviceCode"":""$($env:deviceCode)""}"))
-          }
           "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
             if (!($authContext)) {
-              $authContext = [System.Environment]::GetEnvironmentVariable($_)
-              if ($authContext) {
+              if ($secrets.PSObject.Properties.name -eq $_) {
                 Write-Host "Using $_ secret as AuthContext"
+                $authContext = $secrets."$_"
               }
             }            
           }
@@ -170,10 +170,10 @@ jobs:
             $environmentName = $null
             "$($envName)-EnvironmentName", "$($envName)_EnvironmentName", "EnvironmentName" | ForEach-Object {
               if (!($EnvironmentName)) {
-                $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable($_)))
-                if ($EnvironmentName) {
+                if ($secrets.PSObject.Properties.name -eq $_) {
                   Write-Host "Using $_ secret as EnvironmentName"
-                  Write-Host "Please consider using the DeployTo$_ setting instead, where you can specify EnvironmentName, projects and branches"
+                  Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the EnvironmentName in a Secret."
+                  $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
                 }
               }            
             }
@@ -182,25 +182,30 @@ jobs:
             $environmentName = '${{ steps.envName.outputs.envName }}'
           }
           $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
+
           if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "projects") {
             $projects = $deployToSetting.projects
           }
-          else {
-            $projects = [System.Environment]::GetEnvironmentVariable("$($envName)-projects")
-            if (-not $projects) {
-              $projects = [System.Environment]::GetEnvironmentVariable("$($envName)_Projects")
-              if (-not $projects) {
-                $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('projects')))
-              }
-            }
+          elseif ($settings.PSObject.Properties.name -eq "$($envName)-projects") {
+            $projects = $settings."$($envName)-projects"
+            Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)-projects'"
           }
-          if ($projects -eq '') {
+          elseif ($settings.PSObject.Properties.name -eq "$($envName)_projects") {
+            $projects = $settings."$($envName)_projects"
+            Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)_projects'"
+          }
+          elseif ($secrets.PSObject.Properties.name -eq "projects") {
+            $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.projects))
+            Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in the secret 'project'"
+          }
+          if ($projects -eq '' -or $projects -eq '*') {
             $projects = '*'
           }
-          elseif ($projects -ne '*') {
+          else {
             $buildProjects = '${{ needs.Initialization.outputs.projects }}' | ConvertFrom-Json
             $projects = ($projects.Split(',') | Where-Object { $buildProjects -contains $_ }) -join ','
           }
+
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "authContext=$authContext"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "environmentName=$environmentName"
           Write-Host "environmentName=$([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName)))"

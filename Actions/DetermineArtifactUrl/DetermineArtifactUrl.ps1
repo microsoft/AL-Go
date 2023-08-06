@@ -2,9 +2,7 @@ Param(
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
-    [string] $project = ".",
-    [Parameter(HelpMessage = "Secrets from repository in compressed Json format", Mandatory = $false)]
-    [string] $secretsJson = '{"insiderSasToken":""}'
+    [string] $project = "."
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -22,8 +20,11 @@ try {
     
     #region Action: Determine artifacts to use
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
-    $secrets = $secretsJson | ConvertFrom-Json | ConvertTo-HashTable
-    $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
+    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    $insiderSasToken = ''
+    if ($Secrets.ContainsKey('insiderSasToken'')) {
+        $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Secrets.insiderSasToken))
+    }
     $projectSettings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken

@@ -7,6 +7,7 @@ Determines the artifactUrl to use for a given project
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
+| Secrets | env.Secrets with insiderSasToken must be read by a prior call to the ReadSecets Action |
 
 ### Parameters
 | Name | Required | Description | Default value |
@@ -14,7 +15,6 @@ Determines the artifactUrl to use for a given project
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | project | | Project folder if repository is setup for multiple projects | . |
-| secretsJson | | Secrets from repository in compressed Json format | |
 
 ## OUTPUT
 

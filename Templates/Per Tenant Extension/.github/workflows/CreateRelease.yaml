@@ -260,12 +260,12 @@ jobs:
 
       - name: nuGetContext
         id: nuGetContext
-        if: ${{ env.nuGetContext }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $nuGetContext = ''
-          if ('${{ matrix.atype }}' -eq 'Apps') {
-            $nuGetContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('nuGetContext')))
+          $secrets = $env:Secrets | ConvertFrom-Json
+          if ('${{ matrix.atype }}' -eq 'Apps' -and $secrets.PSObject.Properties.Name -eq 'nuGetContext') {
+            $nuGetContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.nuGetContext))
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "nuGetContext=$nuGetContext"
 
@@ -284,12 +284,12 @@ jobs:
 
       - name: storageContext
         id: storageContext
-        if: ${{ env.storageContext }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $storageContext = ''
-          if ('${{ matrix.atype }}' -eq 'Apps') {
-            $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Environment]::GetEnvironmentVariable('storageContext')))
+          $secrets = $env:Secrets | ConvertFrom-Json
+          if ('${{ matrix.atype }}' -eq 'Apps' -and $secrets.PSObject.Properties.Name -eq 'storageContext') {
+            $storageContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext))
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "storageContext=$storageContext"
 
@@ -351,10 +351,15 @@ jobs:
         env:
           useGhTokenWorkflow: ${{ github.event.inputs.useGhTokenWorkflow }}
         run: |
+          $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+          $secrets = $env:Secrets | ConvertFrom-Json
           if ($env:useGhTokenWorkflow -eq 'true') {
-            $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GHTOKENWORKFLOW))
-          } else {
-            $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+            if ($secrets.PSObject.Properties.Name -eq 'GHTOKENWORKFLOW') {
+              $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.GHTOKENWORKFLOW))
+            }
+            else {
+              Write-Host "::Warning::GHTOKENWORKFLOW secret not found. Using GITHUB_TOKEN."
+            }
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 
