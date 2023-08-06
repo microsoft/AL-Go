@@ -22,7 +22,7 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = ''
-    if ($Secrets.ContainsKey('insiderSasToken'')) {
+    if ($Secrets.ContainsKey('insiderSasToken')) {
         $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Secrets.insiderSasToken))
     }
     $projectSettings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
