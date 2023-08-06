@@ -178,16 +178,7 @@ jobs:
       fail-fast: false
     name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
     uses: ./.github/workflows/_BuildALGoProject.yaml
-    secrets:
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      licenseFileUrl: ${{ secrets.licenseFileUrl }}
-      insiderSasToken: ${{ secrets.insiderSasToken }}
-      codeSignCertificateUrl: ${{ secrets.codeSignCertificateUrl }}
-      codeSignCertificatePassword: ${{ secrets.codeSignCertificatePassword }}
-      keyVaultCertificateUrl: ${{ secrets.keyVaultCertificateUrl }}
-      keyVaultCertificatePassword: ${{ secrets.keyVaultCertificatePassword }}
-      keyVaultClientId: ${{ secrets.keyVaultClientId }}
-      gitHubPackagesContext: ${{ secrets.gitHubPackagesContext }}
+    secrets: inherit
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
       runsOn: ${{ needs.Initialization.outputs.githubRunner }}
