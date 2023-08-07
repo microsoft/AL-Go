@@ -999,8 +999,9 @@ function AnalyzeRepo {
                 Write-Host "Dependency to projects '$($dependency.projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
                 if ($dependency.PsObject.Properties.name -eq "AuthTokenSecret") {
                     Write-Host "Using secret $($dependency.AuthTokenSecret) for access to repository"
+                    $secrets = $env:Secrets | ConvertFrom-Json
                     # AuthTokenSecret is specified, use the value of that secret
-                    $dependency.AuthTokenSecret = $Secrets."$($dependency.AuthTokenSecret)"
+                    $dependency.AuthTokenSecret = $secrets."$($dependency.AuthTokenSecret)"
                 }
                 else {
                     if ($token) {
