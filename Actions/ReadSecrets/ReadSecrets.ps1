@@ -3,6 +3,8 @@ Param(
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $getSecrets = "",
+    [Parameter(HelpMessage = "Specify whether or not the function should also get AuthToken secrets from AppDependencyProbingPaths", Mandatory = $false)]
+    [bool] $getAppDependencyProbingPathsSecrets,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
@@ -36,7 +38,6 @@ try {
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $outSettings = $settings
     $keyVaultName = ""
     if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
         $keyVaultName = $settings.keyVaultName
@@ -55,6 +56,15 @@ try {
             $secret = "$($secret)=$($settings."$secretNameProperty")"
         }
         $secretsCollection += $secret
+    }
+
+    # Loop through appDependencyProbingPaths and add secrets to the collection of secrets to get
+    if ($getAppDependencyProbingPathsSecrets -and $settings.Keys -contains 'appDependencyProbingPaths') {
+        $settings.appDependencyProbingPaths | ForEach-Object {
+            if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
+                $secretsCollection += $_.authTokenSecret
+            } 
+        }
     }
 
     @($secretsCollection) | ForEach-Object {
@@ -94,14 +104,6 @@ try {
         }
     }
 
-    if ($outSettings.Keys -contains 'appDependencyProbingPaths') {
-        $outSettings.appDependencyProbingPaths | ForEach-Object {
-            if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
-                $_.authTokenSecret = GetSecret -secret $_.authTokenSecret -keyVaultName $keyVaultName
-            } 
-        }
-    }
-
     if ($secretsCollection) {
         Write-Host "The following secrets was not found: $(($secretsCollection | ForEach-Object { 
             $secretSplit = @($_.Split('='))
@@ -119,9 +121,6 @@ try {
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Secrets=$outSecretsJson"
-
-    $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
 
     #endregion
 

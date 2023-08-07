@@ -994,12 +994,17 @@ function AnalyzeRepo {
                 $dependency | Add-Member -name "branch" -MemberType NoteProperty -Value "main"
             }
             Write-Host "Dependency to projects '$($dependency.projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
-            if (-not ($dependency.PsObject.Properties.name -eq "AuthTokenSecret")) {
+            if ($dependency.PsObject.Properties.name -eq "AuthTokenSecret") {
+                Write-Host "Using secret $($dependency.AuthTokenSecret) for access to repository"
+                # AuthTokenSecret is specified, use the value of that secret
+                $dependency.AuthTokenSecret = $Secrets."$($dependency.AuthTokenSecret)"
+            }
+            else {
                 if ($token) {
-                    Write-Host "Using token as AuthTokenSecret"
+                    Write-Host "Using GITHUB_TOKEN for access to repository"
                 }
                 else {
-                    Write-Host "No token available, will attempt to invoke gh auth token to get access to repository"
+                    Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
                 }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
             }
