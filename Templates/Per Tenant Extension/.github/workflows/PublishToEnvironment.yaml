@@ -172,7 +172,7 @@ jobs:
               if (!($EnvironmentName)) {
                 if ($secrets."$_") {
                   Write-Host "Using $_ secret as EnvironmentName"
-                  Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the EnvironmentName in a Secret."
+                  Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the EnvironmentName in a Secret."
                   $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
                 }
               }            
@@ -189,15 +189,15 @@ jobs:
           }
           elseif ($settings.PSObject.Properties.name -eq "$($envName)-projects") {
             $projects = $settings."$($envName)-projects"
-            Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)-projects'"
+            Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)-projects'"
           }
           elseif ($settings.PSObject.Properties.name -eq "$($envName)_projects") {
             $projects = $settings."$($envName)_projects"
-            Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)_projects'"
+            Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)_projects'"
           }
           elseif ($secrets.projects) {
             $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.projects))
-            Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in the secret 'project'"
+            Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in the secret 'project'"
           }
           if ($projects -eq '' -or $projects -eq '*') {
             $projects = '*'
