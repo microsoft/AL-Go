@@ -25,6 +25,7 @@ Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use 
 
 ### New Settings
 - `keyVaultCodesignCertificateName`:  With this setting you can delegate the codesigning to an Azure Key Vault. This can be useful if your certificate has to be stored in a Hardware Security Module
+- `PullRequestTrigger`:  With this setting you can set which trigger to use for Pull Request Builds. By default AL-Go will use pull_request_target.
 
 ### New Actions
 - `DownloadProjectDependencies`: Downloads the dependency apps for a given project and build mode.

@@ -86,6 +86,7 @@ jobs:
             get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps
 
         - name: Read secrets
+          if: github.event_name != 'pull_request'
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
           env:
             secrets: ${{ toJson(secrets) }}
