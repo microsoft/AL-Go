@@ -21,5 +21,5 @@ Determines the artifactUrl to use for a given project
 ### ENV variables
 | Name | Description |
 | :-- | :-- |
-| ArtifactUrl | The ArtifactUrl to use |
-| ArtifactCacheKey | The Cache Key to use for caching the artifacts when using CompilerFolder |
+| artifact | The ArtifactUrl to use for the build |
+| artifactCacheKey | The Cache Key to use for caching the artifacts when using CompilerFolder |

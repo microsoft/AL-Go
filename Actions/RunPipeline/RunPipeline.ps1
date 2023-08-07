@@ -5,6 +5,8 @@ Param(
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d',
+    [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
+    [string] $artifact = "",
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
@@ -127,7 +129,9 @@ try {
         }
     }
 
-    $artifact = $repo.artifact
+    if (-not $artifact) {
+        $artifact = $repo.artifact
+    }
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
 
@@ -199,7 +203,7 @@ try {
     $CreateRuntimePackages = $false
 
     if ($repo.versioningStrategy -eq -1) {
-        $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+        $artifactVersion = [Version]$artifact.Split('/')[4]
         $runAlPipelineParams += @{
             "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
         }

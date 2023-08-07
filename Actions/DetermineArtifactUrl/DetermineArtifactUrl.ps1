@@ -22,26 +22,21 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Secrets.insiderSasToken))
-    $projectSettings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
-    $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
+    $settings = AnalyzeRepo -settings $settings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
+    $artifactUrl = Determine-ArtifactUrl -sprojectSettings $settings -insiderSasToken $insiderSasToken
     $artifactCacheKey = ''
-    $projectSettings.artifact = $artifactUrl
-    if ($projectSettings.useCompilerFolder) {
+    if ($settings.useCompilerFolder) {
         $artifactCacheKey = $artifactUrl.Split('?')[0]
     }
     #endregion
 
     #region Action: Output
     # Set output variables
-    Write-Host "SETTINGS:"
-    $projectSettings | ConvertTo-Json -Depth 99 | Out-Host
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($projectSettings | ConvertTo-Json -Depth 99 -Compress)"
-
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$artifactUrl"
-    Write-Host "Artifact=$artifactUrl"
+    Write-Host "artifact=$artifactUrl"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifactCacheKey=$artifactCacheKey"
-    Write-Host "ArtifactCacheKey=$artifactCacheKey"
+    Write-Host "artifactCacheKey=$artifactCacheKey"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope
