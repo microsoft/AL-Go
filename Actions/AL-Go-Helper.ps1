@@ -1001,7 +1001,7 @@ function AnalyzeRepo {
                     Write-Host "Using secret $($dependency.AuthTokenSecret) for access to repository"
                     $secrets = $env:Secrets | ConvertFrom-Json
                     # AuthTokenSecret is specified, use the value of that secret
-                    $dependency.AuthTokenSecret = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($dependency.AuthTokenSecret)")
+                    $dependency.AuthTokenSecret = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($dependency.AuthTokenSecret)"))
                 }
                 else {
                     if ($token) {
