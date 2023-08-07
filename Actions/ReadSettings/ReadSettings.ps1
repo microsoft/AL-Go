@@ -82,7 +82,7 @@ try {
             if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
                 Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
             }
-            elseif ($settingsValue -and ($settingsValue.contains("`n") -or $settingsValue.contains("`r"))) {
+            elseif ($settingValue.contains("`n") -or $settingValue.contains("`r")) {
                 throw "Setting $setting contains line breaks, which is not supported"
             }
             else {
