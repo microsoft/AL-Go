@@ -679,9 +679,11 @@ function ResolveProjectFolders {
                 # if an AL app has a dependency to an app from the performance toolkit apps, it is a bcpt test app
                 if ($appJson.PSObject.Properties.Name -eq "dependencies") {
                     $appJson.dependencies | ForEach-Object {
-                        $id = $_.Id
                         if ($_.PSObject.Properties.Name -eq "AppId") {
                             $id = $_.AppId
+                        }
+                        else {
+                            $id = $_.Id
                         }
 
                         # Check if the app is a test app or a bcpt app
@@ -692,7 +694,6 @@ function ResolveProjectFolders {
                             $isTestApp = $true
                         }
                     }
-                    
                 }
 
                 # Folders are relative to the project folder
