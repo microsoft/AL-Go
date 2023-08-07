@@ -58,7 +58,7 @@ jobs:
                   "copyToMain" = ($env:copyToMain -eq 'Y')
                   "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
               }
-              . ".\Internal\Deploy.ps1" -config $config -githubOwner $githubOwner -token $token
+              . ".\Internal\Deploy.ps1" -config $config -token $token
             }
           }
           catch {

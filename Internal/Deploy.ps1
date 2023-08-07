@@ -2,11 +2,7 @@
     [Parameter(Mandatory=$true)]
     [Hashtable] $config,
     [Parameter(Mandatory=$true)]
-    [string] $githubOwner,
-    [Parameter(Mandatory=$true)]
-    [string] $token,
-    [string] $algoBranch,
-    [switch] $directCommit
+    [string] $token
 )
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
@@ -17,8 +13,8 @@ $oldPath = Get-Location
 try {
 
     # Authenticate to GIT and GH
-    invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
-    invoke-git config --global user.name "$githubOwner"
+    invoke-git config --global user.email "$($config.githubOwner)@users.noreply.github.com"
+    invoke-git config --global user.name "$($config.githubOwner)"
     invoke-git config --global hub.protocol https
     invoke-git config --global core.autocrlf false
     $ENV:GITHUB_TOKEN = ''
