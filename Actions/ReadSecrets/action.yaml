@@ -7,8 +7,7 @@ inputs:
     default: powershell
   gitHubSecrets:
     description: All GitHub Secrets in compressed JSON format
-    required: false
-    default: '{}'
+    required: true
   getSecrets:
     description: Comma separated list of Secrets to get
     required: true
