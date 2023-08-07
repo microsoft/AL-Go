@@ -83,10 +83,17 @@ function YamlTest {
                 $type = $value.ParameterType.ToString()
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
-                $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
+                if ($name -ne 'GitHubSecrets') {
+                    $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
+                }
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
                 if ($type -eq "System.String" -or $type -eq "System.Int32") {
-                    $parameterString += " -$($name) `$ENV:_$($name)"
+                    if ($name -eq 'GitHubSecrets') {
+                        $parameterString += ' -gitHubSecrets ''${{ inputs.gitHubSecrets }}'''
+                    }
+                    else {
+                        $parameterString += " -$($name) `$ENV:_$($name)"
+                    }
                     if (!$required) {
                         $yaml.AppendLine("    default: *") | Out-Null
                     }
