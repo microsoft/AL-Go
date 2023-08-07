@@ -522,7 +522,7 @@ function ReadSettings {
         "environments"                           = @()
         "buildModes"                             = @()
         "useCompilerFolder"                      = $false
-        "PullrequestTrigger"                     = "pull_request_target"
+        "PullRequestTrigger"                     = "pull_request_target"
     }
 
     # Read settings from files and merge them into the settings object
