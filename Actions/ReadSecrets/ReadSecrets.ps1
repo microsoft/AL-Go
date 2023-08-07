@@ -111,6 +111,7 @@ try {
             else {
                 "$($secretSplit[0]) (Secret $($secretSplit[1]))"
             }
+            $outSecrets += @{ ""$($secretSplit[0])"" = """" }
         }) -join ', ')"
     }
 

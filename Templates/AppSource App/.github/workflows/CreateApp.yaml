@@ -80,7 +80,7 @@ jobs:
           $ghToken = '${{ secrets.GITHUB_TOKEN }}'
           if ($env:useGhTokenWorkflow -eq 'true') {
             $secrets = $env:Secrets | ConvertFrom-Json
-            if ($secrets.PSObject.Properties.Name -eq 'GHTOKENWORKFLOW') {
+            if ($secrets.GHTOKENWORKFLOW) {
               $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.GHTOKENWORKFLOW))
             }
             else {

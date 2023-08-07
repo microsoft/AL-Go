@@ -76,7 +76,7 @@ jobs:
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $secrets = $env:Secrets | ConvertFrom-Json
           $settings = $env:Settings | ConvertFrom-Json
-          if ($secrets.PSObject.Properties.Name -eq 'adminCenterApiCredentials') {
+          if ($secrets.adminCenterApiCredentials) {
             $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.adminCenterApiCredentials))
             Write-Host "AdminCenterApiCredentials provided in secret $($settings.adminCenterApiCredentialsSecretName)!"
             Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "Admin Center Api Credentials was provided in a secret called $($settings.adminCenterApiCredentialsSecretName). Using this information for authentication."
@@ -129,7 +129,7 @@ jobs:
           $ghToken = '${{ secrets.GITHUB_TOKEN }}'
           if ($env:useGhTokenWorkflow -eq 'true') {
             $secrets = $env:Secrets | ConvertFrom-Json
-            if ($secrets.PSObject.Properties.Name -eq 'GHTOKENWORKFLOW') {
+            if ($secrets.GHTOKENWORKFLOW) {
               $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.GHTOKENWORKFLOW))
             }
             else {

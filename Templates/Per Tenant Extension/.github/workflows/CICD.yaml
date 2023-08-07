@@ -120,7 +120,7 @@ jobs:
             $include = $false
             Write-Host "Check DeliveryTarget $_"
             $contextName = "$($_)Context"
-            if ($secrets.PSObject.Properties.name -eq $contextName) {
+            if ($secrets."$contextName") {
               $settingName = "DeliverTo$_"
               if (($settings.PSObject.Properties.Name -eq $settingName) -and ($settings."$settingName".PSObject.Properties.Name -eq "Branches")) {
                 Write-Host "Branches:"
@@ -245,7 +245,7 @@ jobs:
           $authContext = $null
           "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
             if (!($authContext)) {
-              if ($secrets.PSObject.Properties.name -eq $_) {
+              if ($secrets."$_") {
                 Write-Host "Using $_ secret as AuthContext"
                 $authContext = $secrets."$_"
               }
@@ -262,7 +262,7 @@ jobs:
             $environmentName = $null
             "$($envName)-EnvironmentName", "$($envName)_EnvironmentName", "EnvironmentName" | ForEach-Object {
               if (!($EnvironmentName)) {
-                if ($secrets.PSObject.Properties.name -eq $_) {
+                if ($secrets."$_") {
                   Write-Host "Using $_ secret as EnvironmentName"
                   Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the EnvironmentName in a Secret."
                   $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -286,7 +286,7 @@ jobs:
             $projects = $settings."$($envName)_projects"
             Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)_projects'"
           }
-          elseif ($secrets.PSObject.Properties.name -eq "projects") {
+          elseif ($secrets.projects) {
             $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.projects))
             Write-Host "::Warning::Please consider using the DeployTo$_ setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in the secret 'project'"
           }
