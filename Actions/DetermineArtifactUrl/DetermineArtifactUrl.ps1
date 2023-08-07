@@ -21,10 +21,7 @@ try {
     #region Action: Determine artifacts to use
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
-    $insiderSasToken = ''
-    if ($Secrets.ContainsKey('insiderSasToken')) {
-        $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Secrets.insiderSasToken))
-    }
+    $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Secrets.insiderSasToken))
     $projectSettings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $projectSettings = AnalyzeRepo -settings $projectSettings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $projectSettings -insiderSasToken $insiderSasToken
