@@ -9,10 +9,9 @@ Param(
     [string] $suffix
 )
 
-function Set-EnvVariable([string] $name, [string] $value) {
+function Set-OutputVariable([string] $name, [string] $value) {
     Write-Host "Assigning $value to $name"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "$name=$value"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$name=$value"
 }
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -34,7 +33,7 @@ try {
     if ($buildMode -eq 'Default') { 
         $buildMode = '' 
     }
-    Set-EnvVariable -name "BuildMode" -value $buildMode
+    Set-OutputVariable -name "BuildMode" -value $buildMode
 
     if ($suffix) {
         # Add the date to the suffix 
@@ -48,14 +47,14 @@ try {
     'Apps', 'Dependencies', 'TestApps', 'TestResults', 'BcptTestResults', 'BuildOutput', 'ContainerEventLog' | ForEach-Object {
         $name = "$($_)ArtifactsName"
         $value = "$($projectName)-$($branchName)-$buildMode$_-$suffix"
-        Set-EnvVariable -name $name -value $value
+        Set-OutputVariable -name $name -value $value
     }
 
     # Set this build artifacts name
     'Apps', 'TestApps' | ForEach-Object {
         $name = "ThisBuild$($_)ArtifactsName"
         $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
-        Set-EnvVariable -name $name -value $value
+        Set-OutputVariable -name $name -value $value
     }
 }
 catch {

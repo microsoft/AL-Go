@@ -176,7 +176,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: inputs.publishArtifacts
           with:
-            name: ${{ env.AppsArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
             path: '${{ inputs.project }}/.buildartifacts/Apps/'
             if-no-files-found: ignore
 
@@ -184,7 +184,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: inputs.publishArtifacts
           with:
-            name: ${{ env.DependenciesArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.DependenciesArtifactsName }}
             path: '${{ inputs.project }}/.buildartifacts/Dependencies/'
             if-no-files-found: ignore
 
@@ -192,7 +192,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: inputs.publishArtifacts
           with:
-            name: ${{ env.TestAppsArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.TestAppsArtifactsName }}
             path: '${{ inputs.project }}/.buildartifacts/TestApps/'
             if-no-files-found: ignore
 
@@ -200,7 +200,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: (success() || failure()) && (hashFiles(format('{0}/BuildOutput.txt',inputs.project)) != '')
           with:
-            name: ${{ env.BuildOutputArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.BuildOutputArtifactsName }}
             path: '${{ inputs.project }}/BuildOutput.txt'
             if-no-files-found: ignore
 
@@ -208,7 +208,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: (failure()) && (hashFiles(format('{0}/ContainerEventLog.evtx',inputs.project)) != '')
           with:
-            name: ${{ env.ContainerEventLogArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.ContainerEventLogArtifactsName }}
             path: '${{ inputs.project }}/ContainerEventLog.evtx'
             if-no-files-found: ignore
 
@@ -216,7 +216,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: (success() || failure()) && (hashFiles(format('{0}/TestResults.xml',inputs.project)) != '')
           with:
-            name: ${{ env.TestResultsArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.TestResultsArtifactsName }}
             path: '${{ inputs.project }}/TestResults.xml'
             if-no-files-found: ignore
 
@@ -224,7 +224,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',inputs.project)) != '')
           with:
-            name: ${{ env.BcptTestResultsArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.BcptTestResultsArtifactsName }}
             path: '${{ inputs.project }}/bcptTestResults.json'
             if-no-files-found: ignore
 
