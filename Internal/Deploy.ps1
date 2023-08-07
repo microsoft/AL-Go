@@ -64,8 +64,8 @@ try {
     # CopyToMain is set when we release to f.ex. v3.2, where we create a new branch on AL-Go-PTE called v3.2, but also copies the changes to the main and the preview branch
     # This way, preview and main will always be up to date with the latest release
     $copyToMain = $config.ContainsKey('copyToMain') -and $config.copyToMain
-    if ($copyToMain -and ($config.branch -eq 'preview' -or $config.branch -eq 'main')) {
-        throw "You cannot use copyToMain when deploying to the preview or main branch. copyToMain is only for release branches"
+    if ($copyToMain -and ($config.branch -eq 'preview' -or $config.branch -eq 'main' -or $algoBranch -ne 'main')) {
+        throw "You cannot use copyToMain when deploying to the preview or main branch. You also cannot use copyToMain when deploying from other branches than main. copyToMain is only for release branches"
     }
 
     $appSourceAppRepoPath = Join-Path $baseFolder $config.appSourceAppRepo
