@@ -3,7 +3,6 @@
     [string] $githubOwner,
     [string] $token,
     [string] $algoBranch,
-    [switch] $github,
     [switch] $directCommit
 )
 
@@ -15,21 +14,15 @@ Write-Host "::WARNING::The collect mechanism is deprecated. Use the new direct A
 
 $oldPath = Get-Location
 try {
-    if ($github) {
-        if (!$githubOwner -or !$token) { throw "When running deploy in a workflow, you need to set githubOwner and token" }
-
-        invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
-        invoke-git config --global user.name "$githubOwner"
-        invoke-git config --global hub.protocol https
-        invoke-git config --global core.autocrlf false
-        $ENV:GITHUB_TOKEN = ''
-    }
+    invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
+    invoke-git config --global user.name "$githubOwner"
+    invoke-git config --global hub.protocol https
+    invoke-git config --global core.autocrlf false
+    $ENV:GITHUB_TOKEN = ''
 
     Write-Host "Authenticating with GitHub using token"
     $token | invoke-gh auth login --with-token
-    if ($github) {
-        $ENV:GITHUB_TOKEN = $token
-    }
+    $ENV:GITHUB_TOKEN = $token
 
     $originalOwnerAndRepo = @{
         "actionsRepo"            = "microsoft/AL-Go-Actions"
@@ -107,10 +100,6 @@ try {
     Write-Host "To the $algoBranch branch from $srcOwnerAndRepo (folder $baseRepoPath)"
     Write-Host
 
-    if (-not $github) {
-        Read-Host "If this is not what you want to do, then press Ctrl+C now, else press Enter."
-    }
-
     $config.actionsRepo, $config.perTenantExtensionRepo, $config.appSourceAppRepo | ForEach-Object {
         if (Test-Path $_) {
             Set-Location $_
@@ -179,12 +168,7 @@ try {
     }
     Set-Location $baseRepoPath
 
-    if ($github) {
-        $serverUrl = "https://$($user.login):$token@github.com/$($srcOwnerAndRepo).git"
-    }
-    else {
-        $serverUrl = "https://github.com/$($srcOwnerAndRepo).git"
-    }
+    $serverUrl = "https://$($user.login):$token@github.com/$($srcOwnerAndRepo).git"
 
     $commitMessage = "Collect changes from $($config.githubOwner)/*@$($config.branch)"
     invoke-git add *
