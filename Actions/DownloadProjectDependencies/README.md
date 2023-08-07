@@ -6,7 +6,9 @@ The action constructs arrays of paths to .app files, that are dependencies of th
 ## INPUT
 
 ### ENV variables
-none
+| Name | Description |
+| :-- | :-- |
+| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
 
 ### Parameters
 | Name | Required | Description | Default value |

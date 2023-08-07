@@ -8,6 +8,14 @@ Param(
     [string] $token
 )
 
+function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinationPath) {
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
+    if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
+        return Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+    }
+}
+
 function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
     Write-Host "Downloading dependencies for project '$project'"
     
@@ -72,10 +80,8 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
 }
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
 # IMPORTANT: No code that can fail should be outside the try/catch
 # IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
-
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
@@ -86,6 +92,10 @@ try {
     Write-Host "::group::Downloading project dependencies from current build"
     $projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
     $downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -destinationPath $destinationPath
+    Write-Host "::endgroup::"
+
+    Write-Host "::group::Downloading project dependencies from probing paths"
+    $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath
     Write-Host "::endgroup::"
 
     Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
