@@ -22,21 +22,21 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 try {
     $settings = $env:Settings | ConvertFrom-Json
 
-    if ($project -eq ".") { 
-        $project = $settings.repoName 
+    if ($project -eq ".") {
+        $project = $settings.repoName
     }
 
     $branchName = $branchName.Replace('\', '_').Replace('/', '_')
     $projectName = $project.Replace('\', '_').Replace('/', '_')
 
     # If the buildmode is default, then we don't want to add it to the artifact name
-    if ($buildMode -eq 'Default') { 
-        $buildMode = '' 
+    if ($buildMode -eq 'Default') {
+        $buildMode = ''
     }
     Set-OutputVariable -name "BuildMode" -value $buildMode
 
     if ($suffix) {
-        # Add the date to the suffix 
+        # Add the date to the suffix
         $suffix = "$suffix-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
     }
     else {

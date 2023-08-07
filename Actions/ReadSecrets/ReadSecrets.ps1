@@ -64,7 +64,7 @@ try {
         $settings.appDependencyProbingPaths | ForEach-Object {
             if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
                 $secretsCollection += $_.authTokenSecret
-            } 
+            }
         }
     }
 

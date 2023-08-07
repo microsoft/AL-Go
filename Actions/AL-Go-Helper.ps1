@@ -420,7 +420,7 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
     )
 
-    function GetSettingsObject { 
+    function GetSettingsObject {
         Param(
             [string] $path
         )
@@ -966,10 +966,10 @@ function AnalyzeRepo {
             $settings.appDependencyProbingPaths = @($settings.appDependencyProbingPaths | ForEach-Object {
                     if ($_.GetType().Name -eq "PSCustomObject") {
                         $_
-                    } 
-                    else { 
+                    }
+                    else {
                         New-Object -Type PSObject -Property $_
-                    } 
+                    }
                 })
             $settings.appDependencyProbingPaths | ForEach-Object {
                 $dependency = $_
@@ -1044,7 +1044,7 @@ function AnalyzeRepo {
                                 "appFolders", "testFolders" | ForEach-Object {
                                     $propertyName = $_
                                     Write-Host "Adding folders from $depProject to $_"
-                                    $found = $true
+                                    $found = $false
                                     $depSettings."$propertyName" | ForEach-Object {
                                         $folder = (Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative).ToLowerInvariant()
                                         if (!$settings."$propertyName".Contains($folder)) {
@@ -1568,10 +1568,10 @@ function CreateDevEnv {
             $repo.appDependencyProbingPaths = @($repo.appDependencyProbingPaths | ForEach-Object {
                     if ($_.GetType().Name -eq "PSCustomObject") {
                         $_
-                    } 
-                    else { 
+                    }
+                    else {
                         New-Object -Type PSObject -Property $_
-                    } 
+                    }
                 })
             Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
                 if ($_.startswith('(')) {

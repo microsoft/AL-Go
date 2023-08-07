@@ -107,10 +107,10 @@ try {
     $downloadedDependencies | ForEach-Object {
         # naming convention: app, (testapp)
         if ($_.startswith('(')) {
-            $DownloadedTestApps += $_    
+            $DownloadedTestApps += $_
         }
         else {
-            $DownloadedApps += $_    
+            $DownloadedApps += $_
         }
     }
 

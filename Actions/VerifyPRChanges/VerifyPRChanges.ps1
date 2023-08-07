@@ -23,7 +23,7 @@ function ValidateFiles
         if (($extension -in $disallowedExtensions) -or ($name -in $disallowedFiles) -or $filename.StartsWith(".github/")) {
             throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
         }
-    } 
+    }
 }
 
 function ValidatePullRequest
@@ -79,11 +79,11 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 # IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
-    $headers = @{             
+    $headers = @{
         "Authorization" = "token $token"
         "Accept"        = "application/vnd.github.baptiste-preview+json"
     }
-  
+
     ValidatePullRequest -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
     ValidatePullRequestFiles -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
 }
