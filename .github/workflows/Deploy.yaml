@@ -6,15 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: Branch to deploy to (default is main) - (NOTE Use preview when deploying preview releases on microsoft/al-go)
-        required: false
-        default: 'main'
+        description: 'Branch to deploy to (NOTE: Use preview when deploying preview releases on microsoft/al-go)'
+        required: true
       copyToMain:
-        description: Additionally deploy templates to main+preview branch? (Y/N) - (NOTE Only use Yes when deploying ordinary releases on microsoft/al-go)
+        description: 'Additionally deploy templates to main+preview branch? (Y/N) - (NOTE: Enter Y if this is a release to PROD on microsoft/al-go)'
         required: false
         default: 'N'
       defaultBcContainerHelperVersion:
-        description: Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)
+        description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
         required: false
         default: ''
 
@@ -37,6 +36,10 @@ jobs:
           }
 
       - name: Deploy
+        env:
+          branch: ${{ github.event.inputs.branch }}
+          copyToMain: ${{ github.event.inputs.copyToMain }}
+          defaultBcContainerHelperVersion: ${{ github.event.inputs.defaultBcContainerHelperVersion }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
@@ -46,20 +49,16 @@ jobs:
             }
             else {
               $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
-              $settings = [ordered]@{
+              $config = @{
                   "githubOwner" = $githubOwner
                   "actionsRepo" = "AL-Go-Actions"
                   "perTenantExtensionRepo" = "AL-Go-PTE"
                   "appSourceAppRepo" = "AL-Go-AppSource"
-                  "branch" = '${{ github.event.inputs.branch }}'
-                  "copyToMain" = ('${{ github.event.inputs.copyToMain }}' -eq 'Y')
-                  "localFolder" = ""
-                  "baseFolder" = [System.IO.Path]::GetTempPath()
-                  "defaultBcContainerHelperVersion" = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
+                  "branch" = $env:branch
+                  "copyToMain" = ($env:copyToMain -eq 'Y')
+                  "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
               }
-              $settingsFile = Join-Path $settings.baseFolder "deploy.json"
-              $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
-              . ".\Internal\Deploy.ps1" -configName $settingsFile -githubOwner $githubOwner -token $token -github
+              . ".\Internal\Deploy.ps1" -config $config -token $token
             }
           }
           catch {

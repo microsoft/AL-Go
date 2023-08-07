@@ -86,6 +86,7 @@ jobs:
             get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
 
         - name: Read secrets
+          if: github.event_name != 'pull_request'
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
           with:
             shell: ${{ inputs.shell }}
