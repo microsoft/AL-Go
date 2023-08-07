@@ -47,6 +47,7 @@ function EnsureAzStorageModule() {
 }
 
 # IMPORTANT: No code that can fail should be outside the try/catch
+# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     $baseFolder = $ENV:GITHUB_WORKSPACE

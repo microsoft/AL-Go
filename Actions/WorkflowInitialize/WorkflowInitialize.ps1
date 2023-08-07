@@ -8,6 +8,8 @@ $telemetryScope = $null
 $BcContainerHelperPath = ""
 
 # IMPORTANT: No code that can fail should be outside the try/catch
+# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
+
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)

@@ -83,6 +83,7 @@ $telemetryScope = $null
 $bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
+# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -189,7 +190,7 @@ try {
             try {
                 $settingsJsonFile = Join-Path $projectFolder $ALGoSettingsFile
                 $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
-                if (@($settingsJson.appFolders)+@($settingsJson.testFolders)) {
+                if (@($settingsJson.appFolders) + @($settingsJson.testFolders)) {
                     if ($ttype -eq "Test App") {
                         if ($SettingsJson.testFolders -notcontains $foldername) {
                             $SettingsJson.testFolders += @($folderName)
@@ -219,7 +220,7 @@ try {
                     $workspace | Set-JsonContentLF -Path $workspaceFile
                 }
                 catch {
-                   throw "$workspaceFileName is malformed.$([environment]::Newline) $($_.Exception.Message)"
+                    throw "$workspaceFileName is malformed.$([environment]::Newline) $($_.Exception.Message)"
                 }
             }
         }

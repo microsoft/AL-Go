@@ -86,6 +86,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 # IMPORTANT: No code that can fail should be outside the try/catch
+# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
@@ -128,6 +129,5 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
 }
 catch {
-    OutputError -message "ReadSettings action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    exit
+    OutputError -message "DownloadProjectDependencies action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
 }

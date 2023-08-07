@@ -10,6 +10,7 @@ $telemetryScope = $null
 $bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
+# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     #region Action: Setup
@@ -44,7 +45,6 @@ try {
 catch {
     OutputError -message "DetermineArtifactUrl action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
-    exit
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

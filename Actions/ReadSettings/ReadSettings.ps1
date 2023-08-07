@@ -22,6 +22,7 @@ $telemetryScope = $null
 $bcContainerHelperPath = $null
 
 # IMPORTANT: No code that can fail should be outside the try/catch
+# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     $baseFolder = $ENV:GITHUB_WORKSPACE
@@ -203,7 +204,6 @@ try {
 catch {
     OutputError -message "ReadSettings action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
-    exit
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
