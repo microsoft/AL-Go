@@ -58,6 +58,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           getEnvironments: '*'
+          get: type
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
@@ -275,6 +276,7 @@ jobs:
           }
           $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
 
+          $projects = ''
           if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "projects") {
             $projects = $deployToSetting.projects
           }
