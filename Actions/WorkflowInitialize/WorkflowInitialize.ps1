@@ -10,7 +10,7 @@ $BcContainerHelperPath = ""
 # IMPORTANT: No code that can fail should be outside the try/catch
 # IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
 
-try {
+#try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
@@ -30,6 +30,8 @@ try {
 
     Write-Big -str "a$verstr"
 
+    throw "myerr"
+    
     Test-ALGoRepository -baseFolder $ENV:GITHUB_WORKSPACE
 
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
@@ -73,14 +75,15 @@ try {
 
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "correlationId=$correlationId"
     Write-Host "correlationId=$correlationId"
-}
-catch {
-    Write-Host "::ERROR::WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    $host.SetShouldExit(1)
-    if ($bcContainerHelperPath) {
-        TrackException -telemetryScope $telemetryScope -errorRecord $_
-    }
-}
-finally {
+#}
+#catch {
+#    Write-Host "::ERROR::WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+#    $host.SetShouldExit(1)
+#    if ($bcContainerHelperPath) {
+#        TrackException -telemetryScope $telemetryScope -errorRecord $_
+#    }
+#}
+#finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
-}
+#}
+#
