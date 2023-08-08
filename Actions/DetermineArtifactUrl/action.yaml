@@ -27,7 +27,7 @@ runs:
           ${{ github.action_path }}/DetermineArtifactUrl.ps1 -parentTelemetryScopeJson $env:_parentTelemetryScopeJson -project $ENV:_project
         }
         catch {
-          Write-Host "::ERROR::Unexpected error when running action. Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' '))), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
           exit 1
         }
 branding:

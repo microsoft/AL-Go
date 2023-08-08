@@ -61,7 +61,7 @@ runs:
           ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -templateUrl $ENV:_templateUrl -templateBranch $ENV:_templateBranch -update ($ENV:_update -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
         }
         catch {
-          Write-Host "::ERROR::Unexpected error when running action. Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' '))), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
           exit 1
         }
 branding:

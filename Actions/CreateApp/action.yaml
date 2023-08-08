@@ -76,7 +76,7 @@ runs:
           ${{ github.action_path }}/CreateApp.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -type $ENV:_type -name $ENV:_name -publisher $ENV:_publisher -idrange $ENV:_idrange -sampleCode ($ENV:_sampleCode -eq 'Y') -sampleSuite ($ENV:_sampleSuite -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
         }
         catch {
-          Write-Host "::ERROR::Unexpected error when running action. Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' '))), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
           exit 1
         }
 branding:
