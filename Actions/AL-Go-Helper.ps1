@@ -974,7 +974,7 @@ function AnalyzeRepo {
             $settings.appDependencyProbingPaths | ForEach-Object {
                 $dependency = $_
                 if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
-                    throw "AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which you have a dependency"
+                    throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
                 }
                 if ($dependency.Repo -eq ".") {
                     $dependency.Repo = "$server_url/$repository"
