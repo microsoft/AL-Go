@@ -129,7 +129,13 @@ try {
         $useAppFolders = $repo.appFolders
     }
     $useAppFolders.GetType() | Out-Host
+    Write-Host '----'
+    $useAppFolders.count | Out-Host
+    Write-Host '----'
     $useAppFolders | Out-Host
+    Write-Host '----'
+    $useAppFolders[0] | Out-Host
+
     if ($testFolders) {
         $useTestFolders = @(ConvertFrom-Json $testFolders)
     }
