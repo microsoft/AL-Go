@@ -126,17 +126,26 @@ try {
 
     $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken -doNotCheckAppDependencyProbingPaths @analyzeRepoParams
 
-    if (-not $appFolders) {
-        $appFolders = $repo.appFolders
+    if ($appFolders) {
+        $useAppFolders = ConvertFrom-Json $appFolders
     }
-    if (-not $testFolders) {
-        $testFolders = $repo.testFolders
+    else {
+        $useAppFolders = $repo.appFolders
     }
-    if (-not $bcptTestFolders) {
-        $bcptTestFolders = $repo.bcptTestFolders
+    if ($testFolders) {
+        $useTestFolders = ConvertFrom-Json $testFolders
+    }
+    else {
+        $useTestFolders = $repo.testFolders
+    }
+    if ($bcptTestFolders) {
+        $useBcptTestFolders = ConvertFrom-Json $bcptTestFolders
+    }
+    else {
+        $useBcptTestFolders = $repo.bcptTestFolders
     }
 
-    if ((-not $appFolders) -and (-not $testFolders) -and (-not $bcptTestFolders)) {
+    if ((-not $useAppFolders) -and (-not $useTestFolders) -and (-not $useBcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
     }
@@ -400,9 +409,9 @@ try {
         -generateDependencyArtifact:$repo.generateDependencyArtifact `
         -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $appFolders `
-        -testFolders $testFolders `
-        -bcptTestFolders $bcptTestFolders `
+        -appFolders $useAppFolders `
+        -testFolders $useTestFolders `
+        -bcptTestFolders $useBcptTestFolders `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
