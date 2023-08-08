@@ -16,10 +16,10 @@ inputs:
     description: A JSON object that matches eash project with its dependency projects
     required: true
 outputs:
-  DownloadedApps: 
+  DownloadedApps:
     description: A JSON-formatted array of paths to .app files of the apps that were downloaded
     value: ${{ steps.DownloadDependencies.outputs.DownloadedApps }}
-  DownloadedTestApps: 
+  DownloadedTestApps:
     description: A JSON-formatted array of paths to .app files of the test apps that were downloaded
     value: ${{ steps.DownloadDependencies.outputs.DownloadedTestApps }}
 runs:
@@ -41,10 +41,10 @@ runs:
         _destinationPath: ${{ github.workspace }}/.dependencies
         _gitHubToken: ${{ github.token }}
       run:
-        try { 
+        try {
           ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectsDependenciesJson $ENV:_projectsDependenciesJson -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
         }
-        catch { 
+        catch {
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
           exit 1
         }

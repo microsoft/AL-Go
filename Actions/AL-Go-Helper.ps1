@@ -1041,7 +1041,7 @@ function AnalyzeRepo {
                                 $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps) -doNotIssueWarnings -doNotCheckArtifactSetting -server_url $server_url -repository $repository
 
                                 Set-Location $projectPath
-                                "appFolders", "testFolders" | ForEach-Object {
+                                "appFolders", "testFolders", "bcptTestFolders" | ForEach-Object {
                                     $propertyName = $_
                                     Write-Host "Adding folders from $depProject to $_"
                                     $found = $false

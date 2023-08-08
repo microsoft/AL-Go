@@ -21,6 +21,18 @@ inputs:
     description: ArtifactUrl to use for the build
     required: false
     default: ''
+  appFolders:
+    description: A JSON-formatted array of appFolders
+    required: false
+    default: ''
+  testFolders:
+    description: A JSON-formatted array of testFolders
+    required: false
+    default: ''
+  bcptTestFolders:
+    description: A JSON-formatted array of bcptTestFolders
+    required: false
+    default: ''
   project:
     description: Project folder
     required: false
@@ -47,11 +59,14 @@ runs:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _artifact: ${{ inputs.artifact }}
+        _appFolders: ${{ inputs.appFolders }}
+        _testFolders: ${{ inputs.testFolders }}
+        _bcptTestFolders: ${{ inputs.bcptTestFolders }}
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
         _installAppsJson: ${{ inputs.installAppsJson }}
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
-      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -artifact $ENV:_artifact -appFolders $ENV:_appFolders -testFolders $ENV:_testFolders -bcptTestFolders $ENV:_bcptTestFolders -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
 branding:
   icon: terminal
   color: blue

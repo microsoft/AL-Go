@@ -83,7 +83,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
-            get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
+            get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact,appFolders,testFolders,bcptTestFolders
 
         - name: Read secrets
           if: github.event_name != 'pull_request'
@@ -128,6 +128,9 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             artifact: ${{ env.artifact }}
+            appFolders: ${{ env.artifact }}
+            testFolders: ${{ env.testFolders }}
+            bcptTestFolders: ${{ env.bcptTestFolders }}
             project: ${{ inputs.project }}
             buildMode: ${{ inputs.buildMode }}
             installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}

@@ -14,6 +14,7 @@ function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinatio
     if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
         return Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
     }
+    return $settings
 }
 
 function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
@@ -95,7 +96,7 @@ try {
     Write-Host "::endgroup::"
 
     Write-Host "::group::Downloading project dependencies from probing paths"
-    $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath
+    $settings = $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath
     Write-Host "::endgroup::"
 
     Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
@@ -122,6 +123,13 @@ try {
 
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
+
+    'appFolders', 'testFolders', 'bcptTestFolders' | ForEach-Object {
+        $propName = $_
+        Write-Host "Setting $($propName) to $($settings."$propName" -join ', ')"
+        $foldersJson = ConvertTo-Json $settings."$propName" -Depth 99 -Compress
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$propName=$foldersJson"
+    }
 }
 catch {
     Write-Host "::ERROR::DownloadProjectDependencies action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"

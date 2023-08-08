@@ -7,6 +7,12 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
     [string] $artifact = "",
+    [Parameter(HelpMessage = "A JSON-formatted array of appFolders", Mandatory = $false)]
+    [string] $appFolders = "",
+    [Parameter(HelpMessage = "A JSON-formatted array of testFolders", Mandatory = $false)]
+    [string] $testFolders = "",
+    [Parameter(HelpMessage = "A JSON-formatted array of bcptTestFolders", Mandatory = $false)]
+    [string] $bcptTestFolders = "",
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
@@ -119,7 +125,18 @@ try {
     }
 
     $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken -doNotCheckAppDependencyProbingPaths @analyzeRepoParams
-    if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
+
+    if (-not $appFolders) {
+        $appFolders = $repo.appFolders
+    }
+    if (-not $testFolders) {
+        $testFolders = $repo.testFolders
+    }
+    if (-not $bcptTestFolders) {
+        $bcptTestFolders = $repo.bcptTestFolders
+    }
+
+    if ((-not $appFolders) -and (-not $testFolders) -and (-not $bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
     }
@@ -383,9 +400,9 @@ try {
         -generateDependencyArtifact:$repo.generateDependencyArtifact `
         -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $repo.appFolders `
-        -testFolders $repo.testFolders `
-        -bcptTestFolders $repo.bcptTestFolders `
+        -appFolders $appFolders `
+        -testFolders $testFolders `
+        -bcptTestFolders $bcptTestFolders `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `

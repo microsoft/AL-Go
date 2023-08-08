@@ -79,8 +79,8 @@ try {
         $settingValue = $settings."$setting"
         $outSettings += @{ "$setting" = $settingValue }
         if ($getSettings -contains $setting) {
-            if ($settingValue -is [System.Collections.Specialized.OrderedDictionary]) {
-                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$($settingValue | ConvertTo-Json -Depth 99 -Compress)"
+            if ($settingValue -is [System.Collections.Specialized.OrderedDictionary] -or $settingValue -is [hashtable]) {
+                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$(ConvertTo-Json $settingValue -Depth 99 -Compress)"
             }
             elseif ($settingValue -is [String] -and ($settingValue.contains("`n") -or $settingValue.contains("`r"))) {
                 throw "Setting $setting contains line breaks, which is not supported"

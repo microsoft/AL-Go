@@ -21,7 +21,11 @@ The action constructs arrays of paths to .app files, that are dependencies of th
 ## OUTPUT
 
 ### ENV variables
-none
+| Name | Description |
+| :-- | :-- |
+| appFolders | A JSON-formatted array of appFolders |
+| testFolders | A JSON-formatted array of testFolders |
+| bcptTestFolders | A JSON-formatted array of bcptTestFolders |
 
 ### OUTPUT variables
 | Name | Description |
