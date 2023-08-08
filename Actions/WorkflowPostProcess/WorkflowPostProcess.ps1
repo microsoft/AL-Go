@@ -23,7 +23,7 @@ try {
     }
 }
 catch {
-    OutputError -message "WorkflowPostProcess action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+    Write-Host "::ERROR::WorkflowPostProcess action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
 }
 finally {

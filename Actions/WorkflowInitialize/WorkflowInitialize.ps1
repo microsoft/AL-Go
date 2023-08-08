@@ -75,7 +75,7 @@ try {
     Write-Host "correlationId=$correlationId"
 }
 catch {
-    OutputError -message "WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+    Write-Host "::ERROR::WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     if ($bcContainerHelperPath) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
