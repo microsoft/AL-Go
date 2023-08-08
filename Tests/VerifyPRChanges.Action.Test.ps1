@@ -15,6 +15,7 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename": "Scripts/BuildScript.ps1", "status": "modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
         Mock Write-Host {}
+        Mock $host.SetShouldExit() {}
 
        { 
         & $scriptPath `
@@ -28,6 +29,7 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"Scripts/BuildScript.ps1", "status": "added"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
         Mock Write-Host {}
+        Mock $host.SetShouldExit() {}
 
        { 
         & $scriptPath `
@@ -41,6 +43,7 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"Scripts/BuildScript.ps1","status":"removed"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
         Mock Write-Host {}
+        Mock $host.SetShouldExit() {}
 
        { 
         & $scriptPath `
@@ -54,6 +57,7 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"CODEOWNERS","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
         Mock Write-Host {}
+        Mock $host.SetShouldExit() {}
 
        { 
         & $scriptPath `
@@ -67,6 +71,7 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":".github/Settings.json","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
         Mock Write-Host {}
+        Mock $host.SetShouldExit() {}
 
        { 
         & $scriptPath `
@@ -80,6 +85,7 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":".github/workflows/test.yaml","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
         Mock Write-Host {}
+        Mock $host.SetShouldExit() {}
 
        { 
         & $scriptPath `
@@ -128,6 +134,7 @@ Describe 'VerifyPRChanges Action Tests' {
     It 'should fail if the PR is from a fork and changes more than 3000 files' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 5001 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock Write-Host {}
+        Mock $host.SetShouldExit() {}
 
        { 
         & $scriptPath `
