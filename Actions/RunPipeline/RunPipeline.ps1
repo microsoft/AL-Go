@@ -121,35 +121,19 @@ try {
     }
 
     $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken -doNotCheckAppDependencyProbingPaths @analyzeRepoParams
-
+    
+    # Using this construct as there are differences in how PS5 and PS7 interpret simple JSON like [] or ['test']
     if ($appFolders) {
-        $useAppFolders = @(ConvertFrom-Json $appFolders)
+        $repo.appFolders = (ConvertFrom-Json "{""folders"":$appFolders}").folders
     }
-    else {
-        $useAppFolders = $repo.appFolders
-    }
-    $useAppFolders.GetType() | Out-Host
-    Write-Host '----'
-    $useAppFolders.count | Out-Host
-    Write-Host '----'
-    $useAppFolders | Out-Host
-    Write-Host '----'
-    $useAppFolders[0] | Out-Host
-
     if ($testFolders) {
-        $useTestFolders = @(ConvertFrom-Json $testFolders)
-    }
-    else {
-        $useTestFolders = $repo.testFolders
+        $repo.testFolders = (ConvertFrom-Json "{""folders"":$testFolders}").folders
     }
     if ($bcptTestFolders) {
-        $useBcptTestFolders = @(ConvertFrom-Json $bcptTestFolders)
-    }
-    else {
-        $useBcptTestFolders = $repo.bcptTestFolders
+        $repo.bcptTestFolders = (ConvertFrom-Json "{""folders"":$bcptTestFolders}").folders
     }
 
-    if ((-not $useAppFolders) -and (-not $useTestFolders) -and (-not $useBcptTestFolders)) {
+    if ((-not $repo.appFolders) -and (-not $repo.testFolders) -and (-not $repo.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
     }
@@ -413,9 +397,9 @@ try {
         -generateDependencyArtifact:$repo.generateDependencyArtifact `
         -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $useAppFolders `
-        -testFolders $useTestFolders `
-        -bcptTestFolders $useBcptTestFolders `
+        -appFolders $repo.appFolders `
+        -testFolders $repo.testFolders `
+        -bcptTestFolders $repo.bcptTestFolders `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
