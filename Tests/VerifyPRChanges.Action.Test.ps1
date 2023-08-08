@@ -127,6 +127,7 @@ Describe 'VerifyPRChanges Action Tests' {
 
     It 'should fail if the PR is from a fork and changes more than 3000 files' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 5001 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock Write-Host {}
 
        { 
         & $scriptPath `
