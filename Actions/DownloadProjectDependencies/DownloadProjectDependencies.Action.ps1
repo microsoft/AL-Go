@@ -9,8 +9,6 @@ Param(
 )
 
 function DownloadDependenciesFromProbingPaths([ref] $settings, $baseFolder, $project, $destinationPath) {
-
-    throw "myerr"
     $settings.Value = AnalyzeRepo -settings $settings.Value -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     if ($settings.Value.ContainsKey('appDependencyProbingPaths') -and $settings.Value.appDependencyProbingPaths) {
         return Get-Dependencies -probingPathsJson $settings.Value.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
@@ -80,59 +78,50 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
     return $downloadedDependencies
 }
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-# IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
-#try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-    Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
+Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
 
-    $downloadedDependencies = @()
+$downloadedDependencies = @()
 
-    Write-Host "::group::Downloading project dependencies from current build"
-    $projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-    $downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -destinationPath $destinationPath
-    Write-Host "::endgroup::"
+Write-Host "::group::Downloading project dependencies from current build"
+$projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -destinationPath $destinationPath
+Write-Host "::endgroup::"
 
-    Write-Host "::group::Downloading project dependencies from probing paths"
-    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
-    $downloadedDependencies += DownloadDependenciesFromProbingPaths -settings ([ref]$settings) -baseFolder $baseFolder -project $project -destinationPath $destinationPath
-    Write-Host "::endgroup::"
+Write-Host "::group::Downloading project dependencies from probing paths"
+$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+$downloadedDependencies += DownloadDependenciesFromProbingPaths -settings ([ref]$settings) -baseFolder $baseFolder -project $project -destinationPath $destinationPath
+Write-Host "::endgroup::"
 
-    Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
+Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
 
-    $downloadedApps = @()
-    $downloadedTestApps = @()
+$downloadedApps = @()
+$downloadedTestApps = @()
 
-    # Split the downloaded dependencies into apps and test apps
-    $downloadedDependencies | ForEach-Object {
-        # naming convention: app, (testapp)
-        if ($_.startswith('(')) {
-            $DownloadedTestApps += $_
-        }
-        else {
-            $DownloadedApps += $_
-        }
+# Split the downloaded dependencies into apps and test apps
+$downloadedDependencies | ForEach-Object {
+    # naming convention: app, (testapp)
+    if ($_.startswith('(')) {
+        $DownloadedTestApps += $_
     }
-
-    Write-Host "Downloaded dependencies apps: $($DownloadedApps -join ', ')"
-    Write-Host "Downloaded dependencies test apps: $($DownloadedTestApps -join ', ')"
-
-    $DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
-    $DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
-
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
-
-    'appFolders', 'testFolders', 'bcptTestFolders' | ForEach-Object {
-        $propName = $_
-        Write-Host "Setting $($propName) to $($settings."$propName" -join ', ')"
-        $foldersJson = ConvertTo-Json $settings."$propName" -Depth 99 -Compress
-        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$propName=$foldersJson"
+    else {
+        $DownloadedApps += $_
     }
-#}
-#catch {
-#    Write-Host "::ERROR::DownloadProjectDependencies action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-#    $host.SetShouldExit(1)
-#}
+}
+
+Write-Host "Downloaded dependencies apps: $($DownloadedApps -join ', ')"
+Write-Host "Downloaded dependencies test apps: $($DownloadedTestApps -join ', ')"
+
+$DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
+$DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
+
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
+
+'appFolders', 'testFolders', 'bcptTestFolders' | ForEach-Object {
+    $propName = $_
+    Write-Host "Setting $($propName) to $($settings."$propName" -join ', ')"
+    $foldersJson = ConvertTo-Json $settings."$propName" -Depth 99 -Compress
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$propName=$foldersJson"
+}

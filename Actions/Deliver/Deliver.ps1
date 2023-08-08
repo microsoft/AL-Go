@@ -20,7 +20,6 @@ Param(
     [bool] $goLive
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
@@ -45,9 +44,6 @@ function EnsureAzStorageModule() {
         }
     }
 }
-
-# IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     $baseFolder = $ENV:GITHUB_WORKSPACE
@@ -475,9 +471,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    Write-Host "::ERROR::Deliver action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    $host.SetShouldExit(1)
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

@@ -5,12 +5,8 @@ Param(
     [string] $project = "."
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
-
-# IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     #region Action: Setup
@@ -43,9 +39,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    Write-Host "::ERROR::DetermineArtifactUrl action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    $host.SetShouldExit(1)
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

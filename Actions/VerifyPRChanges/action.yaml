@@ -26,7 +26,15 @@ runs:
         _token: ${{ inputs.token }}
         _prBaseRepository: ${{ inputs.prBaseRepository }}
         _pullRequestId: ${{ inputs.pullRequestId }}
-      run: try { ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -prBaseRepository $ENV:_prBaseRepository -pullRequestId $ENV:_pullRequestId } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("*",'').Replace("*",' ')))"; exit 1 }
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -prBaseRepository $ENV:_prBaseRepository -pullRequestId $ENV:_pullRequestId
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' '))), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 branding:
   icon: terminal
   color: blue
