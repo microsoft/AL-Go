@@ -41,6 +41,7 @@ runs:
         _destinationPath: ${{ github.workspace }}/.dependencies
         _gitHubToken: ${{ github.token }}
       run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
           ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectsDependenciesJson $ENV:_projectsDependenciesJson -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
         }
