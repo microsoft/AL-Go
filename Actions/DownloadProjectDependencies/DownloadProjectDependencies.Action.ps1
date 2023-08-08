@@ -8,13 +8,11 @@ Param(
     [string] $token
 )
 
-function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinationPath) {
-    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
-    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
-    if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
-        return Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+function DownloadDependenciesFromProbingPaths([ref] $settings, $baseFolder, $project, $destinationPath) {
+    $settings.Value = AnalyzeRepo -settings $settings.Value -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
+    if ($settings.Value.ContainsKey('appDependencyProbingPaths') -and $settings.Value.appDependencyProbingPaths) {
+        return Get-Dependencies -probingPathsJson $settings.Value.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
     }
-    return $settings
 }
 
 function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
@@ -96,7 +94,8 @@ try {
     Write-Host "::endgroup::"
 
     Write-Host "::group::Downloading project dependencies from probing paths"
-    $settings = $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $downloadedDependencies += DownloadDependenciesFromProbingPaths -settings ([ref]$settings) -baseFolder $baseFolder -project $project -destinationPath $destinationPath
     Write-Host "::endgroup::"
 
     Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
