@@ -88,5 +88,5 @@ try {
     ValidatePullRequestFiles -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
 }
 catch {
-    Write-Host "::ERRORR::VerifyPRChanges action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+    Write-Host "::ERROR::VerifyPRChanges action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
 }
