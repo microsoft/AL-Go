@@ -7,11 +7,11 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
     [string] $artifact = "",
-    [Parameter(HelpMessage = "A JSON-formatted array of appFolders", Mandatory = $false)]
+    [Parameter(HelpMessage = "A JSON-formatted array of appFolders", Mandatory = $true)]
     [string] $appFolders = "",
-    [Parameter(HelpMessage = "A JSON-formatted array of testFolders", Mandatory = $false)]
+    [Parameter(HelpMessage = "A JSON-formatted array of testFolders", Mandatory = $true)]
     [string] $testFolders = "",
-    [Parameter(HelpMessage = "A JSON-formatted array of bcptTestFolders", Mandatory = $false)]
+    [Parameter(HelpMessage = "A JSON-formatted array of bcptTestFolders", Mandatory = $true)]
     [string] $bcptTestFolders = "",
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
@@ -123,15 +123,9 @@ try {
     $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken -doNotCheckAppDependencyProbingPaths @analyzeRepoParams
     
     # Using this construct as there are differences in how PS5 and PS7 interpret simple JSON like [] or ['test']
-    if ($appFolders) {
-        $repo.appFolders = (ConvertFrom-Json "{""folders"":$appFolders}").folders
-    }
-    if ($testFolders) {
-        $repo.testFolders = (ConvertFrom-Json "{""folders"":$testFolders}").folders
-    }
-    if ($bcptTestFolders) {
-        $repo.bcptTestFolders = (ConvertFrom-Json "{""folders"":$bcptTestFolders}").folders
-    }
+    $repo.appFolders = (ConvertFrom-Json "{""folders"":$appFolders}").folders
+    $repo.testFolders = (ConvertFrom-Json "{""folders"":$testFolders}").folders
+    $repo.bcptTestFolders = (ConvertFrom-Json "{""folders"":$bcptTestFolders}").folders
 
     if ((-not $repo.appFolders) -and (-not $repo.testFolders) -and (-not $repo.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"

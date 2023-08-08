@@ -23,16 +23,13 @@ inputs:
     default: ''
   appFolders:
     description: A JSON-formatted array of appFolders
-    required: false
-    default: ''
+    required: true
   testFolders:
     description: A JSON-formatted array of testFolders
-    required: false
-    default: ''
+    required: true
   bcptTestFolders:
     description: A JSON-formatted array of bcptTestFolders
-    required: false
-    default: ''
+    required: true
   project:
     description: Project folder
     required: false
