@@ -46,7 +46,7 @@ runs:
         }
         catch {
           Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
-          exit 1
+          $host.SetShouldExit(1)
         }
 branding:
   icon: terminal
