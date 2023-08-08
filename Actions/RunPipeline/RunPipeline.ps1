@@ -7,11 +7,11 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
     [string] $artifact = "",
-    [Parameter(HelpMessage = "A JSON-formatted array of appFolders", Mandatory = $false)]
+    [Parameter(HelpMessage = "A JSON-formatted array of appFolders", Mandatory = $true)]
     [string] $appFolders = "",
-    [Parameter(HelpMessage = "A JSON-formatted array of testFolders", Mandatory = $false)]
+    [Parameter(HelpMessage = "A JSON-formatted array of testFolders", Mandatory = $true)]
     [string] $testFolders = "",
-    [Parameter(HelpMessage = "A JSON-formatted array of bcptTestFolders", Mandatory = $false)]
+    [Parameter(HelpMessage = "A JSON-formatted array of bcptTestFolders", Mandatory = $true)]
     [string] $bcptTestFolders = "",
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
@@ -24,14 +24,10 @@ Param(
     [string] $installTestAppsJson = '[]'
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 $containerBaseFolder = $null
 $projectPath = $null
-
-# IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -125,27 +121,13 @@ try {
     }
 
     $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken -doNotCheckAppDependencyProbingPaths @analyzeRepoParams
+    
+    # Using this construct as there are differences in how PS5 and PS7 interpret simple JSON like [] or ['test']
+    $repo.appFolders = (ConvertFrom-Json "{""folders"":$appFolders}").folders
+    $repo.testFolders = (ConvertFrom-Json "{""folders"":$testFolders}").folders
+    $repo.bcptTestFolders = (ConvertFrom-Json "{""folders"":$bcptTestFolders}").folders
 
-    if ($appFolders) {
-        $useAppFolders = ConvertFrom-Json $appFolders
-    }
-    else {
-        $useAppFolders = $repo.appFolders
-    }
-    if ($testFolders) {
-        $useTestFolders = ConvertFrom-Json $testFolders
-    }
-    else {
-        $useTestFolders = $repo.testFolders
-    }
-    if ($bcptTestFolders) {
-        $useBcptTestFolders = ConvertFrom-Json $bcptTestFolders
-    }
-    else {
-        $useBcptTestFolders = $repo.bcptTestFolders
-    }
-
-    if ((-not $useAppFolders) -and (-not $useTestFolders) -and (-not $useBcptTestFolders)) {
+    if ((-not $repo.appFolders) -and (-not $repo.testFolders) -and (-not $repo.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
     }
@@ -409,9 +391,9 @@ try {
         -generateDependencyArtifact:$repo.generateDependencyArtifact `
         -updateDependencies:$repo.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $useAppFolders `
-        -testFolders $useTestFolders `
-        -bcptTestFolders $useBcptTestFolders `
+        -appFolders $repo.appFolders `
+        -testFolders $repo.testFolders `
+        -bcptTestFolders $repo.bcptTestFolders `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
@@ -444,9 +426,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    Write-Host "::ERROR::RunPipeline action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    $host.SetShouldExit(1)
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     try {

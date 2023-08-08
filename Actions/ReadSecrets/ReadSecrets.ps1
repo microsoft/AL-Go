@@ -9,12 +9,9 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d'
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
-# IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
 $buildMutexName = "AL-Go-ReadSecrets"
 $buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
 try {
@@ -97,7 +94,6 @@ try {
                     }
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
-                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
                 $outSecrets += @{ "$envVar" = $base64value }
                 Write-Host "$envVar successfully read from secret $secret"
                 $secretsCollection.Remove($_)
@@ -128,9 +124,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    Write-Host "::ERROR::ReadSecrets action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    $host.SetShouldExit(1)
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

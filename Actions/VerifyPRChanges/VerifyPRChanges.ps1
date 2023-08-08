@@ -73,22 +73,10 @@ function ValidatePullRequestFiles
     Write-Host "Verification completed successfully."
 }
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
-# IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
-
-try {
-    $headers = @{
-        "Authorization" = "token $token"
-        "Accept"        = "application/vnd.github.baptiste-preview+json"
-    }
-
-    ValidatePullRequest -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
-    ValidatePullRequestFiles -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
+$headers = @{
+    "Authorization" = "token $token"
+    "Accept"        = "application/vnd.github.baptiste-preview+json"
 }
-catch {
-    Write-Host "::ERROR::VerifyPRChanges action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    $host.SetShouldExit(1)
-    throw
-}
+
+ValidatePullRequest -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
+ValidatePullRequestFiles -PullRequestRepository $prBaseRepository -PullRequestId $pullRequestId -Headers $headers
