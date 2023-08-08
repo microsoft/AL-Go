@@ -128,6 +128,8 @@ try {
     else {
         $useAppFolders = $repo.appFolders
     }
+    $useAppFolders.GetType() | Out-Host
+    $useAppFolders | Out-Host
     if ($testFolders) {
         $useTestFolders = @(ConvertFrom-Json $testFolders)
     }
