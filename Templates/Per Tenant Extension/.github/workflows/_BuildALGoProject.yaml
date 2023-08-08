@@ -128,7 +128,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             artifact: ${{ env.artifact }}
-            appFolders: ${{ env.artifact }}
+            appFolders: ${{ env.appFolders }}
             testFolders: ${{ env.testFolders }}
             bcptTestFolders: ${{ env.bcptTestFolders }}
             project: ${{ inputs.project }}
