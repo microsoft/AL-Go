@@ -76,7 +76,7 @@ function ValidatePullRequestFiles
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 # IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
+# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     $headers = @{

@@ -17,7 +17,7 @@ function Set-OutputVariable([string] $name, [string] $value) {
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 # IMPORTANT: No code that can fail should be outside the try/catch
-# IMPORTANT: All actions needs a try/catch here and not only in the yaml file, else they can silently fail
+# IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
 
 try {
     $settings = $env:Settings | ConvertFrom-Json
@@ -58,6 +58,6 @@ try {
     }
 }
 catch {
-    Write-Host "::ERROR::AnalyzeTests action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+    Write-Host "::ERROR::CalculateArtifactNames action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     $host.SetShouldExit(1)
 }
