@@ -145,7 +145,7 @@ function YamlTest {
     $yaml.AppendLine("          `${{ github.action_path }}/$actionName.ps1$parameterString") | Out-Null
     $yaml.AppendLine("        }") | Out-Null
     $yaml.AppendLine("        catch {") | Out-Null
-    $yaml.AppendLine('          Write-Host "::ERROR::Unexpected error when running action. Message: $($_.Exception.Message.Replace("`r",'''').Replace("`n",'' ''))), StackTrace: $($_.ScriptStackTrace.Replace("`r",'''').Replace("`n",'' <- ''))";') | Out-Null
+    $yaml.AppendLine('          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'''').Replace("`n",'' '')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'''').Replace("`n",'' <- ''))";') | Out-Null
     $yaml.AppendLine("          exit 1") | Out-Null
     $yaml.AppendLine("        }") | Out-Null
     $yaml.AppendLine("branding:") | Out-Null
@@ -157,7 +157,9 @@ function YamlTest {
 
     $i = 0
     while ($i -lt $yamlLines.Count -and $i -lt $actualYaml.count) {
-        $actualYaml[$i] | Should -BeLike $yamlLines[$i]
+        if ($yamlLines[$i] -ne $actualYaml[$i]) {
+            $actualYaml[$i] | Should -BeLike $yamlLines[$i]
+        }
         $i++
     }
 
