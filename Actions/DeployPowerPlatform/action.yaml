@@ -54,7 +54,7 @@ runs:
       uses: microsoft/powerplatform-actions/who-am-i@v0
       with:
         environment-url: ${{env.ppEnvironmentUrl}}
-        tenant-id: ${{env.tenantId}}
+        tenant-id: ${{env.ppTenantId}}
         app-id: ${{env.ppApplicationId}}
         client-secret: ${{env.ppClientSecret}}
  
@@ -110,7 +110,7 @@ runs:
       uses: microsoft/powerplatform-actions/import-solution@v0
       with:
         environment-url: ${{env.ppEnvironmentUrl}}
-        tenant-id: ${{env.tenantId}}
+        tenant-id: ${{env.ppTenantId}}
         app-id: ${{env.ppApplicationId}}
         client-secret: ${{env.ppClientSecret}}
         solution-file: .artifacts/tempPPSolution/ppsolution.zip

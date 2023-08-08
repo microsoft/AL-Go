@@ -580,6 +580,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Test
+        run: |
+          $ErrorActionPreference = "STOP"
+          Set-StrictMode -version 2.0
+          Write-Host "${{ needs.build.result }}"
+
       - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main

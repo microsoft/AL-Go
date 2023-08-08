@@ -27,7 +27,6 @@ function Update-PowerAppSettings {
     $currentPowerAppSettings = Get-CurrentPowerAppSettings -solutionFolder $SolutionFolder
     if ($currentPowerAppSettings.Count -eq 0) {
         Write-Warning "Could not find PowerApps connections file"
-        throw "Could not find PowerApps connections file"
     }
 
     Write-Host "Number of Business Central connections found: "$currentPowerAppSettings.Count
