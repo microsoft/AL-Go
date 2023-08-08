@@ -155,7 +155,7 @@ jobs:
           project: ${{ github.event.inputs.project }}
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }}
           directCommit: ${{ github.event.inputs.directCommit }}
-          adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }}
+          adminCenterApiCredentials: ${{ fromJson(env.Secrets).adminCenterApiCredentials }}
 
       - name: Finalize the workflow
         if: always()

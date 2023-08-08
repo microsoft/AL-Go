@@ -82,7 +82,7 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          token: ${{ env.ghTokenWorkflow }}
+          token: ${{ fromJson(env.Secrets).ghTokenWorkflow }}
           Update: Y
           templateUrl: ${{ env.templateUrl }}
           directCommit: ${{ env.directCommit }}
