@@ -30,8 +30,6 @@ $BcContainerHelperPath = ""
 
     Write-Big -str "a$verstr"
 
-    throw "myerr"
-    
     Test-ALGoRepository -baseFolder $ENV:GITHUB_WORKSPACE
 
     $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE

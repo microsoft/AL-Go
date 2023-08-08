@@ -9,6 +9,8 @@ Param(
 )
 
 function DownloadDependenciesFromProbingPaths([ref] $settings, $baseFolder, $project, $destinationPath) {
+
+    throw "myerr"
     $settings.Value = AnalyzeRepo -settings $settings.Value -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     if ($settings.Value.ContainsKey('appDependencyProbingPaths') -and $settings.Value.appDependencyProbingPaths) {
         return Get-Dependencies -probingPathsJson $settings.Value.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
@@ -81,7 +83,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 # IMPORTANT: No code that can fail should be outside the try/catch
 # IMPORTANT: All actions need a try/catch here and not only in the yaml file, else they can silently fail
-try {
+#try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
     Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
@@ -129,8 +131,8 @@ try {
         $foldersJson = ConvertTo-Json $settings."$propName" -Depth 99 -Compress
         Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$propName=$foldersJson"
     }
-}
-catch {
-    Write-Host "::ERROR::DownloadProjectDependencies action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
-    $host.SetShouldExit(1)
-}
+#}
+#catch {
+#    Write-Host "::ERROR::DownloadProjectDependencies action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+#    $host.SetShouldExit(1)
+#}
