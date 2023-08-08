@@ -127,19 +127,19 @@ try {
     $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken -doNotCheckAppDependencyProbingPaths @analyzeRepoParams
 
     if ($appFolders) {
-        $useAppFolders = ConvertFrom-Json $appFolders
+        $useAppFolders = @(ConvertFrom-Json $appFolders)
     }
     else {
         $useAppFolders = $repo.appFolders
     }
     if ($testFolders) {
-        $useTestFolders = ConvertFrom-Json $testFolders
+        $useTestFolders = @(ConvertFrom-Json $testFolders)
     }
     else {
         $useTestFolders = $repo.testFolders
     }
     if ($bcptTestFolders) {
-        $useBcptTestFolders = ConvertFrom-Json $bcptTestFolders
+        $useBcptTestFolders = @(ConvertFrom-Json $bcptTestFolders)
     }
     else {
         $useBcptTestFolders = $repo.bcptTestFolders
