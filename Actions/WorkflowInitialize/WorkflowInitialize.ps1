@@ -76,6 +76,7 @@ try {
 }
 catch {
     Write-Host "::ERROR::WorkflowInitialize action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
+    $host.SetShouldExit(1)
     if ($bcContainerHelperPath) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
