@@ -17,11 +17,8 @@ Param(
     [bool] $directCommit    
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
-
-# IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -220,16 +217,22 @@ try {
                         }
                     }
 
-                    # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                     if ($baseName -eq "PullRequestHandler") {
+                        # The PullRequestHandler workflow can have a RepoSetting called PullRequestTrigger which specifies the trigger to use for Pull Requests
+                        $triggerSection = $yaml.Get('on:/pull')
+                        $triggerSection.content = "$($repoSettings.PullRequestTrigger):"
+                        $yaml.Replace('on:/pull', $triggerSection.Content)
+
+                        # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
                         if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
                             $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
                         }
                         else {
                             $CICDPullRequestBranches = $defaultCICDPullRequestBranches
                         }
+
                         # update the branches: line with the new branches
-                        $yaml.Replace('on:/pull_request_target:/branches:', "branches: [ '$($cicdPullRequestBranches -join "', '")' ]")
+                        $yaml.Replace("on:/$($repoSettings.PullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
                     }
 
                     # Repo Setting runs-on and shell determines which GitHub runner is used for all non-build jobs (build jobs are run using the GitHubRunner/GitHubRunnerShell repo settings)
@@ -536,8 +539,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "CheckForUpdates action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

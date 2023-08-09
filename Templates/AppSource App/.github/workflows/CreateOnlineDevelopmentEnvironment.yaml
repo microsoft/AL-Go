@@ -64,21 +64,22 @@ jobs:
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        env:
-          secrets: ${{ toJson(secrets) }}
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          secrets: 'adminCenterApiCredentials'
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'adminCenterApiCredentials'
 
       - name: Check AdminCenterApiCredentials / Initiate Device Login (open to see code)
         id: authenticate
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:adminCenterApiCredentials))
-          if ($adminCenterApiCredentials) {
-            Write-Host "AdminCenterApiCredentials provided in secret $($ENV:adminCenterApiCredentialsSecretName)!"
-            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "Admin Center Api Credentials was provided in a secret called $($ENV:adminCenterApiCredentialsSecretName). Using this information for authentication."
+          $secrets = $env:Secrets | ConvertFrom-Json
+          $settings = $env:Settings | ConvertFrom-Json
+          if ($secrets.adminCenterApiCredentials) {
+            $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.adminCenterApiCredentials))
+            Write-Host "AdminCenterApiCredentials provided in secret $($settings.adminCenterApiCredentialsSecretName)!"
+            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "Admin Center Api Credentials was provided in a secret called $($settings.adminCenterApiCredentialsSecretName). Using this information for authentication."
           }
           else {
             Write-Host "AdminCenterApiCredentials not provided, initiating Device Code flow"
@@ -89,7 +90,7 @@ jobs:
             $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
             CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
-            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($ENV:adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
+            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($settings.adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
             Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
           }
 
@@ -111,26 +112,29 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          get: ghTokenWorkflowSecretName
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        env:
-          secrets: ${{ toJson(secrets) }}
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          secrets: 'adminCenterApiCredentials,ghTokenWorkflow=${{ env.GHTOKENWORKFLOWSECRETNAME }}'
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'adminCenterApiCredentials,ghTokenWorkflow'
 
       - name: CalculateToken
         id: CalculateToken
         env:
           useGhTokenWorkflow: ${{ github.event.inputs.useGhTokenWorkflow }}
         run: |
+          $ghToken = '${{ secrets.GITHUB_TOKEN }}'
           if ($env:useGhTokenWorkflow -eq 'true') {
-            $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GHTOKENWORKFLOW))
-          } else {
-            $ghToken = '${{ secrets.GITHUB_TOKEN }}'
+            $secrets = $env:Secrets | ConvertFrom-Json
+            if ($secrets.GHTOKENWORKFLOW) {
+              $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.GHTOKENWORKFLOW))
+            }
+            else {
+              Write-Host "::Warning::GHTOKENWORKFLOW secret not found. Using GITHUB_TOKEN."
+            }
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
 
@@ -151,7 +155,7 @@ jobs:
           project: ${{ github.event.inputs.project }}
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }}
           directCommit: ${{ github.event.inputs.directCommit }}
-          adminCenterApiCredentials: ${{ env.adminCenterApiCredentials }}
+          adminCenterApiCredentials: ${{ fromJson(env.Secrets).adminCenterApiCredentials }}
 
       - name: Finalize the workflow
         if: always()

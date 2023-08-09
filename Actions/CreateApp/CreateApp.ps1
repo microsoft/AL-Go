@@ -26,12 +26,9 @@ Param(
     [bool] $directCommit
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-
-# IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -67,7 +64,7 @@ try {
     if ($type -eq "Performance Test App") {
         try {
             $settings = ReadSettings -baseFolder $baseFolder -project $project
-            $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotIssueWarnings
+            $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotIssueWarnings -doNotCheckAppDependencyProbingPaths
             $folders = Download-Artifacts -artifactUrl $settings.artifact -includePlatform
             $sampleApp = Join-Path $folders[0] "Applications.*\Microsoft_Performance Toolkit Samples_*.app"
             if (Test-Path $sampleApp) {
@@ -143,8 +140,8 @@ try {
 
 }
 catch {
-    OutputError -message "CreateApp action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

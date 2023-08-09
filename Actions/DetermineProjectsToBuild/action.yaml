@@ -33,10 +33,15 @@ runs:
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
       run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try { 
           $changedFiles = ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}
           ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson
-        } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 branding:
   icon: terminal
   color: blue

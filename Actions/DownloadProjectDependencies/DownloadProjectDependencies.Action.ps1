@@ -9,16 +9,11 @@ Param(
 )
 
 function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinationPath) {
-    $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
-    
-    $probingPaths = $projectSettings.appDependencyProbingPaths | ConvertFrom-Json
-
-    $downloadedDependencies = @()
-    if ($probingPaths) {
-        $downloadedDependencies += Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths -saveToPath $destinationPath  | Where-Object { $_ }
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
+    if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
+        return Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
     }
-
-    return $downloadedDependencies
 }
 
 function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
@@ -33,37 +28,37 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
     
     # For each dependency project, calculate the corresponding probing path
     $dependeciesProbingPaths = @($dependencyProjects | ForEach-Object {
-        $dependencyProject = $_
+            $dependencyProject = $_
 
-        Write-Host "Reading settings for project '$dependencyProject'"
-        $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
+            Write-Host "Reading settings for project '$dependencyProject'"
+            $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
     
-        $dependencyBuildMode = $buildMode
-        if(!($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
-            # Download the default build mode if the specified build mode is not supported for the dependency project
-            Write-Host "Build mode '$dependencyBuildMode' is not supported for project '$dependencyProject'. Using the default build mode."
-            $dependencyBuildMode = 'Default';
-        }
+            $dependencyBuildMode = $buildMode
+            if (!($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
+                # Download the default build mode if the specified build mode is not supported for the dependency project
+                Write-Host "Build mode '$dependencyBuildMode' is not supported for project '$dependencyProject'. Using the default build mode."
+                $dependencyBuildMode = 'Default';
+            }
 
-        $currentBranch = $ENV:GITHUB_REF_NAME
+            $currentBranch = $ENV:GITHUB_REF_NAME
 
-        $baseBranch = $ENV:GITHUB_BASE_REF_NAME
-        # $ENV:GITHUB_BASE_REF_NAME is specified only for pull requests, so if it is not specified, use the current branch
-        if(!$baseBranch) {
-            $baseBranch = $currentBranch
-        }
+            $baseBranch = $ENV:GITHUB_BASE_REF_NAME
+            # $ENV:GITHUB_BASE_REF_NAME is specified only for pull requests, so if it is not specified, use the current branch
+            if (!$baseBranch) {
+                $baseBranch = $currentBranch
+            }
     
-        return @{
-            "release_status" = "thisBuild"
-            "version" = "latest"
-            "buildMode" = $dependencyBuildMode
-            "projects" = $dependencyProject
-            "repo" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-            "branch" = $currentBranch
-            "baseBranch" = $baseBranch
-            "authTokenSecret" = $token
-        }
-    })
+            return @{
+                "release_status"  = "thisBuild"
+                "version"         = "latest"
+                "buildMode"       = $dependencyBuildMode
+                "projects"        = $dependencyProject
+                "repo"            = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                "branch"          = $currentBranch
+                "baseBranch"      = $baseBranch
+                "authTokenSecret" = $token
+            }
+        })
     
     # For each probing path, download the dependencies
     $downloadedDependencies = @()
@@ -83,9 +78,6 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
 
     return $downloadedDependencies
 }
-
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
@@ -111,10 +103,10 @@ $downloadedTestApps = @()
 $downloadedDependencies | ForEach-Object {
     # naming convention: app, (testapp)
     if ($_.startswith('(')) {
-        $DownloadedTestApps += $_    
+        $DownloadedTestApps += $_
     }
     else {
-        $DownloadedApps += $_    
+        $DownloadedApps += $_
     }
 }
 
