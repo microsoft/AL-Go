@@ -32,7 +32,7 @@ Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use 
 
 ### Settings and Secrets in AL-Go for GitHub
 In earlier versions of AL-Go for GitHub, all settings were available as individual environment variables to scripts and overrides, this is no longer the case.
-Settings was also available as one compressed json structure in env:Settings, this is still the case.
+Settings were also available as one compressed JSON structure in env:Settings, this is still the case.
 Settings can no longer contain line breaks. It might have been possible to use line breaks earlier, but it would likely have unwanted consequences.
 Use `$settings = $ENV:Settings | ConvertFrom-Json` to get all settings in PowerShell.
 
