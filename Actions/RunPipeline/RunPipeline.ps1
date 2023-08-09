@@ -121,7 +121,7 @@ try {
     }
 
     $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken -doNotCheckAppDependencyProbingPaths @analyzeRepoParams
-    
+
     # Using this construct as there are differences in how PS5 and PS7 interpret simple JSON like [] or ['test']
     $repo.appFolders = (ConvertFrom-Json "{""folders"":$appFolders}").folders
     $repo.testFolders = (ConvertFrom-Json "{""folders"":$testFolders}").folders
