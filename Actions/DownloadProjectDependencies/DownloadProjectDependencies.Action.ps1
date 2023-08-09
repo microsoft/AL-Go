@@ -10,7 +10,7 @@ Param(
 
 function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinationPath) {
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
-    AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings | Out-Null
+    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
         return Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
     }
