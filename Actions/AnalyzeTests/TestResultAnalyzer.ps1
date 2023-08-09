@@ -215,12 +215,12 @@ function GetBcptSummaryMD {
                 $pctDurationMin = ($durationMin-$baseDurationMin)*100/$baseDurationMin
                 $durationMinStr = "$($durationMin.ToString("N2"))|"
                 $baseDurationMinStr = "$($baseDurationMin.ToString("N2"))|"
-                $diffDurationMinStr = "$($diffDurationMin.ToString("**#.##**;-#.##;"))|"
+                $diffDurationMinStr = "$($diffDurationMin.ToString("**#**;-#;0"))|"
 
                 $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseNumberOfSQLStmts)*100/$baseNumberOfSQLStmts
                 $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("N0"))|"
                 $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("N0"))|"
-                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("**#**;-#;"))|"
+                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("**#**;-#;0"))|"
 
                 if (!$baseLine) {
                     # No baseline provided
