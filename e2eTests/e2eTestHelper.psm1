@@ -396,7 +396,6 @@ function CreateAlGoRepository {
         # Replace URL's + references to microsoft/AL-Go-Actions with $templateOwner/AL-Go/Actions
         Get-ChildItem -Path . -File -Recurse | ForEach-Object {
             $file = $_.FullName
-            Write-Host $file
             $lines = Get-Content -Encoding UTF8 -path $file
         
             # Replace URL's to actions repository first
@@ -411,7 +410,7 @@ function CreateAlGoRepository {
         
             $content = "$($lines -join "`n")`n"
 
-            # Update Template references
+            # Update Template references in test apps
             $content = $content.Replace('{TEMPLATEURL}', $template)
             $content = $content.Replace('https://github.com/microsoft/AL-Go-PTE@main', $template)
             $content = $content.Replace('https://github.com/microsoft/AL-Go-AppSource@main', $template)
