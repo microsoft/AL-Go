@@ -21,7 +21,7 @@ Write-Host -ForegroundColor Yellow @'
 #                                                 |_|                                                 #
 # This test tests the following scenario:
 #                                                                                                      
-#  - Create a new repository based on the PTE template with 5 projects, using appDependencyProbingPaths with release_status set to 'include'
+#  - Create a new repository based on the PTE template, running Windows with 5 projects, using appDependencyProbingPaths with release_status set to 'include'
 #    - P1/app1 with dependency to P1/app2
 #    - P1/app2 with no dependencies
 #    - P2/app3 with dependency to P1/app1 and P1/app2
@@ -33,6 +33,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Run the Test Next Minor Workflow
 #  - Run the Test Next Major Workflow
 #  - Test that runs were successful and artifacts were created in CI/CD workflow
+#  - Redo everything on Linux
 #  - Cleanup repositories
 #
 '@
@@ -55,7 +56,6 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateAlGoRepository `
     -github:$github `
-    -linux `
     -template $template `
     -repository $repository `
     -branch $branch `
@@ -78,26 +78,41 @@ CreateAlGoRepository `
 
 $repoPath = (Get-Location).Path
 
-# Run CI/CD workflow
-$run = Run-CICD -branch $branch
+1..2 | ForEach-Object {
+    # Run CI/CD workflow
+    $run = Run-CICD -branch $branch
 
-# Launch Current, NextMinor and NextMajor builds
-$runTestCurrent = Run-TestCurrent -branch $branch
-$runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+    # Launch Current, NextMinor and NextMajor builds
+    $runTestCurrent = Run-TestCurrent -branch $branch
+    $runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
+    $runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
 
-# Wait for CI/CD workflow to finish
-WaitWorkflow -runid $run.id
-# P0 has 5 apps: app1,app2,app3,app4 and app6
-# P1 has 2 apps: app1,app2
-# P2 has 3 apps: app1,app2,app3
-# P3 has 3 apps: app1,app2,app4
-# P4 has 5 apps: app1,app2,app3,app4,app5
-Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=(5+2+3+3+5);"thisbuild"=0} -repoVersion '1.0' -appVersion '1.0'
+    # Wait for CI/CD workflow to finish
+    WaitWorkflow -runid $run.id
+    # P0 has 5 apps: app1,app2,app3,app4 and app6
+    # P1 has 2 apps: app1,app2
+    # P2 has 3 apps: app1,app2,app3
+    # P3 has 3 apps: app1,app2,app4
+    # P4 has 5 apps: app1,app2,app3,app4,app5
+    Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=(5+2+3+3+5);"thisbuild"=0} -repoVersion '1.0' -appVersion '1.0'
 
-WaitWorkflow -runid $runTestCurrent.id -noDelay
-WaitWorkflow -runid $runTestNextMinor.id -noDelay
-WaitWorkflow -runid $runTestNextMajor.id -noDelay
+    WaitWorkflow -runid $runTestCurrent.id -noDelay
+    WaitWorkflow -runid $runTestNextMinor.id -noDelay
+    WaitWorkflow -runid $runTestNextMajor.id -noDelay
+
+    if ($_ -eq 1) {
+        Pull
+
+        # Set GitHubRunner and runs-on to ubuntu-latest (and use CompilerFolder)
+        Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-latest"; "gitHubRunner" = "ubuntu-latest"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
+        
+        # Push
+        CommitAndPush -commitMessage 'Shift to Linux'
+        
+        # Upgrade AL-Go System Files
+        Run-UpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
+    }
+}
 
 Set-Location $prevLocation
 
