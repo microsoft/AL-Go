@@ -1040,20 +1040,25 @@ function AnalyzeRepo {
                                 $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
                                 $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps) -doNotIssueWarnings -doNotCheckArtifactSetting -server_url $server_url -repository $repository
 
-                                Set-Location $projectPath
-                                "appFolders", "testFolders", "bcptTestFolders" | ForEach-Object {
-                                    $propertyName = $_
-                                    Write-Host "Adding folders from $depProject to $_"
-                                    $found = $false
-                                    $depSettings."$propertyName" | ForEach-Object {
-                                        $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
-                                        if (!$settings."$propertyName".Contains($folder)) {
-                                            $settings."$propertyName" += @($folder)
-                                            $found = $true
-                                            Write-Host "- $folder"
+                                Push-Location $projectPath
+                                try {
+                                    "appFolders", "testFolders", "bcptTestFolders" | ForEach-Object {
+                                        $propertyName = $_
+                                        Write-Host "Adding folders from $depProject to $_"
+                                        $found = $false
+                                        $depSettings."$propertyName" | ForEach-Object {
+                                            $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
+                                            if (!$settings."$propertyName".Contains($folder)) {
+                                                $settings."$propertyName" += @($folder)
+                                                $found = $true
+                                                Write-Host "- $folder"
+                                            }
                                         }
+                                        if (!$found) { Write-Host "- No folders added" }
                                     }
-                                    if (!$found) { Write-Host "- No folders added" }
+                                }
+                                finally {
+                                    Pop-Location
                                 }
                             }
                         }
