@@ -40,7 +40,7 @@ In earlier versions of AL-Go for GitHub, all secrets requested by AL-Go for GitH
 As described in bug 647, all secrets available to the workflow were also available in env:_Secrets, this is no longer the case.
 All requested secrets were also available (base64 encoded) as one compressed JSON structure in env:Secrets, this is still the case.
 Use `$secrets = $ENV:Secrets | ConvertFrom-Json` to get all requested secrets in PowerShell.
-You cannot get to any secrets that wasn't requested by AL-Go for GitHub.
+You cannot get to any secrets that weren't requested by AL-Go for GitHub.
 
 ## v3.1
 
