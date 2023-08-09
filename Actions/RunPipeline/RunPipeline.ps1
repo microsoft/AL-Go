@@ -103,9 +103,7 @@ try {
     }
     if ($artifact) {
         # Avoid checking the artifact setting in AnalyzeRepo if we have an artifactUrl
-        $analyzeRepoParams += @{
-            "doNotCheckArtifactSetting" = $true
-        }
+        $settings.artifact = $artifact
         $gitHubHostedRunner = $settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*"
         if ($gitHubHostedRunner -and $settings.useCompilerFolder) {
             # If we are running GitHub hosted agents and UseCompilerFolder is set (and we have an artifactUrl), we need to set the artifactCachePath
@@ -128,9 +126,6 @@ try {
         }
     }
 
-    if (-not $artifact) {
-        $artifact = $repo.artifact
-    }
     $installApps = $repo.installApps
     $installTestApps = $repo.installTestApps
 
@@ -202,7 +197,7 @@ try {
     $CreateRuntimePackages = $false
 
     if ($repo.versioningStrategy -eq -1) {
-        $artifactVersion = [Version]$artifact.Split('/')[4]
+        $artifactVersion = [Version]$repo.artifact.Split('/')[4]
         $runAlPipelineParams += @{
             "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
         }
@@ -368,7 +363,7 @@ try {
         -imageName $imageName `
         -bcAuthContext $authContext `
         -environment $environmentName `
-        -artifact $artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -artifact $repo.artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
         -vsixFile $repo.vsixFile `
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `
