@@ -52,10 +52,12 @@ try {
         if ($secret -eq 'AppDependencyProbingPathsSecrets') {
             $getAppDependencyProbingPathsSecrets = $true
         }
-        elseif ($settings.Keys -contains $secretNameProperty) {
-            $secret = "$($secret)=$($settings."$secretNameProperty")"
+        else {
+            if ($settings.Keys -contains $secretNameProperty) {
+                $secret = "$($secret)=$($settings."$secretNameProperty")"
+            }
+            $secretsCollection += $secret
         }
-        $secretsCollection += $secret
     }
 
     # Loop through appDependencyProbingPaths and add secrets to the collection of secrets to get
