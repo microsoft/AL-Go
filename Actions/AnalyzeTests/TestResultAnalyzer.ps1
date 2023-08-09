@@ -169,7 +169,7 @@ function GetBcptSummaryMD {
     $baseLine = ReadBcptFile -path $baseLinePath
 
     $summarySb = [System.Text.StringBuilder]::new()
-    $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|$(if ($baseLine){'Status|'})Duration|$(if ($baseLine){'Duration (Base)|Duration (Diff)|'})SQL Stmts|$(if ($baseLine){'SQL Stmts (Base)|SQL Stmts (Diff)|'})\n|:---|:---|:---|:---|$(if ($baseLine){'---:|'}):--:|$(if ($baseLine){'---:|'})---:|$(if ($baseLine){'---:|'})\n") | Out-Null
+    $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|$(if ($baseLine){'Status|'})Duration|$(if ($baseLine){'Duration (Base)|Duration (Diff)|'})SQL Stmts|$(if ($baseLine){'SQL Stmts (Base)|SQL Stmts (Diff)|'})\n|:---|:---|:---|:---|$(if ($baseLine){'---:|'}):--:|$(if ($baseLine){'---:|---:|'})---:|$(if ($baseLine){'---:|---:|'})\n") | Out-Null
 
     $lastSuiteName = ''
     $lastCodeunitID = ''
@@ -200,9 +200,9 @@ function GetBcptSummaryMD {
                         throw "No base line measurements"
                     }
                     $baseDurationMin = ($baseLineMeasurements | ForEach-Object { $_.durationMin } | Measure-Object -Minimum).Minimum
-                    $diffDurationMin = $durationMin-$baseDurationMin
+                    $diffDurationMin = $baseDurationMin-$durationMin
                     $baseNumberOfSQLStmts = ($baseLineMeasurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Minimum).Minimum
-                    $diffNumberOfSQLStmts = $numberOfSQLStmts-$baseNumberOfSQLStmts
+                    $diffNumberOfSQLStmts = $baseNumberOfSQLStmts-$numberOfSQLStmts
                 }
                 catch {
                     $baseLineFound = $false
@@ -215,12 +215,12 @@ function GetBcptSummaryMD {
                 $pctDurationMin = ($durationMin-$baseDurationMin)*100/$baseDurationMin
                 $durationMinStr = "$($durationMin.ToString("N2"))|"
                 $baseDurationMinStr = "$($baseDurationMin.ToString("N2"))|"
-                $diffDurationMinStr = "$($diffDurationMin.ToString("N2"))|"
+                $diffDurationMinStr = "$($diffDurationMin.ToString("#.##;(#.##);"))|"
 
                 $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseNumberOfSQLStmts)*100/$baseNumberOfSQLStmts
                 $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("N0"))|"
                 $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("N0"))|"
-                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("N0"))|"
+                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("#;(#);"))|"
 
                 if (!$baseLine) {
                     # No baseline provided
