@@ -53,7 +53,6 @@ function GetGithubSecret {
         $value = $script:githubSecrets."$secret"
         if ($value) {
             MaskValue -key $secret -value $value
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$envVar=$value"
             return $value
         }
     }
