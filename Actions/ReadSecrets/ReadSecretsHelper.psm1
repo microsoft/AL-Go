@@ -1,4 +1,8 @@
-$script:gitHubSecrets = $env:secrets | ConvertFrom-Json
+Param(
+    [string] $_gitHubSecrets
+)
+
+$script:gitHubSecrets = $_gitHubSecrets | ConvertFrom-Json
 $script:keyvaultConnectionExists = $false
 $script:azureRm210 = $false
 $script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
@@ -49,7 +53,6 @@ function GetGithubSecret {
         $value = $script:githubSecrets."$secret"
         if ($value) {
             MaskValue -key $secret -value $value
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$envVar=$value"
             return $value
         }
     }

@@ -1,24 +1,18 @@
 Param(
+    [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
+    [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
-    [string] $secrets = "",
+    [string] $getSecrets = "",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
-# IMPORTANT: No code that can fail should be outside the try/catch
 $buildMutexName = "AL-Go-ReadSecrets"
 $buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
 try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
-
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0078' -parentTelemetryScopeJson $parentTelemetryScopeJson
-
     try {
         if (!$buildMutex.WaitOne(1000)) {
             Write-Host "Waiting for other process executing ReadSecrets"
@@ -30,11 +24,16 @@ try {
        Write-Host "Other process terminated abnormally"
     }
 
-    Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1")
+    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+
+    Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    $telemetryScope = CreateScope -eventId 'DO0078' -parentTelemetryScopeJson $parentTelemetryScopeJson
+
+    Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $outSettings = $settings
     $keyVaultName = ""
     if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
         $keyVaultName = $settings.keyVaultName
@@ -45,14 +44,29 @@ try {
             }
         }
     }
+    $getAppDependencyProbingPathsSecrets = $false
     [System.Collections.ArrayList]$secretsCollection = @()
-    $secrets.Split(',') | Select-Object -Unique | ForEach-Object {
+    $getSecrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
         $secretNameProperty = "$($secret)SecretName"
-        if ($settings.Keys -contains $secretNameProperty) {
-            $secret = "$($secret)=$($settings."$secretNameProperty")"
+        if ($secret -eq 'AppDependencyProbingPathsSecrets') {
+            $getAppDependencyProbingPathsSecrets = $true
         }
-        $secretsCollection += $secret
+        else {
+            if ($settings.Keys -contains $secretNameProperty) {
+                $secret = "$($secret)=$($settings."$secretNameProperty")"
+            }
+            $secretsCollection += $secret
+        }
+    }
+
+    # Loop through appDependencyProbingPaths and add secrets to the collection of secrets to get
+    if ($getAppDependencyProbingPathsSecrets -and $settings.Keys -contains 'appDependencyProbingPaths') {
+        $settings.appDependencyProbingPaths | ForEach-Object {
+            if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
+                $secretsCollection += $_.authTokenSecret
+            }
+        }
     }
 
     @($secretsCollection) | ForEach-Object {
@@ -84,19 +98,10 @@ try {
                     }
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
-                Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$envVar=$base64value"
                 $outSecrets += @{ "$envVar" = $base64value }
                 Write-Host "$envVar successfully read from secret $secret"
                 $secretsCollection.Remove($_)
             }
-        }
-    }
-
-    if ($outSettings.Keys -contains 'appDependencyProbingPaths') {
-        $outSettings.appDependencyProbingPaths | ForEach-Object {
-            if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
-                $_.authTokenSecret = GetSecret -secret $_.authTokenSecret -keyVaultName $keyVaultName
-            } 
         }
     }
 
@@ -116,19 +121,15 @@ try {
     #region Action: Output
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "RepoSecrets=$outSecretsJson"
-
-    $outSettingsJson = $outSettings | ConvertTo-Json -Depth 99 -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$OutSettingsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Secrets=$outSecretsJson"
 
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "ReadSecrets action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
-    exit
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

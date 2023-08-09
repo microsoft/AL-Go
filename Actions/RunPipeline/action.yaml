@@ -17,14 +17,14 @@ inputs:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
     default: '7b7d'
+  artifact:
+    description: ArtifactUrl to use for the build
+    required: false
+    default: ''
   project:
     description: Project folder
     required: false
     default: '.'
-  secretsJson:
-    description: Secrets from repository in compressed Json format
-    required: false
-    default: '{"insiderSasToken":"","licenseFileUrl":"","codeSignCertificateUrl":"","CodeSignCertificatePw":"","keyVaultCertificateUrl":"","KeyVaultCertificatePw":"","keyVaultClientId":"","applicationInsightsConnectionString": ""}'
   buildMode:
     description: Specifies a mode to use for the build steps
     required: false
@@ -46,12 +46,20 @@ runs:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+        _artifact: ${{ inputs.artifact }}
         _project: ${{ inputs.project }}
-        _secretsJson: ${{ inputs.secretsJson }}
         _buildMode: ${{ inputs.buildMode }}
         _installAppsJson: ${{ inputs.installAppsJson }}
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
-      run: try { ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -secretsJson $ENV:_secretsJson -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/RunPipeline.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 branding:
   icon: terminal
   color: blue

@@ -343,7 +343,10 @@ function CreateAlGoRepository {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $waitMinutes = Get-Random -Minimum 0 -Maximum 4
+    $waitMinutes = 0
+    if ($github) {
+        $waitMinutes = Get-Random -Minimum 0 -Maximum 4
+    }
     $templateFolder = ''
     if ($template.Contains('|')) {
         # In order to run tests on the direct AL-Go Development branch, specify the folder in which the template is located after a | character in template
@@ -400,12 +403,19 @@ function CreateAlGoRepository {
             $replace = "`$1https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`$2"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
         
-            # Replace AL-Go-Action references
+            # Replace AL-Go-Actions references
             $regex = "^(.*)microsoft\/AL-Go-Actions(.*)main(.*)$"
             $replace = "`$1$($templateOwner)/AL-Go/Actions`$2$($templateBranch)`$3"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
         
-            [System.IO.File]::WriteAllText($file, "$($lines -join "`n")`n")
+            $content = "$($lines -join "`n")`n"
+
+            # Update Template references in test apps
+            $content = $content.Replace('{TEMPLATEURL}', $template)
+            $content = $content.Replace('https://github.com/microsoft/AL-Go-PTE@main', $template)
+            $content = $content.Replace('https://github.com/microsoft/AL-Go-AppSource@main', $template)
+
+            [System.IO.File]::WriteAllText($file, $content)
         }
     }
 

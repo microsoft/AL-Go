@@ -20,7 +20,6 @@ Param(
     [bool] $goLive
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
 
@@ -45,8 +44,6 @@ function EnsureAzStorageModule() {
         }
     }
 }
-
-# IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
     $baseFolder = $ENV:GITHUB_WORKSPACE
@@ -187,7 +184,7 @@ try {
             Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
             
             $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
-            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
+            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotCheckAppDependencyProbingPaths -doNotIssueWarnings
             $parameters = @{
                 "Project" = $thisProject
                 "ProjectName" = $projectName
@@ -408,7 +405,7 @@ try {
         }
         elseif ($deliveryTarget -eq "AppSource") {
             $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
-            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
+            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotCheckAppDependencyProbingPaths -doNotIssueWarnings
             # if type is Release, we only get here with the projects that needs to be delivered to AppSource
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
             if ($type -eq 'Release' -or ($projectSettings.Keys -contains 'AppSourceContinuousDelivery' -and $projectSettings.AppSourceContinuousDelivery)) {
@@ -474,8 +471,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Deliver action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

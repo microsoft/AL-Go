@@ -30,6 +30,18 @@ Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use 
 ### New Actions
 - `DownloadProjectDependencies`: Downloads the dependency apps for a given project and build mode.
 
+### Settings and Secrets in AL-Go for GitHub
+In earlier versions of AL-Go for GitHub, all settings were available as individual environment variables to scripts and overrides, this is no longer the case.
+Settings were also available as one compressed JSON structure in env:Settings, this is still the case.
+Settings can no longer contain line breaks. It might have been possible to use line breaks earlier, but it would likely have unwanted consequences.
+Use `$settings = $ENV:Settings | ConvertFrom-Json` to get all settings in PowerShell.
+
+In earlier versions of AL-Go for GitHub, all secrets requested by AL-Go for GitHub were available as individual environment variables to scripts and overrides, this is no longer the case.
+As described in bug 647, all secrets available to the workflow were also available in env:_Secrets, this is no longer the case.
+All requested secrets were also available (base64 encoded) as one compressed JSON structure in env:Secrets, this is still the case.
+Use `$secrets = $ENV:Secrets | ConvertFrom-Json` to get all requested secrets in PowerShell.
+You cannot get to any secrets that weren't requested by AL-Go for GitHub.
+
 ## v3.1
 
 ### Issues

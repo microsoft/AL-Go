@@ -107,6 +107,9 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "useCompilerFolder" = $useCompilerFolder.IsPresent; "doNotPublishApps" = $useCompilerFolder.IsPresent }
 $repoPath = (Get-Location).Path
 
+# Wait for GitHub to create the repository
+Start-Sleep -Seconds 60
+
 # Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)
 $runs = Get-NumberOfRuns -repository $repository
 
