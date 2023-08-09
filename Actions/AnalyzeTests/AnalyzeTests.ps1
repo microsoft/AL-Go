@@ -24,9 +24,16 @@ try {
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -path $testResultsFile
 
+    $settings = $env:Settings | ConvertFrom-Json
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
     $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
-    $bcptSummaryMD = GetBcptSummaryMD -path $bcptTestResultsFile -baseLinePath $bcptBaseLineFile
+    $bcptSummaryMD = GetBcptSummaryMD `
+        -path $bcptTestResultsFile `
+        -baseLinePath $bcptBaseLineFile `
+        -DurationThresholdWarning $settings.DurationThresholdWarning `
+        -DurationThresholdError $settings.DurationThresholdError `
+        -NumberOfSqlStmtsThresholdWarning $settings.NumberOfSqlStmtsThresholdWarning `
+        -NumberOfSqlStmtsThresholdError $settings.NumberOfSqlStmtsThresholdError
 
     # If summary fits, we will display it in the GitHub summary
     if ($testResultsSummaryMD.Length -gt 65000) {

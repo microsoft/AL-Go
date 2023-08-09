@@ -523,6 +523,10 @@ function ReadSettings {
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "PullRequestTrigger"                            = "pull_request_target"
+        "DurationThresholdWarning"                      = 10
+        "DurationThresholdError"                        = 25
+        "NumberOfSqlStmtsThresholdWarning"              = 5
+        "NumberOfSqlStmtsThresholdError"                = 10
     }
 
     # Read settings from files and merge them into the settings object
