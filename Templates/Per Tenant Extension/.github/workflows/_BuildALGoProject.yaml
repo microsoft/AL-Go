@@ -92,8 +92,7 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             gitHubSecrets: ${{ toJson(secrets) }}
-            getSecrets: ${{ inputs.secrets }}
-            getAppDependencyProbingPathsSecrets: 'Y'
+            getSecrets: '${{ inputs.secrets }},appDependencyProbingPathsSecrets'
 
         - name: Determine ArtifactUrl
           uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main

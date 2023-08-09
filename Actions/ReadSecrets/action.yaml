@@ -11,10 +11,6 @@ inputs:
   getSecrets:
     description: Comma separated list of Secrets to get
     required: true
-  getAppDependencyProbingPathsSecrets:
-    description: Specify whether or not the function should also get AuthToken secrets from AppDependencyProbingPaths
-    required: false
-    default: 'N'
   parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
@@ -26,12 +22,11 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _getSecrets: ${{ inputs.getSecrets }}
-        _getAppDependencyProbingPathsSecrets: ${{ inputs.getAppDependencyProbingPathsSecrets }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -getAppDependencyProbingPathsSecrets ($ENV:_getAppDependencyProbingPathsSecrets -eq 'Y') -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
+          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

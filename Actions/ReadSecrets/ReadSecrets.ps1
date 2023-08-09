@@ -3,8 +3,6 @@ Param(
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $getSecrets = "",
-    [Parameter(HelpMessage = "Specify whether or not the function should also get AuthToken secrets from AppDependencyProbingPaths", Mandatory = $false)]
-    [bool] $getAppDependencyProbingPathsSecrets,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
@@ -46,11 +44,15 @@ try {
             }
         }
     }
+    $getAppDependencyProbingPathsSecrets = $false
     [System.Collections.ArrayList]$secretsCollection = @()
     $getSecrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
         $secretNameProperty = "$($secret)SecretName"
-        if ($settings.Keys -contains $secretNameProperty) {
+        if ($secret -eq 'AppDependencyProbingPathsSecrets') {
+            $getAppDependencyProbingPathsSecrets = $true
+        }
+        elseif ($settings.Keys -contains $secretNameProperty) {
             $secret = "$($secret)=$($settings."$secretNameProperty")"
         }
         $secretsCollection += $secret

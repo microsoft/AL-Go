@@ -1,7 +1,7 @@
 # Read secrets
 Read secrets from GitHub secrets or Azure Keyvault for AL-Go workflows
 The secrets read and added to the output are the secrets specified in the getSecrets parameter
-Additionally, the secrets specified by the authToken secret in AppDependencyProbingPaths are read if getAppDependencyProbingPathsSecrets is 'Y'
+Additionally, the secrets specified by the authToken secret in AppDependencyProbingPaths are read if appDependencyProbingPathsSecrets is specified in getSecrets
 
 ## INPUT
 
@@ -15,8 +15,7 @@ Additionally, the secrets specified by the authToken secret in AppDependencyProb
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| getSecrets | Yes | Comma separated list of secrets to get | |
-| getAppDependencyProbingPathsSecrets | No | Specify whether or not the function should also get AuthToken secrets from AppDependencyProbingPaths | N |
+| getSecrets | Yes | Comma separated list of secrets to get (add appDependencyProbingPathsSecrets to request secrets needed for resolving dependencies in AppDependencyProbingPaths) | |
 
 ## OUTPUT
 
