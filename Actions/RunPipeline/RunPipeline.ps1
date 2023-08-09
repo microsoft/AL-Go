@@ -110,6 +110,9 @@ try {
             $runAlPipelineParams += @{
                 "artifactCachePath" = Join-Path $ENV:GITHUB_WORKSPACE ".artifactcache"
             }
+            $analyzeRepoParams += @{
+                "doNotCheckArtifactSetting" = $true
+            }
         }
     }
 
