@@ -1046,7 +1046,7 @@ function AnalyzeRepo {
                                     Write-Host "Adding folders from $depProject to $_"
                                     $found = $false
                                     $depSettings."$propertyName" | ForEach-Object {
-                                        $folder = (Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative).ToLowerInvariant()
+                                        $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
                                         if (!$settings."$propertyName".Contains($folder)) {
                                             $settings."$propertyName" += @($folder)
                                             $found = $true
