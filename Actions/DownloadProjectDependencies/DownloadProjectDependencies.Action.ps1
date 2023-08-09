@@ -8,10 +8,11 @@ Param(
     [string] $token
 )
 
-function DownloadDependenciesFromProbingPaths([ref] $settings, $baseFolder, $project, $destinationPath) {
-    $settings.Value = AnalyzeRepo -settings $settings.Value -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
-    if ($settings.Value.ContainsKey('appDependencyProbingPaths') -and $settings.Value.appDependencyProbingPaths) {
-        return Get-Dependencies -probingPathsJson $settings.Value.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinationPath) {
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings | Out-Null
+    if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
+        return Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
     }
 }
 
@@ -90,8 +91,7 @@ $downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $bas
 Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading project dependencies from probing paths"
-$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
-$downloadedDependencies += DownloadDependenciesFromProbingPaths -settings ([ref]$settings) -baseFolder $baseFolder -project $project -destinationPath $destinationPath
+$downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath
 Write-Host "::endgroup::"
 
 Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
@@ -118,10 +118,3 @@ $DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
-
-'appFolders', 'testFolders', 'bcptTestFolders' | ForEach-Object {
-    $propName = $_
-    Write-Host "Setting $($propName) to $($settings."$propName" -join ', ')"
-    $foldersJson = ConvertTo-Json $settings."$propName" -Depth 99 -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$propName=$foldersJson"
-}

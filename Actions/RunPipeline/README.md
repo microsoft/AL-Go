@@ -17,9 +17,6 @@ Run pipeline in AL-Go repository
 | token | | The GitHub token running the action | github.token |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | artifact | | ArtifactUrl to use for the build | settings.artifact |
-| appFolders | | A JSON-formatted array of appFolders | settings.appFolders |
-| testFolders | | A JSON-formatted array of testFolders | settings.testFolders |
-| bcptTestFolders | | A JSON-formatted array of bcptTestFolders | settings.bcptTestFolders |
 | project | | Project name if the repository is setup for multiple projects | . |
 | buildMode | | Specifies a mode to use for the build steps | Default |
 | installAppsJson | | A JSON-formatted list of apps to install | [] |
