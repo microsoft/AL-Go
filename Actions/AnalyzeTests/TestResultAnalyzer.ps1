@@ -168,10 +168,8 @@ function GetBcptSummaryMD {
     $bcpt = ReadBcptFile -path $path
     $baseLine = ReadBcptFile -path $baseLinePath
 
-    $failuresSummaryMD = ""
-
     $summarySb = [System.Text.StringBuilder]::new()
-    $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|$(if ($baseLine){'Status|'})Duration|$(if ($baseLine){'Duration (BaseLine)|'})SQL Stmts|$(if ($baseLine){'SQL Stmts (BaseLine)|'})\n|:---|:---|:---|:---|$(if ($baseLine){'---:|'}):--:|$(if ($baseLine){'---:|'})---:|$(if ($baseLine){'---:|'})\n") | Out-Null
+    $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|$(if ($baseLine){'Status|'})Duration|$(if ($baseLine){'Duration (Base)|Duration (Diff)|'})SQL Stmts|$(if ($baseLine){'SQL Stmts (Base)|SQL Stmts (Diff)|'})\n|:---|:---|:---|:---|$(if ($baseLine){'---:|'}):--:|$(if ($baseLine){'---:|'})---:|$(if ($baseLine){'---:|'})\n") | Out-Null
 
     $lastSuiteName = ''
     $lastCodeunitID = ''
@@ -192,8 +190,8 @@ function GetBcptSummaryMD {
                 # Get measurements to use for statistics
                 $measurements = @($operation."measurements" | Sort-Object -Descending { $_.durationMin } | Select-Object -Skip $skipMeasurements)
                 # Calculate statistics and store them in the operation
-                $durationMin = ($measurements | ForEach-Object { $_.durationMin } | Measure-Object -Average).Average
-                $numberOfSQLStmts = ($measurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Average).Average
+                $durationMin = ($measurements | ForEach-Object { $_.durationMin } | Measure-Object -Minimum).Minimum
+                $numberOfSQLStmts = ($measurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Minimum).Minimum
 
                 $baseLineFound = $true
                 try {
@@ -201,47 +199,45 @@ function GetBcptSummaryMD {
                     if ($baseLineMeasurements.Count -eq 0) {
                         throw "No base line measurements"
                     }
-                    $baseLineDurationMin = ($baseLineMeasurements | ForEach-Object { $_.durationMin } | Measure-Object -Average).Average
-                    $baseLineNumberOfSQLStmts = ($baseLineMeasurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Average).Average
+                    $baseDurationMin = ($baseLineMeasurements | ForEach-Object { $_.durationMin } | Measure-Object -Minimum).Minimum
+                    $diffDurationMin = $durationMin-$baseDurationMin
+                    $baseNumberOfSQLStmts = ($baseLineMeasurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Minimum).Minimum
+                    $diffNumberOfSQLStmts = $numberOfSQLStmts-$baseNumberOfSQLStmts
                 }
                 catch {
                     $baseLineFound = $false
-                    $baseLineDurationMin = $durationMin
-                    $baseLineNumberOfSQLStmts = $numberOfSQLStmts
+                    $baseDurationMin = $durationMin
+                    $diffDurationMin = 0
+                    $baseNumberOfSQLStmts = $numberOfSQLStmts
+                    $diffNumberOfSQLStmts = 0
                 }
 
-                $pctDurationMin = ($durationMin-$baseLineDurationMin)*100/$baseLineDurationMin
-                if ($pctDurationMin -le 0) {
-                    $durationMinStr = "**$($durationMin.ToString("N2"))**|"
-                    $baseLineDurationMinStr = "$($baseLineDurationMin.ToString("N2"))|"
-                }
-                else {
-                    $durationMinStr = "$($durationMin.ToString("N2"))|"
-                    $baseLineDurationMinStr = "**$($baseLineDurationMin.ToString("N2"))**|"
-                }
+                $pctDurationMin = ($durationMin-$baseDurationMin)*100/$baseDurationMin
+                $durationMinStr = "$($durationMin.ToString("N2"))|"
+                $baseDurationMinStr = "$($baseDurationMin.ToString("N2"))|"
+                $diffDurationMinStr = "$($diffDurationMin.ToString("N2"))|"
 
-                $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseLineNumberOfSQLStmts)*100/$baseLineNumberOfSQLStmts
-                if ($pctNumberOfSQLStmts -le 0) {
-                    $numberOfSQLStmtsStr = "**$($numberOfSQLStmts.ToString("N0"))**|"
-                    $baseLineNumberOfSQLStmtsStr = "$($baseLineNumberOfSQLStmts.ToString("N0"))|"
-                }
-                else {
-                    $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("N0"))|"
-                    $baseLineNumberOfSQLStmtsStr = "**$($baseLineNumberOfSQLStmts.ToString("N0"))**|"
-                }
+                $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseNumberOfSQLStmts)*100/$baseNumberOfSQLStmts
+                $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("N0"))|"
+                $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("N0"))|"
+                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("N0"))|"
 
                 if (!$baseLine) {
                     # No baseline provided
                     $statusStr = ''
-                    $baselinedurationMinStr = ''
-                    $baseLineNumberOfSQLStmtsStr = ''
+                    $baseDurationMinStr = ''
+                    $diffDurationMinStr = ''
+                    $baseNumberOfSQLStmtsStr = ''
+                    $diffNumberOfSQLStmtsStr = ''
                 }
                 else {
                     if (!$baseLineFound) {
                         # Baseline provided, but not found for this operation
                         $statusStr = $statusSkipped
-                        $baselinedurationMinStr = 'N/A|'
-                        $baseLineNumberOfSQLStmtsStr = 'N/A|'
+                        $baseDurationMinStr = 'N/A|'
+                        $diffDurationMinStr = '|'
+                        $baseNumberOfSQLStmtsStr = 'N/A|'
+                        $diffNumberOfSQLStmtsStr = '|'
                     }
                     else {
                         $statusStr = $statusOK
@@ -283,7 +279,7 @@ function GetBcptSummaryMD {
                 $thisCodeunitID = ''; if ($codeunitID -ne $lastCodeunitID) { $thisCodeunitID = $codeunitID; $thisOperationName = $operationName }
                 $thisSuiteName = ''; if ($suiteName -ne $lastSuiteName) { $thisSuiteName = $suiteName; $thisOperationName = $operationName }
 
-                $summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseLineDurationMinStr$numberOfSQLStmtsStr$baseLineNumberOfSQLStmtsStr\n") | Out-Null
+                $summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseDurationMinStr$diffDurationMinStr$numberOfSQLStmtsStr$baseNumberOfSQLStmtsStr$diffNumberOfSQLStmtsStr\n") | Out-Null
 
                 $lastSuiteName = $suiteName
                 $lastCodeunitID = $codeUnitID
@@ -296,7 +292,7 @@ function GetBcptSummaryMD {
     if (-not $baseLine) {
         $summarySb.Append("\n<i>No baseline provided. Copy a set of BCPT results to $([System.IO.Path]::GetFileName($baseLinePath)) in the project folder in order to establish a baseline.</i>") | Out-Null
     }
-    
+
     $summarySb.ToString()
 }
 
