@@ -1,10 +1,9 @@
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
-$bcContainerHelperPath = $null
 
 Describe "Get-ProjectsToBuild" {
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
-        $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
+        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
         $scriptPath = Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.ps1" -Resolve
         . $scriptPath
@@ -602,6 +601,6 @@ Describe "Get-ProjectsToBuild" {
     }
 
     AfterAll {
-        CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+        CleanupAfterBcContainerHelper
     }
 }

@@ -1,5 +1,4 @@
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
-$bcContainerHelperPath = $null
 
 # Settings, which affects the behavior of DetermineArtifactUrl
 # - artifact - specifies an artifactUrl (or pattern) to use
@@ -11,7 +10,7 @@ $bcContainerHelperPath = $null
 Describe "DetermineArtifactUrl" {
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
-        $bcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
+        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
         Mock -CommandName Get-BcArtifactUrl -MockWith { Param([string] $storageAccount, [string] $type = 'sandbox', [string] $version, [string] $country = '*', [string] $select = 'Latest', [string] $sasToken = '')
 
@@ -114,7 +113,7 @@ Describe "DetermineArtifactUrl" {
     }
 
     AfterAll {
-        CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+        CleanupAfterBcContainerHelper
     }
 }
 

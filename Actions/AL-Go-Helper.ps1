@@ -275,8 +275,10 @@ function DownloadAndImportBcContainerHelper {
         if (-not $module) {
             OutputError "When setting BcContainerHelperVersion to none, you need to ensure that BcContainerHelper is installed on the build agent"
         }
-
         $BcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
+    }
+    elseif ($env:BcContainerHelperPath) {
+        $BcContainerHelperPath = $env:BcContainerHelperPath    
     }
     else {
         $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -304,23 +306,25 @@ function DownloadAndImportBcContainerHelper {
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
+        $env:BcContainerHelperPath = $BcContainerHelperPath
+        Add-Content -Encoding UTF8 -Path $GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
     }
     . $BcContainerHelperPath @params
-    $tempName
 }
 
 function CleanupAfterBcContainerHelper {
-    Param(
-        [string] $bcContainerHelperPath
-    )
-
-    if ($bcContainerHelperPath) {
+    if ($env:BcContainerHelperPath) {
         try {
             Write-Host "Removing BcContainerHelper"
             Remove-Module BcContainerHelper
             Remove-Item $bcContainerHelperPath -Recurse -Force
         }
-        catch {}
+        catch {
+        }
+        finally {
+            $env:BcContainerHelperPath = ""
+            Add-Content -Encoding UTF8 -Path $GITHUB_ENV "BcContainerHelperPath="
+        }
     }
 }
 
@@ -1388,7 +1392,6 @@ function CreateDevEnv {
         [string] $baseFolder,
         [string] $project,
         [string] $userName = $env:Username,
-        [string] $bcContainerHelperPath = "",
 
         [Parameter(ParameterSetName = 'cloud')]
         [Hashtable] $bcAuthContext = $null,
@@ -1417,10 +1420,7 @@ function CreateDevEnv {
     $projectFolder = Join-Path $baseFolder $project -Resolve
     $dependenciesFolder = Join-Path $projectFolder ".dependencies"
     $runAlPipelineParams = @{}
-    $loadBcContainerHelper = ($bcContainerHelperPath -eq "")
-    if ($loadBcContainerHelper) {
-        $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
-    }
+    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
     try {
         if ($caller -eq "local") {
             $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -1765,9 +1765,7 @@ function CreateDevEnv {
             -keepContainer
     }
     finally {
-        if ($loadBcContainerHelper) {
-            CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
-        }
+        CleanupAfterBcContainerHelper
         if (Test-Path $dependenciesFolder) {
             Get-ChildItem -Path $dependenciesFolder -Include * -File | ForEach-Object { $_.Delete() }
         }

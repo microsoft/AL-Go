@@ -149,6 +149,13 @@ jobs:
           Write-Host "DeliveryTargetCount=$($deliveryTargets.Count)"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
 
+      - name: Cleanup
+        if: always()
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+
   CheckForUpdates:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
@@ -169,6 +176,13 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           templateUrl: ${{ env.templateUrl }}
+
+      - name: Cleanup
+        if: always()
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
   Build:
     needs: [ Initialization ]
@@ -318,6 +332,13 @@ jobs:
           environmentName: ${{ steps.authContext.outputs.environmentName }}
           artifacts: '.artifacts'
 
+      - name: Cleanup
+        if: always()
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+
   Deliver:
     needs: [ Initialization, Build ]
     if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargetCount > 0
@@ -368,6 +389,13 @@ jobs:
           projects: ${{ needs.Initialization.outputs.projects }}
           deliveryTarget: ${{ matrix.deliveryTarget }}
           artifacts: '.artifacts'
+
+      - name: Cleanup
+        if: always()
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
   PostProcess:
     if: (!cancelled())
