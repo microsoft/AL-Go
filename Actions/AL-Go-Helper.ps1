@@ -270,15 +270,15 @@ function DownloadAndImportBcContainerHelper {
     }
 
     if ($bcContainerHelperVersion -eq "none") {
-        $tempName = ""
         $module = Get-Module BcContainerHelper
         if (-not $module) {
             OutputError "When setting BcContainerHelperVersion to none, you need to ensure that BcContainerHelper is installed on the build agent"
         }
         $BcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
+        . $BcContainerHelperPath @params
     }
     elseif ($env:BcContainerHelperPath) {
-        $BcContainerHelperPath = $env:BcContainerHelperPath    
+        . $env:BcContainerHelperPath @params
     }
     else {
         $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -306,10 +306,12 @@ function DownloadAndImportBcContainerHelper {
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
+        Write-Host $BcContainerHelperPath
+        . $BcContainerHelperPath @params
+        Write-Host "done"
         $env:BcContainerHelperPath = $BcContainerHelperPath
         Add-Content -Encoding UTF8 -Path $GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
     }
-    . $BcContainerHelperPath @params
 }
 
 function CleanupAfterBcContainerHelper {
