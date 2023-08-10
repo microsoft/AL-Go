@@ -168,12 +168,12 @@ function GetBcptSummaryMD {
 
     $summarySb = [System.Text.StringBuilder]::new()
     if ($baseLine) {
-        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration|Duration base|Duration diff|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
-        $summarySb.Append("|:---------|:----------|:------------|:--------|:----:|-------:|------------:|------------:|------------:|--------:|-------------:|-------------:|-------------:|\n") | Out-Null
+        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration (ms)|Duration base (ms)|Duration diff (ms)|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
+        $summarySb.Append("|:---------|:----------|:------------|:--------|:----:|------------:|-----------------:|-----------------:|------------:|--------:|-------------:|-------------:|-------------:|\n") | Out-Null
     }
     else {
-        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Duration|SQL Stmts|\n") | Out-Null
-        $summarySb.Append("|:---------|:----------|:------------|:--------|-------:|--------:|\n") | Out-Null
+        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Duration (ms)|SQL Stmts|\n") | Out-Null
+        $summarySb.Append("|:---------|:----------|:------------|:--------|------------:|--------:|\n") | Out-Null
     }
 
     $lastSuiteName = ''
@@ -218,14 +218,14 @@ function GetBcptSummaryMD {
                 }
 
                 $pctDurationMin = ($durationMin-$baseDurationMin)*100/$baseDurationMin
-                $durationMinStr = "$($durationMin.ToString("N2"))ms|"
-                $baseDurationMinStr = "$($baseDurationMin.ToString("N2"))ms|"
-                $diffDurationMinStr = "$($diffDurationMin.ToString("**#**;-#;0"))ms|$($pctDurationMin.ToString('+#.#;-#.#;0'))%|"
+                $durationMinStr = "$($durationMin.ToString("#"))|"
+                $baseDurationMinStr = "$($baseDurationMin.ToString("#"))|"
+                $diffDurationMinStr = "$($diffDurationMin.ToString("+#;-#;0"))|$($pctDurationMin.ToString('+#;-#;0'))%|"
 
                 $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseNumberOfSQLStmts)*100/$baseNumberOfSQLStmts
-                $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("N0"))|"
-                $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("N0"))|"
-                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("**#**;-#;0"))|$($pctNumberOfSQLStmts.ToString('+#.#;-#.#;0'))%|"
+                $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("#"))|"
+                $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("#"))|"
+                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("+#;-#;0"))|$($pctNumberOfSQLStmts.ToString('+#;-#;0'))%|"
 
                 $thisOperationName = ''; if ($operationName -ne $lastOperationName) { $thisOperationName = $operationName }
                 $thisCodeunitName = ''; if ($codeunitName -ne $lastCodeunitName) { $thisCodeunitName = $codeunitName; $thisOperationName = $operationName }
