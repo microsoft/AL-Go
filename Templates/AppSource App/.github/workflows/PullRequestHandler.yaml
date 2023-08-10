@@ -82,6 +82,13 @@ jobs:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
 
+      - name: Cleanup
+        if: always()
+        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+
   Build:
     needs: [ Initialization ]
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
