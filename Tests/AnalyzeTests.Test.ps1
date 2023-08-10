@@ -97,7 +97,7 @@ Describe "AnalyzeTests Action Tests" {
         $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine1
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
-        $columns = 11
+        $columns = 13
         $rows = 12
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
@@ -120,7 +120,7 @@ Describe "AnalyzeTests Action Tests" {
         $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2 -warningDurationThreshold 1 -errorDurationThreshold 2 -warningNumberOfSqlStmtsThreshold 1 -errorNumberOfSqlStmtsThreshold 2
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
-        $columns = 11
+        $columns = 13
         $rows = 12
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2

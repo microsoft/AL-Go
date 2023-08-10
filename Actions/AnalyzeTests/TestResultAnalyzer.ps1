@@ -167,7 +167,14 @@ function GetBcptSummaryMD {
     $baseLine = ReadBcptFile -path $baseLinePath
 
     $summarySb = [System.Text.StringBuilder]::new()
-    $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|$(if ($baseLine){'Status|'})Duration|$(if ($baseLine){'Duration (Base)|Duration (Diff)|'})SQL Stmts|$(if ($baseLine){'SQL Stmts (Base)|SQL Stmts (Diff)|'})\n|:---|:---|:---|:---|$(if ($baseLine){'---:|'}):--:|$(if ($baseLine){'---:|---:|'})---:|$(if ($baseLine){'---:|---:|'})\n") | Out-Null
+    if ($baseLine) {
+        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration|Duration base|Duration diff|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
+        $summarySb.Append("|:---------|:----------|:------------|:--------|:----:|-------:|------------:|------------:|------------:|--------:|-------------:|-------------:|-------------:|\n") | Out-Null
+    }
+    else {
+        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Duration|SQL Stmts|\n") | Out-Null
+        $summarySb.Append("|:---------|:----------|:------------|:--------|-------:|--------:|\n") | Out-Null
+    }
 
     $lastSuiteName = ''
     $lastCodeunitID = ''
@@ -211,14 +218,14 @@ function GetBcptSummaryMD {
                 }
 
                 $pctDurationMin = ($durationMin-$baseDurationMin)*100/$baseDurationMin
-                $durationMinStr = "$($durationMin.ToString("N2"))|"
-                $baseDurationMinStr = "$($baseDurationMin.ToString("N2"))|"
-                $diffDurationMinStr = "$($diffDurationMin.ToString("**#**;-#;0"))|"
+                $durationMinStr = "$($durationMin.ToString("N2"))ms|"
+                $baseDurationMinStr = "$($baseDurationMin.ToString("N2"))ms|"
+                $diffDurationMinStr = "$($diffDurationMin.ToString("**#**;-#;0"))ms|$($pctDurationMin.ToString('+#.#;-#.#;0'))%|"
 
                 $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseNumberOfSQLStmts)*100/$baseNumberOfSQLStmts
                 $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("N0"))|"
                 $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("N0"))|"
-                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("**#**;-#;0"))|"
+                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("**#**;-#;0"))|$($pctNumberOfSQLStmts.ToString('+#.#;-#.#;0'))%|"
 
                 if (!$baseLine) {
                     # No baseline provided
@@ -233,9 +240,9 @@ function GetBcptSummaryMD {
                         # Baseline provided, but not found for this operation
                         $statusStr = $statusSkipped
                         $baseDurationMinStr = 'N/A|'
-                        $diffDurationMinStr = '|'
+                        $diffDurationMinStr = '||'
                         $baseNumberOfSQLStmtsStr = 'N/A|'
-                        $diffNumberOfSQLStmtsStr = '|'
+                        $diffNumberOfSQLStmtsStr = '||'
                     }
                     else {
                         $statusStr = $statusOK
