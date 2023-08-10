@@ -306,9 +306,7 @@ function DownloadAndImportBcContainerHelper {
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
-        Write-Host $BcContainerHelperPath
         . $BcContainerHelperPath @params
-        Write-Host "done"
         $env:BcContainerHelperPath = $BcContainerHelperPath
         Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
     }
