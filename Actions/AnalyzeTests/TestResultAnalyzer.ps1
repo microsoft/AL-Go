@@ -227,6 +227,11 @@ function GetBcptSummaryMD {
                 $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("N0"))|"
                 $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("**#**;-#;0"))|$($pctNumberOfSQLStmts.ToString('+#.#;-#.#;0'))%|"
 
+                $thisOperationName = ''; if ($operationName -ne $lastOperationName) { $thisOperationName = $operationName }
+                $thisCodeunitName = ''; if ($codeunitName -ne $lastCodeunitName) { $thisCodeunitName = $codeunitName; $thisOperationName = $operationName }
+                $thisCodeunitID = ''; if ($codeunitID -ne $lastCodeunitID) { $thisCodeunitID = $codeunitID; $thisOperationName = $operationName }
+                $thisSuiteName = ''; if ($suiteName -ne $lastSuiteName) { $thisSuiteName = $suiteName; $thisOperationName = $operationName }
+
                 if (!$baseLine) {
                     # No baseline provided
                     $statusStr = ''
@@ -248,29 +253,30 @@ function GetBcptSummaryMD {
                         $statusStr = $statusOK
                         if ($pctDurationMin -ge $DurationThresholdError) {
                             $statusStr = $statusError
-                            if ($operationName -eq "Scenario") {
-
-                                # TODO: Determine when to give errors and warnings
-
+                            if ($thisCodeunitName) {
+                                # Only give errors and warnings on top level operation
                                 OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($DurationThresholdError)% for duration"
                             }
                         }
                         if ($pctNumberOfSQLStmts -ge $NumberOfSqlStmtsThresholdError) {
                             $statusStr = $statusError
-                            if ($operationName -eq "Scenario") {
+                            if ($thisCodeunitName) {
+                                # Only give errors and warnings on top level operation
                                 OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($NumberOfSqlStmtsThresholdError)% for number of SQL statements"
                             }
                         }
                         if ($statusStr -eq $statusOK) {
                             if ($pctDurationMin -ge $DurationThresholdWarning) {
                                 $statusStr = $statusWarning
-                                if ($operationName -eq "Scenario") {
+                                if ($thisCodeunitName) {
+                                    # Only give errors and warnings on top level operation
                                     OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the warning threshold of $($DurationThresholdWarning)% for duration"
                                 }
                             }
                             if ($pctNumberOfSQLStmts -ge $NumberOfSqlStmtsThresholdWarning) {
                                 $statusStr = $statusWarning
-                                if ($operationName -eq "Scenario") {
+                                if ($thisCodeunitName) {
+                                    # Only give errors and warnings on top level operation
                                     OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the warning threshold of $($NumberOfSqlStmtsThresholdWarning)% for number of SQL statements"
                                 }
                             }
@@ -278,11 +284,6 @@ function GetBcptSummaryMD {
                     }
                     $statusStr += '|'
                 }
-
-                $thisOperationName = ''; if ($operationName -ne $lastOperationName) { $thisOperationName = $operationName }
-                $thisCodeunitName = ''; if ($codeunitName -ne $lastCodeunitName) { $thisCodeunitName = $codeunitName; $thisOperationName = $operationName }
-                $thisCodeunitID = ''; if ($codeunitID -ne $lastCodeunitID) { $thisCodeunitID = $codeunitID; $thisOperationName = $operationName }
-                $thisSuiteName = ''; if ($suiteName -ne $lastSuiteName) { $thisSuiteName = $suiteName; $thisOperationName = $operationName }
 
                 $summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseDurationMinStr$diffDurationMinStr$numberOfSQLStmtsStr$baseNumberOfSQLStmtsStr$diffNumberOfSQLStmtsStr\n") | Out-Null
 
