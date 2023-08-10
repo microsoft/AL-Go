@@ -310,7 +310,7 @@ function DownloadAndImportBcContainerHelper {
         . $BcContainerHelperPath @params
         Write-Host "done"
         $env:BcContainerHelperPath = $BcContainerHelperPath
-        Add-Content -Encoding UTF8 -Path $GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
+        Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
     }
 }
 
