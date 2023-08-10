@@ -97,7 +97,7 @@ Describe "AnalyzeTests Action Tests" {
         $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine1
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
-        $columns = 9
+        $columns = 11
         $rows = 12
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
@@ -126,7 +126,7 @@ Describe "AnalyzeTests Action Tests" {
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
         [regex]::Matches($md, '\|Operation.\|').Count | should -Be 10
         [regex]::Matches($md, '\|N\/A\|').Count | should -Be 4
-        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 2
+        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 4
         [regex]::Matches($md, "\|$statusWarning\|").Count | should -Be 4
         [regex]::Matches($md, "\|$statusError\|").Count | should -Be 2
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
