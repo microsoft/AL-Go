@@ -325,7 +325,7 @@ function CleanupAfterBcContainerHelper {
         }
         finally {
             $env:BcContainerHelperPath = ""
-            Add-Content -Encoding UTF8 -Path $GITHUB_ENV "BcContainerHelperPath="
+            Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath="
         }
     }
 }
