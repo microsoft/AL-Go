@@ -37,7 +37,7 @@ try {
     Set-Location $baseRepoPath
 
     # Whoami
-    $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
+    $user = invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" user -silent -returnValue | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
 
     # Dump configuration
