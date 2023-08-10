@@ -50,9 +50,9 @@ Describe "AnalyzeTests Action Tests" {
 
         $bcptFilename = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 5 -noOfMeasurements 4
         # BaseLine1 has overall highter duration and more SQL statements than bcptFilename (+ one more opearion)
-        $bcptBaseLine1 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 4 -noOfOperations 6 -noOfMeasurements 4 -durationOffset 1 -numberOfSQLStmtsOffset 1
+        $bcptBaseLine1 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 4 -noOfOperations 6 -noOfMeasurements 4 -durationOffset 5 -numberOfSQLStmtsOffset 1
         # BaseLine2 has overall lower duration and less SQL statements than bcptFilename (+ one less opearion)
-        $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 4 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 1
+        $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 4 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 0
     }
 
     It 'Compile Action' {
@@ -117,18 +117,18 @@ Describe "AnalyzeTests Action Tests" {
         $script:warningCount = 0
         Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
 
-        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2 -warningDurationThreshold 4 -errorDurationThreshold 8 -warningNumberOfSqlStmtsThreshold 4 -errorNumberOfSqlStmtsThreshold 8
+        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2 -warningDurationThreshold 1 -errorDurationThreshold 2 -warningNumberOfSqlStmtsThreshold 1 -errorNumberOfSqlStmtsThreshold 2
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
-        $columns = 9
+        $columns = 11
         $rows = 12
         [regex]::Matches($md, '\|SUITE1\|').Count | should -Be 1
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
         [regex]::Matches($md, '\|Operation.\|').Count | should -Be 10
         [regex]::Matches($md, '\|N\/A\|').Count | should -Be 4
-        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 2
+        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 4
         [regex]::Matches($md, "\|$statusWarning\|").Count | should -Be 4
-        [regex]::Matches($md, "\|$statusError\|").Count | should -Be 2
+        [regex]::Matches($md, "\|$statusError\|").Count | should -Be 0
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
         $script:errorCount | Should -be 0
         $script:warningCount | Should -be 0
