@@ -117,7 +117,7 @@ Describe "AnalyzeTests Action Tests" {
         $script:warningCount = 0
         Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
 
-        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2 -warningDurationThreshold 6 -errorDurationThreshold 12 -warningNumberOfSqlStmtsThreshold 6 -errorNumberOfSqlStmtsThreshold 12
+        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2 -warningDurationThreshold 4 -errorDurationThreshold 8 -warningNumberOfSqlStmtsThreshold 4 -errorNumberOfSqlStmtsThreshold 8
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 9
@@ -126,7 +126,7 @@ Describe "AnalyzeTests Action Tests" {
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
         [regex]::Matches($md, '\|Operation.\|').Count | should -Be 10
         [regex]::Matches($md, '\|N\/A\|').Count | should -Be 4
-        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 4
+        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 2
         [regex]::Matches($md, "\|$statusWarning\|").Count | should -Be 4
         [regex]::Matches($md, "\|$statusError\|").Count | should -Be 2
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
