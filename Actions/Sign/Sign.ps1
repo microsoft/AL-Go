@@ -1,8 +1,6 @@
 param(
     [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
     [string] $AzureCredentialsJson,
-    [Parameter(HelpMessage = "'OBSOLETE: Settings from repository in compressed Json format'", Mandatory = $true)]
-    [string] $settingsJson,
     [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
     [String] $PathToFiles,
     [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
@@ -36,7 +34,7 @@ try {
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
-    $settings = ConvertFrom-Json $settingsJson
+    $settings = $env:Settings | ConvertFrom-Json
     if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
         $AzureKeyVaultName = $AzureCredentials.keyVaultName
     } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {
