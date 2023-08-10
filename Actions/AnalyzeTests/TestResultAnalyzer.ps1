@@ -295,7 +295,10 @@ function GetBcptSummaryMD {
         }
     }
 
-    if (-not $baseLine) {
+    if ($baseLine) {
+        $summarySb.Append("\n<i>Used baseline provided in $([System.IO.Path]::GetFileName($baseLinePath)).</i>") | Out-Null
+    }
+    else {
         $summarySb.Append("\n<i>No baseline provided. Copy a set of BCPT results to $([System.IO.Path]::GetFileName($baseLinePath)) in the project folder in order to establish a baseline.</i>") | Out-Null
     }
 
