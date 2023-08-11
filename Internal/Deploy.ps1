@@ -204,7 +204,7 @@ try {
         invoke-git checkout -b $branchName origin/$algoBranch
         invoke-git add .
         invoke-git commit --allow-empty -m 'checkout'
-        invoke-git push $serverUrl
+        invoke-git push origin $branchName 
         invoke-gh pr create --fill -B "main"
     }
 }
