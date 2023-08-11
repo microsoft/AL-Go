@@ -291,7 +291,7 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
     }
 
-    if ($env:BcContainerHelperPath -and (Test-Path -Path $bcContainerHelperPath -ItemType leaf)) {
+    if ($env:BcContainerHelperPath -and (Test-Path -Path $env:BcContainerHelperPath -ItemType leaf)) {
         $bcContainerHelperPath = $env:BcContainerHelperPath
     }
     elseif ($bcContainerHelperVersion -eq "none") {

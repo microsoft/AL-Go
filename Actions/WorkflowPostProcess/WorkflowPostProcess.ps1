@@ -18,6 +18,8 @@ try {
     }
 }
 catch {
-    TrackException -telemetryScope $telemetryScope -errorRecord $_
+    if ($env:BcContainerHelperPath) {
+        TrackException -telemetryScope $telemetryScope -errorRecord $_
+    }
     throw
 }
