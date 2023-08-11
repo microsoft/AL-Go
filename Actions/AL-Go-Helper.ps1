@@ -367,7 +367,7 @@ function DownloadAndImportBcContainerHelper {
                     Remove-Item $tempName -Recurse -Force
                 }
                 else {
-                    Rename-Item -Path $tempName -NewName $version               
+                    Rename-Item -Path $tempName -NewName $version
                 }
             }
             finally {

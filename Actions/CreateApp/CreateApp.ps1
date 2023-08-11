@@ -75,7 +75,7 @@ try {
             if (!(Test-Path -Path $sampleApp)) {
                 throw "Could not locate sample app for the Business Central version"
             }
-            
+
             Extract-AppFileToFolder -appFilename $sampleApp -generateAppJson -appFolder $tmpFolder
         }
         catch {
