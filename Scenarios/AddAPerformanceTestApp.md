@@ -8,7 +8,7 @@
 1. Under **Actions**, you will see that a Merge pull request **CI workflow** has been kicked off
 ![Workflows](https://github.com/microsoft/AL-Go/assets/10775043/90ee2dee-4e2a-4d16-80bc-63d3ce1f53b5)
 1. If you wait for the workflow to complete, you will see that it completes and one of the build artifacts are the **BCPT Test Results**
-![Fail](images/https://github.com/microsoft/AL-Go/assets/10775043/ad154e32-34d4-49f1-a8de-e74ed5a79217)
+![Fail](https://github.com/microsoft/AL-Go/assets/10775043/ad154e32-34d4-49f1-a8de-e74ed5a79217)
 1. Opening the **BCPT Test Results** and inspecting the results looks like this
 ![Test failure](https://github.com/microsoft/AL-Go/assets/10775043/0869601d-55e6-4e1d-9d1e-fb1a2c0c6b05)
 1. Currently there isn't a visual viewer of these results. The goal is to have a PowerBI dashboard, which can gather BCPT test results from multiple builds and compare.
