@@ -343,13 +343,32 @@ function DownloadAndImportBcContainerHelper {
             $version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
             $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
             Write-Host "CacheFolder: $cacheFolder"
-            if (Test-Path $cacheFolder) {
-                Write-Host "remove"
-                Remove-Item $tempName -Recurse -Force
+
+            # To avoid two agents on the same machine downloading the same version at the same time, use a mutex
+            $buildMutexName = "DownloadAndImportBcContainerHelper"
+            $buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
+            try {
+                try {
+                    if (!$buildMutex.WaitOne(1000)) {
+                        Write-Host "Waiting for other process loading BcContainerHelper"
+                        $buildMutex.WaitOne() | Out-Null
+                        Write-Host "Other process completed loading BcContainerHelper"
+                    }
+                }
+                catch [System.Threading.AbandonedMutexException] {
+                    Write-Host "Other process terminated abnormally"
+                }
+                if (Test-Path $cacheFolder) {
+                    Write-Host "remove"
+                    Remove-Item $tempName -Recurse -Force
+                }
+                else {
+                    Write-Host "rename"
+                    Rename-Item -Path $tempName -NewName $version               
+                }
             }
-            else {
-                Write-Host "rename"
-                Rename-Item -Path $tempName -NewName $version               
+            finally {
+                $buildMutex.ReleaseMutex()
             }
             $bcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper/BcContainerHelper.ps1"
         }
