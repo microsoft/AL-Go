@@ -336,7 +336,7 @@ function DownloadAndImportBcContainerHelper {
             }
             $BcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper.ps1"
         }
-        Write-Host "Import from $bccContainerHelperPath"
+        Write-Host "Import from $bcContainerHelperPath"
         . $BcContainerHelperPath @params
         $env:BcContainerHelperPath = $BcContainerHelperPath
         Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
