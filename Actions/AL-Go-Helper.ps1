@@ -291,6 +291,7 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
     }
 
+    Write-Host "'$env:BcContainerHelperPath'"
     if ($env:BcContainerHelperPath -and (Test-Path -Path $env:BcContainerHelperPath -ItemType leaf)) {
         $bcContainerHelperPath = $env:BcContainerHelperPath
     }
@@ -302,6 +303,7 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
     }
     else {
+        Write-Host "check type"
         if ($isWindows) {
             $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
         }
@@ -313,6 +315,7 @@ function DownloadAndImportBcContainerHelper {
             New-Item -Path $bcContainerHelperRootFolder -ItemType Directory | Out-Null
         }
 
+        Write-Host $bcContainerHelperVersion
         $webclient = New-Object System.Net.WebClient
         if ($bcContainerHelperVersion -like "https://*") {
             # Use temp space for private versions
