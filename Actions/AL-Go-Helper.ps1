@@ -226,6 +226,23 @@ function Expand-7zipArchive {
     }
 }
 
+#
+# Download and import the BcContainerHelper module
+#
+# ContainerHelperVersion can be:
+# - preview (or dev), which will use the preview version downloaded from bccontainerhelper blob storage
+# - latest, which will use the latest version downloaded from bccontainerhelper blob storage
+# - private, which will use a fork of BcContainerHelper from the same owner as the AL-Go repo
+# - https://... - direct download url to a zip file containing the BcContainerHelper module
+#
+# When using priavet or direct download url, the module will be downloaded to a temp folder and will not be cached
+# When using preview or latest, the module will be downloaded to a cache folder and will be reused if the same version is requested again
+# This is to avoid filling up the temp folder with multiple identical versions of BcContainerHelper
+#
+# This function will use baseFolder to get settings from the repository settings file (.github/AL-Go-Settings.json) and apply to BcContainerHelper
+#
+# the function will set $env:BcContainerHelperPath, which is the path to the BcContainerHelper.ps1 file for reuse in subsequent calls
+#
 function DownloadAndImportBcContainerHelper {
     Param(
         [string] $bcContainerHelperVersion = $defaultBcContainerHelperVersion,
@@ -280,16 +297,15 @@ function DownloadAndImportBcContainerHelper {
         New-Item -Path $bcContainerHelperRootFolder -ItemType Directory | Out-Null
     }
 
-    if ($bcContainerHelperVersion -eq "none") {
+    if ($env:BcContainerHelperPath) {
+        $bcContainerHelperPath = $env:BcContainerHelperPath
+    }
+    elseif ($bcContainerHelperVersion -eq "none") {
         $module = Get-Module BcContainerHelper
         if (-not $module) {
             OutputError "When setting BcContainerHelperVersion to none, you need to ensure that BcContainerHelper is installed on the build agent"
         }
-        $BcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
-        . $BcContainerHelperPath @params
-    }
-    elseif ($env:BcContainerHelperPath) {
-        . $env:BcContainerHelperPath @params
+        $bcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
     }
     else {
         $webclient = New-Object System.Net.WebClient
@@ -320,7 +336,7 @@ function DownloadAndImportBcContainerHelper {
             }
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
-        $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
+        $bcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
         if ($bcContainerHelperVersion -notlike "https://*") {
             # Check whether the version is already available in the cache
@@ -335,13 +351,13 @@ function DownloadAndImportBcContainerHelper {
                 Write-Host "rename"
                 Rename-Item -Path $tempName -NewName $version               
             }
-            $BcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper/BcContainerHelper.ps1"
+            $bcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper/BcContainerHelper.ps1"
         }
-        Write-Host "Import from $bcContainerHelperPath"
-        . $BcContainerHelperPath @params
-        $env:BcContainerHelperPath = $BcContainerHelperPath
-        Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
     }
+    Write-Host "Import from $bcContainerHelperPath"
+    . $bcContainerHelperPath @params
+    $env:BcContainerHelperPath = $BcContainerHelperPath
+    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
 }
 
 function MergeCustomObjectIntoOrderedDictionary {
