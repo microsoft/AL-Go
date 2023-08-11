@@ -2,7 +2,7 @@
 *Prerequisites: A completed [scenario 1](GetStarted.md)*
 
 1. On **github.com**, open **Actions** on your solution, select **Create a new performance test app** and then choose **Run workflow**. Enter values for **name**, **publisher**, and **ID range** and choose **Run workflow**
-![Run Workflow](images/16a.png)
+![Run Workflow](https://github.com/microsoft/AL-Go/assets/10775043/40f9bda7-578b-4844-9c2b-f59200d04584)
 1. When the workflow is done, navigate to **Pull Requests**, **inspect the PR** and **Merge the pull request**
 ![Pull Request](images/16b.png)
 1. Under **Actions**, you will see that a Merge pull request **CI workflow** has been kicked off
