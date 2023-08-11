@@ -199,8 +199,9 @@ try {
         if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
-
-        invoke-git checkout -b "Test-Deploy-$algoBranch"
+        
+        $branchName = "Deploy/$algoBranch/$([System.Guid]::NewGuid().ToString())"
+        invoke-git checkout -b $branchName origin/$algoBranch
         invoke-git add .
         invoke-git commit --allow-empty -m 'checkout'
         invoke-git push $serverUrl
