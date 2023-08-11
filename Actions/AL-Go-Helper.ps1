@@ -269,6 +269,13 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
     }
 
+    if ($isWindows) {
+        $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
+    }
+    else {
+        $bcContainerHelperRootFolder = '/lib/bcContainerHelper'
+    }
+
     if ($bcContainerHelperVersion -eq "none") {
         $module = Get-Module BcContainerHelper
         if (-not $module) {
@@ -281,31 +288,52 @@ function DownloadAndImportBcContainerHelper {
         . $env:BcContainerHelperPath @params
     }
     else {
-        $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         $webclient = New-Object System.Net.WebClient
         if ($bcContainerHelperVersion -like "https://*") {
+            # Use temp space for private versions
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
             Write-Host "Downloading BcContainerHelper developer version from $bcContainerHelperVersion"
             try {
                 $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
             }
             catch {
+                $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
                 $bcContainerHelperVersion = "preview"
                 Write-Host "Download failed, downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
                 $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
             }
         }
-        elseif ($bcContainerHelperVersion -eq "preview" -or $bcContainerHelperVersion -eq "dev") {
-            # For backwards compatibility, use preview when dev is specified
-            Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/preview.zip", "$tempName.zip")
-        }
         else {
-            Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from CDN"
-            $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
+            if ($bcContainerHelperVersion -eq "preview" -or $bcContainerHelperVersion -eq "dev") {
+                # For backwards compatibility, use preview when dev is specified
+                Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
+                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/preview.zip", "$tempName.zip")
+            }
+            else {
+                Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from CDN"
+                $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            }
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
+        if ($bcContainerHelperVersion -notlike "https://*") {
+            # Check whether the version is already available in the cache
+            $version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
+            $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
+            Write-Host "CacheFolder: $cacheFolder"
+            if (Test-Path $cacheFolder) {
+                Write-Host "remove"
+                Remove-Item $tempName -Recurse -Force
+            }
+            else {
+                Write-Host "rename"
+                Rename-Item -Path $tempName -NewName $version               
+            }
+            $BcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper.ps1"
+        }
+        Write-Host "Import from $bccContainerHelperPath"
         . $BcContainerHelperPath @params
         $env:BcContainerHelperPath = $BcContainerHelperPath
         Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
