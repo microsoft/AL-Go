@@ -200,10 +200,11 @@ try {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
         
-        $branchName = "Deploy/$algoBranch/$([System.Guid]::NewGuid().ToString())"
-        invoke-git checkout -b $branchName origin/$algoBranch
+        $baseBranch = $config.branch
+        $branchName = "Deploy/$baseBranch/$([System.Guid]::NewGuid().ToString())"
+        invoke-git checkout -b $branchName origin/$baseBranch
         invoke-git add .
-        invoke-git commit --allow-empty -m "Deploying Al-Go from $($config.branch) to $algoBranch"
+        invoke-git commit --allow-empty -m "Deploying Al-Go from $algoBranch to $baseBranch"
         invoke-git push origin $branchName 
         invoke-gh pr create --fill -B $algoBranch
     }
