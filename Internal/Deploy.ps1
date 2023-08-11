@@ -181,20 +181,20 @@ try {
                 # When deploying to a release branch, these URLs are replaced by the following code
                 if ($config.branch -eq 'preview') {
                     $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
-                    $replace = "`$1https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`$2"
+                    $replace = "`${1}https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`${2}"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
 
                 # Replace the owner and repo names in the workflow
                 Write-Host "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                Write-Host "`$1$useRepo`$2$($useBranch)`$3"
+                Write-Host "`${1}$useRepo`${2}$($useBranch)`${3}"
                 $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                $replace = "`$1$useRepo`$2$($useBranch)`$3"
+                $replace = "`${1}$useRepo`${2}$($useBranch)`${3}"
                 $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
             }
             if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.ContainsKey("defaultBcContainerHelperVersion") -and $config.defaultBcContainerHelperVersion)) {
                 # replace defaultBcContainerHelperVersion (even if a version is set)
-                $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)"" # `$5" }
+                $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`${1}`$defaultBcContainerHelperVersion`${2}=`${3}""$($config.defaultBcContainerHelperVersion)"" # `${5}" }
             }
             [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
         }
