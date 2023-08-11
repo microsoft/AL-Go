@@ -275,8 +275,8 @@ function DownloadAndImportBcContainerHelper {
     else {
         $bcContainerHelperRootFolder = '/lib/bcContainerHelper'
     }
-    if (!(Test-Path $bccContainerHelperRootFolder)) {
-        New-Item -Path $bccContainerHelperRootFolder -ItemType Directory | Out-Null
+    if (!(Test-Path $bcContainerHelperRootFolder)) {
+        New-Item -Path $bcContainerHelperRootFolder -ItemType Directory | Out-Null
     }
 
     if ($bcContainerHelperVersion -eq "none") {
