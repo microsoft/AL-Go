@@ -302,7 +302,6 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
     }
     else {
-        Write-Host "check type"
         if ($isWindows) {
             $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
         }
