@@ -111,10 +111,6 @@ Describe "DetermineArtifactUrl" {
         $projectSettings.artifact = "///us/latest"
         Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
     }
-
-    AfterAll {
-        CleanupAfterBcContainerHelper
-    }
 }
 
 

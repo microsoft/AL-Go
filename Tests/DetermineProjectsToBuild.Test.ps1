@@ -599,8 +599,4 @@ Describe "Get-ProjectsToBuild" {
     AfterEach {
         Remove-Item $baseFolder -Force -Recurse
     }
-
-    AfterAll {
-        CleanupAfterBcContainerHelper
-    }
 }

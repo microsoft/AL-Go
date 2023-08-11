@@ -21,6 +21,3 @@ catch {
     TrackException -telemetryScope $telemetryScope -errorRecord $_
     throw
 }
-finally {
-    CleanupAfterBcContainerHelper
-}

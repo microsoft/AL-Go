@@ -312,22 +312,6 @@ function DownloadAndImportBcContainerHelper {
     }
 }
 
-function CleanupAfterBcContainerHelper {
-    if ($env:BcContainerHelperPath) {
-        try {
-            Write-Host "Removing BcContainerHelper"
-            Remove-Module BcContainerHelper
-            Remove-Item $bcContainerHelperPath -Recurse -Force
-        }
-        catch {
-        }
-        finally {
-            $env:BcContainerHelperPath = ""
-            Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath="
-        }
-    }
-}
-
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
@@ -1765,7 +1749,6 @@ function CreateDevEnv {
             -keepContainer
     }
     finally {
-        CleanupAfterBcContainerHelper
         if (Test-Path $dependenciesFolder) {
             Get-ChildItem -Path $dependenciesFolder -Include * -File | ForEach-Object { $_.Delete() }
         }
