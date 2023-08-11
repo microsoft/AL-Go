@@ -334,7 +334,7 @@ function DownloadAndImportBcContainerHelper {
                 Write-Host "rename"
                 Rename-Item -Path $tempName -NewName $version               
             }
-            $BcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper.ps1"
+            $BcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper/BcContainerHelper.ps1"
         }
         Write-Host "Import from $bcContainerHelperPath"
         . $BcContainerHelperPath @params
