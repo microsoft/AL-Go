@@ -385,12 +385,12 @@ function CreateAlGoRepository {
         
             # Replace URL's to actions repository first
             $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/main(.*)$"
-            $replace = "`$1https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`$2"
+            $replace = "`${1}https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`${2}"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
         
             # Replace AL-Go-Actions references
             $regex = "^(.*)microsoft\/AL-Go-Actions(.*)main(.*)$"
-            $replace = "`$1$($templateOwner)/AL-Go/Actions`$2$($templateBranch)`$3"
+            $replace = "`${1}$($templateOwner)/AL-Go/Actions`${2}$($templateBranch)`${3}"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
         
             $content = "$($lines -join "`n")`n"
