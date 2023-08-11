@@ -200,9 +200,11 @@ try {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
 
+        invoke-git checkout -b "Test-Deploy-$algoBranch"
         invoke-git add .
         invoke-git commit --allow-empty -m 'checkout'
         invoke-git push $serverUrl
+        invoke-gh gh pr create --fill -B "main"
     }
 }
 finally {
