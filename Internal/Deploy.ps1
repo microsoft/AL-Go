@@ -204,7 +204,7 @@ try {
         invoke-git add .
         invoke-git commit --allow-empty -m 'checkout'
         invoke-git push $serverUrl
-        invoke-gh gh pr create --fill -B "main"
+        invoke-gh pr create --fill -B "main"
     }
 }
 finally {
