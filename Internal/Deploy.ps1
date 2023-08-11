@@ -203,9 +203,9 @@ try {
         $branchName = "Deploy/$algoBranch/$([System.Guid]::NewGuid().ToString())"
         invoke-git checkout -b $branchName origin/$algoBranch
         invoke-git add .
-        invoke-git commit --allow-empty -m 'checkout'
+        invoke-git commit --allow-empty -m "Deploying Al-Go from $($config.branch) to $algoBranch"
         invoke-git push origin $branchName 
-        invoke-gh pr create --fill -B "main"
+        invoke-gh pr create --fill -B $algoBranch
     }
 }
 finally {
