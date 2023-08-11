@@ -291,8 +291,7 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
     }
 
-    Write-Host "PATH: $env:BcContainerHelperPath"
-    if ("$env:BcContainerHelperPath" -and (Test-Path -Path $env:BcContainerHelperPath -ItemType leaf)) {
+    if ("$env:BcContainerHelperPath" -and (Test-Path -Path $env:BcContainerHelperPath -PathType Leaf)) {
         $bcContainerHelperPath = $env:BcContainerHelperPath
     }
     elseif ($bcContainerHelperVersion -eq "none") {
@@ -380,8 +379,8 @@ function DownloadAndImportBcContainerHelper {
     }
     Write-Host "Import from $bcContainerHelperPath"
     . $bcContainerHelperPath @params
-    $env:BcContainerHelperPath = $BcContainerHelperPath
-    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$BcContainerHelperPath"
+    $env:BcContainerHelperPath = $bcContainerHelperPath
+    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$bcContainerHelperPath"
 }
 
 function MergeCustomObjectIntoOrderedDictionary {
