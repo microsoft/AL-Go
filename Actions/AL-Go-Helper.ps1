@@ -232,12 +232,17 @@ function Expand-7zipArchive {
 # ContainerHelperVersion can be:
 # - preview (or dev), which will use the preview version downloaded from bccontainerhelper blob storage
 # - latest, which will use the latest version downloaded from bccontainerhelper blob storage
+# - a specific version, which will use the specific version downloaded from bccontainerhelper blob storage
+# - none, which will use the BcContainerHelper module installed on the build agent
 # - private, which will use a fork of BcContainerHelper from the same owner as the AL-Go repo
 # - https://... - direct download url to a zip file containing the BcContainerHelper module
 #
-# When using priavet or direct download url, the module will be downloaded to a temp folder and will not be cached
-# When using preview or latest, the module will be downloaded to a cache folder and will be reused if the same version is requested again
+# When using private or direct download url, the module will be downloaded to a temp folder and will not be cached
+# When using none, the module will be located in modules and used from there
+# When using preview, latest or a specific version number, the module will be downloaded to a cache folder and will be reused if the same version is requested again
 # This is to avoid filling up the temp folder with multiple identical versions of BcContainerHelper
+# The cache folder is C:\ProgramData\BcContainerHelper on Windows and /home/<username>/.BcContainerHelper on Linux
+# A Mutex will be used to ensure multiple agents aren't fighting over the same cache folder
 #
 # This function will use baseFolder to get settings from the repository settings file (.github/AL-Go-Settings.json) and apply to BcContainerHelper
 #
@@ -342,7 +347,6 @@ function DownloadAndImportBcContainerHelper {
             # Check whether the version is already available in the cache
             $version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
             $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
-            Write-Host "CacheFolder: $cacheFolder"
 
             # To avoid two agents on the same machine downloading the same version at the same time, use a mutex
             $buildMutexName = "DownloadAndImportBcContainerHelper"
@@ -359,11 +363,9 @@ function DownloadAndImportBcContainerHelper {
                     Write-Host "Other process terminated abnormally"
                 }
                 if (Test-Path $cacheFolder) {
-                    Write-Host "remove"
                     Remove-Item $tempName -Recurse -Force
                 }
                 else {
-                    Write-Host "rename"
                     Rename-Item -Path $tempName -NewName $version               
                 }
             }
