@@ -205,13 +205,6 @@ jobs:
             } = createReleaseResponse;
             core.setOutput('releaseId', releaseId);
 
-      - name: Cleanup
-        if: always()
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-
   UploadArtifacts:
     runs-on: [ windows-latest ]
     needs: [ CreateRelease ]
@@ -313,13 +306,6 @@ jobs:
           artifacts: ${{ github.event.inputs.appVersion }}
           atypes: 'Apps,TestApps,Dependencies'
 
-      - name: Cleanup
-        if: always()
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
-
   CreateReleaseBranch:
     if: ${{ github.event.inputs.createReleaseBranch=='Y' }}
     runs-on: [ windows-latest ]
@@ -338,13 +324,6 @@ jobs:
           git config user.email ${{ github.actor}}@users.noreply.github.com
           git commit --allow-empty -m "Release branch ${{ needs.CreateRelease.outputs.releaseBranch }}"
           git push origin ${{ needs.CreateRelease.outputs.releaseBranch }}
-
-      - name: Cleanup
-        if: always()
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
 
   UpdateVersionNumber:
     if: ${{ github.event.inputs.updateVersionNumber!='' }}
@@ -392,13 +371,6 @@ jobs:
           parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
           versionNumber: ${{ github.event.inputs.updateVersionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}
-
-      - name: Cleanup
-        if: always()
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
 
   PostProcess:
     if: always()

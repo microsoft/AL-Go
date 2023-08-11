@@ -93,13 +93,6 @@ jobs:
             Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
           }
 
-      - name: Cleanup
-        if: always()
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-
   CreateDevelopmentEnvironment:
     runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
     defaults:

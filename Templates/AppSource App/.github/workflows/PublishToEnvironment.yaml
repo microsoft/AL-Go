@@ -102,13 +102,6 @@ jobs:
             Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
           }
 
-      - name: Cleanup
-        if: always()
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-
   Deploy:
     needs: [ Initialization ]
     if: needs.Initialization.outputs.environmentCount > 0
@@ -231,13 +224,6 @@ jobs:
           projects: ${{ steps.authContext.outputs.projects }}
           environmentName: ${{ steps.authContext.outputs.environmentName }}
           artifacts: ${{ github.event.inputs.appVersion }}
-
-      - name: Cleanup
-        if: always()
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@main
-        with:
-          shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
   PostProcess:
     if: always()
