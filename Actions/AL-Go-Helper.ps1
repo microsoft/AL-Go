@@ -273,7 +273,8 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
     }
     else {
-        $bcContainerHelperRootFolder = '/lib/bcContainerHelper'
+        $myUsername = (whoami)
+        $bcContainerHelperRootFolder = "/home/$myUsername/.BcContainerHelper"
     }
     if (!(Test-Path $bcContainerHelperRootFolder)) {
         New-Item -Path $bcContainerHelperRootFolder -ItemType Directory | Out-Null
