@@ -186,8 +186,6 @@ try {
                 }
 
                 # Replace the owner and repo names in the workflow
-                Write-Host "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                Write-Host "`${1}$useRepo`${2}$($useBranch)`${3}"
                 $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
                 $replace = "`${1}$useRepo`${2}$($useBranch)`${3}"
                 $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
