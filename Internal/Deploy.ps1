@@ -22,7 +22,7 @@ function PushChanges
 
     if ($DirectCommit) {
         invoke-git commit --allow-empty -m $CommitMessage
-        invoke-git push
+        invoke-git push origin $BaseBranch
     } else {
         $branchName = "Deploy/$baseBranch/$([System.Guid]::NewGuid().ToString())"
         invoke-git checkout -b $branchName origin/$BaseBranch
