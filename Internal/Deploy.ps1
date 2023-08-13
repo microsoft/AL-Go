@@ -229,7 +229,7 @@ try {
         invoke-git commit --allow-empty -m "Deploying Al-Go from $algoBranch to $baseBranch"
         invoke-git push origin $branchName 
         invoke-gh pr create --base $baseBranch --title "Deploying Al-Go from $algoBranch to $baseBranch" --body "Deploying Al-Go from $algoBranch to $baseBranch"#>
-        PushChanges -BaseBranch $config.branch -CommitMessage "Deploying Al-Go from $algoBranch to $($config.branch)" -DirectCommit:$directCommit
+        PushChanges -BaseBranch $config.branch -CommitMessage "Deploying Al-Go from $algoBranch to $($config.branch)" -DirectCommit $directCommit
     }
 }
 finally {
