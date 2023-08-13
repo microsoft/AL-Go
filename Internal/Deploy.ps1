@@ -24,6 +24,11 @@ function PushChanges
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $BaseBranch
     } else {
+        if (-not (invoke-git ls-remote --heads origin $BaseBranch)) {
+            Write-Host "Branch $BaseBranch does not exist in origin. Creating it"
+            invoke-git git branch origin/main $BaseBranch
+            invoke-git push origin $BaseBranch
+        }
         $branchName = "Deploy/$baseBranch/$([System.Guid]::NewGuid().ToString())"
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
