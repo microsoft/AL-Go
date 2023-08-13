@@ -223,13 +223,7 @@ try {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
         
-        <#$baseBranch = $config.branch
-        invoke-git checkout -b $branchName origin/$baseBranch
-        invoke-git add .
-        invoke-git commit --allow-empty -m "Deploying Al-Go from $algoBranch to $baseBranch"
-        invoke-git push origin $branchName 
-        invoke-gh pr create --base $baseBranch --title "Deploying Al-Go from $algoBranch to $baseBranch" --body "Deploying Al-Go from $algoBranch to $baseBranch"#>
-        PushChanges -BaseBranch $config.branch -CommitMessage "Deploying Al-Go from $algoBranch to $($config.branch)" -DirectCommit $directCommit
+        PushChanges -BaseBranch $config.branch -CommitMessage "Deploying Al-Go from $algoBranch ($srcSHA)" -DirectCommit $directCommit
     }
 }
 finally {
