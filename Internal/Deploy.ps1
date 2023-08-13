@@ -4,7 +4,7 @@
     [Parameter(Mandatory=$true)]
     [string] $token,
     [Parameter(Mandatory=$false)]
-    [switch] $directCommit
+    [bool] $directCommit
 )
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking

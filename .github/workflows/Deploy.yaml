@@ -12,6 +12,10 @@ on:
         description: 'Additionally deploy templates to main+preview branch? (Y/N) - (NOTE: Enter Y if this is a release to PROD on microsoft/al-go)'
         required: false
         default: 'N'
+      directCommit:
+        description: Direct COMMIT (Y/N)
+        required: false
+        default: "N"
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
         required: false
@@ -32,6 +36,7 @@ jobs:
         env:
           branch: ${{ github.event.inputs.branch }}
           copyToMain: ${{ github.event.inputs.copyToMain }}
+          directCommit: ${{ github.event.inputs.directCommit }}
           defaultBcContainerHelperVersion: ${{ github.event.inputs.defaultBcContainerHelperVersion }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -51,7 +56,7 @@ jobs:
                   "copyToMain" = ($env:copyToMain -eq 'Y')
                   "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
               }
-              . ".\Internal\Deploy.ps1" -config $config -token $token
+              . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit ($env:directCommit -eq 'Y')
             }
           }
           catch {
