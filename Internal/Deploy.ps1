@@ -2,12 +2,35 @@
     [Parameter(Mandatory=$true)]
     [Hashtable] $config,
     [Parameter(Mandatory=$true)]
-    [string] $token
+    [string] $token,
+    [Parameter(Mandatory=$false)]
+    [switch] $directCommit
 )
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+function PushChanges
+(
+    [string] $BaseBranch,
+    [string] $CommitMessage,
+    [switch] $DirectCommit
+)
+{
+    invoke-git add .
+
+    if ($DirectCommit) {
+        invoke-git commit --allow-empty -m $CommitMessage
+        invoke-git push
+    } else {
+        $branchName = "Deploy/$baseBranch/$([System.Guid]::NewGuid().ToString())"
+        invoke-git checkout -b $branchName origin/$BaseBranch
+        invoke-git commit --allow-empty -m $CommitMessage
+        invoke-git push origin $branchName 
+        invoke-gh pr create --base $BaseBranch --title $CommitMessage --body $CommitMessage
+    }
+}
 
 $oldPath = Get-Location
 try {
@@ -200,13 +223,13 @@ try {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
         
-        $baseBranch = $config.branch
-        $branchName = "Deploy/$baseBranch/$([System.Guid]::NewGuid().ToString())"
+        <#$baseBranch = $config.branch
         invoke-git checkout -b $branchName origin/$baseBranch
         invoke-git add .
         invoke-git commit --allow-empty -m "Deploying Al-Go from $algoBranch to $baseBranch"
         invoke-git push origin $branchName 
-        invoke-gh pr create --base $baseBranch --title "Deploying Al-Go from $algoBranch to $baseBranch" --body "Deploying Al-Go from $algoBranch to $baseBranch"
+        invoke-gh pr create --base $baseBranch --title "Deploying Al-Go from $algoBranch to $baseBranch" --body "Deploying Al-Go from $algoBranch to $baseBranch"#>
+        PushChanges -BaseBranch $config.branch -CommitMessage "Deploying Al-Go from $algoBranch to $($config.branch)" -DirectCommit:$directCommit
     }
 }
 finally {
