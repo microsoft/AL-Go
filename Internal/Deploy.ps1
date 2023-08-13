@@ -15,7 +15,7 @@ function PushChanges
 (
     [string] $BaseBranch,
     [string] $CommitMessage,
-    [switch] $DirectCommit
+    [bool] $DirectCommit
 )
 {
     invoke-git add .
