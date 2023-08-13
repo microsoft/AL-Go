@@ -206,7 +206,7 @@ try {
         invoke-git add .
         invoke-git commit --allow-empty -m "Deploying Al-Go from $algoBranch to $baseBranch"
         invoke-git push origin $branchName 
-        invoke-gh pr create --fill -B $algoBranch
+        invoke-gh pr create -B $algoBranch --title "Deploying Al-Go from $algoBranch to $baseBranch" --body "Deploying Al-Go from $algoBranch to $baseBranch"
     }
 }
 finally {
