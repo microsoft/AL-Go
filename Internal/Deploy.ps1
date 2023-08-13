@@ -222,8 +222,8 @@ try {
         if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
-        
-        PushChanges -BaseBranch $config.branch -CommitMessage "Deploying Al-Go from $algoBranch ($srcSHA)" -DirectCommit $directCommit
+        Write-Host "PushChanges -BaseBranch $branch -CommitMessage 'Deploying Al-Go from $algoBranch ($srcSHA)' -DirectCommit $directCommit"
+        PushChanges -BaseBranch $branch -CommitMessage "Deploying Al-Go from $algoBranch ($srcSHA)" -DirectCommit $directCommit
     }
 }
 finally {
