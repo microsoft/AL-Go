@@ -13,9 +13,10 @@ on:
         required: false
         default: 'N'
       directCommit:
+        type: boolean
         description: Direct COMMIT (Y/N)
         required: false
-        default: "N"
+        default: false
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
         required: false
@@ -56,7 +57,7 @@ jobs:
                   "copyToMain" = ($env:copyToMain -eq 'Y')
                   "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
               }
-              . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit ($env:directCommit -eq 'Y')
+              . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit $env:directCommit
             }
           }
           catch {
