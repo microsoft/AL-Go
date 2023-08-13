@@ -9,12 +9,13 @@ on:
         description: 'Branch to deploy to (NOTE: Use preview when deploying preview releases on microsoft/al-go)'
         required: true
       copyToMain:
+        type: boolean
         description: 'Additionally deploy templates to main+preview branch? (Y/N) - (NOTE: Enter Y if this is a release to PROD on microsoft/al-go)'
         required: false
-        default: 'N'
+        default: false
       directCommit:
         type: boolean
-        description: Direct COMMIT (Y/N)
+        description: Direct Commit (Default is false)
         required: false
         default: false
       defaultBcContainerHelperVersion:
@@ -54,7 +55,7 @@ jobs:
                   "perTenantExtensionRepo" = "AL-Go-PTE"
                   "appSourceAppRepo" = "AL-Go-AppSource"
                   "branch" = $env:branch
-                  "copyToMain" = ($env:copyToMain -eq 'Y')
+                  "copyToMain" = ($env:copyToMain -eq 'true')
                   "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
               }
               . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit ($env:directCommit -eq 'true')
