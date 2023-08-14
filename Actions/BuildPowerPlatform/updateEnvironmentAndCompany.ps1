@@ -5,7 +5,6 @@ param(
     [Parameter(Position = 2, mandatory = $true)] [string] $SolutionFolder
 )
 
-
 function Update-PowerAppSettings {
     [CmdletBinding()]
     param(
@@ -29,7 +28,7 @@ function Update-PowerAppSettings {
         Write-Warning "Could not find PowerApps connections file"
     }
 
-    Write-Host "Number of Business Central connections found: "$currentPowerAppSettings.Count
+    Write-Host "Number of Business Central Power App connections found: "$currentPowerAppSettings.Count
     $newSettings = "$EnvironmentName,$CompanyId"    
     foreach ($currentSetting in $currentPowerAppSettings) {
         if ($currentSetting -eq $newSettings) {
@@ -67,9 +66,14 @@ function Get-CurrentPowerAppSettings {
     param (
         [Parameter(Position = 0, mandatory = $true)] [string] $solutionFolder
     )
-
-    $connectionsFilePaths = Get-ChildItem -Path "$solutionFolder/CanvasApps" -Recurse -File -Include "Connections.json" | Select-Object -ExpandProperty FullName
+    
+    if (-not (Test-Path -Path "$solutionFolder/CanvasApps")) {
+        # No Canvas apps present in the solution
+        return @()
+    }
+    
     $currentSettingsList = @()
+    $connectionsFilePaths = Get-ChildItem -Path "$solutionFolder/CanvasApps" -Recurse -File -Include "Connections.json" | Select-Object -ExpandProperty FullName
     foreach ($connectionsFilePath in $connectionsFilePaths) {
         $jsonFile = Get-Content $connectionsFilePath | ConvertFrom-Json
     
@@ -133,7 +137,11 @@ function Update-FlowFile {
     )
     # Read the JSON file
     $jsonObject = Get-Content $FilePath | ConvertFrom-Json
+
+    write-host "Checking flow: $FilePath"
     
+    $shouldUpdate = $false
+
     # Update all flow triggers
     $triggersObject = $jsonObject.properties.definition.triggers
     $triggers = $triggersObject | Get-Member -MemberType Properties
@@ -143,7 +151,9 @@ function Update-FlowFile {
         if (-not $parametersObject) {
             continue
         }
-        $parametersObject = Update-ParameterObject -parametersObject $parametersObject -CompanyId $CompanyId -EnvironmentName $EnvironmentName
+        if(Update-ParameterObject -parametersObject $parametersObject -CompanyId $CompanyId -EnvironmentName $EnvironmentName){
+            $shouldUpdate = $true
+        }
     }
     
     # Update all flow actions
@@ -155,11 +165,18 @@ function Update-FlowFile {
         if (-not $parametersObject) {
             continue
         }      
-        $parametersObject = Update-ParameterObject -parametersObject $parametersObject -CompanyId $CompanyId -EnvironmentName $EnvironmentName
+        if(Update-ParameterObject -parametersObject $parametersObject -CompanyId $CompanyId -EnvironmentName $EnvironmentName){
+            $shouldUpdate = $true
+        }
     }
-
-    # Save the updated JSON back to the file
-    $jsonObject | ConvertTo-Json -Depth 100 | Set-Content $FilePath
+    if ($shouldUpdate) {
+        Write-Host "Updating: $FilePath"
+        # Save the updated JSON back to the file
+        $jsonObject | ConvertTo-Json -Depth 100 | Set-Content $FilePath
+    }
+    else {
+        Write-Host "No update needed for: $FilePath"
+    }
 }
 
 function Update-ParameterObject {
@@ -174,25 +191,34 @@ function Update-ParameterObject {
     )
     # Check if paramers are for Business Central
     if ((-not $parametersObject.company) -or (-not $parametersObject.bcEnvironment)) {
-        return $parametersObject
-    }       
-        
+        return $false
+    } 
+
+    $oldCompany = $parametersObject.company
+    $oldBcEnvironment = $parametersObject.bcenvironment
+    
+    write-host "Checking parameters object: "$parametersObject
+    write-host "BcEnvironment: $oldBcEnvironment"
+    write-host "Company: $oldCompany"
+
     # Check if parameters are already set to the correct values
-    if (($parametersObject.company -eq $CompanyId) -and ($parametersObject.bcEnvironment -eq $EnvironmentName)) {
-        Write-Host "No changes needed for: $FilePath"
-        return $parametersObject
+    if (($oldCompany -eq $CompanyId) -and ($oldBcEnvironment -eq $EnvironmentName)) {
+        return $false
     }
+
+    $enviromentVariablePlaceHolder = "@parameters("
 
     # Check if parameters are set using a different approach (e.g. environment variables or passed in parameters)
-    if ($parametersObject.company -contains "@parameters('" -or $parametersObject.bcEnvironment -contains "@parameters('") {
-        Write-Host "No changes needed for: $FilePath (parameters are set using a configurable approach)"
-        return $parametersObject
+    if ($oldCompany.contains($enviromentVariablePlaceHolder) -or $oldBcEnvironment.contains($enviromentVariablePlaceHolder)) {
+        return $false
     }
 
-    Write-Host "Updating: $FilePath"
     $parametersObject.company = $CompanyId
     $parametersObject.bcEnvironment = $EnvironmentName
-    return $parametersObject
+    
+    write-host "New parameters object: "$parametersObject
+
+    return $true
 }
 
 Write-Host "Updating the Power Platform solution Business Central connection settings"
