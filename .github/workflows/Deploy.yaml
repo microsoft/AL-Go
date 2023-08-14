@@ -30,7 +30,7 @@ defaults:
 jobs:
   Deploy:
     runs-on: [ ubuntu-latest ]
-    environment: production
+    environment: Production
     steps:
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
