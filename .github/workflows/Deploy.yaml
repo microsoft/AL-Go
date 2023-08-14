@@ -15,7 +15,7 @@ on:
         default: false
       directCommit:
         type: boolean
-        description: Direct Commit (Default is false)
+        description: Push directly to the target branch. If not set, a PR will be created.
         required: false 
         default: false
       defaultBcContainerHelperVersion:
