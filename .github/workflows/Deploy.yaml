@@ -10,7 +10,7 @@ on:
         required: true
       copyToMain:
         type: boolean
-        description: 'Additionally deploy templates to main+preview branch? (Y/N) - (NOTE: Enter Y if this is a release to PROD on microsoft/al-go)'
+        description: 'Additionally deploy templates to main+preview branch? Set if this is a release to PROD on microsoft/al-go'
         required: false
         default: false
       directCommit:
