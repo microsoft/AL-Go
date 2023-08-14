@@ -84,7 +84,7 @@ runs:
         process-canvas-apps: true
 
     - name: Rebuild solution
-      uses: microsoft/AL-Go-Actions/BuildPowerPlatform@PPPreview
+      uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
       with:
         shell: ${{ inputs.shell }}
         parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
