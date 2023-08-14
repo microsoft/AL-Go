@@ -16,7 +16,7 @@ on:
       directCommit:
         type: boolean
         description: Direct Commit (Default is false)
-        required: false
+        required: false 
         default: false
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
@@ -32,6 +32,19 @@ jobs:
     runs-on: [ ubuntu-latest ]
     environment: production
     steps:
+      - name: Validate Deployment
+        #if: github.repository_owner == 'microsoft'
+        env: 
+          runId: ${{ github.run_id }}
+          repository: ${{ github.repository }}
+        run: | 
+          $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
+          $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
+
+          if ($approval.user.login -eq $run.actor.login) {
+            throw "You cannot approve your own deployment"
+          }
+
       - uses: actions/checkout@v3
 
       - name: Deploy
