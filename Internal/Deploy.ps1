@@ -228,7 +228,7 @@ try {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
         Write-Host "PushChanges -BaseBranch $branch -CommitMessage 'Deploying Al-Go from $algoBranch ($srcSHA)' -DirectCommit $directCommit"
-        PushChanges -BaseBranch $branch -CommitMessage "Deploying Al-Go from $algoBranch ($srcSHA)" -DirectCommit $directCommit
+        PushChanges -BaseBranch $branch -CommitMessage "Deploying Al-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
     }
 }
 finally {
