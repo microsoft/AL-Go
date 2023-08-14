@@ -33,7 +33,7 @@ jobs:
     environment: production
     steps:
       - name: Validate Deployment
-        #if: github.repository_owner == 'microsoft'
+        if: github.repository_owner == 'microsoft'
         env: 
           runId: ${{ github.run_id }}
           repository: ${{ github.repository }}

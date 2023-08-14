@@ -24,7 +24,7 @@ function PushChanges
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $BaseBranch
     } else {
-        if (-not (invoke-git ls-remote --heads origin $BaseBranch)) {
+        if (-not (git ls-remote --heads origin $BaseBranch)) {
             Write-Host "Branch $BaseBranch does not exist in origin. Creating it"
             invoke-git branch origin/main $BaseBranch
             invoke-git push origin $BaseBranch
