@@ -1,4 +1,5 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'directCommit', Justification = 'False positive.')]
+Param(
     [Parameter(Mandatory=$true)]
     [Hashtable] $config,
     [Parameter(Mandatory=$true)]
@@ -32,7 +33,7 @@ function PushChanges
         $branchName = "Deploy/$baseBranch/$([System.Guid]::NewGuid().ToString())"
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
-        invoke-git push origin $branchName 
+        invoke-git push origin $branchName
         invoke-gh pr create --base $BaseBranch --title $CommitMessage --body $CommitMessage
     }
 }
