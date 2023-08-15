@@ -280,16 +280,6 @@ function DownloadAndImportBcContainerHelper {
             $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
         }
     }
-    if ($bcContainerHelperVersion -eq "") {
-        $bcContainerHelperVersion = "latest"
-    }
-    elseif ($bcContainerHelperVersion -eq "private") {
-        # Using a private BcContainerHelper version grabs a fork of BcContainerHelper with the same owner as the AL-Go actions
-        # The ActionsRepo below will be modified to point to actual running actions repo by the deploy mechanism, please do not change
-        $ActionsRepo = "microsoft/AL-Go-Actions@main"
-        $owner = $actionsRepo.Split('/')[0]
-        $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
-    }
 
     if ("$env:BcContainerHelperPath" -and (Test-Path -Path $env:BcContainerHelperPath -PathType Leaf)) {
         $bcContainerHelperPath = $env:BcContainerHelperPath
@@ -302,6 +292,17 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
     }
     else {
+        if ($bcContainerHelperVersion -eq "") {
+            $bcContainerHelperVersion = "latest"
+        }
+        elseif ($bcContainerHelperVersion -eq "private") {
+            # Using a private BcContainerHelper version grabs a fork of BcContainerHelper with the same owner as the AL-Go actions
+            # The ActionsRepo below will be modified to point to actual running actions repo by the deploy mechanism, please do not change
+            $ActionsRepo = "microsoft/AL-Go-Actions@main"
+            $owner = $actionsRepo.Split('/')[0]
+            $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
+        }
+    
         if ($isWindows) {
             $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
         }
@@ -313,7 +314,6 @@ function DownloadAndImportBcContainerHelper {
             New-Item -Path $bcContainerHelperRootFolder -ItemType Directory | Out-Null
         }
 
-        Write-Host $bcContainerHelperVersion
         $webclient = New-Object System.Net.WebClient
         if ($bcContainerHelperVersion -like "https://*") {
             # Use temp space for private versions
