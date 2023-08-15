@@ -298,7 +298,7 @@ function DownloadAndImportBcContainerHelper {
         elseif ($bcContainerHelperVersion -eq "private") {
             throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
         }
-    
+
         if ($isWindows) {
             $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
         }
