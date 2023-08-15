@@ -296,11 +296,7 @@ function DownloadAndImportBcContainerHelper {
             $bcContainerHelperVersion = "latest"
         }
         elseif ($bcContainerHelperVersion -eq "private") {
-            # Using a private BcContainerHelper version grabs a fork of BcContainerHelper with the same owner as the AL-Go actions
-            # The ActionsRepo below will be modified to point to actual running actions repo by the deploy mechanism, please do not change
-            $ActionsRepo = "microsoft/AL-Go-Actions@main"
-            $owner = $actionsRepo.Split('/')[0]
-            $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
+            throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
         }
     
         if ($isWindows) {
