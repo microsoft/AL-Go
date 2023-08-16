@@ -101,11 +101,7 @@ try {
 
     if ($getenvironments) {
         $environments = @()
-        $headers = @{ 
-            "Authorization"        = "token $token"
-            "Accept"               = "application/vnd.github.v3+json"
-            "X-GitHub-Api-Version" = "2022-11-28"
-        }
+        $headers = GetHeader -token $token
         Write-Host "Requesting environments: $getEnvironments"
         $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
         try {

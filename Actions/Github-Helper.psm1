@@ -536,9 +536,13 @@ function GetLatestRelease {
 function GetHeader {
     param (
         [string] $token,
-        [string] $accept = "application/vnd.github.v3+json"
+        [string] $accept = "application/vnd.github+json",
+        [string] $apiVersion = "2022-11-28"
     )
-    $headers = @{ "Accept" = $accept }
+    $headers = @{
+        "Accept" = $accept
+        "X-GitHub-Api-Version" = $apiVersion
+    }
     if (![string]::IsNullOrEmpty($token)) {
         $headers["Authorization"] = "token $token"
     }
@@ -588,10 +592,7 @@ function DownloadRelease {
     if ([string]::IsNullOrEmpty($token)) {
         $token = invoke-gh -silent -returnValue auth token
     }
-    $headers = @{ 
-        "Accept"        = "application/octet-stream"
-        "Authorization" = "token $token"
-    }
+    $headers = GetHeader -token $token -accept "application/octet-stream"
     $projects.Split(',') | ForEach-Object {
         $project = $_.Replace('\','_').Replace('/','_')
         Write-Host "project '$project'"
@@ -741,10 +742,7 @@ function DownloadArtifact {
     if ([string]::IsNullOrEmpty($token)) {
         $token = invoke-gh -silent -returnValue auth token
     }
-    $headers = @{ 
-        "Authorization" = "token $token"
-        "Accept"        = "application/vnd.github.v3+json"
-    }
+    $headers = GetHeader -token $token
     $outFile = Join-Path $path "$($artifact.Name).zip"
     InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
     $outFile
