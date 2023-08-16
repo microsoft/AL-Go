@@ -35,14 +35,19 @@ jobs:
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
         env: 
-          runId: ${{ github.run_id }}
+          branch: ${{ github.event.inputs.branch }}
           repository: ${{ github.repository }}
+          runId: ${{ github.run_id }}
         run: | 
-          $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
-          $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
+          if ($env:branch -match 'preview') {
+            Write-Host "Deploying to preview branch. No validation required"
+          } else {
+            $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
+            $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
 
-          if ($approval.user.login -eq $run.actor.login) {
-            throw "You cannot approve your own deployment"
+            if ($approval.user.login -eq $run.actor.login) {
+              throw "You cannot approve your own deployment"
+            }
           }
 
       - uses: actions/checkout@v3
