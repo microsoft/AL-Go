@@ -60,9 +60,8 @@ jobs:
             if (!$token) {
               throw "In order to run the Deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token"
             }
-            else {
-              $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
-              $config = @{
+            $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
+            $config = @{
                   "githubOwner" = $githubOwner
                   "actionsRepo" = "AL-Go-Actions"
                   "perTenantExtensionRepo" = "AL-Go-PTE"
@@ -70,9 +69,8 @@ jobs:
                   "branch" = $env:branch
                   "copyToMain" = ($env:copyToMain -eq 'true')
                   "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
-              }
-              . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit ($env:directCommit -eq 'true')
             }
+            . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit ($env:directCommit -eq 'true')
           }
           catch {
             Write-Host "::Error::Error deploying repositories. The error was $($_.Exception.Message)"
