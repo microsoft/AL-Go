@@ -30,7 +30,8 @@ function PushChanges
             invoke-git branch $BaseBranch origin/main
             invoke-git push origin $BaseBranch
         }
-        $branchName = "deploy/$baseBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))"
+        $branchName = "deploy/$BaseBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))"
+
 
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
