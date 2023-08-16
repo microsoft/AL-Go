@@ -13,7 +13,7 @@ Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve)
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 function PushChanges
-(   
+(
     [Parameter(HelpMessage = "The branch Al-Go is being deployed to (e.g. main / v.3.2)", Mandatory = $false)]
     [string] $BaseBranch,
     [Parameter(HelpMessage = "The message on the commit or PR that contains the latest changes", Mandatory = $false)]
