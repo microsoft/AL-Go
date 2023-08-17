@@ -61,6 +61,13 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
         Write-Host "Changes to repo Settings, building all projects"
         return $projects
     }
+
+    foreach($fullBuildFolder in $settings.fullBuildFolders) {
+        if ($modifiedFiles -like $fullBuildFolder) {
+            Write-Host "Changes to $fullBuildFolder, building all projects"
+            return $projects
+        }
+    }
     
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
