@@ -57,20 +57,23 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
         return $projects
     }
 
-    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
     Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
     
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
         return $projects
     }
-
+    
     $fullBuildPatterns = @( Join-Path '.github' '*.json')
     if($settings.fullBuildPatterns) {
         $fullBuildPatterns += $settings.fullBuildPatterns
     }
+    
+    #Include the base folder in the modified files
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
 
     foreach($fullBuildFolder in $fullBuildPatterns) {
+        # The Join-Path is needed to make sure the path has the correct slashes
         $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
         
         if ($modifiedFiles -like $fullBuildFolder) {
