@@ -29,8 +29,8 @@ try {
         $branch = "create-development-environment/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
     }
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
-    $repoBaseFolder = (Get-Location).Path
-    DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+    $baseFolder = (Get-Location).Path
+    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0073' -parentTelemetryScopeJson $parentTelemetryScopeJson
@@ -45,7 +45,7 @@ try {
         -caller GitHubActions `
         -environmentName $environmentName `
         -reUseExistingEnvironment:$reUseExistingEnvironment `
-        -baseFolder $repoBaseFolder `
+        -baseFolder $baseFolder `
         -project $project `
         -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
 

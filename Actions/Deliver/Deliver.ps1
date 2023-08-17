@@ -45,9 +45,8 @@ function EnsureAzStorageModule() {
 }
 
 try {
-    $baseFolder = $ENV:GITHUB_WORKSPACE
     . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
-    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+    DownloadAndImportBcContainerHelper
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "../TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0081' -parentTelemetryScopeJson $parentTelemetryScopeJson
@@ -61,6 +60,7 @@ try {
 
     $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
 
+    $baseFolder = $ENV:GITHUB_WORKSPACE
     $settings = ReadSettings -baseFolder $baseFolder
     if ($settings.projects) {
         $projectList = $settings.projects | Where-Object { $_ -like $projects }

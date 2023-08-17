@@ -25,9 +25,9 @@ try {
 
     Write-Big -str "a$verstr"
 
-    Test-ALGoRepository -baseFolder $ENV:GITHUB_WORKSPACE
+    Test-ALGoRepository
 
-    DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+    DownloadAndImportBcContainerHelper
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId $eventId

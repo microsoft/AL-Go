@@ -88,8 +88,8 @@ try {
         $branch = "add-existing-app/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. add-existing-app/main/210101120000
     }
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
-    $repoBaseFolder = (Get-Location).path
-    DownloadAndImportBcContainerHelper -baseFolder $repoBaseFolder
+    $baseFolder = (Get-Location).path
+    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScopeJson $parentTelemetryScopeJson 
@@ -220,7 +220,7 @@ try {
             }
         }
     }
-    Set-Location $repoBaseFolder
+    Set-Location $baseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Add existing apps ($($appNames -join ', '))" -branch $branch
 
     TrackTrace -telemetryScope $telemetryScope

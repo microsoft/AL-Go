@@ -339,25 +339,17 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
 
 #
 # Download and import the BcContainerHelper module based on repository settings
+# baseFolder is the repository baseFolder
 #
-# baseFolder is the project folder of your AL-Go project, # meaning that the repository settings file will be in one of:
-# - baseFolder/.github/AL-Go-Settings.json
-# - baseFolder/../.github/AL-Go-Settings.json
-# - baseFolder/../../.github/AL-Go-Settings.json
-#
-function DownloadAndImportBcContainerHelper([string] $baseFolder) {
+function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_WORKSPACE) {
     $params = @{ "ExportTelemetryFunctions" = $true }
-    # Locate Repo Settings file
     $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
-    if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
-        $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
-        if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
-            $repoSettingsPath = Join-Path $baseFolder "..\..\$repoSettingsFile"
-        }
-    }
 
-    $bcContainerHelperVersion = ''
+    # Default BcContainerHelper Version is hardcoded in AL-Go-Helper (replaced during AL-Go deploy)
+    $bcContainerHelperVersion = $defaultBcContainerHelperVersion
     if (Test-Path $repoSettingsPath) {
+        # Read Repository Settings file (without applying organization variables, repository variables or project settings files)
+        # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in repo settings file
         $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
         if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
             $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
