@@ -1,13 +1,49 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'directCommit', Justification = 'False positive.')]
+Param(
     [Parameter(Mandatory=$true)]
     [Hashtable] $config,
     [Parameter(Mandatory=$true)]
-    [string] $token
+    [string] $token,
+    [Parameter(Mandatory=$false)]
+    [bool] $directCommit
 )
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+function PushChanges
+(
+    [Parameter(HelpMessage = "The branch Al-Go is being deployed to (e.g. main / v.3.2)", Mandatory = $false)]
+    [string] $BaseBranch,
+    [Parameter(HelpMessage = "The message on the commit or PR that contains the latest changes", Mandatory = $false)]
+    [string] $CommitMessage,
+    [Parameter(HelpMessage = "If true, the commit will be pushed directly to the base branch. If false, a pull request will be created", Mandatory = $false)]
+    [bool] $DirectCommit
+)
+{
+    invoke-git add .
+
+    if ($DirectCommit) {
+        # Direct commit to base branch
+        invoke-git commit --allow-empty -m $CommitMessage
+        invoke-git push origin $BaseBranch
+    } else {
+        # Create PR to base branch
+        if (-not (git ls-remote --heads origin $BaseBranch)) {
+            Write-Host "Branch $BaseBranch does not exist in origin. Creating it"
+            invoke-git branch $BaseBranch origin/main
+            invoke-git push origin $BaseBranch
+        }
+        $branchName = "deploy/$BaseBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))"
+
+
+        invoke-git checkout -b $branchName origin/$BaseBranch
+        invoke-git commit --allow-empty -m $CommitMessage
+        invoke-git push origin $branchName
+        invoke-gh pr create --base $BaseBranch --title $CommitMessage --body $CommitMessage
+    }
+}
 
 $oldPath = Get-Location
 try {
@@ -37,7 +73,7 @@ try {
     Set-Location $baseRepoPath
 
     # Whoami
-    $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
+    $user = invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" user -silent -returnValue | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
 
     # Dump configuration
@@ -108,7 +144,6 @@ try {
             @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath;            "branch" = "main" }
             @{ "repo" = $config.perTenantExtensionRepo; "srcPath" = Join-Path $baseRepoPath "Templates\Per Tenant Extension"; "dstPath" = $perTenantExtensionRepoPath; "branch" = "preview" }
             @{ "repo" = $config.appSourceAppRepo;       "srcPath" = Join-Path $baseRepoPath "Templates\AppSource App";        "dstPath" = $appSourceAppRepoPath;       "branch" = "preview" }
-            @{ "repo" = $config.actionsRepo;            "srcPath" = Join-Path $baseRepoPath "Actions";                        "dstPath" = $actionsRepoPath;            "branch" = "preview" }
         )
     }
 
@@ -181,28 +216,26 @@ try {
                 # When deploying to a release branch, these URLs are replaced by the following code
                 if ($config.branch -eq 'preview') {
                     $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
-                    $replace = "`$1https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`$2"
+                    $replace = "`${1}https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`${2}"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
                 }
 
                 # Replace the owner and repo names in the workflow
                 $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                $replace = "`$1$useRepo`$2$($useBranch)`$3"
+                $replace = "`${1}$useRepo`${2}$($useBranch)`${3}"
                 $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
             }
             if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.ContainsKey("defaultBcContainerHelperVersion") -and $config.defaultBcContainerHelperVersion)) {
                 # replace defaultBcContainerHelperVersion (even if a version is set)
-                $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""$($config.defaultBcContainerHelperVersion)"" # `$5" }
+                $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`${1}`$defaultBcContainerHelperVersion`${2}=`${3}""$($config.defaultBcContainerHelperVersion)"" # `${5}" }
             }
             [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
         }
         if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
             Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
         }
+        PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
 
-        invoke-git add .
-        invoke-git commit --allow-empty -m 'checkout'
-        invoke-git push $serverUrl
     }
 }
 finally {

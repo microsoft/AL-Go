@@ -34,7 +34,7 @@ try {
     Set-Location $PSScriptRoot
     $baseRepoPath = invoke-git -returnValue rev-parse --show-toplevel
     Write-Host "Base repo path: $baseRepoPath"
-    $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
+    $user = invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" user -silent -returnValue | ConvertFrom-Json
     Write-Host "GitHub user: $($user.login)"
 
     if ($configName -eq "") { $configName = $user.login }
@@ -157,11 +157,11 @@ try {
             $lines = ([string](Get-ContentLF -path $dstFile)).Split("`n")
             "actionsRepo", "perTenantExtensionRepo", "appSourceAppRepo" | ForEach-Object {
                 $regex = "^(.*)$($config.githubOwner)\/$($config."$_")(.*)$($config.branch)(.*)$"
-                $replace = "`$1$($originalOwnerAndRepo."$_")`$2$originalBranch`$3"
+                $replace = "`${1}$($originalOwnerAndRepo."$_")`${2}$originalBranch`${3}"
                 $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
             }
             if ($_.Name -eq "AL-Go-Helper.ps1") {
-                $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)"(.*)$', "`$1`$defaultBcContainerHelperVersion`$2=`$3""""`$5" }
+                $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)"(.*)$', "`${1}`$defaultBcContainerHelperVersion`${2}=`${3}""""`${5}" }
             }
             [System.IO.File]::WriteAllText($srcFile, "$($lines -join "`n")`n")
         }
