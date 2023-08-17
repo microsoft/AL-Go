@@ -227,7 +227,9 @@ function Expand-7zipArchive {
 }
 
 #
-# Download and import the BcContainerHelper module
+# Get Path to BcContainerHelper module (download if necessary)
+#
+# If $env:BcContainerHelperPath is set, it will be reused (ignoring the ContainerHelperVersion)
 #
 # ContainerHelperVersion can be:
 # - preview (or dev), which will use the preview version downloaded from bccontainerhelper blob storage
@@ -236,54 +238,21 @@ function Expand-7zipArchive {
 # - none, which will use the BcContainerHelper module installed on the build agent
 # - https://... - direct download url to a zip file containing the BcContainerHelper module
 #
-# When using private or direct download url, the module will be downloaded to a temp folder and will not be cached
+# When using direct download url, the module will be downloaded to a temp folder and will not be cached
 # When using none, the module will be located in modules and used from there
 # When using preview, latest or a specific version number, the module will be downloaded to a cache folder and will be reused if the same version is requested again
 # This is to avoid filling up the temp folder with multiple identical versions of BcContainerHelper
 # The cache folder is C:\ProgramData\BcContainerHelper on Windows and /home/<username>/.BcContainerHelper on Linux
 # A Mutex will be used to ensure multiple agents aren't fighting over the same cache folder
 #
-# This function will use baseFolder to get settings from the repository settings file (.github/AL-Go-Settings.json) and apply to BcContainerHelper
+# This function will set $env:BcContainerHelperPath, which is the path to the BcContainerHelper.ps1 file for reuse in subsequent calls
 #
-# the function will set $env:BcContainerHelperPath, which is the path to the BcContainerHelper.ps1 file for reuse in subsequent calls
-#
-function DownloadAndImportBcContainerHelper {
-    Param(
-        [string] $bcContainerHelperVersion = $defaultBcContainerHelperVersion,
-        [string] $baseFolder = ""
-    )
-
-    $params = @{ "ExportTelemetryFunctions" = $true }
-    if ($baseFolder) {
-        $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
-        if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
-            $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
-            if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
-                $repoSettingsPath = Join-Path $baseFolder "..\..\$repoSettingsFile"
-            }
-        }
-        if (Test-Path $repoSettingsPath) {
-            $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "latest") {
-                if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
-                    $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
-                    Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
-                    if ($bcContainerHelperVersion -like "https://*") {
-                        throw "Setting BcContainerHelperVersion to a URL is not allowed."
-                    }
-                    elseif ($bcContainerHelperVersion -ne "" -and $bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
-                        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
-                    }
-                }
-            }
-            $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
-        }
-    }
-
+function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
     if ("$env:BcContainerHelperPath" -and (Test-Path -Path $env:BcContainerHelperPath -PathType Leaf)) {
-        $bcContainerHelperPath = $env:BcContainerHelperPath
+        return $env:BcContainerHelperPath
     }
-    elseif ($bcContainerHelperVersion -eq "none") {
+
+    if ($bcContainerHelperVersion -eq 'None') {
         $module = Get-Module BcContainerHelper
         if (-not $module) {
             OutputError "When setting BcContainerHelperVersion to none, you need to ensure that BcContainerHelper is installed on the build agent"
@@ -291,13 +260,6 @@ function DownloadAndImportBcContainerHelper {
         $bcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
     }
     else {
-        if ($bcContainerHelperVersion -eq "") {
-            $bcContainerHelperVersion = "latest"
-        }
-        elseif ($bcContainerHelperVersion -eq "private") {
-            throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
-        }
-
         if ($isWindows) {
             $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
         }
@@ -343,7 +305,6 @@ function DownloadAndImportBcContainerHelper {
             # Check whether the version is already available in the cache
             $version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
             $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
-
             # To avoid two agents on the same machine downloading the same version at the same time, use a mutex
             $buildMutexName = "DownloadAndImportBcContainerHelper"
             $buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
@@ -371,10 +332,59 @@ function DownloadAndImportBcContainerHelper {
             $bcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper/BcContainerHelper.ps1"
         }
     }
-    Write-Host "Import from $bcContainerHelperPath"
-    . $bcContainerHelperPath @params
     $env:BcContainerHelperPath = $bcContainerHelperPath
     Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$bcContainerHelperPath"
+    return $bcContainerHelperPath
+}
+
+#
+# Download and import the BcContainerHelper module based on repository settings
+#
+# baseFolder is the project folder of your AL-Go project, # meaning that the repository settings file will be in one of:
+# - baseFolder/.github/AL-Go-Settings.json
+# - baseFolder/../.github/AL-Go-Settings.json
+# - baseFolder/../../.github/AL-Go-Settings.json
+#
+function DownloadAndImportBcContainerHelper([string] $baseFolder) {
+    $params = @{ "ExportTelemetryFunctions" = $true }
+    # Locate Repo Settings file
+    $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
+    if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
+        $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
+        if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
+            $repoSettingsPath = Join-Path $baseFolder "..\..\$repoSettingsFile"
+        }
+    }
+
+    $bcContainerHelperVersion = ''
+    if (Test-Path $repoSettingsPath) {
+        $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+        if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
+            $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+            Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
+            if ($bcContainerHelperVersion -like "https://*") {
+                throw "Setting BcContainerHelperVersion to a URL in settings is not allowed. Fork the AL-Go repository and use direct AL-Go development instead."
+            }
+        }
+        $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
+    }
+
+    if ($bcContainerHelperVersion -eq "") {
+        $bcContainerHelperVersion = "latest"
+    }
+
+    if ($bcContainerHelperVersion -eq "private") {
+        throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
+    }
+
+    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
+    }
+
+    $bcContainerHelperPath = GetBcContainerHelperPath bcContainerHelperVersion $bcContainerHelperVersion
+
+    Write-Host "Import from $bcContainerHelperPath"
+    . $bcContainerHelperPath @params
 }
 
 function MergeCustomObjectIntoOrderedDictionary {
