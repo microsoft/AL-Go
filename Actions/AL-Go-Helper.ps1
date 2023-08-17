@@ -234,7 +234,6 @@ function Expand-7zipArchive {
 # - latest, which will use the latest version downloaded from bccontainerhelper blob storage
 # - a specific version, which will use the specific version downloaded from bccontainerhelper blob storage
 # - none, which will use the BcContainerHelper module installed on the build agent
-# - private, which will use a fork of BcContainerHelper from the same owner as the AL-Go repo
 # - https://... - direct download url to a zip file containing the BcContainerHelper module
 #
 # When using private or direct download url, the module will be downloaded to a temp folder and will not be cached
