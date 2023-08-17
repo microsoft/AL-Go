@@ -57,24 +57,30 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
         return $projects
     }
 
-    if ($modifiedFiles -like '.github/*.json') {
-        Write-Host "Changes to repo Settings, building all projects"
-        return $projects
-    }
+    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
 
-    foreach($fullBuildFolder in $settings.fullBuildFolders) {
-        if ($modifiedFiles -like $fullBuildFolder) {
-            Write-Host "Changes to $fullBuildFolder, building all projects"
-            return $projects
-        }
-    }
-    
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
         return $projects
     }
 
-    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
+    if ($modifiedFiles -like '.github/*.json') {
+        Write-Host "Changes to repo settings, building all projects"
+        return $projects
+    }
+
+    $modifiedFiles = $modifiedFiles | % { Join-Path $baseFolder $_}
+    foreach($fullBuildFolder in $settings.fullBuildFolders) {
+        $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
+        Write-Host "FullBuild folder: $fullBuildFolder"
+
+        if ($modifiedFiles -like $fullBuildFolder) {
+            Write-Host "Changes to $fullBuildFolder, building all projects"
+            return $projects
+        }
+    }
+
+
 
     Write-Host "Filtering projects to build based on the modified files"
 
