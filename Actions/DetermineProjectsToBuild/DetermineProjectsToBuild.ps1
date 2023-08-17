@@ -136,7 +136,7 @@ function Get-ProjectsToBuild(
     Push-Location $baseFolder
 
     try {
-        $settings = ReadSettings -baseFolder $baseFolder -project '.' # Read AL-Go settings for the repo
+        $settings = $env:Settings | ConvertFrom-Json
         
         if ($settings.projects) {
             Write-Host "Projects specified in settings"
