@@ -17,6 +17,10 @@ Describe "Get-ProjectsToBuild" {
     It 'loads a single project in the root folder' {
         New-Item -Path "$baseFolder/.AL-Go/settings.json" -type File -Force
 
+        # Add AL-Go settings file
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @(".")
@@ -53,6 +57,10 @@ Describe "Get-ProjectsToBuild" {
     It 'loads two independent projects with no build modes set' {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+
+        # Add AL-Go settings file
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -151,8 +159,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false }
-        New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $alGoSettings -Depth 99) -type File -Force
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         #region Single file modified
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
@@ -312,8 +320,8 @@ Describe "Get-ProjectsToBuild" {
 
         #region One project is modified, but alwaysBuildAllProjects is set to true
         #Add settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $true }
-        New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $alGoSettings) -type File -Force
+        $alGoSettings = @{ alwaysBuildAllProjects = $true; projects = @(); useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -364,8 +372,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ useProjectDependencies = $false }
-        New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $alGoSettings) -type File -Force
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
         
@@ -414,8 +422,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ useProjectDependencies = $true }
-        New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $alGoSettings) -type File -Force
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
         
@@ -469,8 +477,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ useProjectDependencies = $false }
-        New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $alGoSettings) -type File -Force
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -524,8 +532,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ useProjectDependencies = $true }
-        New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $alGoSettings) -type File -Force
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -591,8 +599,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ useProjectDependencies = $true }
-        New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $alGoSettings) -type File -Force
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         { Get-ProjectsToBuild -baseFolder $baseFolder -maxBuildDepth 1 } | Should -Throw "The build depth is too deep, the maximum build depth is 1. You need to run 'Update AL-Go System Files' to update the workflows"
     }

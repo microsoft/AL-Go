@@ -57,20 +57,15 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
         return $projects
     }
 
-    $modifiedFiles = $modifiedFiles | ForEach-Object { Join-Path $baseFolder $_}
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
     Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
     
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
         return $projects
     }
-    
-    if ($modifiedFiles -like '.github/*.json') {
-        Write-Host "Changes to repo settings, building all projects"
-        return $projects
-    }
 
-    $fullBuildFolders = @( Join-Path '.github', '*.json')
+    $fullBuildFolders = @( Join-Path '.github' '*.json')
     if($settings.fullBuildFolders) {
         $fullBuildFolders += $settings.fullBuildFolders
     }
@@ -86,18 +81,25 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
 
     Write-Host "Filtering projects to build based on the modified files"
 
-    $filteredProjects = @($projects | Where-Object {
-            $checkProject = $_
-            $buildProject = $false
-            if (Test-Path -Path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
-                $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -includeAlGoFolder
+    $filteredProjects = @()
+    foreach($project in $projects) 
+    {
+        if (Test-Path -Path (Join-Path $baseFolder "$project/.AL-Go/settings.json")) {
+            $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
-                $projectFolders | ForEach-Object {
-                    if ($modifiedFiles -like "$_/*") { $buildProject = $true }
-                }
+            $modifiedProjectFolders = @($projectFolders | Where-Object {
+                $projectFolder = Join-Path $baseFolder "$_/*"
+
+                return $($modifiedFiles -like $projectFolder)
+            })
+
+            if ($modifiedProjectFolders.Count -gt 0) {
+                # The project has been modified, add it to the list of projects to build
+                $filteredProjects += $project
             }
-            $buildProject
-        })
+        }
+            
+    }
 
     return $filteredProjects
 }
