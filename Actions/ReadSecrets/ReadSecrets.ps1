@@ -56,7 +56,9 @@ try {
             if ($settings.Keys -contains $secretNameProperty) {
                 $secret = "$($secret)=$($settings."$secretNameProperty")"
             }
-            $secretsCollection += $secret
+            if ($secretsCollection -notcontains $secret) {
+                $secretsCollection += $secret
+            }
         }
     }
 
@@ -64,7 +66,9 @@ try {
     if ($getAppDependencyProbingPathsSecrets -and $settings.Keys -contains 'appDependencyProbingPaths') {
         $settings.appDependencyProbingPaths | ForEach-Object {
             if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
-                $secretsCollection += $_.authTokenSecret
+                if ($secretsCollection -notcontains $_.authTokenSecret) {
+                    $secretsCollection += $_.authTokenSecret
+                }
             }
         }
     }
