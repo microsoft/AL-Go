@@ -14,7 +14,7 @@ $actionsRepo = "$repoBaseName-Actions"
 $perTenantExtensionRepo = "$repoBaseName-PTE"
 $appSourceAppRepo = "$repoBaseName-AppSource"
 
-$settings = [ordered]@{
+$config = [ordered]@{
     "githubOwner" = $githubOwner
     "actionsRepo" = $actionsRepo
     "perTenantExtensionRepo" = $perTenantExtensionRepo
@@ -25,10 +25,7 @@ $settings = [ordered]@{
     "defaultBcContainerHelperVersion" = $bcContainerHelperVersion
 }
 
-$settingsFile = Join-Path $settings.baseFolder "$repoBaseName.json"
-$settings | Set-JsonContentLF -path $settingsFile
-
-. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -configName $settingsFile -githubOwner $githubOwner -token $token -github:$github
+. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -config $config -token $token
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "actionsRepo=$actionsRepo"
 Write-Host "actionsRepo=$actionsRepo"

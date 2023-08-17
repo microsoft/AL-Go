@@ -21,7 +21,15 @@ runs:
       env:
         _project: ${{ inputs.project }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-      run: try { ${{ github.action_path }}/PipelineCleanup.ps1 -project $ENV:_project -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/PipelineCleanup.ps1 -project $ENV:_project -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 branding:
   icon: terminal
   color: blue

@@ -1,25 +1,18 @@
 param(
-    [Parameter(HelpMessage = "Azure Key Vault URI.", Mandatory = $true)]
+    [Parameter(HelpMessage = "Azure Credentials secret", Mandatory = $true)]
     [string] $AzureCredentialsJson,
-    [Parameter(HelpMessage = "'OBSOLETE: Settings from repository in compressed Json format'", Mandatory = $true)]
-    [string] $settingsJson,
-    [Parameter(HelpMessage = "Paths to the files to be signed.", Mandatory = $true)]
+    [Parameter(HelpMessage = "The path to the files to be signed", Mandatory = $true)]
     [String] $PathToFiles,
-    [Parameter(HelpMessage = "Timestamp service.", Mandatory = $false)]
+    [Parameter(HelpMessage = "The URI of the timestamp server", Mandatory = $false)]
     [string] $TimestampService = "http://timestamp.digicert.com",
-    [Parameter(HelpMessage = "Timestamp digest algorithm.", Mandatory = $false)]
-    [string] $TimestampDigest = "sha256",
-    [Parameter(HelpMessage = "File digest algorithm.", Mandatory = $false)]
-    [string] $FileDigest = "sha256",
+    [Parameter(HelpMessage = "The digest algorithm to use for signing and timestamping", Mandatory = $false)]
+    [string] $digestAlgorithm = "sha256",
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $ParentTelemetryScopeJson = '7b7d'
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $telemetryScope = $null
 $bcContainerHelperPath = $null
-
-# IMPORTANT: No code that can fail should be outside the try/catch
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -39,7 +32,7 @@ try {
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
-    $settings = ConvertFrom-Json $settingsJson
+    $settings = $env:Settings | ConvertFrom-Json
     if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
         $AzureKeyVaultName = $AzureCredentials.keyVaultName
     } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {
@@ -53,22 +46,22 @@ try {
         Register-NavSip 
         Write-Host "::endgroup::"
 
-        AzureSignTool sign --file-digest $FileDigest `
+        AzureSignTool sign --file-digest $digestAlgorithm `
             --azure-key-vault-url "https://$AzureKeyVaultName.vault.azure.net/" `
             --azure-key-vault-client-id $AzureCredentials.clientId `
             --azure-key-vault-tenant-id $AzureCredentials.tenantId `
             --azure-key-vault-client-secret $AzureCredentials.clientSecret `
             --azure-key-vault-certificate $Settings.keyVaultCodesignCertificateName `
             --timestamp-rfc3161 "$TimestampService" `
-            --timestamp-digest $TimestampDigest `
+            --timestamp-digest $digestAlgorithm `
             $Files
     } -MaxRetries 3
     
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    OutputError -message "Sign action failed.$([environment]::Newline)Error: $($_.Exception.Message)$([environment]::Newline)Stacktrace: $($_.scriptStackTrace)"
     TrackException -telemetryScope $telemetryScope -errorRecord $_
+    throw
 }
 finally {
     CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath

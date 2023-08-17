@@ -80,10 +80,7 @@ function Add-PropertiesToJsonFile {
     )
 
     if ($wait -and $commit) {
-        $headers = @{ 
-            "Accept" = "application/vnd.github.v3+json"
-            "Authorization" = "token $token"
-        }
+        $headers = GetHeader -token $token
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
@@ -145,11 +142,7 @@ function RunWorkflow {
         Write-Host ($parameters | ConvertTo-Json)
     }
 
-    $headers = @{ 
-      "Accept" = "application/vnd.github.v3+json"
-      "Authorization" = "token $token"
-    }
-
+    $headers = GetHeader -token $token
     $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit" -retry).Content | ConvertFrom-Json).rate
     $percent = [int]($rate.remaining*100/$rate.limit)
     Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percent%)"
@@ -222,11 +215,7 @@ function DownloadWorkflowLog {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = @{ 
-        "Accept" = "application/vnd.github.v3+json"
-        "Authorization" = "token $token"
-    }
-
+    $headers = GetHeader -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
     $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
@@ -246,11 +235,7 @@ function WaitWorkflow {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = @{ 
-        "Accept" = "application/vnd.github.v3+json"
-        "Authorization" = "token $token"
-    }
-
+    $headers = GetHeader -token $token
     $status = ""
     do {
         if ($delay) {
@@ -343,7 +328,10 @@ function CreateAlGoRepository {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $waitMinutes = Get-Random -Minimum 0 -Maximum 4
+    $waitMinutes = 0
+    if ($github) {
+        $waitMinutes = Get-Random -Minimum 0 -Maximum 4
+    }
     $templateFolder = ''
     if ($template.Contains('|')) {
         # In order to run tests on the direct AL-Go Development branch, specify the folder in which the template is located after a | character in template
@@ -397,15 +385,22 @@ function CreateAlGoRepository {
         
             # Replace URL's to actions repository first
             $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/main(.*)$"
-            $replace = "`$1https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`$2"
+            $replace = "`${1}https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`${2}"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
         
-            # Replace AL-Go-Action references
+            # Replace AL-Go-Actions references
             $regex = "^(.*)microsoft\/AL-Go-Actions(.*)main(.*)$"
-            $replace = "`$1$($templateOwner)/AL-Go/Actions`$2$($templateBranch)`$3"
+            $replace = "`${1}$($templateOwner)/AL-Go/Actions`${2}$($templateBranch)`${3}"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
         
-            [System.IO.File]::WriteAllText($file, "$($lines -join "`n")`n")
+            $content = "$($lines -join "`n")`n"
+
+            # Update Template references in test apps
+            $content = $content.Replace('{TEMPLATEURL}', $template)
+            $content = $content.Replace('https://github.com/microsoft/AL-Go-PTE@main', $template)
+            $content = $content.Replace('https://github.com/microsoft/AL-Go-AppSource@main', $template)
+
+            [System.IO.File]::WriteAllText($file, $content)
         }
     }
 
@@ -503,10 +498,7 @@ function MergePRandPull {
     }
 
     Write-Host "Get Previous runs"
-    $headers = @{ 
-        "Accept" = "application/vnd.github.v3+json"
-        "Authorization" = "token $token"
-    }
+    $headers = GetHeader -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs"
     $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
@@ -555,10 +547,10 @@ function RemoveRepository {
         Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         try {
             $owner = $repository.Split("/")[0]
-            @((invoke-gh api -H "Accept: application/vnd.github+json" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
+            @((invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
                 Write-Host "+ package $($_.name)"
                 # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
-                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" /orgs/$owner/packages/nuget/$($_.name) --input
+                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages/nuget/$($_.name) --input
             }
         }
         catch {

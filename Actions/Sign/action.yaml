@@ -8,6 +8,9 @@ inputs:
   azureCredentialsJson:
     description: Azure Credentials secret
     required: true
+  pathToFiles:
+    description: The path to the files to be signed
+    required: true
   timestampService:
     description: The URI of the timestamp server
     required: false
@@ -16,9 +19,6 @@ inputs:
     description: The digest algorithm to use for signing and timestamping
     required: false
     default: SHA256
-  pathToFiles:
-    description: The path to the files to be signed
-    required: true
   parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
@@ -30,23 +30,19 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
+        _pathToFiles: ${{ inputs.pathToFiles }}
         _timestampService: ${{ inputs.timestampService }}
         _digestAlgorithm: ${{ inputs.digestAlgorithm }}
-        _pathToFiles: ${{ inputs.pathToFiles }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-      id: Sign
       run: |
-        try { 
-          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson $ENV:_azureCredentialsJson `
-                                      -TimestampService $ENV:_timestampService `
-                                      -TimestampDigest $ENV:_digestAlgorithm `
-                                      -FileDigest $ENV:_digestAlgorithm `
-                                      -PathToFiles $ENV:_pathToFiles `
-                                      -ParentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
-        } catch { 
-          Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson $ENV:_azureCredentialsJson -PathToFiles $ENV:_pathToFiles -TimestampService $ENV:_timestampService -digestAlgorithm $ENV:_digestAlgorithm -ParentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
         }
-
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 branding:
   icon: terminal
   color: blue

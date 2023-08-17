@@ -9,49 +9,44 @@ Param(
     [string] $suffix
 )
 
-function Set-EnvVariable([string] $name, [string] $value) {
+function Set-OutputVariable([string] $name, [string] $value) {
     Write-Host "Assigning $value to $name"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "$name=$value"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$name=$value"
 }
-
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 $settings = $env:Settings | ConvertFrom-Json
 
-if ($project -eq ".") { 
-  $project = $settings.repoName 
+if ($project -eq ".") {
+    $project = $settings.repoName
 }
 
-$branchName = $branchName.Replace('\','_').Replace('/','_')
-$projectName = $project.Replace('\','_').Replace('/','_')
+$branchName = $branchName.Replace('\', '_').Replace('/', '_')
+$projectName = $project.Replace('\', '_').Replace('/', '_')
 
 # If the buildmode is default, then we don't want to add it to the artifact name
-if ($buildMode -eq 'Default') { 
-  $buildMode = '' 
+if ($buildMode -eq 'Default') {
+    $buildMode = ''
 }
-Set-EnvVariable -name "BuildMode" -value $buildMode
+Set-OutputVariable -name "BuildMode" -value $buildMode
 
-if($suffix) {
-  # Add the date to the suffix 
-  $suffix = "$suffix-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
+if ($suffix) {
+    # Add the date to the suffix
+    $suffix = "$suffix-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
 }
 else {
-  # Default suffix is the build number
-  $suffix = "$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+    # Default suffix is the build number
+    $suffix = "$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
 }
 
-'Apps','Dependencies','TestApps','TestResults','BcptTestResults','BuildOutput','ContainerEventLog' | ForEach-Object {
-  $name = "$($_)ArtifactsName"
-  $value = "$($projectName)-$($branchName)-$buildMode$_-$suffix"
-
-  Set-EnvVariable -name $name -value $value
+'Apps', 'Dependencies', 'TestApps', 'TestResults', 'BcptTestResults', 'BuildOutput', 'ContainerEventLog' | ForEach-Object {
+    $name = "$($_)ArtifactsName"
+    $value = "$($projectName)-$($branchName)-$buildMode$_-$suffix"
+    Set-OutputVariable -name $name -value $value
 }
 
 # Set this build artifacts name
 'Apps', 'TestApps' | ForEach-Object {
-  $name = "ThisBuild$($_)ArtifactsName"
-  $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
-  
-  Set-EnvVariable -name $name -value $value
+    $name = "ThisBuild$($_)ArtifactsName"
+    $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
+    Set-OutputVariable -name $name -value $value
 }
