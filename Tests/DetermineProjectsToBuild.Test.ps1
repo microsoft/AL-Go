@@ -158,7 +158,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
@@ -203,7 +203,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
@@ -255,7 +255,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project1/app/app.json')
@@ -301,7 +301,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $modifiedFiles = @()
@@ -398,7 +398,7 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[1].project | Should -BeExactly "Project2"
     }
 
-    It 'loads correct projects, based on the modified files: Project1 is modified, fullBuildFolders is set to .github' {
+    It 'loads correct projects, based on the modified files: Project1 is modified, fullBuildPatterns is set to .github' {
         # Setup project structure
         $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
@@ -406,7 +406,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @('.github') }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @('.github') }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
@@ -428,7 +428,7 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
     }
 
-    It 'loads correct projects, based on the modified files: Project1 is modified, fullBuildFolders is set to Project1/*' {
+    It 'loads correct projects, based on the modified files: Project1 is modified, fullBuildPatterns is set to Project1/*' {
         # Setup project structure
         $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
@@ -436,7 +436,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @('Project1/*') }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @('Project1/*') }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')

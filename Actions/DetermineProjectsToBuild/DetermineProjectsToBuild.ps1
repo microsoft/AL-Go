@@ -65,12 +65,12 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
         return $projects
     }
 
-    $fullBuildFolders = @( Join-Path '.github' '*.json')
-    if($settings.fullBuildFolders) {
-        $fullBuildFolders += $settings.fullBuildFolders
+    $fullBuildPatterns = @( Join-Path '.github' '*.json')
+    if($settings.fullBuildPatterns) {
+        $fullBuildPatterns += $settings.fullBuildPatterns
     }
 
-    foreach($fullBuildFolder in $fullBuildFolders) {
+    foreach($fullBuildFolder in $fullBuildPatterns) {
         $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
         
         if ($modifiedFiles -like $fullBuildFolder) {
