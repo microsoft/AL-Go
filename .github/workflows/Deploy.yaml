@@ -9,9 +9,15 @@ on:
         description: 'Branch to deploy to (NOTE: Use preview when deploying preview releases on microsoft/al-go)'
         required: true
       copyToMain:
-        description: 'Additionally deploy templates to main+preview branch? (Y/N) - (NOTE: Enter Y if this is a release to PROD on microsoft/al-go)'
+        type: boolean
+        description: 'Additionally deploy templates to main+preview branch? Set if this is a release to PROD on microsoft/al-go'
         required: false
-        default: 'N'
+        default: false
+      directCommit:
+        type: boolean
+        description: Push directly to the target branch. If not set, a PR will be created.
+        required: false 
+        default: false
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
         required: false
@@ -24,21 +30,33 @@ defaults:
 jobs:
   Deploy:
     runs-on: [ ubuntu-latest ]
+    environment: Production
     steps:
-      - uses: actions/checkout@v3
+      - name: Validate Deployment
+        if: github.repository_owner == 'microsoft'
+        env: 
+          branch: ${{ github.event.inputs.branch }}
+          repository: ${{ github.repository }}
+          runId: ${{ github.run_id }}
+        run: | 
+          if ($env:branch -match 'preview') {
+            Write-Host "Deploying to preview branch. No validation required"
+          } else {
+            $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
+            $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
 
-      - name: CheckUser
-        run: |
-          $threeMusketeers = @("freddydk", "aholstrup1", "mazhelez")
-          if ("$ENV:GITHUB_REPOSITORY" -eq "microsoft/AL-Go" -and "$ENV:GITHUB_ACTOR" -notin $threeMusketeers) {
-            Write-Host "::Error::You cannot run deploy and collect in the microsoft/AL-Go repo"
-            exit 1
+            if ($approval.user.login -eq $run.actor.login) {
+              throw "You cannot approve your own deployment"
+            }
           }
+
+      - uses: actions/checkout@v3
 
       - name: Deploy
         env:
           branch: ${{ github.event.inputs.branch }}
           copyToMain: ${{ github.event.inputs.copyToMain }}
+          directCommit: ${{ github.event.inputs.directCommit }}
           defaultBcContainerHelperVersion: ${{ github.event.inputs.defaultBcContainerHelperVersion }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -47,19 +65,17 @@ jobs:
             if (!$token) {
               throw "In order to run the Deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token"
             }
-            else {
-              $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
-              $config = @{
+            $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
+            $config = @{
                   "githubOwner" = $githubOwner
                   "actionsRepo" = "AL-Go-Actions"
                   "perTenantExtensionRepo" = "AL-Go-PTE"
                   "appSourceAppRepo" = "AL-Go-AppSource"
                   "branch" = $env:branch
-                  "copyToMain" = ($env:copyToMain -eq 'Y')
+                  "copyToMain" = ($env:copyToMain -eq 'true')
                   "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
-              }
-              . ".\Internal\Deploy.ps1" -config $config -token $token
             }
+            . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit ($env:directCommit -eq 'true')
           }
           catch {
             Write-Host "::Error::Error deploying repositories. The error was $($_.Exception.Message)"

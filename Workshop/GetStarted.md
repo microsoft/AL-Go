@@ -13,7 +13,7 @@ Click **Use This Template** and select **Create a new repository**. Select your 
 
 Click **Actions**, select the **CI/CD** workflow, click **Run workflow** and run the CI/CD workflow on our empty repository. Wait for the CI/CD workflow to complete.
 
-<img width="1261" alt="image" src="https://github.com/zpeters/AL-Go/assets/39647/bc73bfdc-0fd3-4f14-8cd5-29bea42144dc">
+![image](https://github.com/microsoft/AL-Go/assets/10775043/d411bc1f-8494-4c00-93b5-26046ecda6a1)
 
  By clicking the workflow in the list, and scrolling down, you should see:
 
