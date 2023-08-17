@@ -369,11 +369,11 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder) {
         $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
     }
 
-    if ($bcContainerHelperVersion -eq "") {
+    if ($bcContainerHelperVersion -eq '') {
         $bcContainerHelperVersion = "latest"
     }
 
-    if ($bcContainerHelperVersion -eq "private") {
+    if ($bcContainerHelperVersion -eq 'private') {
         throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
     }
 
@@ -381,7 +381,7 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder) {
         Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
     }
 
-    $bcContainerHelperPath = GetBcContainerHelperPath bcContainerHelperVersion $bcContainerHelperVersion
+    $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
 
     Write-Host "Import from $bcContainerHelperPath"
     . $bcContainerHelperPath @params
