@@ -98,7 +98,6 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
                 $filteredProjects += $project
             }
         }
-            
     }
 
     return $filteredProjects

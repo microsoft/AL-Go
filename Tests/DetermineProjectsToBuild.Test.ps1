@@ -52,7 +52,6 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "."
     }
-
     
     It 'loads two independent projects with no build modes set' {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
@@ -151,7 +150,7 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[2].project | Should -BeExactly "Project2"
     }
 
-    It 'loads correct projects, based on the modified files' {
+    It 'loads correct projects, based on the modified files: single modified file in Project1' {
         # Setup project structure
         $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
@@ -162,7 +161,6 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
-        #region Single file modified
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
 
@@ -195,9 +193,19 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
         $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
-        #endregion
+    }
 
-        #region Multiple files modified
+    It 'loads correct projects, based on the modified files: multiple modified files in Project1 and Project2' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        
+        # Add AL-Go settings file
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
 
@@ -237,9 +245,19 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
         $buildOrder[0].buildDimensions[1].buildMode | Should -BeExactly "Default"
         $buildOrder[0].buildDimensions[1].project | Should -BeExactly "Project2"
-        #endregion
+    }
 
-        #region Multiple files modified, but only one project
+    It 'loads correct projects, based on the modified files: multiple modified files only in Project1' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        
+        # Add AL-Go settings file
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project1/app/app.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
 
@@ -273,10 +291,19 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
         $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
-        #endregion
+    }
 
+    It 'loads correct projects, based on the modified files: no modified files' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        
+        # Add AL-Go settings file
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @() }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
 
-        #region No modified files
         $modifiedFiles = @()
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
 
@@ -316,9 +343,15 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
         $buildOrder[0].buildDimensions[1].buildMode | Should -BeExactly "Default"
         $buildOrder[0].buildDimensions[1].project | Should -BeExactly "Project2"
-        #endregion
+    }
 
-        #region One project is modified, but alwaysBuildAllProjects is set to true
+    It 'loads correct projects, based on the modified files: only Project1 is modified, alwaysBuildAllProjects is set to true' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $true; projects = @(); useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
@@ -363,7 +396,68 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
         $buildOrder[0].buildDimensions[1].buildMode | Should -BeExactly "Default"
         $buildOrder[0].buildDimensions[1].project | Should -BeExactly "Project2"
-        #endregion
+    }
+
+    It 'loads correct projects, based on the modified files: Project1 is modified, fullBuildFolders is set to .github' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        
+        # Add AL-Go settings file
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @('.github') }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+
+        $modifiedFiles = @('Project1/.AL-Go/settings.json')
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+
+        $allProjects | Should -BeExactly @("Project1", "Project2")
+        $projectsToBuild | Should -BeExactly @("Project1")
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable
+        $projectDependencies['Project1'] | Should -BeExactly @()
+        $projectDependencies['Project2'] | Should -BeExactly @()
+
+        $buildOrder.Count | Should -BeExactly 1
+        $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[0].projects | Should -BeExactly @("Project1")
+        $buildOrder[0].projectsCount | Should -BeExactly 1
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
+    }
+
+    It 'loads correct projects, based on the modified files: Project1 is modified, fullBuildFolders is set to Project1/*' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        
+        # Add AL-Go settings file
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildFolders = @('Project1/*') }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+
+        $modifiedFiles = @('Project1/.AL-Go/settings.json')
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+
+        $allProjects | Should -BeExactly @("Project1", "Project2")
+        $projectsToBuild | Should -BeExactly @("Project1", "Project2")
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable
+        $projectDependencies['Project1'] | Should -BeExactly @()
+        $projectDependencies['Project2'] | Should -BeExactly @()
+
+        $buildOrder.Count | Should -BeExactly 1
+        $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[0].projects | Should -BeExactly @("Project1", "Project2")
+        $buildOrder[0].projectsCount | Should -BeExactly 2
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 2
+        $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
+        $buildOrder[0].buildDimensions[1].buildMode | Should -BeExactly "Default"
+        $buildOrder[0].buildDimensions[1].project | Should -BeExactly "Project2"
     }
 
     It 'loads independent projects correctly, if useProjectDependencies is set to false' {
