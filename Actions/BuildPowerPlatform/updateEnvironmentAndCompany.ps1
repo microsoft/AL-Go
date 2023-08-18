@@ -52,10 +52,10 @@ function Update-PowerAppFiles {
         # only check json and xml files
         if (($file.Extension -eq ".json") -or ($file.Extension -eq ".xml")) {
             
-            $fileContent = Get-Content $file.FullName
+            $fileContent = Get-Content  $file.FullName
             if (Select-String -Pattern $oldSetting -InputObject $fileContent) {
                 $fileContent = $fileContent -creplace $oldSetting, $newSetting                
-                Set-Content -Path $file.FullName -Value $fileContent
+                Set-Content -Path $file.FullName -Value $fileContent 
                 Write-Host "Updated: $file.FullName"
             }
         }
@@ -75,7 +75,7 @@ function Get-CurrentPowerAppSettings {
     $currentSettingsList = @()
     $connectionsFilePaths = Get-ChildItem -Path "$solutionFolder/CanvasApps" -Recurse -File -Include "Connections.json" | Select-Object -ExpandProperty FullName
     foreach ($connectionsFilePath in $connectionsFilePaths) {
-        $jsonFile = Get-Content $connectionsFilePath | ConvertFrom-Json
+        $jsonFile = Get-Content  $connectionsFilePath | ConvertFrom-Json
     
         # We don't know the name of the connector node, so we need to loop through all of them
         $ConnectorNodeNames = ($jsonFile | Get-Member -MemberType NoteProperty).Name
@@ -97,7 +97,7 @@ function Get-CurrentPowerAppSettings {
 
                     # The Business Central environment can be be inconsistant - Either starting with a capital letter or all caps.
                     # Add both variants to ensure we find all connections
-                    $currentSettingsParts = $currentEnvironmentAndCompany.Split(",");
+                    $currentSettingsParts = @($currentEnvironmentAndCompany.Split(","))
                     $currentSettingsList += "$($currentSettingsParts[0].ToUpperInvariant()),$($currentSettingsParts[1])"
                 } 
             }
@@ -136,7 +136,7 @@ function Update-FlowFile {
         [string]$EnvironmentName
     )
     # Read the JSON file
-    $jsonObject = Get-Content $FilePath | ConvertFrom-Json
+    $jsonObject = Get-Content $FilePath  | ConvertFrom-Json
 
     write-host "Checking flow: $FilePath"
     
@@ -172,7 +172,7 @@ function Update-FlowFile {
     if ($shouldUpdate) {
         Write-Host "Updating: $FilePath"
         # Save the updated JSON back to the file
-        $jsonObject | ConvertTo-Json -Depth 100 | Set-Content $FilePath
+        $jsonObject | ConvertTo-Json -Depth 100 | Set-Content  $FilePath
     }
     else {
         Write-Host "No update needed for: $FilePath"
