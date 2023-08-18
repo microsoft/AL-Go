@@ -6,12 +6,11 @@ There are 2 steps to connect your GitHub repository to your Power Platform tenan
 2. Setup the AL-Go Repository settings (.github/AL-Go-Settings.json)
 
 ## Authentication Context
+The authentication context is a JSON object that you save in your GitHub secrets with the following naming convention: `<GitHubEnvironmentName>_AUTHCONTEXT`
 
 The authentication context specifies how the GitHub Environment you have created authenticates against your Power Platform and Business Central environments. You can use UserName/Password to create the authentication context or create a service principal account and use a client secret to connect (see a [Setting up service principal](./SetupServicePrincipal.md) for detailed steps).
 
 > **NOTE:** Username/password authentication is only supported for tenants that do NOT have 2-factor authentication enabled.
-
-The authentication context is a JSON object that you save in your GitHub secrets with the following naming convention: `<GitHubEnvironmentName>_AUTHCONTEXT`
 
 The recommended way to get the auth context is to use the BCContainerHelper to generate the JSON - open a PowerShell window and run the following commands:
 
@@ -32,8 +31,8 @@ New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppClientSecret $ppC
 # If not already installed, install latest BcContainerHelper
 Install-Module BcContainerHelper -force
 
-$ppUserName = Read-Host -Prompt "Enter userName"
-$ppPassword = Read-Host -AsSecureString -Prompt 'Enter password'
+$ppUserName = Read-Host -Prompt "Enter Power Platform user name"
+$ppPassword = Read-Host -AsSecureString -Prompt 'Enter Power Platform password'
 New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserName -ppPassword $ppPassword | Set-Clipboard
 ```
 
