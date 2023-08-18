@@ -19,7 +19,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -59,7 +59,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -159,7 +159,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -204,7 +204,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -256,7 +256,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project1/app/app.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -302,7 +302,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @()
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -354,7 +354,7 @@ Describe "Get-ProjectsToBuild" {
 
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $true; projects = @(); useProjectDependencies = $false }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -407,7 +407,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @('.github') }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -437,7 +437,7 @@ Describe "Get-ProjectsToBuild" {
 
         # Add AL-Go settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @('Project1/*') }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
@@ -467,7 +467,7 @@ Describe "Get-ProjectsToBuild" {
 
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -517,7 +517,7 @@ Describe "Get-ProjectsToBuild" {
 
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -572,7 +572,7 @@ Describe "Get-ProjectsToBuild" {
 
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -627,7 +627,7 @@ Describe "Get-ProjectsToBuild" {
 
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
@@ -694,7 +694,7 @@ Describe "Get-ProjectsToBuild" {
 
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         { Get-ProjectsToBuild -baseFolder $baseFolder -maxBuildDepth 1 } | Should -Throw "The build depth is too deep, the maximum build depth is 1. You need to run 'Update AL-Go System Files' to update the workflows"
     }
