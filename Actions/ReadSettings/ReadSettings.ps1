@@ -143,7 +143,7 @@ try {
                     if ($branchPolicy) {
                         $branches = @()
                         if ($ghEnvironment.deployment_branch_policy.protected_branches) {
-                            Write-Host "GitHub Environment $envName only allows protected branches, getting branches from GitHub API"
+                            Write-Host "GitHub Environment $envName only allows protected branches, getting protected branches from GitHub API"
                             $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches"
                             $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name })
                         }
