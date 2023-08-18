@@ -140,11 +140,11 @@ try {
                 $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $envName }
                 if ($ghEnvironment) {
                     $ghEnvironment | ConvertTo-Json | Out-Host
-                    $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
+                    $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "deployment_branch_policy" })
                     if ($branchPolicy) {
                         $branchPolicy | ConvertTo-Json | Out-Host
 
-                        $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment-protection-rules"
+                        $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment_protection_rules"
                         Write-Host "Getting deployment protection rules for $envName from GitHub API"
                         $policies = InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors
                         $policies | ConvertTo-Json | Out-Host
