@@ -140,27 +140,17 @@ try {
                 $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $envName }
                 if ($ghEnvironment) {
                     $ghEnvironment | ConvertTo-Json | Out-Host
-                    $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "deployment_branch_policy" })
+                    $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
                     if ($branchPolicy) {
-                        $branchPolicy | ConvertTo-Json | Out-Host
-
-                        $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment_protection_rules"
-                        Write-Host "Getting deployment protection rules for $envName from GitHub API"
-                        $policies = InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors
-                        $policies | ConvertTo-Json | Out-Host
-
-
-                        Write-Host "GitHub Environment $envName has branch policies, getting branches from GitHub API"
-                        $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
-                        Write-Host "Getting branches for $envName from GitHub API"
-                        $policies = InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors
-                        if ($policies) {
-                            $policies | Out-Host
-                            $branches = @(($policies | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
+                        if ($ghEnvironment.deployment_branch_policy.protected_branches) {
+                            Write-Host "GitHub Environment $envName only allows protected branches, getting branches from GitHub API"
+                            $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches"
+                            $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name })
                         }
-                        else {
-                            Write-Host "GitHub Environment $envName has deployment branches defined, but no branches added, using main as default"
-                            $branches = @( 'main' )
+                        elseif ($ghEnvironment.deployment_branch_policy.custom_branch_policies) {
+                            Write-Host "GitHub Environment $envName has custom deployment branch policies, getting branches from GitHub API"
+                            $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
+                            $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                         }
                     }
                     else {
