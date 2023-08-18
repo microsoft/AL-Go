@@ -141,6 +141,7 @@ try {
                 if ($ghEnvironment) {
                     $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
                     if ($branchPolicy) {
+                        $branchPolicy | ConvertTo-Json | Out-Host
                         Write-Host "GitHub Environment $envName has branch policies, getting branches from GitHub API"
                         $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
                         Write-Host "Getting branches for $envName from GitHub API"
@@ -150,12 +151,12 @@ try {
                             $branches = @(($policies | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                         }
                         else {
-                            Write-Host "GitHub Environment $envName does not have branch policies, using main as default"
+                            Write-Host "GitHub Environment $envName has deployment branches defined, but no branches added, using main as default"
                             $branches = @( 'main' )
                         }
                     }
                     else {
-                        Write-Host "GitHub Environment $envName does not have branch policies, using main as default"
+                        Write-Host "GitHub Environment $envName does not have deployment branches defined, using main as default"
                         $branches = @( 'main' )
                     }
                 }
