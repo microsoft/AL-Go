@@ -2,6 +2,10 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### Issues 
+
+Adding Deployment Branch Policy = Protected Branches caused AL-Go for GitHub to fail during initialization (getting environments for deployment)
+
 ## v3.2
 
 ### Issues
