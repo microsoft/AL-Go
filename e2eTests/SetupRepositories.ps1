@@ -25,7 +25,7 @@ $config = [ordered]@{
     "defaultBcContainerHelperVersion" = $bcContainerHelperVersion
 }
 
-. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -config $config -token $token -DirectCommit
+. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -config $config -token $token -DirectCommit $true
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "actionsRepo=$actionsRepo"
 Write-Host "actionsRepo=$actionsRepo"
