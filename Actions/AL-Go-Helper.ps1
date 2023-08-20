@@ -2120,3 +2120,15 @@ function Retry-Command {
         }
     }
 }
+
+function Get-WorkflowStatus([stirng] $Repository, [string] $RunId) {
+    $workflowJobs = gh api /repos/$Repository/actions/runs/$RunId/jobs | ConvertFrom-Json
+
+    Write-Host "Workflow status: $workflowJobs"
+
+    $failedJobs = $workflowJobs | Where-Object { $_.conclusion -eq "failure" }
+
+    if ($failedJobs) {
+        throw "Workflow failed with the following jobs: $($failedJobs.name -join ', ')"
+    }
+}
