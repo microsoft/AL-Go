@@ -29,11 +29,6 @@ jobs:
     if: (github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name) && (github.event_name != 'pull_request')
     runs-on: [ windows-latest ]
     steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-          ref: refs/pull/${{ github.event.number }}/merge
-
       - uses: microsoft/AL-Go-Actions/VerifyPRChanges@main
 
   Initialization:
@@ -108,12 +103,6 @@ jobs:
     needs: [ Initialization, Build ]
     if: (!cancelled())
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          lfs: true
-          ref: refs/pull/${{ github.event.number }}/merge
-
       - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
