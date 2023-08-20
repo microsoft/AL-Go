@@ -184,7 +184,7 @@ try {
                 if ($settingsBranches -and $includeEnvironment) {
                     Write-Host "- settings branches: $($settingsBranches -join ', ')"
                 }
-                $branches | ForEach-Object {
+                $policyBranches | ForEach-Object {
                     if ($ENV:GITHUB_REF_NAME -like $_) {
                         $includeEnvironment = $true
                     }
