@@ -18,7 +18,6 @@ try {
         TrackTrace -telemetryScope $telemetryScope
     }
 
-    Get-WorkflowStatus -RunId $Env:GITHUB_RUN_ID -Repo $Env:GITHUB_REPOSITORY
 }
 catch {
     TrackException -telemetryScope $telemetryScope -errorRecord $_

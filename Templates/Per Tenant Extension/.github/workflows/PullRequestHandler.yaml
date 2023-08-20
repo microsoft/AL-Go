@@ -98,15 +98,13 @@ jobs:
       secrets: 'licenseFileUrl,insiderSasToken,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
 
-  PostProcess:
+  StatusCheck:
     runs-on: [ windows-latest ]
     needs: [ Initialization, Build ]
-    if: (!cancelled())
+    if: always()
     steps:
-      - name: Finalize the workflow
-        id: PostProcess
-        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+      - name: Pull Request Status Check
+        id: StatusCheck
+        uses: microsoft/AL-Go-Actions/PullRequestStatusCheck@main
         with:
           shell: powershell
-          eventId: "DO0104"
-          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
