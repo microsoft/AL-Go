@@ -2121,7 +2121,14 @@ function Retry-Command {
     }
 }
 
-function Get-WorkflowStatus([stirng] $Repository, [string] $RunId) {
+function Get-WorkflowStatus() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Repository,
+        [Parameter(Mandatory = $true)]
+        [string] $RunId
+    )
+    
     $workflowJobs = gh api /repos/$Repository/actions/runs/$RunId/jobs | ConvertFrom-Json
 
     Write-Host "Workflow status: $workflowJobs"
