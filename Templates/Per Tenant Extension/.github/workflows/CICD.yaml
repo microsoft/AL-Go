@@ -30,7 +30,6 @@ jobs:
       environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
       environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
       deliveryTargets: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
-      deliveryTargetCount: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetCount }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
       checkRunId: ${{ steps.CreateCheckRun.outputs.checkRunId }}
@@ -74,80 +73,26 @@ jobs:
 
       - name: Determine Delivery Target Secrets
         id: DetermineDeliveryTargetSecrets
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $deliveryTargetSecrets = @('GitHubPackagesContext','NuGetContext','StorageContext','AppSourceContext')
-          $namePrefix = 'DeliverTo'
-          Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") | ForEach-Object {
-            $deliveryTarget = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
-            $deliveryTargetSecrets += @("$($deliveryTarget)Context")
-          }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$($deliveryTargetSecrets -join ',')"
+        uses: microsoft/AL-Go-Actions/DetermineDeliveryTargets@main
+        with:
+          shell: powershell
+          projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
+          checkContextSecrets: 'N'
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: ${{ steps.DetermineDeliveryTargetSecrets.outputs.Secrets }}
+          getSecrets: ${{ steps.DetermineDeliveryTargetSecrets.outputs.ContextSecrets }}
 
       - name: Determine Delivery Targets
         id: DetermineDeliveryTargets
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $deliveryTargets = @('GitHubPackages','NuGet','Storage')
-          if ($env:type -eq "AppSource App") {
-            $continuousDelivery = $false
-            # For multi-project repositories, we will add deliveryTarget AppSource if any project has AppSourceContinuousDelivery set to true
-            ('${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}' | ConvertFrom-Json) | where-Object { $_ } | ForEach-Object {
-              $projectSettings = Get-Content (Join-Path $_ '.AL-Go/settings.json') -encoding UTF8 -raw | ConvertFrom-Json
-              if ($projectSettings.PSObject.Properties.Name -eq 'AppSourceContinuousDelivery' -and $projectSettings.AppSourceContinuousDelivery) {
-                Write-Host "Project $_ is setup for Continuous Delivery"
-                $continuousDelivery = $true
-              }
-            }
-            if ($continuousDelivery) {
-              $deliveryTargets += @("AppSource")
-            }
-          }
-          $namePrefix = 'DeliverTo'
-          Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") | ForEach-Object {
-            $deliveryTarget = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
-            $deliveryTargets += @($deliveryTarget)
-          }
-          $settings = $env:Settings | ConvertFrom-Json
-          $secrets = $env:Secrets | ConvertFrom-Json
-          $deliveryTargets = @($deliveryTargets | Select-Object -unique | Where-Object {
-            $include = $false
-            Write-Host "Check DeliveryTarget $_"
-            $contextName = "$($_)Context"
-            if ($secrets."$contextName") {
-              $settingName = "DeliverTo$_"
-              if (($settings.PSObject.Properties.Name -eq $settingName) -and ($settings."$settingName".PSObject.Properties.Name -eq "Branches")) {
-                Write-Host "Branches:"
-                $settings."$settingName".Branches | ForEach-Object {
-                  Write-Host "- $_"
-                  if ($ENV:GITHUB_REF_NAME -like $_) {
-                    $include = $true
-                  }
-                }
-              }
-              else {
-                $include = ($ENV:GITHUB_REF_NAME -eq 'main')
-              }
-            }
-            if ($include) {
-              Write-Host "DeliveryTarget $_ included"
-            }
-            $include
-          })
-          $deliveryTargetsJson = $deliveryTargets | ConvertTo-Json -Depth 99 -compress
-          if ($deliveryTargets.Count -lt 2) { $deliveryTargetsJson = "[$($deliveryTargetsJson)]" }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetsJson=$deliveryTargetsJson"
-          Write-Host "DeliveryTargetsJson=$deliveryTargetsJson"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeliveryTargetCount=$($deliveryTargets.Count)"
-          Write-Host "DeliveryTargetCount=$($deliveryTargets.Count)"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "DeliveryTargets=$deliveryTargetsJson"
+        uses: microsoft/AL-Go-Actions/DetermineDeliveryTargets@main
+        with:
+          shell: powershell
+          projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
+          checkContextSecrets: 'Y'
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
@@ -189,7 +134,7 @@ jobs:
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
-      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetCount > 0 || needs.Initialization.outputs.environmentCount > 0 }}
+      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargets != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
       signArtifacts: true
       useArtifactCache: true
 
@@ -320,7 +265,7 @@ jobs:
 
   Deliver:
     needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargetCount > 0
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargets != '[]'
     strategy:
       matrix:
         deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargets) }}

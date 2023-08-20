@@ -137,38 +137,53 @@ try {
             } | Where-Object {
                 $envName = $_
                 Write-Host "Environment: $envName"
+                $environmentName = $_.Split(' ')[0]
+                $deployToName = "DeployTo$environmentName"
+                $settingsBranches = $null
+                if (($settings.Contains($deployToName)) -and ($settings."$deployToName".Contains('Branches'))) {
+                    $settingsBranches = @($settings."$deployToName".Branches)
+                }
+                $policyBranches = $null
                 $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $envName }
                 if ($ghEnvironment) {
                     $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
                     if ($branchPolicy) {
-                        $branches = @()
                         if ($ghEnvironment.deployment_branch_policy.protected_branches) {
                             Write-Host "GitHub Environment $envName only allows protected branches, getting protected branches from GitHub API"
                             $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches"
-                            $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name })
+                            $policyBranches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name })
                         }
                         elseif ($ghEnvironment.deployment_branch_policy.custom_branch_policies) {
                             Write-Host "GitHub Environment $envName has custom deployment branch policies, getting branches from GitHub API"
                             $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($envName))/deployment-branch-policies"
-                            $branches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
+                            $policyBranches = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
                         }
                     }
                     else {
                         Write-Host "GitHub Environment $envName does not have deployment branches defined, using main as default"
-                        $branches = @( 'main' )
                     }
                 }
                 else {
                     Write-Host "Environment $envName was defined in settings, using main as default"
-                    $branches = @( 'main' )
                 }
-                $environmentName = $_.Split(' ')[0]
-                $deployToName = "DeployTo$environmentName"
-                if (($settings.Contains($deployToName)) -and ($settings."$deployToName".Contains('Branches'))) {
-                    $branches = @($settings."$deployToName".Branches)
+                # First check whether we can include the environment based on policy settings
+                # If policy says no - ignore settings
+                if ($policyBranches) {
+                    $includeEnvironment = $false
+                    Write-Host "- policy branches: $($policyBranches -join ', ')"
+                    $policyBranches | ForEach-Object {
+                        if ($ENV:GITHUB_REF_NAME -like $_) {
+                            $includeEnvironment = $true
+                        }
+                    }
                 }
-                Write-Host "- branches: $($branches -join ', ')"
-                $includeEnvironment = $false
+                else {
+                    # No policy defined
+                    $includeEnvironment = $true
+                }
+                if ($settingsBranches -and $includeEnvironment) {
+                    Write-Host "- settings branches: $($settingsBranches -join ', ')"
+                }
                 $branches | ForEach-Object {
                     if ($ENV:GITHUB_REF_NAME -like $_) {
                         $includeEnvironment = $true

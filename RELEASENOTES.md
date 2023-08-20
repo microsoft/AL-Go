@@ -4,7 +4,10 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 
 ### Issues 
 
-Adding Deployment Branch Policy = Protected Branches caused AL-Go for GitHub to fail during initialization (getting environments for deployment)
+After configuring deployment branches for an environment in GitHub and setting Deployment Branch Policy to **Protected Branches**, AL-Go for GitHub would fail during initialization (trying to get environments for deployment)
+
+### New Actions
+- `DetermineDeliveryTargets`: Determine which delivery targets should be used for delivering artifacts from the build job.
 
 ## v3.2
 
