@@ -10,8 +10,6 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    Get-WorkflowStatus -RunId $Env:GITHUB_RUN_ID -Repo $Env:GITHUB_REPOSITORY
-
     $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
     $branch = $ap[$ap.Count-2]
     $owner = $ap[$ap.Count-4]
