@@ -102,6 +102,7 @@ jobs:
     runs-on: [ windows-latest ]
     needs: [ Initialization, Build ]
     if: always()
+    name: Pull Request Status Check
     steps:
       - name: Pull Request Status Check
         id: PullRequestStatusCheck
