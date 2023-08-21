@@ -9,6 +9,9 @@ After configuring deployment branches for an environment in GitHub and setting D
 ### New Actions
 - `DetermineDeliveryTargets`: Determine which delivery targets should be used for delivering artifacts from the build job.
 
+### New Settings
+- `fullBuildPatterns`: used by `DetermineProjectsToBuild` action to specify changes in which files and folders would trigger a full build (building all AL-Go projects).
+
 ## v3.2
 
 ### Issues

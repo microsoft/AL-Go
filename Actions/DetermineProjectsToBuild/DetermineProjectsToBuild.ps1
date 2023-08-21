@@ -15,10 +15,10 @@ function New-BuildDimensions(
 )
 {
     $buildDimensions = @()
-    
+
     $projects | ForEach-Object {
         $project = $_
-        
+
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         $buildModes = @($projectSettings.buildModes)
 
@@ -26,7 +26,7 @@ function New-BuildDimensions(
             Write-Host "No build modes found for project $project, using default build mode 'Default'."
             $buildModes = @('Default')
         }
-        
+
         $buildModes | ForEach-Object {
             $buildMode = $_
             $buildDimensions += @{
@@ -35,7 +35,7 @@ function New-BuildDimensions(
             }
         }
     }
-    
+
     return @(, $buildDimensions) # force array
 }
 
@@ -50,39 +50,58 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
         return $projects
-    } 
+    }
 
     if (!$modifiedFiles) {
         Write-Host "No files modified, building all projects"
         return $projects
     }
 
-    if ($modifiedFiles -like '.github/*.json') {
-        Write-Host "Changes to repo Settings, building all projects"
-        return $projects
-    }
-    
+    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
+
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
         return $projects
     }
 
-    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
+    $fullBuildPatterns = @( Join-Path '.github' '*.json')
+    if($settings.fullBuildPatterns) {
+        $fullBuildPatterns += $settings.fullBuildPatterns
+    }
+
+    #Include the base folder in the modified files
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+
+    foreach($fullBuildFolder in $fullBuildPatterns) {
+        # The Join-Path is needed to make sure the path has the correct slashes
+        $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
+
+        if ($modifiedFiles -like $fullBuildFolder) {
+            Write-Host "Changes to $fullBuildFolder, building all projects"
+            return $projects
+        }
+    }
 
     Write-Host "Filtering projects to build based on the modified files"
 
-    $filteredProjects = @($projects | Where-Object {
-            $checkProject = $_
-            $buildProject = $false
-            if (Test-Path -Path (Join-Path $baseFolder "$checkProject/.AL-Go/settings.json")) {
-                $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $checkProject -includeAlGoFolder
+    $filteredProjects = @()
+    foreach($project in $projects)
+    {
+        if (Test-Path -Path (Join-Path $baseFolder "$project/.AL-Go/settings.json")) {
+            $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
-                $projectFolders | ForEach-Object {
-                    if ($modifiedFiles -like "$_/*") { $buildProject = $true }
-                }
+            $modifiedProjectFolders = @($projectFolders | Where-Object {
+                $projectFolder = Join-Path $baseFolder "$_/*"
+
+                return $($modifiedFiles -like $projectFolder)
+            })
+
+            if ($modifiedProjectFolders.Count -gt 0) {
+                # The project has been modified, add it to the list of projects to build
+                $filteredProjects += $project
             }
-            $buildProject
-        })
+        }
+    }
 
     return $filteredProjects
 }
@@ -114,15 +133,15 @@ function Get-ProjectsToBuild(
     $modifiedFiles = @(),
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     $maxBuildDepth = 0
-) 
+)
 {
     Write-Host "Determining projects to build in $baseFolder"
-    
+
     Push-Location $baseFolder
 
     try {
-        $settings = ReadSettings -baseFolder $baseFolder -project '.' # Read AL-Go settings for the repo
-        
+        $settings = $env:Settings | ConvertFrom-Json
+
         if ($settings.projects) {
             Write-Host "Projects specified in settings"
             $projects = $settings.projects
@@ -130,28 +149,28 @@ function Get-ProjectsToBuild(
         else {
             # Get all projects that have a settings.json file
             $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-            
+
             # If the repo has a settings.json file, add it to the list of projects to build
             if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
                 $projects += @(".")
             }
         }
-        
+
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
-        
+
         $projectsToBuild = @()
         $projectDependencies = @{}
         $projectsOrderToBuild = @()
-        
+
         if ($projects) {
             $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
-            
+
             if($settings.useProjectDependencies) {
                 $buildAlso = @{}
 
                 # Calculate the full projects order
                 $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-                
+
                 $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
             }
             else {
@@ -174,7 +193,7 @@ function Get-ProjectsToBuild(
                 }
             }
         }
-        
+
         if ($projectsOrderToBuild.Count -eq 0) {
             Write-Host "Did not find any projects to add to the build order, adding default values"
             $projectsOrderToBuild += @{
@@ -186,7 +205,7 @@ function Get-ProjectsToBuild(
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"
 
         if($maxBuildDepth -and ($projectsOrderToBuild.Count -gt $maxBuildDepth)) {
-            throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows" 
+            throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows"
         }
 
         return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild
