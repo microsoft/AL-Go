@@ -104,7 +104,7 @@ jobs:
     if: always()
     steps:
       - name: Pull Request Status Check
-        id: StatusCheck
+        id: PullRequestStatusCheck
         uses: microsoft/AL-Go-Actions/PullRequestStatusCheck@main
         with:
           shell: powershell
