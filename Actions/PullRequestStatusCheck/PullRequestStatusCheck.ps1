@@ -1,7 +1,7 @@
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter(HelpMessage = "Repository name", Mandatory = $false)]
     [string] $Repository,
-    [Parameter(Mandatory = $true)]
+    [Parameter(HelpMessage = "Run Id", Mandatory = $false)]
     [string] $RunId
 )
 

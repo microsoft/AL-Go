@@ -107,5 +107,7 @@ jobs:
       - name: Pull Request Status Check
         id: PullRequestStatusCheck
         uses: microsoft/AL-Go-Actions/PullRequestStatusCheck@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
