@@ -76,7 +76,7 @@ function Copy-HashTable() {
     )
     $ht = @{}
     if ($object) {
-        $object.Keys | ForEach-Object { 
+        $object.Keys | ForEach-Object {
             $ht[$_] = $object[$_]
         }
     }
@@ -187,7 +187,7 @@ function stringToInt {
     )
 
     $i = 0
-    if ([int]::TryParse($str.Trim(), [ref] $i)) { 
+    if ([int]::TryParse($str.Trim(), [ref] $i)) {
         $i
     }
     else {
@@ -479,7 +479,7 @@ function ReadSettings {
         Param(
             [string] $path
         )
-        
+
         if (Test-Path $path) {
             try {
                 Write-Host "Applying settings from $path"
@@ -578,6 +578,7 @@ function ReadSettings {
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "PullRequestTrigger"                            = "pull_request_target"
+        "fullBuildPatterns"                              = @()
     }
 
     # Read settings from files and merge them into the settings object
@@ -730,7 +731,7 @@ function ResolveProjectFolders {
 
                 $isTestApp = $false
                 $isBcptTestApp = $false
-                
+
                 # if an AL app has a dependency to a test app, it is a test app
                 # if an AL app has a dependency to an app from the performance toolkit apps, it is a bcpt test app
                 if ($appJson.PSObject.Properties.Name -eq "dependencies") {
@@ -743,10 +744,10 @@ function ResolveProjectFolders {
                         }
 
                         # Check if the app is a test app or a bcpt app
-                        if ($performanceToolkitApps.Contains($id)) { 
+                        if ($performanceToolkitApps.Contains($id)) {
                             $isBcptTestApp = $true
                         }
-                        elseif ($testRunnerApps.Contains($id)) { 
+                        elseif ($testRunnerApps.Contains($id)) {
                             $isTestApp = $true
                         }
                     }
@@ -810,7 +811,7 @@ function AnalyzeRepo {
     )
 
     $settings = $settings | Copy-HashTable
-    
+
     if (!$runningLocal) {
         Write-Host "::group::Analyzing repository"
     }
@@ -1194,7 +1195,7 @@ function installModules {
             Install-Module $_ -Force | Out-Null
         }
     }
-    $modules | ForEach-Object { 
+    $modules | ForEach-Object {
         Write-Host "Importing module $_"
         Import-Module $_ -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
     }
@@ -1298,7 +1299,7 @@ function Select-Value {
         else {
             Write-Host $_.Value
         }
-        $offset++     
+        $offset++
     }
     Write-Host
     $answer = -1
@@ -1488,7 +1489,7 @@ function CreateDevEnv {
         }
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
         $settings = ReadSettings @params
-    
+
         if ($caller -eq "GitHubActions") {
             if ($kind -ne "cloud") {
                 OutputError -message "Unexpected. kind=$kind, caller=$caller"
@@ -1524,7 +1525,7 @@ function CreateDevEnv {
                                 }
                             }
                         }
-                    } 
+                    }
                 }
             }
 
@@ -1544,12 +1545,12 @@ function CreateDevEnv {
                     if ($settings.applicationInsightsConnectionStringSecretName) {
                         $applicationInsightsConnectionStringSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.applicationInsightsConnectionStringSecretName
                         if ($applicationInsightsConnectionStringSecret) {
-                            $runAlPipelineParams += @{ 
+                            $runAlPipelineParams += @{
                                 "applicationInsightsConnectionString" = $applicationInsightsConnectionStringSecret.SecretValue | Get-PlainText
                             }
                         }
                     }
-                    
+
                     if ($settings.keyVaultCertificateUrlSecretName) {
                         $KeyVaultCertificateUrlSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultCertificateUrlSecretName
                         if ($KeyVaultCertificateUrlSecret) {
@@ -1559,7 +1560,7 @@ function CreateDevEnv {
                                 OutputError -message "When specifying a KeyVaultCertificateUrl secret in settings, you also need to provide a KeyVaultCertificatePassword secret and a KeyVaultClientId secret"
                                 exit
                             }
-                            $runAlPipelineParams += @{ 
+                            $runAlPipelineParams += @{
                                 "KeyVaultCertPfxFile"     = $KeyVaultCertificateUrlSecret.SecretValue | Get-PlainText
                                 "keyVaultCertPfxPassword" = $keyVaultCertificatePasswordSecret.SecretValue
                                 "keyVaultClientId"        = $keyVaultClientIdSecret.SecretValue | Get-PlainText
@@ -1631,14 +1632,14 @@ function CreateDevEnv {
                 })
             Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
                 if ($_.startswith('(')) {
-                    $installTestApps += $_    
+                    $installTestApps += $_
                 }
                 else {
-                    $installApps += $_    
+                    $installApps += $_
                 }
             }
         }
-    
+
         if ($repo.versioningStrategy -eq -1) {
             if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
             $artifactVersion = [Version]$repo.artifact.Split('/')[4]
@@ -1680,7 +1681,7 @@ function CreateDevEnv {
         if (Test-Path $testResultsFiles) {
             Remove-Item $testResultsFiles -Force
         }
-    
+
         Set-Location $projectFolder
         $runAlPipelineOverrides | ForEach-Object {
             $scriptName = $_
@@ -1715,7 +1716,7 @@ function CreateDevEnv {
             if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
                 throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
             }
-            
+
             if ($bcAuthContext) {
                 $authContext = Renew-BcAuthContext $bcAuthContext
             }
@@ -1746,12 +1747,12 @@ function CreateDevEnv {
                 } while (!($baseApp))
                 $baseapp | Out-Host
             }
-            
+
             $artifact = Get-BCArtifactUrl `
                 -country $countryCode `
                 -version $baseApp.Version `
                 -select Closest
-            
+
             if ($artifact) {
                 Write-Host "Using Artifacts: $artifact"
             }
@@ -1767,7 +1768,7 @@ function CreateDevEnv {
                 "updateLaunchJson" = "Cloud Sandbox ($environmentName)"
             }
         }
-        
+
         "enableTaskScheduler",
         "assignPremiumPlan",
         "installTestRunner",
@@ -1897,12 +1898,12 @@ Function AnalyzeProjectDependencies {
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
-        
+
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
         Push-Location $baseFolder
         try {
             $projectPath = Join-Path $baseFolder $project
-            $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
+            $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
                 return (Resolve-Path (Join-Path $projectPath $_) -Relative)
             }
         }
@@ -1980,7 +1981,7 @@ Function AnalyzeProjectDependencies {
             if ($foundDependencies) {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
                 # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
-                $foundDependencies | ForEach-Object { 
+                $foundDependencies | ForEach-Object {
                     if ($buildAlso.value.Keys -contains $_) {
                         if ($buildAlso.value."$_" -notcontains $project) {
                             $buildAlso.value."$_" += @( $project )
@@ -2000,9 +2001,9 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
-        
+
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
-        
+
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
         $no++
     }
@@ -2014,7 +2015,7 @@ function GetBaseFolder {
     Param(
         [string] $folder
     )
-    
+
     Push-Location $folder
     try {
         $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
@@ -2026,7 +2027,7 @@ function GetBaseFolder {
     if (!$baseFolder -or !(Test-Path (Join-Path $baseFolder '.github') -PathType Container)) {
         throw "Cannot determine base folder from folder $folder."
     }
-    
+
     return $baseFolder
 }
 
@@ -2082,7 +2083,7 @@ function Determine-ArtifactUrl {
             }
         }
     }
-    
+
     if ($artifact -like "https://*") {
         $artifactUrl = $artifact
         $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
@@ -2118,7 +2119,7 @@ function Determine-ArtifactUrl {
         $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
         Write-Host "Latest AT artifacts $atArtifactUrl"
         $latestATversion = $atArtifactUrl.Split('/')[4]
-        $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
+        $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object {
             $countryArtifactUrl = $_.Split('?')[0] # remove sas token
             $countryArtifactUrl.Split('/')[5] # get country
         }
