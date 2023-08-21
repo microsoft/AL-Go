@@ -2,6 +2,9 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
+### New Settings
+- `fullBuildPatterns`: used by `DetermineProjectsToBuild` action to specify changes in which files and folders would trigger a full build (building all AL-Go projects).
+
 ## v3.2
 
 ### Issues
