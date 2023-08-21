@@ -25,23 +25,22 @@ Describe "PullRequestStatusCheck Action Tests" {
     # Call action
 
     It 'should fail if there is a job that fails' {
-        Mock -CommandName gh -MockWith {  '{ "total_count":  3, "jobs":  [ { "conclusion":  "failure" }, { "conclusion":  "skipped" }, { "conclusion":  "success" } ] }' }
+        Mock -CommandName gh -MockWith {'{"total_count":3,"jobs":[{ "name": "job1", "conclusion":  "success" },{ "name": "job2", "conclusion":  "skipped" },{ "name": "job3", "conclusion":  "failure" }]}'}
 
        { 
         & $scriptPath `
                 -Repository "microsoft/AL-Go" `
                 -RunId "123456"
-        } | Should -Throw
+        } | Should -Throw -ExpectedMessage 'Workflow failed with the following jobs: job3'
     }
 
     It 'should complete if there are no failing jobs' {
-        Mock -CommandName gh -MockWith {  '{ "total_count":  3, "jobs":  [ { "conclusion":  "skipped" }, { "conclusion":  "skipped" }, { "conclusion":  "success" } ] }' }
+        Mock -CommandName gh -MockWith {'{"total_count":3,"jobs":[{ "name": "job1", "conclusion":  "success" },{ "name": "job2", "conclusion":  "skipped" },{ "name": "job3", "conclusion":  "success" }]}'}
+        Mock Write-Host {}
 
-       { 
         & $scriptPath `
                 -Repository "microsoft/AL-Go" `
                 -RunId "123456"
-        }
 
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Workflow succeeded" }
     }
