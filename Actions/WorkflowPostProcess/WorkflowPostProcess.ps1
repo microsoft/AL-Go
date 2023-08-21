@@ -17,7 +17,6 @@ try {
         $telemetryScope = RegisterTelemetryScope (hexStrToStr -hexStr $telemetryScopeJson)
         TrackTrace -telemetryScope $telemetryScope
     }
-
 }
 catch {
     TrackException -telemetryScope $telemetryScope -errorRecord $_
