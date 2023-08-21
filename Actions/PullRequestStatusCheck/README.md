@@ -4,13 +4,14 @@ Check the status of a pull request build and fail the build if any jobs have fai
 ## INPUT
 
 ### ENV variables
-none
+GITHUB_TOKEN
 
 ### Parameters
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| token | | The token to use for authentication | GITHUB_TOKEN |
+| repository | | The repository to check the status of the pull request | github.repository |
+| runId | | The run id of the pull request to check | github.run_id |
 
 ## OUTPUT
 none
