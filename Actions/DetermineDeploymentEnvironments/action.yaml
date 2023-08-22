@@ -8,6 +8,10 @@ inputs:
   getEnvironments:
     description: Specifies the pattern of the environments you want to retreive (* for all)
     required: true
+  type:
+    description: Type of deployment (CD or Publish)
+    required: false
+    default: 'CD'
 outputs:
   EnvironmentsMatrixJson:
     description: The Environment matrix to use for the Deploy step in compressed JSON format

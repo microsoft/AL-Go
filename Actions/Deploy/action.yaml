@@ -17,10 +17,6 @@ inputs:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
     default: '7b7d'
-  projects:
-    description: Projects to deploy
-    required: false
-    default: ''
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -31,6 +27,9 @@ inputs:
     description: Type of deployment (CD or Publish)
     required: false
     default: 'CD'
+  deploymentEnvironmentsJson:
+    description: The settings for all Deployment Environments
+    required: true
 runs:
   using: composite
   steps:
@@ -40,14 +39,14 @@ runs:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-        _projects: ${{ inputs.projects }}
         _environmentName: ${{ inputs.environmentName }}
         _artifacts: ${{ inputs.artifacts }}
         _type: ${{ inputs.type }}
+        _deploymentEnvironmentsJson: ${{ $inputs.deploymentEnvironmentsJson }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/Deploy.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -projects $ENV:_projects -environmentName $ENV:_environmentName -artifacts $ENV:_artifacts -type $ENV:_type
+          ${{ github.action_path }}/Deploy.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -projects $ENV:_projects -environmentName $ENV:_environmentName -artifacts $ENV:_artifacts -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

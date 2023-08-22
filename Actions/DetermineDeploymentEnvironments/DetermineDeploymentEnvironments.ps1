@@ -1,6 +1,9 @@
 Param(
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (* for all)", Mandatory = $true)]
-    [string] $getEnvironments
+    [string] $getEnvironments,
+    [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
+    [ValidateSet('CD','Publish')]
+    [string] $type = "CD"    
 )
 
 function GetGitHubEnvironments([string] $getEnvironments) {
@@ -10,7 +13,7 @@ function GetGitHubEnvironments([string] $getEnvironments) {
     try {
         Write-Host "Trying to get environments from GitHub API"
         $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments)
-    } 
+    }
     catch {
         $ghEnvironments = @()
         Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
@@ -37,13 +40,12 @@ if (!($environments)) {
     if ($getenvironments -notcontains '*' -and $getenvironments -notcontains '?' -and $getenvironments -notcontains ',') {
         $unknownEnvironment = 1
         $envName = $getEnvironments.Split(' ')[0]
-        $deploymentEnvironments += @{ 
+        $deploymentEnvironments += @{
             "$getEnvironments" = @{
                 "EnvironmentName" = $envName
                 "Branches" = $null
                 "BranchesFromPolicy" = $null
                 "Projects" = '*'
-                "AuthContextSecret" = "$($envName)-AuthContext,$($envName)_AuthContext,AuthContext"
                 "ContinuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
             }
@@ -61,14 +63,12 @@ else {
         # - projects: all
         # - continuous deployment: only for environments not tagged with PROD or FAT
         # - runs-on: same as settings."runs-on"
-        # - authContextSecret: envName-AuthContext,envName_AuthContext,AuthContext (first that exists)
         $deploymentSettings = [ordered]@{
             "EnvironmentName" = $envName
             "Branches" = $null
             "BranchesFromPolicy" = $null
             "Projects" = '*'
-            "AuthContextSecret" = "$($envName)-AuthContext,$($envName)_AuthContext,AuthContext"
-            "ContinuousDeployment" = !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')
+            "ContinuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
         }
 
@@ -107,23 +107,32 @@ else {
             }
         }
 
-        # Check whether any GitHub policy disallows this branch to deploy to this environment
-        if ($deploymentSettings.BranchesFromPolicy) {
-            # Check whether GITHUB_REF_NAME is allowed to deploy to this environment
-            $includeEnvironment = $deploymentSettings.BranchesFromPolicy | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
-            if ($deploymentSettings.Branches -and $includeEnvironment) {
-                # Branches are also defined in settings for this environment - only include branches that also exists in settings
-                $includeEnvironment = $deploymentSettings.Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
-            }
-        }
-        else {
-            if ($deploymentSettings.Branches) {
-                # Branches are defined in settings for this environment - only include branches that exists in settings
-                $includeEnvironment = $deploymentSettings.Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
+        # Include Environment if:
+        # - Type is not Continous Deployment
+        # - Environment is setup for Continuous Deployment (in settings)
+        # - Continuous Deployment is unset in settings and environment name doesn't contain PROD or FAT tags
+        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($deploymentSettings.ContinuousDeployment -eq $null -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
+
+        # Check branch policies and settings
+        if ($includeEnvironment) {
+            # Check whether any GitHub policy disallows this branch to deploy to this environment
+            if ($deploymentSettings.BranchesFromPolicy) {
+                # Check whether GITHUB_REF_NAME is allowed to deploy to this environment
+                $includeEnvironment = $deploymentSettings.BranchesFromPolicy | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
+                if ($deploymentSettings.Branches -and $includeEnvironment) {
+                    # Branches are also defined in settings for this environment - only include branches that also exists in settings
+                    $includeEnvironment = $deploymentSettings.Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
+                }
             }
             else {
-                # If no branch policies are defined in GitHub nor in settings - only allow main branch to deploy
-                $includeEnvironment = $ENV:GITHUB_REF_NAME -eq 'main'
+                if ($deploymentSettings.Branches) {
+                    # Branches are defined in settings for this environment - only include branches that exists in settings
+                    $includeEnvironment = $deploymentSettings.Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
+                }
+                else {
+                    # If no branch policies are defined in GitHub nor in settings - only allow main branch to deploy
+                    $includeEnvironment = $ENV:GITHUB_REF_NAME -eq 'main'
+                }
             }
         }
         if ($includeEnvironment) {
