@@ -6,9 +6,8 @@ Param(
     [string] $type = "CD"
 )
 
-function GetGitHubEnvironments([string] $getEnvironments) {
+function GetGitHubEnvironments() {
     $headers = GetHeader -token $env:GITHUB_TOKEN
-    Write-Host "Requesting environments: $getEnvironments"
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
     try {
         Write-Host "Trying to get environments from GitHub API"
@@ -24,9 +23,11 @@ function GetGitHubEnvironments([string] $getEnvironments) {
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
-$ghEnvironments = @(GetGitHubEnvironments -getEnvironments $getEnvironments)
+Write-Host "Environment pattern to use: $getEnvironments"
+Write-Host "Requesting environments from GitHub"
+$ghEnvironments = @(GetGitHubEnvironments)
 
-Write-Host "Requesting environments from settings"
+Write-Host "Reading environments from settings"
 $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
