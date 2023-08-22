@@ -27,7 +27,7 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $ghEnvironments = @(GetGitHubEnvironments -getEnvironments $getEnvironments)
 
 Write-Host "Requesting environments from settings"
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ }
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
