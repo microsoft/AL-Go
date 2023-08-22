@@ -96,6 +96,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="assignPremiumPlan"></a>assignPremiumPlan | Setting assignPremiumPlan to true in your project setting file, causes the build container to be created with the AssignPremiumPlan set. This causes the auto-created user to have Premium Plan enabled. This setting is needed if your tests require premium plan enabled. | false |
 | <a id="enableTaskScheduler"></a>enableTaskScheduler | Setting enableTaskScheduler to true in your project setting file, causes the build container to be created with the Task Scheduler running. | false |
 | <a id="useCompilerFolder"></a>useCompilerFolder | Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set **doNotPublishApps** to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. | false |
+| <a id="excludeEnvironments"></a>excludeEnvironments | excludeEnvironments can be an array of GitHub Environments, which should be excluded from the list of environments considered for deployment. github_pages is automatically added to this array and cannot be used as environment for deployment of AL-Go for GitHub projects. | [ ] |
 
 ## AppSource specific advanced settings
 
@@ -155,15 +156,45 @@ Here are the parameters to use in your custom script:
 
 | Parameter | Description | Example |
 | --------- | :--- | :--- |
-| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject
-| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject
-| `$parameters.type` | Type of delivery (CD or Release) | CD
-| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0
-| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0
-| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0
-| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0
-| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0
-| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0
+| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject |
+| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject |
+| `$parameters.type` | Type of delivery (CD or Release) | CD |
+| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0 |
+| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0 |
+| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0 |
+| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0 |
+| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0 |
+| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0 |
+
+## Custom Deployment
+
+You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named DeployTo*.ps1 in the .github folder. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
+
+DeployToMyEnvironment.ps1
+```
+Param(
+    [Hashtable]$parameters
+)
+
+Write-Host "Deployment Type (CD or Release): $($parameters.type)"
+Write-Host "Apps to deploy: $($parameters.apps)"
+Write-Host "Deployment Settings: $($parameters.DeploymentSettings)"
+```
+
+**Note:** You can also create one script to override all deployment functionality, by creating a script called DeployTo.ps1 in the .github folder.
+
+Here are the parameters to use in your custom script:
+
+| Parameter | Description | Example |
+| --------- | :--- | :--- |
+| `$parameters.type` | Type of delivery (CD or Release) | CD |
+| `$parameters.apps` | Apps to deploy | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
+| `$parameters.EnvironmentName` | Environment name | Production |
+| `$parameters.Branches` | Branches which should deploy to this environment (from settings) | main,dev |
+| `$parameters.BranchesFromPolicy` | Branches which should deploy to this environment (from GitHub environments) | main |
+| `$parameters.Projects` | Projects to deploy to this environment | |
+| `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
+| `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 
 ## Run-AlPipeline script override
 

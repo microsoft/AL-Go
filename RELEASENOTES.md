@@ -12,7 +12,7 @@ After configuring deployment branches for an environment in GitHub and setting D
 
 ### New Settings
 - `fullBuildPatterns`: used by `DetermineProjectsToBuild` action to specify changes in which files and folders would trigger a full build (building all AL-Go projects).
-
+- `excludeEnvironments`: used by `DetermineDeploymentEnvironments` action to exclude environments from the list of environments considered for deployment.
 ## v3.2
 
 ### Issues

@@ -26,8 +26,18 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 Write-Host "Environment pattern to use: $getEnvironments"
 $ghEnvironments = @(GetGitHubEnvironments)
 
+# Include custom deployment environments
+Write-Host "Searching for Custom Deployment Scripts"
+$namePrefix = 'DeployTo'
+$customEnvironments = @()
+Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") | ForEach-Object {
+    $customEnvironment = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
+    $customEnvironments += @($customEnvironment)
+}
+
 Write-Host "Reading environments from settings"
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
+$settings.excludeEnvironments += @('github_pages')
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + $customEnvironments + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
 

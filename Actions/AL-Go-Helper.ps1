@@ -579,7 +579,7 @@ function ReadSettings {
         "useCompilerFolder"                             = $false
         "PullRequestTrigger"                            = "pull_request_target"
         "fullBuildPatterns"                             = @()
-        "excludeEnvironments"                           = @('github-pages')
+        "excludeEnvironments"                           = @()
     }
 
     # Read settings from files and merge them into the settings object
