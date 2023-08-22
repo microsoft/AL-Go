@@ -170,7 +170,7 @@ try {
             # Production environment
             if ($type -eq 'CD' -and $null -eq $deploymentSettings.ContinuousDeployment) {
                 # Continuous deployment is undefined in settings - we will not deploy to production environments
-                Write-Host "Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
+                Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
             }
             else {
                 # Check for AppSource App - cannot be deployed
