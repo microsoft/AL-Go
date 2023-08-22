@@ -6,7 +6,7 @@ Param(
 )
 
 function IncludeBranch([string] $deliveryTarget) {
-    $settingsName = "DeliverTo$_"
+    $settingsName = "DeliverTo$deliveryTarget"
     if ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('Branches')) {
         Write-Host "- Branches defined: $($settings."$settingsName".Branches -join ', ') - "
         $settings."$settingsName".Branches | ForEach-Object {

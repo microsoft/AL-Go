@@ -94,6 +94,7 @@ Describe "DetermineDeliveryTargets Action Test" {
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["NuGet","AppSource","Custom"]'
+        $generatedOutPut | Should -Contain 'contextSecrets=NuGetContext,AppSourceContext,CustomContext'
     }
 
     It 'Test calling action directly - PTE / Storage + Custom' {
@@ -106,9 +107,10 @@ Describe "DetermineDeliveryTargets Action Test" {
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["Storage","Custom"]'
+        $generatedOutPut | Should -Contain 'ContextSecrets=StorageContext,CustomContext'
     }
 
-    It 'Test calling action directly - PTE / Storage + Custom (and AppSourceContext)' {
+    It 'Test calling action directly - PTE (branch) / Storage + Custom (and AppSourceContext) - yields no delivery targets' {
         $env:Settings = @{ "type" = "PTE" } | ConvertTo-Json -Compress
         $env:Secrets = @{ "NuGetContext" = ""; "GitHubPackagesContext" = ""; "StorageContext" = "xyz"; "AppSourceContext" = "abc"; "CustomContext" = "123" } | ConvertTo-Json -Compress
         "test" | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeliverToCustom.ps1')
@@ -118,6 +120,7 @@ Describe "DetermineDeliveryTargets Action Test" {
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=[]'
+        $generatedOutPut | Should -Contain 'ContextSecrets='
     }
 
     It 'Test calling action directly - PTE (branch) / Storage + Custom' {
@@ -130,6 +133,7 @@ Describe "DetermineDeliveryTargets Action Test" {
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["Custom"]'
+        $generatedOutPut | Should -Contain 'ContextSecrets=CustomContext'
     }
 
     It 'Test calling action directly - Do not check context secrets' {
@@ -142,6 +146,6 @@ Describe "DetermineDeliveryTargets Action Test" {
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["GitHubPackages","NuGet","Storage","Custom"]'
-        $generatedOutPut | Should -Contain 'contextSecrets=GitHubPackagesContext,NuGetContext,StorageContext,CustomContext'
+        $generatedOutPut | Should -Contain 'ContextSecrets=GitHubPackagesContext,NuGetContext,StorageContext,CustomContext'
     }
 }

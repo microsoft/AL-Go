@@ -1,4 +1,4 @@
-name: Determine ArtifactUrl to use
+name: Determine Deployment Environments
 author: Microsoft Corporation
 inputs:
   shell:
