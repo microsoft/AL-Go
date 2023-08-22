@@ -32,7 +32,9 @@ $namePrefix = 'DeployTo'
 $customEnvironments = @()
 Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") | ForEach-Object {
     $customEnvironment = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
-    $customEnvironments += @($customEnvironment)
+    if ($customEnvironment) {
+        $customEnvironments += @($customEnvironment)
+    }
 }
 
 Write-Host "Reading environments from settings"

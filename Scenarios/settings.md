@@ -178,7 +178,7 @@ Param(
 
 Write-Host "Deployment Type (CD or Release): $($parameters.type)"
 Write-Host "Apps to deploy: $($parameters.apps)"
-Write-Host "Deployment Settings: $($parameters.DeploymentSettings)"
+Write-Host "Environment Name: $($parameters.EnvironmentName)"
 ```
 
 **Note:** You can also create one script to override all deployment functionality, by creating a script called DeployTo.ps1 in the .github folder.
@@ -191,6 +191,7 @@ Here are the parameters to use in your custom script:
 | `$parameters.apps` | Apps to deploy | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
 | `$parameters.EnvironmentName` | Environment name | Production |
 | `$parameters.Branches` | Branches which should deploy to this environment (from settings) | main,dev |
+| `$parameters.AuthContext` | AuthContext in a compressed Json structure | {"refreshToken":"mytoken"} |
 | `$parameters.BranchesFromPolicy` | Branches which should deploy to this environment (from GitHub environments) | main |
 | `$parameters.Projects` | Projects to deploy to this environment | |
 | `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
