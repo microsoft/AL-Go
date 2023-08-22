@@ -80,6 +80,7 @@ else {
             'EnvironmentName','Branches','Projects','AuthTokenSecret','ContinuousDeployment','runs-on' | ForEach-Object {
                 if ($deployTo.ContainsKey($_)) {
                     $deploymentSettings."$_" = $deployTo."$_"
+                    Write-Host "Set $_ to $($deployTo."$_")"                    
                 }
             }
         }
