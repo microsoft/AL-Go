@@ -160,6 +160,7 @@ Write-Host "EnvironmentsMatrixJson=$environmentsMatrixJson"
 
 $deploymentEnvironmentsJson = ConvertTo-Json -InputObject $deploymentEnvironments -Depth 99 -Compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
+Write-Host "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
