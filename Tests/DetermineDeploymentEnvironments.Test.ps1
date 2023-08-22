@@ -66,7 +66,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         PassGeneratedOutput
 
-        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"test"}]},"fail-fast":false}'
+        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"environment":"test","os":"[\"ubuntu-latest\"]"}]},"fail-fast":false}'
         $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
         $EnvironmentCount | Should -Be 1
 
