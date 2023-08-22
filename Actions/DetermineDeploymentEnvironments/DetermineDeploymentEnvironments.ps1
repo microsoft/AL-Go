@@ -114,7 +114,10 @@ else {
         $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($deploymentSettings.ContinuousDeployment -eq $null -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
 
         # Check branch policies and settings
-        if ($includeEnvironment) {
+        if (-not $includeEnvironment) {
+            Write-Host "Environment $environmentName is not setup for continuous deployment"
+        }
+        else {
             # Check whether any GitHub policy disallows this branch to deploy to this environment
             if ($deploymentSettings.BranchesFromPolicy) {
                 # Check whether GITHUB_REF_NAME is allowed to deploy to this environment
@@ -134,9 +137,13 @@ else {
                     $includeEnvironment = $ENV:GITHUB_REF_NAME -eq 'main'
                 }
             }
+            if (!$includeEnvironment) {
+                Write-Host "Environment $environmentName is not setup for deployments from branch $ENV:GITHUB_REF_NAME"
+            }
         }
         if ($includeEnvironment) {
             $deploymentEnvironments += @{ "$environmentName" = $deploymentSettings }
+            $deploymentSettings | ConvertTo-Json -Depth 99 | Out-Host
         }
     }
 }
@@ -153,7 +160,6 @@ Write-Host "EnvironmentsMatrixJson=$environmentsMatrixJson"
 
 $deploymentEnvironmentsJson = ConvertTo-Json -InputObject $deploymentEnvironments -Depth 99 -Compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
-Write-Host "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
