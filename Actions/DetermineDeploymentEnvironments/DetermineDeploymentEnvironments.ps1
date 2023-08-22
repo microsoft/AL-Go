@@ -10,7 +10,7 @@ function GetGitHubEnvironments() {
     $headers = GetHeader -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
     try {
-        Write-Host "Trying to get environments from GitHub API"
+        Write-Host "Requesting environments from GitHub"
         $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments)
     }
     catch {
@@ -24,7 +24,6 @@ function GetGitHubEnvironments() {
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 Write-Host "Environment pattern to use: $getEnvironments"
-Write-Host "Requesting environments from GitHub"
 $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
