@@ -87,9 +87,8 @@ jobs:
             $webClient = New-Object System.Net.WebClient
             $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
             . $ALGoHelperPath
-            $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+            DownloadAndImportBcContainerHelper
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
-            CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
             Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($settings.adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
             Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
           }

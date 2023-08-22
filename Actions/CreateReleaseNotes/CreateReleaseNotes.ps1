@@ -12,11 +12,10 @@ Param(
 )
 
 $telemetryScope = $null
-$bcContainerHelperPath = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1")
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+    DownloadAndImportBcContainerHelper
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0074' -parentTelemetryScopeJson $parentTelemetryScopeJson
@@ -69,9 +68,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    TrackException -telemetryScope $telemetryScope -errorRecord $_
+    if ($env:BcContainerHelperPath) {
+        TrackException -telemetryScope $telemetryScope -errorRecord $_
+    }
     throw
-}
-finally {
-    CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
 }

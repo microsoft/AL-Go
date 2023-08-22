@@ -76,7 +76,7 @@ function Copy-HashTable() {
     )
     $ht = @{}
     if ($object) {
-        $object.Keys | ForEach-Object { 
+        $object.Keys | ForEach-Object {
             $ht[$_] = $object[$_]
         }
     }
@@ -187,7 +187,7 @@ function stringToInt {
     )
 
     $i = 0
-    if ([int]::TryParse($str.Trim(), [ref] $i)) { 
+    if ([int]::TryParse($str.Trim(), [ref] $i)) {
         $i
     }
     else {
@@ -226,102 +226,157 @@ function Expand-7zipArchive {
     }
 }
 
-function DownloadAndImportBcContainerHelper {
-    Param(
-        [string] $bcContainerHelperVersion = $defaultBcContainerHelperVersion,
-        [string] $baseFolder = ""
-    )
-
-    $params = @{ "ExportTelemetryFunctions" = $true }
-    if ($baseFolder) {
-        $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
-        if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
-            $repoSettingsPath = Join-Path $baseFolder "..\$repoSettingsFile"
-            if (-not (Test-Path $repoSettingsPath -PathType Leaf)) {
-                $repoSettingsPath = Join-Path $baseFolder "..\..\$repoSettingsFile"
-            }
-        }
-        if (Test-Path $repoSettingsPath) {
-            $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-            if ($bcContainerHelperVersion -eq "" -or $bcContainerHelperVersion -eq "latest") {
-                if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
-                    $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
-                    Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
-                    if ($bcContainerHelperVersion -like "https://*") {
-                        throw "Setting BcContainerHelperVersion to a URL is not allowed."
-                    }
-                    elseif ($bcContainerHelperVersion -ne "" -and $bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
-                        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
-                    }
-                }
-            }
-            $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
-        }
-    }
-    if ($bcContainerHelperVersion -eq "") {
-        $bcContainerHelperVersion = "latest"
-    }
-    elseif ($bcContainerHelperVersion -eq "private") {
-        # Using a private BcContainerHelper version grabs a fork of BcContainerHelper with the same owner as the AL-Go actions
-        # The ActionsRepo below will be modified to point to actual running actions repo by the deploy mechanism, please do not change
-        $ActionsRepo = "microsoft/AL-Go-Actions@main"
-        $owner = $actionsRepo.Split('/')[0]
-        $bcContainerHelperVersion = "https://github.com/$owner/navcontainerhelper/archive/master.zip"
+#
+# Get Path to BcContainerHelper module (download if necessary)
+#
+# If $env:BcContainerHelperPath is set, it will be reused (ignoring the ContainerHelperVersion)
+#
+# ContainerHelperVersion can be:
+# - preview (or dev), which will use the preview version downloaded from bccontainerhelper blob storage
+# - latest, which will use the latest version downloaded from bccontainerhelper blob storage
+# - a specific version, which will use the specific version downloaded from bccontainerhelper blob storage
+# - none, which will use the BcContainerHelper module installed on the build agent
+# - https://... - direct download url to a zip file containing the BcContainerHelper module
+#
+# When using direct download url, the module will be downloaded to a temp folder and will not be cached
+# When using none, the module will be located in modules and used from there
+# When using preview, latest or a specific version number, the module will be downloaded to a cache folder and will be reused if the same version is requested again
+# This is to avoid filling up the temp folder with multiple identical versions of BcContainerHelper
+# The cache folder is C:\ProgramData\BcContainerHelper on Windows and /home/<username>/.BcContainerHelper on Linux
+# A Mutex will be used to ensure multiple agents aren't fighting over the same cache folder
+#
+# This function will set $env:BcContainerHelperPath, which is the path to the BcContainerHelper.ps1 file for reuse in subsequent calls
+#
+function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
+    if ("$env:BcContainerHelperPath" -and (Test-Path -Path $env:BcContainerHelperPath -PathType Leaf)) {
+        return $env:BcContainerHelperPath
     }
 
-    if ($bcContainerHelperVersion -eq "none") {
-        $tempName = ""
+    if ($bcContainerHelperVersion -eq 'None') {
         $module = Get-Module BcContainerHelper
         if (-not $module) {
             OutputError "When setting BcContainerHelperVersion to none, you need to ensure that BcContainerHelper is installed on the build agent"
         }
-
-        $BcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
+        $bcContainerHelperPath = Join-Path (Split-Path $module.Path -parent) "BcContainerHelper.ps1" -Resolve
     }
     else {
-        $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        if ($isWindows) {
+            $bcContainerHelperRootFolder = 'C:\ProgramData\BcContainerHelper'
+        }
+        else {
+            $myUsername = (whoami)
+            $bcContainerHelperRootFolder = "/home/$myUsername/.BcContainerHelper"
+        }
+        if (!(Test-Path $bcContainerHelperRootFolder)) {
+            New-Item -Path $bcContainerHelperRootFolder -ItemType Directory | Out-Null
+        }
+
         $webclient = New-Object System.Net.WebClient
         if ($bcContainerHelperVersion -like "https://*") {
+            # Use temp space for private versions
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
             Write-Host "Downloading BcContainerHelper developer version from $bcContainerHelperVersion"
             try {
                 $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
             }
             catch {
+                $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
                 $bcContainerHelperVersion = "preview"
                 Write-Host "Download failed, downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
                 $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
             }
         }
-        elseif ($bcContainerHelperVersion -eq "preview" -or $bcContainerHelperVersion -eq "dev") {
-            # For backwards compatibility, use preview when dev is specified
-            Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/preview.zip", "$tempName.zip")
-        }
         else {
-            Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from CDN"
-            $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
+            if ($bcContainerHelperVersion -eq "preview" -or $bcContainerHelperVersion -eq "dev") {
+                # For backwards compatibility, use preview when dev is specified
+                Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
+                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/preview.zip", "$tempName.zip")
+            }
+            else {
+                Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from CDN"
+                $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            }
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
-        $BcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
+        $bcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
+        if ($bcContainerHelperVersion -notlike "https://*") {
+            # Check whether the version is already available in the cache
+            $version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
+            $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
+            # To avoid two agents on the same machine downloading the same version at the same time, use a mutex
+            $buildMutexName = "DownloadAndImportBcContainerHelper"
+            $buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
+            try {
+                try {
+                    if (!$buildMutex.WaitOne(1000)) {
+                        Write-Host "Waiting for other process loading BcContainerHelper"
+                        $buildMutex.WaitOne() | Out-Null
+                        Write-Host "Other process completed loading BcContainerHelper"
+                    }
+                }
+                catch [System.Threading.AbandonedMutexException] {
+                    Write-Host "Other process terminated abnormally"
+                }
+                if (Test-Path $cacheFolder) {
+                    Remove-Item $tempName -Recurse -Force
+                }
+                else {
+                    Rename-Item -Path $tempName -NewName $version
+                }
+            }
+            finally {
+                $buildMutex.ReleaseMutex()
+            }
+            $bcContainerHelperPath = Join-Path $cacheFolder "BcContainerHelper/BcContainerHelper.ps1"
+        }
     }
-    . $BcContainerHelperPath @params
-    $tempName
+    $env:BcContainerHelperPath = $bcContainerHelperPath
+    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$bcContainerHelperPath"
+    return $bcContainerHelperPath
 }
 
-function CleanupAfterBcContainerHelper {
-    Param(
-        [string] $bcContainerHelperPath
-    )
+#
+# Download and import the BcContainerHelper module based on repository settings
+# baseFolder is the repository baseFolder
+#
+function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_WORKSPACE) {
+    $params = @{ "ExportTelemetryFunctions" = $true }
+    $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
 
-    if ($bcContainerHelperPath) {
-        try {
-            Write-Host "Removing BcContainerHelper"
-            Remove-Module BcContainerHelper
-            Remove-Item $bcContainerHelperPath -Recurse -Force
+    # Default BcContainerHelper Version is hardcoded in AL-Go-Helper (replaced during AL-Go deploy)
+    $bcContainerHelperVersion = $defaultBcContainerHelperVersion
+    if (Test-Path $repoSettingsPath) {
+        # Read Repository Settings file (without applying organization variables, repository variables or project settings files)
+        # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in repo settings file
+        $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
+        if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
+            $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
+            Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
+            if ($bcContainerHelperVersion -like "https://*") {
+                throw "Setting BcContainerHelperVersion to a URL in settings is not allowed. Fork the AL-Go repository and use direct AL-Go development instead."
+            }
         }
-        catch {}
+        $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
     }
+
+    if ($bcContainerHelperVersion -eq '') {
+        $bcContainerHelperVersion = "latest"
+    }
+
+    if ($bcContainerHelperVersion -eq 'private') {
+        throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
+    }
+
+    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
+    }
+
+    $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
+
+    Write-Host "Import from $bcContainerHelperPath"
+    . $bcContainerHelperPath @params
 }
 
 function MergeCustomObjectIntoOrderedDictionary {
@@ -424,7 +479,7 @@ function ReadSettings {
         Param(
             [string] $path
         )
-        
+
         if (Test-Path $path) {
             try {
                 Write-Host "Applying settings from $path"
@@ -527,6 +582,7 @@ function ReadSettings {
         "DurationThresholdError"                        = 25
         "NumberOfSqlStmtsThresholdWarning"              = 5
         "NumberOfSqlStmtsThresholdError"                = 10
+        "fullBuildPatterns"                              = @()
     }
 
     # Read settings from files and merge them into the settings object
@@ -679,7 +735,7 @@ function ResolveProjectFolders {
 
                 $isTestApp = $false
                 $isBcptTestApp = $false
-                
+
                 # if an AL app has a dependency to a test app, it is a test app
                 # if an AL app has a dependency to an app from the performance toolkit apps, it is a bcpt test app
                 if ($appJson.PSObject.Properties.Name -eq "dependencies") {
@@ -692,10 +748,10 @@ function ResolveProjectFolders {
                         }
 
                         # Check if the app is a test app or a bcpt app
-                        if ($performanceToolkitApps.Contains($id)) { 
+                        if ($performanceToolkitApps.Contains($id)) {
                             $isBcptTestApp = $true
                         }
-                        elseif ($testRunnerApps.Contains($id)) { 
+                        elseif ($testRunnerApps.Contains($id)) {
                             $isTestApp = $true
                         }
                     }
@@ -759,7 +815,7 @@ function AnalyzeRepo {
     )
 
     $settings = $settings | Copy-HashTable
-    
+
     if (!$runningLocal) {
         Write-Host "::group::Analyzing repository"
     }
@@ -1143,7 +1199,7 @@ function installModules {
             Install-Module $_ -Force | Out-Null
         }
     }
-    $modules | ForEach-Object { 
+    $modules | ForEach-Object {
         Write-Host "Importing module $_"
         Import-Module $_ -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
     }
@@ -1247,7 +1303,7 @@ function Select-Value {
         else {
             Write-Host $_.Value
         }
-        $offset++     
+        $offset++
     }
     Write-Host
     $answer = -1
@@ -1392,7 +1448,6 @@ function CreateDevEnv {
         [string] $baseFolder,
         [string] $project,
         [string] $userName = $env:Username,
-        [string] $bcContainerHelperPath = "",
 
         [Parameter(ParameterSetName = 'cloud')]
         [Hashtable] $bcAuthContext = $null,
@@ -1421,10 +1476,7 @@ function CreateDevEnv {
     $projectFolder = Join-Path $baseFolder $project -Resolve
     $dependenciesFolder = Join-Path $projectFolder ".dependencies"
     $runAlPipelineParams = @{}
-    $loadBcContainerHelper = ($bcContainerHelperPath -eq "")
-    if ($loadBcContainerHelper) {
-        $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
-    }
+    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
     try {
         if ($caller -eq "local") {
             $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -1441,7 +1493,7 @@ function CreateDevEnv {
         }
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
         $settings = ReadSettings @params
-    
+
         if ($caller -eq "GitHubActions") {
             if ($kind -ne "cloud") {
                 OutputError -message "Unexpected. kind=$kind, caller=$caller"
@@ -1477,7 +1529,7 @@ function CreateDevEnv {
                                 }
                             }
                         }
-                    } 
+                    }
                 }
             }
 
@@ -1497,12 +1549,12 @@ function CreateDevEnv {
                     if ($settings.applicationInsightsConnectionStringSecretName) {
                         $applicationInsightsConnectionStringSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.applicationInsightsConnectionStringSecretName
                         if ($applicationInsightsConnectionStringSecret) {
-                            $runAlPipelineParams += @{ 
+                            $runAlPipelineParams += @{
                                 "applicationInsightsConnectionString" = $applicationInsightsConnectionStringSecret.SecretValue | Get-PlainText
                             }
                         }
                     }
-                    
+
                     if ($settings.keyVaultCertificateUrlSecretName) {
                         $KeyVaultCertificateUrlSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultCertificateUrlSecretName
                         if ($KeyVaultCertificateUrlSecret) {
@@ -1512,7 +1564,7 @@ function CreateDevEnv {
                                 OutputError -message "When specifying a KeyVaultCertificateUrl secret in settings, you also need to provide a KeyVaultCertificatePassword secret and a KeyVaultClientId secret"
                                 exit
                             }
-                            $runAlPipelineParams += @{ 
+                            $runAlPipelineParams += @{
                                 "KeyVaultCertPfxFile"     = $KeyVaultCertificateUrlSecret.SecretValue | Get-PlainText
                                 "keyVaultCertPfxPassword" = $keyVaultCertificatePasswordSecret.SecretValue
                                 "keyVaultClientId"        = $keyVaultClientIdSecret.SecretValue | Get-PlainText
@@ -1584,14 +1636,14 @@ function CreateDevEnv {
                 })
             Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
                 if ($_.startswith('(')) {
-                    $installTestApps += $_    
+                    $installTestApps += $_
                 }
                 else {
-                    $installApps += $_    
+                    $installApps += $_
                 }
             }
         }
-    
+
         if ($repo.versioningStrategy -eq -1) {
             if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
             $artifactVersion = [Version]$repo.artifact.Split('/')[4]
@@ -1633,7 +1685,7 @@ function CreateDevEnv {
         if (Test-Path $testResultsFiles) {
             Remove-Item $testResultsFiles -Force
         }
-    
+
         Set-Location $projectFolder
         $runAlPipelineOverrides | ForEach-Object {
             $scriptName = $_
@@ -1668,7 +1720,7 @@ function CreateDevEnv {
             if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
                 throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
             }
-            
+
             if ($bcAuthContext) {
                 $authContext = Renew-BcAuthContext $bcAuthContext
             }
@@ -1699,12 +1751,12 @@ function CreateDevEnv {
                 } while (!($baseApp))
                 $baseapp | Out-Host
             }
-            
+
             $artifact = Get-BCArtifactUrl `
                 -country $countryCode `
                 -version $baseApp.Version `
                 -select Closest
-            
+
             if ($artifact) {
                 Write-Host "Using Artifacts: $artifact"
             }
@@ -1720,7 +1772,7 @@ function CreateDevEnv {
                 "updateLaunchJson" = "Cloud Sandbox ($environmentName)"
             }
         }
-        
+
         "enableTaskScheduler",
         "assignPremiumPlan",
         "installTestRunner",
@@ -1769,9 +1821,6 @@ function CreateDevEnv {
             -keepContainer
     }
     finally {
-        if ($loadBcContainerHelper) {
-            CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
-        }
         if (Test-Path $dependenciesFolder) {
             Get-ChildItem -Path $dependenciesFolder -Include * -File | ForEach-Object { $_.Delete() }
         }
@@ -1853,12 +1902,12 @@ Function AnalyzeProjectDependencies {
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
-        
+
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
         Push-Location $baseFolder
         try {
             $projectPath = Join-Path $baseFolder $project
-            $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { 
+            $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
                 return (Resolve-Path (Join-Path $projectPath $_) -Relative)
             }
         }
@@ -1936,7 +1985,7 @@ Function AnalyzeProjectDependencies {
             if ($foundDependencies) {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
                 # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
-                $foundDependencies | ForEach-Object { 
+                $foundDependencies | ForEach-Object {
                     if ($buildAlso.value.Keys -contains $_) {
                         if ($buildAlso.value."$_" -notcontains $project) {
                             $buildAlso.value."$_" += @( $project )
@@ -1956,9 +2005,9 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
-        
+
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
-        
+
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
         $no++
     }
@@ -1970,7 +2019,7 @@ function GetBaseFolder {
     Param(
         [string] $folder
     )
-    
+
     Push-Location $folder
     try {
         $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
@@ -1982,7 +2031,7 @@ function GetBaseFolder {
     if (!$baseFolder -or !(Test-Path (Join-Path $baseFolder '.github') -PathType Container)) {
         throw "Cannot determine base folder from folder $folder."
     }
-    
+
     return $baseFolder
 }
 
@@ -2038,7 +2087,7 @@ function Determine-ArtifactUrl {
             }
         }
     }
-    
+
     if ($artifact -like "https://*") {
         $artifactUrl = $artifact
         $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
@@ -2074,7 +2123,7 @@ function Determine-ArtifactUrl {
         $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
         Write-Host "Latest AT artifacts $atArtifactUrl"
         $latestATversion = $atArtifactUrl.Split('/')[4]
-        $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object { 
+        $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object {
             $countryArtifactUrl = $_.Split('?')[0] # remove sas token
             $countryArtifactUrl.Split('/')[5] # get country
         }

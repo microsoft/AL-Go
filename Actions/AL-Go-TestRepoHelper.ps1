@@ -116,7 +116,7 @@ function Test-JsonFile {
 
 function Test-ALGoRepository {
     Param(
-        [string] $baseFolder
+        [string] $baseFolder = $ENV:GITHUB_WORKSPACE
     )
     
     if ($ENV:ALGoOrgSettings) {

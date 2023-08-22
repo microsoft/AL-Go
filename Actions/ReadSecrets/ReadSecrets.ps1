@@ -8,7 +8,6 @@ Param(
 )
 
 $telemetryScope = $null
-$bcContainerHelperPath = $null
 
 $buildMutexName = "AL-Go-ReadSecrets"
 $buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
@@ -25,7 +24,7 @@ try {
     }
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $ENV:GITHUB_WORKSPACE
+    DownloadAndImportBcContainerHelper
 
     Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0078' -parentTelemetryScopeJson $parentTelemetryScopeJson
@@ -56,7 +55,9 @@ try {
             if ($settings.Keys -contains $secretNameProperty) {
                 $secret = "$($secret)=$($settings."$secretNameProperty")"
             }
-            $secretsCollection += $secret
+            if ($secretsCollection -notcontains $secret) {
+                $secretsCollection += $secret
+            }
         }
     }
 
@@ -64,7 +65,9 @@ try {
     if ($getAppDependencyProbingPathsSecrets -and $settings.Keys -contains 'appDependencyProbingPaths') {
         $settings.appDependencyProbingPaths | ForEach-Object {
             if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
-                $secretsCollection += $_.authTokenSecret
+                if ($secretsCollection -notcontains $_.authTokenSecret) {
+                    $secretsCollection += $_.authTokenSecret
+                }
             }
         }
     }
@@ -128,10 +131,11 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    TrackException -telemetryScope $telemetryScope -errorRecord $_
+    if ($env:BcContainerHelperPath) {
+        TrackException -telemetryScope $telemetryScope -errorRecord $_
+    }
     throw
 }
 finally {
-    CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
     $buildMutex.ReleaseMutex()
 }

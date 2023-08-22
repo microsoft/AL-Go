@@ -27,7 +27,6 @@ Param(
 )
 
 $telemetryScope = $null
-$bcContainerHelperPath = $null
 $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
 
 try {
@@ -39,7 +38,7 @@ try {
     }
     $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
     $baseFolder = (Get-Location).Path
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0072' -parentTelemetryScopeJson $parentTelemetryScopeJson
@@ -76,6 +75,7 @@ try {
             if (!(Test-Path -Path $sampleApp)) {
                 throw "Could not locate sample app for the Business Central version"
             }
+
             Extract-AppFileToFolder -appFilename $sampleApp -generateAppJson -appFolder $tmpFolder
         }
         catch {
@@ -140,11 +140,12 @@ try {
 
 }
 catch {
-    TrackException -telemetryScope $telemetryScope -errorRecord $_
+    if ($env:BcContainerHelperPath) {
+        TrackException -telemetryScope $telemetryScope -errorRecord $_
+    }
     throw
 }
 finally {
-    CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
     if (Test-Path $tmpFolder) {
         Remove-Item $tmpFolder -Recurse -Force
     }

@@ -21,7 +21,6 @@ Param(
 )
 
 $telemetryScope = $null
-$bcContainerHelperPath = $null
 
 function EnsureAzStorageModule() {
     if (get-command New-AzStorageContext -ErrorAction SilentlyContinue) {
@@ -46,9 +45,8 @@ function EnsureAzStorageModule() {
 }
 
 try {
-    $baseFolder = $ENV:GITHUB_WORKSPACE
     . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
-    $BcContainerHelperPath = DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+    DownloadAndImportBcContainerHelper
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "../TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0081' -parentTelemetryScopeJson $parentTelemetryScopeJson
@@ -62,6 +60,7 @@ try {
 
     $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
 
+    $baseFolder = $ENV:GITHUB_WORKSPACE
     $settings = ReadSettings -baseFolder $baseFolder
     if ($settings.projects) {
         $projectList = $settings.projects | Where-Object { $_ -like $projects }
@@ -471,9 +470,8 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    TrackException -telemetryScope $telemetryScope -errorRecord $_
+    if ($env:BcContainerHelperPath) {
+        TrackException -telemetryScope $telemetryScope -errorRecord $_
+    }
     throw
-}
-finally {
-    CleanupAfterBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
 }
