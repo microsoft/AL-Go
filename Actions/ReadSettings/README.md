@@ -14,8 +14,6 @@ none
 | token | | The GitHub token running the action | github.token |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | project | | Project name if the repository is setup for multiple projects | . |
-| includeProduction | | Specifies whether you want to include production environments | N |
-| release | | Indicates whether this is called from a release pipeline | N |
 | get | | Specifies which properties to get from the settings file, default is all | |
 
 ## OUTPUT

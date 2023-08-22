@@ -36,7 +36,13 @@ try {
         }
     }
     if (-not $authContext) {
-        throw "No Authentication Context found for environment ($environmentName). You must create an environment secret called AUTHCONTEXT or a repository secret called $($envName)_AUTHCONTEXT."
+        # No AuthContext secret provided, if deviceCode is present, use it - else give an error
+        if ($env:deviceCode) {
+            $authContext = "{""deviceCode"":""$($env:deviceCode)""}"
+        }
+        else {
+            throw "No Authentication Context found for environment ($environmentName). You must create an environment secret called AUTHCONTEXT or a repository secret called $($envName)_AUTHCONTEXT."
+        }
     }
 
     $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))

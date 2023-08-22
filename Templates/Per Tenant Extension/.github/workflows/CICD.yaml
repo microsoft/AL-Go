@@ -227,20 +227,8 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ matrix.deliveryTarget }}Context'
 
-      - name: DeliveryContext
-        id: deliveryContext
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $secrets = $env:Secrets | ConvertFrom-Json
-          $contextName = '${{ matrix.deliveryTarget }}Context'
-          $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$contextName"))
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliveryContext=$deliveryContext"
-          Write-Host "deliveryContext=$deliveryContext"
-
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main
-        env:
-          deliveryContext: ${{ steps.deliveryContext.outputs.deliveryContext }}
         with:
           shell: powershell
           type: 'CD'

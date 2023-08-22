@@ -7,10 +7,6 @@ Param(
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
-    [Parameter(HelpMessage = "Specifies whether you want to include production environments", Mandatory = $false)]
-    [bool] $includeProduction,
-    [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
-    [bool] $release,
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
     [string] $get = ""
 )

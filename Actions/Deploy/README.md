@@ -4,7 +4,11 @@ Deploy Apps to online environment
 ## INPUT
 
 ### ENV variables
-none
+| Name | Description |
+| :-- | :-- |
+| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
+| Secrets | env.Secrets with delivery target context secrets must be read by a prior call to the ReadSecrets Action |
+| deviceCode | When deploying to a single unknown environment, we will wait for the user to finalize the deviceflow with this deviceCode |
 
 ### Parameters
 | Name | Required | Description | Default value |
