@@ -5,26 +5,15 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  repository:
-    description: Repository name
-    required: false
-    default: ${{ github.repository }}
-  runId:
-    description: Run Id
-    required: false
-    default: ${{ github.run_id }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      env:
-        _repository: ${{ inputs.repository }}
-        _runId: ${{ inputs.runId }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/PullRequestStatusCheck.ps1 -Repository $Env:_repository -RunId $Env:_runId
+          ${{ github.action_path }}/PullRequestStatusCheck.ps1
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
