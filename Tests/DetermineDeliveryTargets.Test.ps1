@@ -42,7 +42,7 @@ Describe "DetermineDeliveryTargets Action Test" {
         $env:Settings = @{ "type" = "PTE" } | ConvertTo-Json -Compress
         $env:Secrets = @{ "NuGetContext" = "xyz"; "GitHubPackagesContext" = ""; "StorageContext" = ""; "AppSourceContext" = "abc" } | ConvertTo-Json -Compress
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["NuGet"]'
@@ -53,7 +53,7 @@ Describe "DetermineDeliveryTargets Action Test" {
         $env:Settings = @{ "type" = "AppSource App" } | ConvertTo-Json -Compress
         $env:Secrets = @{ "NuGetContext" = ""; "GitHubPackagesContext" = "xyz"; "StorageContext" = ""; "AppSourceContext" = "abc" } | ConvertTo-Json -Compress
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["GitHubPackages"]'
@@ -65,32 +65,32 @@ Describe "DetermineDeliveryTargets Action Test" {
         $env:Secrets = @{ "NuGetContext" = "xyz"; "GitHubPackagesContext" = ""; "StorageContext" = ""; "AppSourceContext" = "abc" } | ConvertTo-Json -Compress
         @{"AppSourceContinuousDelivery" = $true} | ConvertTo-Json | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/AL-Go-Settings.json')
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["NuGet","AppSource"]'
     }
 
-    # 
+    # AppSource App with GitHubPackagesContext and AppSourceContext defined, with AppSourceContinuousDelivery set, should yield GitHubPackages and AppSource
     It 'Test calling action directly - AppSource App / GitHubPackages + CD - Custom' {
         $env:Settings = @{ "type" = "AppSource App" } | ConvertTo-Json -Compress
         $env:Secrets = @{ "NuGetContext" = "xyz"; "GitHubPackagesContext" = ""; "StorageContext" = ""; "AppSourceContext" = "abc" } | ConvertTo-Json -Compress
         @{"AppSourceContinuousDelivery" = $true} | ConvertTo-Json | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/AL-Go-Settings.json')
         "test" | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE 'DeliverToCustom.ps1')
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["NuGet","AppSource"]'
     }
 
-    It 'Test calling action directly - AppSource App / GitHubPackages + CD + Custom' {
+    It 'Test calling action directly -  AppSource App / NuGet + AppSource + Custom' {
         $env:Settings = @{ "type" = "AppSource App" } | ConvertTo-Json -Compress
         $env:Secrets = @{ "NuGetContext" = "xyz"; "GitHubPackagesContext" = ""; "StorageContext" = ""; "AppSourceContext" = "abc"; "CustomContext" = "123" } | ConvertTo-Json -Compress
         @{"AppSourceContinuousDelivery" = $true} | ConvertTo-Json | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/AL-Go-Settings.json')
         "test" | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeliverToCustom.ps1')
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["NuGet","AppSource","Custom"]'
@@ -102,19 +102,19 @@ Describe "DetermineDeliveryTargets Action Test" {
         @{"AppSourceContinuousDelivery" = $true} | ConvertTo-Json | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/AL-Go-Settings.json')
         "test" | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeliverToCustom.ps1')
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["Storage","Custom"]'
     }
 
-    It 'Test calling action directly - PTE / Storage + Custom' {
+    It 'Test calling action directly - PTE / Storage + Custom (and AppSourceContext)' {
         $env:Settings = @{ "type" = "PTE" } | ConvertTo-Json -Compress
         $env:Secrets = @{ "NuGetContext" = ""; "GitHubPackagesContext" = ""; "StorageContext" = "xyz"; "AppSourceContext" = "abc"; "CustomContext" = "123" } | ConvertTo-Json -Compress
         "test" | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeliverToCustom.ps1')
         $env:GITHUB_REF_NAME = 'branch'
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=[]'
@@ -126,7 +126,7 @@ Describe "DetermineDeliveryTargets Action Test" {
         "test" | Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeliverToCustom.ps1')
         $env:GITHUB_REF_NAME = "branch"
 
-        . (Join-Path $scriptRoot $scriptName)  -checkContextSecrets $true
+        . (Join-Path $scriptRoot $scriptName) -checkContextSecrets $true
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain 'DeliveryTargetsJson=["Custom"]'
