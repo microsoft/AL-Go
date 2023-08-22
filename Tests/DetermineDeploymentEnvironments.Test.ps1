@@ -1,17 +1,17 @@
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
-function PassGeneratedOutput() {
-    Get-Content $env:GITHUB_OUTPUT -Encoding UTF8 | ForEach-Object {
-        Set-Variable -Scope Script -Name $_.Split('=')[0] -Value $_.SubString($_.IndexOf('=')+1)
-    }
-}
-
 Describe "DetermineDeploymentEnvironments Action Test" {
     BeforeAll {
         $actionName = "DetermineDeploymentEnvironments"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+
+        function PassGeneratedOutput() {
+            Get-Content $env:GITHUB_OUTPUT -Encoding UTF8 | ForEach-Object {
+                Set-Variable -Scope Script -Name $_.Split('=')[0] -Value $_.SubString($_.IndexOf('=')+1)
+            }
+        }
     }
 
     BeforeEach {
