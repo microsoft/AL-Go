@@ -22,9 +22,6 @@ outputs:
   EnvironmentCount:
     description: Number of Deployment Environments
     value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentCount }}
-  UnknownEnvironment:
-    description: 1 if the Environment specified doesn't exist in GitHub or settings, else 0
-    value: ${{ steps.determineDeploymentEnvironments.outputs.UnknownEnvironment }}
 runs:
   using: composite
   steps:

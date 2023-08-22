@@ -33,12 +33,10 @@ Write-Host "Environments found: $($environments -join ', ')"
 
 $deploymentEnvironments = @{}
 
-$unknownEnvironment = 0
 if (!($environments)) {
     # If no environments are defined and the user specified a single environment, use that environment
     # This allows the user to specify a single environment without having to define it in the settings
     if ($getenvironments -notcontains '*' -and $getenvironments -notcontains '?' -and $getenvironments -notcontains ',') {
-        $unknownEnvironment = 1
         $envName = $getEnvironments.Split(' ')[0]
         $deploymentEnvironments += @{
             "$getEnvironments" = @{
@@ -165,6 +163,3 @@ Write-Host "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
-
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
-Write-Host "UnknownEnvironment=$unknownEnvironment"

@@ -20,6 +20,5 @@ Determines the artifactUrl to use for a given project
 | EnvironmentsMatrixJson | The Environment matrix to use for the Deploy step in compressed JSON format |
 | DeploymentEnvironmentsJson | Deployment Environments with settings in compressed JSON format |
 | EnvironmentCount | Number of Deployment Environments |
-| UnknownEnvironment | 1 if the Environment specified doesn't exist in GitHub or settings, else 0 |
 
 ### ENV variables

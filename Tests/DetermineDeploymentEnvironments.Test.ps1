@@ -42,7 +42,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             "EnvironmentsMatrixJson" = "The Environment matrix to use for the Deploy step in compressed JSON format"
             "DeploymentEnvironmentsJson" = "Deployment Environments with settings in compressed JSON format"
             "EnvironmentCount" = "Number of Deployment Environments"
-            "UnknownEnvironment" = "1 if the Environment specified doesn't exist in GitHub or settings, else 0"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
@@ -62,7 +61,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"test"},{"os":"[\"ubuntu-latest\"]","environment":"another"}]},"fail-fast":false}'
         $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","AuthContextSecret":"test-AuthContext,test_AuthContext,AuthContext","ContinuousDeployment":true,"runs-on":["ubuntu-latest"]},"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","AuthContextSecret":"another-AuthContext,another_AuthContext,AuthContext","ContinuousDeployment":true,"runs-on":["ubuntu-latest"]}}'
         $EnvironmentCount | Should -Be 2
-        $UnknownEnvironment | Should -Be 0
     }
 
     # 2 environments defined in GitHub - one with branch policy
@@ -82,7 +80,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"another"}]},"fail-fast":false}'
         $DeploymentEnvironmentsJson | Should -Be '{"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","AuthContextSecret":"another-AuthContext,another_AuthContext,AuthContext","ContinuousDeployment":true,"runs-on":["ubuntu-latest"]}}'
         $EnvironmentCount | Should -Be 1
-        $UnknownEnvironment | Should -Be 0
 
         $env:GITHUB_REF_NAME = 'branch'
 
@@ -91,7 +88,5 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         PassGeneratedOutput
 
         $EnvironmentCount | Should -Be 1
-        $UnknownEnvironment | Should -Be 0
-
     }
 }

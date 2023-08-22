@@ -22,7 +22,6 @@ Describe "ReadSettings Action Tests" {
             "GitHubRunnerShell" = "Shell for GitHubRunner jobs"
             "EnvironmentsJson" = "Environments in compressed Json format"
             "EnvironmentCount" = "Number of environments in array"
-            "UnknownEnvironment" = "Determines whether we are publishing to an unknown environment"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
