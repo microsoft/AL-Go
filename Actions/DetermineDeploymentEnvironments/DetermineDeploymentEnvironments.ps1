@@ -31,7 +31,7 @@ $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.en
 
 Write-Host "Environments found: $($environments -join ', ')"
 
-$deploymentEnvironments = @{}
+$deploymentEnvironments = [ordered]@{}
 
 if (!($environments)) {
     # If no environments are defined and the user specified a single environment, use that environment
