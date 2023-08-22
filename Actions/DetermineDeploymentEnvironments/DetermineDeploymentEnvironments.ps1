@@ -3,7 +3,7 @@ Param(
     [string] $getEnvironments,
     [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
     [ValidateSet('CD','Publish')]
-    [string] $type = "CD"    
+    [string] $type = "CD"
 )
 
 function GetGitHubEnvironments([string] $getEnvironments) {
@@ -77,10 +77,9 @@ else {
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             $deployTo = $settings."$settingsName"
-            'EnvironmentName','Branches','Projects','AuthTokenSecret','ContinuousDeployment','runs-on' | ForEach-Object {
+            'EnvironmentName','Branches','Projects','ContinuousDeployment','runs-on' | ForEach-Object {
                 if ($deployTo.ContainsKey($_)) {
                     $deploymentSettings."$_" = $deployTo."$_"
-                    Write-Host "Set $_ to $($deployTo."$_")"                    
                 }
             }
         }
@@ -144,6 +143,7 @@ else {
         }
         if ($includeEnvironment) {
             $deploymentEnvironments += @{ "$environmentName" = $deploymentSettings }
+            # Dump Deployment settings for included environments
             $deploymentSettings | ConvertTo-Json -Depth 99 | Out-Host
         }
     }
