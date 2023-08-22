@@ -47,24 +47,33 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     }
 
     # 2 environments defined in GitHub - no branch policy
-    It 'Test calling action directly - PTE / Nuget' {
+    It 'Test calling action directly - 2 environments defined in GitHub - no branch policy' {
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
 
         Mock InvokeWebRequest {
             if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
         }
 
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
 
         PassGeneratedOutput
 
         $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"test"},{"os":"[\"ubuntu-latest\"]","environment":"another"}]},"fail-fast":false}'
-        $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","AuthContextSecret":"test-AuthContext,test_AuthContext,AuthContext","ContinuousDeployment":true,"runs-on":["ubuntu-latest"]},"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","AuthContextSecret":"another-AuthContext,another_AuthContext,AuthContext","ContinuousDeployment":true,"runs-on":["ubuntu-latest"]}}'
+        $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]},"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
         $EnvironmentCount | Should -Be 2
+
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test'
+
+        PassGeneratedOutput
+
+        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"test"}]},"fail-fast":false}'
+        $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
+        $EnvironmentCount | Should -Be 1
+
     }
 
     # 2 environments defined in GitHub - one with branch policy
-    It 'Test calling action directly - PTE / Nuget' {
+    It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy' {
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
 
         Mock InvokeWebRequest {
@@ -73,17 +82,17 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             #if ($uri -like '*/deployment-branch-policies') { return @{ "branch_policies" = @( @{ "name" = "main" }, @{ "name" = "branch" } ) } | ConvertTo-Json -Depth 99 -Compress }
         }
 
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
 
         PassGeneratedOutput
 
         $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"another"}]},"fail-fast":false}'
-        $DeploymentEnvironmentsJson | Should -Be '{"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","AuthContextSecret":"another-AuthContext,another_AuthContext,AuthContext","ContinuousDeployment":true,"runs-on":["ubuntu-latest"]}}'
+        $DeploymentEnvironmentsJson | Should -Be '{"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
         $EnvironmentCount | Should -Be 1
 
         $env:GITHUB_REF_NAME = 'branch'
 
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
 
         PassGeneratedOutput
 
