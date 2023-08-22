@@ -1,0 +1,153 @@
+Param(
+    [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (* for all)", Mandatory = $true)]
+    [string] $getEnvironments
+)
+
+function GetGitHubEnvironments([string] $getEnvironments) {
+    $headers = GetHeader -token $env:GITHUB_TOKEN
+    Write-Host "Requesting environments: $getEnvironments"
+    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+    try {
+        Write-Host "Trying to get environments from GitHub API"
+        $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments)
+    } 
+    catch {
+        $ghEnvironments = @()
+        Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
+    }
+    $ghEnvironments
+}
+
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+$ghEnvironments = @(GetGitHubEnvironments -getEnvironments $getEnvironments)
+
+Write-Host "Requesting environments from settings"
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ }
+
+Write-Host "Environments found: $($environments -join ', ')"
+
+$deploymentEnvironments = @{}
+
+$unknownEnvironment = 0
+if (!($environments)) {
+    # If no environments are defined and the user specified a single environment, use that environment
+    # This allows the user to specify a single environment without having to define it in the settings
+    if ($getenvironments -notcontains '*' -and $getenvironments -notcontains '?' -and $getenvironments -notcontains ',') {
+        $unknownEnvironment = 1
+        $envName = $getEnvironments.Split(' ')[0]
+        $deploymentEnvironments += @{ 
+            "$getEnvironments" = @{
+                "EnvironmentName" = $envName
+                "Branches" = $null
+                "BranchesFromPolicy" = $null
+                "Projects" = '*'
+                "AuthContextSecret" = "$($envName)-AuthContext,$($envName)_AuthContext,AuthContext"
+                "ContinuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
+                "runs-on" = @($settings."runs-on".Split(',').Trim())
+            }
+        }
+    }
+}
+else {
+    $environments | ForEach-Object {
+        $environmentName = $_
+        Write-Host "Environment: $environmentName"
+        $envName = $_.Split(' ')[0]
+        # Default Deployment settings are:
+        # - environment name: same
+        # - branches: main
+        # - projects: all
+        # - continuous deployment: only for environments not tagged with PROD or FAT
+        # - runs-on: same as settings."runs-on"
+        # - authContextSecret: envName-AuthContext,envName_AuthContext,AuthContext (first that exists)
+        $deploymentSettings = [ordered]@{
+            "EnvironmentName" = $envName
+            "Branches" = $null
+            "BranchesFromPolicy" = $null
+            "Projects" = '*'
+            "AuthContextSecret" = "$($envName)-AuthContext,$($envName)_AuthContext,AuthContext"
+            "ContinuousDeployment" = !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')
+            "runs-on" = @($settings."runs-on".Split(',').Trim())
+        }
+
+        # Check DeployTo<environmentName> setting
+        $settingsName = "DeployTo$environmentName"
+        if ($settings.ContainsKey($settingsName)) {
+            # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+            $deployTo = $settings."$settingsName"
+            'EnvironmentName','Branches','Projects','AuthTokenSecret','ContinuousDeployment','runs-on' | ForEach-Object {
+                if ($deployTo.ContainsKey($_)) {
+                    $deploymentSettings."$_" = $deployTo."$_"
+                }
+            }
+        }
+
+        # Get Branch policies on GitHub Environment
+        $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $environmentName }
+        if ($ghEnvironment) {
+            # Environment is defined in GitHub - check protection rules
+            $headers = GetHeader -token $env:GITHUB_TOKEN
+            $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
+            if ($branchPolicy) {
+                if ($ghEnvironment.deployment_branch_policy.protected_branches) {
+                    Write-Host "GitHub Environment $environmentName only allows protected branches, getting protected branches from GitHub API"
+                    $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches"
+                    $deploymentSettings.BranchesFromPolicy = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name })
+                }
+                elseif ($ghEnvironment.deployment_branch_policy.custom_branch_policies) {
+                    Write-Host "GitHub Environment $environmentName has custom deployment branch policies, getting branches from GitHub API"
+                    $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($environmentName))/deployment-branch-policies"
+                    $deploymentSettings.BranchesFromPolicy = @((InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name })
+                }
+            }
+            else {
+                Write-Host "GitHub Environment $environmentName does not have a branch policy defined"
+            }
+        }
+
+        # Check whether any GitHub policy disallows this branch to deploy to this environment
+        if ($deploymentSettings.BranchesFromPolicy) {
+            # Check whether GITHUB_REF_NAME is allowed to deploy to this environment
+            $includeEnvironment = $deploymentSettings.BranchesFromPolicy | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
+            if ($deploymentSettings.Branches -and $includeEnvironment) {
+                # Branches are also defined in settings for this environment - only include branches that also exists in settings
+                $includeEnvironment = $deploymentSettings.Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
+            }
+        }
+        else {
+            if ($deploymentSettings.Branches) {
+                # Branches are defined in settings for this environment - only include branches that exists in settings
+                $includeEnvironment = $deploymentSettings.Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
+            }
+            else {
+                # If no branch policies are defined in GitHub nor in settings - only allow main branch to deploy
+                $includeEnvironment = $ENV:GITHUB_REF_NAME -eq 'main'
+            }
+        }
+        if ($includeEnvironment) {
+            $deploymentEnvironments += @{ "$environmentName" = $deploymentSettings }
+        }
+    }
+}
+
+# Calculate deployment matrix
+$json = [ordered]@{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
+$deploymentEnvironments.Keys | ForEach-Object {
+    $deploymentEnvironment = $deploymentEnvironments."$_"
+    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)" }
+}
+$environmentsMatrixJson = $json | ConvertTo-Json -Depth 99 -compress
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsMatrixJson=$environmentsMatrixJson"
+Write-Host "EnvironmentsMatrixJson=$environmentsMatrixJson"
+
+$deploymentEnvironmentsJson = ConvertTo-Json -InputObject $deploymentEnvironments -Depth 99 -Compress
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
+Write-Host "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
+
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
+Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
+
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
+Write-Host "UnknownEnvironment=$unknownEnvironment"

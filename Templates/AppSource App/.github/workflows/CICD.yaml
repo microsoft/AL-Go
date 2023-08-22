@@ -27,12 +27,12 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
-      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
-      deliveryTargets: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
+      environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsJson }}
+      environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
+      deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
+      deliveryTargetsJson: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
-      checkRunId: ${{ steps.CreateCheckRun.outputs.checkRunId }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
@@ -93,6 +93,14 @@ jobs:
           shell: powershell
           projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
           checkContextSecrets: 'N'
+
+      - name: Determine Deployment Environments
+        id: DetermineDeploymentEnvironments
+        uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
+        with:
+          shell: powershell
+          getEnvironments: '*'
+
   CheckForUpdates:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
@@ -133,14 +141,14 @@ jobs:
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
-      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargets != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
+      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
       signArtifacts: true
       useArtifactCache: true
 
   Deploy:
     needs: [ Initialization, Build ]
     if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
-    strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
+    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
     environment:
@@ -264,10 +272,10 @@ jobs:
 
   Deliver:
     needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargets != '[]'
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargetsJson != '[]'
     strategy:
       matrix:
-        deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargets) }}
+        deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargetsJson) }}
       fail-fast: false
     runs-on: [ windows-latest ]
     name: Deliver to ${{ matrix.deliveryTarget }}

@@ -27,12 +27,12 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
-      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
-      deliveryTargets: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
+      environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsJson }}
+      environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
+      deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
+      deliveryTargetsJson: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
-      checkRunId: ${{ steps.CreateCheckRun.outputs.checkRunId }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
@@ -56,7 +56,6 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          getEnvironments: '*'
           get: type
 
       - name: Determine Workflow Depth
@@ -93,6 +92,19 @@ jobs:
           shell: powershell
           projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
           checkContextSecrets: 'Y'
+
+      - name: Determine Deployment Environments
+        id: DetermineDeploymentEnvironments
+        uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
+        with:
+          shell: powershell
+          getEnvironments: '*'
+
+      - name: Check Obsolete Secrets usage
+        run: |
+          # Check whether secrets called envName-EnvironmentName, envName_EnvironmentName, EnvironmentName, projects exists
+          # Check whether settings called envName-Projects, envName_Projects exists
+          # fail build with message that these secrets are no longer supported - use DeployTo instead
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
@@ -134,14 +146,14 @@ jobs:
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,codeSignCertificatePassword,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
-      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargets != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
+      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
       signArtifacts: true
       useArtifactCache: true
 
   Deploy:
     needs: [ Initialization, Build ]
     if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
-    strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
+    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
     environment:
@@ -177,6 +189,9 @@ jobs:
       - name: AuthContext
         id: authContext
         run: |
+          #
+          # Check secrets.environmentName and secrets.projects - throw error if specified in that
+          #
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $settings = $env:Settings | ConvertFrom-Json
           $envName = '${{ steps.envName.outputs.envName }}'
@@ -265,10 +280,10 @@ jobs:
 
   Deliver:
     needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargets != '[]'
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargetsJson != '[]'
     strategy:
       matrix:
-        deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargets) }}
+        deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargetsJson) }}
       fail-fast: false
     runs-on: [ windows-latest ]
     name: Deliver to ${{ matrix.deliveryTarget }}
