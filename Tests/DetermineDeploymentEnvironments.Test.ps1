@@ -58,7 +58,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         PassGeneratedOutput
 
-        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"test"},{"os":"[\"ubuntu-latest\"]","environment":"another"}]},"fail-fast":false}'
+        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"environment":"another","os":"[\"ubuntu-latest\"]"},{"environment":"test","os":"[\"ubuntu-latest\"]"}]},"fail-fast":false}'
         $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]},"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
         $EnvironmentCount | Should -Be 2
 
@@ -86,7 +86,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         PassGeneratedOutput
 
-        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"os":"[\"ubuntu-latest\"]","environment":"another"}]},"fail-fast":false}'
+        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"environment":"another","os":"[\"ubuntu-latest\"]"}]},"fail-fast":false}'
         $DeploymentEnvironmentsJson | Should -Be '{"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
         $EnvironmentCount | Should -Be 1
 
