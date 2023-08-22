@@ -73,7 +73,7 @@ else {
         }
 
         # Check DeployTo<environmentName> setting
-        $settingsName = "DeployTo$environmentName"
+        $settingsName = "DeployTo$envName"
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             $deployTo = $settings."$settingsName"
