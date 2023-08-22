@@ -1,4 +1,4 @@
-name: Determine DeliveryTargets to use
+name: Determine Delivery Targets
 author: Microsoft Corporation
 inputs:
   shell:
