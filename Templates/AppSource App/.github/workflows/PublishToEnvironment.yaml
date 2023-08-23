@@ -111,7 +111,7 @@ jobs:
   Deploy:
     needs: [ Initialization ]
     if: needs.Initialization.outputs.environmentCount > 0
-    strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
+    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
     environment:

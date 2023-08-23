@@ -60,7 +60,7 @@ jobs:
 
       - name: EnvName
         id: envName
-        if: steps.ReadSettings.outputs.EnvironmentCount == 1
+        if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
