@@ -48,53 +48,160 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in GitHub - no branch policy
     It 'Test calling action directly - 2 environments defined in GitHub - no branch policy' {
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
-
         Mock InvokeWebRequest {
             if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
         }
 
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
-
         PassGeneratedOutput
-
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"};@{"environment"="test";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ForceSync"=$false;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ForceSync"=$false;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 2
 
         . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test'
-
         PassGeneratedOutput
-
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="test";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ForceSync"=$false;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 1
     }
 
-    # 2 environments defined in GitHub - one with branch policy
-    It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy' {
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
-
+    # 2 environments defined in GitHub - one with branch policy = protected branches
+    It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy = protected branches' {
         Mock InvokeWebRequest {
-            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
+            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $true; "custom_branch_policies" = $false } }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
             if ($uri -like '*/branches') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } )) }
-            #if ($uri -like '*/deployment-branch-policies') { return @{ "branch_policies" = @( @{ "name" = "main" }, @{ "name" = "branch" } ) } | ConvertTo-Json -Depth 99 -Compress }
         }
 
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
-
         PassGeneratedOutput
-
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ForceSync"=$false;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 1
 
         $env:GITHUB_REF_NAME = 'branch'
-
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
-
         PassGeneratedOutput
-
         $EnvironmentCount | Should -Be 1
+    }
+
+    # 2 environments defined in GitHub - one with branch policy = branch. the other with no branch policy
+    It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy = main' {
+        Mock InvokeWebRequest {
+            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
+            if ($uri -like '*/branches') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } )) }
+            if ($uri -like '*/deployment-branch-policies') { return @{ "branch_policies" = @( @{ "name" = "branch" } ) } | ConvertTo-Json -Depth 99 -Compress }
+        }
+
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
+        # Only another environment should be included when deploying from main
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
+        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ForceSync"=$false;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
+
+        # Change branch to branch - now only test environment should be included (due to branch policy)
+        $env:GITHUB_REF_NAME = 'branch'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+    }
+
+    # 2 environments defined in GitHub, 1 in settings - exclude another environment
+    It 'Test calling action directly - 2 environments defined in GitHub, one in settings' {
+        Mock InvokeWebRequest {
+            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }; @{ "name" = "another"; "protection_rules" = @() } ) }) }
+        }
+
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github_pages' ) }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 3
+
+        # Exclude another environment
+        $settings.excludeEnvironments += @('another')
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 2
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Not -Contain "another"
+
+        # Add Branch policy to settings to only allow branch to deploy to test environment
+        $settings += @{ 
+            "DeployToTest" = @{
+                "Branches" = @("branch")
+            }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "settingsenv"
+
+        # Changing branch to branch - now only test environment should be included (due to settings branch policy)
+        $env:GITHUB_REF_NAME = 'branch'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+    }
+
+    # 2 environments defined in Settings - one PROD and one non-PROD (name based)
+    It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (name based)' {
+        Mock InvokeWebRequest {
+            if ($uri -like '*/environments') { throw "Not supported" }
+        }
+
+        # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github_pages' ) }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
+
+        # Publish to test environment - test is included
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+    }
+
+    # 2 environments defined in Settings - one PROD and one non-PROD (settings based)
+    It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github_pages' ) }
+
+        Mock InvokeWebRequest {
+            if ($uri -like '*/environments') { throw "Not supported" }
+        }
+
+        $settings += @{ 
+            "DeployToTest" = @{
+                "ContinuousDeployment" = $false
+            }
+            "DeployToAnother" = @{
+                "ContinuousDeployment" = $true
+            }
+        }
+
+        # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
+
+        # Publish to test environment - test is included
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
     }
 }
