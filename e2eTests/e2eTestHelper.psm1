@@ -6,6 +6,7 @@ $defaultRuntime = "10.0"
 $defaultPublisher = "MS Test"
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
+. (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
 
 function GetDefaultPublisher() {
     return $defaultPublisher
