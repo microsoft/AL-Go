@@ -224,7 +224,7 @@ function GetWorkflowsInPath {
 }
 
 function PesterMatchHashtable($ActualValue, $ExpectedValue, [switch] $Negate) {
-    $message = FindMismatchedHashtableValue "" $ActualValue $ExpectedValue
+    $message = FindMismatchedHashtableValue -Prefix "" -ActualValue $ActualValue -ExpectedValue $ExpectedValue
     $success = $null -eq $message
 
     if ($success) {
@@ -262,7 +262,7 @@ function FindMismatchedHashtableValue($Prefix, $ActualValue, $ExpectedValue) {
             }
             0..($actualItem.Count-1) | ForEach-Object {
                 if ($actualItem[$_] -is [hashtable] -and $expectedItem[$_] -is [hashtable]) {
-                    $message = FindMismatchedHashtableValue "$($Prefix)$($expectedKey)[$_]." $actualItem[$_] $expectedItem[$_]
+                    $message = FindMismatchedHashtableValue -Prefix "$($Prefix)$($expectedKey)[$_]." -ActualValue $actualItem[$_] -ExpectedValue $expectedItem[$_]
                     if ($message) {
                         return $message
                     }
@@ -273,7 +273,7 @@ function FindMismatchedHashtableValue($Prefix, $ActualValue, $ExpectedValue) {
             }
         }
         elseif ($actualItem -is [hashtable] -and $expectedItem -is [hashtable]) {
-            $message = FindMismatchedHashtableValue "$($Prefix)$($expectedKey)." $actualItem $expectedItem
+            $message = FindMismatchedHashtableValue -Prefix "$($Prefix)$($expectedKey)." -ActualValue $actualItem -ExpectedValue $expectedItem
             if ($message) {
                 return $message
             }

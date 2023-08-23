@@ -106,7 +106,7 @@ function ConvertTo-HashTable() {
             $ht[$name] = ConvertTo-HashTable $value -recurse
         }
         elseif ($recurse -and $value -is [array]) {
-            $ht[$name] = @($value | ForEach-Object { 
+            $ht[$name] = @($value | ForEach-Object {
                 if (($_ -is [System.Collections.Specialized.OrderedDictionary]) -or ($_ -is [hashtable]) -or ($_ -is [System.Management.Automation.PSCustomObject])) {
                     ConvertTo-HashTable $_ -recurse
                 }
