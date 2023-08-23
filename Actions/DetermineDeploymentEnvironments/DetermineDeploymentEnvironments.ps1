@@ -151,7 +151,7 @@ else {
 
 # Calculate deployment matrix
 $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
-$deploymentEnvironments.Keys | ForEach-Object {
+$deploymentEnvironments.Keys | Sort-Object | ForEach-Object {
     $deploymentEnvironment = $deploymentEnvironments."$_"
     $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)" }
 }

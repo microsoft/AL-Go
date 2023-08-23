@@ -58,7 +58,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         PassGeneratedOutput
 
-        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="test";"os"="[""ubuntu-latest""]"};@{"environment"="another";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
+        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"};@{"environment"="test";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 2
 
