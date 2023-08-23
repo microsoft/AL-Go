@@ -118,7 +118,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
 
         # Add Branch policy to settings to only allow branch to deploy to test environment - now no environments should be included
-        $settings += @{ 
+        $settings += @{
             "DeployToTest" = @{
                 "Branches" = @("branch")
             }
@@ -157,7 +157,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Not -Contain "another"
 
         # Add Branch policy to settings to only allow branch to deploy to test environment
-        $settings += @{ 
+        $settings += @{
             "DeployToTest" = @{
                 "Branches" = @("branch")
             }
