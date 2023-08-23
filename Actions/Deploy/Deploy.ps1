@@ -171,8 +171,9 @@ try {
         }
 
         try {
-            if ($response.environmentType -eq 1 -and !($bcAuthContext.ClientSecret)) {
-                # Use dev endpoint for sandbox environments (Publish-BcContainerApp)
+            $sandboxEnvironment = ($response.environmentType -eq 1)
+            if ($sandboxEnvironment -and !($bcAuthContext.ClientSecret)) {
+                # Sandbox and not S2S -> use dev endpoint (Publish-BcContainerApp)
                 $parameters = @{
                     "bcAuthContext" = $bcAuthContext
                     "environment" = $deploymentSettings.EnvironmentName
@@ -182,6 +183,12 @@ try {
                     Write-Host "Using ForceSync"
                     $parameters += @{ "SyncMode" = "ForceSync" }
                 }
+                Write-Host "Publishing apps using development endpoint"
+                Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
+            }
+            elseif (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.ContinuousDeployment)) {
+                # Continuous deployment is undefined in settings - we will not deploy to production environments
+                Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
             }
             else {
                 # Use automation API for production environments (Publish-PerTenantExtensionApps)
@@ -194,29 +201,8 @@ try {
                     Write-Host "Using ForceSync"
                     $parameters += @{ "SchemaSyncMode" = "Force" }
                 }
-            }
-            if ($response.environmentType -eq 1) {
-                # Sandbox environment
-                if ($bcAuthContext.ClientSecret) {
-                    Write-Host "Using S2S, publishing apps using automation API"
-                    Publish-PerTenantExtensionApps @parameters
-                }
-                else {
-                    Write-Host "Publishing apps using development endpoint"
-                    Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
-                }
-            }
-            else {
-                # Production environment
-                if ($type -eq 'CD' -and $null -eq $deploymentSettings.ContinuousDeployment) {
-                    # Continuous deployment is undefined in settings - we will not deploy to production environments
-                    Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
-                }
-                else {
-                    # Check for AppSource App - cannot be deployed
-                    Write-Host "Publishing apps using automation API"
-                    Publish-PerTenantExtensionApps @parameters
-                }
+                Write-Host "Publishing apps using automation API"
+                Publish-PerTenantExtensionApps @parameters
             }
         }
         catch {
