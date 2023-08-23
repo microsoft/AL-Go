@@ -138,10 +138,7 @@ try {
 
     Set-Location $ENV:GITHUB_WORKSPACE
 
-    $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/DeployTo$($environmentName).ps1"
-    if (-not (Test-Path $customScript)) {
-        $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/DeployTo.ps1"
-    }
+    $customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/DeployTo$($deploySettings.EnvironmentType).ps1"
     if (Test-Path $customScript) {
         Write-Host "Executing custom deployment script $customScript"
         $parameters = @{

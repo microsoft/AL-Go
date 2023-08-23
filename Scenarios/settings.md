@@ -168,7 +168,7 @@ Here are the parameters to use in your custom script:
 
 ## Custom Deployment
 
-You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named DeployTo*.ps1 in the .github folder. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
+You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named `DeployTo<EnvironmentType>.ps1` in the .github folder. Default Environment Type is SaaS, but you can define your own type by specifying EnvironmentType in the `DeployTo<EnvironmentName>` setting. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
 
 DeployToMyEnvironment.ps1
 ```
@@ -178,10 +178,11 @@ Param(
 
 Write-Host "Deployment Type (CD or Release): $($parameters.type)"
 Write-Host "Apps to deploy: $($parameters.apps)"
+Write-Host "Environment Type: $($parameters.EnvironmentType)"
 Write-Host "Environment Name: $($parameters.EnvironmentName)"
 ```
 
-**Note:** You can also create one script to override all deployment functionality, by creating a script called DeployTo.ps1 in the .github folder.
+**Note:** You can also create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
 
 Here are the parameters to use in your custom script:
 
@@ -189,6 +190,7 @@ Here are the parameters to use in your custom script:
 | --------- | :--- | :--- |
 | `$parameters.type` | Type of delivery (CD or Release) | CD |
 | `$parameters.apps` | Apps to deploy | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
+| `$parameters.EnvironmentType` | Environment type | SaaS |
 | `$parameters.EnvironmentName` | Environment name | Production |
 | `$parameters.Branches` | Branches which should deploy to this environment (from settings) | main,dev |
 | `$parameters.AuthContext` | AuthContext in a compressed Json structure | {"refreshToken":"mytoken"} |
