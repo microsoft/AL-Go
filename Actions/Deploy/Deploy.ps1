@@ -29,6 +29,16 @@ try {
     $deploymentSettings = $deploymentEnvironments."$environmentName"
     $envName = $environmentName.Split(' ')[0]
     $secrets = $env:Secrets | ConvertFrom-Json
+
+    # Check obsolete secrets
+    $obsoleteSecrets = @()
+    "$($envName)-EnvironmentName","$($envName)_EnvironmentName","EnvironmentName","Projects" | ForEach-Object {
+        if ($secrets."$_") { $obsoleteSecrets += $_ }
+    }
+    if ($obsoleteSecrets) {
+        throw "The following secrets are obsolete and should be removed: $($obsoleteSecrets -join ', ')"
+    }
+
     $authContext = $null
     "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext" | ForEach-Object {
         if ($secrets."$_") {

@@ -101,13 +101,6 @@ jobs:
           getEnvironments: '*'
           type: 'CD'
 
-      - name: Check Obsolete Secrets usage
-        run: |
-
-          # Check whether secrets called envName-EnvironmentName, envName_EnvironmentName, EnvironmentName, projects exists
-          # Check whether settings called envName-Projects, envName_Projects exists
-          # fail build with message that these secrets are no longer supported - use DeployTo instead
-
   CheckForUpdates:
     runs-on: [ windows-latest ]
     needs: [ Initialization ]
@@ -186,7 +179,7 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
 
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
