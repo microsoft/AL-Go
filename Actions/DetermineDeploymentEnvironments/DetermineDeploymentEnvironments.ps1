@@ -27,7 +27,7 @@ Write-Host "Environment pattern to use: $getEnvironments"
 $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
-$settings.excludeEnvironments += @('github_pages')
+$settings.excludeEnvironments += @('github-pages')
 $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
