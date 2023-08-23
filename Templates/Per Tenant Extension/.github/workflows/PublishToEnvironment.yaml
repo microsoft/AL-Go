@@ -63,7 +63,7 @@ jobs:
         if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
+          $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.environmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read secrets
