@@ -171,15 +171,28 @@ try {
         }
 
         try {
+            $parameters = @{
+                "bcAuthContext" = $bcAuthContext
+                "environment" = $deploymentSettings.EnvironmentName
+                "appFiles" = $apps
+            }
             if ($response.environmentType -eq 1) {
                 # Sandbox environment
                 if ($bcAuthContext.ClientSecret) {
                     Write-Host "Using S2S, publishing apps using automation API"
-                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
+                    if ($deploymentSettings.ForceSync) {
+                        Write-Host "Using ForceSync"
+                        $parameters += @{ "SchemaSyncMode" = "Force" }
+                    }
+                    Publish-PerTenantExtensionApps @parameters
                 }
                 else {
                     Write-Host "Publishing apps using development endpoint"
-                    Publish-BcContainerApp -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFile $apps -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
+                    if ($deploymentSettings.ForceSync) {
+                        Write-Host "Using ForceSync"
+                        $parameters += @{ "SyncMode" = "ForceSync" }
+                    }
+                    Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
                 }
             }
             else {
@@ -191,6 +204,10 @@ try {
                 else {
                     # Check for AppSource App - cannot be deployed
                     Write-Host "Publishing apps using automation API"
+                    if ($deploymentSettings.ForceSync) {
+                        Write-Host "Using ForceSync"
+                        $parameters += @{ "SchemaSyncMode" = "Force" }
+                    }
                     Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
                 }
             }
