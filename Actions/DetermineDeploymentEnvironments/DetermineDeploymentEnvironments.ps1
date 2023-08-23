@@ -32,7 +32,7 @@ $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.en
 
 Write-Host "Environments found: $($environments -join ', ')"
 
-$deploymentEnvironments = [ordered]@{}
+$deploymentEnvironments = @{}
 
 if (!($environments)) {
     # If no environments are defined and the user specified a single environment, use that environment
@@ -62,7 +62,7 @@ else {
         # - projects: all
         # - continuous deployment: only for environments not tagged with PROD or FAT
         # - runs-on: same as settings."runs-on"
-        $deploymentSettings = [ordered]@{
+        $deploymentSettings = @{
             "EnvironmentType" = "SaaS"
             "EnvironmentName" = $envName
             "Branches" = $null
@@ -150,10 +150,10 @@ else {
 }
 
 # Calculate deployment matrix
-$json = [ordered]@{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
+$json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
 $deploymentEnvironments.Keys | ForEach-Object {
     $deploymentEnvironment = $deploymentEnvironments."$_"
-    $json.matrix.include += [ordered]@{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)" }
+    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)" }
 }
 $environmentsMatrixJson = $json | ConvertTo-Json -Depth 99 -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsMatrixJson=$environmentsMatrixJson"

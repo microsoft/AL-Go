@@ -58,18 +58,17 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         PassGeneratedOutput
 
-        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"environment":"test","os":"[\"ubuntu-latest\"]"},{"environment":"another","os":"[\"ubuntu-latest\"]"}]},"fail-fast":false}'
-        $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]},"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
+        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="test";"os"="[""ubuntu-latest""]"};@{"environment"="another";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
+        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 2
 
         . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test'
 
         PassGeneratedOutput
 
-        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"environment":"test","os":"[\"ubuntu-latest\"]"}]},"fail-fast":false}'
-        $DeploymentEnvironmentsJson | Should -Be '{"test":{"EnvironmentName":"test","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
+        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="test";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
+        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 1
-
     }
 
     # 2 environments defined in GitHub - one with branch policy
@@ -86,8 +85,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         PassGeneratedOutput
 
-        $EnvironmentsMatrixJson | Should -Be '{"matrix":{"include":[{"environment":"another","os":"[\"ubuntu-latest\"]"}]},"fail-fast":false}'
-        $DeploymentEnvironmentsJson | Should -Be '{"another":{"EnvironmentName":"another","Branches":null,"BranchesFromPolicy":null,"Projects":"*","ContinuousDeployment":null,"runs-on":["ubuntu-latest"]}}'
+        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
+        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=$null;"BranchesFromPolicy"=$null;"Projects"="*";"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 1
 
         $env:GITHUB_REF_NAME = 'branch'
