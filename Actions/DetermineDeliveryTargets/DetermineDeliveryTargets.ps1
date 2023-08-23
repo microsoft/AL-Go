@@ -39,6 +39,7 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deliveryTargets = @('GitHubPackages','NuGet','Storage')
 if ($settings.type -eq "AppSource App") {
     # For multi-project repositories, we will add deliveryTarget AppSource if any project has AppSourceContinuousDelivery set to true
+    Write-Host "'$projectsJson'"
     $projectsJson | ConvertFrom-Json | ForEach-Object {
         $projectSettings = ReadSettings -project $_
         if ($projectSettings.Contains('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery) {
