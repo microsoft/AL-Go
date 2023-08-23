@@ -171,27 +171,38 @@ try {
         }
 
         try {
-            $parameters = @{
-                "bcAuthContext" = $bcAuthContext
-                "environment" = $deploymentSettings.EnvironmentName
-                "appFiles" = $apps
+            if ($response.environmentType -eq 1 -and !($bcAuthContext.ClientSecret)) {
+                # Use dev endpoint for sandbox environments (Publish-BcContainerApp)
+                $parameters = @{
+                    "bcAuthContext" = $bcAuthContext
+                    "environment" = $deploymentSettings.EnvironmentName
+                    "appFile" = $apps
+                }
+                if ($deploymentSettings.ForceSync) {
+                    Write-Host "Using ForceSync"
+                    $parameters += @{ "SyncMode" = "ForceSync" }
+                }
+            }
+            else {
+                # Use automation API for production environments (Publish-PerTenantExtensionApps)
+                $parameters = @{
+                    "bcAuthContext" = $bcAuthContext
+                    "environment" = $deploymentSettings.EnvironmentName
+                    "appFiles" = $apps
+                }
+                if ($deploymentSettings.ForceSync) {
+                    Write-Host "Using ForceSync"
+                    $parameters += @{ "SchemaSyncMode" = "Force" }
+                }
             }
             if ($response.environmentType -eq 1) {
                 # Sandbox environment
                 if ($bcAuthContext.ClientSecret) {
                     Write-Host "Using S2S, publishing apps using automation API"
-                    if ($deploymentSettings.ForceSync) {
-                        Write-Host "Using ForceSync"
-                        $parameters += @{ "SchemaSyncMode" = "Force" }
-                    }
                     Publish-PerTenantExtensionApps @parameters
                 }
                 else {
                     Write-Host "Publishing apps using development endpoint"
-                    if ($deploymentSettings.ForceSync) {
-                        Write-Host "Using ForceSync"
-                        $parameters += @{ "SyncMode" = "ForceSync" }
-                    }
                     Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
                 }
             }
@@ -204,11 +215,7 @@ try {
                 else {
                     # Check for AppSource App - cannot be deployed
                     Write-Host "Publishing apps using automation API"
-                    if ($deploymentSettings.ForceSync) {
-                        Write-Host "Using ForceSync"
-                        $parameters += @{ "SchemaSyncMode" = "Force" }
-                    }
-                    Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
+                    Publish-PerTenantExtensionApps @parameters
                 }
             }
         }
