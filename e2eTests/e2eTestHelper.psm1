@@ -37,26 +37,6 @@ function SetTokenAndRepository {
     }
 }
 
-function ConvertTo-HashTable {
-    Param(
-        [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object,
-        [switch] $recurse
-    )
-    $ht = @{}
-    if ($object) {
-        $object.PSObject.Properties | ForEach-Object { 
-            if ($recurse -and ($_.Value -is [PSCustomObject])) {
-                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
-            }
-            else {
-                $ht[$_.Name] = $_.Value
-            }
-        }
-    }
-    $ht
-}
-
 function Get-PlainText {
     Param(
         [parameter(ValueFromPipeline, Mandatory = $true)]
