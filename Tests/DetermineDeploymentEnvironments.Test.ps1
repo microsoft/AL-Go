@@ -91,7 +91,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         Mock InvokeWebRequest {
             if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
             if ($uri -like '*/branches') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } )) }
-            if ($uri -like '*/deployment-branch-policies') { return @{ "branch_policies" = @( @{ "name" = "branch" } ) } | ConvertTo-Json -Depth 99 -Compress }
+            if ($uri -like '*/deployment-branch-policies') { return @{ "branch_policies" = @( @{ "name" = "branch" }, @{ "name" = "branch2" } ) } | ConvertTo-Json -Depth 99 -Compress }
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
@@ -104,6 +104,31 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
 
         # Change branch to branch - now only test environment should be included (due to branch policy)
+        $env:GITHUB_REF_NAME = 'branch'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+
+        # Change branch to branch2 - test environment should still be included (due to branch policy)
+        $env:GITHUB_REF_NAME = 'branch2'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+
+        # Add Branch policy to settings to only allow branch to deploy to test environment - now no environments should be included
+        $settings += @{ 
+            "DeployToTest" = @{
+                "Branches" = @("branch")
+            }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+
+        # Change branch to branch - test environment should still be included (due to branch policy)
         $env:GITHUB_REF_NAME = 'branch'
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
         PassGeneratedOutput
@@ -181,7 +206,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             if ($uri -like '*/environments') { throw "Not supported" }
         }
 
-        $settings += @{ 
+        $settings += @{
             "DeployToTest" = @{
                 "ContinuousDeployment" = $false
             }
