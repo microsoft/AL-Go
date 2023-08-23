@@ -57,6 +57,14 @@ else {
         $environmentName = $_
         Write-Host "Environment: $environmentName"
         $envName = $_.Split(' ')[0]
+
+        # Check Obsolete Settings
+        "$($envName)-Projects","$($envName)_Projects" | ForEach-Object {
+            if ($settings.Contains($_)) {
+                throw "The setting $_ is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
+            }
+        }
+
         # Default Deployment settings are:
         # - environment name: same
         # - branches: main

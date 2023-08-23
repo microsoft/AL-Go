@@ -31,12 +31,13 @@ try {
     $secrets = $env:Secrets | ConvertFrom-Json
 
     # Check obsolete secrets
-    $obsoleteSecrets = @()
-    "$($envName)-EnvironmentName","$($envName)_EnvironmentName","EnvironmentName","Projects" | ForEach-Object {
-        if ($secrets."$_") { $obsoleteSecrets += $_ }
+    "$($envName)-EnvironmentName","$($envName)_EnvironmentName","EnvironmentName" | ForEach-Object {
+        if ($secrets."$_") {
+            throw "The secret $_ is obsolete and should be replaced by using the EnvironmentName property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
+        }
     }
-    if ($obsoleteSecrets) {
-        throw "The following secrets are obsolete and should be removed: $($obsoleteSecrets -join ', ')"
+    if ($secrets.Projects) {
+        throw "The secret Projects is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
     }
 
     $authContext = $null
