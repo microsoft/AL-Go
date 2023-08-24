@@ -29,11 +29,6 @@ jobs:
     if: (github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name) && (github.event_name != 'pull_request')
     runs-on: [ windows-latest ]
     steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-          ref: refs/pull/${{ github.event.number }}/merge
-
       - uses: microsoft/AL-Go-Actions/VerifyPRChanges@main
 
   Initialization:
@@ -103,21 +98,16 @@ jobs:
       secrets: 'licenseFileUrl,insiderSasToken,keyVaultCertificateUrl,keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
 
-  PostProcess:
+  StatusCheck:
     runs-on: [ windows-latest ]
     needs: [ Initialization, Build ]
     if: (!cancelled())
+    name: Pull Request Status Check
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          lfs: true
-          ref: refs/pull/${{ github.event.number }}/merge
-
-      - name: Finalize the workflow
-        id: PostProcess
-        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+      - name: Pull Request Status Check
+        id: PullRequestStatusCheck
+        uses: microsoft/AL-Go-Actions/PullRequestStatusCheck@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
-          eventId: "DO0104"
-          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

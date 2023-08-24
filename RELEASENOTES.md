@@ -47,6 +47,9 @@ By specifying a custom EnvironmentType in the DeployTo structure for an environm
 | `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 
+### Status Checks in Pull Requests
+AL-Go for GitHub now adds status checks to Pull Requests Builds. In your GitHub branch protection rules, you can set up "Pull Request Status Check" to be a required status check to ensure Pull Request Builds succeed before merging.
+
 ## v3.2
 
 ### Issues
