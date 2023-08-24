@@ -91,7 +91,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     # 2 environments defined in GitHub - one with branch policy = branch. the other with no branch policy
     It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy = main' {
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) }) 
+            return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) })
         }
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/branches' } -MockWith {
             return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } ))
