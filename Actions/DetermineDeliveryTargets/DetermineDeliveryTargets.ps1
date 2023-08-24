@@ -9,12 +9,7 @@ function IncludeBranch([string] $deliveryTarget) {
     $settingsName = "DeliverTo$deliveryTarget"
     if ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('Branches')) {
         Write-Host "- Branches defined: $($settings."$settingsName".Branches -join ', ') - "
-        $settings."$settingsName".Branches | ForEach-Object {
-            if ($ENV:GITHUB_REF_NAME -like $_) {
-                return $true
-            }
-        }
-        return $false
+        return ($null -ne ($settings."$settingsName".Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }))
     }
     else {
         Write-Host "- No branches defined, defaulting to main"

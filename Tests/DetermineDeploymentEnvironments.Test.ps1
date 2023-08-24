@@ -48,8 +48,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in GitHub - no branch policy
     It 'Test calling action directly - 2 environments defined in GitHub - no branch policy' {
-        Mock InvokeWebRequest {
-            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
@@ -68,9 +68,11 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in GitHub - one with branch policy = protected branches
     It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy = protected branches' {
-        Mock InvokeWebRequest {
-            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $true; "custom_branch_policies" = $false } }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
-            if ($uri -like '*/branches') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } )) }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $true; "custom_branch_policies" = $false } }, @{ "name" = "another"; "protection_rules" = @() } ) })
+        }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/branches' } -MockWith {
+            return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } ))
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
@@ -88,10 +90,14 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in GitHub - one with branch policy = branch. the other with no branch policy
     It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy = main' {
-        Mock InvokeWebRequest {
-            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) }) }
-            if ($uri -like '*/branches') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } )) }
-            if ($uri -like '*/deployment-branch-policies') { return @{ "branch_policies" = @( @{ "name" = "branch" }, @{ "name" = "branch2" } ) } | ConvertTo-Json -Depth 99 -Compress }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) }) 
+        }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/branches' } -MockWith {
+            return (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } ))
+        }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/deployment-branch-policies' } -MockWith {
+            return @{ "branch_policies" = @( @{ "name" = "branch" }, @{ "name" = "branch2" } ) } | ConvertTo-Json -Depth 99 -Compress
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
@@ -138,8 +144,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in GitHub, 1 in settings - exclude another environment
     It 'Test calling action directly - 2 environments defined in GitHub, one in settings' {
-        Mock InvokeWebRequest {
-            if ($uri -like '*/environments') { return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }; @{ "name" = "another"; "protection_rules" = @() } ) }) }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }; @{ "name" = "another"; "protection_rules" = @() } ) })
         }
 
         $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github_pages' ) }
@@ -178,8 +184,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in Settings - one PROD and one non-PROD (name based)
     It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (name based)' {
-        Mock InvokeWebRequest {
-            if ($uri -like '*/environments') { throw "Not supported" }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            throw "Not supported"
         }
 
         # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
@@ -202,8 +208,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {
         $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github_pages' ) }
 
-        Mock InvokeWebRequest {
-            if ($uri -like '*/environments') { throw "Not supported" }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            throw "Not supported"
         }
 
         $settings += @{

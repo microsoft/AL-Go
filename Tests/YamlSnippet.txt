@@ -53,7 +53,6 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          getEnvironments: '*'
 
   CheckForUpdates:
     runs-on: [ windows-latest ]
