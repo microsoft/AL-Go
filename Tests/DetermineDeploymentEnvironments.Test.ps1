@@ -53,13 +53,13 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"};@{"environment"="test";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"SyncMode"=$null;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"SyncMode"=$null;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 2
 
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'CD'
         PassGeneratedOutput
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="test";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"SyncMode"=$null;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
@@ -76,14 +76,14 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"SyncMode"=$null;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
         $EnvironmentCount | Should -Be 1
 
         $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
     }
@@ -102,7 +102,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @(); "excludeEnvironments" = @( 'github_pages' ) } | ConvertTo-Json -Compress
         # Only another environment should be included when deploying from main
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"SyncMode"=$null;"ContinuousDeployment"=$null;"runs-on"=@("ubuntu-latest")}}
@@ -111,14 +111,14 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         # Change branch to branch - now only test environment should be included (due to branch policy)
         $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
 
         # Change branch to branch2 - test environment should still be included (due to branch policy)
         $env:GITHUB_REF_NAME = 'branch2'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
@@ -130,13 +130,13 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             }
         }
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 0
 
         # Change branch to branch - test environment should still be included (due to branch policy)
         $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
@@ -150,14 +150,14 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
         $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github_pages' ) }
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 3
 
         # Exclude another environment
         $settings.excludeEnvironments += @('another')
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 2
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Not -Contain "another"
@@ -169,14 +169,14 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             }
         }
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "settingsenv"
 
         # Changing branch to branch - now only test environment should be included (due to settings branch policy)
         $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*'
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
