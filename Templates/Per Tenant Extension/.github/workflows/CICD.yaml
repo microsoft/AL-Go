@@ -59,6 +59,7 @@ jobs:
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           getEnvironments: '*'
           get: type
+          validateSettings: 'Y'
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
