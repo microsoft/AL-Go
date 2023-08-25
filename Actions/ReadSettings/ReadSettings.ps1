@@ -33,7 +33,6 @@ try {
     if ($validateSettings) {
         ValidateSettings -settings $settings
     }
-    
     if ($get) {
         $getSettings = $get.Split(',').Trim()
     }
