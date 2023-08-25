@@ -24,9 +24,12 @@ try {
     DownloadAndImportBcContainerHelper
 
     import-module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "ReadSettings.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $settings = ReadSettings -project $project
+
+    ValidateSettings -settings $settings
     if ($get) {
         $getSettings = $get.Split(',').Trim()
     }
