@@ -1,4 +1,4 @@
-# Determine artifactUrl
+# Determine Deployment Environments
 Determines the artifactUrl to use for a given project
 
 ## INPUT
