@@ -68,7 +68,7 @@ if (!($environments)) {
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
-                "ForceSync" = $false
+                "SyncMode" = $null
                 "ContinuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
             }
@@ -100,7 +100,7 @@ else {
             "Branches" = @()
             "BranchesFromPolicy" = @()
             "Projects" = '*'
-            "ForceSync" = $false
+            "SyncMode" = $null
             "ContinuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
         }
@@ -110,7 +110,7 @@ else {
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             $deployTo = $settings."$settingsName"
-            'EnvironmentType','EnvironmentName','Branches','Projects','ForceSync','ContinuousDeployment','runs-on' | ForEach-Object {
+            'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on' | ForEach-Object {
                 if ($deployTo.ContainsKey($_)) {
                     $deploymentSettings."$_" = $deployTo."$_"
                 }

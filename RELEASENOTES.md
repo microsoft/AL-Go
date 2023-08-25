@@ -27,7 +27,7 @@ Earlier, you could also specify the projects you want to deploy to an environmen
   - **EnvironmentName** = specifies the "real" name of the environment if it differs from the GitHub environment
   - **Branches** = an array of branch patterns, which are allowed to deploy to this environment. (Default [ "main" ])
   - **Projects** = In multi-project repositories, this property can be a comma separated list of project patterns to deploy to this environment. (Default *)
-  - **ForceSync** = true if deployment to this environment should happen with ForceSync, else false. (Default false)
+  - **SyncMode** = ForceSync if deployment to this environment should happen with ForceSync, else Add. If deploying to the development endpoint you can also specify Development and Clean. (Default Add)
   - **ContinuousDeployment** = true if this environment should be used for continuous deployment, else false. (Default: AL-Go will continuously deploy to sandbox environments or environments, which doesn't end in (PROD) or (FAT)
   - **runs-on** = specifies which GitHub runner to use when deploying to this environment. (Default is settings.runs-on)
 

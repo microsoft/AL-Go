@@ -190,9 +190,12 @@ try {
                     "environment" = $deploymentSettings.EnvironmentName
                     "appFile" = $apps
                 }
-                if ($deploymentSettings.ForceSync) {
-                    Write-Host "Using ForceSync"
-                    $parameters += @{ "SyncMode" = "ForceSync" }
+                if ($deploymentSettings.SyncMode) {
+                    if (@('Add','ForceSync', 'Clean', 'Development') -notcontains $deploymentSettings.SyncMode) {
+                        throw "Invalid SyncMode $($deploymentSettings.SyncMode) when deploying using the development endpoint. Valid values are Add, ForceSync, Development and Clean."
+                    }
+                    Write-Host "Using $($deploymentSettings.SyncMode)"
+                    $parameters += @{ "SyncMode" = $deploymentSettings.SyncMode }
                 }
                 Write-Host "Publishing apps using development endpoint"
                 Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
@@ -208,9 +211,14 @@ try {
                     "environment" = $deploymentSettings.EnvironmentName
                     "appFiles" = $apps
                 }
-                if ($deploymentSettings.ForceSync) {
-                    Write-Host "Using ForceSync"
-                    $parameters += @{ "SchemaSyncMode" = "Force" }
+                if ($deploymentSettings.SyncMode) {
+                    if (@('Add','ForceSync') -notcontains $deploymentSettings.SyncMode) {
+                        throw "Invalid SyncMode $($deploymentSettings.SyncMode) when deploying using the automation API. Valid values are Add and ForceSync."
+                    }
+                    Write-Host "Using $($deploymentSettings.SyncMode)"
+                    $syncMode = $deploymentSettings.SyncMode
+                    if ($syncMode -eq 'ForceSync') { $syncMode = 'Force' }
+                    $parameters += @{ "SchemaSyncMode" = $syncMode }
                 }
                 Write-Host "Publishing apps using automation API"
                 Publish-PerTenantExtensionApps @parameters
