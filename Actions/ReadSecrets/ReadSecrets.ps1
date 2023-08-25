@@ -31,8 +31,6 @@ try {
 
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
 
-    ValidateSecrets
-
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $keyVaultName = ""

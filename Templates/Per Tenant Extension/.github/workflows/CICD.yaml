@@ -59,7 +59,6 @@ jobs:
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           getEnvironments: '*'
           get: type
-          validateSettings: 'Y'
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
@@ -163,6 +162,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           get: templateUrl
+          validateSettings: 'Y'
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
