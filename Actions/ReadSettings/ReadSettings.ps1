@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "Indicates whether this is called from a release pipeline", Mandatory = $false)]
     [bool] $release,
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
-    [string] $get = ""
+    [string] $get = "",
+    [Parameter(HelpMessage = "Specifies whether to validate the settings", Mandatory = $false)]
+    [bool] $validateSettings = $false
 )
 
 $telemetryScope = $null
@@ -28,8 +30,10 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0079' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $settings = ReadSettings -project $project
-
-    ValidateSettings -settings $settings
+    if ($validateSettings) {
+        ValidateSettings -settings $settings
+    }
+    
     if ($get) {
         $getSettings = $get.Split(',').Trim()
     }

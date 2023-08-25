@@ -37,6 +37,10 @@ inputs:
     description: Specifies which properties to get from the settings file, default is all
     required: false
     default: ''
+  validateSettings:
+    description: Specifies whether to validate the settings
+    required: false
+    default: 'N'
 outputs:
   GitHubRunnerJson:
     description: GitHubRunner in compressed Json format
@@ -68,10 +72,11 @@ runs:
         _includeProduction: ${{ inputs.includeProduction }}
         _release: ${{ inputs.release }}
         _get: ${{ inputs.get }}
+        _validateSettings: ${{ inputs.validateSettings }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get
+          ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get -validateSettings ($ENV:_validateSettings -eq 'Y')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
