@@ -32,8 +32,8 @@ function ValidateSettings($Settings) {
 
 function PrintObsoleteMessage($SettingName, $Message, $Type) {
     if ($Type -eq "Warning") {
-        Write-Host "::Warning::The setting $SettingName has been obsoleted. $Message This warning will become an error in a future release."
+        Write-Host "::Warning::The Al-Go setting $SettingName has been obsoleted. $Message This warning will become an error in a future release."
     } else {
-        Write-Host "::Error::The setting $SettingName has been obsoleted. $Message"
+        Write-Host "::Error::The Al-Go setting $SettingName has been obsoleted. $Message"
     }
 }
