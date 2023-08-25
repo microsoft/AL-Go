@@ -1,5 +1,5 @@
 # Determine Deployment Environments
-Determines the artifactUrl to use for a given project
+Determines the environments to be used for a build or a publish
 
 ## INPUT
 
@@ -7,14 +7,13 @@ Determines the artifactUrl to use for a given project
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
-| Secrets | env.Secrets with insiderSasToken must be read by a prior call to the ReadSecrets Action |
 
 ### Parameters
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| project | | Project folder if repository is setup for multiple projects | . |
+| getEnvironments | Yes | Specifies the pattern of the environments you want to retrieve (* for all) | |
+| type | Yes | Type of deployment (CD or Publish) | |
 
 ## OUTPUT
 | EnvironmentsMatrixJson | The Environment matrix to use for the Deploy step in compressed JSON format |

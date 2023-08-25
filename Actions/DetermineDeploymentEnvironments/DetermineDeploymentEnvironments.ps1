@@ -1,9 +1,9 @@
 Param(
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (* for all)", Mandatory = $true)]
     [string] $getEnvironments,
-    [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $true)]
     [ValidateSet('CD','Publish')]
-    [string] $type = "CD"
+    [string] $type
 )
 
 function GetGitHubEnvironments() {

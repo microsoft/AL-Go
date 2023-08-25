@@ -10,8 +10,7 @@ inputs:
     required: true
   type:
     description: Type of deployment (CD or Publish)
-    required: false
-    default: 'CD'
+    required: true
 outputs:
   EnvironmentsMatrixJson:
     description: The Environment matrix to use for the Deploy step in compressed JSON format
