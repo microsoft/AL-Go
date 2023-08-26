@@ -21,18 +21,6 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  getenvironments:
-    description: Specifies the pattern of the environments you want to retreive (or empty for no environments)
-    required: false
-    default: ''
-  includeProduction:
-    description: Specifies whether you want to include production environments
-    required: false
-    default: 'N'
-  release:
-    description: Indicates whether this is called from a release pipeline
-    required: false
-    default: 'N'
   get:
     description: Specifies which properties to get from the settings file, default is all
     required: false
@@ -44,15 +32,6 @@ outputs:
   GitHubRunnerShell:
     description: Shell for GitHubRunner jobs
     value: ${{ steps.readsettings.outputs.GitHubRunnerShell }}
-  EnvironmentsJson:
-    description: Environments in compressed Json format
-    value: ${{ steps.readsettings.outputs.EnvironmentsJson }}
-  EnvironmentCount:
-    description: Number of environments in array
-    value: ${{ steps.readsettings.outputs.EnvironmentCount }}
-  UnknownEnvironment:
-    description: Determines whether we are publishing to an unknown environment
-    value: ${{ steps.readsettings.outputs.UnknownEnvironment }}
 runs:
   using: composite
   steps:
@@ -64,14 +43,11 @@ runs:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
-        _getenvironments: ${{ inputs.getenvironments }}
-        _includeProduction: ${{ inputs.includeProduction }}
-        _release: ${{ inputs.release }}
         _get: ${{ inputs.get }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -getenvironments $ENV:_getenvironments -includeProduction ($ENV:_includeProduction -eq 'Y') -release ($ENV:_release -eq 'Y') -get $ENV:_get
+          ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -get $ENV:_get
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

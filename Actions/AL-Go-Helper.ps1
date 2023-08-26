@@ -91,25 +91,44 @@ function ConvertTo-HashTable() {
         [switch] $recurse
     )
 
+    function AddValueToHashTable {
+        Param(
+            [hashtable] $ht,
+            [string] $name,
+            $value,
+            [switch] $recurse
+        )
+
+        if ($ht.Contains($name)) {
+            throw "Duplicate key $name"
+        }
+        if ($recurse -and ($value -is [System.Collections.Specialized.OrderedDictionary] -or $value -is [hashtable] -or $value -is [System.Management.Automation.PSCustomObject])) {
+            $ht[$name] = ConvertTo-HashTable $value -recurse
+        }
+        elseif ($recurse -and $value -is [array]) {
+            $ht[$name] = @($value | ForEach-Object {
+                if (($_ -is [System.Collections.Specialized.OrderedDictionary]) -or ($_ -is [hashtable]) -or ($_ -is [System.Management.Automation.PSCustomObject])) {
+                    ConvertTo-HashTable $_ -recurse
+                }
+                else {
+                    $_
+                }
+            })
+        }
+        else {
+            $ht[$name] = $value
+        }
+    }
+
     $ht = @{}
     if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
         $object.Keys | ForEach-Object {
-            if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $object."$_" -is [PSCustomObject])) {
-                $ht[$_] = ConvertTo-HashTable $object."$_" -recurse
-            }
-            else {
-                $ht[$_] = $object."$_"
-            }
+            AddValueToHashTable -ht $ht -name $_ -value $object."$_" -recurse:$recurse
         }
     }
-    elseif ($object -is [PSCustomObject]) {
+    elseif ($object -is [System.Management.Automation.PSCustomObject]) {
         $object.PSObject.Properties | ForEach-Object {
-            if ($recurse -and ($_.Value -is [System.Collections.Specialized.OrderedDictionary] -or $_.Value -is [hashtable] -or $_.Value -is [PSCustomObject])) {
-                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
-            }
-            else {
-                $ht[$_.Name] = $_.Value
-            }
+            AddValueToHashTable -ht $ht -name $_.Name -value $_.Value -recurse:$recurse
         }
     }
     $ht
@@ -578,7 +597,8 @@ function ReadSettings {
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "PullRequestTrigger"                            = "pull_request_target"
-        "fullBuildPatterns"                              = @()
+        "fullBuildPatterns"                             = @()
+        "excludeEnvironments"                           = @()
     }
 
     # Read settings from files and merge them into the settings object

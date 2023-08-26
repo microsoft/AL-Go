@@ -28,9 +28,9 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-      environments: ${{ steps.ReadSettings.outputs.EnvironmentsJson }}
-      environmentCount: ${{ steps.ReadSettings.outputs.EnvironmentCount }}
-      unknownEnvironment: ${{ steps.ReadSettings.outputs.UnknownEnvironment }}
+      environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
+      environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
+      deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
       deviceCode: ${{ steps.Authenticate.outputs.deviceCode }}
     steps:
       - name: Checkout
@@ -49,20 +49,26 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+
+      - name: Determine Deployment Environments
+        id: DetermineDeploymentEnvironments
+        uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
+        with:
+          shell: powershell
           getEnvironments: ${{ github.event.inputs.environmentName }}
-          includeProduction: 'Y'
+          type: 'Publish'
 
       - name: EnvName
         id: envName
-        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
+        if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $envName = '${{ fromJson(steps.ReadSettings.outputs.environmentsJson).matrix.include[0].environment }}'.split(' ')[0]
+          $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.environmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read secrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
+        if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -71,7 +77,7 @@ jobs:
 
       - name: Authenticate
         id: Authenticate
-        if: steps.ReadSettings.outputs.UnknownEnvironment == 1
+        if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
         run: |
           $envName = '${{ steps.envName.outputs.envName }}'
           $secretName = ''
@@ -105,7 +111,7 @@ jobs:
   Deploy:
     needs: [ Initialization ]
     if: needs.Initialization.outputs.environmentCount > 0
-    strategy: ${{ fromJson(needs.Initialization.outputs.environments) }}
+    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
     environment:
@@ -135,95 +141,14 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
 
-      - name: AuthContext
-        id: authContext
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $settings = $env:Settings | ConvertFrom-Json
-          $envName = '${{ steps.envName.outputs.envName }}'
-          $settingsName = "DeployTo$envName"
-          if ($settings.PSObject.Properties.name -eq $settingsName) {
-            $deployToSetting = $settings."$settingsName" | ConvertFrom-Json
-          }
-          else {
-            $deployToSetting = [PSCustomObject]@{}
-          }
-          $secrets = $env:Secrets | ConvertFrom-Json
-          $authContext = $null
-          "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
-            if (!($authContext)) {
-              if ($secrets."$_") {
-                Write-Host "Using $_ secret as AuthContext"
-                $authContext = $secrets."$_"
-              }
-            }            
-          }
-          if (!($authContext)) {
-            Write-Host "::Error::No AuthContext provided"
-            exit 1
-          }
-          if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "EnvironmentName") {
-            $environmentName = $deployToSetting.EnvironmentName
-          }
-          else {
-            $environmentName = $null
-            "$($envName)-EnvironmentName", "$($envName)_EnvironmentName", "EnvironmentName" | ForEach-Object {
-              if (!($EnvironmentName)) {
-                if ($secrets."$_") {
-                  Write-Host "Using $_ secret as EnvironmentName"
-                  Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the EnvironmentName in a Secret."
-                  $EnvironmentName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
-                }
-              }            
-            }
-          }
-          if (!($environmentName)) {
-            $environmentName = '${{ steps.envName.outputs.envName }}'
-          }
-          $environmentName = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($environmentName + '${{ matrix.environment }}'.SubString($envName.Length)).ToUpperInvariant()))
-
-          $projects = ''
-          if (("$deployToSetting" -ne "") -and $deployToSetting.PSObject.Properties.name -eq "projects") {
-            $projects = $deployToSetting.projects
-          }
-          elseif ($settings.PSObject.Properties.name -eq "$($envName)-projects") {
-            $projects = $settings."$($envName)-projects"
-            Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)-projects'"
-          }
-          elseif ($settings.PSObject.Properties.name -eq "$($envName)_projects") {
-            $projects = $settings."$($envName)_projects"
-            Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in Setting '$($envName)_projects'"
-          }
-          elseif ($secrets.projects) {
-            $projects = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.projects))
-            Write-Host "::Warning::Please consider using the $settingsName setting, where you can specify EnvironmentName, projects and branches - instead of specifying the Projects in the secret 'project'"
-          }
-          if ($projects -eq '' -or $projects -eq '*') {
-            $projects = '*'
-          }
-          else {
-            $buildProjects = '${{ needs.Initialization.outputs.projects }}' | ConvertFrom-Json
-            $projects = ($projects.Split(',') | Where-Object { $buildProjects -contains $_ }) -join ','
-          }
-
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "authContext=$authContext"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "environmentName=$environmentName"
-          Write-Host "environmentName=$([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($environmentName)))"
-          Write-Host "environmentName (as Base64)=$environmentName"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "projects=$projects"
-          Write-Host "projects=$projects"
-
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
-        env:
-          AuthContext: ${{ steps.authContext.outputs.authContext }}
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
-          type: 'Publish'
-          projects: ${{ steps.authContext.outputs.projects }}
-          environmentName: ${{ steps.authContext.outputs.environmentName }}
+          environmentName: ${{ matrix.environment }}
           artifacts: ${{ github.event.inputs.appVersion }}
+          type: 'Publish'
+          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   PostProcess:
     if: always()

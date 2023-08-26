@@ -1,0 +1,44 @@
+name: Determine Deployment Environments
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  getEnvironments:
+    description: Specifies the pattern of the environments you want to retreive (* for all)
+    required: true
+  type:
+    description: Type of deployment (CD or Publish)
+    required: true
+outputs:
+  EnvironmentsMatrixJson:
+    description: The Environment matrix to use for the Deploy step in compressed JSON format
+    value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
+  DeploymentEnvironmentsJson:
+    description: Deployment Environments with settings in compressed JSON format
+    value: ${{ steps.determineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
+  EnvironmentCount:
+    description: Number of Deployment Environments
+    value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentCount }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: determineDeploymentEnvironments
+      env:
+        _getEnvironments: ${{ inputs.getEnvironments }}
+        _type: ${{ inputs.type }}
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/DetermineDeploymentEnvironments.ps1 -getEnvironments $ENV:_getEnvironments -type $ENV:_type
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
+branding:
+  icon: terminal
+  color: blue

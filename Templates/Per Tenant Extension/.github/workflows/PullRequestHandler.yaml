@@ -63,7 +63,6 @@ jobs:
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-          getEnvironments: '*'
       
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
