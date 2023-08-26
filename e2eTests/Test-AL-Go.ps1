@@ -6,7 +6,6 @@
     [string] $template = $global:pteTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
     [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText),
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private,
@@ -242,8 +241,8 @@ $runs++
 
 # Launch Current, NextMinor and NextMajor builds
 $runTestCurrent = Run-TestCurrent -branch $branch
-$runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+$runTestNextMinor = Run-TestNextMinor -branch $branch
+$runTestNextMajor = Run-TestNextMajor -branch $branch
 
 # TODO: Test workspace
 

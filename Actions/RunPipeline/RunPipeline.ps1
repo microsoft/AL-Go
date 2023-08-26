@@ -82,7 +82,7 @@ try {
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -115,7 +115,7 @@ try {
         }
     }
 
-    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
+    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project @analyzeRepoParams
 
     if ((-not $repo.appFolders) -and (-not $repo.testFolders) -and (-not $repo.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
@@ -360,12 +360,13 @@ try {
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
+        -accept_insiderEula `
         -pipelinename $workflowName `
         -containerName $containerName `
         -imageName $imageName `
         -bcAuthContext $authContext `
         -environment $environmentName `
-        -artifact $repo.artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -artifact $repo.artifact.replace('{INSIDERSASTOKEN}','') `
         -vsixFile $repo.vsixFile `
         -companyName $repo.companyName `
         -memoryLimit $repo.memoryLimit `

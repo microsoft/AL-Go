@@ -8,7 +8,7 @@ Param(
     [string] $auth = "",
     [pscredential] $credential = $null,
     [string] $licenseFileUrl = "",
-    [string] $insiderSasToken = "",
+    [switch] $accept_insiderEula,
     [switch] $fromVSCode
 )
 
@@ -131,7 +131,7 @@ CreateDevEnv `
     -auth $auth `
     -credential $credential `
     -licenseFileUrl $licenseFileUrl `
-    -insiderSasToken $insiderSasToken
+    -accept_insiderEula:$accept_insiderEula
 }
 catch {
     Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"

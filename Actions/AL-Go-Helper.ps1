@@ -534,7 +534,6 @@ function ReadSettings {
         "appRevision"                                   = 0
         "keyVaultName"                                  = ""
         "licenseFileUrlSecretName"                      = "licenseFileUrl"
-        "insiderSasTokenSecretName"                     = "insiderSasToken"
         "ghTokenWorkflowSecretName"                     = "ghTokenWorkflow"
         "adminCenterApiCredentialsSecretName"           = "adminCenterApiCredentials"
         "applicationInsightsConnectionStringSecretName" = "applicationInsightsConnectionString"
@@ -821,7 +820,6 @@ function AnalyzeRepo {
         $token,
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
         [string] $project = '.',
-        [string] $insiderSasToken,
         [switch] $doNotCheckArtifactSetting,
         [switch] $doNotCheckAppDependencyProbingPaths,
         [switch] $doNotIssueWarnings,
@@ -974,7 +972,7 @@ function AnalyzeRepo {
     }
 
     if (!$doNotCheckArtifactSetting) {
-        $artifactUrl = Determine-ArtifactUrl -projectSettings $settings -insiderSasToken $insiderSasToken -doNotIssueWarnings:$doNotIssueWarnings
+        $artifactUrl = Determine-ArtifactUrl -projectSettings $settings -doNotIssueWarnings:$doNotIssueWarnings
         $version = $artifactUrl.Split('/')[4]
         Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"
         $folders = Download-Artifacts -artifactUrl $artifactUrl -includePlatform -ErrorAction SilentlyContinue
@@ -1481,8 +1479,8 @@ function CreateDevEnv {
         [pscredential] $credential,
         [Parameter(ParameterSetName = 'local')]
         [string] $containerName = "",
-        [string] $insiderSasToken = "",
-        [string] $licenseFileUrl = ""
+        [string] $licenseFileUrl = "",
+        [switch] $accept_insiderEula
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1557,9 +1555,6 @@ function CreateDevEnv {
                     $LicenseFileSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.licenseFileUrlSecretName
                     if ($LicenseFileSecret) { $licenseFileUrl = $LicenseFileSecret.SecretValue | Get-PlainText }
 
-                    $insiderSasTokenSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.insiderSasTokenSecretName
-                    if ($insiderSasTokenSecret) { $insiderSasToken = $insiderSasTokenSecret.SecretValue | Get-PlainText }
-
                     # do not add codesign cert.
 
                     if ($settings.applicationInsightsConnectionStringSecretName) {
@@ -1608,17 +1603,19 @@ function CreateDevEnv {
             "settings"   = $settings
             "baseFolder" = $projectFolder
         }
-        if ($kind -eq "local") {
-            $params += @{
-                "insiderSasToken" = $insiderSasToken
-            }
-        }
-        elseif ($kind -eq "cloud") {
+        if ($kind -eq "cloud") {
+            $accept_insiderEula = $true
             $params += @{
                 "doNotCheckArtifactSetting" = $true
             }
         }
         $repo = AnalyzeRepo @params
+
+        if (!$accept_insiderEula -and ($repo.artifact -like 'https://bcinsider.blob.core.windows.net/*' -or $repo.artifact -like 'https://bcinsider.azureedge.net/*')) {
+            Read-Host 'Press ENTER to accept the Business Central insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) or break the script to cancel'
+            $accept_insiderEula = $true
+        }
+
         if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
             Write-Host "Repository is empty"
         }
@@ -1716,7 +1713,7 @@ function CreateDevEnv {
 
         if ($kind -eq "local") {
             $runAlPipelineParams += @{
-                "artifact"   = $repo.artifact.replace('{INSIDERSASTOKEN}', $insiderSasToken)
+                "artifact"   = $repo.artifact.replace('{INSIDERSASTOKEN}', '')
                 "auth"       = $auth
                 "credential" = $credential
             }
@@ -1808,6 +1805,7 @@ function CreateDevEnv {
         }
 
         Run-AlPipeline @runAlPipelineParams `
+            -accept_insiderEula:$accept_insiderEula `
             -vsixFile $repo.vsixFile `
             -pipelinename $workflowName `
             -imageName "" `
@@ -2074,32 +2072,23 @@ function GetProject {
 function Determine-ArtifactUrl {
     Param(
         [hashtable] $projectSettings,
-        [string] $insiderSasToken = "",
         [switch] $doNotIssueWarnings
     )
 
     $artifact = $projectSettings.artifact
     if ($artifact.Contains('{INSIDERSASTOKEN}')) {
-        if ($insiderSasToken) {
-            $artifact = $artifact.replace('{INSIDERSASTOKEN}', $insiderSasToken)
-        }
-        else {
-            throw "Artifact definition $artifact requires you to create a secret called InsiderSasToken, containing the Insider SAS Token from https://aka.ms/collaborate"
-        }
+        $artifact = $artifact.replace('{INSIDERSASTOKEN}', '')
+        Write-Host "::Warning::Please update your artifact setting and remove {INSIDERSASTOKEN} from the setting. This is no longer needed."
     }
 
     Write-Host "Checking artifact setting for project"
     if ($artifact -eq "" -and $projectSettings.updateDependencies) {
         $artifact = Get-BCArtifactUrl -country $projectSettings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$projectSettings.applicationDependency } | Select-Object -First 1
         if (-not $artifact) {
-            if ($insiderSasToken) {
-                $artifact = Get-BCArtifactUrl -storageAccount bcinsider -country $projectSettings.country -select all -sasToken $insiderSasToken | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$projectSettings.applicationDependency } | Select-Object -First 1
-                if (-not $artifact) {
-                    throw "No artifacts found for application dependency $($projectSettings.applicationDependency)."
-                }
-            }
-            else {
-                throw "No artifacts found for application dependency $($projectSettings.applicationDependency). If you are targetting an insider version, you need to create a secret called InsiderSasToken, containing the Insider SAS Token from https://aka.ms/collaborate"
+            # Check insider artifacts
+            $artifact = Get-BCArtifactUrl -storageAccount bcinsider -accept_insiderEula -country $projectSettings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$projectSettings.applicationDependency } | Select-Object -First 1
+            if (-not $artifact) {
+                throw "No artifacts found for application dependency $($projectSettings.applicationDependency)."
             }
         }
     }
@@ -2110,7 +2099,6 @@ function Determine-ArtifactUrl {
         $artifactType = ("$artifactUrl////".Split('/')[3])
         $version = ("$artifactUrl////".Split('/')[4])
         $country = ("$artifactUrl////".Split('?')[0].Split('/')[5])
-        $sasToken = "$($artifactUrl)?".Split('?')[1]
     }
     else {
         $segments = "$artifact/////".Split('/')
@@ -2119,8 +2107,8 @@ function Determine-ArtifactUrl {
         $version = $segments[2]
         $country = $segments[3]; if ($country -eq "") { $country = $projectSettings.country }
         $select = $segments[4]; if ($select -eq "") { $select = "latest" }
-        $sasToken = $segments[5]
-        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -sasToken $sasToken | Select-Object -First 1
+#        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -accept_insiderEula -type $artifactType -version $version -country $country -select $select | Select-Object -First 1
+        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select | Select-Object -First 1
         if (-not $artifactUrl) {
             throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
         }
@@ -2136,10 +2124,10 @@ function Determine-ArtifactUrl {
         # AT is the latest published language - use this to determine available country codes (combined with mapping)
         $ver = [Version]$version
         Write-Host "https://$storageAccount/$artifactType/$version/$country"
-        $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest -sasToken $sasToken
+        $atArtifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -accept_insiderEula -type $artifactType -country at -version "$($ver.Major).$($ver.Minor)" -select Latest
         Write-Host "Latest AT artifacts $atArtifactUrl"
         $latestATversion = $atArtifactUrl.Split('/')[4]
-        $countries = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $latestATversion -sasToken $sasToken -select All | ForEach-Object {
+        $countries = Get-BCArtifactUrl -storageAccount $storageAccount -accept_insiderEula -type $artifactType -version $latestATversion -select All | ForEach-Object {
             $countryArtifactUrl = $_.Split('?')[0] # remove sas token
             $countryArtifactUrl.Split('/')[5] # get country
         }

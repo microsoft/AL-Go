@@ -7,7 +7,7 @@ Run pipeline in AL-Go repository
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
-| Secrets | env.Secrets with licenseFileUrl, insiderSasToken, codeSignCertificateUrl, codeSignCertificatePassword, keyVaultCertificateUrl, keyVaultCertificatePassword, keyVaultClientId, gitHubPackagesContext, applicationInsightsConnectionString must be read by a prior call to the ReadSecets Action |
+| Secrets | env.Secrets with licenseFileUrl, codeSignCertificateUrl, codeSignCertificatePassword, keyVaultCertificateUrl, keyVaultCertificatePassword, keyVaultClientId, gitHubPackagesContext, applicationInsightsConnectionString must be read by a prior call to the ReadSecets Action |
 
 ### Parameters
 | Name | Required | Description | Default value |

@@ -8,7 +8,7 @@ Param(
     [string] $auth = "",
     [pscredential] $credential = $null,
     [string] $licenseFileUrl = "",
-    [string] $insiderSasToken = "",
+    [switch] $accept_insiderEula,
     [switch] $fromVSCode
 )
 
@@ -23,7 +23,8 @@ $GitHubHelperPath = "$([System.IO.Path]::GetTempFileName()).psm1"
 $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/Github-Helper.psm1', $GitHubHelperPath)
 Write-Host "Downloading AL-Go Helper script"
 $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
-$webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
+#$webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
+$alGoHelperPath = 'C:\src\github\freddydk\AL-Go\Actions\AL-Go-Helper.ps1'
 
 Import-Module $GitHubHelperPath
 . $ALGoHelperPath -local
@@ -131,7 +132,7 @@ CreateDevEnv `
     -auth $auth `
     -credential $credential `
     -licenseFileUrl $licenseFileUrl `
-    -insiderSasToken $insiderSasToken
+    -accept_insiderEula:$accept_insiderEula
 }
 catch {
     Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"
