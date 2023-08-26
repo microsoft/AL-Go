@@ -2107,8 +2107,7 @@ function Determine-ArtifactUrl {
         $version = $segments[2]
         $country = $segments[3]; if ($country -eq "") { $country = $projectSettings.country }
         $select = $segments[4]; if ($select -eq "") { $select = "latest" }
-#        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -accept_insiderEula -type $artifactType -version $version -country $country -select $select | Select-Object -First 1
-        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select | Select-Object -First 1
+        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -accept_insiderEula -type $artifactType -version $version -country $country -select $select | Select-Object -First 1
         if (-not $artifactUrl) {
             throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
         }
