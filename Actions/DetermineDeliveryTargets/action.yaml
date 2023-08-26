@@ -1,0 +1,43 @@
+name: Determine Delivery Targets
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  projectsJson:
+    description: Projects to investigate
+    required: false
+    default: '["."]'
+  checkContextSecrets:
+    description: Check whether context secret exists
+    required: false
+    default: 'N'
+outputs:
+  DeliveryTargetsJson:
+    description: An array of Delivery Targets in compressed JSON format
+    value: ${{ steps.determineDeliveryTargets.outputs.DeliveryTargetsJson }}
+  ContextSecrets:
+    description: A comma seperated list of Context Secret names used
+    value: ${{ steps.determineDeliveryTargets.outputs.ContextSecrets }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: determineDeliveryTargets
+      env:
+        _projectsJson: ${{ inputs.projectsJson }}
+        _checkContextSecrets: ${{ inputs.checkContextSecrets }}
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/DetermineDeliveryTargets.ps1 -projectsJson $ENV:_projectsJson -checkContextSecrets ($ENV:_checkContextSecrets -eq 'Y')
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
+branding:
+  icon: terminal
+  color: blue

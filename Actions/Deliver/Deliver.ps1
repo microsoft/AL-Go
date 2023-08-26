@@ -84,13 +84,7 @@ try {
     Write-Host "Projects:"
     $projectList | Out-Host
 
-    if ("$env:deliveryContext" -eq "") {
-        throw "$($deliveryTarget)Context is not defined, cannot deliver to $deliveryTarget"
-    }
-    $key = "$($deliveryTarget)Context"
-    Write-Host "Using $key"
-    Set-Variable -Name $key -Value $env:deliveryContext
-
+    $secrets = $env:Secrets | ConvertFrom-Json
     $projectList | ForEach-Object {
         $thisProject = $_
         # $project should be the project part of the artifact name generated from the build
@@ -188,7 +182,7 @@ try {
                 "Project" = $thisProject
                 "ProjectName" = $projectName
                 "type" = $type
-                "Context" = $env:deliveryContext
+                "Context" = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context"))
                 "RepoSettings" = $settings
                 "ProjectSettings" = $projectSettings
             }
@@ -230,7 +224,7 @@ try {
             . $customScript -parameters $parameters
         }
         elseif ($deliveryTarget -eq "GitHubPackages") {
-            $githubPackagesCredential = $githubPackagesContext | ConvertFrom-Json
+            $githubPackagesCredential = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.githubPackagesContext)) | ConvertFrom-Json
             'Apps' | ForEach-Object {
                 $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($folder.Count -gt 1) {
@@ -254,10 +248,10 @@ try {
         }
         elseif ($deliveryTarget -eq "NuGet") {
             try {
-                $nuGetAccount = $nuGetContext | ConvertFrom-Json | ConvertTo-HashTable
+                $nuGetAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.nuGetContext)) | ConvertFrom-Json | ConvertTo-HashTable
                 $nuGetServerUrl = $nuGetAccount.ServerUrl
                 $nuGetToken = $nuGetAccount.Token
-                Write-Host "NuGetContext OK"
+                Write-Host "NuGetContext secret OK"
             }
             catch {
                 throw "NuGetContext secret is malformed. Needs to be formatted as Json, containing serverUrl and token as a minimum."
@@ -330,7 +324,7 @@ try {
         elseif ($deliveryTarget -eq "Storage") {
             EnsureAzStorageModule
             try {
-                $storageAccount = $storageContext | ConvertFrom-Json | ConvertTo-HashTable
+                $storageAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json | ConvertTo-HashTable
                 # Check that containerName and blobName are present
                 $storageAccount.containerName | Out-Null
                 $storageAccount.blobName | Out-Null
@@ -409,8 +403,11 @@ try {
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
             if ($type -eq 'Release' -or ($projectSettings.Keys -contains 'AppSourceContinuousDelivery' -and $projectSettings.AppSourceContinuousDelivery)) {
                 EnsureAzStorageModule
-                $appSourceContextHt = $appSourceContext | ConvertFrom-Json | ConvertTo-HashTable
-                $authContext = New-BcAuthContext @appSourceContextHt
+                $appSourceContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext)) | ConvertFrom-Json | ConvertTo-HashTable
+                if (!$appSourceContext) {
+                    throw "appSourceContext secret is missing"
+                }
+                $authContext = New-BcAuthContext @appSourceContext
 
                 if ($projectSettings.Keys -contains "AppSourceMainAppFolder") {
                     $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder

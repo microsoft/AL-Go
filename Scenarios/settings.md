@@ -26,7 +26,8 @@ When running a workflow or a local script, the settings are applied by reading o
 | <a id="testFolders"></a>testFolders | testFolders should be an array of folders (relative to project root), which contains test apps for this project. Apps in these folders are sorted based on dependencies and built, published and tests are run in that order.<br />If testFolders are not specified, AL-Go for GitHub will try to locate testFolders in the root of the project. | [ ] |
 | <a id="bcptTestFolders"></a>bcptTestFolders | bcptTestFolders should be an array of folders (relative to project root), which contains performance test apps for this project. Apps in these folders are sorted based on dependencies and built, published and bcpt tests are run in that order.<br />If bcptTestFolders are not specified, AL-Go for GitHub will try to locate bcptTestFolders in the root of the project. | [ ] |
 | <a id="appDependencyProbingPaths"></a>appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version (default latest)<br />**release_status** = latestBuild/release/prerelease/draft (default release)<br />**projects** = projects (default * = all)<br />**AuthTokenSecret** = Name of secret containing auth token (default none)<br /> | [ ] |
-| <a id="environments"></a>environments | Array of logical environment names. You can specify environments in GitHub environments or in the repo settings file. If you specify environments in the settings file, you can create your AUTHCONTEXT secret using **&lt;environmentname&gt;_AUTHCONTEXT**. If the actual environment name is different from the logical environmentname, then you can create a secret with the actual name called **&lt;environmentname&gt;_ENVIRONMENTNAME** | [ ] |
+| <a id="environments"></a>environments | Array of logical environment names. You can specify environments in GitHub environments or in the repo settings file. If you specify environments in the settings file, you can create your AUTHCONTEXT secret using **&lt;environmentname&gt;_AUTHCONTEXT**. You can specify additional information about environments in a setting called **DeployTo&lt;environmentname&gt;** | [ ] |
+| <a id="deployto"></a>DeployTo&lt;environmentname&gt; | Structure with additional properties for the environment specified. The structure can contain the following properties:<br />**EnvironmentType** = specifies the type of environment. The environment type can be used to invoke a custom deployment. (Default SaaS)<br />**EnvironmentName** = specifies the "real" name of the environment if it differs from the GitHub environment.<br />**Branches** = an array of branch patterns, which are allowed to deploy to this environment. (Default main)<br />**Projects** = In multi-project repositories, this property can be a comma separated list of project patterns to deploy to this environment. (Default *)<br />**SyncMode** = ForceSync if deployment to this environment should happen with ForceSync, else Add. If deploying to the development endpoint you can also specify Development or Clean. (Default Add)<br />**ContinuousDeployment** = true if this environment should be used for continuous deployment, else false. (Default: AL-Go will continuously deploy to sandbox environments or environments, which doesn't end in (PROD) or (FAT)<br />**runs-on** = specifies which runner to use when deploying to this environment. (Default is settings.runs-on)<br /> | { } |
 | <a id="cleanModePreprocessorSymbols"></a>cleanModePreprocessorSymbols | List of clean tags to be used in _Clean_ build mode | [ ] |
 
 ## AppSource specific basic settings
@@ -96,6 +97,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="assignPremiumPlan"></a>assignPremiumPlan | Setting assignPremiumPlan to true in your project setting file, causes the build container to be created with the AssignPremiumPlan set. This causes the auto-created user to have Premium Plan enabled. This setting is needed if your tests require premium plan enabled. | false |
 | <a id="enableTaskScheduler"></a>enableTaskScheduler | Setting enableTaskScheduler to true in your project setting file, causes the build container to be created with the Task Scheduler running. | false |
 | <a id="useCompilerFolder"></a>useCompilerFolder | Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set **doNotPublishApps** to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. | false |
+| <a id="excludeEnvironments"></a>excludeEnvironments | excludeEnvironments can be an array of GitHub Environments, which should be excluded from the list of environments considered for deployment. github_pages is automatically added to this array and cannot be used as environment for deployment of AL-Go for GitHub projects. | [ ] |
 
 ## AppSource specific advanced settings
 
@@ -155,15 +157,48 @@ Here are the parameters to use in your custom script:
 
 | Parameter | Description | Example |
 | --------- | :--- | :--- |
-| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject
-| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject
-| `$parameters.type` | Type of delivery (CD or Release) | CD
-| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0
-| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0
-| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0
-| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0
-| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0
-| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0
+| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject |
+| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject |
+| `$parameters.type` | Type of delivery (CD or Release) | CD |
+| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0 |
+| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0 |
+| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0 |
+| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0 |
+| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0 |
+| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0 |
+
+## Custom Deployment
+
+You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named `DeployTo<EnvironmentType>.ps1` in the .github folder. Default Environment Type is SaaS, but you can define your own type by specifying EnvironmentType in the `DeployTo<EnvironmentName>` setting. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
+
+DeployToMyEnvironment.ps1
+```
+Param(
+    [Hashtable]$parameters
+)
+
+Write-Host "Deployment Type (CD or Release): $($parameters.type)"
+Write-Host "Apps to deploy: $($parameters.apps)"
+Write-Host "Environment Type: $($parameters.EnvironmentType)"
+Write-Host "Environment Name: $($parameters.EnvironmentName)"
+```
+
+**Note:** You can also create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
+
+Here are the parameters to use in your custom script:
+
+| Parameter | Description | Example |
+| --------- | :--- | :--- |
+| `$parameters.type` | Type of delivery (CD or Release) | CD |
+| `$parameters.apps` | Apps to deploy | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
+| `$parameters.EnvironmentType` | Environment type | SaaS |
+| `$parameters.EnvironmentName` | Environment name | Production |
+| `$parameters.Branches` | Branches which should deploy to this environment (from settings) | main,dev |
+| `$parameters.AuthContext` | AuthContext in a compressed Json structure | {"refreshToken":"mytoken"} |
+| `$parameters.BranchesFromPolicy` | Branches which should deploy to this environment (from GitHub environments) | main |
+| `$parameters.Projects` | Projects to deploy to this environment | |
+| `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
+| `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 
 ## Run-AlPipeline script override
 

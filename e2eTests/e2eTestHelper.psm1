@@ -6,6 +6,7 @@ $defaultRuntime = "10.0"
 $defaultPublisher = "MS Test"
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
+. (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
 
 function GetDefaultPublisher() {
     return $defaultPublisher
@@ -35,26 +36,6 @@ function SetTokenAndRepository {
     if ($github) {
         $ENV:GITHUB_TOKEN = $token
     }
-}
-
-function ConvertTo-HashTable {
-    Param(
-        [parameter(ValueFromPipeline)]
-        [PSCustomObject] $object,
-        [switch] $recurse
-    )
-    $ht = @{}
-    if ($object) {
-        $object.PSObject.Properties | ForEach-Object { 
-            if ($recurse -and ($_.Value -is [PSCustomObject])) {
-                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
-            }
-            else {
-                $ht[$_.Name] = $_.Value
-            }
-        }
-    }
-    $ht
 }
 
 function Get-PlainText {
