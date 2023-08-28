@@ -388,8 +388,8 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
         throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
     }
 
-    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
-        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
+    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview' -and $bcContainerHelperVersion -notlike 'https://*') {
+        Write-Host "::Warning::Using a specific version of BcContainerHelper ($bcContainerHelperVersion) is not recommended and will lead to build failures in the future. Consider removing the setting."
     }
 
     $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
