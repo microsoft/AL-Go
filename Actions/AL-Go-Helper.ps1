@@ -1145,7 +1145,7 @@ function AnalyzeRepo {
     }
 
     if (!$settings.doNotRunBcptTests -and -not $settings.bcptTestFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
+        Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile"
         $settings.doNotRunBcptTests = $true
     }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
