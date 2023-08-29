@@ -53,7 +53,7 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  useGhTokenWorkflowForCommits: ${{ github.event.inputs.useGhTokenWorkflow }}
+  UseGhTokenWorkflowForCommits: ${{ github.event.inputs.useGhTokenWorkflow }}
 
 jobs:
   CreateRelease:

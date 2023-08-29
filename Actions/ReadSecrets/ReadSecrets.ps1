@@ -40,7 +40,7 @@ try {
     $getSecrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
         if ($secret -eq 'TokenForCommits') {
-            if ($env:useGhTokenWorkflowForCommits -ne 'true') { return }
+            if ($env:UseGhTokenWorkflowForCommits -ne 'true') { return }
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
             $getTokenForCommits = $true
@@ -125,7 +125,7 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$outSecretsJson"
 
     if ($getTokenForCommits) {
-        if ($env:useGhTokenWorkflowForCommits -eq 'true' -and $outSecrets.ghTokenWorkflow) {
+        if ($env:UseGhTokenWorkflowForCommits -eq 'true' -and $outSecrets.ghTokenWorkflow) {
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
         }
         else {
