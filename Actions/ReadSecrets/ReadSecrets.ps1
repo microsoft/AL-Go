@@ -129,7 +129,7 @@ try {
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
         }
         else {
-            $ghToken = $env:GITHUB_TOKEN
+            $ghToken = GetGithubSecret -SecretName 'github_token'
         }
         Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TokenForCommits=$ghToken"
     }
