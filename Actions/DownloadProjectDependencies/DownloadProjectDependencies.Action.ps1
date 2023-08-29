@@ -81,6 +81,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
 Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
 
