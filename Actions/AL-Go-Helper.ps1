@@ -1137,7 +1137,7 @@ function CheckAppDependencyProbingPaths {
                             $dependencyIds = @( @($settings.appDependencies + $settings.testDependencies) | ForEach-Object { $_.id })
                             $thisIncludeOnlyAppIds = @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps)
                             $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
-                            $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $project -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
+                            $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
                             $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
 
                             $projectPath = Join-Path $baseFolder $depProject -Resolve
