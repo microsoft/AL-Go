@@ -19,6 +19,8 @@ Describe "ReadSecrets Action Tests" {
         }
         $outputs = [ordered]@{
             "Secrets" = "All requested secrets in compressed JSON format"
+            "TokenForCommits" = "The token to use when workflows are creating Pull Requests or Commits."
+        
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

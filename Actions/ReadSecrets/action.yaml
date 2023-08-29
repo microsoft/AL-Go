@@ -15,6 +15,9 @@ outputs:
   Secrets:
     description: All requested secrets in compressed JSON format
     value: ${{ steps.ReadSecrets.outputs.Secrets }}
+  TokenForCommits:
+    description: The token to use when workflows are creating Pull Requests or Commits.
+    value: ${{ steps.ReadSecrets.outputs.TokenForCommits }}
 runs:
   using: composite
   steps:
