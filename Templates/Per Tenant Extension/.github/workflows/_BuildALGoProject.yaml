@@ -81,7 +81,6 @@ jobs:
           uses: microsoft/AL-Go-Actions/ReadSettings@main
           with:
             shell: ${{ inputs.shell }}
-            parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
             get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
 
