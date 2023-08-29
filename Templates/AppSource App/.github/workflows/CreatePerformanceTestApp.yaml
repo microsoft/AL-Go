@@ -65,7 +65,6 @@ jobs:
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
-        if: github.event.inputs.useGhTokenWorkflow == 'true'
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
