@@ -14,13 +14,13 @@ inputs:
 outputs:
   Secrets:
     description: All requested secrets in compressed JSON format
-    value: ${{ steps.readSecrets.outputs.Secrets }}
+    value: ${{ steps.ReadSecrets.outputs.Secrets }}
 runs:
   using: composite
   steps:
     - name: run
-      id: readSecrets
       shell: ${{ inputs.shell }}
+      id: ReadSecrets
       env:
         _getSecrets: ${{ inputs.getSecrets }}
       run: |
