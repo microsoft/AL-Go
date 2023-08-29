@@ -1166,14 +1166,12 @@ function CheckAppDependencyProbingPaths {
     }
 }
 
-
-
 function Get-ProjectFolders {
     Param(
         [string] $baseFolder,
         [string] $project,
         [switch] $includeALGoFolder,
-        [string[]] $includeOnlyAppIds
+        [string[]] $includeOnlyAppIds,
         $token
     )
 
