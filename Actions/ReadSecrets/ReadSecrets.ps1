@@ -40,10 +40,10 @@ try {
     $getSecrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
         if ($secret -eq 'TokenForCommits') {
+            $getTokenForCommits = $true
             if ($env:UseGhTokenWorkflowForCommits -ne 'true') { return }
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
-            $getTokenForCommits = $true
         }
         $secretNameProperty = "$($secret)SecretName"
         if ($secret -eq 'AppDependencyProbingPathsSecrets') {
@@ -126,11 +126,14 @@ try {
 
     if ($getTokenForCommits) {
         if ($env:UseGhTokenWorkflowForCommits -eq 'true' -and $outSecrets.ghTokenWorkflow) {
+            Write-Host "use ghTokenWorkflow"
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
         }
         else {
+            Write-Host "use github-token"
             $ghToken = GetGithubSecret -SecretName 'github_token'
         }
+        Write-Host "add to output"
         Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TokenForCommits=$ghToken"
     }
 
