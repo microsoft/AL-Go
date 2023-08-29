@@ -1164,6 +1164,7 @@ function CheckAppDependencyProbingPaths {
             }
         }
     }
+    $settings
 }
 
 function Get-ProjectFolders {
