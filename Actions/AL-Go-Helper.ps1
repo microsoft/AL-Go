@@ -1051,7 +1051,8 @@ function CheckAppDependencyProbingPaths {
         [hashTable] $settings,
         $token,
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
-        [string] $project = '.'
+        [string] $project = '.',
+        [string[]] $includeOnlyAppIds
     )
 
     Write-Host "Checking appDependencyProbingPaths"
@@ -1134,9 +1135,10 @@ function CheckAppDependencyProbingPaths {
                             Write-Host "Identified dependency to project $depProject in the same repository"
 
                             $dependencyIds = @( @($settings.appDependencies + $settings.testDependencies) | ForEach-Object { $_.id })
+                            $thisIncludeOnlyAppIds = @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps)
                             $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
-                            $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
-                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject
+                            $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $project -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotIssueWarnings
+                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
 
                             Push-Location $projectPath
                             try {
