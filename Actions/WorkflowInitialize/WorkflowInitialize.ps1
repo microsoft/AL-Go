@@ -70,7 +70,7 @@ try {
     Write-Host "correlationId=$correlationId"
 }
 catch {
-    if ($env:BcContainerHelperPath) {
+    if (Get-Module BcContainerHelper) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
     throw
