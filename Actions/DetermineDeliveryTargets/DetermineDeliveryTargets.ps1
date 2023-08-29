@@ -21,6 +21,7 @@ function IncludeDeliveryTarget([string] $deliveryTarget) {
     Write-Host "DeliveryTarget $_ - "
     # DeliveryTarget Context Secret needs to be specified for a delivery target to be included
     $contextName = "$($_)Context"
+    $secrets = $env:Secrets | ConvertFrom-Json
     if (-not $secrets."$contextName") {
         Write-Host "- Secret '$contextName' not found"
         return $false
@@ -51,7 +52,6 @@ Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") |
 $deliveryTargets = @($deliveryTargets | Select-Object -unique)
 if ($checkContextSecrets) {
     # Check all delivery targets and include only the ones needed
-    $secrets = $env:Secrets | ConvertFrom-Json
     $deliveryTargets = @($deliveryTargets | Where-Object { IncludeDeliveryTarget -deliveryTarget $_ })
 }
 $contextSecrets = @($deliveryTargets | ForEach-Object { "$($_)Context" })

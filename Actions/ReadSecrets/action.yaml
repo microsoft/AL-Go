@@ -11,22 +11,22 @@ inputs:
   getSecrets:
     description: Comma separated list of Secrets to get
     required: true
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
+outputs:
+  Secrets:
+    description: All requested secrets in compressed JSON format
+    value: ${{ steps.readSecrets.outputs.Secrets }}
 runs:
   using: composite
   steps:
     - name: run
+      id: readSecrets
       shell: ${{ inputs.shell }}
       env:
         _getSecrets: ${{ inputs.getSecrets }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
+          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

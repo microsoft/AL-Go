@@ -67,11 +67,11 @@ jobs:
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
@@ -81,7 +81,7 @@ jobs:
         run: |
           $envName = '${{ steps.envName.outputs.envName }}'
           $secretName = ''
-          $secrets = $env:Secrets | ConvertFrom-Json
+          $secrets = '${{ steps.ReadSecrets.outputs.Secrets }}' | ConvertFrom-Json
           $authContext = $null
           "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
             if (!($authContext)) {
@@ -135,6 +135,7 @@ jobs:
           shell: powershell
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
@@ -143,6 +144,8 @@ jobs:
 
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           environmentName: ${{ matrix.environment }}

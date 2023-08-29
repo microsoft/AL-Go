@@ -79,6 +79,7 @@ jobs:
           checkContextSecrets: 'N'
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
@@ -88,6 +89,8 @@ jobs:
       - name: Determine Delivery Targets
         id: DetermineDeliveryTargets
         uses: microsoft/AL-Go-Actions/DetermineDeliveryTargets@main
+        env:
+          Secrets: ${{ steps.ReadSecrets.outputs.Secrets }}
         with:
           shell: powershell
           projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
@@ -175,6 +178,7 @@ jobs:
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
@@ -183,6 +187,8 @@ jobs:
 
       - name: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           environmentName: ${{ matrix.environment }}
@@ -214,6 +220,7 @@ jobs:
           shell: powershell
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
@@ -222,6 +229,8 @@ jobs:
 
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           type: 'CD'

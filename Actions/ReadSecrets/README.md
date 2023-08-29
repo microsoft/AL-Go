@@ -22,7 +22,10 @@ Additionally, the secrets specified by the authToken secret in AppDependencyProb
 ### ENV variables
 | Name | Description |
 | :-- | :-- |
-| Secrets | A compressed json construct with all secrets base64 encoded. The secret value + the base64 value of the secret value are masked in the log |
+| Secrets | A compressed json construct with all requested secrets base64 encoded. The secret value + the base64 value of the secret value are masked in the log |
 
 ### OUTPUT variables
-none
+| Name | Description |
+| :-- | :-- |
+| Secrets | A compressed json construct with all requested secrets base64 encoded. The secret value + the base64 value of the secret value are masked in the log |
+

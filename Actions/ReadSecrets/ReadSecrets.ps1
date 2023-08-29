@@ -2,12 +2,8 @@ Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
-    [string] $getSecrets = "",
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '7b7d'
+    [string] $getSecrets = ""
 )
-
-$telemetryScope = $null
 
 $buildMutexName = "AL-Go-ReadSecrets"
 $buildMutex = New-Object System.Threading.Mutex($false, $buildMutexName)
@@ -24,11 +20,6 @@ try {
     }
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    DownloadAndImportBcContainerHelper
-
-    Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0078' -parentTelemetryScopeJson $parentTelemetryScopeJson
-
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
 
     $outSecrets = [ordered]@{}
@@ -44,9 +35,16 @@ try {
         }
     }
     $getAppDependencyProbingPathsSecrets = $false
+    $getTokenForCommits = $false
     [System.Collections.ArrayList]$secretsCollection = @()
     $getSecrets.Split(',') | Select-Object -Unique | ForEach-Object {
         $secret = $_
+        if ($secret -eq 'TokenForCommits') {
+            if ($env:useGhTokenWorkflowForCommits -ne 'true') { return }
+            # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
+            $secret = 'ghTokenWorkflow'
+            $getTokenForCommits = $true
+        }
         $secretNameProperty = "$($secret)SecretName"
         if ($secret -eq 'AppDependencyProbingPathsSecrets') {
             $getAppDependencyProbingPathsSecrets = $true
@@ -124,17 +122,19 @@ try {
     #region Action: Output
 
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Secrets=$outSecretsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$outSecretsJson"
+
+    if ($getTokenForCommits) {
+        if ($env:useGhTokenWorkflowForCommits -eq 'true' -and $outSecrets.ghTokenWorkflow) {
+            $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
+        }
+        else {
+            $ghToken = $env:GITHUB_TOKEN
+        }
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TokenForCommits=$ghToken"
+    }
 
     #endregion
-
-    TrackTrace -telemetryScope $telemetryScope
-}
-catch {
-    if ($env:BcContainerHelperPath) {
-        TrackException -telemetryScope $telemetryScope -errorRecord $_
-    }
-    throw
 }
 finally {
     $buildMutex.ReleaseMutex()
