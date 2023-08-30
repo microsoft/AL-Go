@@ -31,6 +31,7 @@ function New-BuildDimensions(
             $buildMode = $_
             $buildDimensions += @{
                 project = $project
+                projectName = $projectSettings.projectName
                 buildMode = $buildMode
             }
         }
