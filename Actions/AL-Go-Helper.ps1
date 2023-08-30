@@ -1066,8 +1066,7 @@ function CheckAppDependencyProbingPaths {
                     New-Object -Type PSObject -Property $_
                 }
             })
-        $settings.appDependencyProbingPaths | ForEach-Object {
-            $dependency = $_
+        foreach($dependency in settings.appDependencyProbingPaths) {
             if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
                 throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
             }
@@ -1126,12 +1125,11 @@ function CheckAppDependencyProbingPaths {
                     OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
                 }
                 else {
-                    $dependency.projects.Split(',') | ForEach-Object {
-                        if ($_ -eq '*') {
+                    foreach($depProject in $dependency.projects.Split(',')) {
+                        if ($depProject -eq '*') {
                             OutputWarning "Dependencies to the same repository cannot specify all projects (*)"
                         }
                         else {
-                            $depProject = $_
                             Write-Host "Identified dependency to project $depProject in the same repository"
 
                             $dependencyIds = @( @($settings.appDependencies + $settings.testDependencies) | ForEach-Object { $_.id })
@@ -1143,11 +1141,10 @@ function CheckAppDependencyProbingPaths {
                             $projectPath = Join-Path $baseFolder $project -Resolve
                             Push-Location $projectPath
                             try {
-                                "appFolders", "testFolders", "bcptTestFolders" | ForEach-Object {
-                                    $propertyName = $_
+                                foreach($propertyName in "appFolders", "testFolders", "bcptTestFolders") {
                                     Write-Host "Adding folders from $depProject to $_ in $project"
                                     $found = $false
-                                    $depSettings."$propertyName" | ForEach-Object {
+                                    foreach($_ in $depSettings."$propertyName") {
                                         $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
                                         if (!$settings."$propertyName".Contains($folder)) {
                                             $settings."$propertyName" += @($folder)
