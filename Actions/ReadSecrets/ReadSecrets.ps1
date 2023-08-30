@@ -108,7 +108,7 @@ try {
     }
 
     if ($secretsCollection) {
-        $unresolvedSecrets = ($secretsCollection | ForEach-Object { 
+        $unresolvedSecrets = ($secretsCollection | ForEach-Object {
             $secretSplit = @($_.Split('='))
             if ($secretSplit.Count -eq 1) {
                 $secretSplit[0]
