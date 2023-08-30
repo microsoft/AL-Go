@@ -10,6 +10,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - Issue 592 Internal Server Error when publishing
 - Issue 557 Deployment step fails when retried
 - After configuring deployment branches for an environment in GitHub and setting Deployment Branch Policy to **Protected Branches**, AL-Go for GitHub would fail during initialization (trying to get environments for deployment)
+- The DetermineDeploymentEnvironments doesn't work in private repositories (needs the GITHUB_TOKEN)
 
 ### Breaking changes
 

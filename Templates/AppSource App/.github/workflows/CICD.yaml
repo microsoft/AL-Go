@@ -98,6 +98,8 @@ jobs:
       - name: Determine Deployment Environments
         id: DetermineDeploymentEnvironments
         uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
           getEnvironments: '*'
