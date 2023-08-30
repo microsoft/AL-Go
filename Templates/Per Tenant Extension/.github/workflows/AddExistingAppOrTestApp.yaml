@@ -31,7 +31,6 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  UseGhTokenWorkflowForCommits: ${{ github.event.inputs.useGhTokenWorkflow }}
 
 jobs:
   AddExistingAppOrTestApp:
@@ -59,6 +58,7 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForCommits'
+          useGhTokenWorkflowForCommits: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Add existing app
         uses: microsoft/AL-Go-Actions/AddExistingApp@main

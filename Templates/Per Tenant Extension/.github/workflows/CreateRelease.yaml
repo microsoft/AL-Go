@@ -53,7 +53,6 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  UseGhTokenWorkflowForCommits: ${{ github.event.inputs.useGhTokenWorkflow }}
 
 jobs:
   CreateRelease:
@@ -321,6 +320,7 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForCommits'
+          useGhTokenWorkflowForCommits: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Update Version Number
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main

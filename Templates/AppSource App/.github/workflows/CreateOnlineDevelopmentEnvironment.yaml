@@ -35,7 +35,6 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  UseGhTokenWorkflowForCommits: ${{ github.event.inputs.useGhTokenWorkflow }}
 
 jobs:
   Initialization:
@@ -116,6 +115,7 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'adminCenterApiCredentials,TokenForCommits'
+          useGhTokenWorkflowForCommits: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Set AdminCenterApiCredentials
         id: SetAdminCenterApiCredentials

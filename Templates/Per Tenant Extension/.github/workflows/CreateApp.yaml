@@ -41,7 +41,6 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  UseGhTokenWorkflowForCommits: ${{ github.event.inputs.useGhTokenWorkflow }}
 
 jobs:
   CreateApp:
@@ -70,6 +69,7 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForCommits'
+          useGhTokenWorkflowForCommits: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Creating a new app
         uses: microsoft/AL-Go-Actions/CreateApp@main

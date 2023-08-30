@@ -9,7 +9,6 @@ Additionally, the secrets specified by the authToken secret in AppDependencyProb
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
-| UseGhTokenWorkflowForCommits | Set this ENV variable to true in order to use the GhTokenWorkflow secret for Pull Requests and Commits |
 
 ### Parameters
 | Name | Required | Description | Default value |
@@ -17,6 +16,7 @@ Additionally, the secrets specified by the authToken secret in AppDependencyProb
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | getSecrets | Yes | Comma separated list of secrets to get (add appDependencyProbingPathsSecrets to request secrets needed for resolving dependencies in AppDependencyProbingPaths, add TokenForCommits in order to request a token to use for pull requests and commits) | |
+| useGhTokenWorkflowForCommits | false | Set this variable to true if you want to use the GhTokenWorkflow secret for TokenForCommits |
 
 ## OUTPUT
 

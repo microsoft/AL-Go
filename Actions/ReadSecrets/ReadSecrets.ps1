@@ -2,7 +2,9 @@ Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
-    [string] $getSecrets = ""
+    [string] $getSecrets = "",
+    [Parameter(HelpMessage = "Determines wheher you want to use the GhTokenWorkflow secret for TokenForCommits", Mandatory = $false)]
+    [string] $useGhTokenWorkflowForCommits = 'false'
 )
 
 $buildMutexName = "AL-Go-ReadSecrets"
@@ -41,7 +43,7 @@ try {
         $secret = $_
         if ($secret -eq 'TokenForCommits') {
             $getTokenForCommits = $true
-            if ($env:UseGhTokenWorkflowForCommits -ne 'true') { return }
+            if ($useGhTokenWorkflowForCommits -ne 'true') { return }
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
         }
