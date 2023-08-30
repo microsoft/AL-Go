@@ -127,7 +127,7 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$outSecretsJson"
 
     if ($getTokenForCommits) {
-        if ($env:UseGhTokenWorkflowForCommits -eq 'true' -and $outSecrets.ghTokenWorkflow) {
+        if ($useGhTokenWorkflowForCommits -eq 'true' -and $outSecrets.ghTokenWorkflow) {
             Write-Host "Use ghTokenWorkflow for Commits"
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
         }
