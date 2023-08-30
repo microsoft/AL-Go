@@ -39,8 +39,7 @@ try {
     $getAppDependencyProbingPathsSecrets = $false
     $getTokenForCommits = $false
     [System.Collections.ArrayList]$secretsCollection = @()
-    $getSecrets.Split(',') | Select-Object -Unique | ForEach-Object {
-        $secret = $_
+    foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
         if ($secret -eq 'TokenForCommits') {
             $getTokenForCommits = $true
             if ($useGhTokenWorkflowForCommits -ne 'true') { return }
@@ -63,7 +62,7 @@ try {
 
     # Loop through appDependencyProbingPaths and add secrets to the collection of secrets to get
     if ($getAppDependencyProbingPathsSecrets -and $settings.Keys -contains 'appDependencyProbingPaths') {
-        $settings.appDependencyProbingPaths | ForEach-Object {
+        foreach($_ in $settings.appDependencyProbingPaths) {
             if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
                 if ($secretsCollection -notcontains $_.authTokenSecret) {
                     $secretsCollection += $_.authTokenSecret
@@ -72,7 +71,7 @@ try {
         }
     }
 
-    @($secretsCollection) | ForEach-Object {
+    foreach($_ in $secretsCollection) {
         $secretSplit = $_.Split('=')
         $envVar = $secretSplit[0]
         $secret = $envVar
@@ -93,7 +92,7 @@ try {
                     if ($value.contains("`n")) {
                         throw "JSON Secret $secret contains line breaks. JSON Secrets should be compressed JSON (i.e. NOT contain any line breaks)."
                     }
-                    $json.Keys | ForEach-Object {
+                    foreach($_ in $json.Keys) {
                         if (@("Scopes","TenantId","BlobName","ContainerName","StorageAccountName") -notcontains $_) {
                             # Mask individual values (but not Scopes, TenantId, BlobName, ContainerName and StorageAccountName)
                             MaskValue -key "$($secret).$($_)" -value $json."$_"
@@ -109,7 +108,7 @@ try {
     }
 
     if ($secretsCollection) {
-        Write-Host "The following secrets was not found: $(($secretsCollection | ForEach-Object { 
+        $unresolvedSecrets = ($secretsCollection | ForEach-Object { 
             $secretSplit = @($_.Split('='))
             if ($secretSplit.Count -eq 1) {
                 $secretSplit[0]
@@ -118,7 +117,8 @@ try {
                 "$($secretSplit[0]) (Secret $($secretSplit[1]))"
             }
             $outSecrets += @{ ""$($secretSplit[0])"" = """" }
-        }) -join ', ')"
+        }) -join ', '
+        Write-Host "The following secrets was not found: $unresolvedSecrets"
     }
 
     #region Action: Output

@@ -42,11 +42,17 @@ function GetGithubSecret {
     param (
         [string] $secretName
     )
+    $secretSplit = $secretName.Split('=')
+    $envVar = $secretSplit[0]
+    $secret = $envVar
+    if ($secretSplit.Count -gt 1) {
+        $secret = $secretSplit[1]
+    }
 
-    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
-        $value = $script:githubSecrets."$secretName"
+    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
+        $value = $script:githubSecrets."$secret"
         if ($value) {
-            MaskValue -key $secretName -value $value
+            MaskValue -key $secret -value $value
             return $value
         }
     }
