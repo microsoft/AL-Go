@@ -50,6 +50,10 @@ By specifying a custom EnvironmentType in the DeployTo structure for an environm
 ### Status Checks in Pull Requests
 AL-Go for GitHub now adds status checks to Pull Requests Builds. In your GitHub branch protection rules, you can set up "Pull Request Status Check" to be a required status check to ensure Pull Request Builds succeed before merging.
 
+### Secrets in AL-Go for GitHub
+In v3.2 of AL-Go for GitHub, all secrets requested by AL-Go for GitHub were available to all steps in a job one compressed JSON structure in env:Secrets.
+With this update, only the steps that actually requires secrets will have the secrets available.
+
 ## v3.2
 
 ### Issues
