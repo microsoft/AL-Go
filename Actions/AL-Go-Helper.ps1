@@ -1140,12 +1140,12 @@ function CheckAppDependencyProbingPaths {
                             $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
                             $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
 
-                            $projectPath = Join-Path $baseFolder $depProject -Resolve
+                            $projectPath = Join-Path $baseFolder $project -Resolve
                             Push-Location $projectPath
                             try {
                                 "appFolders", "testFolders", "bcptTestFolders" | ForEach-Object {
                                     $propertyName = $_
-                                    Write-Host "Adding folders from $depProject to $_"
+                                    Write-Host "Adding folders from $depProject to $_ in $project"
                                     $found = $false
                                     $depSettings."$propertyName" | ForEach-Object {
                                         $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
