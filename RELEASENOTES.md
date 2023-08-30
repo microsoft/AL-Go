@@ -3,6 +3,7 @@
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
 ### Issues 
+
 - Issue 227 Feature request: Allow deployments with "Schema Sync Mode" = Force
 - Issue 519 Deploying to onprem environment
 - Issue 520 Automatic deployment to environment with annotation
@@ -11,8 +12,11 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - After configuring deployment branches for an environment in GitHub and setting Deployment Branch Policy to **Protected Branches**, AL-Go for GitHub would fail during initialization (trying to get environments for deployment)
 
 ### Breaking changes
+
 Earlier, you could specify a mapping to an environment name in an environment secret called `<environmentname>_EnvironmentName`, `<environmentname>-EnvironmentName` or just `EnvironmentName`. You could also specify the projects you want to deploy to an environment as an environment secret called `Projects`.
+
 This mechanism is no longer supported and you will get an error if your repository has these secrets. Instead you should use the `DeployTo<environmentName>` setting described below.
+
 Earlier, you could also specify the projects you want to deploy to an environment in a setting called `<environmentName>_Projects` or `<environmentName>-Projects`. This is also no longer supported. Instead use the `DeployTo<environmentName>` and remove the old settings.
 
 ### New Actions
@@ -32,6 +36,7 @@ Earlier, you could also specify the projects you want to deploy to an environmen
   - **runs-on** = specifies which GitHub runner to use when deploying to this environment. (Default is settings.runs-on)
 
 ### Custom Deployment
+
 By specifying a custom EnvironmentType in the DeployTo structure for an environment, you can now add a script in the .github folder called `DeployTo<environmentType>.ps1`. This script will be executed instead of the standard deployment mechanism with the following parameters in a HashTable:
 
 | Parameter | Description | Example |
@@ -48,6 +53,7 @@ By specifying a custom EnvironmentType in the DeployTo structure for an environm
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 
 ### Status Checks in Pull Requests
+
 AL-Go for GitHub now adds status checks to Pull Requests Builds. In your GitHub branch protection rules, you can set up "Pull Request Status Check" to be a required status check to ensure Pull Request Builds succeed before merging.
 
 ### Secrets in AL-Go for GitHub
