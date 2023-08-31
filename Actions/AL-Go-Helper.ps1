@@ -1142,7 +1142,7 @@ function CheckAppDependencyProbingPaths {
                             Push-Location $projectPath
                             try {
                                 foreach($propertyName in "appFolders", "testFolders", "bcptTestFolders") {
-                                    Write-Host "Adding folders from $depProject to $_ in $project"
+                                    Write-Host "Adding folders from $depProject to $propertyName in $project"
                                     $found = $false
                                     foreach($_ in $depSettings."$propertyName") {
                                         $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
