@@ -3,7 +3,7 @@ Param(
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $getSecrets = "",
-    [Parameter(HelpMessage = "Determines wheher you want to use the GhTokenWorkflow secret for TokenForCommits", Mandatory = $false)]
+    [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForCommits", Mandatory = $false)]
     [string] $useGhTokenWorkflowForCommits = 'false'
 )
 
