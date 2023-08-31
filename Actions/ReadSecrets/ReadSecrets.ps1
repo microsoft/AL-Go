@@ -71,6 +71,7 @@ try {
         }
     }
 
+    # Loop through secrets (use @() to allow us to remove items from the collection while looping)
     foreach($_ in @($secretsCollection)) {
         $secretSplit = $_.Split('=')
         $envVar = $secretSplit[0]
