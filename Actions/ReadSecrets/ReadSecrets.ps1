@@ -71,7 +71,7 @@ try {
         }
     }
 
-    foreach($_ in ($secretsCollection)) {
+    foreach($_ in @($secretsCollection)) {
         $secretSplit = $_.Split('=')
         $envVar = $secretSplit[0]
         $secret = $envVar
