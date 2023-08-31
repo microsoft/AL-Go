@@ -1066,7 +1066,7 @@ function CheckAppDependencyProbingPaths {
                     New-Object -Type PSObject -Property $_
                 }
             })
-        foreach($dependency in settings.appDependencyProbingPaths) {
+        foreach($dependency in $settings.appDependencyProbingPaths) {
             if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
                 throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
             }
