@@ -117,7 +117,7 @@ try {
             else {
                 "$($secretSplit[0]) (Secret $($secretSplit[1]))"
             }
-            $outSecrets += @{ $($secretSplit[0]) = "" }
+            $outSecrets += @{ "$($secretSplit[0])" = "" }
         }) -join ', '
         Write-Host "The following secrets was not found: $unresolvedSecrets"
     }
