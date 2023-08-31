@@ -12,7 +12,7 @@ inputs:
     description: Comma separated list of Secrets to get
     required: true
   useGhTokenWorkflowForPush:
-    description: Determines wheher you want to use the GhTokenWorkflow secret for TokenForPush
+    description: Determines whether you want to use the GhTokenWorkflow secret for TokenForPush
     required: false
     default: 'false'
 outputs:
