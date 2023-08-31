@@ -42,7 +42,7 @@ try {
     foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
         if ($secret -eq 'TokenForPush') {
             $getTokenForPush = $true
-            if ($useGhTokenWorkflowForPush -ne 'true') { return }
+            if ($useGhTokenWorkflowForPush -ne 'true') { continue }
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
         }
@@ -129,11 +129,11 @@ try {
 
     if ($getTokenForPush) {
         if ($useGhTokenWorkflowForPush -eq 'true' -and $outSecrets.ghTokenWorkflow) {
-            Write-Host "Use ghTokenWorkflow for Commits"
+            Write-Host "Use ghTokenWorkflow for Push"
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
         }
         else {
-            Write-Host "Use github_token for Commits"
+            Write-Host "Use github_token for Push"
             $ghToken = GetGithubSecret -SecretName 'github_token'
         }
         Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TokenForPush=$ghToken"
