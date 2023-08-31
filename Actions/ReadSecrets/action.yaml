@@ -11,17 +11,17 @@ inputs:
   getSecrets:
     description: Comma separated list of Secrets to get
     required: true
-  useGhTokenWorkflowForCommits:
-    description: Determines wheher you want to use the GhTokenWorkflow secret for TokenForCommits
+  useGhTokenWorkflowForPush:
+    description: Determines wheher you want to use the GhTokenWorkflow secret for TokenForPush
     required: false
     default: 'false'
 outputs:
   Secrets:
     description: All requested secrets in compressed JSON format
     value: ${{ steps.ReadSecrets.outputs.Secrets }}
-  TokenForCommits:
-    description: The token to use when workflows are creating Pull Requests or Commits.
-    value: ${{ steps.ReadSecrets.outputs.TokenForCommits }}
+  TokenForPush:
+    description: The token to use when workflows are pushing changes (either directly, or via pull requests).
+    value: ${{ steps.ReadSecrets.outputs.TokenForPush }}
 runs:
   using: composite
   steps:
@@ -30,11 +30,11 @@ runs:
       id: ReadSecrets
       env:
         _getSecrets: ${{ inputs.getSecrets }}
-        _useGhTokenWorkflowForCommits: ${{ inputs.useGhTokenWorkflowForCommits }}
+        _useGhTokenWorkflowForPush: ${{ inputs.useGhTokenWorkflowForPush }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -useGhTokenWorkflowForCommits $ENV:_useGhTokenWorkflowForCommits
+          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -useGhTokenWorkflowForPush $ENV:_useGhTokenWorkflowForPush
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

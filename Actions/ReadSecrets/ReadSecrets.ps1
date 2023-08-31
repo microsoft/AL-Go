@@ -3,8 +3,8 @@ Param(
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $getSecrets = "",
-    [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForCommits", Mandatory = $false)]
-    [string] $useGhTokenWorkflowForCommits = 'false'
+    [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
+    [string] $useGhTokenWorkflowForPush = 'false'
 )
 
 $buildMutexName = "AL-Go-ReadSecrets"
@@ -37,12 +37,12 @@ try {
         }
     }
     $getAppDependencyProbingPathsSecrets = $false
-    $getTokenForCommits = $false
+    $getTokenForPush = $false
     [System.Collections.ArrayList]$secretsCollection = @()
     foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
-        if ($secret -eq 'TokenForCommits') {
-            $getTokenForCommits = $true
-            if ($useGhTokenWorkflowForCommits -ne 'true') { return }
+        if ($secret -eq 'TokenForPush') {
+            $getTokenForPush = $true
+            if ($useGhTokenWorkflowForPush -ne 'true') { return }
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
         }
@@ -62,48 +62,48 @@ try {
 
     # Loop through appDependencyProbingPaths and add secrets to the collection of secrets to get
     if ($getAppDependencyProbingPathsSecrets -and $settings.Keys -contains 'appDependencyProbingPaths') {
-        foreach($_ in $settings.appDependencyProbingPaths) {
-            if ($_.PsObject.Properties.name -eq "AuthTokenSecret") {
-                if ($secretsCollection -notcontains $_.authTokenSecret) {
-                    $secretsCollection += $_.authTokenSecret
+        foreach($appDependencyProbingPath in $settings.appDependencyProbingPaths) {
+            if ($appDependencyProbingPath.PsObject.Properties.name -eq "AuthTokenSecret") {
+                if ($secretsCollection -notcontains $appDependencyProbingPath.authTokenSecret) {
+                    $secretsCollection += $appDependencyProbingPath.authTokenSecret
                 }
             }
         }
     }
 
     # Loop through secrets (use @() to allow us to remove items from the collection while looping)
-    foreach($_ in @($secretsCollection)) {
-        $secretSplit = $_.Split('=')
-        $envVar = $secretSplit[0]
-        $secret = $envVar
+    foreach($secret in @($secretsCollection)) {
+        $secretSplit = $secret.Split('=')
+        $secretsProperty = $secretSplit[0]
+        $secretName = $secretsProperty
         if ($secretSplit.Count -gt 1) {
-            $secret = $secretSplit[1]
+            $secretName = $secretSplit[1]
         }
 
-        if ($secret) {
-            $value = GetSecret -secret $secret -keyVaultName $keyVaultName
-            if ($value) {
+        if ($secretName) {
+            $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
+            if ($secretValue) {
                 $json = @{}
                 try {
-                    $json = $value | ConvertFrom-Json | ConvertTo-HashTable
+                    $json = $secretValue | ConvertFrom-Json | ConvertTo-HashTable
                 }
                 catch {
                 }
                 if ($json.Keys.Count) {
-                    if ($value.contains("`n")) {
-                        throw "JSON Secret $secret contains line breaks. JSON Secrets should be compressed JSON (i.e. NOT contain any line breaks)."
+                    if ($secretValue.contains("`n")) {
+                        throw "JSON Secret $secretName contains line breaks. JSON Secrets should be compressed JSON (i.e. NOT contain any line breaks)."
                     }
-                    foreach($_ in $json.Keys) {
-                        if (@("Scopes","TenantId","BlobName","ContainerName","StorageAccountName") -notcontains $_) {
+                    foreach($keyName in $json.Keys) {
+                        if (@("Scopes","TenantId","BlobName","ContainerName","StorageAccountName") -notcontains $keyName) {
                             # Mask individual values (but not Scopes, TenantId, BlobName, ContainerName and StorageAccountName)
-                            MaskValue -key "$($secret).$($_)" -value $json."$_"
+                            MaskValue -key "$($secretName).$($keyName)" -value $json."$keyName"
                         }
                     }
                 }
-                $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value))
-                $outSecrets += @{ "$envVar" = $base64value }
-                Write-Host "$envVar successfully read from secret $secret"
-                $secretsCollection.Remove($_)
+                $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
+                $outSecrets += @{ "$secretsProperty" = $base64value }
+                Write-Host "$secretsProperty successfully read from secret $secretName"
+                $secretsCollection.Remove($secret)
             }
         }
     }
@@ -127,8 +127,8 @@ try {
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$outSecretsJson"
 
-    if ($getTokenForCommits) {
-        if ($useGhTokenWorkflowForCommits -eq 'true' -and $outSecrets.ghTokenWorkflow) {
+    if ($getTokenForPush) {
+        if ($useGhTokenWorkflowForPush -eq 'true' -and $outSecrets.ghTokenWorkflow) {
             Write-Host "Use ghTokenWorkflow for Commits"
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
         }
@@ -136,7 +136,7 @@ try {
             Write-Host "Use github_token for Commits"
             $ghToken = GetGithubSecret -SecretName 'github_token'
         }
-        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TokenForCommits=$ghToken"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TokenForPush=$ghToken"
     }
 
     #endregion

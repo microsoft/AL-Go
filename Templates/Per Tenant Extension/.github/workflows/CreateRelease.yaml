@@ -319,14 +319,14 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'TokenForCommits'
-          useGhTokenWorkflowForCommits: '${{ github.event.inputs.useGhTokenWorkflow }}'
+          getSecrets: 'TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Update Version Number
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
           shell: powershell
-          token: ${{ steps.ReadSecrets.outputs.TokenForCommits }}
+          token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           parentTelemetryScopeJson: ${{ needs.CreateRelease.outputs.telemetryScopeJson }}
           versionNumber: ${{ github.event.inputs.updateVersionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}

@@ -73,14 +73,14 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'TokenForCommits'
-          useGhTokenWorkflowForCommits: '${{ github.event.inputs.useGhTokenWorkflow }}'
+          getSecrets: 'TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Creating a new test app
         uses: microsoft/AL-Go-Actions/CreateApp@main
         with:
           shell: powershell
-          token: ${{ steps.ReadSecrets.outputs.TokenForCommits }}
+          token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           project: ${{ github.event.inputs.project }}
           type: 'Performance Test App'
