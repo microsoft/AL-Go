@@ -62,7 +62,7 @@ jobs:
         id: DetermineWorkflowDepth
         run: |
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
-          
+
       - name: Determine Projects To Build
         id: determineProjectsToBuild
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
@@ -129,7 +129,7 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
       fail-fast: false
-    name: Build ${{ matrix.project }} - ${{ matrix.buildMode }}
+    name: Build ${{ matrix.projectName }} - ${{ matrix.buildMode }}
     uses: ./.github/workflows/_BuildALGoProject.yaml
     secrets: inherit
     with:
