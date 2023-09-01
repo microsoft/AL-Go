@@ -68,7 +68,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    if ($env:BcContainerHelperPath) {
+    if (Get-Module BcContainerHelper) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
     throw

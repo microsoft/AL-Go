@@ -235,7 +235,7 @@ function WaitWorkflow {
     Write-Host
     Write-Host $run.conclusion
     if ($run.conclusion -ne "Success") {
-        throw "Workflow $name failed, url = $($run.html_url)"
+        throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)"
     }
 }
 

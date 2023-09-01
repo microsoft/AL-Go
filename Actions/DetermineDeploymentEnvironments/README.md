@@ -7,6 +7,7 @@ Determines the environments to be used for a build or a publish
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
+| GITHUB_TOKEN | GITHUB_TOKEN must be set as an environment variable when calling this action |
 
 ### Parameters
 | Name | Required | Description | Default value |
