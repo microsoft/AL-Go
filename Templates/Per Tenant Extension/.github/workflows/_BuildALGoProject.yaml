@@ -81,22 +81,23 @@ jobs:
           uses: microsoft/AL-Go-Actions/ReadSettings@main
           with:
             shell: ${{ inputs.shell }}
-            parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
             get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
 
         - name: Read secrets
+          id: ReadSecrets
           if: github.event_name != 'pull_request'
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
           with:
             shell: ${{ inputs.shell }}
-            parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             gitHubSecrets: ${{ toJson(secrets) }}
             getSecrets: '${{ inputs.secrets }},appDependencyProbingPathsSecrets'
 
         - name: Determine ArtifactUrl
           uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
           id: determineArtifactUrl
+          env:
+            Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
@@ -112,6 +113,8 @@ jobs:
         - name: Download Project Dependencies
           id: DownloadProjectDependencies
           uses: microsoft/AL-Go-Actions/DownloadProjectDependencies@main
+          env:
+            Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           with:
             shell: ${{ inputs.shell }}
             project: ${{ inputs.project }}
@@ -122,6 +125,7 @@ jobs:
           id: RunPipeline
           uses: microsoft/AL-Go-Actions/RunPipeline@main
           env:
+            Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
             BuildMode: ${{ inputs.buildMode }}
           with:
             shell: ${{ inputs.shell }}

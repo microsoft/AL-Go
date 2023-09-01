@@ -115,21 +115,22 @@ try {
         }
     }
 
-    $repo = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
+    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
+    $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
-    if ((-not $repo.appFolders) -and (-not $repo.testFolders) -and (-not $repo.bcptTestFolders)) {
+    if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
     }
 
-    if ($repo.type -eq "AppSource App" ) {
+    if ($settings.type -eq "AppSource App" ) {
         if ($licenseFileUrl -eq "") {
             OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
         }
     }
 
-    $installApps = $repo.installApps
-    $installTestApps = $repo.installTestApps
+    $installApps = $settings.installApps
+    $installTestApps = $settings.installTestApps
 
     $installApps += $installAppsJson | ConvertFrom-Json
     $installTestApps += $installTestAppsJson | ConvertFrom-Json
@@ -139,7 +140,7 @@ try {
     # Analyze InstallApps and InstallTestApps before launching pipeline 
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
-    if (!$repo.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$repo.keyVaultCodesignCertificateName) {
+    if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
         OutputWarning -message "Using the legacy CodeSignCertificateUrl and CodeSignCertificatePassword parameters. Consider using the new Azure Keyvault signing instead. Go to https://aka.ms/ALGoSettings#keyVaultCodesignCertificateName to find out more"
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
@@ -161,7 +162,7 @@ try {
     }
 
     $previousApps = @()
-    if (!$repo.skipUpgrade) {
+    if (!$settings.skipUpgrade) {
         Write-Host "::group::Locating previous release"
         try {
             $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
@@ -183,14 +184,14 @@ try {
         Write-Host "::endgroup::"
     }
 
-    $additionalCountries = $repo.additionalCountries
+    $additionalCountries = $settings.additionalCountries
 
     $imageName = ""
     if (-not $gitHubHostedRunner) {
-        $imageName = $repo.cacheImageName
+        $imageName = $settings.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
-            Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $repo.cacheKeepDays
+            Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $settings.cacheKeepDays
             Write-Host "::endgroup::"
         }
     }
@@ -198,17 +199,17 @@ try {
     $environmentName = ""
     $CreateRuntimePackages = $false
 
-    if ($repo.versioningStrategy -eq -1) {
-        $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+    if ($settings.versioningStrategy -eq -1) {
+        $artifactVersion = [Version]$settings.artifact.Split('/')[4]
         $runAlPipelineParams += @{
             "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
         }
         $appBuild = $artifactVersion.Build
         $appRevision = $artifactVersion.Revision
     }
-    elseif (($repo.versioningStrategy -band 16) -eq 16) {
+    elseif (($settings.versioningStrategy -band 16) -eq 16) {
         $runAlPipelineParams += @{
-            "appVersion" = $repo.repoVersion
+            "appVersion" = $settings.repoVersion
         }
     }
     
@@ -250,12 +251,12 @@ try {
     }
 
     if ($runAlPipelineParams.Keys -notcontains 'ImportTestDataInBcContainer') {
-        if (($repo.configPackages) -or ($repo.Keys | Where-Object { $_ -like 'configPackages.*' })) {
+        if (($settings.configPackages) -or ($settings.Keys | Where-Object { $_ -like 'configPackages.*' })) {
             Write-Host "Adding Import Test Data override"
             Write-Host "Configured config packages:"
-            $repo.Keys | Where-Object { $_ -like 'configPackages*' } | ForEach-Object {
+            $settings.Keys | Where-Object { $_ -like 'configPackages*' } | ForEach-Object {
                 Write-Host "- $($_):"
-                $repo."$_" | ForEach-Object {
+                $settings."$_" | ForEach-Object {
                     Write-Host "  - $_"
                 }
             }
@@ -264,12 +265,12 @@ try {
                     Param([Hashtable]$parameters)
                     $country = Get-BcContainerCountry -containerOrImageName $parameters.containerName
                     $prop = "configPackages.$country"
-                    if ($repo.Keys -notcontains $prop) {
+                    if ($settings.Keys -notcontains $prop) {
                         $prop = "configPackages"
                     }
-                    if ($repo."$prop") {
+                    if ($settings."$prop") {
                         Write-Host "Importing config packages from $prop"
-                        $repo."$prop" | ForEach-Object {
+                        $settings."$prop" | ForEach-Object {
                             $configPackage = $_.Split(',')[0].Replace('{COUNTRY}',$country)
                             $packageId = $_.Split(',')[1]
                             UploadImportAndApply-ConfigPackageInBcContainer `
@@ -332,12 +333,12 @@ try {
     "enableAppSourceCop",
     "enablePerTenantExtensionCop",
     "enableUICop" | ForEach-Object {
-        if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+        if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
     switch($buildMode){
         'Clean' {
-            $preprocessorsymbols = $repo.cleanModePreprocessorSymbols
+            $preprocessorsymbols = $settings.cleanModePreprocessorSymbols
 
             if (!$preprocessorsymbols) {
                 throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
@@ -365,34 +366,34 @@ try {
         -imageName $imageName `
         -bcAuthContext $authContext `
         -environment $environmentName `
-        -artifact $repo.artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
-        -vsixFile $repo.vsixFile `
-        -companyName $repo.companyName `
-        -memoryLimit $repo.memoryLimit `
+        -artifact $settings.artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -vsixFile $settings.vsixFile `
+        -companyName $settings.companyName `
+        -memoryLimit $settings.memoryLimit `
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
         -installApps $installApps `
         -installTestApps $installTestApps `
-        -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
-        -generateDependencyArtifact:$repo.generateDependencyArtifact `
-        -updateDependencies:$repo.updateDependencies `
+        -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
+        -generateDependencyArtifact:$settings.generateDependencyArtifact `
+        -updateDependencies:$settings.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $repo.appFolders `
-        -testFolders $repo.testFolders `
-        -bcptTestFolders $repo.bcptTestFolders `
+        -appFolders $settings.appFolders `
+        -testFolders $settings.testFolders `
+        -bcptTestFolders $settings.bcptTestFolders `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
-        -customCodeCops $repo.customCodeCops `
+        -customCodeCops $settings.customCodeCops `
         -gitHubActions `
-        -failOn $repo.failOn `
-        -treatTestFailuresAsWarnings:$repo.treatTestFailuresAsWarnings `
-        -rulesetFile $repo.rulesetFile `
-        -appSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
+        -failOn $settings.failOn `
+        -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
+        -rulesetFile $settings.rulesetFile `
+        -appSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
-        -obsoleteTagMinAllowedMajorMinor $repo.obsoleteTagMinAllowedMajorMinor `
+        -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
@@ -413,7 +414,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    if ($env:BcContainerHelperPath) {
+    if (Get-Module BcContainerHelper) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
     throw

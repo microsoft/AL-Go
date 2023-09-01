@@ -48,7 +48,7 @@ function GetGithubSecret {
     if ($secretSplit.Count -gt 1) {
         $secret = $secretSplit[1]
     }
-    
+
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
         $value = $script:githubSecrets."$secret"
         if ($value) {

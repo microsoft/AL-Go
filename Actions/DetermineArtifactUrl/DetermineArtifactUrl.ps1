@@ -19,7 +19,7 @@ try {
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $settings = AnalyzeRepo -settings $settings -project $project -doNotCheckArtifactSetting -doNotCheckAppDependencyProbingPaths -doNotIssueWarnings
+    $settings = AnalyzeRepo -settings $settings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = Determine-ArtifactUrl -projectSettings $settings -insiderSasToken $insiderSasToken
     $artifactCacheKey = ''
     if ($settings.useCompilerFolder) {
@@ -38,7 +38,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    if ($env:BcContainerHelperPath) {
+    if (Get-Module BcContainerHelper) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
     throw
