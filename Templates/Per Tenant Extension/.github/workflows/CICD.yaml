@@ -132,7 +132,7 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
       fail-fast: false
-    name: Build ${{ matrix.projectName }} - ${{ matrix.buildMode }}
+    name: Build ${{ matrix.projectName }} (${{ matrix.buildMode }})
     uses: ./.github/workflows/_BuildALGoProject.yaml
     secrets: inherit
     with:

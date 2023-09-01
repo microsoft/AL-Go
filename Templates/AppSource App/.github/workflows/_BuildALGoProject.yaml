@@ -10,7 +10,7 @@ on:
         required: false
         default: powershell
         type: string
-      runsOn: 
+      runsOn:
         description: JSON-formatted string og the types of machine to run the build job on
         required: true
         type: string
@@ -69,7 +69,7 @@ on:
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
-    name: ${{ inputs.project }} - ${{ inputs.buildMode }}
+    name: ${{ inputs.project }} (${{ inputs.buildMode }})
     steps:
         - name: Checkout
           uses: actions/checkout@v3
@@ -174,7 +174,7 @@ jobs:
             path: '${{ inputs.project }}/.buildartifacts/TestApps/'
             if-no-files-found: ignore
             retention-days: 1
-        
+
         - name: Publish artifacts - apps
           uses: actions/upload-artifact@v3
           if: inputs.publishArtifacts
