@@ -32,9 +32,9 @@ Describe 'AppHelper.psm1 Tests' {
         { ConfirmIdRanges -templateType "AppSource app" -idrange "110000..1000000000000000000000" }  | Should -Throw
     }
 
-    It 'Should create a new app by calling New-SampleApp' {
+    It 'Should create a new app by calling NewSampleApp' {
         $sampleAppFolder = Join-Path $TestDrive "SampleApp"
-        New-SampleApp -destinationPath $sampleAppFolder -name "SampleApp" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120" -sampleCode $true
+        NewSampleApp -destinationPath $sampleAppFolder -name "SampleApp" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120" -sampleCode $true
 
         $sampleAppFolder | Should -Exist
         $sampleAppAppJson = Join-Path $sampleAppFolder "app.json"
@@ -53,9 +53,9 @@ Describe 'AppHelper.psm1 Tests' {
         (Join-Path $sampleAppFolder ".vscode/launch.json") | Should -Exist
     }
 
-    It 'Should create a new test app by calling New-SampleTestApp' {
+    It 'Should create a new test app by calling NewSampleTestApp' {
         $sampleAppFolder = Join-Path $TestDrive "TestPTE"
-        New-SampleTestApp -destinationPath $sampleAppFolder -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120" -sampleCode $true
+        NewSampleTestApp -destinationPath $sampleAppFolder -name "TestPTE" -publisher "TestPublisher" -version "1.0.0.0" -idrange "50101", "50120" -sampleCode $true
 
         $sampleAppFolder | Should -Exist
         $sampleAppAppJson = Join-Path $sampleAppFolder "app.json"
@@ -76,42 +76,42 @@ Describe 'AppHelper.psm1 Tests' {
 
     It 'Insert new app folder ahead of .AL-Go' {
         $workspaceFolders = '[{"path":".AL-Go"}]' | ConvertFrom-Json
-        $workspaceFolders = @(Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
+        $workspaceFolders = @(AddNewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
 
         (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be '[{"path":"newfolder"},{"path":".AL-Go"}]'
     }
 
     It 'Insert new app folder ahead of .AL-Go and .github' {
         $workspaceFolders = '[{"path":".AL-Go"},{"path":".github"}]' | ConvertFrom-Json
-        $workspaceFolders = @(Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
+        $workspaceFolders = @(AddNewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
 
         (ConvertTo-Json -InputObject $workspaceFolders -Compress)  |Should -Be '[{"path":"newfolder"},{"path":".AL-Go"},{"path":".github"}]'
     }
 
     It 'Insert new app folder after onefolder ahead of .AL-Go and .github' {
         $workspaceFolders = '[{"path":"oneFolder"},{"path":".AL-Go"},{"path":".github"}]' | ConvertFrom-Json
-        $workspaceFolders = @(Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
+        $workspaceFolders = @(AddNewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
 
         (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be '[{"path":"onefolder"},{"path":"newfolder"},{"path":".AL-Go"},{"path":".github"}]'
     }
 
     It 'Insert new app folder after .AL-Go, .github and onefolder' {
         $workspaceFolders = '[{"path":".AL-Go"},{"path":".github"},{"path":"oneFolder"}]' | ConvertFrom-Json
-        $workspaceFolders = @(Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
+        $workspaceFolders = @(AddNewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
 
         (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be '[{"path":".AL-Go"},{"path":".github"},{"path":"onefolder"},{"path":"newfolder"}]'
     }
 
     It 'Insert new app folder in empty list' {
         $workspaceFolders = '[]' | ConvertFrom-Json
-        $workspaceFolders = @(Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
+        $workspaceFolders = @(AddNewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
 
         (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be '[{"path":"newfolder"}]'
     }
 
     It 'Insert new app folder in null object' {
         $workspaceFolders = $null
-        $workspaceFolders = @(Add-NewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
+        $workspaceFolders = @(AddNewAppFolderToWorkspaceFolders -workspaceFolder $workspaceFolders -appFolder 'newfolder')
 
         (ConvertTo-Json -InputObject $workspaceFolders -Compress) | Should -Be '[{"path":"newfolder"}]'
     }

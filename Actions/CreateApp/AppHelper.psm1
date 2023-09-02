@@ -100,7 +100,7 @@ function UpdateALFile
 .SYNOPSIS
 Creates a simple app.
 #>
-function New-SampleApp
+function NewSampleApp
 (
     [string] $destinationPath,
     [string] $name,
@@ -126,7 +126,7 @@ function New-SampleApp
 # .SYNOPSIS
 # Creates a test app.
 # #>
-function New-SampleTestApp
+function NewSampleTestApp
 (
     [string] $destinationPath,
     [string] $name,
@@ -151,7 +151,7 @@ function New-SampleTestApp
 # .SYNOPSIS
 # Creates a performance test app.
 # #>
-function New-SamplePerformanceTestApp
+function NewSamplePerformanceTestApp
 (
     [string] $destinationPath,
     [string] $name,
@@ -195,7 +195,7 @@ function UpdateWorkspaces
                 $workspaceFile = $_.FullName
                 $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
-                    $workspace.folders = Add-NewAppFolderToWorkspaceFolders $workspace.folders $appName
+                    $workspace.folders = AddNewAppFolderToWorkspaceFolders $workspace.folders $appName
                 }
                 $workspace | Set-JsonContentLF -Path $workspaceFile
             }
@@ -205,7 +205,7 @@ function UpdateWorkspaces
         }
 }
 
-function Add-NewAppFolderToWorkspaceFolders
+function AddNewAppFolderToWorkspaceFolders
 (
     [PSCustomObject[]] $workspaceFolders,
     [string] $appFolder
@@ -236,9 +236,9 @@ function Add-NewAppFolderToWorkspaceFolders
     $workspaceFolders
 }
 
-Export-ModuleMember -Function New-SampleApp
-Export-ModuleMember -Function New-SampleTestApp
-Export-ModuleMember -Function New-SamplePerformanceTestApp
+Export-ModuleMember -Function NewSampleApp
+Export-ModuleMember -Function NewSampleTestApp
+Export-ModuleMember -Function NewSamplePerformanceTestApp
 Export-ModuleMember -Function ConfirmIdRanges
 Export-ModuleMember -Function UpdateWorkspaces
-Export-ModuleMember -Function Add-NewAppFolderToWorkspaceFolders
+Export-ModuleMember -Function AddNewAppFolderToWorkspaceFolders
