@@ -82,7 +82,7 @@ try {
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -90,7 +90,7 @@ try {
         else {
             $value = ""
         }
-        Set-Variable -Name $_ -Value $value
+        Set-Variable -Name $_.TrimStart('*') -Value $value
     }
 
     $analyzeRepoParams = @{}
@@ -144,7 +144,7 @@ try {
         OutputWarning -message "Using the legacy CodeSignCertificateUrl and CodeSignCertificatePassword parameters. Consider using the new Azure Keyvault signing instead. Go to https://aka.ms/ALGoSettings#keyVaultCodesignCertificateName to find out more"
         $runAlPipelineParams += @{ 
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
-            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
+            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword
         }
     }
     if ($applicationInsightsConnectionString) {
@@ -156,7 +156,7 @@ try {
     if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
         $runAlPipelineParams += @{ 
             "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
-            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword -AsPlainText -Force
+            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword
             "keyVaultClientId" = $keyVaultClientId
         }
     }

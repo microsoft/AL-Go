@@ -32,11 +32,13 @@ try {
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
     $settings = $env:Settings | ConvertFrom-Json
-    if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
-        $AzureKeyVaultName = $AzureCredentials.keyVaultName
-    } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {
+    if ($settings.keyVaultName) {
         $AzureKeyVaultName = $settings.keyVaultName
-    } else {
+    }
+    elseif ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
+        $AzureKeyVaultName = $AzureCredentials.keyVaultName
+    }
+    else {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
