@@ -229,4 +229,5 @@ function GetSecret {
     if ($value -and $encrypted) {
         $value = ConvertTo-SecureString $value -AsPlainText -Force | ConvertFrom-SecureString
     }
+    return $value
 }
