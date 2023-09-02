@@ -14,6 +14,10 @@ $validRanges = @{
     "Performance Test App" = "50000..$([int32]::MaxValue)" ;
 };
 
+<#
+.SYNOPSIS
+Check that the IdRange is valid for the template type.
+#>
 function ConfirmIdRanges([string] $templateType, [string]$idrange ) {
     $validRange = $validRanges.$templateType.Replace('..', '-').Split("-")
     $validStart = [int] $validRange[0]
@@ -122,10 +126,10 @@ function NewSampleApp
 }
 
 
-# <#
-# .SYNOPSIS
-# Creates a test app.
-# #>
+<#
+.SYNOPSIS
+Creates a test app.
+#>
 function NewSampleTestApp
 (
     [string] $destinationPath,
@@ -147,10 +151,10 @@ function NewSampleTestApp
     }
 }
 
-# <#
-# .SYNOPSIS
-# Creates a performance test app.
-# #>
+<#
+.SYNOPSIS
+Creates a performance test app.
+#>
 function NewSamplePerformanceTestApp
 (
     [string] $destinationPath,
@@ -182,6 +186,10 @@ function NewSamplePerformanceTestApp
     }
 }
 
+<#
+.SYNOPSIS
+Update workspace file
+#>
 function UpdateWorkspaces
 (
     [string] $projectFolder,
@@ -205,6 +213,10 @@ function UpdateWorkspaces
         }
 }
 
+<#
+.SYNOPSIS
+Add new App Folder to Workspace file
+#>
 function AddNewAppFolderToWorkspaceFolders
 (
     [PSCustomObject[]] $workspaceFolders,
