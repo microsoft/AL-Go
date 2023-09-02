@@ -1,7 +1,7 @@
 function Get-NavSipFromArtifacts
 (
     [string] $NavSipDestination
-) 
+)
 {
     $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 

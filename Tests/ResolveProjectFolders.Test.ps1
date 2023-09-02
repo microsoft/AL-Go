@@ -59,7 +59,7 @@ Describe "ResolveProjectFolders" {
             )
         }
 
-        $alGoSettingsContent = $ALGoSettings | ConvertTo-Json -Depth 99 
+        $alGoSettingsContent = $ALGoSettings | ConvertTo-Json -Depth 99
         New-Item -Path $ALGoSettingsFile -Value $alGoSettingsContent -Force
 
         # Create the app folders
@@ -72,7 +72,7 @@ Describe "ResolveProjectFolders" {
             "testApp2"
         )
         $apps = @{}
-        
+
         $appFolders | ForEach-Object {
             $appFolder = Join-Path $ALGoProjectFolder $_
             New-Item $appFolder -ItemType Directory | Out-Null
@@ -84,7 +84,7 @@ Describe "ResolveProjectFolders" {
                 "name" = $_
                 "dependencies" = @()
             }
-            $appJsonContent = $app | ConvertTo-Json -Depth 99 
+            $appJsonContent = $app | ConvertTo-Json -Depth 99
             New-Item -Path $appJson -Value $appJsonContent -Force
 
             $apps.Add($_, $app)
@@ -139,7 +139,7 @@ Describe "ResolveProjectFolders" {
         $projectSettings = @{ 'appFolders' = @('app1'); 'testFolders' = @(); 'bcptTestFolders' = @()}
 
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
-        
+
         $projectSettings.appFolders | Should -HaveCount 1
         $projectSettings.appFolders | Should -Contain $(Join-Path '.' 'app1')
 
@@ -152,7 +152,7 @@ Describe "ResolveProjectFolders" {
         $projectSettings = @{ 'appFolders' = @('nonExistingApp', 'app1'); 'testFolders' = @('nonExistingTestApp'); 'bcptTestFolders' = @('nonExistingBCPTApp')}
 
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
-        
+
         $projectSettings.appFolders | Should -HaveCount 1
         $projectSettings.appFolders | Should -Contain $(Join-Path '.' 'app1')
 
@@ -165,7 +165,7 @@ Describe "ResolveProjectFolders" {
         $projectSettings = @{ 'appFolders' = @('nonExistingApp'); 'testFolders' = @('nonExistingTestApp'); 'bcptTestFolders' = @()}
 
         ResolveProjectFolders -baseFolder $baseFolder -project $ALGoProject -projectSettings ([ref] $projectSettings)
-        
+
         $projectSettings.appFolders | Should -HaveCount 0
 
         $projectSettings.testFolders | Should -HaveCount 0
@@ -186,7 +186,7 @@ Describe "ResolveProjectFolders" {
         $projectSettings.bcptTestFolders | Should -HaveCount 1
         $projectSettings.bcptTestFolders | Should -Contain $(Join-Path '.' 'bcptApp2')
     }
-    
+
     AfterAll {
         Pop-Location
         Remove-Item -Path $baseFolder -Recurse -Force

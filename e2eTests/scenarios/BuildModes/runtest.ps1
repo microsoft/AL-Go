@@ -11,16 +11,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  ____        _ _     _ __  __           _           
-# |  _ \      (_) |   | |  \/  |         | |          
-# | |_) |_   _ _| | __| | \  / | ___   __| | ___  ___ 
+#  ____        _ _     _ __  __           _
+# |  _ \      (_) |   | |  \/  |         | |
+# | |_) |_   _ _| | __| | \  / | ___   __| | ___  ___
 # |  _ <| | | | | |/ _` | |\/| |/ _ \ / _` |/ _ \/ __|
 # | |_) | |_| | | | (_| | |  | | (_) | (_| |  __/\__ \
 # |____/ \__,_|_|_|\__,_|_|  |_|\___/ \__,_|\___||___/
-#                                                     
+#
 #
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template with a single project HelloWorld app
 #    - add BuildModes and CleanModePreprocessorSymbols to the repo settings
 #  - Run the "CI/CD" workflow
@@ -28,7 +28,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""

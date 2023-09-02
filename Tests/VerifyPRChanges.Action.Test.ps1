@@ -15,11 +15,11 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename": "Scripts/BuildScript.ps1", "status": "modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
-       { 
+       {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         } | Should -Throw
     }
 
@@ -27,11 +27,11 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"Scripts/BuildScript.ps1", "status": "added"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
-       { 
+       {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         } | Should -Throw
     }
 
@@ -39,11 +39,11 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"Scripts/BuildScript.ps1","status":"removed"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
-       { 
+       {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         } | Should -Throw
     }
 
@@ -51,11 +51,11 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"CODEOWNERS","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
-       { 
+       {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         } | Should -Throw
     }
 
@@ -63,11 +63,11 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":".github/Settings.json","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
-       { 
+       {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         } | Should -Throw
     }
 
@@ -75,11 +75,11 @@ Describe 'VerifyPRChanges Action Tests' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
         Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":".github/workflows/test.yaml","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
-       { 
+       {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         } | Should -Throw
     }
 
@@ -91,7 +91,7 @@ Describe 'VerifyPRChanges Action Tests' {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
@@ -103,7 +103,7 @@ Describe 'VerifyPRChanges Action Tests' {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
@@ -115,18 +115,18 @@ Describe 'VerifyPRChanges Action Tests' {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
     It 'should fail if the PR is from a fork and changes more than 3000 files' {
         Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 5001 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
 
-       { 
+       {
         & $scriptPath `
                 -prBaseRepository "microsoft/AL-Go" `
                 -pullRequestId "123456" `
-                -token "ABC" 
+                -token "ABC"
         } | Should -Throw
     }
 

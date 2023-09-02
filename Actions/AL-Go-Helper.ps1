@@ -1603,9 +1603,6 @@ function CreateDevEnv {
                             throw "$_ is an illegal property in adminCenterApiCredentials setting"
                         }
                     }
-                    if ($adminCenterApiCredentials.Keys -contains 'ClientSecret') {
-                        $adminCenterApiCredentials.ClientSecret = ConvertTo-SecureString -String $adminCenterApiCredentials.ClientSecret -AsPlainText -Force
-                    }
                 }
             }
         }

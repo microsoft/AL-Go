@@ -11,17 +11,17 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  _    _          _____           _           _   _____                            _                 _           
-# | |  | |        |  __ \         (_)         | | |  __ \                          | |               (_)          
-# | |  | |___  ___| |__) | __ ___  _  ___  ___| |_| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___ 
+#  _    _          _____           _           _   _____                            _                 _
+# | |  | |        |  __ \         (_)         | | |  __ \                          | |               (_)
+# | |  | |___  ___| |__) | __ ___  _  ___  ___| |_| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___
 # | |  | / __|/ _ \  ___/ '__/ _ \| |/ _ \/ __| __| |  | |/ _ \ '_ \ / _ \ '_ \ / _` |/ _ \ '_ \ / __| |/ _ \/ __|
 # | |__| \__ \  __/ |   | | | (_) | |  __/ (__| |_| |__| |  __/ |_) |  __/ | | | (_| |  __/ | | | (__| |  __/\__ \
 #  \____/|___/\___|_|   |_|  \___/| |\___|\___|\__|_____/ \___| .__/ \___|_| |_|\__,_|\___|_| |_|\___|_|\___||___/
-#                                _/ |                         | |                                                 
+#                                _/ |                         | |
 #                               |__/                          |_|
 #
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template with 5 projects and useProjectDependencies set to true
 #    - P1/app1 with dependency to P1/app2
 #    - P1/app2 with no dependencies
@@ -38,7 +38,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""

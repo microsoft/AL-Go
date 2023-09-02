@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'GitHub Secrets comes in as plain text')]
 Param(
     [string] $_gitHubSecrets
 )
@@ -61,33 +62,45 @@ function GetGithubSecret {
 }
 	
 function Get-KeyVaultCredentials {
+    $creds = $null
     if ($script:isKeyvaultSet) {
-        $jsonStr = $script:gitHuBSecrets.AZURE_CREDENTIALS
+        $jsonStr = $script:gitHubSecrets.AZURE_CREDENTIALS
         if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
-            throw "Secret AZURE_CREDENTIALS cannot contain line breaks"
+            throw "Secret AZURE_CREDENTIALS cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
         }
         try {
             $creds = $jsonStr | ConvertFrom-Json
             # Mask ClientSecret
             MaskValue -key 'clientSecret' -value $creds.ClientSecret
+            $creds.ClientSecret = ConvertTo-SecureString $creds.ClientSecret -AsPlainText -Force
             # Check thet $creds contains the needed properties
             $creds.ClientId | Out-Null
             $creds.subscriptionId | Out-Null
             $creds.TenantId | Out-Null
-            return $creds
         }
         catch {
             throw "Secret AZURE_CREDENTIALS is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
         }
+        $keyVaultNameExists = $creds.PSObject.Properties.Name -eq 'keyVaultName'
+        $settings = $env:Settings | ConvertFrom-Json
+        # If KeyVaultName is defined in settings, use that value
+        if ($settings.keyVaultName) {
+            if ($keyVaultNameExists) {
+                $creds.keyVaultName = $settings.keyVaultName
+            }
+            else {
+                $creds | Add-Member -MemberType NoteProperty -Name 'keyVaultName' -Value $settings.keyVaultName
+            }
+        }
+        elseif (!($keyVaultNameExists)) {
+            # If KeyVaultName is not defined - return null (i.e. do not use a KeyVault)
+            $creds = $null
+        }
     }
-    throw "Secret AZURE_CREDENTIALS is missing. In order to use a Keyvault, please add a secret called AZURE_CREDENTIALS like explained here: https://go.microsoft.com/fwlink/?linkid=2217318&clcid=0x409 (remember to format the json string as compressed json, i.e. no line breaks)"
+    return $creds
 }
 
 function InstallKeyVaultModuleIfNeeded {
-    if (-not $script:isKeyvaultSet) {
-        return
-    }
-
     if ($isWindows) {
         $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
         if ($azModulesPath) {
@@ -121,7 +134,7 @@ function InstallKeyVaultModuleIfNeeded {
                 Disable-AzureRmDataCollection -WarningAction SilentlyContinue
             }
             else {
-                Write-Host "Installing and importing Az.KeyVault." 
+                Write-Host "Installing and importing Az.KeyVault."
                 Install-Module 'Az.KeyVault' -Force
                 Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
             }
@@ -129,19 +142,15 @@ function InstallKeyVaultModuleIfNeeded {
     }
 }
 
-function ConnectAzureKeyVaultIfNeeded {
-    param( 
+function ConnectAzureKeyVault {
+    param(
         [string] $subscriptionId,
         [string] $tenantId,
-        [string] $clientId ,
-        [string] $clientSecret 
+        [string] $clientId,
+        [SecureString] $clientSecret
     )
     try {
-        if ($script:keyvaultConnectionExists) {
-            return
-        }
-
-        $credential = New-Object PSCredential -argumentList $clientId, (ConvertTo-SecureString $clientSecret -AsPlainText -Force)
+        $credential = New-Object PSCredential -argumentList $clientId, $clientSecret
         if ($script:azureRm210) {
             Add-AzureRmAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
             Set-AzureRmContext -SubscriptionId $subscriptionId -Tenant $tenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
@@ -163,31 +172,30 @@ function ConnectAzureKeyVaultIfNeeded {
 function GetKeyVaultSecret {
     param (
         [string] $secretName,
-        [string] $keyVaultName
+        [PsCustomObject] $keyVaultCredentials
     )
 
     if (-not $script:isKeyvaultSet) {
         return $null
     }
-        
+
     if (-not $script:keyvaultConnectionExists) {
-            
         InstallKeyVaultModuleIfNeeded
-            
-        $credentialsJson = Get-KeyVaultCredentials
-        ConnectAzureKeyVaultIfNeeded -subscriptionId $credentialsJson.subscriptionId -tenantId $credentialsJson.tenantId -clientId $credentialsJson.clientId -clientSecret $credentialsJson.clientSecret
+        ConnectAzureKeyVault -subscriptionId $keyVaultCredentials.subscriptionId -tenantId $keyVaultCredentials.tenantId -clientId $keyVaultCredentials.clientId -clientSecret $keyVaultCredentials.clientSecret
     }
 
     $value = ""
     if ($script:azureRm210) {
-        $keyVaultSecret = Get-AzureKeyVaultSecret -VaultName $keyVaultName -Name $secret -ErrorAction SilentlyContinue
+        $keyVaultSecret = Get-AzureKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
     }
     else {
-        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultName -Name $secret -ErrorAction SilentlyContinue
+        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
     }
 
     if ($keyVaultSecret) {
-        $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(([Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)))
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)
+        $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        [Runtime.InteropServices.Marshal]::FreeBSTR($bstr)
         MaskValue -key $secret -value $value
         return $value
     }
@@ -198,25 +206,28 @@ function GetKeyVaultSecret {
 function GetSecret {
     param (
         [string] $secret,
-        [string] $keyVaultName
+        [PSCustomObject] $keyVaultCredentials,
+        [switch] $encrypted
     )
 
     Write-Host "Trying to get the secret($secret) from the github environment."
     $value = GetGithubSecret -secretName $secret
     if ($value) {
         Write-Host "Secret($secret) was retrieved from the github environment."
-        return $value
     }
-
-    if ($keyVaultName) {
-        Write-Host "Trying to get the secret($secret) from Key Vault ($keyVaultName)."
-        $value = GetKeyVaultSecret -secretName $secret -keyVaultName $keyVaultName
+    elseif ($keyVaultCredentials) {
+        Write-Host "Trying to get the secret($secret) from Key Vault ($($keyVaultCredentials.keyVaultName))."
+        $value = GetKeyVaultSecret -secretName $secret -keyVaultCredentials $keyVaultCredentials
         if ($value) {
             Write-Host "Secret($secret) was retrieved from the Key Vault."
-            return $value
         }
     }
-
-    Write-Host  "Could not find secret $secret in Github secrets or Azure Key Vault."
-    return $null
+    else {
+        Write-Host  "Could not find secret $secret in Github secrets or Azure Key Vault."
+        $value = $null
+    }
+    if ($value -and $encrypted) {
+        $value = ConvertTo-SecureString $value -AsPlainText -Force | ConvertFrom-SecureString
+    }
+    return $value
 }

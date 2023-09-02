@@ -11,16 +11,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-# _____      _                     ____                       _               
-#|  __ \    | |                   |  _ \                     | |              
-#| |__) |___| | ___  __ _ ___  ___| |_) |_ __ __ _ _ __   ___| |__   ___  ___ 
+# _____      _                     ____                       _
+#|  __ \    | |                   |  _ \                     | |
+#| |__) |___| | ___  __ _ ___  ___| |_) |_ __ __ _ _ __   ___| |__   ___  ___
 #|  _  // _ \ |/ _ \/ _` / __|/ _ \  _ <| '__/ _` | '_ \ / __| '_ \ / _ \/ __|
 #| | \ \  __/ |  __/ (_| \__ \  __/ |_) | | | (_| | | | | (__| | | |  __/\__ \
 #|_|  \_\___|_|\___|\__,_|___/\___|____/|_|  \__,_|_| |_|\___|_| |_|\___||___/
-#                                                                             
+#
 #
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template with a single project HelloWorld app
 #  - Run the "CI/CD" workflow
 #    - Check that no previous release was found
@@ -46,7 +46,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""

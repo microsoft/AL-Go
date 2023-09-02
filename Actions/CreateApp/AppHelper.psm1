@@ -4,7 +4,7 @@ This module contains some useful functions for working with app manifests.
 
 . (Join-Path -path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$alTemplatePath = Join-Path -Path $here -ChildPath "AppTemplate" 
+$alTemplatePath = Join-Path -Path $here -ChildPath "AppTemplate"
 
 
 $validRanges = @{
@@ -14,7 +14,11 @@ $validRanges = @{
     "Performance Test App" = "50000..$([int32]::MaxValue)" ;
 };
 
-function Confirm-IdRanges([string] $templateType, [string]$idrange ) {  
+<#
+.SYNOPSIS
+Check that the IdRange is valid for the template type.
+#>
+function ConfirmIdRanges([string] $templateType, [string]$idrange ) {
     $validRange = $validRanges.$templateType.Replace('..', '-').Split("-")
     $validStart = [int] $validRange[0]
     $validEnd = [int] $validRange[1]
@@ -22,13 +26,13 @@ function Confirm-IdRanges([string] $templateType, [string]$idrange ) {
     $ids = $idrange.Replace('..', '-').Split("-")
     $idStart = [int] $ids[0]
     $idEnd = [int] $ids[1]
-    
-    if ($ids.Count -ne 2 -or ($idStart) -lt $validStart -or $idStart -gt $idEnd -or $idEnd -lt $validStart -or $idEnd -gt $validEnd -or $idStart -gt $idEnd) { 
+
+    if ($ids.Count -ne 2 -or ($idStart) -lt $validStart -or $idStart -gt $idEnd -or $idEnd -lt $validStart -or $idEnd -gt $validEnd -or $idStart -gt $idEnd) {
         throw "IdRange should be formatted as fromId..toId, and the Id range must be in $($validRange[0]) and $($validRange[1])"
     }
 
     return $ids
-} 
+}
 
 function UpdateManifest
 (
@@ -39,7 +43,7 @@ function UpdateManifest
     [string] $version,
     [string[]] $idrange,
     [switch] $AddTestDependencies
-) 
+)
 {
     #Modify app.json
     $appJson = Get-Content (Join-Path $sourceFolder "app.json") -Encoding UTF8 | ConvertFrom-Json
@@ -78,7 +82,7 @@ function UpdateManifest
     $appJson | Set-JsonContentLF -path $appJsonFile
 }
 
-function UpdateALFile 
+function UpdateALFile
 (
     [string] $sourceFolder = $alTemplatePath,
     [string] $destinationFolder,
@@ -86,7 +90,7 @@ function UpdateALFile
     [int] $fromId = 50100,
     [int] $toId = 50100,
     [int] $startId
-) 
+)
 {
     $al = Get-Content -Encoding UTF8 -Raw -path (Join-Path $sourceFolder $alFileName)
     $fromId..$toId | ForEach-Object {
@@ -100,7 +104,7 @@ function UpdateALFile
 .SYNOPSIS
 Creates a simple app.
 #>
-function New-SampleApp
+function NewSampleApp
 (
     [string] $destinationPath,
     [string] $name,
@@ -108,7 +112,7 @@ function New-SampleApp
     [string] $version,
     [string[]] $idrange,
     [bool] $sampleCode
-) 
+)
 {
     Write-Host "Creating a new sample app in: $destinationPath"
     New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
@@ -122,11 +126,11 @@ function New-SampleApp
 }
 
 
-# <#
-# .SYNOPSIS
-# Creates a test app.
-# #>
-function New-SampleTestApp
+<#
+.SYNOPSIS
+Creates a test app.
+#>
+function NewSampleTestApp
 (
     [string] $destinationPath,
     [string] $name,
@@ -134,7 +138,7 @@ function New-SampleTestApp
     [string] $version,
     [string[]] $idrange,
     [bool] $sampleCode
-) 
+)
 {
     Write-Host "Creating a new test app in: $destinationPath"
     New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
@@ -147,11 +151,11 @@ function New-SampleTestApp
     }
 }
 
-# <#
-# .SYNOPSIS
-# Creates a performance test app.
-# #>
-function New-SamplePerformanceTestApp
+<#
+.SYNOPSIS
+Creates a performance test app.
+#>
+function NewSamplePerformanceTestApp
 (
     [string] $destinationPath,
     [string] $name,
@@ -161,7 +165,7 @@ function New-SamplePerformanceTestApp
     [bool] $sampleCode,
     [bool] $sampleSuite,
     [string] $appSourceFolder
-) 
+)
 {
     Write-Host "Creating a new performance test app in: $destinationPath"
     New-Item  -Path $destinationPath -ItemType Directory -Force | Out-Null
@@ -182,20 +186,24 @@ function New-SamplePerformanceTestApp
     }
 }
 
-function Update-WorkSpaces 
+<#
+.SYNOPSIS
+Update workspace file
+#>
+function UpdateWorkspaces
 (
     [string] $projectFolder,
     [string] $appName
-) 
+)
 {
-    Get-ChildItem -Path $projectFolder -Filter "*.code-workspace" | 
+    Get-ChildItem -Path $projectFolder -Filter "*.code-workspace" |
         ForEach-Object {
             try {
                 $workspaceFileName = $_.Name
                 $workspaceFile = $_.FullName
                 $workspace = Get-Content $workspaceFile -Encoding UTF8 | ConvertFrom-Json
                 if (-not ($workspace.folders | Where-Object { $_.Path -eq $appName })) {
-                    $workspace.folders = Add-NewAppFolderToWorkspaceFolders $workspace.folders $appName
+                    $workspace.folders = AddNewAppFolderToWorkspaceFolders $workspace.folders $appName
                 }
                 $workspace | Set-JsonContentLF -Path $workspaceFile
             }
@@ -205,7 +213,11 @@ function Update-WorkSpaces
         }
 }
 
-function Add-NewAppFolderToWorkspaceFolders
+<#
+.SYNOPSIS
+Add new App Folder to Workspace file
+#>
+function AddNewAppFolderToWorkspaceFolders
 (
     [PSCustomObject[]] $workspaceFolders,
     [string] $appFolder
@@ -236,9 +248,9 @@ function Add-NewAppFolderToWorkspaceFolders
     $workspaceFolders
 }
 
-Export-ModuleMember -Function New-SampleApp
-Export-ModuleMember -Function New-SampleTestApp
-Export-ModuleMember -Function New-SamplePerformanceTestApp
-Export-ModuleMember -Function Confirm-IdRanges
-Export-ModuleMember -Function Update-WorkSpaces
-Export-ModuleMember -Function Add-NewAppFolderToWorkspaceFolders
+Export-ModuleMember -Function NewSampleApp
+Export-ModuleMember -Function NewSampleTestApp
+Export-ModuleMember -Function NewSamplePerformanceTestApp
+Export-ModuleMember -Function ConfirmIdRanges
+Export-ModuleMember -Function UpdateWorkspaces
+Export-ModuleMember -Function AddNewAppFolderToWorkspaceFolders

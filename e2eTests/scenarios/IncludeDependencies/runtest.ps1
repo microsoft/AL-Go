@@ -11,16 +11,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  _____            _           _      _____                            _                 _           
-# |_   _|          | |         | |    |  __ \                          | |               (_)          
-#   | |  _ __   ___| |_   _  __| | ___| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___ 
+#  _____            _           _      _____                            _                 _
+# |_   _|          | |         | |    |  __ \                          | |               (_)
+#   | |  _ __   ___| |_   _  __| | ___| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___
 #   | | | '_ \ / __| | | | |/ _` |/ _ \ |  | |/ _ \ '_ \ / _ \ '_ \ / _` |/ _ \ '_ \ / __| |/ _ \/ __|
 #  _| |_| | | | (__| | |_| | (_| |  __/ |__| |  __/ |_) |  __/ | | | (_| |  __/ | | | (__| |  __/\__ \
 # |_____|_| |_|\___|_|\__,_|\__,_|\___|_____/ \___| .__/ \___|_| |_|\__,_|\___|_| |_|\___|_|\___||___/
-#                                                 | |                                                 
+#                                                 | |
 #                                                 |_|                                                 #
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template, running Windows with 5 projects, using appDependencyProbingPaths with release_status set to 'include'
 #    - P1/app1 with dependency to P1/app2
 #    - P1/app2 with no dependencies
@@ -37,7 +37,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""
@@ -105,10 +105,10 @@ $repoPath = (Get-Location).Path
 
         # Set GitHubRunner and runs-on to ubuntu-latest (and use CompilerFolder)
         Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-latest"; "gitHubRunner" = "ubuntu-latest"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
-        
+
         # Push
         CommitAndPush -commitMessage 'Shift to Linux'
-        
+
         # Upgrade AL-Go System Files
         Run-UpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
     }

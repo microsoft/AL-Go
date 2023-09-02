@@ -11,16 +11,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#   _____ _ _   _    _       _     _____           _                         
-#  / ____(_) | | |  | |     | |   |  __ \         | |                        
-# | |  __ _| |_| |__| |_   _| |__ | |__) |_ _  ___| | ____ _  __ _  ___  ___ 
+#   _____ _ _   _    _       _     _____           _
+#  / ____(_) | | |  | |     | |   |  __ \         | |
+# | |  __ _| |_| |__| |_   _| |__ | |__) |_ _  ___| | ____ _  __ _  ___  ___
 # | | |_ | | __|  __  | | | | '_ \|  ___/ _` |/ __| |/ / _` |/ _` |/ _ \/ __|
 # | |__| | | |_| |  | | |_| | |_) | |  | (_| | (__|   < (_| | (_| |  __/\__ \
 #  \_____|_|\__|_|  |_|\__,_|_.__/|_|   \__,_|\___|_|\_\__,_|\__, |\___||___/
-#                                                             __/ |          
-#                                                            |___/           
+#                                                             __/ |
+#                                                            |___/
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository (repository1) based on the PTE template with 3 apps
 #    - app1 with dependency to app2
 #    - app2 with no dependencies
@@ -42,7 +42,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""

@@ -26,16 +26,7 @@ try {
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $keyVaultName = ""
-    if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
-        $keyVaultName = $settings.keyVaultName
-        if ([string]::IsNullOrEmpty($keyVaultName)) {
-            $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
-            if ($credentialsJson.Keys -contains "keyVaultName") {
-                $keyVaultName = $credentialsJson.keyVaultName
-            }
-        }
-    }
+    $keyVaultCredentials = Get-KeyVaultCredentials
     $getAppDependencyProbingPathsSecrets = $false
     $getTokenForPush = $false
     [System.Collections.ArrayList]$secretsCollection = @()
@@ -46,7 +37,7 @@ try {
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
         }
-        $secretNameProperty = "$($secret)SecretName"
+        $secretNameProperty = "$($secret.TrimStart('*'))SecretName"
         if ($secret -eq 'AppDependencyProbingPathsSecrets') {
             $getAppDependencyProbingPathsSecrets = $true
         }
@@ -75,13 +66,13 @@ try {
     foreach($secret in @($secretsCollection)) {
         $secretSplit = $secret.Split('=')
         $secretsProperty = $secretSplit[0]
-        $secretName = $secretsProperty
+        $secretName = $secretsProperty.TrimStart('*')
         if ($secretSplit.Count -gt 1) {
             $secretName = $secretSplit[1]
         }
 
         if ($secretName) {
-            $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
+            $secretValue = GetSecret -secret $secretName -keyVaultCredentials $keyVaultCredentials -encrypted:($secretsProperty.StartsWith('*'))
             if ($secretValue) {
                 $json = @{}
                 try {
@@ -102,7 +93,7 @@ try {
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 $outSecrets += @{ "$secretsProperty" = $base64value }
-                Write-Host "$secretsProperty successfully read from secret $secretName"
+                Write-Host "$($secretsProperty.TrimStart('*')) successfully read from secret $secretName"
                 $secretsCollection.Remove($secret)
             }
         }
@@ -111,11 +102,11 @@ try {
     if ($secretsCollection) {
         $unresolvedSecrets = ($secretsCollection | ForEach-Object {
             $secretSplit = @($_.Split('='))
-            if ($secretSplit.Count -eq 1) {
-                $secretSplit[0]
+            if ($secretSplit.Count -eq 1 -or ($secretSplit[1] -eq '')) {
+                $secretSplit[0].TrimStart('*')
             }
             else {
-                "$($secretSplit[0]) (Secret $($secretSplit[1]))"
+                "$($secretSplit[0].TrimStart('*')) (Secret $($secretSplit[1]))"
             }
             $outSecrets += @{ "$($secretSplit[0])" = "" }
         }) -join ', '
