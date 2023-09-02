@@ -53,7 +53,7 @@ function GetGithubSecret {
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
         $value = $script:githubSecrets."$secret"
         if ($value) {
-            MaskValue -key $secret -value $value
+            MaskValue -key $envVar -value $value
             return $value
         }
     }
@@ -184,7 +184,14 @@ function GetKeyVaultSecret {
         ConnectAzureKeyVault -subscriptionId $keyVaultCredentials.subscriptionId -tenantId $keyVaultCredentials.tenantId -clientId $keyVaultCredentials.clientId -clientSecret $keyVaultCredentials.clientSecret
     }
 
-    $value = ""
+    $secretSplit = $secretName.Split('=')
+    $envVar = $secretSplit[0]
+    $secret = $envVar
+    if ($secretSplit.Count -gt 1) {
+        $secret = $secretSplit[1]
+    }
+
+    $value = $null
     if ($script:azureRm210) {
         $keyVaultSecret = Get-AzureKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
     }
@@ -196,11 +203,10 @@ function GetKeyVaultSecret {
         $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)
         $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
         [Runtime.InteropServices.Marshal]::FreeBSTR($bstr)
-        MaskValue -key $secret -value $value
-        return $value
+        MaskValue -key $envVar -value $value
     }
 
-    return $null
+    return $value
 }
 
 function GetSecret {
