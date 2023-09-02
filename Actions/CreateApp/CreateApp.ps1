@@ -55,7 +55,7 @@ try {
         throw "An extension name must be specified."
     }
 
-    $ids = Confirm-IdRanges -templateType $type -idrange $idrange
+    $ids = ConfirmIdRanges -templateType $type -idrange $idrange
 
     CheckAndCreateProjectFolder -project $project
     $projectFolder = (Get-Location).Path
@@ -131,7 +131,7 @@ try {
         New-SampleApp -destinationPath (Join-Path $projectFolder $folderName) -name $name -publisher $publisher -version $appVersion -sampleCode $sampleCode -idrange $ids
     }
 
-    Update-WorkSpaces -projectFolder $projectFolder -appName $folderName
+    UpdateWorkspaces -projectFolder $projectFolder -appName $folderName
 
     Set-Location $baseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch

@@ -14,7 +14,7 @@ $validRanges = @{
     "Performance Test App" = "50000..$([int32]::MaxValue)" ;
 };
 
-function Confirm-IdRanges([string] $templateType, [string]$idrange ) {
+function ConfirmIdRanges([string] $templateType, [string]$idrange ) {
     $validRange = $validRanges.$templateType.Replace('..', '-').Split("-")
     $validStart = [int] $validRange[0]
     $validEnd = [int] $validRange[1]
@@ -182,7 +182,7 @@ function New-SamplePerformanceTestApp
     }
 }
 
-function Update-WorkSpaces
+function UpdateWorkspaces
 (
     [string] $projectFolder,
     [string] $appName
@@ -239,6 +239,6 @@ function Add-NewAppFolderToWorkspaceFolders
 Export-ModuleMember -Function New-SampleApp
 Export-ModuleMember -Function New-SampleTestApp
 Export-ModuleMember -Function New-SamplePerformanceTestApp
-Export-ModuleMember -Function Confirm-IdRanges
-Export-ModuleMember -Function Update-WorkSpaces
+Export-ModuleMember -Function ConfirmIdRanges
+Export-ModuleMember -Function UpdateWorkspaces
 Export-ModuleMember -Function Add-NewAppFolderToWorkspaceFolders

@@ -6,30 +6,30 @@ Import-Module (Join-Path -path $here -ChildPath "..\Actions\CreateApp\AppHelper.
 . (Join-Path -path $here -ChildPath "..\Actions\AL-Go-Helper.ps1" -Resolve)
 
 Describe 'AppHelper.psm1 Tests' {
-    It 'Confirm-IdRanges validates a valid PTE range' {
-        $ids = Confirm-IdRanges -templateType "PTE" -idrange "50000..99999"
+    It 'ConfirmIdRanges validates a valid PTE range' {
+        $ids = ConfirmIdRanges -templateType "PTE" -idrange "50000..99999"
         $ids[0] | Should -EQ "50000"
         $ids[1] | Should -EQ "99999"
     }
 
-    It 'Confirm-IdRanges throws on invalid PTE range' {
-        { Confirm-IdRanges -templateType "PTE" -idrange "5000..50200" }   | Should -Throw
-        { Confirm-IdRanges -templateType "PTE" -idrange "50000..5000" }   | Should -Throw
-        { Confirm-IdRanges -templateType "PTE" -idrange "50100..50000" }  | Should -Throw
-        { Confirm-IdRanges -templateType "PTE" -idrange "50100..100000" } | Should -Throw
+    It 'ConfirmIdRanges throws on invalid PTE range' {
+        { ConfirmIdRanges -templateType "PTE" -idrange "5000..50200" }   | Should -Throw
+        { ConfirmIdRanges -templateType "PTE" -idrange "50000..5000" }   | Should -Throw
+        { ConfirmIdRanges -templateType "PTE" -idrange "50100..50000" }  | Should -Throw
+        { ConfirmIdRanges -templateType "PTE" -idrange "50100..100000" } | Should -Throw
     }
 
-    It 'Confirm-IdRanges validates a valid AppSource app range' {
-        $ids = Confirm-IdRanges -templateType "AppSource App" -idrange "100000..110000"
+    It 'ConfirmIdRanges validates a valid AppSource app range' {
+        $ids = ConfirmIdRanges -templateType "AppSource App" -idrange "100000..110000"
         $ids[0] | Should -EQ "100000"
         $ids[1] | Should -EQ "110000"
     }
 
-    It '(Confirm-IdRanges) should throw on invalid AppSource app range' {
-        { Confirm-IdRanges -templateType "AppSource app" -idrange "99999..110000" }   | Should -Throw
-        { Confirm-IdRanges -templateType "AppSource app" -idrange "100000..1100" }   | Should -Throw
-        { Confirm-IdRanges -templateType "AppSource app" -idrange "110000..100000" }  | Should -Throw
-        { Confirm-IdRanges -templateType "AppSource app" -idrange "110000..1000000000000000000000" }  | Should -Throw
+    It '(ConfirmIdRanges) should throw on invalid AppSource app range' {
+        { ConfirmIdRanges -templateType "AppSource app" -idrange "99999..110000" }   | Should -Throw
+        { ConfirmIdRanges -templateType "AppSource app" -idrange "100000..1100" }   | Should -Throw
+        { ConfirmIdRanges -templateType "AppSource app" -idrange "110000..100000" }  | Should -Throw
+        { ConfirmIdRanges -templateType "AppSource app" -idrange "110000..1000000000000000000000" }  | Should -Throw
     }
 
     It 'Should create a new app by calling New-SampleApp' {
