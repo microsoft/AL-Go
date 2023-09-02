@@ -62,8 +62,11 @@ if ($isPsCore) {
 else {
     $byteEncodingParam = @{ "Encoding" = "byte" }
     $allowUnencryptedAuthenticationParam = @{ }
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isWindows', Justification = 'Will only run on PS5')]
     $isWindows = $true
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isLinux', Justification = 'Will only run on PS5')]
     $isLinux = $false
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isMacOS', Justification = 'Will only run on PS5')]
     $IsMacOS = $false
 }
 
