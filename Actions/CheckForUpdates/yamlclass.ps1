@@ -106,8 +106,8 @@ class Yaml {
         $c = 0
         if ($this.Find($line, [ref] $s, [ref] $c)) {
             $charCount = ($line.ToCharArray() | Where-Object {$_ -eq '/'} | Measure-Object).Count
-            [string[]] $result = @($this.content | Select-Object -Skip $s -First $c | ForEach-Object { 
-                "$_$("  "*$charCount)".Substring(2*$charCount).TrimEnd() 
+            [string[]] $result = @($this.content | Select-Object -Skip $s -First $c | ForEach-Object {
+                "$_$("  "*$charCount)".Substring(2*$charCount).TrimEnd()
             } )
             $start.value = $s
             $count.value = $c

@@ -36,7 +36,7 @@ try {
             docker pull --quiet $genericImageName
         } -ArgumentList $genericImageName | Out-Null
     }
-  
+
     $containerName = GetContainerName($project)
 
     $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
@@ -137,24 +137,24 @@ try {
 
     # Analyze app.json version dependencies before launching pipeline
 
-    # Analyze InstallApps and InstallTestApps before launching pipeline 
+    # Analyze InstallApps and InstallTestApps before launching pipeline
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
         OutputWarning -message "Using the legacy CodeSignCertificateUrl and CodeSignCertificatePassword parameters. Consider using the new Azure Keyvault signing instead. Go to https://aka.ms/ALGoSettings#keyVaultCodesignCertificateName to find out more"
-        $runAlPipelineParams += @{ 
+        $runAlPipelineParams += @{
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
             "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword
         }
     }
     if ($applicationInsightsConnectionString) {
-        $runAlPipelineParams += @{ 
+        $runAlPipelineParams += @{
             "applicationInsightsConnectionString" = $applicationInsightsConnectionString
         }
     }
 
     if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
-        $runAlPipelineParams += @{ 
+        $runAlPipelineParams += @{
             "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
             "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword
             "keyVaultClientId" = $keyVaultClientId
@@ -212,7 +212,7 @@ try {
             "appVersion" = $settings.repoVersion
         }
     }
-    
+
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 

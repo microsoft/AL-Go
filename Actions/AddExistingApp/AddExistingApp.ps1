@@ -39,11 +39,11 @@ function expandfile {
         # .zip file
         $destinationPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString())"
         Expand-7zipArchive -path $path -destinationPath $destinationPath
-    
+
         $directoryInfo = Get-ChildItem $destinationPath | Measure-Object
         if ($directoryInfo.count -eq 0) {
             throw "The file is empty or malformed."
-        }      
+        }
 
         $appFolders = @()
         if (Test-Path (Join-Path $destinationPath 'app.json')) {
@@ -71,7 +71,7 @@ function expandfile {
     elseif ([string]::new([char[]](Get-Content $path @byteEncodingParam -TotalCount 4)) -eq "NAVX") {
         $destinationPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString())"
         Extract-AppFileToFolder -appFilename $path -appFolder $destinationPath -generateAppJson
-        $destinationPath        
+        $destinationPath
     }
     else {
         throw "The provided url cannot be extracted. The url might be wrong or the file is malformed."
@@ -92,7 +92,7 @@ try {
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScopeJson $parentTelemetryScopeJson 
+    $telemetryScope = CreateScope -eventId 'DO0070' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $type = "PTE"
     Write-Host "Reading $RepoSettingsFile"
@@ -120,17 +120,17 @@ try {
         if ($appJson.PSObject.Properties.Name -eq "idRange") {
             $ranges += @($appJson.idRange)
         }
-        
+
         $ttype = ""
         $ranges | Select-Object -First 1 | ForEach-Object {
             if ($_.from -lt 100000 -and $_.to -lt 100000) {
                 $ttype = "PTE"
             }
             else {
-                $ttype = "AppSource App" 
+                $ttype = "AppSource App"
             }
         }
-        
+
         if ($appJson.PSObject.Properties.Name -eq "dependencies") {
             $appJson.dependencies | ForEach-Object {
                 if ($_.PSObject.Properties.Name -eq "AppId") {
@@ -139,7 +139,7 @@ try {
                 else {
                     $id = $_.Id
                 }
-                if ($testRunnerApps.Contains($id)) { 
+                if ($testRunnerApps.Contains($id)) {
                     $ttype = "Test App"
                 }
             }

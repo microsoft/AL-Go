@@ -26,8 +26,8 @@ try {
 
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
-    $Files | ForEach-Object { 
-        Write-Host "- $_" 
+    $Files | ForEach-Object {
+        Write-Host "- $_"
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
@@ -44,7 +44,7 @@ try {
 
     Retry-Command -Command {
         Write-Host "::group::Register NavSip"
-        Register-NavSip 
+        Register-NavSip
         Write-Host "::endgroup::"
 
         AzureSignTool sign --file-digest $digestAlgorithm `
@@ -57,7 +57,7 @@ try {
             --timestamp-digest $digestAlgorithm `
             $Files
     } -MaxRetries 3
-    
+
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {

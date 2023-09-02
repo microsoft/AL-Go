@@ -5,7 +5,7 @@
     [string] $actionsRepo,
     [string] $perTenantExtensionRepo,
     [string] $appSourceAppRepo
-    
+
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0

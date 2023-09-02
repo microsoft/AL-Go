@@ -53,7 +53,7 @@ function YamlTest {
     $systemParameters = @($emptyCmd.Parameters.Keys.GetEnumerator() | ForEach-Object { $_ })
 
     Invoke-Expression $actionScript
-    
+
     $yaml = [System.Text.StringBuilder]::new()
     $yaml.AppendLine("name: *") | Out-Null
     $yaml.AppendLine("author: *") | Out-Null
@@ -151,7 +151,7 @@ function YamlTest {
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null
     $yaml.Append("  color: blue") | Out-Null
-    
+
     $yamlLines = $yaml.ToString().Replace("`r","").Split("`n")
     $actualYaml = @(Get-Content -path (Join-Path $scriptRoot "action.yaml"))
 

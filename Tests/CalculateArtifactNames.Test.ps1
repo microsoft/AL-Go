@@ -30,7 +30,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-CleanApps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-CleanTestApps"
@@ -52,7 +52,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
@@ -72,7 +72,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
@@ -97,7 +97,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
         # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
         $currentDate = [DateTime]::UtcNow.ToString('yyyyMMdd')
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
@@ -124,7 +124,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
         # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
         $currentDate = [DateTime]::UtcNow.ToString('yyyyMMdd')
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject_øåæ-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject_øåæ-TestApps"

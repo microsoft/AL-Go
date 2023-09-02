@@ -12,14 +12,14 @@ on:
       name:
         description: Name
         required: true
-        default: '<YourAppName>.PerformanceTest'         
+        default: '<YourAppName>.PerformanceTest'
       publisher:
         description: Publisher
         required: true
       idrange:
         description: ID range
         required: true
-        default: '50000..99999'  
+        default: '50000..99999'
       sampleCode:
         description: Include Sample code (Y/N)
         required: false

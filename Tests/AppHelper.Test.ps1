@@ -39,7 +39,7 @@ Describe 'AppHelper.psm1 Tests' {
         $sampleAppFolder | Should -Exist
         $sampleAppAppJson = Join-Path $sampleAppFolder "app.json"
         $sampleAppAppJson | Should -Exist
-        
+
         $appJson = Get-Content -Path $sampleAppAppJson -Encoding UTF8 | ConvertFrom-Json
         $appJson.name | Should -be "SampleApp"
         $appJson.publisher | Should -be "TestPublisher"
@@ -60,7 +60,7 @@ Describe 'AppHelper.psm1 Tests' {
         $sampleAppFolder | Should -Exist
         $sampleAppAppJson = Join-Path $sampleAppFolder "app.json"
         $sampleAppAppJson | Should -Exist
-        
+
         $appJson = Get-Content -Path $sampleAppAppJson -Encoding UTF8 | ConvertFrom-Json
         $appJson.name | Should -be "TestPTE"
         $appJson.publisher | Should -be "TestPublisher"

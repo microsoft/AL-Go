@@ -178,7 +178,7 @@ function GetKeyVaultSecret {
     if (-not $script:isKeyvaultSet) {
         return $null
     }
-        
+
     if (-not $script:keyvaultConnectionExists) {
         InstallKeyVaultModuleIfNeeded
         ConnectAzureKeyVault -subscriptionId $keyVaultCredentials.subscriptionId -tenantId $keyVaultCredentials.tenantId -clientId $keyVaultCredentials.clientId -clientSecret $keyVaultCredentials.clientSecret

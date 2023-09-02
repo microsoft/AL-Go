@@ -118,7 +118,7 @@ Example, adding this:
 ```json
     "ConditionalSettings": [
         {
-            "branches": [ 
+            "branches": [
                 "feature/*"
             ],
             "settings": {
@@ -140,10 +140,10 @@ You could imagine that you could have and organizational settings variable conta
 ```json
     "ConditionalSettings": [
         {
-            "repositories": [ 
+            "repositories": [
                 "bcsamples-*"
             ],
-            "branches": [ 
+            "branches": [
                 "features/*"
             ],
             "settings": {

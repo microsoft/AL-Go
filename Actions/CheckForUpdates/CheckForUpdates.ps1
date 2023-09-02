@@ -14,7 +14,7 @@ Param(
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
-    [bool] $directCommit    
+    [bool] $directCommit
 )
 
 $telemetryScope = $null
@@ -90,7 +90,7 @@ try {
     Write-Host "Using ArchiveUrl $archiveUrl"
 
     # Download the template repository and unpack to a temp folder
-    $headers = @{             
+    $headers = @{
         "Accept" = "application/vnd.github.baptiste-preview+json"
         "token" = $token
     }
@@ -98,7 +98,7 @@ try {
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
-    
+
     # CheckFiles is an array of hashtables with the following properties:
     # dstPath: The path to the file in the current repository
     # srcPath: The path to the file in the template repository
@@ -157,7 +157,7 @@ try {
         $buildAlso = @{}
         $projectDependencies = @{}
         $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-        
+
         $depth = $projectsOrder.Count
         Write-Host "Calculated dependency depth to be $depth"
     }
@@ -260,7 +260,7 @@ try {
 
                         if ($depth -gt 1) {
                             # Also, duplicate the build job for each dependency depth
-                            
+
                             $build = $yaml.Get('jobs:/Build:/')
                             if($build)
                             {
@@ -299,7 +299,7 @@ try {
                                     $build.Replace('if:', $if)
                                     $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
                                     $build.Replace('strategy:/matrix:/include:',"include: `${{ fromJson(needs.Initialization.outputs.buildOrderJson)[$index].buildDimensions }}")
-                                    
+
                                     # Last build job is called build, all other build jobs are called build1, build2, etc.
                                     if ($depth -eq $_) {
                                         $newBuild += @("Build:")
@@ -328,7 +328,7 @@ try {
                 if ($directALGo) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
                     $lines = $srcContent.Split("`n")
-                    
+
                     # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
                     $originalOwnerAndRepo = @{
                         "actionsRepo" = "microsoft/AL-Go-Actions"
@@ -425,7 +425,7 @@ try {
 
                 # checkout branch to update
                 invoke-git checkout $updateBranch
-                
+
                 # If $directCommit, then changes are made directly to the default branch
                 if (!$directcommit) {
                     # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
