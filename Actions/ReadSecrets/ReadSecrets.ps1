@@ -93,7 +93,7 @@ try {
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 $outSecrets += @{ "$secretsProperty" = $base64value }
-                Write-Host "$secretsProperty successfully read from secret $secretName"
+                Write-Host "$($secretsProperty.TrimStart('*')) successfully read from secret $secretName"
                 $secretsCollection.Remove($secret)
             }
         }
@@ -103,10 +103,10 @@ try {
         $unresolvedSecrets = ($secretsCollection | ForEach-Object {
             $secretSplit = @($_.Split('='))
             if ($secretSplit.Count -eq 1 -or ($secretSplit[1] -eq '')) {
-                $secretSplit[0]
+                $secretSplit[0].TrimStart('*')
             }
             else {
-                "$($secretSplit[0]) (Secret $($secretSplit[1]))"
+                "$($secretSplit[0].TrimStart('*')) (Secret $($secretSplit[1]))"
             }
             $outSecrets += @{ "$($secretSplit[0])" = "" }
         }) -join ', '
