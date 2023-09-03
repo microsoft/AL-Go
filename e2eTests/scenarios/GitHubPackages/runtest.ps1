@@ -1,4 +1,5 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -75,9 +76,9 @@ CreateAlGoRepository `
     -branch $branch `
     -contentScript {
         Param([string] $path)
-        $global:id2 = CreateNewAppInFolder -folder $path -name app2 -objID 50002
-        $global:id1 = CreateNewAppInFolder -folder $path -name app1 -objID 50001 -dependencies @( @{ "id" = $global:id2; "name" = "app2"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
-        $global:id3 = CreateNewAppInFolder -folder $path -name app3 -objID 50003 -dependencies @( @{ "id" = $global:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }, @{ "id" = $global:id2; "name" = "app2"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $script:id2 = CreateNewAppInFolder -folder $path -name app2 -objID 50002
+        $script:id1 = CreateNewAppInFolder -folder $path -name app1 -objID 50001 -dependencies @( @{ "id" = $script:id2; "name" = "app2"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $script:id3 = CreateNewAppInFolder -folder $path -name app3 -objID 50003 -dependencies @( @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }, @{ "id" = $script:id2; "name" = "app2"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path '.AL-Go\settings.json') -properties @{ "country" = "w1" }
     }
 SetRepositorySecret -repository $repository1 -name 'GitHubPackagesContext' -value $githubPackagesContextJson
@@ -93,7 +94,7 @@ CreateAlGoRepository `
     -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
     -contentScript {
         Param([string] $path)
-        $global:id4 = CreateNewAppInFolder -folder $path -name app4 -objID 50004 -dependencies @( @{ "id" = $global:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $script:id4 = CreateNewAppInFolder -folder $path -name app4 -objID 50004 -dependencies @( @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path '.AL-Go\settings.json') -properties @{ "country" = "dk" }
     }
 SetRepositorySecret -repository $repository2 -name 'GitHubPackagesContext' -value $githubPackagesContextJson
@@ -108,7 +109,7 @@ CreateAlGoRepository `
     -addRepoSettings @{ "generateDependencyArtifact" = $true } `
     -contentScript {
         Param([string] $path)
-        $global:id5 = CreateNewAppInFolder -folder $path -name app5 -objID 50005 -dependencies @( @{ "id" = $global:id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $global:id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $script:id5 = CreateNewAppInFolder -folder $path -name app5 -objID 50005 -dependencies @( @{ "id" = $script:id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $script:id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path '.AL-Go\settings.json') -properties @{ "country" = "dk" }
     }
 SetRepositorySecret -repository $repository -name 'GitHubPackagesContext' -value $githubPackagesContextJson
