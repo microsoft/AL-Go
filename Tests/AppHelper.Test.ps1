@@ -1,4 +1,4 @@
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Reloading the module
 Get-Module AppHelper | Remove-Module -Force

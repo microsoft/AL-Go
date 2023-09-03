@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The GitHub token to use to fetch the changed files", Mandatory = $false)]
     [string] $token
 )

@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The event id of the initiating workflow", Mandatory = $true)]
     [string] $eventId
 )

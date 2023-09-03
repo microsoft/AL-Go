@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The project for which to download dependencies", Mandatory = $true)]
     [string] $project,
     [string] $baseFolder,

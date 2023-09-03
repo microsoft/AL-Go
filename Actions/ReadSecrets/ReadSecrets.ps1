@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]

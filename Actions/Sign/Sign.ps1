@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(HelpMessage = "Azure Credentials secret", Mandatory = $true)]
     [string] $AzureCredentialsJson,
     [Parameter(HelpMessage = "The path to the files to be signed", Mandatory = $true)]

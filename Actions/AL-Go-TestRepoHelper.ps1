@@ -1,4 +1,4 @@
-function Test-Property {
+﻿function Test-Property {
     Param(
         [HashTable] $json,
         [string] $settingsDescription,

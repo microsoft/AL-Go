@@ -1,4 +1,4 @@
-#requires -Version 5.0
+﻿#requires -Version 5.0
 
 # This class holds the content of a Yaml file
 # The content is stored in an array of strings, where each string is a line of the Yaml file

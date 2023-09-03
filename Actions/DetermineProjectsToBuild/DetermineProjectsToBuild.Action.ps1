@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
     [string] $baseFolder,
     [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]

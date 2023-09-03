@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
 Describe "DetermineDeliveryTargets Action Test" {
     BeforeAll {

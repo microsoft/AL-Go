@@ -1,4 +1,4 @@
-Get-Module Github-Helper | Remove-Module -Force
+﻿Get-Module Github-Helper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
 Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')

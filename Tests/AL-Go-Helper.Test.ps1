@@ -1,4 +1,4 @@
-Describe "AL-Go-Helper tests" {
+﻿Describe "AL-Go-Helper tests" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
     }

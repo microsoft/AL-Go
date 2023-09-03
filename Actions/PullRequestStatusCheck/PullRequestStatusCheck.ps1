@@ -1,4 +1,4 @@
-function PullRequestStatusCheck()
+﻿function PullRequestStatusCheck()
 {
     param(
         [Parameter(HelpMessage = "Repository name", Mandatory = $true)]

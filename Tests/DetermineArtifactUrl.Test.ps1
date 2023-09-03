@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
 # Settings, which affects the behavior of DetermineArtifactUrl
 # - artifact - specifies an artifactUrl (or pattern) to use

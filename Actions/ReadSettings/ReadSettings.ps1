@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]

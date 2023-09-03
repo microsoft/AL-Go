@@ -1,4 +1,4 @@
-Get-Module TestActionsHelper | Remove-Module -Force
+﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '../TestActionsHelper.psm1')
 
 Describe "All AL-GO workflows should have the .yaml extension" {
