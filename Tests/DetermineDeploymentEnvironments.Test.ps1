@@ -5,6 +5,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $actionName = "DetermineDeploymentEnvironments"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
         function PassGeneratedOutput() {
