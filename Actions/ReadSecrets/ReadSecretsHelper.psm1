@@ -41,7 +41,8 @@ function MaskValue {
 
 function GetGithubSecret {
     param (
-        [string] $secretName
+        [string] $secretName,
+        [switch] $encrypted
     )
     $secretSplit = $secretName.Split('=')
     $envVar = $secretSplit[0]
@@ -54,7 +55,14 @@ function GetGithubSecret {
         $value = $script:githubSecrets."$secret"
         if ($value) {
             MaskValue -key $envVar -value $value
-            return $value
+            if ($encrypted) {
+                # Return encrypted string
+                return (ConvertTo-SecureString -String $value -AsPlainText -Force | ConvertFrom-SecureString)
+            }
+            else {
+                # Return decrypted string
+                return $value
+            }
         }
     }
 
@@ -172,7 +180,8 @@ function ConnectAzureKeyVault {
 function GetKeyVaultSecret {
     param (
         [string] $secretName,
-        [PsCustomObject] $keyVaultCredentials
+        [PsCustomObject] $keyVaultCredentials,
+        [switch] $encrypted
     )
 
     if (-not $script:isKeyvaultSet) {
@@ -198,14 +207,19 @@ function GetKeyVaultSecret {
     else {
         $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
     }
-
-    if ($keyVaultSecret) {
-        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)
-        $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
-        [Runtime.InteropServices.Marshal]::FreeBSTR($bstr)
-        MaskValue -key $envVar -value $value
+    if ($value) {
+        if ($encrypted) {
+            # Return encrypted string
+            $value = $keyVaultSecret.SecretValue | ConvertFrom-SecureString
+        }
+        else {
+            # Return decrypted string
+            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)
+            $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            [Runtime.InteropServices.Marshal]::FreeBSTR($bstr)
+            MaskValue -key $envVar -value $value
+        }
     }
-
     return $value
 }
 
@@ -217,13 +231,13 @@ function GetSecret {
     )
 
     Write-Host "Trying to get the secret($secret) from the github environment."
-    $value = GetGithubSecret -secretName $secret
+    $value = GetGithubSecret -secretName $secret -encrypted:$encrypted
     if ($value) {
         Write-Host "Secret($secret) was retrieved from the github environment."
     }
     elseif ($keyVaultCredentials) {
         Write-Host "Trying to get the secret($secret) from Key Vault ($($keyVaultCredentials.keyVaultName))."
-        $value = GetKeyVaultSecret -secretName $secret -keyVaultCredentials $keyVaultCredentials
+        $value = GetKeyVaultSecret -secretName $secret -keyVaultCredentials $keyVaultCredentials -encrypted:$encrypted
         if ($value) {
             Write-Host "Secret($secret) was retrieved from the Key Vault."
         }
@@ -231,9 +245,6 @@ function GetSecret {
     else {
         Write-Host  "Could not find secret $secret in Github secrets or Azure Key Vault."
         $value = $null
-    }
-    if ($value -and $encrypted) {
-        $value = ConvertTo-SecureString $value -AsPlainText -Force | ConvertFrom-SecureString
     }
     return $value
 }
