@@ -60,7 +60,7 @@ function GetGithubSecret {
 
     return $null
 }
-	
+
 function GetKeyVaultCredentials {
     $creds = $null
     if ($script:isKeyvaultSet) {
