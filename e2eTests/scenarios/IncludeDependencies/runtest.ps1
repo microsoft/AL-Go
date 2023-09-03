@@ -71,9 +71,9 @@ CreateAlGoRepository `
         Add-PropertiesToJsonFile -path (Join-Path $path 'P2\.AL-Go\settings.json') -properties @{ "country" = "w1"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P1" } ) }
         $id4 = CreateNewAppInFolder -folder (Join-Path $path 'P3') -name app4 -objID 50004 -dependencies @( @{ "id" = $id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P3\.AL-Go\settings.json') -properties @{ "country" = "w1"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P1" } ) }
-        $id5 = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $null = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P4\.AL-Go\settings.json') -properties @{ "country" = "it"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P2,P3" } ) }
-        $id6 = CreateNewAppInFolder -folder (Join-Path $path 'P0') -name app6 -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $null = CreateNewAppInFolder -folder (Join-Path $path 'P0') -name app6 -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P0\.AL-Go\settings.json') -properties @{ "country" = "dk"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P3,P2" } ) }
     }
 

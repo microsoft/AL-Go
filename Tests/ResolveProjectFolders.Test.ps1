@@ -1,4 +1,4 @@
-Describe "ResolveProjectFolders" {
+﻿Describe "ResolveProjectFolders" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
 
