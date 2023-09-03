@@ -6,7 +6,9 @@ Describe "Deploy Action Tests" {
         $actionName = "Deploy"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
         $scriptPath = Join-Path $scriptRoot $scriptName
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
     }
 

@@ -61,7 +61,7 @@ function GetGithubSecret {
     return $null
 }
 	
-function Get-KeyVaultCredentials {
+function GetKeyVaultCredentials {
     $creds = $null
     if ($script:isKeyvaultSet) {
         $jsonStr = $script:gitHubSecrets.AZURE_CREDENTIALS
