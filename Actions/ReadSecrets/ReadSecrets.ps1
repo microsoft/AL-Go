@@ -26,6 +26,11 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
 
+    if ($tempGhTokenWorkflow) {
+        # Use the temporary GhTokenWorkflow for push if specified and needed
+        $useGhTokenWorkflowForPush = 'true'
+    }
+
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $keyVaultName = ""
@@ -83,7 +88,13 @@ try {
         }
 
         if ($secretName) {
-            $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
+            if ($tempGhTokenWorkflow -and $secretsProperty -eq 'ghTokenWorkflow') {
+                Write-Host "Using temporary Personal Access Token as GhTokenWorkflow"
+                $secretValue = $tempGhTokenWorkflow
+            }
+            else {
+                $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
+            }
             if ($secretValue) {
                 $json = @{}
                 try {
@@ -126,12 +137,6 @@ try {
 
     #region Action: Output
 
-    if ($outSecrets.Contains('ghTokenWorkflow') -and $tempGhTokenWorkflow) {
-        Write-Host "Overriding GhTokenWorkflow with manually specified token"
-        $outSecrets.ghTokenWorkflow = $tempGhTokenWorkflow
-        # Use the manual GhTokenWorkflow for push if specified
-        $useGhTokenWorkflowForPush = 'true'
-    }
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$outSecretsJson"
 

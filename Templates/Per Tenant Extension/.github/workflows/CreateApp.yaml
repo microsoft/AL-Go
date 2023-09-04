@@ -53,11 +53,10 @@ jobs:
       - name: Mask Token
         id: tempGhTokenWorkflow
         run: |
+          # Using github.event.inputs.tempGhTokenWorkflow will expose the token in the logs
           $eventPath = Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
           $tempGhTokenWorkflow = $eventPath.inputs.tempGhTokenWorkflow
           if ($tempGhTokenWorkflow) {
-            Write-Host "::add-mask::$tempGhTokenWorkflow"
-            $tempGhTokenWorkflow = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($tempGhTokenWorkflow))
             Write-Host "::add-mask::$tempGhTokenWorkflow"
           }
           Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "tempGhTokenWorkflow=$tempGhTokenWorkflow"
