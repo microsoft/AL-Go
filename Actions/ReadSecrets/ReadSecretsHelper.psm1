@@ -207,7 +207,7 @@ function GetKeyVaultSecret {
     else {
         $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
     }
-    if ($value) {
+    if ($keyVaultSecret) {
         if ($encrypted) {
             # Return encrypted string
             $value = $keyVaultSecret.SecretValue | ConvertFrom-SecureString
