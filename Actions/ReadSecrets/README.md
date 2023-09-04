@@ -16,7 +16,8 @@ Additionally, the secrets specified by the authToken secret in AppDependencyProb
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | getSecrets | Yes | Comma separated list of secrets to get (add appDependencyProbingPathsSecrets to request secrets needed for resolving dependencies in AppDependencyProbingPaths, add TokenForPush in order to request a token to use for pull requests and commits) | |
-| useGhTokenWorkflowForPush | false | Determines whether you want to use the GhTokenWorkflow secret for TokenForPush |
+| useGhTokenWorkflowForPush | false | Determines whether you want to use the GhTokenWorkflow secret for TokenForPush | |
+| tempGhTokenWorkflow | false | Temporary Personal Access Token (Base64 encoded), which overrides GhTokenWorkflow if present | |
 
 ## OUTPUT
 

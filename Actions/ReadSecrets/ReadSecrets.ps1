@@ -4,7 +4,9 @@ Param(
     [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
-    [string] $useGhTokenWorkflowForPush = 'false'
+    [string] $useGhTokenWorkflowForPush = 'false',
+    [Parameter(HelpMessage = "Temporary Personal Access Token (Base64 encoded), which overrides GhTokenWorkflow if present", Mandatory = $false)]
+    [string] $tempGhTokenWorkflow = ""
 )
 
 $buildMutexName = "AL-Go-ReadSecrets"
@@ -124,6 +126,12 @@ try {
 
     #region Action: Output
 
+    if ($outSecrets.ContainsKey('ghTokenWorkflow') -and $tempGhTokenWorkflow) {
+        Write-Host "Overriding GhTokenWorkflow with manually specified token"
+        $outSecrets.ghTokenWorkflow = $tempGhTokenWorkflow
+        # Use the manual GhTokenWorkflow for push if specified
+        $useGhTokenWorkflowForPush = 'true'
+    }
     $outSecretsJson = $outSecrets | ConvertTo-Json -Compress
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Secrets=$outSecretsJson"
 
