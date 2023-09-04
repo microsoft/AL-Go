@@ -230,16 +230,16 @@ function GetSecret {
         [switch] $encrypted
     )
 
-    Write-Host "Trying to get the secret($secret) from the github environment."
+    Write-Host "Trying to get the secret ($secret) from the github environment."
     $value = GetGithubSecret -secretName $secret -encrypted:$encrypted
     if ($value) {
-        Write-Host "Secret($secret) was retrieved from the github environment."
+        Write-Host "Secret ($secret) was retrieved from the github environment."
     }
     elseif ($keyVaultCredentials) {
-        Write-Host "Trying to get the secret($secret) from Key Vault ($($keyVaultCredentials.keyVaultName))."
+        Write-Host "Trying to get the secret ($secret) from Key Vault ($($keyVaultCredentials.keyVaultName))."
         $value = GetKeyVaultSecret -secretName $secret -keyVaultCredentials $keyVaultCredentials -encrypted:$encrypted
         if ($value) {
-            Write-Host "Secret($secret) was retrieved from the Key Vault."
+            Write-Host "Secret ($secret) was retrieved from the Key Vault."
         }
     }
     else {

@@ -42,10 +42,12 @@ try {
             $getAppDependencyProbingPathsSecrets = $true
         }
         else {
+            $secretName = $secret
             if ($settings.Keys -contains $secretNameProperty) {
-                $secret = "$($secret)=$($settings."$secretNameProperty")"
+                $secretName = $settings."$secretNameProperty"
+                $secret = "$($secret)=$secretName"
             }
-            if ($secretsCollection -notcontains $secret) {
+            if ($secretName -and ($secretsCollection -notcontains $secret)) {
                 $secretsCollection += $secret
             }
         }
