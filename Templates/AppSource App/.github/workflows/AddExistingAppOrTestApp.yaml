@@ -20,7 +20,7 @@ on:
         description: Use GhTokenWorkflow for Pull Request/COMMIT
         type: boolean
       tempGhTokenWorkflow:
-        description: Temporary Personal Access Token to use as GhTokenWorkflow
+        description: Temporary Access Token to use as GhTokenWorkflow
         required: false
         default: ''
 

@@ -16,7 +16,7 @@ inputs:
     required: false
     default: 'false'
   tempGhTokenWorkflow:
-    description: Temporary Personal Access Token (Base64 encoded), which overrides GhTokenWorkflow if present
+    description: Temporary Access Token, which overrides GhTokenWorkflow if present
     required: false
     default: ''
 outputs:

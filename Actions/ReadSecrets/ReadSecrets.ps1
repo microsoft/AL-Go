@@ -5,7 +5,7 @@ Param(
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
     [string] $useGhTokenWorkflowForPush = 'false',
-    [Parameter(HelpMessage = "Temporary Personal Access Token (Base64 encoded), which overrides GhTokenWorkflow if present", Mandatory = $false)]
+    [Parameter(HelpMessage = "Temporary Access Token, which overrides GhTokenWorkflow if present", Mandatory = $false)]
     [string] $tempGhTokenWorkflow = ""
 )
 
@@ -89,7 +89,7 @@ try {
 
         if ($secretName) {
             if ($tempGhTokenWorkflow -and $secretsProperty -eq 'ghTokenWorkflow') {
-                Write-Host "Using temporary Personal Access Token as GhTokenWorkflow"
+                Write-Host "Using Temporary Access Token as GhTokenWorkflow"
                 $secretValue = $tempGhTokenWorkflow
             }
             else {
