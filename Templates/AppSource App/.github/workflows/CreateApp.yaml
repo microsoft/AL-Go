@@ -29,6 +29,10 @@ on:
       useGhTokenWorkflow:
         description: Use GhTokenWorkflow for Pull Request/COMMIT
         type: boolean
+      tempGhTokenWorkflow:
+        description: Temporary Personal Access Token to use as GhTokenWorkflow
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -46,6 +50,18 @@ jobs:
   CreateApp:
     runs-on: [ windows-latest ]
     steps:
+      - name: Mask Token
+        id: tempGhTokenWorkflow
+        run: |
+          $eventPath = Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          $tempGhTokenWorkflow = $eventPath.inputs.tempGhTokenWorkflow
+          if ($tempGhTokenWorkflow) {
+            Write-Host "::add-mask::$tempGhTokenWorkflow"
+            $tempGhTokenWorkflow = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($tempGhTokenWorkflow))
+            Write-Host "::add-mask::$tempGhTokenWorkflow"
+          }
+          Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "tempGhTokenWorkflow=$tempGhTokenWorkflow"
+
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -69,6 +85,7 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForPush'
+          tempGhTokenWorkflow: ${{ steps.tempGhTokenWorkflow.outputs.tempGhTokenWorkflow }}
           useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Creating a new app
