@@ -90,6 +90,8 @@ try {
         else {
             $value = ""
         }
+        # Secrets preceded by an asterisk are returned encrypted.
+        # Variable name should not include the asterisk
         Set-Variable -Name $_.TrimStart('*') -Value $value
     }
 

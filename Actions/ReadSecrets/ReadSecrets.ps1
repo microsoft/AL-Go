@@ -1,7 +1,7 @@
 ﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
-    [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
+    [Parameter(HelpMessage = "Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
     [string] $useGhTokenWorkflowForPush = 'false'
@@ -82,6 +82,7 @@ try {
         }
 
         if ($secretName) {
+            # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
             $secretValue = GetSecret -secret $secretName -keyVaultCredentials $keyVaultCredentials -encrypted:($secretsProperty.StartsWith('*'))
             if ($secretValue) {
                 $json = @{}
