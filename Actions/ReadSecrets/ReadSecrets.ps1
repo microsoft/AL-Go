@@ -45,10 +45,18 @@ try {
             $secretName = $secret
             if ($settings.Keys -contains $secretNameProperty) {
                 $secretName = $settings."$secretNameProperty"
-                $secret = "$($secret)=$secretName"
             }
-            if ($secretName -and ($secretsCollection -notcontains $secret)) {
-                $secretsCollection += $secret
+            # Secret is the AL-Go name of the secret
+            # SecretName is the actual name of the secret to get from the KeyVault or GitHub environment
+            if ($secretName) {
+                if ($secretName -ne $secret) {
+                    # Setup mapping between AL-Go secret name and actual secret name
+                    $secret = "$($secret)=$secretName"
+                }
+                if ($secretsCollection -notcontains $secret) {
+                    # Add secret to the collection of secrets to get
+                    $secretsCollection += $secret
+                }
             }
         }
     }
