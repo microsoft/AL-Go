@@ -76,14 +76,16 @@ try {
     foreach($secret in @($secretsCollection)) {
         $secretSplit = $secret.Split('=')
         $secretsProperty = $secretSplit[0]
-        $secretName = $secretsProperty.TrimStart('*')
+        # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
+        $secretsPropertyName = $secretsProperty.TrimStart('*')
+        $encrypted = $secretsProperty.StartsWith('*')
+        $secretName = $secretsPropertyName
         if ($secretSplit.Count -gt 1) {
             $secretName = $secretSplit[1]
         }
 
         if ($secretName) {
-            # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
-            $secretValue = GetSecret -secret $secretName -keyVaultCredentials $keyVaultCredentials -encrypted:($secretsProperty.StartsWith('*'))
+            $secretValue = GetSecret -secret $secretName -keyVaultCredentials $keyVaultCredentials -encrypted:$encrypted
             if ($secretValue) {
                 $json = @{}
                 try {
@@ -104,7 +106,7 @@ try {
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 $outSecrets += @{ "$secretsProperty" = $base64value }
-                Write-Host "$($secretsProperty.TrimStart('*')) successfully read from secret $secretName"
+                Write-Host "$($secretsPropertyName) successfully read from secret $secretName"
                 $secretsCollection.Remove($secret)
             }
         }
@@ -113,13 +115,16 @@ try {
     if ($secretsCollection) {
         $unresolvedSecrets = ($secretsCollection | ForEach-Object {
             $secretSplit = @($_.Split('='))
+            $secretsProperty = $secretSplit[0]
+            # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
+            $secretsPropertyName = $secretsProperty.TrimStart('*')
             if ($secretSplit.Count -eq 1 -or ($secretSplit[1] -eq '')) {
-                $secretSplit[0].TrimStart('*')
+                $secretsPropertyName
             }
             else {
-                "$($secretSplit[0].TrimStart('*')) (Secret $($secretSplit[1]))"
+                "$($secretsPropertyName) (Secret $($secretSplit[1]))"
             }
-            $outSecrets += @{ "$($secretSplit[0])" = "" }
+            $outSecrets += @{ "$secretsProperty" = "" }
         }) -join ', '
         Write-Host "The following secrets was not found: $unresolvedSecrets"
     }
