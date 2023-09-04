@@ -58,8 +58,13 @@ By specifying a custom EnvironmentType in the DeployTo structure for an environm
 AL-Go for GitHub now adds status checks to Pull Requests Builds. In your GitHub branch protection rules, you can set up "Pull Request Status Check" to be a required status check to ensure Pull Request Builds succeed before merging.
 
 ### Secrets in AL-Go for GitHub
+
 In v3.2 of AL-Go for GitHub, all secrets requested by AL-Go for GitHub were available to all steps in a job one compressed JSON structure in env:Secrets.
 With this update, only the steps that actually requires secrets will have the secrets available.
+
+### Temporary GhTokenWorkflow Secret
+
+If you do not want to have a GhTokenWorkflow secret in your repositories, you can now specify the token during Workflow Dispatch. All workflows using the GhTokenWorkflow secret will now have an optional parameter for specifying a temporary GhTokenWorkflow. Setting this secret will also automatically use this temporary token for Push (set useGhTokenWorkflowForPush)
 
 ## v3.2
 
