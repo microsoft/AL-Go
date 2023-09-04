@@ -126,7 +126,7 @@ try {
 
     #region Action: Output
 
-    if ($outSecrets.ContainsKey('ghTokenWorkflow') -and $tempGhTokenWorkflow) {
+    if ($outSecrets.Contains('ghTokenWorkflow') -and $tempGhTokenWorkflow) {
         Write-Host "Overriding GhTokenWorkflow with manually specified token"
         $outSecrets.ghTokenWorkflow = $tempGhTokenWorkflow
         # Use the manual GhTokenWorkflow for push if specified
