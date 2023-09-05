@@ -86,11 +86,11 @@ function Test-ArtifactsFromRun {
             }).Count
         }
         if ($actual -ne $expected) {
-            Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
+            Write-Host "::Error::Expected number of $type was $expected. Actual number of $type is $actual"
             $err = $true
         }
         else {
-            Write-Host "Number of $_ was $actual as expected"
+            Write-Host "Number of $type was $actual as expected"
         }
     }
     if ($err) {
