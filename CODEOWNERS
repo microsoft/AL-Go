@@ -1,7 +1,2 @@
 # These owners will be the default owners for everything in the repo.
 * @microsoft/d365-bc-engineering-systems
-
-# Build system files
-/Internal @microsoft/d365-bc-engineering-systems
-/.github @microsoft/d365-bc-engineering-systems
-/CODEOWNERS @microsoft/d365-bc-engineering-systems
