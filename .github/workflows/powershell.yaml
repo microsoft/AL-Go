@@ -6,7 +6,7 @@ name: PSScriptAnalyzer
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "PSScriptAnalyzer" ]
   pull_request:
     branches: [ "main" ]
 
