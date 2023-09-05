@@ -1,7 +1,7 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
-    [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
+    [Parameter(HelpMessage = "Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
     [string] $useGhTokenWorkflowForPush = 'false'
@@ -26,16 +26,7 @@ try {
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $keyVaultName = ""
-    if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
-        $keyVaultName = $settings.keyVaultName
-        if ([string]::IsNullOrEmpty($keyVaultName)) {
-            $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
-            if ($credentialsJson.Keys -contains "keyVaultName") {
-                $keyVaultName = $credentialsJson.keyVaultName
-            }
-        }
-    }
+    $keyVaultCredentials = GetKeyVaultCredentials
     $getAppDependencyProbingPathsSecrets = $false
     $getTokenForPush = $false
     [System.Collections.ArrayList]$secretsCollection = @()
@@ -46,16 +37,26 @@ try {
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
         }
-        $secretNameProperty = "$($secret)SecretName"
+        $secretNameProperty = "$($secret.TrimStart('*'))SecretName"
         if ($secret -eq 'AppDependencyProbingPathsSecrets') {
             $getAppDependencyProbingPathsSecrets = $true
         }
         else {
+            $secretName = $secret
             if ($settings.Keys -contains $secretNameProperty) {
-                $secret = "$($secret)=$($settings."$secretNameProperty")"
+                $secretName = $settings."$secretNameProperty"
             }
-            if ($secretsCollection -notcontains $secret) {
-                $secretsCollection += $secret
+            # Secret is the AL-Go name of the secret
+            # SecretName is the actual name of the secret to get from the KeyVault or GitHub environment
+            if ($secretName) {
+                if ($secretName -ne $secret) {
+                    # Setup mapping between AL-Go secret name and actual secret name
+                    $secret = "$($secret)=$secretName"
+                }
+                if ($secretsCollection -notcontains $secret) {
+                    # Add secret to the collection of secrets to get
+                    $secretsCollection += $secret
+                }
             }
         }
     }
@@ -75,13 +76,16 @@ try {
     foreach($secret in @($secretsCollection)) {
         $secretSplit = $secret.Split('=')
         $secretsProperty = $secretSplit[0]
-        $secretName = $secretsProperty
+        # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
+        $secretsPropertyName = $secretsProperty.TrimStart('*')
+        $encrypted = $secretsProperty.StartsWith('*')
+        $secretName = $secretsPropertyName
         if ($secretSplit.Count -gt 1) {
             $secretName = $secretSplit[1]
         }
 
         if ($secretName) {
-            $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
+            $secretValue = GetSecret -secret $secretName -keyVaultCredentials $keyVaultCredentials -encrypted:$encrypted
             if ($secretValue) {
                 $json = @{}
                 try {
@@ -102,7 +106,7 @@ try {
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 $outSecrets += @{ "$secretsProperty" = $base64value }
-                Write-Host "$secretsProperty successfully read from secret $secretName"
+                Write-Host "$($secretsPropertyName) successfully read from secret $secretName"
                 $secretsCollection.Remove($secret)
             }
         }
@@ -111,13 +115,16 @@ try {
     if ($secretsCollection) {
         $unresolvedSecrets = ($secretsCollection | ForEach-Object {
             $secretSplit = @($_.Split('='))
-            if ($secretSplit.Count -eq 1) {
-                $secretSplit[0]
+            $secretsProperty = $secretSplit[0]
+            # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
+            $secretsPropertyName = $secretsProperty.TrimStart('*')
+            if ($secretSplit.Count -eq 1 -or ($secretSplit[1] -eq '')) {
+                $secretsPropertyName
             }
             else {
-                "$($secretSplit[0]) (Secret $($secretSplit[1]))"
+                "$($secretsPropertyName) (Secret $($secretSplit[1]))"
             }
-            $outSecrets += @{ "$($secretSplit[0])" = "" }
+            $outSecrets += @{ "$secretsProperty" = "" }
         }) -join ', '
         Write-Host "The following secrets was not found: $unresolvedSecrets"
     }

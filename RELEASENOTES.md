@@ -2,7 +2,7 @@
 
 Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
 
-### Issues 
+### Issues
 
 - Issue 227 Feature request: Allow deployments with "Schema Sync Mode" = Force
 - Issue 519 Deploying to onprem environment
@@ -128,13 +128,13 @@ All these actions now uses the selected branch in the **Run workflow** dialog as
 
 ### New Settings
 
-- `UseCompilerFolder`: Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set `doNotPublishApps` to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. 
+- `UseCompilerFolder`: Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set `doNotPublishApps` to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing.
 - `vsixFile`: vsixFile should be a direct download URL to the version of the AL Language extension you want to use for building the project or repo. By default, AL-Go will use the AL Language extension that comes with the Business Central Artifacts.
 
 ### New Workflows
 
 - **_BuildALGoProject** is a reusable workflow that unites the steps for building an AL-Go projects. It has been reused in the following workflows: _CI/CD_, _Pull Request Build_, _NextMinor_, _NextMajor_ and _Current_.
-The workflow appears under the _Actions_ tab in GitHub, but it is not actionable in any way.  
+The workflow appears under the _Actions_ tab in GitHub, but it is not actionable in any way.
 
 ### New Actions
 
@@ -271,7 +271,7 @@ Setting the repo setting "runs-on" to "Ubuntu-Latest", followed by running Updat
 - Issue #273 Potential security issue in Pull Request Handler in Open Source repositories
 - Issue #303 PullRequestHandler fails on added files
 - Issue #299 Multi-project repositories build all projects on Pull Requests
-- Issue #291 Issues with new Pull Request Handler 
+- Issue #291 Issues with new Pull Request Handler
 - Issue #287 AL-Go pipeline fails in ReadSettings step
 
 ### Changes
@@ -386,7 +386,7 @@ Setting the repo setting "runs-on" to "Ubuntu-Latest", followed by running Updat
 ```
     "ConditionalSettings": [
         {
-            "branches": [ 
+            "branches": [
                 "feature/*"
             ],
             "settings": {

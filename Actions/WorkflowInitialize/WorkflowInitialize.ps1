@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The event id of the initiating workflow", Mandatory = $true)]
     [string] $eventId
 )
@@ -54,7 +54,7 @@ try {
         AddTelemetryProperty -telemetryScope $telemetryScope -key "runAttempt" -value $ENV:GITHUB_RUN_ATTEMPT
         AddTelemetryProperty -telemetryScope $telemetryScope -key "runNumber" -value $ENV:GITHUB_RUN_NUMBER
         AddTelemetryProperty -telemetryScope $telemetryScope -key "runId" -value $ENV:GITHUB_RUN_ID
-        
+
         $scopeJson = strToHexStr -str ($telemetryScope | ConvertTo-Json -Compress)
         $correlationId = ($telemetryScope.CorrelationId).ToString()
     }

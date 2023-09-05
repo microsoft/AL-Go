@@ -9,7 +9,7 @@ inputs:
     description: All GitHub Secrets in compressed JSON format
     required: true
   getSecrets:
-    description: Comma separated list of Secrets to get
+    description: Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted
     required: true
   useGhTokenWorkflowForPush:
     description: Determines whether you want to use the GhTokenWorkflow secret for TokenForPush

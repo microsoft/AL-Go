@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [switch] $local
 )
 
@@ -62,8 +62,11 @@ if ($isPsCore) {
 else {
     $byteEncodingParam = @{ "Encoding" = "byte" }
     $allowUnencryptedAuthenticationParam = @{ }
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isWindows', Justification = 'Will only run on PS5')]
     $isWindows = $true
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isLinux', Justification = 'Will only run on PS5')]
     $isLinux = $false
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isMacOS', Justification = 'Will only run on PS5')]
     $IsMacOS = $false
 }
 
@@ -1602,9 +1605,6 @@ function CreateDevEnv {
                         if (-not ($legalParameters -contains $_)) {
                             throw "$_ is an illegal property in adminCenterApiCredentials setting"
                         }
-                    }
-                    if ($adminCenterApiCredentials.Keys -contains 'ClientSecret') {
-                        $adminCenterApiCredentials.ClientSecret = ConvertTo-SecureString -String $adminCenterApiCredentials.ClientSecret -AsPlainText -Force
                     }
                 }
             }

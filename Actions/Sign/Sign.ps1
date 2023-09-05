@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(HelpMessage = "Azure Credentials secret", Mandatory = $true)]
     [string] $AzureCredentialsJson,
     [Parameter(HelpMessage = "The path to the files to be signed", Mandatory = $true)]
@@ -26,23 +26,25 @@ try {
 
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
-    $Files | ForEach-Object { 
-        Write-Host "- $_" 
+    $Files | ForEach-Object {
+        Write-Host "- $_"
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
     $settings = $env:Settings | ConvertFrom-Json
-    if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
-        $AzureKeyVaultName = $AzureCredentials.keyVaultName
-    } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {
+    if ($settings.keyVaultName) {
         $AzureKeyVaultName = $settings.keyVaultName
-    } else {
+    }
+    elseif ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
+        $AzureKeyVaultName = $AzureCredentials.keyVaultName
+    }
+    else {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
     Retry-Command -Command {
         Write-Host "::group::Register NavSip"
-        Register-NavSip 
+        Register-NavSip
         Write-Host "::endgroup::"
 
         AzureSignTool sign --file-digest $digestAlgorithm `
@@ -55,7 +57,7 @@ try {
             --timestamp-digest $digestAlgorithm `
             $Files
     } -MaxRetries 3
-    
+
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {

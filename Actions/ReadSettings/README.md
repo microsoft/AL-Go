@@ -10,8 +10,6 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| actor | | The GitHub actor running the action | github.actor |
-| token | | The GitHub token running the action | github.token |
 | project | | Project name if the repository is setup for multiple projects | . |
 | get | | Specifies which properties to get from the settings file, default is all | |
 

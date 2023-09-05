@@ -1,4 +1,4 @@
-name: Cleanup after failed E2E 
+name: Cleanup after failed E2E
 
 on:
   workflow_dispatch:

@@ -19,7 +19,7 @@
     - appFolders, see https://aka.ms/algosettings#appfolders
     - testFolders, see https://aka.ms/algosettings#testfolders
     - appSourceMandatoryAffixes, see https://aka.ms/algosettings#appSourceMandatoryAffixes
-    - enableAppSourceCop, see https://aka.ms/algosettings#enableAppSourceCop 
+    - enableAppSourceCop, see https://aka.ms/algosettings#enableAppSourceCop
     - enablePerTenantExtensionCop, see https://aka.ms/algosettings#enablePerTenantExtensionCop
     - enableCodeCop, see https://aka.ms/algosettings#enableCodeCop
     - enableUICop, see https://aka.ms/algosettings#enableUICop

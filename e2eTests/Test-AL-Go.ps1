@@ -1,4 +1,5 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -15,15 +16,15 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  ______           _ ___                _    _           _                                    _       
-# |  ____|         | |__ \              | |  | |         | |                                  (_)      
-# | |__   _ __   __| |  ) |___ _ __   __| |  | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___  
-# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \ 
+#  ______           _ ___                _    _           _                                    _
+# |  ____|         | |__ \              | |  | |         | |                                  (_)
+# | |__   _ __   __| |  ) |___ _ __   __| |  | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___
+# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \
 # | |____| | | | (_| |/ /_  __/ | | | (_| |  | |_  __\__ \ |_   \__ \ (__  __/ | | | (_| | |  | | (_) |
-# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/ 
+# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/
 #
 # This scenario runs for both PTE template and AppSource App template and as single project and multi project repositories
-#                                                                                                      
+#
 # - Login to GitHub
 # - Create a new repository based on the selected template
 # - If (AppSource App) Create a licensefileurl secret
@@ -59,7 +60,7 @@ Write-Host -ForegroundColor Yellow @'
 # - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 
@@ -137,7 +138,7 @@ $runs++
 $run = Run-CICD -wait -branch $branch
 $runs++
 
-if ($useCompilerFolder) { 
+if ($useCompilerFolder) {
     # If using compiler folder duing tests, doNotPublishApps is also set to true (for now), which means that apps are not published and tests are not run
     # Later we will fix this to include test runs as well, but for now, expected number of tests is 0
     $expectedNumberOfTests = 0

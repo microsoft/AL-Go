@@ -90,7 +90,7 @@ function Add-PropertiesToJsonFile {
                 $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
                 if ($run) {
                     break
-                } 
+                }
                 Write-Host "Run not started, waiting..."
             }
             WaitWorkflow -repository $repository -runid $run.id
@@ -161,7 +161,7 @@ function RunWorkflow {
     else {
         Write-Host "No previous run found"
     }
-    
+
     Write-Host "Run workflow"
     $url = "https://api.github.com/repos/$repository/actions/workflows/$($workflow.id)/dispatches"
     Write-Host $url
@@ -351,7 +351,7 @@ function CreateAlGoRepository {
     Write-Host "Downloading template from $templateUrl"
     $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
     [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
-    
+
     $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
     Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
     Copy-Item (Join-Path (Get-Item "$tempRepoPath/*/$templateFolder").FullName '*') -Destination . -Recurse -Force
@@ -363,17 +363,17 @@ function CreateAlGoRepository {
         Get-ChildItem -Path . -File -Recurse | ForEach-Object {
             $file = $_.FullName
             $lines = Get-Content -Encoding UTF8 -path $file
-        
+
             # Replace URL's to actions repository first
             $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/main(.*)$"
             $replace = "`${1}https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`${2}"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
-        
+
             # Replace AL-Go-Actions references
             $regex = "^(.*)microsoft\/AL-Go-Actions(.*)main(.*)$"
             $replace = "`${1}$($templateOwner)/AL-Go/Actions`${2}$($templateBranch)`${3}"
             $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
-        
+
             $content = "$($lines -join "`n")`n"
 
             # Update Template references in test apps
@@ -504,7 +504,7 @@ function MergePRandPull {
         $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
         if ($run) {
             break
-        } 
+        }
         Write-Host "Run not started, waiting..."
     }
     if ($wait) {

@@ -1,4 +1,5 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -12,14 +13,14 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  ______           _ ___                _    _    _                           _         _           _                                    _       
-# |  ____|         | |__ \              | |  | |  | |                         | |       | |         | |                                  (_)      
-# | |__   _ __   __| |  ) |___ _ __   __| |  | |  | |_ __   __ _ _ __ __ _  __| | ___   | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___  
-# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | |  | | '_ \ / _` | '__/ _` |/ _` |/ _ \  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \ 
+#  ______           _ ___                _    _    _                           _         _           _                                    _
+# |  ____|         | |__ \              | |  | |  | |                         | |       | |         | |                                  (_)
+# | |__   _ __   __| |  ) |___ _ __   __| |  | |  | |_ __   __ _ _ __ __ _  __| | ___   | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___
+# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | |  | | '_ \ / _` | '__/ _` |/ _` |/ _ \  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \
 # | |____| | | | (_| |/ /_  __/ | | | (_| |  | |__| | |_) | (_| | | | (_| | (_| |  __/  | |_  __\__ \ |_   \__ \ (__  __/ | | | (_| | |  | | (_) |
-# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \____/| .__/ \__, |_|  \__,_|\__,_|\___|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/ 
-#                                                   | |     __/ |                                                                                 
-#                                                   |_|    |___/                                                                                  
+# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \____/| .__/ \__, |_|  \__,_|\__,_|\___|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/
+#                                                   | |     __/ |
+#                                                   |_|    |___/
 #
 # This scenario runs for every previously released version of GitHub Go - both for PTEs and AppSource Apps
 # The scenario tests that we do not break existing CI/CD workflows and that existing repositories can upgrade to newest version
@@ -98,7 +99,7 @@ $run = Run-CICD -wait -branch $branch
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Expected Run: CI/CD triggered on workflow_dispatch
-$runs++ 
+$runs++
 
 # Update AL-Go System Files
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
@@ -112,11 +113,11 @@ Start-Sleep -seconds 100
 MergePRandPull -branch $branch | Out-Null
 if ($releaseVersion -ge [System.Version]"2.2") {
     # Expected Run: Pull Request Handler triggered by pull_request_target
-    $runs++ 
-    
+    $runs++
+
     if ($releaseVersion -le [System.Version]"2.4") {
         # Expected Run: CICD triggered by workflow_run (after Pull Request Handler has finished)
-        $runs++ 
+        $runs++
     }
 }
 # Expected Run: CICD run on push (after PR is merged)

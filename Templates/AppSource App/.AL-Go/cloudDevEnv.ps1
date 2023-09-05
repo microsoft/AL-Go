@@ -1,4 +1,4 @@
-#
+﻿#
 # Script for creating cloud development environment
 # Please do not modify this script as it will be auto-updated from the AL-Go Template
 # Recommended approach is to use as is or add a script (freddyk-devenv.ps1), which calls this script with the user specific parameters
@@ -31,13 +31,13 @@ $project = GetProject -baseFolder $baseFolder -projectALGoFolder $PSScriptRoot
 Clear-Host
 Write-Host
 Write-Host -ForegroundColor Yellow @'
-   _____ _                 _   _____             ______            
-  / ____| |               | | |  __ \           |  ____|           
+   _____ _                 _   _____             ______
+  / ____| |               | | |  __ \           |  ____|
  | |    | | ___  _   _  __| | | |  | | _____   __ |__   _ ____   __
  | |    | |/ _ \| | | |/ _` | | |  | |/ _ \ \ / /  __| | '_ \ \ / /
- | |____| | (_) | |_| | (_| | | |__| |  __/\ V /| |____| | | \ V / 
-  \_____|_|\___/ \__,_|\__,_| |_____/ \___| \_/ |______|_| |_|\_/  
-                                                                   
+ | |____| | (_) | |_| | (_| | | |__| |  __/\ V /| |____| | | \ V /
+  \_____|_|\___/ \__,_|\__,_| |_____/ \___| \_/ |______|_| |_|\_/
+
 '@
 
 Write-Host @'
