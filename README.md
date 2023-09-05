@@ -6,7 +6,7 @@ The goal is that people who have created their GitHub repositories based on the 
 The roadmap for AL-Go for GitHub can be found here: [https://aka.ms/ALGoRoadmap](https://aka.ms/ALGoRoadmap)
 
 The template repositories to use as starting point are:
-- [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [https://aka.ms/algopte](https://aka.ms/algopte) is the GitHub repository template for Per Tenant Extenstions. When creating a Per Tenant Extensions, this is your starting point.
+- [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [https://aka.ms/algopte](https://aka.ms/algopte) is the GitHub repository template for Per Tenant Extensions. When creating a Per Tenant Extensions, this is your starting point.
 - [https://github.com/microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) or [https://aka.ms/algoappsource](https://aka.ms/algoappsource) is the GitHub repository template for AppSource apps. When creating an AppSource App, this is your starting point.
 
 
