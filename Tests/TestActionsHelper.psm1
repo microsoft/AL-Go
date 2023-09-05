@@ -42,6 +42,10 @@ function GetActionScript {
     $actionScript
 }
 
+<#
+.SYNOPSIS
+Test the yaml structure of an action
+#>
 function YamlTest {
     Param(
         [string] $scriptRoot,
@@ -170,6 +174,10 @@ function YamlTest {
     $yamlLines.Count | Should -be $actualYaml.Count
 }
 
+<#
+.SYNOPSIS
+Test that all actions are referenced from microsoft/AL-Go-Actions@<main|preview> or actions/ (by GitHub)
+#>
 function TestActionsReferences {
     param(
         [Parameter(Mandatory)]
@@ -198,6 +206,10 @@ function TestActionsReferences {
     }
 }
 
+<#
+.SYNOPSIS
+Test that all referenced workflows are coming from .github/workflows/
+#>
 function TestWorkflowReferences {
     param(
         [Parameter(Mandatory)]
