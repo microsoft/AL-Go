@@ -1,4 +1,4 @@
-﻿function Run-TestCurrent {
+﻿function RunTestCurrent {
     Param(
         [switch] $wait,
         [string] $repository,

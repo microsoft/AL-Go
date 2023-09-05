@@ -32,7 +32,7 @@ try {
     if ($isWindows) {
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
-        Start-Job -ScriptBlock {
+        Start-Job -ScriptBlock { Param($genericImageName)
             docker pull --quiet $genericImageName
         } -ArgumentList $genericImageName | Out-Null
     }

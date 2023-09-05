@@ -1,4 +1,4 @@
-﻿function Run-UpdateAlGoSystemFiles {
+﻿function RunUpdateAlGoSystemFiles {
     Param(
         [string] $templateUrl,
         [switch] $directCommit,

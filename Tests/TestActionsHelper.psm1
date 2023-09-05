@@ -21,6 +21,10 @@ function iReplace {
     $string
 }
 
+<#
+.SYNOPSIS
+Get the action script from a script file
+#>
 function GetActionScript {
     Param(
         [string] $scriptRoot,

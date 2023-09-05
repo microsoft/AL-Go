@@ -1,4 +1,4 @@
-﻿function Get-NumberOfRuns {
+﻿function GetNumberOfRuns {
     Param(
         [string] $repository,
         [string] $workflowName
@@ -17,14 +17,14 @@
     $runs.Count
 }
 
-function Test-NumberOfRuns {
+function TestNumberOfRuns {
     Param(
         [string] $repository,
         [string] $workflowName,
         [int] $expectedNumberOfRuns
     )
 
-    $count = Get-NumberOfRuns -repository $repository -workflowName $workflowName
+    $count = GetNumberOfRuns -repository $repository -workflowName $workflowName
     if ($count -ne $expectedNumberOfRuns) {
         throw "Expected number of runs was $expectedNumberOfRuns. Actual number was $($count)"
     }
@@ -37,8 +37,7 @@ function Test-ArtifactsFromRun {
         [hashtable] $expectedArtifacts = @{},
         [string] $expectedNumberOfTests = 0,
         [string] $repoVersion = "",
-        [string] $appVersion = "",
-        [switch] $addDelay
+        [string] $appVersion = ""
     )
 
     Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
@@ -73,8 +72,7 @@ function Test-ArtifactsFromRun {
         }
     }
     $path = Join-Path (Get-Location).Path $folder -Resolve
-    $expectedArtifacts.Keys | ForEach-Object {
-        $type = $_
+    foreach($type in $expectedArtifacts.Keys) {
         $expected = $expectedArtifacts."$type"
         Write-Host "Type: $type, Expected: $expected"
         if ($type -eq 'thisbuild') {
@@ -108,11 +106,12 @@ function Test-PropertiesInJsonFile {
 
     $err = $false
     $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-    $properties.Keys | ForEach-Object {
-        $expected = $properties."$_"
-        $actual = Invoke-Expression "`$json.$_"
+    foreach($key in $properties.Keys) {
+        $expected = $properties."$key"
+        $expression = $json."$key"
+        $actual = Invoke-Expression $expression
         if ($actual -ne $expected) {
-            Write-Host "::Error::Property $_ is $actual. Expected $expected"
+            Write-Host "::Error::Property $key is $actual. Expected $expected"
             $err = $true
         }
     }

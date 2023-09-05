@@ -83,15 +83,15 @@ CreateAlGoRepository `
 $repoPath = (Get-Location).Path
 
 # Update AL-Go System Files to uptake UseProjectDependencies setting
-Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
 
 # Run CI/CD workflow
-$run = Run-CICD -branch $branch
+$run = RunCICD -branch $branch
 
 # Launch Current, NextMinor and NextMajor builds
-$runTestCurrent = Run-TestCurrent -branch $branch
-$runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+$runTestCurrent = RunTestCurrent -branch $branch
+$runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
+$runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
 
 # Wait for all workflows to finish
 WaitWorkflow -runid $run.id

@@ -132,12 +132,12 @@ try {
         }
 
         if ($appJson.PSObject.Properties.Name -eq "dependencies") {
-            $appJson.dependencies | ForEach-Object {
-                if ($_.PSObject.Properties.Name -eq "AppId") {
-                    $id = $_.AppId
+            foreach($dependency in $appJson.dependencies) {
+                if ($dependency.PSObject.Properties.Name -eq "AppId") {
+                    $id = $dependency.AppId
                 }
                 else {
-                    $id = $_.Id
+                    $id = $dependency.Id
                 }
                 if ($testRunnerApps.Contains($id)) {
                     $ttype = "Test App"
@@ -146,8 +146,8 @@ try {
         }
 
         if ($ttype -ne "Test App") {
-            Get-ChildItem -Path $appFolder -Filter "*.al" -Recurse | ForEach-Object {
-                $alContent = (Get-Content -Path $_.FullName -Encoding UTF8) -join "`n"
+            foreach($appName in (Get-ChildItem -Path $appFolder -Filter "*.al" -Recurse).FullName) {
+                $alContent = (Get-Content -Path $appName -Encoding UTF8) -join "`n"
                 if ($alContent -like "*codeunit*subtype*=*test*[test]*") {
                     $ttype = "Test App"
                 }

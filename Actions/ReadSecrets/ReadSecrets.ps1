@@ -1,10 +1,12 @@
 ﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
-    [Parameter(HelpMessage = "Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
+    [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
-    [string] $useGhTokenWorkflowForPush = 'false'
+    [string] $useGhTokenWorkflowForPush = 'false',
+    [Parameter(HelpMessage = "Temporary Access Token, which overrides GhTokenWorkflow if present", Mandatory = $false)]
+    [string] $tempGhTokenWorkflow = ""
 )
 
 $buildMutexName = "AL-Go-ReadSecrets"
@@ -24,9 +26,23 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
 
+    if ($tempGhTokenWorkflow) {
+        # Use the temporary GhTokenWorkflow for push if specified and needed
+        $useGhTokenWorkflowForPush = 'true'
+    }
+
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $keyVaultCredentials = GetKeyVaultCredentials
+    $keyVaultName = ""
+    if (IsKeyVaultSet -and $settings.ContainsKey('keyVaultName')) {
+        $keyVaultName = $settings.keyVaultName
+        if ([string]::IsNullOrEmpty($keyVaultName)) {
+            $credentialsJson = Get-KeyVaultCredentials | ConvertTo-HashTable
+            if ($credentialsJson.Keys -contains "keyVaultName") {
+                $keyVaultName = $credentialsJson.keyVaultName
+            }
+        }
+    }
     $getAppDependencyProbingPathsSecrets = $false
     $getTokenForPush = $false
     [System.Collections.ArrayList]$secretsCollection = @()
@@ -37,26 +53,16 @@ try {
             # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
             $secret = 'ghTokenWorkflow'
         }
-        $secretNameProperty = "$($secret.TrimStart('*'))SecretName"
+        $secretNameProperty = "$($secret)SecretName"
         if ($secret -eq 'AppDependencyProbingPathsSecrets') {
             $getAppDependencyProbingPathsSecrets = $true
         }
         else {
-            $secretName = $secret
             if ($settings.Keys -contains $secretNameProperty) {
-                $secretName = $settings."$secretNameProperty"
+                $secret = "$($secret)=$($settings."$secretNameProperty")"
             }
-            # Secret is the AL-Go name of the secret
-            # SecretName is the actual name of the secret to get from the KeyVault or GitHub environment
-            if ($secretName) {
-                if ($secretName -ne $secret) {
-                    # Setup mapping between AL-Go secret name and actual secret name
-                    $secret = "$($secret)=$secretName"
-                }
-                if ($secretsCollection -notcontains $secret) {
-                    # Add secret to the collection of secrets to get
-                    $secretsCollection += $secret
-                }
+            if ($secretsCollection -notcontains $secret) {
+                $secretsCollection += $secret
             }
         }
     }
@@ -76,22 +82,26 @@ try {
     foreach($secret in @($secretsCollection)) {
         $secretSplit = $secret.Split('=')
         $secretsProperty = $secretSplit[0]
-        # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
-        $secretsPropertyName = $secretsProperty.TrimStart('*')
-        $encrypted = $secretsProperty.StartsWith('*')
-        $secretName = $secretsPropertyName
+        $secretName = $secretsProperty
         if ($secretSplit.Count -gt 1) {
             $secretName = $secretSplit[1]
         }
 
         if ($secretName) {
-            $secretValue = GetSecret -secret $secretName -keyVaultCredentials $keyVaultCredentials -encrypted:$encrypted
+            if ($tempGhTokenWorkflow -and $secretsProperty -eq 'ghTokenWorkflow') {
+                Write-Host "Using Temporary Access Token as GhTokenWorkflow"
+                $secretValue = $tempGhTokenWorkflow
+            }
+            else {
+                $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
+            }
             if ($secretValue) {
-                $json = @{}
                 try {
+                    # Test whether the secret is a JSON secret in order to mask the individual values
                     $json = $secretValue | ConvertFrom-Json | ConvertTo-HashTable
                 }
                 catch {
+                    $json = @{}
                 }
                 if ($json.Keys.Count) {
                     if ($secretValue.contains("`n")) {
@@ -106,7 +116,7 @@ try {
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 $outSecrets += @{ "$secretsProperty" = $base64value }
-                Write-Host "$($secretsPropertyName) successfully read from secret $secretName"
+                Write-Host "$secretsProperty successfully retrieved"
                 $secretsCollection.Remove($secret)
             }
         }
@@ -115,16 +125,13 @@ try {
     if ($secretsCollection) {
         $unresolvedSecrets = ($secretsCollection | ForEach-Object {
             $secretSplit = @($_.Split('='))
-            $secretsProperty = $secretSplit[0]
-            # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
-            $secretsPropertyName = $secretsProperty.TrimStart('*')
-            if ($secretSplit.Count -eq 1 -or ($secretSplit[1] -eq '')) {
-                $secretsPropertyName
+            if ($secretSplit.Count -eq 1) {
+                $secretSplit[0]
             }
             else {
-                "$($secretsPropertyName) (Secret $($secretSplit[1]))"
+                "$($secretSplit[0]) (Secret $($secretSplit[1]))"
             }
-            $outSecrets += @{ "$secretsProperty" = "" }
+            $outSecrets += @{ "$($secretSplit[0])" = "" }
         }) -join ', '
         Write-Host "The following secrets was not found: $unresolvedSecrets"
     }
