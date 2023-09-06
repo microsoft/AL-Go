@@ -24,7 +24,7 @@ jobs:
       - name: Test AL-GO Workflows
         if: github.repository_owner == 'microsoft'
         run: |
-          $errorActionPreference = "Stop"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
             Get-ChildItem -Path (Join-Path "." "Tests/WorkflowSanitation") -Filter "*.Test.ps1" -File | ForEach-Object {
               Write-Host "Running $($_.Name)"
@@ -33,5 +33,5 @@ jobs:
           }
           catch {
             Write-Host "::Error::Error when running tests. The Error was $($_.Exception.Message)"
-            $host.SetShouldExit(1)
+            exit 1
           }
