@@ -431,7 +431,9 @@ finally {
             Copy-Item -Path $containerEventLogFile -Destination $destFolder
         }
     }
-    catch {}
+    catch {
+        Write-Host "Error getting event log from container: $($_.Exception.Message)"
+    }
     if ($containerBaseFolder -and (Test-Path $containerBaseFolder) -and $projectPath -and (Test-Path $projectPath)) {
         Write-Host "Removing temp folder"
         Remove-Item -Path (Join-Path $projectPath '*') -Recurse -Force

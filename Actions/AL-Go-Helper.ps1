@@ -979,7 +979,7 @@ function AnalyzeRepo {
     }
 
     if (!$doNotCheckArtifactSetting) {
-        $artifactUrl = Determine-ArtifactUrl -projectSettings $settings -insiderSasToken $insiderSasToken -doNotIssueWarnings:$doNotIssueWarnings
+        $artifactUrl = DetermineArtifactUrl -projectSettings $settings -insiderSasToken $insiderSasToken -doNotIssueWarnings:$doNotIssueWarnings
         $version = $artifactUrl.Split('/')[4]
         Write-Host "Downloading artifacts from $($artifactUrl.Split('?')[0])"
         $folders = Download-Artifacts -artifactUrl $artifactUrl -includePlatform -ErrorAction SilentlyContinue
@@ -1387,7 +1387,6 @@ function Enter-Value {
         [Parameter(Mandatory = $true)]
         [string] $question,
         [switch] $doNotConvertToLower,
-        [switch] $previousStep,
         [char[]] $trimCharacters = @()
     )
 
@@ -1921,8 +1920,7 @@ Function AnalyzeProjectDependencies {
     # Loop through all projects
     # Get all apps in the project
     # Get all dependencies for the apps
-    $projects | ForEach-Object {
-        $project = $_
+    foreach($project in $projects) {
         Write-Host "- Analyzing project: $project"
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
@@ -1931,9 +1929,8 @@ Function AnalyzeProjectDependencies {
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
         Push-Location $baseFolder
         try {
-            $projectPath = Join-Path $baseFolder $project
             $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
-                return (Resolve-Path (Join-Path $projectPath $_) -Relative)
+                return (Resolve-Path (Join-Path $baseFolder "$project/$_") -Relative)
             }
         }
         finally {
@@ -2080,7 +2077,7 @@ function GetProject {
     $project
 }
 
-function Determine-ArtifactUrl {
+function DetermineArtifactUrl {
     Param(
         [hashtable] $projectSettings,
         [string] $insiderSasToken = "",
@@ -2167,7 +2164,7 @@ function Determine-ArtifactUrl {
     return $artifactUrl
 }
 
-function Retry-Command {
+function RetryCommand {
     param(
         [Parameter(Mandatory = $true)]
         [ScriptBlock]$Command,

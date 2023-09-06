@@ -1,5 +1,4 @@
 ﻿Param(
-    [switch] $github,
     [string] $githubOwner,
     [string] $token,
     [string] $bcContainerHelperVersion = ''

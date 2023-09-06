@@ -5,6 +5,7 @@ Describe "CheckForUpdates Action Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
     }
 

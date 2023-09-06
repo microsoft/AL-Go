@@ -1,4 +1,5 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
+Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]

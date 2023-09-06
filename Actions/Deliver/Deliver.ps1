@@ -85,8 +85,7 @@ try {
     $projectList | Out-Host
 
     $secrets = $env:Secrets | ConvertFrom-Json
-    $projectList | ForEach-Object {
-        $thisProject = $_
+    foreach($thisProject in $projectList) {
         # $project should be the project part of the artifact name generated from the build
         if ($thisProject -and ($thisProject -ne '.')) {
             $project = $thisProject.Replace('\','_').Replace('/','_')
@@ -426,7 +425,6 @@ try {
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
                 $mainAppJson = Get-Content -Path (Join-Path $baseFolder "$thisProject/$AppSourceMainAppFolder/app.json") -Encoding UTF8 | ConvertFrom-Json
-                $mainAppVersion = [Version]$mainAppJson.Version
                 $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
                 $artfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($artFolder.Count -eq 0) {

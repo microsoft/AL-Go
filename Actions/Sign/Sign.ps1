@@ -43,7 +43,7 @@ try {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
-    Retry-Command -Command { Param( $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Certificate, $Files)
+    RetryCommand -Command { Param( $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Certificate, $Files)
         Write-Host "::group::Register NavSip"
         Register-NavSip
         Write-Host "::endgroup::"
