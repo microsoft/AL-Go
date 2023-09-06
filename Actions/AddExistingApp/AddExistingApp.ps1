@@ -121,14 +121,12 @@ try {
             $ranges += @($appJson.idRange)
         }
 
-        $ttype = ""
-        $ranges | Select-Object -First 1 | ForEach-Object {
-            if ($_.from -lt 100000 -and $_.to -lt 100000) {
-                $ttype = "PTE"
-            }
-            else {
-                $ttype = "AppSource App"
-            }
+        # Determine whether the app is PTE or AppSource App based on one of the id ranges (the first)
+        if ($ranges[0].from -lt 100000 -and $ranges[0].to -lt 100000) {
+            $ttype = "PTE"
+        }
+        else {
+            $ttype = "AppSource App"
         }
 
         if ($appJson.PSObject.Properties.Name -eq "dependencies") {

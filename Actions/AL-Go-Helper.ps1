@@ -79,6 +79,7 @@ else {
 # Copy a HashTable to ensure non case sensitivity (Issue #385)
 function Copy-HashTable() {
     [CmdletBinding()]
+    [OutputType([System.Collections.HashTable])]
     Param(
         [parameter(ValueFromPipeline)]
         [hashtable] $object
@@ -94,6 +95,7 @@ function Copy-HashTable() {
 
 function ConvertTo-HashTable() {
     [CmdletBinding()]
+    [OutputType([System.Collections.HashTable])]
     Param(
         [parameter(ValueFromPipeline)]
         $object,

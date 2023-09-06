@@ -231,6 +231,10 @@ function TestWorkflowReferences {
     }
 }
 
+<#
+.SYNOPSIS
+Get all workflows in a path
+#>
 function GetWorkflowsInPath {
     param(
         [Parameter(Mandatory, ValueFromPipeline = $true)]
