@@ -85,7 +85,7 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
     foreach($project in $projects)
     {
         if (Test-Path -Path (Join-Path $baseFolder "$project/.AL-Go/settings.json")) {
-            $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
+            $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
             $modifiedProjectFolders = @($projectFolders | Where-Object {
                 $projectFolder = Join-Path $baseFolder "$_/*"

@@ -1177,7 +1177,7 @@ function CheckAppDependencyProbingPaths {
     $settings
 }
 
-function Get-ProjectFolders {
+function GetProjectFolders {
     Param(
         [string] $baseFolder,
         [string] $project,
