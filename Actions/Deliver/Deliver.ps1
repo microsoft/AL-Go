@@ -353,7 +353,20 @@ try {
             $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
             Write-Host "Storage Container Name is $storageContainerName"
             Write-Host "Storage Blob Name is $storageBlobName"
-            Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
+
+            $containerExists = $true
+            try {
+                Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
+            }
+            catch {
+                $containerExists = $false
+            }
+            
+            if (-not $containerExists) {
+                Write-Host "Container $storageContainerName does not exist. Creating..."
+                New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
+            }
+            
             Write-Host "Delivering to $storageContainerName in $($storageAccount.StorageAccountName)"
             $atypes.Split(',') | ForEach-Object {
                 $atype = $_
