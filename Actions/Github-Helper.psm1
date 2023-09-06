@@ -613,11 +613,14 @@ function DownloadRelease {
     $projects.Split(',') | ForEach-Object {
         $project = $_.Replace('\','_').Replace('/','_')
         Write-Host "project '$project'"
-
-        $release.assets | Where-Object { $_.name -like "$project-*-$mask-*.zip" -or $_.name -like "$project-$mask-*.zip" } | ForEach-Object {
-            $uri = "$api_url/repos/$repository/releases/assets/$($_.id)"
+        $assetPattern1 = "$project-*-$mask-*.zip"
+        $assetPattern2 = "$project-$mask-*.zip"
+        Write-Host "AssetPatterns: $assetPattern1 | $assetPattern2"
+        $assets = @($release.assets | Where-Object { $_.name -like $assetPattern1 -or $_.name -like $assetPattern2 })
+        foreach($asset in $assets) {
+            $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
             Write-Host $uri
-            $filename = Join-Path $path $_.name
+            $filename = Join-Path $path $asset.name
             InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
             return $filename
         }
