@@ -24,14 +24,15 @@ jobs:
       - name: Test AL-GO Workflows
         if: github.repository_owner == 'microsoft'
         run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
-            Get-ChildItem -Path (Join-Path "." "Tests/WorkflowSanitation") -Filter "*.Test.ps1" -File | ForEach-Object {
-              Write-Host "Running $($_.Name)"
-              . $_.FullName
+            $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+            $result = Invoke-Pester @(Get-ChildItem -Path (Join-Path "." "Tests/WorkflowSanitation/*.Test.ps1")) -passthru
+            if ($result.FailedCount -gt 0) {
+              Write-Host "::Error::$($result.FailedCount) tests are failing"
+              $host.SetShouldExit(1)
             }
           }
           catch {
             Write-Host "::Error::Error when running tests. The Error was $($_.Exception.Message)"
-            exit 1
+            $host.SetShouldExit(1)
           }
