@@ -26,6 +26,7 @@ Earlier, you could also specify the projects you want to deploy to an environmen
 - `DetermineDeploymentEnvironments`: Determine which deployment environments should be used for the workflow.
 
 ### New Settings
+- `projectName`: project setting used as friendly name for an AL-Go project, to be used in the UI for various workflows, e.g. CICD, Pull Request Build.
 - `fullBuildPatterns`: used by `DetermineProjectsToBuild` action to specify changes in which files and folders would trigger a full build (building all AL-Go projects).
 - `excludeEnvironments`: used by `DetermineDeploymentEnvironments` action to exclude environments from the list of environments considered for deployment.
 - `deployTo<environmentName>`: is not really new, but has new properties. The complete list of properties is here:

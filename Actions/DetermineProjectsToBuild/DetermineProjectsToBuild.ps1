@@ -28,6 +28,7 @@ function CreateBuildDimensions(
         foreach($buildMode in $buildModes) {
             $buildDimensions += @{
                 project = $project
+                projectName = $projectSettings.projectName
                 buildMode = $buildMode
             }
         }
