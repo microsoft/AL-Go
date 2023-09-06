@@ -1185,8 +1185,7 @@ function GetProjectFolders {
         [string] $baseFolder,
         [string] $project,
         [switch] $includeALGoFolder,
-        [string[]] $includeOnlyAppIds,
-        $token
+        [string[]] $includeOnlyAppIds
     )
 
     Write-Host "Analyzing project $project"
