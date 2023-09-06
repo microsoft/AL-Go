@@ -76,13 +76,17 @@ function Test-ArtifactsFromRun {
         $expected = $expectedArtifacts."$type"
         Write-Host "Type: $type, Expected: $expected"
         if ($type -eq 'thisbuild') {
+            $fileNamePattern = "thisbuild-*-Apps?*$appVersion.*.*.app"
+            Write-Host "FileNamePattern: $fileNamePattern"
             $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
-                $_.FullName.Substring($path.Length+1) -like "thisbuild-*-Apps?*$appVersion.*.*.app"
+                $_.FullName.Substring($path.Length+1) -like $fileNamePattern
             }).Count
         }
         else {
+            $fileNamePattern = "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
+            Write-Host "FileNamePattern: $fileNamePattern"
             $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
-                $_.FullName.SubString($path.Length+1) -like "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
+                $_.FullName.SubString($path.Length+1) -like $fileNamePattern
             }).Count
         }
         if ($actual -ne $expected) {
@@ -105,11 +109,12 @@ function Test-PropertiesInJsonFile {
     )
 
     $err = $false
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'json', Justification = 'False positive.')]
     $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
     foreach($key in $properties.Keys) {
         $expected = $properties."$key"
-        $expression = $json."$key"
-        $actual = Invoke-Expression $expression
+        # Key can be 'idRanges[0].from' or other expressions
+        $actual = Invoke-Expression "`$json.$key"
         if ($actual -ne $expected) {
             Write-Host "::Error::Property $key is $actual. Expected $expected"
             $err = $true

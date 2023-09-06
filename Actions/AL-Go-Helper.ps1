@@ -131,13 +131,13 @@ function ConvertTo-HashTable() {
 
     $ht = @{}
     if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
-        $object.Keys | ForEach-Object {
-            AddValueToHashTable -ht $ht -name $_ -value $object."$_" -recurse:$recurse
+        foreach($key in $object.Keys) {
+            AddValueToHashTable -ht $ht -name $key -value $object."$key" -recurse:$recurse
         }
     }
     elseif ($object -is [System.Management.Automation.PSCustomObject]) {
-        $object.PSObject.Properties | ForEach-Object {
-            AddValueToHashTable -ht $ht -name $_.Name -value $_.Value -recurse:$recurse
+        foreach($property in $object.PSObject.Properties) {
+            AddValueToHashTable -ht $ht -name $property.Name -value $property.Value -recurse:$recurse
         }
     }
     $ht
@@ -763,12 +763,12 @@ function ResolveProjectFolders {
                 # if an AL app has a dependency to a test app, it is a test app
                 # if an AL app has a dependency to an app from the performance toolkit apps, it is a bcpt test app
                 if ($appJson.PSObject.Properties.Name -eq "dependencies") {
-                    $appJson.dependencies | ForEach-Object {
-                        if ($_.PSObject.Properties.Name -eq "AppId") {
-                            $id = $_.AppId
+                    foreach($dependency in $appJson.dependencies) {
+                        if ($dependency.PSObject.Properties.Name -eq "AppId") {
+                            $id = $dependency.AppId
                         }
                         else {
-                            $id = $_.Id
+                            $id = $dependency.Id
                         }
 
                         # Check if the app is a test app or a bcpt app
