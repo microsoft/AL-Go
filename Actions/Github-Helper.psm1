@@ -611,8 +611,8 @@ function DownloadRelease {
         $token = invoke-gh -silent -returnValue auth token
     }
     $headers = GetHeader -token $token -accept "application/octet-stream"
-    $projects.Split(',') | ForEach-Object {
-        $project = $_.Replace('\','_').Replace('/','_')
+    foreach($project in $projects.Split(',')) {
+        $project = $project.Replace('\','_').Replace('/','_')
         Write-Host "project '$project'"
         $assetPattern1 = "$project-*-$mask-*.zip"
         $assetPattern2 = "$project-$mask-*.zip"
