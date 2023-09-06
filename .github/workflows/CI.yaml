@@ -24,5 +24,7 @@ jobs:
       - name: Test AL-GO Workflows
         if: github.repository_owner == 'microsoft'
         run: |
-          . (Join-Path "." "Tests/WorkflowSanitation/WorkflowFileExtensions.Test.ps1")
-          . (Join-Path "." "Tests/WorkflowSanitation/WorkflowReferences.Test.ps1")
+          Get-ChildItem -Path (Join-Path "." "Tests/WorkflowSanitation") -Filter "*.Test.ps1")" -File | ForEach-Object {
+            Write-Host "Running $($_.Name)"
+            . $_.FullName
+          }
