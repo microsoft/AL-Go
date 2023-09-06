@@ -1,12 +1,10 @@
 ﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
-    [Parameter(HelpMessage = "Comma separated list of Secrets to get", Mandatory = $true)]
+    [Parameter(HelpMessage = "Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
-    [string] $useGhTokenWorkflowForPush = 'false',
-    [Parameter(HelpMessage = "Temporary Access Token, which overrides GhTokenWorkflow if present", Mandatory = $false)]
-    [string] $tempGhTokenWorkflow = ""
+    [string] $useGhTokenWorkflowForPush = 'false'
 )
 
 $buildMutexName = "AL-Go-ReadSecrets"
@@ -25,11 +23,6 @@ try {
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
-
-    if ($tempGhTokenWorkflow) {
-        # Use the temporary GhTokenWorkflow for push if specified and needed
-        $useGhTokenWorkflowForPush = 'true'
-    }
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
@@ -88,13 +81,7 @@ try {
         }
 
         if ($secretName) {
-            if ($tempGhTokenWorkflow -and $secretsProperty -eq 'ghTokenWorkflow') {
-                Write-Host "Using Temporary Access Token as GhTokenWorkflow"
-                $secretValue = $tempGhTokenWorkflow
-            }
-            else {
-                $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
-            }
+            $secretValue = GetSecret -secret $secretName -keyVaultName $keyVaultName
             if ($secretValue) {
                 try {
                     # Test whether the secret is a JSON secret in order to mask the individual values
