@@ -1,4 +1,5 @@
 function GetExtendedErrorMessage {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingEmptyCatchBlock", "", Justification="We want to ignore errors")]
     Param(
         $errorRecord
     )
