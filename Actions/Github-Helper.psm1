@@ -230,6 +230,7 @@ function GetDependencies {
 }
 
 function CmdDo {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingEmptyCatchBlock", "", Justification="We want to ignore errors")]
     Param(
         [string] $command = "",
         [string] $arguments = "",
@@ -243,7 +244,6 @@ function CmdDo {
     $oldEncoding = [Console]::OutputEncoding
     try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
     try {
-        $result = $true
         $pinfo = New-Object System.Diagnostics.ProcessStartInfo
         $pinfo.FileName = $command
         $pinfo.RedirectStandardError = $true
