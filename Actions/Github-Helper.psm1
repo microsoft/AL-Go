@@ -107,7 +107,7 @@ function InvokeWebRequest {
     }
 }
 
-function Get-Dependencies {
+function GetDependencies {
     Param(
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
@@ -119,10 +119,8 @@ function Get-Dependencies {
     }
 
     $downloadedList = @()
-    'Apps','TestApps' | ForEach-Object {
-        $mask = $_
-        $probingPathsJson | ForEach-Object {
-            $dependency = $_
+    foreach($mask in 'Apps','TestApps') {
+        foreach($dependency in $probingPathsJson) {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
 
@@ -135,8 +133,7 @@ function Get-Dependencies {
 
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
-                $projects.Split(',') | ForEach-Object {
-                    $project = $_
+                foreach($project in $projects.Split(',')) {
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
                     $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"

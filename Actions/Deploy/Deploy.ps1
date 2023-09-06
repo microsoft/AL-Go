@@ -1,6 +1,4 @@
 ﻿Param(
-    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
-    [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
