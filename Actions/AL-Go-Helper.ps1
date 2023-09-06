@@ -84,13 +84,15 @@ function Copy-HashTable() {
         [parameter(ValueFromPipeline)]
         [hashtable] $object
     )
-    $ht = @{}
-    if ($object) {
-        $object.Keys | ForEach-Object {
-            $ht[$_] = $object[$_]
+    Process {
+        $ht = @{}
+        if ($object) {
+            $object.Keys | ForEach-Object {
+                $ht[$_] = $object[$_]
+            }
         }
+        $ht
     }
-    $ht
 }
 
 function ConvertTo-HashTable() {
@@ -102,47 +104,49 @@ function ConvertTo-HashTable() {
         [switch] $recurse
     )
 
-    function AddValueToHashTable {
-        Param(
-            [hashtable] $ht,
-            [string] $name,
-            $value,
-            [switch] $recurse
-        )
-
-        if ($ht.Contains($name)) {
-            throw "Duplicate key $name"
+    Process {
+        function AddValueToHashTable {
+            Param(
+                [hashtable] $ht,
+                [string] $name,
+                $value,
+                [switch] $recurse
+            )
+    
+            if ($ht.Contains($name)) {
+                throw "Duplicate key $name"
+            }
+            if ($recurse -and ($value -is [System.Collections.Specialized.OrderedDictionary] -or $value -is [hashtable] -or $value -is [System.Management.Automation.PSCustomObject])) {
+                $ht[$name] = ConvertTo-HashTable $value -recurse
+            }
+            elseif ($recurse -and $value -is [array]) {
+                $ht[$name] = @($value | ForEach-Object {
+                    if (($_ -is [System.Collections.Specialized.OrderedDictionary]) -or ($_ -is [hashtable]) -or ($_ -is [System.Management.Automation.PSCustomObject])) {
+                        ConvertTo-HashTable $_ -recurse
+                    }
+                    else {
+                        $_
+                    }
+                })
+            }
+            else {
+                $ht[$name] = $value
+            }
         }
-        if ($recurse -and ($value -is [System.Collections.Specialized.OrderedDictionary] -or $value -is [hashtable] -or $value -is [System.Management.Automation.PSCustomObject])) {
-            $ht[$name] = ConvertTo-HashTable $value -recurse
+    
+        $ht = @{}
+        if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
+            foreach($key in $object.Keys) {
+                AddValueToHashTable -ht $ht -name $key -value $object."$key" -recurse:$recurse
+            }
         }
-        elseif ($recurse -and $value -is [array]) {
-            $ht[$name] = @($value | ForEach-Object {
-                if (($_ -is [System.Collections.Specialized.OrderedDictionary]) -or ($_ -is [hashtable]) -or ($_ -is [System.Management.Automation.PSCustomObject])) {
-                    ConvertTo-HashTable $_ -recurse
-                }
-                else {
-                    $_
-                }
-            })
+        elseif ($object -is [System.Management.Automation.PSCustomObject]) {
+            foreach($property in $object.PSObject.Properties) {
+                AddValueToHashTable -ht $ht -name $property.Name -value $property.Value -recurse:$recurse
+            }
         }
-        else {
-            $ht[$name] = $value
-        }
+        $ht
     }
-
-    $ht = @{}
-    if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
-        foreach($key in $object.Keys) {
-            AddValueToHashTable -ht $ht -name $key -value $object."$key" -recurse:$recurse
-        }
-    }
-    elseif ($object -is [System.Management.Automation.PSCustomObject]) {
-        foreach($property in $object.PSObject.Properties) {
-            AddValueToHashTable -ht $ht -name $property.Name -value $property.Value -recurse:$recurse
-        }
-    }
-    $ht
 }
 
 function OutputError {

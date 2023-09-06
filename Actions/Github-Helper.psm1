@@ -296,20 +296,22 @@ function invoke-gh {
         [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
     )
 
-    $arguments = "$command "
-    $remaining | ForEach-Object {
-        if ("$_".IndexOf(" ") -ge 0 -or "$_".IndexOf('"') -ge 0) {
-            $arguments += """$($_.Replace('"','\"'))"" "
+    Process {
+        $arguments = "$command "
+        foreach($parameter in $remaining) {
+            if ("$parameter".IndexOf(" ") -ge 0 -or "$parameter".IndexOf('"') -ge 0) {
+                $arguments += """$($parameter.Replace('"','\"'))"" "
+            }
+            else {
+                $arguments += "$parameter "
+            }
         }
-        else {
-            $arguments += "$_ "
+        try {
+            cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
         }
-    }
-    try {
-        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
-    }
-    catch [System.Management.Automation.MethodInvocationException] {
-        throw "It looks like GitHub CLI is not installed. Please install GitHub CLI from https://cli.github.com/"
+        catch [System.Management.Automation.MethodInvocationException] {
+            throw "It looks like GitHub CLI is not installed. Please install GitHub CLI from https://cli.github.com/"
+        }
     }
 }
 
@@ -323,20 +325,22 @@ function invoke-git {
         [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
     )
 
-    $arguments = "$command "
-    $remaining | ForEach-Object {
-        if ("$_".IndexOf(" ") -ge 0 -or "$_".IndexOf('"') -ge 0) {
-            $arguments += """$($_.Replace('"','\"'))"" "
+    Process {
+        $arguments = "$command "
+        foreach($parameter in $remaining) {
+            if ("$parameter".IndexOf(" ") -ge 0 -or "$parameter".IndexOf('"') -ge 0) {
+                $arguments += """$($parameter.Replace('"','\"'))"" "
+            }
+            else {
+                $arguments += "$parameter "
+            }
         }
-        else {
-            $arguments += "$_ "
+        try {
+            cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
         }
-    }
-    try {
-        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
-    }
-    catch [System.Management.Automation.MethodInvocationException] {
-        throw "It looks like Git is not installed. Please install Git from https://git-scm.com/download"
+        catch [System.Management.Automation.MethodInvocationException] {
+            throw "It looks like Git is not installed. Please install Git from https://git-scm.com/download"
+        }
     }
 }
 
@@ -360,17 +364,20 @@ function SemVerObjToSemVerStr {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         $semVerObj
     )
-    try {
-        $str = "$($semVerObj.Prefix)$($semVerObj.Major).$($semVerObj.Minor).$($semVerObj.Patch)"
-        for ($i=0; $i -lt 5; $i++) {
-            $seg = $semVerObj."Addt$i"
-            if ($seg -eq 'zzz') { break }
-            if ($i -eq 0) { $str += "-$($seg)" } else { $str += ".$($seg)" }
+
+    Process {
+        try {
+            $str = "$($semVerObj.Prefix)$($semVerObj.Major).$($semVerObj.Minor).$($semVerObj.Patch)"
+            for ($i=0; $i -lt 5; $i++) {
+                $seg = $semVerObj."Addt$i"
+                if ($seg -eq 'zzz') { break }
+                if ($i -eq 0) { $str += "-$($seg)" } else { $str += ".$($seg)" }
+            }
+            $str
         }
-        $str
-    }
-    catch {
-        throw "'$SemVerObj' cannot be recognized as a semantic version object (internal error)"
+        catch {
+            throw "'$SemVerObj' cannot be recognized as a semantic version object (internal error)"
+        }
     }
 }
 
@@ -401,76 +408,78 @@ function SemVerStrToSemVerObj {
         [switch] $allowMajorMinorOnly
     )
 
-    $obj = New-Object PSCustomObject
-    try {
-        # Only allowed prefix is a 'v'.
-        # This is supported by GitHub when sorting tags
-        $prefix = ''
-        $verstr = $semVerStr
-        if ($semVerStr -like 'v*') {
-            $prefix = 'v'
-            $verStr = $semVerStr.Substring(1)
-        }
-        # Next part is a version number with 2 or 3 segments
-        # 2 segments are allowed only if $allowMajorMinorOnly is specified
-        $version = [System.Version]"$($verStr.split('-')[0])"
-        if ($version.Revision -ne -1) { throw "not semver" }
-        if ($version.Build -eq -1) {
-            if ($allowMajorMinorOnly) {
-                $version = [System.Version]"$($version.Major).$($version.Minor).0"
-                $idx = $semVerStr.IndexOf('-')
-                if ($idx -eq -1) {
-                    $semVerStr = "$semVerStr.0"
-                }
-                else {
-                    $semVerstr = $semVerstr.insert($idx, '.0')
-                }
+    Process {
+        $obj = New-Object PSCustomObject
+        try {
+            # Only allowed prefix is a 'v'.
+            # This is supported by GitHub when sorting tags
+            $prefix = ''
+            $verstr = $semVerStr
+            if ($semVerStr -like 'v*') {
+                $prefix = 'v'
+                $verStr = $semVerStr.Substring(1)
             }
-            else {
-                throw "not semver"
-            }
-        }
-        # Add properties to the object
-        $obj | Add-Member -MemberType NoteProperty -Name "Prefix" -Value $prefix
-        $obj | Add-Member -MemberType NoteProperty -Name "Major" -Value ([int]$version.Major)
-        $obj | Add-Member -MemberType NoteProperty -Name "Minor" -Value ([int]$version.Minor)
-        $obj | Add-Member -MemberType NoteProperty -Name "Patch" -Value ([int]$version.Build)
-        0..4 | ForEach-Object {
-            # default segments to 'zzz' for sorting of SemVer Objects to work as GitHub does
-            $obj | Add-Member -MemberType NoteProperty -Name "Addt$_" -Value 'zzz'
-        }
-        $idx = $verStr.IndexOf('-')
-        if ($idx -gt 0) {
-            $segments = $verStr.SubString($idx+1).Split('.')
-            if ($segments.Count -gt 5) {
-                throw "max. 5 segments"
-            }
-            # Add all 5 segments to the object
-            # If the segment is a number, it is converted to an integer
-            # If the segment is a string, it cannot be -ge 'zzz' (would be sorted wrongly)
-            0..($segments.Count-1) | ForEach-Object {
-                $result = 0
-                if ([int]::TryParse($segments[$_], [ref] $result)) {
-                    $obj."Addt$_" = [int]$result
-                }
-                else {
-                    if ($segments[$_] -ge 'zzz') {
-                        throw "Unsupported segment"
+            # Next part is a version number with 2 or 3 segments
+            # 2 segments are allowed only if $allowMajorMinorOnly is specified
+            $version = [System.Version]"$($verStr.split('-')[0])"
+            if ($version.Revision -ne -1) { throw "not semver" }
+            if ($version.Build -eq -1) {
+                if ($allowMajorMinorOnly) {
+                    $version = [System.Version]"$($version.Major).$($version.Minor).0"
+                    $idx = $semVerStr.IndexOf('-')
+                    if ($idx -eq -1) {
+                        $semVerStr = "$semVerStr.0"
                     }
-                    $obj."Addt$_" = $segments[$_]
+                    else {
+                        $semVerstr = $semVerstr.insert($idx, '.0')
+                    }
+                }
+                else {
+                    throw "not semver"
                 }
             }
+            # Add properties to the object
+            $obj | Add-Member -MemberType NoteProperty -Name "Prefix" -Value $prefix
+            $obj | Add-Member -MemberType NoteProperty -Name "Major" -Value ([int]$version.Major)
+            $obj | Add-Member -MemberType NoteProperty -Name "Minor" -Value ([int]$version.Minor)
+            $obj | Add-Member -MemberType NoteProperty -Name "Patch" -Value ([int]$version.Build)
+            0..4 | ForEach-Object {
+                # default segments to 'zzz' for sorting of SemVer Objects to work as GitHub does
+                $obj | Add-Member -MemberType NoteProperty -Name "Addt$_" -Value 'zzz'
+            }
+            $idx = $verStr.IndexOf('-')
+            if ($idx -gt 0) {
+                $segments = $verStr.SubString($idx+1).Split('.')
+                if ($segments.Count -gt 5) {
+                    throw "max. 5 segments"
+                }
+                # Add all 5 segments to the object
+                # If the segment is a number, it is converted to an integer
+                # If the segment is a string, it cannot be -ge 'zzz' (would be sorted wrongly)
+                0..($segments.Count-1) | ForEach-Object {
+                    $result = 0
+                    if ([int]::TryParse($segments[$_], [ref] $result)) {
+                        $obj."Addt$_" = [int]$result
+                    }
+                    else {
+                        if ($segments[$_] -ge 'zzz') {
+                            throw "Unsupported segment"
+                        }
+                        $obj."Addt$_" = $segments[$_]
+                    }
+                }
+            }
+            # Check that the object can be converted back to the original string
+            $newStr = SemVerObjToSemVerStr -semVerObj $obj
+            if ($newStr -cne $semVerStr) {
+                throw "Not equal"
+            }
         }
-        # Check that the object can be converted back to the original string
-        $newStr = SemVerObjToSemVerStr -semVerObj $obj
-        if ($newStr -cne $semVerStr) {
-            throw "Not equal"
+        catch {
+            throw "'$semVerStr' cannot be recognized as a semantic version string (https://semver.org)"
         }
+        $obj
     }
-    catch {
-        throw "'$semVerStr' cannot be recognized as a semantic version string (https://semver.org)"
-    }
-    $obj
 }
 
 function GetReleases {
@@ -634,7 +643,9 @@ function Get-ContentLF {
         [string] $path
     )
 
-    (Get-Content -Path $path -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+    Process {
+        (Get-Content -Path $path -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+    }
 }
 
 # Set-Content defaults to culture specific ANSI encoding, which is not what we want
@@ -648,14 +659,16 @@ function Set-ContentLF {
         $content
     )
 
-    $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-    if ($content -is [array]) {
-        $content = $content -join "`n"
+    Process {
+        $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
+        if ($content -is [array]) {
+            $content = $content -join "`n"
+        }
+        else {
+            $content = "$content".Replace("`r", "")
+        }
+        [System.IO.File]::WriteAllText($path, "$content`n")
     }
-    else {
-        $content = "$content".Replace("`r", "")
-    }
-    [System.IO.File]::WriteAllText($path, "$content`n")
 }
 
 # Format Object to JSON and write to file with LF line endings and formatted as PowerShell 7 would do it
@@ -676,14 +689,16 @@ function Set-JsonContentLF {
         [object] $object
     )
 
-    $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
-    if ($PSVersionTable.PSVersion.Major -lt 6) {
-        try {
-            $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-            . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
-        }
-        catch {
-            Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted by PowerShell $($PSVersionTable.PSVersion)"
+    Process {
+        $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
+        if ($PSVersionTable.PSVersion.Major -lt 6) {
+            try {
+                $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
+                . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
+            }
+            catch {
+                Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted by PowerShell $($PSVersionTable.PSVersion)"
+            }
         }
     }
 }
@@ -711,13 +726,17 @@ function GetArtifacts {
         $artifactsJson = InvokeWebRequest -Headers $headers -Uri $uri
         $artifacts = $artifactsJson | ConvertFrom-Json
         $page++
-        $allArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like "*-$branch-$mask-$version" })
+        $artifactPattern = "*-$branch-$mask-$version"
+        Write-Host "ArtifactPattern: $artifactPattern"
+        $allArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
         $result = @()
         $allArtifactsFound = $true
-        $projects.Split(',') | ForEach-Object {
-            $project = $_.Replace('\','_').Replace('/','_')
-            Write-Host "project '$project'"
-            $projectArtifact = $allArtifacts | Where-Object { $_.name -like "$project-$branch-$mask-$version" } | Select-Object -First 1
+        foreach($project in $projects.Split(',')) {
+            $project = $project.Replace('\','_').Replace('/','_')
+            Write-Host "Project: $project"
+            $artifactPattern = "$project-$branch-$mask-$version"
+            Write-Host "ArtifactPattern: $artifactPattern"
+            $projectArtifact = $allArtifacts | Where-Object { $_.name -like $artifactPattern } | Select-Object -First 1
             if ($projectArtifact) {
                 $result += @($projectArtifact)
             }

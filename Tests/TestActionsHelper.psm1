@@ -240,7 +240,9 @@ function GetWorkflowsInPath {
         [Parameter(Mandatory, ValueFromPipeline = $true)]
         [string]$Path
     )
-    return (Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml'))
+    Process {
+        return (Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml'))
+    }
 }
 
 function PesterMatchHashtable($ActualValue, $ExpectedValue, [switch] $Negate) {

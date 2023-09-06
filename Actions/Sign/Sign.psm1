@@ -1,4 +1,4 @@
-function Get-NavSipFromArtifacts
+function GetNavSipFromArtifacts
 (
     [string] $NavSipDestination
 )
@@ -27,7 +27,7 @@ function Register-NavSip() {
     $navSipDllPath = Join-Path $navSipDestination "navsip.dll"
     try {
         if (-not (Test-Path $navSipDllPath)) {
-            Get-NavSipFromArtifacts -NavSipDestination $navSipDllPath
+            GetNavSipFromArtifacts -NavSipDestination $navSipDllPath
         }
 
         Write-Host "Unregistering dll $navSipDllPath"
