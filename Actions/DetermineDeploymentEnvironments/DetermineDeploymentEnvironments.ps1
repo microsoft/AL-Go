@@ -124,7 +124,7 @@ else {
         # - Type is not Continous Deployment
         # - Environment is setup for Continuous Deployment (in settings)
         # - Continuous Deployment is unset in settings and environment name doesn't contain PROD or FAT tags
-        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($deploymentSettings.ContinuousDeployment -eq $null -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
+        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($null -eq $deploymentSettings.ContinuousDeployment -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
 
         # Check branch policies and settings
         if (-not $includeEnvironment) {

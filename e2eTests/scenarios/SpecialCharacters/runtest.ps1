@@ -61,7 +61,7 @@ CreateAlGoRepository `
     -branch $branch `
     -contentScript {
         Param([string] $path)
-        $global:id = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
+        $null = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
         Add-PropertiesToJsonFile -path (Join-Path $path '.github/AL-Go-Settings.json') -properties @{ "RepoName" = $repoName }
     }
 
