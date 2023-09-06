@@ -23,6 +23,10 @@ on:
         description: Name of the built project
         required: true
         type: string
+      projectName:
+        description: Friendly name of the built project
+        required: true
+        type: string
       projectDependenciesJson:
         description: Dependencies of the built project in compressed Json format
         required: false
@@ -74,7 +78,7 @@ env:
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
-    name: ${{ inputs.project }} - ${{ inputs.buildMode }}
+    name: ${{ inputs.projectName }} (${{ inputs.buildMode }})
     steps:
         - name: Checkout
           uses: actions/checkout@v3

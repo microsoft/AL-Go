@@ -549,6 +549,7 @@ function ReadSettings {
         "codeSignCertificatePasswordSecretName"         = "codeSignCertificatePassword"
         "additionalCountries"                           = @()
         "appDependencies"                               = @()
+        "projectName"                                   = ""
         "appFolders"                                    = @()
         "testDependencies"                              = @()
         "testFolders"                                   = @()
@@ -712,6 +713,9 @@ function ReadSettings {
     }
     if ($settings.shell -ne "powershell" -and $settings.shell -ne "pwsh") {
         throw "Invalid value for setting: shell: $($settings.githubRunnerShell)"
+    }
+    if($settings.projectName -eq '') {
+        $settings.projectName = $project # Default to project path as project name
     }
     $settings
 }
