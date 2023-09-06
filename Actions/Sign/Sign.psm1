@@ -18,6 +18,10 @@ function Get-NavSipFromArtifacts
     }
 }
 
+<#
+.SYNOPSIS
+Register the navsip.dll in the system32 folder
+#>
 function Register-NavSip() {
     $navSipDestination = "C:\Windows\System32"
     $navSipDllPath = Join-Path $navSipDestination "navsip.dll"
