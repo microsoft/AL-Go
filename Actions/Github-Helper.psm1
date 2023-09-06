@@ -10,7 +10,9 @@ function GetExtendedErrorMessage {
         $errorDetails = $errorRecord.ErrorDetails | ConvertFrom-Json
         $message += " $($errorDetails.error)`n$($errorDetails.error_description)"
     }
-    catch {}
+    catch {
+        # ignore errors
+    }
     try {
         if ($exception -is [System.Management.Automation.MethodInvocationException]) {
             $exception = $exception.InnerException
@@ -21,7 +23,10 @@ function GetExtendedErrorMessage {
             if ($webResponse.StatusDescription) {
                 $message += "`n$($webResponse.StatusDescription)"
             }
-        } catch {}
+        }
+        catch {
+            # ignore errors
+        }
         $reqstream = $webResponse.GetResponseStream()
         $sr = new-object System.IO.StreamReader $reqstream
         $result = $sr.ReadToEnd()
@@ -38,9 +43,13 @@ function GetExtendedErrorMessage {
                 $message += " (ms-correlation-x = $correlationX)"
             }
         }
-        catch {}
+        catch {
+            # ignore errors
+        }
     }
-    catch{}
+    catch{
+        # ignore errors
+    }
     $message
 }
 
@@ -95,7 +104,9 @@ function InvokeWebRequest {
                 Invoke-WebRequest  @params -Uri $uri
                 return
             }
-            catch {}
+            catch {
+                Write-Host "Retry failed as well"
+            }
         }
         if ($ignoreErrors.IsPresent) {
             Write-Host $message
