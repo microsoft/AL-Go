@@ -25,4 +25,4 @@ jobs:
       - name: Upload SARIF results file
         uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: $ENV:GITHUB_WORKSPACE\System Application_ErrorLog_WW.sarif
+          sarif_file: System Application_ErrorLog_WW.sarif
