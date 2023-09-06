@@ -112,7 +112,7 @@ function ConvertTo-HashTable() {
                 $value,
                 [switch] $recurse
             )
-    
+
             if ($ht.Contains($name)) {
                 throw "Duplicate key $name"
             }
@@ -133,7 +133,7 @@ function ConvertTo-HashTable() {
                 $ht[$name] = $value
             }
         }
-    
+
         $ht = @{}
         if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
             foreach($key in $object.Keys) {
@@ -650,38 +650,38 @@ function ReadSettings {
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
     }
-    $settingsObjects | Where-Object { $_ } | ForEach-Object {
-        $settingsJson = $_
-        MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
-        if ("$settingsJson" -ne "" -and $settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
-            $settingsJson.ConditionalSettings | ForEach-Object {
-                $conditionalSetting = $_
-                if ("$conditionalSetting" -ne "") {
-                    $conditionMet = $true
-                    $conditions = @()
-                    if ($conditionalSetting.PSObject.Properties.Name -eq "branches") {
-                        $conditionMet = $conditionMet -and ($conditionalSetting.branches | Where-Object { $branchName -like $_ })
-                        $conditions += @("branchName: $branchName")
-                    }
-                    if ($conditionalSetting.PSObject.Properties.Name -eq "repositories") {
-                        $conditionMet = $conditionMet -and ($conditionalSetting.repositories | Where-Object { $repoName -like $_ })
-                        $conditions += @("repoName: $repoName")
-                    }
-                    if ($project -and $conditionalSetting.PSObject.Properties.Name -eq "projects") {
-                        $conditionMet = $conditionMet -and ($conditionalSetting.projects | Where-Object { $project -like $_ })
-                        $conditions += @("project: $project")
-                    }
-                    if ($workflowName -and $conditionalSetting.PSObject.Properties.Name -eq "workflows") {
-                        $conditionMet = $conditionMet -and ($conditionalSetting.workflows | Where-Object { $workflowName -like $_ })
-                        $conditions += @("workflowName: $workflowName")
-                    }
-                    if ($userName -and $conditionalSetting.PSObject.Properties.Name -eq "users") {
-                        $conditionMet = $conditionMet -and ($conditionalSetting.users | Where-Object { $userName -like $_ })
-                        $conditions += @("userName: $userName")
-                    }
-                    if ($conditionMet) {
-                        Write-Host "Applying conditional settings for $($conditions -join ", ")"
-                        MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+    foreach($settingsJson in $settingsObjects) {
+        if ($settingsJson) {
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+            if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
+                foreach($conditionalSetting in $settingsJson.ConditionalSettings) {
+                    if ("$conditionalSetting" -ne "") {
+                        $conditionMet = $true
+                        $conditions = @()
+                        if ($conditionalSetting.PSObject.Properties.Name -eq "branches") {
+                            $conditionMet = $conditionMet -and ($conditionalSetting.branches | Where-Object { $branchName -like $_ })
+                            $conditions += @("branchName: $branchName")
+                        }
+                        if ($conditionalSetting.PSObject.Properties.Name -eq "repositories") {
+                            $conditionMet = $conditionMet -and ($conditionalSetting.repositories | Where-Object { $repoName -like $_ })
+                            $conditions += @("repoName: $repoName")
+                        }
+                        if ($project -and $conditionalSetting.PSObject.Properties.Name -eq "projects") {
+                            $conditionMet = $conditionMet -and ($conditionalSetting.projects | Where-Object { $project -like $_ })
+                            $conditions += @("project: $project")
+                        }
+                        if ($workflowName -and $conditionalSetting.PSObject.Properties.Name -eq "workflows") {
+                            $conditionMet = $conditionMet -and ($conditionalSetting.workflows | Where-Object { $workflowName -like $_ })
+                            $conditions += @("workflowName: $workflowName")
+                        }
+                        if ($userName -and $conditionalSetting.PSObject.Properties.Name -eq "users") {
+                            $conditionMet = $conditionMet -and ($conditionalSetting.users | Where-Object { $userName -like $_ })
+                            $conditions += @("userName: $userName")
+                        }
+                        if ($conditionMet) {
+                            Write-Host "Applying conditional settings for $($conditions -join ", ")"
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+                        }
                     }
                 }
             }
