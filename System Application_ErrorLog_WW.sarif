@@ -1,242 +1,49 @@
 {
-  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
-  "version": "2.1.0",
-    {
-      "ruleId": "AW0009",
-      "locations": [
+    "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json",
+    "version": "2.1.0",
+    "runs": [
         {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Data Administration\\src\\MediaCleanupFactbox.Page.al",
-              "region": {
-                "startLine": 23,
-                "startColumn": 33,
-                "endLine": 23,
-                "endColumn": 44
-              }
-            }
-          ]
+            "tool": {
+                "driver": {
+                    "name": "AL-Go Analyzer",
+                    "informationUri": "https://github.com/microsoft/Al-Go",
+                    "rules": [
+                        {
+                            "id": "AS0059",
+                            "name": "AS0059",
+                            "helpUri": "https://github.com/PowerShell/Psscriptanalyzer"
+                        }
+                    ]
+                }
+            },
+            "artifacts": [
+                {
+                    "location": {
+                        "uri": "file:///home/runner/work/AL-Go/AL-Go/Actions/AddExistingApp/AddExistingApp.ps1"
+                    }
+                }
+            ],
+            "results": [
+                {
+                    "ruleId": "AS0059",
+                    "message": {
+                        "text": "The table 'Web Service Aggregate' cannot be modified because it is part of the read-only application database or because it will result in undefined behavior."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///home/runner/work/AL-Go/AL-Go/Actions/AddExistingApp/AddExistingApp.ps1"
+                                },
+                                "region": {
+                                    "startLine": 127
+                                }
+                            }
+                        }
+                    ]
+                }
+            ],
+            "columnKind": "utf16CodeUnits"
         }
-      ],
-      "shortMessage": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-      "fullMessage": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-      "properties": {
-        "severity": "Warning",
-        "warningLevel": "1",
-        "defaultSeverity": "Warning",
-        "title": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-        "category": "WebClient",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/uicop-aw0009?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    },
-    {
-      "ruleId": "AW0009",
-      "locations": [
-        {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Email\\src\\Account\\EmailAccounts.Page.al",
-              "region": {
-                "startLine": 39,
-                "startColumn": 34,
-                "endLine": 39,
-                "endColumn": 46
-              }
-            }
-          ]
-        }
-      ],
-      "shortMessage": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-      "fullMessage": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-      "properties": {
-        "severity": "Warning",
-        "warningLevel": "1",
-        "defaultSeverity": "Warning",
-        "title": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-        "category": "WebClient",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/uicop-aw0009?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    },
-    {
-      "ruleId": "AW0009",
-      "locations": [
-        {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Email\\src\\Account\\EmailAccountWizard.Page.al",
-              "region": {
-                "startLine": 132,
-                "startColumn": 33,
-                "endLine": 132,
-                "endColumn": 41
-              }
-            }
-          ]
-        }
-      ],
-      "shortMessage": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-      "fullMessage": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-      "properties": {
-        "severity": "Warning",
-        "warningLevel": "1",
-        "defaultSeverity": "Warning",
-        "title": "Using a Blob with subtype Bitmap on a page field is deprecated. Instead use the Media/MediaSet data types.",
-        "category": "WebClient",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/uicop-aw0009?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    },
-    {
-      "ruleId": "AS0059",
-      "locations": [
-        {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Web Service Management\\src\\WebServiceManagementImpl.Codeunit.al",
-              "region": {
-                "startLine": 312,
-                "startColumn": 9,
-                "endLine": 312,
-                "endColumn": 40
-              }
-            }
-          ]
-        }
-      ],
-      "shortMessage": "The table 'Web Service Aggregate' cannot be modified because it is part of the read-only application database or because it will result in undefined behavior.",
-      "fullMessage": "Application database tables and reserved application tables should be used only as temporary tables in a multi-tenant environment. Writing to these tables can lead to runtime errors or unexpected behavior.",
-      "properties": {
-        "severity": "Warning",
-        "warningLevel": "1",
-        "defaultSeverity": "Error",
-        "title": "Reserved database tables are read-only in a multi-tenant environment",
-        "category": "Extensibility",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/appsourcecop-as0059?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    },
-    {
-      "ruleId": "AS0059",
-      "locations": [
-        {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Web Service Management\\src\\WebServiceManagementImpl.Codeunit.al",
-              "region": {
-                "startLine": 319,
-                "startColumn": 17,
-                "endLine": 319,
-                "endColumn": 45
-              }
-            }
-          ]
-        }
-      ],
-      "shortMessage": "The table 'Web Service Aggregate' cannot be modified because it is part of the read-only application database or because it will result in undefined behavior.",
-      "fullMessage": "Application database tables and reserved application tables should be used only as temporary tables in a multi-tenant environment. Writing to these tables can lead to runtime errors or unexpected behavior.",
-      "properties": {
-        "severity": "Warning",
-        "warningLevel": "1",
-        "defaultSeverity": "Error",
-        "title": "Reserved database tables are read-only in a multi-tenant environment",
-        "category": "Extensibility",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/appsourcecop-as0059?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    },
-    {
-      "ruleId": "AS0059",
-      "locations": [
-        {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Web Service Management\\src\\WebServiceManagementImpl.Codeunit.al",
-              "region": {
-                "startLine": 336,
-                "startColumn": 25,
-                "endLine": 336,
-                "endColumn": 53
-              }
-            }
-          ]
-        }
-      ],
-      "shortMessage": "The table 'Web Service Aggregate' cannot be modified because it is part of the read-only application database or because it will result in undefined behavior.",
-      "fullMessage": "Application database tables and reserved application tables should be used only as temporary tables in a multi-tenant environment. Writing to these tables can lead to runtime errors or unexpected behavior.",
-      "properties": {
-        "severity": "Warning",
-        "warningLevel": "1",
-        "defaultSeverity": "Error",
-        "title": "Reserved database tables are read-only in a multi-tenant environment",
-        "category": "Extensibility",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/appsourcecop-as0059?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    },
-    {
-      "ruleId": "AA0181",
-      "locations": [
-        {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Email\\src\\Email\\EmailRecordReferenceImpl.Codeunit.al",
-              "region": {
-                "startLine": 180,
-                "startColumn": 9,
-                "endLine": 180,
-                "endColumn": 26
-              }
-            }
-          ]
-        }
-      ],
-      "shortMessage": "The FindSet() or Find() method on the record 'RecordRef' must be used only in connection with the Next() method.",
-      "fullMessage": "Avoid getting the dataset when an enumeration is not used, which will decrease performance.",
-      "properties": {
-        "severity": "Error",
-        "defaultSeverity": "Warning",
-        "title": "The FindSet() or Find() methods must be used only in connection with the Next() method.",
-        "category": "Design",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/codecop-aa0181?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    },
-    {
-      "ruleId": "AA0008",
-      "locations": [
-        {
-          "analysisTarget": [
-            {
-              "uri": "C:\\Users\\aholstrup\\AppData\\Local\\Temp\\hw4wivtq.1mu\\Email\\src\\Email\\EmailRecordReferenceImpl.Codeunit.al",
-              "region": {
-                "startLine": 180,
-                "startColumn": 9,
-                "endLine": 180,
-                "endColumn": 26
-              }
-            }
-          ]
-        }
-      ],
-      "shortMessage": "You must specify open and close parenthesis after 'FindSet'.",
-      "fullMessage": "Use parenthesis in a function call even if the function does not have any parameters.",
-      "properties": {
-        "severity": "Error",
-        "defaultSeverity": "Warning",
-        "title": "Function calls should have parenthesis even if they do not have any parameters.",
-        "category": "Readability",
-        "helpLink": "https://learn.microsoft.com/dynamics365/business-central/dev-itpro/developer/analyzers/codecop-aa0008?wt.mc_id=d365bc_inproduct_alextension",
-        "isEnabledByDefault": "True",
-        "isSuppressedInSource": "False"
-      }
-    }
+    ]
 }
