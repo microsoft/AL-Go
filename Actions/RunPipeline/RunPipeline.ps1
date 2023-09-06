@@ -31,9 +31,10 @@ try {
 
     if ($isWindows) {
         # Pull docker image in the background
-        Start-Job -ScriptBlock { Param($genericImageName)
-            docker pull --quiet $genericImageName
-        } -ArgumentList (Get-BestGenericImageName) | Out-Null
+        $genericImageName = Get-BestGenericImageName
+        Start-Job -ScriptBlock {
+            docker pull --quiet $using:genericImageName
+        } | Out-Null
     }
 
     $containerName = GetContainerName($project)
