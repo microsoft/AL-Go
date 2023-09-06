@@ -5,14 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  actor:
-    description: The GitHub actor running the action
-    required: false
-    default: ${{ github.actor }}
-  token:
-    description: The GitHub token running the action
-    required: false
-    default: ${{ github.token }}
   project:
     description: Project folder
     required: false
@@ -35,14 +27,12 @@ runs:
       shell: ${{ inputs.shell }}
       id: readsettings
       env:
-        _actor: ${{ inputs.actor }}
-        _token: ${{ inputs.token }}
         _project: ${{ inputs.project }}
         _get: ${{ inputs.get }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/ReadSettings.ps1 -actor $ENV:_actor -token $ENV:_token -project $ENV:_project -get $ENV:_get
+          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -get $ENV:_get
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

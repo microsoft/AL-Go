@@ -70,6 +70,11 @@ on:
         description: Specifies the telemetry scope for the telemetry signal
         required: false
         type: string
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}

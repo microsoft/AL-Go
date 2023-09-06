@@ -1,4 +1,4 @@
-Get-Module TestActionsHelper | Remove-Module -Force
+﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
 Describe 'CalculateArtifactNames Action Tests' {
@@ -7,7 +7,9 @@ Describe 'CalculateArtifactNames Action Tests' {
         $actionName = "CalculateArtifactNames"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
         $scriptPath = Join-Path $scriptRoot $scriptName
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
         $env:Settings = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
@@ -30,7 +32,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-CleanApps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-CleanTestApps"
@@ -52,7 +54,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
@@ -72,7 +74,7 @@ Describe 'CalculateArtifactNames Action Tests' {
                 -project $project `
                 -buildMode $buildMode `
                 -branchName $branchName
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
@@ -97,7 +99,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
         # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
         $currentDate = [DateTime]::UtcNow.ToString('yyyyMMdd')
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject-TestApps"
@@ -124,7 +126,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
         # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
         $currentDate = [DateTime]::UtcNow.ToString('yyyyMMdd')
-        
+
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject_øåæ-Apps"
         $generatedOutPut | Should -Contain "ThisBuildTestAppsArtifactsName=thisbuild-ALGOProject_øåæ-TestApps"

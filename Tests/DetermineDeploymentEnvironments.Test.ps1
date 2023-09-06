@@ -1,10 +1,11 @@
-Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
 Describe "DetermineDeploymentEnvironments Action Test" {
     BeforeAll {
         $actionName = "DetermineDeploymentEnvironments"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
         function PassGeneratedOutput() {

@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -36,7 +36,7 @@ try {
             docker pull --quiet $genericImageName
         } -ArgumentList $genericImageName | Out-Null
     }
-  
+
     $containerName = GetContainerName($project)
 
     $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
@@ -82,7 +82,7 @@ try {
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -90,7 +90,9 @@ try {
         else {
             $value = ""
         }
-        Set-Variable -Name $_ -Value $value
+        # Secrets preceded by an asterisk are returned encrypted.
+        # Variable name should not include the asterisk
+        Set-Variable -Name $_.TrimStart('*') -Value $value
     }
 
     $analyzeRepoParams = @{}
@@ -137,26 +139,26 @@ try {
 
     # Analyze app.json version dependencies before launching pipeline
 
-    # Analyze InstallApps and InstallTestApps before launching pipeline 
+    # Analyze InstallApps and InstallTestApps before launching pipeline
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
         OutputWarning -message "Using the legacy CodeSignCertificateUrl and CodeSignCertificatePassword parameters. Consider using the new Azure Keyvault signing instead. Go to https://aka.ms/ALGoSettings#keyVaultCodesignCertificateName to find out more"
-        $runAlPipelineParams += @{ 
+        $runAlPipelineParams += @{
             "CodeSignCertPfxFile" = $codeSignCertificateUrl
-            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword -AsPlainText -Force
+            "CodeSignCertPfxPassword" = ConvertTo-SecureString -string $codeSignCertificatePassword
         }
     }
     if ($applicationInsightsConnectionString) {
-        $runAlPipelineParams += @{ 
+        $runAlPipelineParams += @{
             "applicationInsightsConnectionString" = $applicationInsightsConnectionString
         }
     }
 
     if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
-        $runAlPipelineParams += @{ 
+        $runAlPipelineParams += @{
             "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
-            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword -AsPlainText -Force
+            "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword
             "keyVaultClientId" = $keyVaultClientId
         }
     }
@@ -212,7 +214,7 @@ try {
             "appVersion" = $settings.repoVersion
         }
     }
-    
+
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 

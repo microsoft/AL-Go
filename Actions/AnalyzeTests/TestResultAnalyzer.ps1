@@ -1,4 +1,4 @@
-function GetTestResultSummary {
+﻿function GetTestResultSummary {
     Param(
         [xml] $testResults,
         [int] $includeFailures
