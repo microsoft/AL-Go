@@ -1327,17 +1327,17 @@ function Select-Value {
     $offset = 0
     $keys = @()
     $values = @()
-
-    $options.GetEnumerator() | ForEach-Object {
+    $defaultAnswer = 0
+    foreach($option in $options.GetEnumerator()) {
         Write-Host -ForegroundColor Yellow "$([char]($offset+97)) " -NoNewline
-        $keys += @($_.Key)
-        $values += @($_.Value)
-        if ($_.Key -eq $default) {
-            Write-Host -ForegroundColor Yellow $_.Value
+        $keys += @($option.Key)
+        $values += @($option.Value)
+        if ($option.Key -eq $default) {
+            Write-Host -ForegroundColor Yellow $option.Value
             $defaultAnswer = $offset
         }
         else {
-            Write-Host $_.Value
+            Write-Host $option.Value
         }
         $offset++
     }
@@ -1973,24 +1973,24 @@ Function AnalyzeProjectDependencies {
         # These projects can be built in parallel and are added to the build order
         # The projects that are added to the build order are removed from the list of projects
         # The loop continues until all projects have been added to the build order
-        $projects | ForEach-Object {
-            $project = $_
+        foreach($project in $projects) {
             Write-Host "- $project"
             # Find all project dependencies for the current project
             $dependencies = $appDependencies."$project".dependencies
             # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
-            $foundDependencies = @($dependencies | ForEach-Object {
-                    $dependency = $_
-                    # Find the project that contains the app for which the current project has a dependency
-                    $depProject = $projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }
-                    # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
-                    $depProject | ForEach-Object {
-                        $_
-                        if ($projectDependencies.Value.Keys -contains $_) {
-                            $projectDependencies.value."$_"
-                        }
+            $foundDependencies = @()
+            foreach($dependecy in $dependencies) {
+                # Find the project that contains the app for which the current project has a dependency
+                $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
+                # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
+                foreach($depProject in $depProjects) {
+                    $foundDependencies += $depProject
+                    if ($projectDependencies.Value.Keys -contains $depProject) {
+                        $foundDependencies += $projectDependencies.value."$depProject"
                     }
-                } | Select-Object -Unique)
+                }
+            }
+            $foundDependencies = @($foundDependencies | Select-Object -Unique)
             # foundDependencies now contains all projects that the current project has a dependency on
             # Update ref variable projectDependencies for this project
             if ($projectDependencies.Value.Keys -notcontains $project) {
@@ -1998,12 +1998,12 @@ Function AnalyzeProjectDependencies {
                 # Update the dependency list for that project if it contains the current project, which might lead to a changed dependency list
                 # This is needed because we are looping through the projects in a any order
                 $keys = @($projectDependencies.value.Keys)
-                $keys | ForEach-Object {
-                    if ($projectDependencies.value."$_" -contains $project) {
-                        $projectDeps = @( $projectDependencies.value."$_" )
-                        $projectDependencies.value."$_" = @( @($projectDeps + $foundDependencies) | Select-Object -Unique )
-                        if (Compare-Object -ReferenceObject $projectDependencies.value."$_" -differenceObject $projectDeps) {
-                            Write-Host "Add ProjectDependencies $($foundDependencies -join ',') to $_"
+                foreach($key in $keys) {
+                    if ($projectDependencies.value."$key" -contains $project) {
+                        $projectDeps = @( $projectDependencies.value."$key" )
+                        $projectDependencies.value."$key" = @( @($projectDeps + $foundDependencies) | Select-Object -Unique )
+                        if (Compare-Object -ReferenceObject $projectDependencies.value."$key" -differenceObject $projectDeps) {
+                            Write-Host "Add ProjectDependencies $($foundDependencies -join ',') to $key"
                         }
                     }
                 }
@@ -2013,14 +2013,14 @@ Function AnalyzeProjectDependencies {
             if ($foundDependencies) {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
                 # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
-                $foundDependencies | ForEach-Object {
-                    if ($buildAlso.value.Keys -contains $_) {
-                        if ($buildAlso.value."$_" -notcontains $project) {
-                            $buildAlso.value."$_" += @( $project )
+                foreach($dependency in $foundDependencies) {
+                    if ($buildAlso.value.Keys -contains $dependency) {
+                        if ($buildAlso.value."$dependency" -notcontains $project) {
+                            $buildAlso.value."$dependency" += @( $project )
                         }
                     }
                     else {
-                        $buildAlso.value."$_" = @( $project )
+                        $buildAlso.value."$dependency" = @( $project )
                     }
                 }
             }

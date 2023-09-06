@@ -56,7 +56,7 @@
                 $failuresSb.Append("<details><summary><i>$appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds</i></summary>\n") | Out-Null
                 $suites | ForEach-Object {
                     Write-Host "  - $($_.name), $($_.tests) tests, $($_.failures) failed, $($_.skipped) skipped, $($_.time) seconds"
-                    if ($_.failures -gt 0 -and $failuresSb.Length -lt 32000) {
+                    if ($_.failures -gt 0 -and $failuresSb.Length -lt 32000 -and $includeFailures -gt $failuresIncluded) {
                         $failuresSb.Append("<details><summary><i>$($_.name), $($_.tests) tests, $($_.failures) failed, $($_.skipped) skipped, $($_.time) seconds</i></summary>") | Out-Null
                         $_.testcase | ForEach-Object {
                             if ($_.ChildNodes.Count -gt 0) {
