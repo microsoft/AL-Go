@@ -87,11 +87,11 @@ try {
         if ($secretName) {
             $secretValue = GetSecret -secret $secretName -keyVaultCredentials $keyVaultCredentials -encrypted:$encrypted
             if ($secretValue) {
-                $json = @{}
                 try {
                     $json = $secretValue | ConvertFrom-Json | ConvertTo-HashTable
                 }
                 catch {
+                    $json = @{}
                 }
                 if ($json.Keys.Count) {
                     if ($secretValue.contains("`n")) {

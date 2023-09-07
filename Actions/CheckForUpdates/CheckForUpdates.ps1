@@ -458,37 +458,34 @@ try {
                 # Update the files
                 # Calculate the release notes, while updating
                 $releaseNotes = ""
-                try {
-                    $updateFiles | ForEach-Object {
-                        # Create the destination folder if it doesn't exist
-                        $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
-                        if (-not (Test-Path -path $path -PathType Container)) {
-                            New-Item -Path $path -ItemType Directory | Out-Null
-                        }
-                        if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                            $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
-                            while ($oldReleaseNotes) {
-                                $releaseNotes = $_.Content
-                                if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
-                                    $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
-                                    $oldReleaseNotes = ""
+                $updateFiles | ForEach-Object {
+                    # Create the destination folder if it doesn't exist
+                    $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
+                    if (-not (Test-Path -path $path -PathType Container)) {
+                        New-Item -Path $path -ItemType Directory | Out-Null
+                    }
+                    if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
+                        $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
+                        while ($oldReleaseNotes) {
+                            $releaseNotes = $_.Content
+                            if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
+                                $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
+                                $oldReleaseNotes = ""
+                            }
+                            else {
+                                $idx = $oldReleaseNotes.IndexOf("`n## ")
+                                if ($idx -gt 0) {
+                                    $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
                                 }
                                 else {
-                                    $idx = $oldReleaseNotes.IndexOf("`n## ")
-                                    if ($idx -gt 0) {
-                                        $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
-                                    }
-                                    else {
-                                        $oldReleaseNotes = ""
-                                    }
+                                    $oldReleaseNotes = ""
                                 }
                             }
                         }
-                        Write-Host "Update $($_.DstFile)"
-                        $_.Content | Set-ContentLF -Path $_.DstFile
                     }
+                    Write-Host "Update $($_.DstFile)"
+                    $_.Content | Set-ContentLF -Path $_.DstFile
                 }
-                catch {}
                 if ($releaseNotes -eq "") {
                     $releaseNotes = "No release notes available!"
                 }

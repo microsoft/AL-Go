@@ -81,12 +81,12 @@ $repoPath = (Get-Location).Path
 
 1..2 | ForEach-Object {
     # Run CI/CD workflow
-    $run = Run-CICD -branch $branch
+    $run = RunCICD -branch $branch
 
     # Launch Current, NextMinor and NextMajor builds
-    $runTestCurrent = Run-TestCurrent -branch $branch
-    $runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-    $runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+    $runTestCurrent = RunTestCurrent -branch $branch
+    $runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
+    $runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
 
     # Wait for CI/CD workflow to finish
     WaitWorkflow -runid $run.id
@@ -112,7 +112,7 @@ $repoPath = (Get-Location).Path
         CommitAndPush -commitMessage 'Shift to Linux'
 
         # Upgrade AL-Go System Files
-        Run-UpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
+        RunUpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
     }
 }
 

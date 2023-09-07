@@ -43,7 +43,7 @@ function Test-Shell {
     }
 }
 
-function Test-Json {
+function Test-SettingsJson {
     Param(
         [hashtable] $json,
         [string] $settingsDescription,
@@ -92,7 +92,7 @@ function Test-JsonStr {
 
     try {
         $json = $jsonStr | ConvertFrom-Json | ConvertTo-HashTable
-        Test-Json -json $json -settingsDescription $settingsDescription -type:$type
+        Test-SettingsJson -json $json -settingsDescription $settingsDescription -type:$type
     }
     catch {
         throw "$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"

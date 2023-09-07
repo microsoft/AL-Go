@@ -1,4 +1,4 @@
-﻿function Get-NumberOfRuns {
+﻿function GetNumberOfRuns {
     Param(
         [string] $repository,
         [string] $workflowName
@@ -17,14 +17,14 @@
     $runs.Count
 }
 
-function Test-NumberOfRuns {
+function TestNumberOfRuns {
     Param(
         [string] $repository,
         [string] $workflowName,
         [int] $expectedNumberOfRuns
     )
 
-    $count = Get-NumberOfRuns -repository $repository -workflowName $workflowName
+    $count = GetNumberOfRuns -repository $repository -workflowName $workflowName
     if ($count -ne $expectedNumberOfRuns) {
         throw "Expected number of runs was $expectedNumberOfRuns. Actual number was $($count)"
     }
@@ -37,8 +37,7 @@ function Test-ArtifactsFromRun {
         [hashtable] $expectedArtifacts = @{},
         [string] $expectedNumberOfTests = 0,
         [string] $repoVersion = "",
-        [string] $appVersion = "",
-        [switch] $addDelay
+        [string] $appVersion = ""
     )
 
     Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
@@ -73,26 +72,29 @@ function Test-ArtifactsFromRun {
         }
     }
     $path = Join-Path (Get-Location).Path $folder -Resolve
-    $expectedArtifacts.Keys | ForEach-Object {
-        $type = $_
+    foreach($type in $expectedArtifacts.Keys) {
         $expected = $expectedArtifacts."$type"
         Write-Host "Type: $type, Expected: $expected"
         if ($type -eq 'thisbuild') {
+            $fileNamePattern = "thisbuild-*-Apps?*$appVersion.*.*.app"
+            Write-Host "FileNamePattern: $fileNamePattern"
             $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
-                $_.FullName.Substring($path.Length+1) -like "thisbuild-*-Apps?*$appVersion.*.*.app"
+                $_.FullName.Substring($path.Length+1) -like $fileNamePattern
             }).Count
         }
         else {
+            $fileNamePattern = "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
+            Write-Host "FileNamePattern: $fileNamePattern"
             $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
-                $_.FullName.SubString($path.Length+1) -like "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
+                $_.FullName.SubString($path.Length+1) -like $fileNamePattern
             }).Count
         }
         if ($actual -ne $expected) {
-            Write-Host "::Error::Expected number of $_ was $expected. Actual number of $_ is $actual"
+            Write-Host "::Error::Expected number of $type was $expected. Actual number of $type is $actual"
             $err = $true
         }
         else {
-            Write-Host "Number of $_ was $actual as expected"
+            Write-Host "Number of $type was $actual as expected"
         }
     }
     if ($err) {
@@ -107,12 +109,14 @@ function Test-PropertiesInJsonFile {
     )
 
     $err = $false
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'json', Justification = 'False positive.')]
     $json = Get-Content $jsonFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-    $properties.Keys | ForEach-Object {
-        $expected = $properties."$_"
-        $actual = Invoke-Expression "`$json.$_"
+    foreach($key in $properties.Keys) {
+        $expected = $properties."$key"
+        # Key can be 'idRanges[0].from' or other expressions
+        $actual = Invoke-Expression "`$json.$key"
         if ($actual -ne $expected) {
-            Write-Host "::Error::Property $_ is $actual. Expected $expected"
+            Write-Host "::Error::Property $key is $actual. Expected $expected"
             $err = $true
         }
     }

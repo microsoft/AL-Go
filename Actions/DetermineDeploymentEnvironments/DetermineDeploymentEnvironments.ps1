@@ -76,15 +76,14 @@ if (!($environments)) {
     }
 }
 else {
-    $environments | ForEach-Object {
-        $environmentName = $_
+    foreach($environmentName in $environments) {
         Write-Host "Environment: $environmentName"
-        $envName = $_.Split(' ')[0]
+        $envName = $environmentName.Split(' ')[0]
 
         # Check Obsolete Settings
-        "$($envName)-Projects","$($envName)_Projects" | ForEach-Object {
-            if ($settings.Contains($_)) {
-                throw "The setting $_ is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
+        foreach($obsoleteSetting in "$($envName)-Projects","$($envName)_Projects") {
+            if ($settings.Contains($obsoleteSetting)) {
+                throw "The setting $obsoleteSetting is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
             }
         }
 
@@ -110,9 +109,9 @@ else {
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             $deployTo = $settings."$settingsName"
-            'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on' | ForEach-Object {
-                if ($deployTo.ContainsKey($_)) {
-                    $deploymentSettings."$_" = $deployTo."$_"
+            foreach($key in 'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on') {
+                if ($deployTo.ContainsKey($key)) {
+                    $deploymentSettings."$key" = $deployTo."$key"
                 }
             }
         }
@@ -125,7 +124,7 @@ else {
         # - Type is not Continous Deployment
         # - Environment is setup for Continuous Deployment (in settings)
         # - Continuous Deployment is unset in settings and environment name doesn't contain PROD or FAT tags
-        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($deploymentSettings.ContinuousDeployment -eq $null -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
+        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($null -eq $deploymentSettings.ContinuousDeployment -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
 
         # Check branch policies and settings
         if (-not $includeEnvironment) {

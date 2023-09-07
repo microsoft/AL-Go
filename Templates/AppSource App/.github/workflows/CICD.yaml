@@ -89,7 +89,7 @@ jobs:
         id: DetermineDeliveryTargets
         uses: microsoft/AL-Go-Actions/DetermineDeliveryTargets@main
         env:
-          Secrets: ${{ steps.ReadSecrets.outputs.Secrets }}
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'

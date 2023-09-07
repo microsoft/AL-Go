@@ -61,12 +61,12 @@ CreateAlGoRepository `
     -branch $branch `
     -contentScript {
         Param([string] $path)
-        $global:id = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
+        $null = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
         Add-PropertiesToJsonFile -path (Join-Path $path '.github/AL-Go-Settings.json') -properties @{ "RepoName" = $repoName }
     }
 
 $repoPath = (Get-Location).Path
-$run = Run-CICD -repository $repository -branch $branch
+$run = RunCICD -repository $repository -branch $branch
 
 # Wait for CI/CD workflow of repository1 to finish
 WaitWorkflow -repository $repository -runid $run.id
@@ -89,9 +89,9 @@ Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "run
 CommitAndPush -commitMessage 'Shift to Linux'
 
 # Upgrade AL-Go System Files
-Run-UpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
+RunUpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
 
-$run = Run-CICD -repository $repository -branch $branch -wait
+$run = RunCICD -repository $repository -branch $branch -wait
 
 # test artifacts generated in repository1
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'

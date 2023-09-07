@@ -72,7 +72,7 @@ CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -co
 $repoPath = (Get-Location).Path
 
 # Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)
-$runs = Get-NumberOfRuns -repository $repository
+$runs = GetNumberOfRuns -repository $repository
 
 # Add AppFolders and TestFolders
 $settingsFile = Join-Path $repoPath '.AL-Go\settings.json'
@@ -95,7 +95,7 @@ if ($appSourceApp) {
 }
 
 # Run CI/CD and wait
-$run = Run-CICD -wait -branch $branch
+$run = RunCICD -wait -branch $branch
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Expected Run: CI/CD triggered on workflow_dispatch
@@ -103,7 +103,7 @@ $runs++
 
 # Update AL-Go System Files
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch
 $runs++
@@ -124,13 +124,13 @@ if ($releaseVersion -ge [System.Version]"2.2") {
 $runs++
 
 # Run CI/CD and wait
-$run = Run-CICD -wait -branch $branch
+$run = RunCICD -wait -branch $branch
 
 # Expected Run: CICD run on workflow_dispatch
 $runs++
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0' -appVersion ''
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
+TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 Set-Location $prevLocation
 

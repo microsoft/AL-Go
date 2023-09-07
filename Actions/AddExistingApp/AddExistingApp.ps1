@@ -121,23 +121,21 @@ try {
             $ranges += @($appJson.idRange)
         }
 
-        $ttype = ""
-        $ranges | Select-Object -First 1 | ForEach-Object {
-            if ($_.from -lt 100000 -and $_.to -lt 100000) {
-                $ttype = "PTE"
-            }
-            else {
-                $ttype = "AppSource App"
-            }
+        # Determine whether the app is PTE or AppSource App based on one of the id ranges (the first)
+        if ($ranges[0].from -lt 100000 -and $ranges[0].to -lt 100000) {
+            $ttype = "PTE"
+        }
+        else {
+            $ttype = "AppSource App"
         }
 
         if ($appJson.PSObject.Properties.Name -eq "dependencies") {
-            $appJson.dependencies | ForEach-Object {
-                if ($_.PSObject.Properties.Name -eq "AppId") {
-                    $id = $_.AppId
+            foreach($dependency in $appJson.dependencies) {
+                if ($dependency.PSObject.Properties.Name -eq "AppId") {
+                    $id = $dependency.AppId
                 }
                 else {
-                    $id = $_.Id
+                    $id = $dependency.Id
                 }
                 if ($testRunnerApps.Contains($id)) {
                     $ttype = "Test App"
@@ -146,8 +144,8 @@ try {
         }
 
         if ($ttype -ne "Test App") {
-            Get-ChildItem -Path $appFolder -Filter "*.al" -Recurse | ForEach-Object {
-                $alContent = (Get-Content -Path $_.FullName -Encoding UTF8) -join "`n"
+            foreach($appName in (Get-ChildItem -Path $appFolder -Filter "*.al" -Recurse).FullName) {
+                $alContent = (Get-Content -Path $appName -Encoding UTF8) -join "`n"
                 if ($alContent -like "*codeunit*subtype*=*test*[test]*") {
                     $ttype = "Test App"
                 }
