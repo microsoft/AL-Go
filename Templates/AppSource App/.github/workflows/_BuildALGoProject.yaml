@@ -10,7 +10,7 @@ on:
         required: false
         default: powershell
         type: string
-      runsOn: 
+      runsOn:
         description: JSON-formatted string og the types of machine to run the build job on
         required: true
         type: string
@@ -21,6 +21,10 @@ on:
         type: string
       project:
         description: Name of the built project
+        required: true
+        type: string
+      projectName:
+        description: Friendly name of the built project
         required: true
         type: string
       projectDependenciesJson:
@@ -66,10 +70,15 @@ on:
         description: Specifies the telemetry scope for the telemetry signal
         required: false
         type: string
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
-    name: ${{ inputs.project }} - ${{ inputs.buildMode }}
+    name: ${{ inputs.projectName }} (${{ inputs.buildMode }})
     steps:
         - name: Checkout
           uses: actions/checkout@v3
@@ -81,22 +90,23 @@ jobs:
           uses: microsoft/AL-Go-Actions/ReadSettings@main
           with:
             shell: ${{ inputs.shell }}
-            parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
             get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
 
         - name: Read secrets
+          id: ReadSecrets
           if: github.event_name != 'pull_request'
           uses: microsoft/AL-Go-Actions/ReadSecrets@main
           with:
             shell: ${{ inputs.shell }}
-            parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             gitHubSecrets: ${{ toJson(secrets) }}
             getSecrets: '${{ inputs.secrets }},appDependencyProbingPathsSecrets'
 
         - name: Determine ArtifactUrl
           uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
           id: determineArtifactUrl
+          env:
+            Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
@@ -112,6 +122,8 @@ jobs:
         - name: Download Project Dependencies
           id: DownloadProjectDependencies
           uses: microsoft/AL-Go-Actions/DownloadProjectDependencies@main
+          env:
+            Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           with:
             shell: ${{ inputs.shell }}
             project: ${{ inputs.project }}
@@ -122,6 +134,7 @@ jobs:
           id: RunPipeline
           uses: microsoft/AL-Go-Actions/RunPipeline@main
           env:
+            Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
             BuildMode: ${{ inputs.buildMode }}
           with:
             shell: ${{ inputs.shell }}
@@ -170,7 +183,7 @@ jobs:
             path: '${{ inputs.project }}/.buildartifacts/TestApps/'
             if-no-files-found: ignore
             retention-days: 1
-        
+
         - name: Publish artifacts - apps
           uses: actions/upload-artifact@v3
           if: inputs.publishArtifacts
@@ -223,7 +236,7 @@ jobs:
           uses: actions/upload-artifact@v3
           if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',inputs.project)) != '')
           with:
-            name: ${{ env.BcptTestResultsArtifactsName }}
+            name: ${{ steps.calculateArtifactsNames.outputs.BcptTestResultsArtifactsName }}
             path: '${{ inputs.project }}/bcptTestResults.json'
             if-no-files-found: ignore
 

@@ -1,4 +1,4 @@
-Describe "GitHub-Helper Tests" {
+﻿Describe "GitHub-Helper Tests" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
     }

@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -37,7 +37,7 @@ function EnsureAzStorageModule() {
             Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
         }
         else {
-            Write-Host "Installing and importing Az.Storage." 
+            Write-Host "Installing and importing Az.Storage."
             Install-Module 'Az.Storage' -Force
             Import-Module  'Az.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
         }
@@ -78,7 +78,7 @@ try {
         throw "No projects matches the pattern '$projects'"
     }
     if ($deliveryTarget -eq "AppSource") {
-        $atypes = "Apps,Dependencies"        
+        $atypes = "Apps,Dependencies"
     }
     Write-Host "Artifacts $artifacts"
     Write-Host "Projects:"
@@ -175,9 +175,9 @@ try {
 
         if (Test-Path $customScript -PathType Leaf) {
             Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
-            
+
             $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
-            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotCheckAppDependencyProbingPaths -doNotIssueWarnings
+            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
             $parameters = @{
                 "Project" = $thisProject
                 "ProjectName" = $projectName
@@ -187,7 +187,7 @@ try {
                 "ProjectSettings" = $projectSettings
             }
             #Calculate the folders per artifact type
-            
+
             #Calculate the folders per artifact type
             'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
                 $artifactType = $_
@@ -219,7 +219,7 @@ try {
                     $parameters[$artifactType.ToLowerInvariant() + "Folders"] = $artifactFolders.FullName
                 }
             }
-            
+
             Write-Host "Calling custom script: $customScript"
             . $customScript -parameters $parameters
         }
@@ -398,7 +398,7 @@ try {
         }
         elseif ($deliveryTarget -eq "AppSource") {
             $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
-            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotCheckAppDependencyProbingPaths -doNotIssueWarnings
+            $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
             # if type is Release, we only get here with the projects that needs to be delivered to AppSource
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
             if ($type -eq 'Release' -or ($projectSettings.Keys -contains 'AppSourceContinuousDelivery' -and $projectSettings.AppSourceContinuousDelivery)) {
@@ -467,7 +467,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    if ($env:BcContainerHelperPath) {
+    if (Get-Module BcContainerHelper) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
     throw

@@ -7,7 +7,7 @@ Determines the delivery targets to use for the build
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
-| Secrets | env.Secrets with delivery target context secrets must be read by a prior call to the ReadSecrets Action |
+| Secrets | env.Secrets with delivery target context secrets must be read by a prior call to the ReadSecrets Action (if checkContextSecrets is set to Y) |
 
 ### Parameters
 | Name | Required | Description | Default value |

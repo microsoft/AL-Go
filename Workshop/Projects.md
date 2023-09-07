@@ -100,7 +100,7 @@ Before running **Update AL-Go System Files** however, let's make some changes to
 |-|
 
  Open **VS Code** and run **Git Clone** to clone your repository to your local machine:
- 
+
 | ![image](https://user-images.githubusercontent.com/10775043/231759374-671a9933-9602-4ec0-bc06-ea5c7236b457.png) |
 |-|
 

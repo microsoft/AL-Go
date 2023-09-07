@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "Name of the built project", Mandatory = $true)]
     [string] $project,
     [Parameter(HelpMessage = "Build mode used when building the artifacts", Mandatory = $true)]

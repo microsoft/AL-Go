@@ -1,4 +1,4 @@
-<#
+﻿<#
 .Synopsis
     Creates buils dimensions for a list of projects.
 
@@ -31,6 +31,7 @@ function New-BuildDimensions(
             $buildMode = $_
             $buildDimensions += @{
                 project = $project
+                projectName = $projectSettings.projectName
                 buildMode = $buildMode
             }
         }

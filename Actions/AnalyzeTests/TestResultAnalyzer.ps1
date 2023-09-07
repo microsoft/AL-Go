@@ -1,4 +1,4 @@
-$statusOK = ":heavy_check_mark:"
+﻿$statusOK = ":heavy_check_mark:"
 $statusWarning = ":warning:"
 $statusError = ":x:"
 $statusSkipped = ":question:"
@@ -304,4 +304,3 @@ function GetBcptSummaryMD {
 
     $summarySb.ToString()
 }
-

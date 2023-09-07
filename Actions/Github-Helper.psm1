@@ -125,22 +125,22 @@ function Get-Dependencies {
             $dependency = $_
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
-            
+
             # change the mask to include the build mode
             if($buildMode -ne "Default") {
                 $mask = "$buildMode$mask"
             }
 
             Write-Host "Locating $mask artifacts for projects: $projects"
-            
+
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
                 $projects.Split(',') | ForEach-Object {
                     $project = $_
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
-                    
+
                     $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
-                    
+
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
@@ -264,7 +264,7 @@ function CmdDo {
         if ("$err" -ne "") {
             $message += "$err"
         }
-        
+
         $message = $message.Trim()
 
         if ($p.ExitCode -eq 0) {
@@ -485,9 +485,9 @@ function GetReleases {
     if ($releases.Count -gt 1) {
         # Sort by SemVer tag
         try {
-            $sortedReleases = $releases.tag_name | 
-                ForEach-Object { SemVerStrToSemVerObj -semVerStr $_ } | 
-                Sort-Object -Property Major,Minor,Patch,Addt0,Addt1,Addt2,Addt3,Addt4 -Descending | 
+            $sortedReleases = $releases.tag_name |
+                ForEach-Object { SemVerStrToSemVerObj -semVerStr $_ } |
+                Sort-Object -Property Major,Minor,Patch,Addt0,Addt1,Addt2,Addt3,Addt4 -Descending |
                 ForEach-Object { SemVerObjToSemVerStr -semVerObj $_ } | ForEach-Object {
                     $tag_name = $_
                     $releases | Where-Object { $_.tag_name -eq $tag_name }
@@ -511,7 +511,7 @@ function GetLatestRelease {
         [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $ref = $ENV:GITHUB_REFNAME
     )
-    
+
     Write-Host "Getting the latest release from $api_url/repos/$repository/releases/latest - branch $ref"
     # Get all releases from GitHub, sorted by SemVer tag
     # If any release tag is not a valid SemVer tag, use default GitHub sorting and issue a warning
@@ -559,7 +559,7 @@ function GetReleaseNotes {
         [string] $previous_tag_name,
         [string] $target_commitish
     )
-    
+
     Write-Host "Generating release note $api_url/repos/$repository/releases/generate-notes"
 
     $postParams = @{
@@ -573,7 +573,7 @@ function GetReleaseNotes {
         $postParams["target_commitish"] = $target_commitish
     }
 
-    InvokeWebRequest -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes" 
+    InvokeWebRequest -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes"
 }
 
 function DownloadRelease {
@@ -596,12 +596,12 @@ function DownloadRelease {
     $projects.Split(',') | ForEach-Object {
         $project = $_.Replace('\','_').Replace('/','_')
         Write-Host "project '$project'"
-        
+
         $release.assets | Where-Object { $_.name -like "$project-*-$mask-*.zip" -or $_.name -like "$project-$mask-*.zip" } | ForEach-Object {
             $uri = "$api_url/repos/$repository/releases/assets/$($_.id)"
             Write-Host $uri
             $filename = Join-Path $path $_.name
-            InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename 
+            InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
             return $filename
         }
     }

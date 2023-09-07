@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The project for which to download dependencies", Mandatory = $true)]
     [string] $project,
     [string] $baseFolder,
@@ -11,28 +11,29 @@ Param(
 function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinationPath) {
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
     $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
+    $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
     if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
         return Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
     }
 }
 
-function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {  
+function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath) {
     Write-Host "Downloading dependencies for project '$project'"
-    
+
     $dependencyProjects = @()
     if ($projectsDependencies.Keys -contains $project) {
         $dependencyProjects = @($projectsDependencies."$project")
     }
 
     Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
-    
+
     # For each dependency project, calculate the corresponding probing path
     $dependeciesProbingPaths = @($dependencyProjects | ForEach-Object {
             $dependencyProject = $_
 
             Write-Host "Reading settings for project '$dependencyProject'"
             $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
-    
+
             $dependencyBuildMode = $buildMode
             if (!($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
                 # Download the default build mode if the specified build mode is not supported for the dependency project
@@ -47,7 +48,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             if (!$baseBranch) {
                 $baseBranch = $currentBranch
             }
-    
+
             return @{
                 "release_status"  = "thisBuild"
                 "version"         = "latest"
@@ -59,7 +60,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
                 "authTokenSecret" = $token
             }
         })
-    
+
     # For each probing path, download the dependencies
     $downloadedDependencies = @()
     $dependeciesProbingPaths | ForEach-Object {
