@@ -62,7 +62,7 @@ $repoPath = (Get-Location).Path
 Start-Process $repoPath
 
 # Run CI/CD workflow
-$run = Run-CICD -repository $repository -branch $branch -wait
+$run = RunCICD -repository $repository -branch $branch -wait
 
 # Test number of artifacts
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1} -repoVersion '1.0' -appVersion '1.0'

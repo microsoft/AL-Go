@@ -20,7 +20,7 @@ try {
     $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $settings = AnalyzeRepo -settings $settings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
-    $artifactUrl = Determine-ArtifactUrl -projectSettings $settings -insiderSasToken $insiderSasToken
+    $artifactUrl = DetermineArtifactUrl -projectSettings $settings -insiderSasToken $insiderSasToken
     $artifactCacheKey = ''
     if ($settings.useCompilerFolder) {
         $artifactCacheKey = $artifactUrl.Split('?')[0]

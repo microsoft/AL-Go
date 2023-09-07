@@ -1,4 +1,4 @@
-﻿function Run-TestNextMinor {
+﻿function RunTestNextMajor {
     Param(
         [switch] $wait,
         [string] $repository,
@@ -9,7 +9,7 @@
     if ($insiderSasToken) {
         SetRepositorySecret -repository $repository -name 'INSIDERSASTOKEN' -value $insiderSasToken
     }
-    $workflowName = 'Test Next Minor'
+    $workflowName = 'Test Next Major'
     $parameters = @{
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository

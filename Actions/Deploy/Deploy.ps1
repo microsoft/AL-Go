@@ -1,6 +1,4 @@
 ﻿Param(
-    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
-    [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
@@ -41,9 +39,9 @@ try {
     }
 
     $authContext = $null
-    "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext" | ForEach-Object {
-        if ($secrets."$_") {
-            $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
+    foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
+        if ($secrets."$secretName") {
+            $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName"))
         }
     }
     if (-not $authContext) {

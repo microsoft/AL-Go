@@ -1,4 +1,5 @@
-﻿param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
+param(
     [Parameter(HelpMessage = "Azure Credentials secret", Mandatory = $true)]
     [string] $AzureCredentialsJson,
     [Parameter(HelpMessage = "The path to the files to be signed", Mandatory = $true)]
@@ -42,7 +43,7 @@ try {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
-    Retry-Command -Command {
+    RetryCommand -Command { Param( $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Certificate, $Files)
         Write-Host "::group::Register NavSip"
         Register-NavSip
         Write-Host "::endgroup::"
@@ -52,11 +53,11 @@ try {
             --azure-key-vault-client-id $AzureCredentials.clientId `
             --azure-key-vault-tenant-id $AzureCredentials.tenantId `
             --azure-key-vault-client-secret $AzureCredentials.clientSecret `
-            --azure-key-vault-certificate $Settings.keyVaultCodesignCertificateName `
+            --azure-key-vault-certificate $Certificate `
             --timestamp-rfc3161 "$TimestampService" `
             --timestamp-digest $digestAlgorithm `
             $Files
-    } -MaxRetries 3
+    } -MaxRetries 3 -ArgumentList $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Settings.keyVaultCodesignCertificateName, $Files
 
     TrackTrace -telemetryScope $telemetryScope
 }

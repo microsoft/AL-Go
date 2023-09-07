@@ -1,6 +1,4 @@
 ﻿Param(
-    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
-    [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
@@ -33,8 +31,8 @@ try {
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
         Start-Job -ScriptBlock {
-            docker pull --quiet $genericImageName
-        } -ArgumentList $genericImageName | Out-Null
+            docker pull --quiet $using:genericImageName
+        } | Out-Null
     }
 
     $containerName = GetContainerName($project)
@@ -117,7 +115,7 @@ try {
         }
     }
 
-    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
+    $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
@@ -431,7 +429,9 @@ finally {
             Copy-Item -Path $containerEventLogFile -Destination $destFolder
         }
     }
-    catch {}
+    catch {
+        Write-Host "Error getting event log from container: $($_.Exception.Message)"
+    }
     if ($containerBaseFolder -and (Test-Path $containerBaseFolder) -and $projectPath -and (Test-Path $projectPath)) {
         Write-Host "Removing temp folder"
         Remove-Item -Path (Join-Path $projectPath '*') -Recurse -Force

@@ -1,4 +1,4 @@
-﻿function Run-AddExistingAppOrTestApp {
+﻿function RunAddExistingAppOrTestApp {
     Param(
         [string] $project,
         [string] $url,

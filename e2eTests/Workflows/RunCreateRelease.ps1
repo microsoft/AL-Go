@@ -1,4 +1,4 @@
-﻿function Run-CreateRelease {
+﻿function RunCreateRelease {
     Param(
         [string] $appVersion,
         [string] $name,
