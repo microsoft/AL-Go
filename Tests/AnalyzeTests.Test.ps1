@@ -15,16 +15,13 @@ Describe "AnalyzeTests Action Tests" {
             )
         
             $bcpt = @()
-            1..$noOfSuites | ForEach-Object {
-                $suiteName = "SUITE$_"
-                1..$noOfCodeunits | ForEach-Object {
-                    $codeunitID = $_
+            for($suiteNo = 1; $suiteNo -le $noOfSuites; $suiteNo++) {
+                $suiteName = "SUITE$suiteNo"
+                for($codeUnitID = 1; $codeunitID -le $noOfCodeunits; $codeunitID++) {
                     $codeunitName = "Codeunit$_"
-                    1..$noOfOperations | ForEach-Object {
-                        $operationNo = $_
+                    for($operationNo = 1; $operationNo -le $noOfOperations; $operationNo++) {
                         $operationName = "Operation$operationNo"
-                        1..$noOfMeasurements | ForEach-Object {
-                            $no = $_
+                        for($no = 1; $no -le $noOfMeasurements; $no++) {
                             $bcpt += @(@{
                                 "id" = [GUID]::NewGuid().ToString()
                                 "bcptCode" = $suiteName
@@ -46,12 +43,16 @@ Describe "AnalyzeTests Action Tests" {
         $actionName = "AnalyzeTests"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'bcptFilename', Justification = 'False positive.')]
         $bcptFilename = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 5 -noOfMeasurements 4
         # BaseLine1 has overall highter duration and more SQL statements than bcptFilename (+ one more opearion)
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'bcptBaseLine1', Justification = 'False positive.')]
         $bcptBaseLine1 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 4 -noOfOperations 6 -noOfMeasurements 4 -durationOffset 5 -numberOfSQLStmtsOffset 1
         # BaseLine2 has overall lower duration and less SQL statements than bcptFilename (+ one less opearion)
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'bcptBaseLine2', Justification = 'False positive.')]
         $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 4 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 0
     }
 
