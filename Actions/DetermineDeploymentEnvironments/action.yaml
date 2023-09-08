@@ -21,6 +21,9 @@ outputs:
   EnvironmentCount:
     description: Number of Deployment Environments
     value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentCount }}
+  UnknownEnvironment:
+    description: Flag determining whether the environment is unknown
+    value: ${{ steps.determineDeploymentEnvironments.outputs.UnknownEnvironment }}
 runs:
   using: composite
   steps:
