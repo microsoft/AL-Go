@@ -61,7 +61,7 @@ jobs:
 
       - name: EnvName
         id: envName
-        if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
+        if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.environmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
@@ -70,7 +70,7 @@ jobs:
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
-        if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
+        if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
@@ -78,7 +78,7 @@ jobs:
 
       - name: Authenticate
         id: Authenticate
-        if: steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount == 1
+        if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
         run: |
           $envName = '${{ steps.envName.outputs.envName }}'
           $secretName = ''
