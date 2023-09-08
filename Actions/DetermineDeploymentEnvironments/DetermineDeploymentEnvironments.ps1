@@ -51,7 +51,7 @@ $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
@@ -64,6 +64,7 @@ if (!($environments)) {
         $envName = $getEnvironments.Split(' ')[0]
         $deploymentEnvironments += @{
             "$getEnvironments" = @{
+                "EnvironmentType" = "SaaS"
                 "EnvironmentName" = $envName
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
