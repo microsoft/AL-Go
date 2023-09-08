@@ -1,25 +1,23 @@
-# https://github.com/microsoft/action-psscriptanalyzer
+# https://github.com/microsoft/psscriptanalyzer-action
 # For more information on PSScriptAnalyzer in general, see
 # https://github.com/PowerShell/PSScriptAnalyzer
 
-name: PSScriptAnalyzer
+name: PSScriptAnalyzer Scan
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: read
-  security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-
+    branches: [ main ]
+    
 jobs:
   build:
-    name: PSScriptAnalyzer
+    name: PSScriptAnalyzer Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+        # Checkout the repository to the GitHub Actions runner
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Run PSScriptAnalyzer
         uses: microsoft/psscriptanalyzer-action@v1.1
@@ -29,8 +27,15 @@ jobs:
           excludeRule: '"PSAvoidUsingInvokeExpression", "PSUseShouldProcessForStateChangingFunctions", "PSAvoidUsingWriteHost", "PSAvoidUsingCmdletAliases"'
           output: results.sarif
 
+      - name: Upload thisbuild artifacts - apps
+        uses: actions/upload-artifact@v3
+        with:
+          name: results.sarif
+          path: results.sarif
+          retention-days: 7
+      
       # Upload the SARIF file generated in the previous step
       - name: Upload SARIF results file
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v1
         with:
-          sarif_file: results.sarif
+          sarif_file: System Application_ErrorLog_WW.sarif

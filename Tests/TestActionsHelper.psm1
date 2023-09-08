@@ -53,7 +53,7 @@ function YamlTest {
     $systemParameters = @($emptyCmd.Parameters.Keys.GetEnumerator() | ForEach-Object { $_ })
 
     Invoke-Expression $actionScript
-    
+
     $yaml = [System.Text.StringBuilder]::new()
     $yaml.AppendLine("name: *") | Out-Null
     $yaml.AppendLine("author: *") | Out-Null
@@ -151,7 +151,7 @@ function YamlTest {
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null
     $yaml.Append("  color: blue") | Out-Null
-    
+
     $yamlLines = $yaml.ToString().Replace("`r","").Split("`n")
     $actualYaml = @(Get-Content -path (Join-Path $scriptRoot "action.yaml"))
 
@@ -222,6 +222,75 @@ function GetWorkflowsInPath {
     )
     return (Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml'))
 }
+
+function PesterMatchHashtable($ActualValue, $ExpectedValue, [switch] $Negate) {
+    $message = FindMismatchedHashtableValue -Prefix "" -ActualValue $ActualValue -ExpectedValue $ExpectedValue
+    $success = $null -eq $message
+
+    if ($success) {
+        if ($Negate) {
+            #expecting failure
+            $success = $false
+            $message = "Expected: '$ActualValue' to not match the expression '$ExpectedValue'"
+        }
+        # else - we can just return success
+    }
+    else {
+        if ($Negate) {
+            # expecting failure
+            $success = $true
+            $message = ""
+        }
+        # else - we can just return failure
+    }
+    return New-Object psobject -Property @{
+        Succeeded      = $success
+        FailureMessage = $message
+    }
+}
+
+function FindMismatchedHashtableValue($Prefix, $ActualValue, $ExpectedValue) {
+    foreach($expectedKey in $ExpectedValue.Keys) {
+        if (-not($ActualValue.Keys -contains $expectedKey)){
+            return "Expected key: '$Prefix$expectedKey', but missing in actual"
+        }
+        $expectedItem = $ExpectedValue[$expectedKey]
+        $actualItem = $ActualValue[$expectedKey]
+        if ($actualItem -is [array] -and $expectedItem -is [array]) {
+            if ($actualItem.Count -ne $expectedItem.Count) {
+                return "Value differs for array at key '$Prefix$expectedKey'. Expected count: $($expectedItem.Count), actual count: $($actualItem.Count)"
+            }
+            0..($actualItem.Count-1) | ForEach-Object {
+                if ($actualItem[$_] -is [hashtable] -and $expectedItem[$_] -is [hashtable]) {
+                    $message = FindMismatchedHashtableValue -Prefix "$($Prefix)$($expectedKey)[$_]." -ActualValue $actualItem[$_] -ExpectedValue $expectedItem[$_]
+                    if ($message) {
+                        return $message
+                    }
+                }
+                elseif (-not ($actualItem[$_] -eq $expectedItem[$_])) {
+                    return "Value differs for key '$($Prefix)$($expectedKey)[$_]'. Expected value: '$($expectedItem[$_])', actual value: '$($actualItem[$_])'"
+                }
+            }
+        }
+        elseif ($actualItem -is [hashtable] -and $expectedItem -is [hashtable]) {
+            $message = FindMismatchedHashtableValue -Prefix "$($Prefix)$($expectedKey)." -ActualValue $actualItem -ExpectedValue $expectedItem
+            if ($message) {
+                return $message
+            }
+        }
+        elseif (-not ($actualItem -eq $expectedItem)) {
+            return "Value differs for key '$Prefix$expectedKey'. Expected value: '$expectedItem', actual value: '$actualItem'"
+        }
+    }
+
+    foreach($actualKey in $ActualValue.Keys) {
+        if (-not($ExpectedValue.Keys -contains $actualKey)){
+            return "Actual key: '$prefix$actualKey', but missing in expected"
+        }
+    }
+}
+
+Add-AssertionOperator -Name MatchHashtable -Test $function:PesterMatchHashtable
 
 Export-ModuleMember -Function GetActionScript
 Export-ModuleMember -Function YamlTest

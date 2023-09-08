@@ -1,0 +1,49 @@
+{
+    "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json",
+    "version": "2.1.0",
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "AL-Go Analyzer",
+                    "informationUri": "https://github.com/microsoft/Al-Go",
+                    "rules": [
+                        {
+                            "id": "AS0059",
+                            "name": "AS0059",
+                            "helpUri": "https://github.com/PowerShell/Psscriptanalyzer"
+                        }
+                    ]
+                }
+            },
+            "artifacts": [
+                {
+                    "location": {
+                        "uri": "file:///home/runner/work/AL-Go/AL-Go/Actions/AddExistingApp/AddExistingApp.ps1"
+                    }
+                }
+            ],
+            "results": [
+                {
+                    "ruleId": "AS0059",
+                    "message": {
+                        "text": "The table 'Web Service Aggregate' cannot be modified because it is part of the read-only application database or because it will result in undefined behavior."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///home/runner/work/AL-Go/AL-Go/Actions/AddExistingApp/AddExistingApp.ps1"
+                                },
+                                "region": {
+                                    "startLine": 127
+                                }
+                            }
+                        }
+                    ]
+                }
+            ],
+            "columnKind": "utf16CodeUnits"
+        }
+    ]
+}

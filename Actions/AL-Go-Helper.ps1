@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [switch] $local
 )
 
@@ -62,8 +62,11 @@ if ($isPsCore) {
 else {
     $byteEncodingParam = @{ "Encoding" = "byte" }
     $allowUnencryptedAuthenticationParam = @{ }
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isWindows', Justification = 'Will only run on PS5')]
     $isWindows = $true
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isLinux', Justification = 'Will only run on PS5')]
     $isLinux = $false
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', 'isMacOS', Justification = 'Will only run on PS5')]
     $IsMacOS = $false
 }
 
@@ -91,25 +94,44 @@ function ConvertTo-HashTable() {
         [switch] $recurse
     )
 
+    function AddValueToHashTable {
+        Param(
+            [hashtable] $ht,
+            [string] $name,
+            $value,
+            [switch] $recurse
+        )
+
+        if ($ht.Contains($name)) {
+            throw "Duplicate key $name"
+        }
+        if ($recurse -and ($value -is [System.Collections.Specialized.OrderedDictionary] -or $value -is [hashtable] -or $value -is [System.Management.Automation.PSCustomObject])) {
+            $ht[$name] = ConvertTo-HashTable $value -recurse
+        }
+        elseif ($recurse -and $value -is [array]) {
+            $ht[$name] = @($value | ForEach-Object {
+                if (($_ -is [System.Collections.Specialized.OrderedDictionary]) -or ($_ -is [hashtable]) -or ($_ -is [System.Management.Automation.PSCustomObject])) {
+                    ConvertTo-HashTable $_ -recurse
+                }
+                else {
+                    $_
+                }
+            })
+        }
+        else {
+            $ht[$name] = $value
+        }
+    }
+
     $ht = @{}
     if ($object -is [System.Collections.Specialized.OrderedDictionary] -or $object -is [hashtable]) {
         $object.Keys | ForEach-Object {
-            if ($recurse -and ($object."$_" -is [System.Collections.Specialized.OrderedDictionary] -or $object."$_" -is [hashtable] -or $object."$_" -is [PSCustomObject])) {
-                $ht[$_] = ConvertTo-HashTable $object."$_" -recurse
-            }
-            else {
-                $ht[$_] = $object."$_"
-            }
+            AddValueToHashTable -ht $ht -name $_ -value $object."$_" -recurse:$recurse
         }
     }
-    elseif ($object -is [PSCustomObject]) {
+    elseif ($object -is [System.Management.Automation.PSCustomObject]) {
         $object.PSObject.Properties | ForEach-Object {
-            if ($recurse -and ($_.Value -is [System.Collections.Specialized.OrderedDictionary] -or $_.Value -is [hashtable] -or $_.Value -is [PSCustomObject])) {
-                $ht[$_.Name] = ConvertTo-HashTable $_.Value -recurse
-            }
-            else {
-                $ht[$_.Name] = $_.Value
-            }
+            AddValueToHashTable -ht $ht -name $_.Name -value $_.Value -recurse:$recurse
         }
     }
     $ht
@@ -527,6 +549,7 @@ function ReadSettings {
         "codeSignCertificatePasswordSecretName"         = "codeSignCertificatePassword"
         "additionalCountries"                           = @()
         "appDependencies"                               = @()
+        "projectName"                                   = ""
         "appFolders"                                    = @()
         "testDependencies"                              = @()
         "testFolders"                                   = @()
@@ -578,7 +601,8 @@ function ReadSettings {
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "PullRequestTrigger"                            = "pull_request_target"
-        "fullBuildPatterns"                              = @()
+        "fullBuildPatterns"                             = @()
+        "excludeEnvironments"                           = @()
     }
 
     # Read settings from files and merge them into the settings object
@@ -689,6 +713,9 @@ function ReadSettings {
     }
     if ($settings.shell -ne "powershell" -and $settings.shell -ne "pwsh") {
         throw "Invalid value for setting: shell: $($settings.githubRunnerShell)"
+    }
+    if($settings.projectName -eq '') {
+        $settings.projectName = $project # Default to project path as project name
     }
     $settings
 }
@@ -803,11 +830,8 @@ function AnalyzeRepo {
         [string] $project = '.',
         [string] $insiderSasToken,
         [switch] $doNotCheckArtifactSetting,
-        [switch] $doNotCheckAppDependencyProbingPaths,
         [switch] $doNotIssueWarnings,
-        [string[]] $includeOnlyAppIds,
-        [string] $server_url = $ENV:GITHUB_SERVER_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY
+        [string[]] $includeOnlyAppIds
     )
 
     $settings = $settings | Copy-HashTable
@@ -1014,118 +1038,8 @@ function AnalyzeRepo {
         Write-Host "::endgroup::"
     }
 
-    Write-Host "Checking project dependencies"
-
-    if (!$doNotCheckAppDependencyProbingPaths) {
-        Write-Host "Checking appDependencyProbingPaths"
-        if ($settings.appDependencyProbingPaths) {
-            $settings.appDependencyProbingPaths = @($settings.appDependencyProbingPaths | ForEach-Object {
-                    if ($_.GetType().Name -eq "PSCustomObject") {
-                        $_
-                    }
-                    else {
-                        New-Object -Type PSObject -Property $_
-                    }
-                })
-            $settings.appDependencyProbingPaths | ForEach-Object {
-                $dependency = $_
-                if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
-                    throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
-                }
-                if ($dependency.Repo -eq ".") {
-                    $dependency.Repo = "$server_url/$repository"
-                }
-                elseif ($dependency.Repo -notlike "https://*") {
-                    $dependency.Repo = "$server_url/$($dependency.Repo)"
-                }
-                if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
-                    $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
-                }
-                if (-not ($dependency.PsObject.Properties.name -eq "projects")) {
-                    $dependency | Add-Member -name "projects" -MemberType NoteProperty -Value "*"
-                }
-                elseif ([String]::IsNullOrEmpty($dependency.projects)) {
-                    $dependency.projects = '*'
-                }
-                if (-not ($dependency.PsObject.Properties.name -eq "release_status")) {
-                    $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
-                }
-                if (-not ($dependency.PsObject.Properties.name -eq "branch")) {
-                    $dependency | Add-Member -name "branch" -MemberType NoteProperty -Value "main"
-                }
-                Write-Host "Dependency to projects '$($dependency.projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
-                if ($dependency.PsObject.Properties.name -eq "AuthTokenSecret") {
-                    Write-Host "Using secret $($dependency.AuthTokenSecret) for access to repository"
-                    $secrets = $env:Secrets | ConvertFrom-Json
-                    # AuthTokenSecret is specified, use the value of that secret
-                    $dependency.AuthTokenSecret = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($dependency.AuthTokenSecret)"))
-                }
-                else {
-                    if ($token) {
-                        Write-Host "Using GITHUB_TOKEN for access to repository"
-                    }
-                    else {
-                        Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
-                    }
-                    $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
-                }
-                if (-not ($dependency.PsObject.Properties.name -eq "alwaysIncludeApps")) {
-                    $dependency | Add-Member -name "alwaysIncludeApps" -MemberType NoteProperty -Value @()
-                }
-                elseif ($dependency.alwaysIncludeApps -is [string]) {
-                    $dependency.alwaysIncludeApps = $dependency.alwaysIncludeApps.Split(' ')
-                }
-                if ($dependency.alwaysIncludeApps) {
-                    Write-Host "Always including apps: $($dependency.alwaysIncludeApps -join ", ")"
-                }
-
-                if ($dependency.release_status -eq "include") {
-                    if ($dependency.Repo -ne "$server_url/$repository") {
-                        OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
-                    }
-                    else {
-                        $dependency.projects.Split(',') | ForEach-Object {
-                            if ($_ -eq '*') {
-                                OutputWarning "Dependencies to the same repository cannot specify all projects (*)"
-                            }
-                            else {
-                                $depProject = $_
-                                Write-Host "Identified dependency to project $depProject in the same repository"
-
-                                $dependencyIds = @( @($settings.appDependencies + $settings.testDependencies) | ForEach-Object { $_.id })
-                                $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
-                                $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps) -doNotIssueWarnings -doNotCheckArtifactSetting -server_url $server_url -repository $repository
-
-                                Push-Location $projectPath
-                                try {
-                                    "appFolders", "testFolders", "bcptTestFolders" | ForEach-Object {
-                                        $propertyName = $_
-                                        Write-Host "Adding folders from $depProject to $_"
-                                        $found = $false
-                                        $depSettings."$propertyName" | ForEach-Object {
-                                            $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
-                                            if (!$settings."$propertyName".Contains($folder)) {
-                                                $settings."$propertyName" += @($folder)
-                                                $found = $true
-                                                Write-Host "- $folder"
-                                            }
-                                        }
-                                        if (!$found) { Write-Host "- No folders added" }
-                                    }
-                                }
-                                finally {
-                                    Pop-Location
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     if (!$settings.doNotRunBcptTests -and -not $settings.bcptTestFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
+        Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile"
         $settings.doNotRunBcptTests = $true
     }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
@@ -1139,14 +1053,133 @@ function AnalyzeRepo {
     $settings
 }
 
+function CheckAppDependencyProbingPaths {
+    Param(
+        [hashTable] $settings,
+        $token,
+        [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
+        [string] $project = '.',
+        [string[]] $includeOnlyAppIds
+    )
+
+    Write-Host "Checking appDependencyProbingPaths"
+    $settings = $settings | Copy-HashTable
+    if ($settings.appDependencyProbingPaths) {
+        $settings.appDependencyProbingPaths = @($settings.appDependencyProbingPaths | ForEach-Object {
+                if ($_.GetType().Name -eq "PSCustomObject") {
+                    $_
+                }
+                else {
+                    New-Object -Type PSObject -Property $_
+                }
+            })
+        foreach($dependency in $settings.appDependencyProbingPaths) {
+            if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
+                throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
+            }
+            if ($dependency.Repo -eq ".") {
+                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+            }
+            elseif ($dependency.Repo -notlike "https://*") {
+                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$($dependency.Repo)"
+            }
+            if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
+                $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
+            }
+            if (-not ($dependency.PsObject.Properties.name -eq "projects")) {
+                $dependency | Add-Member -name "projects" -MemberType NoteProperty -Value "*"
+            }
+            elseif ([String]::IsNullOrEmpty($dependency.projects)) {
+                $dependency.projects = '*'
+            }
+            if (-not ($dependency.PsObject.Properties.name -eq "release_status")) {
+                $dependency | Add-Member -name "release_status" -MemberType NoteProperty -Value "release"
+            }
+            if (-not ($dependency.PsObject.Properties.name -eq "branch")) {
+                $dependency | Add-Member -name "branch" -MemberType NoteProperty -Value "main"
+            }
+            Write-Host "Dependency to projects '$($dependency.projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
+            if ($dependency.PsObject.Properties.name -eq "AuthTokenSecret") {
+                Write-Host "Using secret $($dependency.AuthTokenSecret) for access to repository"
+                if ("$env:Secrets" -eq "") {
+                    throw "Internal error. Secrets are not available!"
+                }
+                $secrets = $env:Secrets | ConvertFrom-Json
+                # AuthTokenSecret is specified, use the value of that secret
+                $dependency.AuthTokenSecret = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($dependency.AuthTokenSecret)"))
+            }
+            else {
+                if ($token) {
+                    Write-Host "Using GITHUB_TOKEN for access to repository"
+                }
+                else {
+                    Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
+                }
+                $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
+            }
+            if (-not ($dependency.PsObject.Properties.name -eq "alwaysIncludeApps")) {
+                $dependency | Add-Member -name "alwaysIncludeApps" -MemberType NoteProperty -Value @()
+            }
+            elseif ($dependency.alwaysIncludeApps -is [string]) {
+                $dependency.alwaysIncludeApps = $dependency.alwaysIncludeApps.Split(' ')
+            }
+            if ($dependency.alwaysIncludeApps) {
+                Write-Host "Always including apps: $($dependency.alwaysIncludeApps -join ", ")"
+            }
+
+            if ($dependency.release_status -eq "include") {
+                if ($dependency.Repo -ne "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY") {
+                    OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
+                }
+                else {
+                    foreach($depProject in $dependency.projects.Split(',')) {
+                        if ($depProject -eq '*') {
+                            OutputWarning "Dependencies to the same repository cannot specify all projects (*)"
+                        }
+                        else {
+                            Write-Host "Identified dependency to project $depProject in the same repository"
+
+                            $dependencyIds = @( @($settings.appDependencies + $settings.testDependencies) | ForEach-Object { $_.id })
+                            $thisIncludeOnlyAppIds = @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps)
+                            $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
+                            $depSettings = AnalyzeRepo -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
+                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
+
+                            $projectPath = Join-Path $baseFolder $project -Resolve
+                            Push-Location $projectPath
+                            try {
+                                foreach($propertyName in "appFolders", "testFolders", "bcptTestFolders") {
+                                    Write-Host "Adding folders from $depProject to $propertyName in $project"
+                                    $found = $false
+                                    foreach($_ in $depSettings."$propertyName") {
+                                        $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
+                                        if (!$settings."$propertyName".Contains($folder)) {
+                                            $settings."$propertyName" += @($folder)
+                                            $found = $true
+                                            Write-Host "- $folder"
+                                        }
+                                    }
+                                    if (!$found) { Write-Host "- No folders added" }
+                                }
+                            }
+                            finally {
+                                Pop-Location
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    $settings
+}
+
 function Get-ProjectFolders {
     Param(
         [string] $baseFolder,
         [string] $project,
         [switch] $includeALGoFolder,
         [string[]] $includeOnlyAppIds,
-        [string] $server_url = $ENV:GITHUB_SERVER_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY,
         $token
     )
 
@@ -1159,7 +1192,7 @@ function Get-ProjectFolders {
 
     $projectFolders = @()
     $settings = ReadSettings -baseFolder $baseFolder -project $project -workflowName "CI/CD"
-    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -includeOnlyAppIds $includeOnlyAppIds -doNotIssueWarnings -doNotCheckArtifactSetting -server_url $server_url -repository $repository -doNotCheckAppDependencyProbingPaths
+    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -includeOnlyAppIds $includeOnlyAppIds -doNotIssueWarnings -doNotCheckArtifactSetting
     $AlGoFolderArr = @()
     if ($includeALGoFolder) { $AlGoFolderArr = @($ALGoFolderName) }
     Set-Location $baseFolder
@@ -1577,17 +1610,11 @@ function CreateDevEnv {
                             throw "$_ is an illegal property in adminCenterApiCredentials setting"
                         }
                     }
-                    if ($adminCenterApiCredentials.Keys -contains 'ClientSecret') {
-                        $adminCenterApiCredentials.ClientSecret = ConvertTo-SecureString -String $adminCenterApiCredentials.ClientSecret -AsPlainText -Force
-                    }
                 }
             }
         }
 
-        $params = @{
-            "settings"   = $settings
-            "baseFolder" = $projectFolder
-        }
+        $params = @{}
         if ($kind -eq "local") {
             $params += @{
                 "insiderSasToken" = $insiderSasToken
@@ -1598,21 +1625,22 @@ function CreateDevEnv {
                 "doNotCheckArtifactSetting" = $true
             }
         }
-        $repo = AnalyzeRepo @params
-        if ((-not $repo.appFolders) -and (-not $repo.testFolders)) {
+        $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @params
+        $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -project $project
+        if ((-not $settings.appFolders) -and (-not $settings.testFolders)) {
             Write-Host "Repository is empty"
         }
 
-        if ($kind -eq "local" -and $repo.type -eq "AppSource App" ) {
+        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
             if ($licenseFileUrl -eq "") {
                 OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
             }
         }
 
-        $installApps = $repo.installApps
-        $installTestApps = $repo.installTestApps
+        $installApps = $settings.installApps
+        $installTestApps = $settings.installTestApps
 
-        if ($repo.appDependencyProbingPaths) {
+        if ($settings.appDependencyProbingPaths) {
             Write-Host "Downloading dependencies ..."
 
             if (Test-Path $dependenciesFolder) {
@@ -1622,7 +1650,7 @@ function CreateDevEnv {
                 New-Item $dependenciesFolder -ItemType Directory | Out-Null
             }
 
-            $repo.appDependencyProbingPaths = @($repo.appDependencyProbingPaths | ForEach-Object {
+            $settings.appDependencyProbingPaths = @($settings.appDependencyProbingPaths | ForEach-Object {
                     if ($_.GetType().Name -eq "PSCustomObject") {
                         $_
                     }
@@ -1630,7 +1658,7 @@ function CreateDevEnv {
                         New-Object -Type PSObject -Property $_
                     }
                 })
-            Get-Dependencies -probingPathsJson $repo.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
+            Get-Dependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
                 if ($_.startswith('(')) {
                     $installTestApps += $_
                 }
@@ -1640,9 +1668,9 @@ function CreateDevEnv {
             }
         }
 
-        if ($repo.versioningStrategy -eq -1) {
+        if ($settings.versioningStrategy -eq -1) {
             if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
-            $artifactVersion = [Version]$repo.artifact.Split('/')[4]
+            $artifactVersion = [Version]$settings.artifact.Split('/')[4]
             $runAlPipelineParams += @{
                 "appVersion"  = "$($artifactVersion.Major).$($artifactVersion.Minor)"
                 "appBuild"    = $artifactVersion.Build
@@ -1650,14 +1678,14 @@ function CreateDevEnv {
             }
         }
         else {
-            if (($repo.versioningStrategy -band 16) -eq 16) {
+            if (($settings.versioningStrategy -band 16) -eq 16) {
                 $runAlPipelineParams += @{
-                    "appVersion" = $repo.repoVersion
+                    "appVersion" = $settings.repoVersion
                 }
             }
             $appBuild = 0
             $appRevision = 0
-            switch ($repo.versioningStrategy -band 15) {
+            switch ($settings.versioningStrategy -band 15) {
                 2 {
                     # USE DATETIME
                     $appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
@@ -1696,7 +1724,7 @@ function CreateDevEnv {
 
         if ($kind -eq "local") {
             $runAlPipelineParams += @{
-                "artifact"   = $repo.artifact.replace('{INSIDERSASTOKEN}', $insiderSasToken)
+                "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', $insiderSasToken)
                 "auth"       = $auth
                 "credential" = $credential
             }
@@ -1739,7 +1767,7 @@ function CreateDevEnv {
                 $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
             }
             else {
-                $countryCode = $repo.country
+                $countryCode = $settings.country
                 New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
                 do {
                     Start-Sleep -Seconds 10
@@ -1779,7 +1807,7 @@ function CreateDevEnv {
         "enableAppSourceCop",
         "enablePerTenantExtensionCop",
         "enableUICop" | ForEach-Object {
-            if ($repo."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+            if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
         }
 
         $sharedFolder = ""
@@ -1788,29 +1816,29 @@ function CreateDevEnv {
         }
 
         Run-AlPipeline @runAlPipelineParams `
-            -vsixFile $repo.vsixFile `
+            -vsixFile $settings.vsixFile `
             -pipelinename $workflowName `
             -imageName "" `
-            -memoryLimit $repo.memoryLimit `
+            -memoryLimit $settings.memoryLimit `
             -baseFolder $projectFolder `
             -sharedFolder $sharedFolder `
             -licenseFile $licenseFileUrl `
             -installApps $installApps `
             -installTestApps $installTestApps `
-            -installOnlyReferencedApps:$repo.installOnlyReferencedApps `
-            -appFolders $repo.appFolders `
-            -testFolders $repo.testFolders `
+            -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
+            -appFolders $settings.appFolders `
+            -testFolders $settings.testFolders `
             -testResultsFile $testResultsFile `
             -testResultsFormat 'JUnit' `
-            -customCodeCops $repo.customCodeCops `
+            -customCodeCops $settings.customCodeCops `
             -azureDevOps:($caller -eq 'AzureDevOps') `
             -gitLab:($caller -eq 'GitLab') `
             -gitHubActions:($caller -eq 'GitHubActions') `
-            -failOn $repo.failOn `
-            -treatTestFailuresAsWarnings:$repo.treatTestFailuresAsWarnings `
-            -rulesetFile $repo.rulesetFile `
-            -AppSourceCopMandatoryAffixes $repo.appSourceCopMandatoryAffixes `
-            -obsoleteTagMinAllowedMajorMinor $repo.obsoleteTagMinAllowedMajorMinor `
+            -failOn $settings.failOn `
+            -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
+            -rulesetFile $settings.rulesetFile `
+            -AppSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
+            -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
             -doNotRunTests `
             -doNotRunBcptTests `
             -useDevEndpoint `

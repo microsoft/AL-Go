@@ -1,20 +1,25 @@
 # Settings
-The behavior of AL-Go for GitHub is very much controlled by the settings in the settings file.
+The behavior of AL-Go for GitHub is very much controlled by settings.
 
-## Where is the settings file located
-An AL-Go repository can consist of a single project (with multiple apps) or multiple projects (each with multiple apps). Multiple projects in a single repository are comparable to multiple repositories; they are built, deployed, and tested separately. All apps in each project (single or multiple) are built together in the same pipeline, published and tested together. If a repository is multiple projects, each project is stored in a separate folder in the root of the repository.
+## Where are the settings located
 
-When running a workflow or a local script, the settings are applied by reading one or more settings files. Last applied settings file wins. The following lists the settings files and their location:
+Settings can be defined in GitHub variables or in various settings file. An AL-Go repository can consist of a single project (with multiple apps) or multiple projects (each with multiple apps). Settings can be applied on the project level or on the repository level. Multiple projects in a single repository are comparable to multiple repositories; they are built, deployed, and tested separately. All apps in each project (single or multiple) are built together in the same pipeline, published and tested together. If a repository is multiple projects, each project is stored in a separate folder in the root of the repository.
 
-**.github\\AL-Go-settings.json** is the repository settings file. This settings file contains settings that are relevant for all projects in the repository. If a settings in the repository settings file is found in a subsequent settings file, it will be overridden by the new value.
+When running a workflow or a local script, the settings are applied by reading settings from GitHub variables and one or more settings files. Last applied settings file wins. The following lists the order of locations to search for settings:
 
-**Special note:** The repository settings file can also contains `BcContainerHelper` settings, which will be applied when loading `BcContainerHelper` in a workflow (see expert section).
+1.  `ALGoOrgSettings` is a **GitHub variable**, which can be defined on an **organizational level** and will apply to **all AL-Go repositories** in this organization.
 
-**.AL-Go\\settings.json** is the project settings file. If the repository is a single project, the .AL-Go folder is in the root folder of the repository. If the repository contains multiple projects, there will be a .AL-Go folder in each project folder.
+1.  `.github/AL-Go-settings.json` is the **repository settings file**. This settings file contains settings that are relevant for all projects in the repository. **Special note:** The repository settings file can also contains `BcContainerHelper` settings, which will be applied when loading `BcContainerHelper` in a workflow - the GitHub variables are not considered for BcContainerHelper settings. (see expert section).
 
-**.AL-Go\\\<workflow\>.settings.json** is the workflow-specific settings file. This option is used for the Current, NextMinor and NextMajor workflows to determine artifacts and build numbers when running these workflows.
+1.  `ALGoRepoSettings` is a **GitHub variable**, which can be defined on an **repository level** and can contain settings that are relevant for **all projects** in the repository.
 
-**.AL-Go\\\<username\>.settings.json** is the user-specific settings file. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
+1.  `.AL-Go/settings.json` is the **project settings file**. If the repository is a single project, the .AL-Go folder is in the root folder of the repository. If the repository contains multiple projects, there will be a .AL-Go folder in each project folder (like `project/.AL-Go/settings.json`)
+
+1.  `.github/<workflow>.settings.json` is the **workflow-specific settings file** for **all projects**. This option is used for the Current, NextMinor and NextMajor workflows to determine artifacts and build numbers when running these workflows.
+
+1.  `.AL-Go/<workflow>.settings.json` is the **workflow-specific settings file** for a **specific project**.
+
+1.  `.AL-Go/<username>.settings.json` is the **user-specific settings file**. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
 
 ## Basic settings
 
@@ -22,11 +27,11 @@ When running a workflow or a local script, the settings are applied by reading o
 | :-- | :-- | :-- |
 | <a id="country"></a>country | Specifies which country this app is built against. | us |
 | <a id="repoVersion"></a>repoVersion | RepoVersion is the repository version number. The Repo Version number consists of \<major\>.\<minor\> only and is used for naming build artifacts in the CI/CD workflow. Build artifacts are named **\<project\>-Apps-\<repoVersion\>.\<build\>.\<revision\>** and can contain multiple apps. The Repo Version number is used as major.minor for individual apps if versioningStrategy is +16. | 1.0 |
+| <a id="projectName"></a>projectName | Friendly name for an AL-Go project to be used in the UI for various workflows (CICD, Pull Request Build, etc.). If not set, the name for the project will be the relative path from the root of the repository. | '' |
 | <a id="appFolders"></a>appFolders | appFolders should be an array of folders (relative to project root), which contains apps for this project. Apps in these folders are sorted based on dependencies and built and published in that order.<br />If appFolders are not specified, AL-Go for GitHub will try to locate appFolders in the root of the project. | [ ] |
 | <a id="testFolders"></a>testFolders | testFolders should be an array of folders (relative to project root), which contains test apps for this project. Apps in these folders are sorted based on dependencies and built, published and tests are run in that order.<br />If testFolders are not specified, AL-Go for GitHub will try to locate testFolders in the root of the project. | [ ] |
 | <a id="bcptTestFolders"></a>bcptTestFolders | bcptTestFolders should be an array of folders (relative to project root), which contains performance test apps for this project. Apps in these folders are sorted based on dependencies and built, published and bcpt tests are run in that order.<br />If bcptTestFolders are not specified, AL-Go for GitHub will try to locate bcptTestFolders in the root of the project. | [ ] |
 | <a id="appDependencyProbingPaths"></a>appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version (default latest)<br />**release_status** = latestBuild/release/prerelease/draft (default release)<br />**projects** = projects (default * = all)<br />**AuthTokenSecret** = Name of secret containing auth token (default none)<br /> | [ ] |
-| <a id="environments"></a>environments | Array of logical environment names. You can specify environments in GitHub environments or in the repo settings file. If you specify environments in the settings file, you can create your AUTHCONTEXT secret using **&lt;environmentname&gt;_AUTHCONTEXT**. If the actual environment name is different from the logical environmentname, then you can create a secret with the actual name called **&lt;environmentname&gt;_ENVIRONMENTNAME** | [ ] |
 | <a id="cleanModePreprocessorSymbols"></a>cleanModePreprocessorSymbols | List of clean tags to be used in _Clean_ build mode | [ ] |
 
 ## AppSource specific basic settings
@@ -50,6 +55,8 @@ The repository settings are only read from the repository settings file (.github
 | <a id="shell"></a>shell | Specifies which shell will be used as the default in all jobs. **powershell** is the default, which results in using _PowerShell 5.1_ (unless you selected _ubuntu-latest_, then **pwsh** is used, which results in using _PowerShell 7_) |
 | <a id="githubRunner"></a>githubRunner | Specifies which github runner will be used for the build jobs in workflows including a build job. This is the most time consuming task. By default this job uses the _Windows-latest_ github runner (unless overridden by the runs-on setting). This settings takes precedence over runs-on so that you can use different runners for the build job and the housekeeping jobs. See **runs-on** setting. |
 | <a id="githubRunnerShell"></a>githubRunnerShell | Specifies which shell is used for build jobs in workflows including a build job. The default is to use the same as defined in **shell**. If the shell setting isn't defined, **powershell** is the default, which results in using _PowerShell 5.1_. Use **pwsh** for _PowerShell 7_. |
+| <a id="environments"></a>environments | Array of logical environment names. You can specify environments in GitHub environments or in the repo settings file. If you specify environments in the settings file, you can create your AUTHCONTEXT secret using **&lt;environmentname&gt;_AUTHCONTEXT**. You can specify additional information about environments in a setting called **DeployTo&lt;environmentname&gt;** | [ ] |
+| <a id="deployto"></a>DeployTo&lt;environmentname&gt; | Structure with additional properties for the environment specified. The structure can contain the following properties:<br />**EnvironmentType** = specifies the type of environment. The environment type can be used to invoke a custom deployment. (Default SaaS)<br />**EnvironmentName** = specifies the "real" name of the environment if it differs from the GitHub environment.<br />**Branches** = an array of branch patterns, which are allowed to deploy to this environment. (Default main)<br />**Projects** = In multi-project repositories, this property can be a comma separated list of project patterns to deploy to this environment. (Default *)<br />**SyncMode** = ForceSync if deployment to this environment should happen with ForceSync, else Add. If deploying to the development endpoint you can also specify Development or Clean. (Default Add)<br />**ContinuousDeployment** = true if this environment should be used for continuous deployment, else false. (Default: AL-Go will continuously deploy to sandbox environments or environments, which doesn't end in (PROD) or (FAT)<br />**runs-on** = specifies which runner to use when deploying to this environment. (Default is settings.runs-on)<br /> | { } |
 | <a id="useProjectDependencies"></a>useProjectDependencies | Determines whether your projects are built using a multi-stage built workflow or single stage. After setting useProjectDependencies to true, you need to run Update AL-Go System Files and your workflows including a build job will change to have multiple build jobs, depending on each other. The number of build jobs will be determined by the dependency depth in your projects.<br />You can change dependencies between your projects, but if the dependency **depth** changes, AL-Go will warn you that updates for your AL-Go System Files are available and you will need to run the workflow. |
 | <a id="CICDPushBranches"></a>CICDPushBranches | CICDPushBranches can be specified as an array of branches, which triggers a CI/CD workflow on commit.<br />Default is [ "main", "release/\*", "feature/\*" ] |
 | <a id="CICDPullrequestBranches"></a>CICDPullRequestBranches | CICDPullRequestBranches can be specified as an array of branches, which triggers a CI/CD workflow on a PR.<br />Default is [ "main" ] |
@@ -96,6 +103,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="assignPremiumPlan"></a>assignPremiumPlan | Setting assignPremiumPlan to true in your project setting file, causes the build container to be created with the AssignPremiumPlan set. This causes the auto-created user to have Premium Plan enabled. This setting is needed if your tests require premium plan enabled. | false |
 | <a id="enableTaskScheduler"></a>enableTaskScheduler | Setting enableTaskScheduler to true in your project setting file, causes the build container to be created with the Task Scheduler running. | false |
 | <a id="useCompilerFolder"></a>useCompilerFolder | Setting useCompilerFolder to true causes your pipelines to use containerless compiling. Unless you also set **doNotPublishApps** to true, setting useCompilerFolder to true won't give you any performance advantage, since AL-Go for GitHub will still need to create a container in order to publish and test the apps. In the future, publishing and testing will be split from building and there will be other options for getting an instance of Business Central for publishing and testing. | false |
+| <a id="excludeEnvironments"></a>excludeEnvironments | excludeEnvironments can be an array of GitHub Environments, which should be excluded from the list of environments considered for deployment. github_pages is automatically added to this array and cannot be used as environment for deployment of AL-Go for GitHub projects. | [ ] |
 
 ## AppSource specific advanced settings
 
@@ -103,6 +111,52 @@ The repository settings are only read from the repository settings file (.github
 | :-- | :-- | :-- |
 | <a id=""></a>appSourceContextSecretName | This setting specifies the name (**NOT the secret**) of a secret containing a json string with ClientID, TenantID and ClientSecret or RefreshToken. If this secret exists, AL-Go will can upload builds to AppSource validation. | AppSourceContext |
 | <a id=""></a>keyVaultCertificateUrlSecretName<br />keyVaultCertificatePasswordSecretName<br />keyVaultClientIdSecretName | If you want to enable KeyVault access for your AppSource App, you need to provide 3 secrets as GitHub Secrets or in the Azure KeyVault. The names of those secrets (**NOT the secrets**) should be specified in the settings file with these 3 settings. Default is to not have KeyVault access from your AppSource App. Read [this](EnableKeyVaultForAppSourceApp.md) for more information. | |
+
+## Conditional Settings
+In any of the settings files, you can add conditional settings by using the ConditionalSettings setting.
+
+Example, adding this:
+```json
+    "ConditionalSettings": [
+        {
+            "branches": [
+                "feature/*"
+            ],
+            "settings": {
+                "doNotPublishApps": true,
+                "doNotSignApps": true
+            }
+        }
+    ]
+```
+to your project settings file (.AL-Go/settings.json) will ensure that all branches matching the patterns in branches will use doNotPublishApps=true and doNotSignApps=true during CI/CD. Conditions can be:
+- **repositories** settings will be applied to repositories matching the patterns
+- **projects** settings will be applied to projects matching the patterns
+- **branches** settings will be applied to branches matching the patterns
+- **workflows** settings will be applied to workflows matching the patterns
+- **users** settings will be applied for users matching the patterns
+
+You could imagine that you could have and organizational settings variable containing:
+
+```json
+    "ConditionalSettings": [
+        {
+            "repositories": [
+                "bcsamples-*"
+            ],
+            "branches": [
+                "features/*"
+            ],
+            "settings": {
+                "doNotSignApps": true
+            }
+        }
+    ]
+```
+
+Which will ensure that for all repositories named `bcsamples-*` in this organization, the branches matching `features/*` will not sign apps.
+
+**Note:** that you can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
 
 ## Expert settings (rarely used)
 
@@ -155,15 +209,48 @@ Here are the parameters to use in your custom script:
 
 | Parameter | Description | Example |
 | --------- | :--- | :--- |
-| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject
-| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject
-| `$parameters.type` | Type of delivery (CD or Release) | CD
-| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0
-| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0
-| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0
-| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0
-| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0
-| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0
+| `$parametes.project` | The current AL-Go project | Root/AllProjects/MyProject |
+| `$parameters.projectsName` | The name of the current AL-Go project | Root_AllProjects_MyProject |
+| `$parameters.type` | Type of delivery (CD or Release) | CD |
+| `$parameters.appsFolder` | The folder that contains the build artifacts from the default build of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0 |
+| `$parameters.testAppsFolder` | The folder that contains the build artifacts from the default build of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0 |
+| `$parameters.dependenciesFolder` | The folder that contains the dependencies of the the AL-Go project for the default build | AllProjects_MyProject-main-Dependencies-1.0.0.0 |
+| `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0 |
+| `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0 |
+| `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0 |
+
+## Custom Deployment
+
+You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named `DeployTo<EnvironmentType>.ps1` in the .github folder. Default Environment Type is SaaS, but you can define your own type by specifying EnvironmentType in the `DeployTo<EnvironmentName>` setting. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
+
+DeployToMyEnvironment.ps1
+```
+Param(
+    [Hashtable]$parameters
+)
+
+Write-Host "Deployment Type (CD or Release): $($parameters.type)"
+Write-Host "Apps to deploy: $($parameters.apps)"
+Write-Host "Environment Type: $($parameters.EnvironmentType)"
+Write-Host "Environment Name: $($parameters.EnvironmentName)"
+```
+
+**Note:** You can also create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
+
+Here are the parameters to use in your custom script:
+
+| Parameter | Description | Example |
+| --------- | :--- | :--- |
+| `$parameters.type` | Type of delivery (CD or Release) | CD |
+| `$parameters.apps` | Apps to deploy | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
+| `$parameters.EnvironmentType` | Environment type | SaaS |
+| `$parameters.EnvironmentName` | Environment name | Production |
+| `$parameters.Branches` | Branches which should deploy to this environment (from settings) | main,dev |
+| `$parameters.AuthContext` | AuthContext in a compressed Json structure | {"refreshToken":"mytoken"} |
+| `$parameters.BranchesFromPolicy` | Branches which should deploy to this environment (from GitHub environments) | main |
+| `$parameters.Projects` | Projects to deploy to this environment | |
+| `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
+| `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 
 ## Run-AlPipeline script override
 

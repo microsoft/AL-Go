@@ -20,7 +20,7 @@ outputs:
   ProjectDependenciesJson:
     description: An object that holds the project dependencies in compressed JSON format
     value: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
-  BuildOrderJson: 
+  BuildOrderJson:
     description: An array of objects that determine that build order, including build dimensions
     value: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
 runs:
@@ -34,7 +34,7 @@ runs:
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try { 
+        try {
           $changedFiles = ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}
           ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson
         }

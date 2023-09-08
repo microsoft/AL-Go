@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -30,7 +30,7 @@ try {
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
-    
+
     $addToVersionNumber = "$versionnumber".StartsWith('+')
     if ($addToVersionNumber) {
         $versionnumber = $versionnumber.Substring(1)
@@ -129,7 +129,7 @@ try {
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    if ($env:BcContainerHelperPath) {
+    if (Get-Module BcContainerHelper) {
         TrackException -telemetryScope $telemetryScope -errorRecord $_
     }
     throw

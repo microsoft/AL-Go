@@ -4,7 +4,9 @@ Check the status of a pull request build and fail the build if any jobs have fai
 ## INPUT
 
 ### ENV variables
-GITHUB_TOKEN
+| Name | Description |
+| :-- | :-- |
+| GITHUB_TOKEN | GITHUB_TOKEN must be set as an environment variable when calling this action |
 
 ### Parameters
 | Name | Required | Description | Default value |

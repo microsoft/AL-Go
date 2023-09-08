@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The token to use for the GitHub API", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "The name of the repository the PR is going to", Mandatory = $false)]

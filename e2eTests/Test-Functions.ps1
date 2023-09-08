@@ -78,7 +78,7 @@ function Test-ArtifactsFromRun {
         $expected = $expectedArtifacts."$type"
         Write-Host "Type: $type, Expected: $expected"
         if ($type -eq 'thisbuild') {
-            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object { 
+            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
                 $_.FullName.Substring($path.Length+1) -like "thisbuild-*-Apps?*$appVersion.*.*.app"
             }).Count
         }

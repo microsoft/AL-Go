@@ -56,32 +56,19 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'appSourceContext'
 
-      - name: DeliveryContext
-        id: deliveryContext
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $secrets = $env:Secrets | ConvertFrom-Json
-          if ($secrets.appSourceContext) {
-            $deliveryContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext))
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliveryContext=$deliveryContext"
-          }
-          else {
-            throw "appSourceContext secret is missing"
-          }
-
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main
         env:
-          deliveryContext: '${{ steps.deliveryContext.outputs.deliveryContext }}'
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

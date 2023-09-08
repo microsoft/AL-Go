@@ -60,13 +60,12 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'adminCenterApiCredentials'
 
@@ -74,10 +73,8 @@ jobs:
         id: authenticate
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $secrets = $env:Secrets | ConvertFrom-Json
           $settings = $env:Settings | ConvertFrom-Json
-          if ($secrets.adminCenterApiCredentials) {
-            $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.adminCenterApiCredentials))
+          if ('${{ fromJson(steps.ReadSecrets.outputs.Secrets).adminCenterApiCredentials }}') {
             Write-Host "AdminCenterApiCredentials provided in secret $($settings.adminCenterApiCredentialsSecretName)!"
             Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "Admin Center Api Credentials was provided in a secret called $($settings.adminCenterApiCredentialsSecretName). Using this information for authentication."
           }
@@ -110,51 +107,38 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'adminCenterApiCredentials,ghTokenWorkflow'
-
-      - name: CalculateToken
-        id: CalculateToken
-        env:
-          useGhTokenWorkflow: ${{ github.event.inputs.useGhTokenWorkflow }}
-        run: |
-          $ghToken = '${{ secrets.GITHUB_TOKEN }}'
-          if ($env:useGhTokenWorkflow -eq 'true') {
-            $secrets = $env:Secrets | ConvertFrom-Json
-            if ($secrets.GHTOKENWORKFLOW) {
-              $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.GHTOKENWORKFLOW))
-            }
-            else {
-              Write-Host "::Warning::GHTOKENWORKFLOW secret not found. Using GITHUB_TOKEN."
-            }
-          }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ghToken=$ghToken"
+          getSecrets: 'adminCenterApiCredentials,TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Set AdminCenterApiCredentials
+        id: SetAdminCenterApiCredentials
         run: |
           if ($env:deviceCode) {
             $adminCenterApiCredentials = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""deviceCode"":""$($env:deviceCode)""}"))
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -value "adminCenterApiCredentials=$adminCenterApiCredentials"
           }
+          else {
+            $adminCenterApiCredentials = '${{ fromJson(steps.ReadSecrets.outputs.Secrets).adminCenterApiCredentials }}'
+          }
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -value "adminCenterApiCredentials=$adminCenterApiCredentials"
 
       - name: Create Development Environment
         uses: microsoft/AL-Go-Actions/CreateDevelopmentEnvironment@main
         with:
           shell: powershell
-          token: ${{ steps.CalculateToken.outputs.ghToken }}
+          token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           environmentName: ${{ github.event.inputs.environmentName }}
           project: ${{ github.event.inputs.project }}
           reUseExistingEnvironment: ${{ github.event.inputs.reUseExistingEnvironment }}
           directCommit: ${{ github.event.inputs.directCommit }}
-          adminCenterApiCredentials: ${{ fromJson(env.Secrets).adminCenterApiCredentials }}
+          adminCenterApiCredentials: ${{ steps.SetAdminCenterApiCredentials.outputs.adminCenterApiCredentials }}
 
       - name: Finalize the workflow
         if: always()

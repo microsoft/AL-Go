@@ -1,4 +1,4 @@
-#requires -Version 5.0
+﻿#requires -Version 5.0
 
 # This class holds the content of a Yaml file
 # The content is stored in an array of strings, where each string is a line of the Yaml file
@@ -106,8 +106,8 @@ class Yaml {
         $c = 0
         if ($this.Find($line, [ref] $s, [ref] $c)) {
             $charCount = ($line.ToCharArray() | Where-Object {$_ -eq '/'} | Measure-Object).Count
-            [string[]] $result = @($this.content | Select-Object -Skip $s -First $c | ForEach-Object { 
-                "$_$("  "*$charCount)".Substring(2*$charCount).TrimEnd() 
+            [string[]] $result = @($this.content | Select-Object -Skip $s -First $c | ForEach-Object {
+                "$_$("  "*$charCount)".Substring(2*$charCount).TrimEnd()
             } )
             $start.value = $s
             $count.value = $c

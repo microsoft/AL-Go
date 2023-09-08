@@ -1,4 +1,6 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -11,16 +13,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  _____            _           _      _____                            _                 _           
-# |_   _|          | |         | |    |  __ \                          | |               (_)          
-#   | |  _ __   ___| |_   _  __| | ___| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___ 
+#  _____            _           _      _____                            _                 _
+# |_   _|          | |         | |    |  __ \                          | |               (_)
+#   | |  _ __   ___| |_   _  __| | ___| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___
 #   | | | '_ \ / __| | | | |/ _` |/ _ \ |  | |/ _ \ '_ \ / _ \ '_ \ / _` |/ _ \ '_ \ / __| |/ _ \/ __|
 #  _| |_| | | | (__| | |_| | (_| |  __/ |__| |  __/ |_) |  __/ | | | (_| |  __/ | | | (__| |  __/\__ \
 # |_____|_| |_|\___|_|\__,_|\__,_|\___|_____/ \___| .__/ \___|_| |_|\__,_|\___|_| |_|\___|_|\___||___/
-#                                                 | |                                                 
+#                                                 | |
 #                                                 |_|                                                 #
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template, running Windows with 5 projects, using appDependencyProbingPaths with release_status set to 'include'
 #    - P1/app1 with dependency to P1/app2
 #    - P1/app2 with no dependencies
@@ -37,7 +39,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""
@@ -69,9 +71,9 @@ CreateAlGoRepository `
         Add-PropertiesToJsonFile -path (Join-Path $path 'P2\.AL-Go\settings.json') -properties @{ "country" = "w1"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P1" } ) }
         $id4 = CreateNewAppInFolder -folder (Join-Path $path 'P3') -name app4 -objID 50004 -dependencies @( @{ "id" = $id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P3\.AL-Go\settings.json') -properties @{ "country" = "w1"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P1" } ) }
-        $id5 = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $null = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P4\.AL-Go\settings.json') -properties @{ "country" = "it"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P2,P3" } ) }
-        $id6 = CreateNewAppInFolder -folder (Join-Path $path 'P0') -name app6 -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $null = CreateNewAppInFolder -folder (Join-Path $path 'P0') -name app6 -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P0\.AL-Go\settings.json') -properties @{ "country" = "dk"; "appDependencyProbingPaths" = @( @{ "repo" = "."; "release_status" = "include"; "projects" = "P3,P2" } ) }
     }
 
@@ -105,10 +107,10 @@ $repoPath = (Get-Location).Path
 
         # Set GitHubRunner and runs-on to ubuntu-latest (and use CompilerFolder)
         Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-latest"; "gitHubRunner" = "ubuntu-latest"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
-        
+
         # Push
         CommitAndPush -commitMessage 'Shift to Linux'
-        
+
         # Upgrade AL-Go System Files
         Run-UpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
     }

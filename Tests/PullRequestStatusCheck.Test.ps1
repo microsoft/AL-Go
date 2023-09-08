@@ -6,7 +6,9 @@ Describe "PullRequestStatusCheck Action Tests" {
         $actionName = "PullRequestStatusCheck"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
         $scriptPath = Join-Path $scriptRoot $scriptName
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
         $ENV:GITHUB_REPOSITORY = "organization/repository"
         $ENV:GITHUB_RUN_ID = "123456"

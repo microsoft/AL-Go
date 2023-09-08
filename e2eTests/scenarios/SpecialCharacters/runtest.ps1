@@ -1,4 +1,6 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -11,16 +13,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#   _____                 _       _    _____ _                          _                
-#  / ____|               (_)     | |  / ____| |                        | |               
-# | (___  _ __   ___  ___ _  __ _| | | |    | |__   __ _ _ __ __ _  ___| |_ ___ _ __ ___ 
+#   _____                 _       _    _____ _                          _
+#  / ____|               (_)     | |  / ____| |                        | |
+# | (___  _ __   ___  ___ _  __ _| | | |    | |__   __ _ _ __ __ _  ___| |_ ___ _ __ ___
 #  \___ \| '_ \ / _ \/ __| |/ _` | | | |    | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__/ __|
 #  ____) | |_) |  __/ (__| | (_| | | | |____| | | | (_| | | | (_| | (__| ||  __/ |  \__ \
 # |_____/| .__/ \___|\___|_|\__,_|_|  \_____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|  |___/
-#        | |                                                                             
-#        |_|                                                                             
+#        | |
+#        |_|
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template with 1 app
 #    - Æøå-app with publisher Süß
 #    - Set RepoName to Privé
@@ -32,7 +34,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 
