@@ -43,6 +43,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             "EnvironmentsMatrixJson" = "The Environment matrix to use for the Deploy step in compressed JSON format"
             "DeploymentEnvironmentsJson" = "Deployment Environments with settings in compressed JSON format"
             "EnvironmentCount" = "Number of Deployment Environments"
+            "UnknownEnvironment" = "Flag determining whether the environment is unknown"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
