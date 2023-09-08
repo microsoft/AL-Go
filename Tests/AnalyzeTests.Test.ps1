@@ -13,12 +13,12 @@ Describe "AnalyzeTests Action Tests" {
                 [int] $durationOffset = 0,
                 [int] $numberOfSQLStmtsOffset = 0
             )
-        
+
             $bcpt = @()
             for($suiteNo = 1; $suiteNo -le $noOfSuites; $suiteNo++) {
                 $suiteName = "SUITE$suiteNo"
                 for($codeUnitID = 1; $codeunitID -le $noOfCodeunits; $codeunitID++) {
-                    $codeunitName = "Codeunit$_"
+                    $codeunitName = "Codeunit$codeunitID"
                     for($operationNo = 1; $operationNo -le $noOfOperations; $operationNo++) {
                         $operationName = "Operation$operationNo"
                         for($no = 1; $no -le $noOfMeasurements; $no++) {
@@ -39,7 +39,7 @@ Describe "AnalyzeTests Action Tests" {
             $bcpt | ConvertTo-Json -Depth 100 | Set-Content -Path $filename -Encoding UTF8
             return $filename
         }
-        
+
         $actionName = "AnalyzeTests"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
