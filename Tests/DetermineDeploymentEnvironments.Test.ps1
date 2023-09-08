@@ -203,7 +203,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
     }
 
     # 2 environments defined in Settings - one PROD and one non-PROD (settings based)
@@ -235,6 +235,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
     }
 }
