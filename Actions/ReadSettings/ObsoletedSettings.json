@@ -6,9 +6,5 @@
     "*_Projects": { 
         "type": "Error",
         "message": "The setting should be replaced by using the Projects property in the DeployTo* setting in .github/AL-Go-Settings.json instead."
-    },
-    "insiderSasTokenSecretName": {
-        "type": "Warning",
-        "message": "The setting should be removed, as it is not needed anymore."
     }
 }
