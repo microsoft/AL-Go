@@ -321,7 +321,7 @@ try {
                     # Add events
                     $start = 0
                     $end = 0
-                    if ($yaml.Find('jobs/BuildALGoProject/steps/- name: PreBuild/', [ref] $start, [ref] $end)) {
+                    if ($yaml.Find('jobs:/BuildALGoProject:/steps:/- name: PreBuild/', [ref] $start, [ref] $end)) {
                         Write-Host "FOUND PREBUILD $Start $End"
                     }
 
