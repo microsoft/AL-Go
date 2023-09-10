@@ -183,6 +183,10 @@ try {
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
                     $yaml = [Yaml]::Load($srcFile)
+                    
+                    Write-Host "-------------------------------------"
+                    $yaml.Content | Out-Host
+                    
                     $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
                     $workflowScheduleKey = "$($baseName)Schedule"
 
@@ -320,7 +324,7 @@ try {
                     # Add events
                     $start = 0
                     $end = 0
-                    if ($yaml.Find('name: PreBuild', [ref] $start, [ref] $end)) {
+                    if ($yaml.Find('name: PreBuild/', [ref] $start, [ref] $end)) {
                         Write-Host "FOUND PREBUILD $Start $End"
                     }
 
