@@ -168,4 +168,9 @@ class Yaml {
     [void] ReplaceAll([string] $from, [string] $to) {
         $this.content = $this.content | ForEach-Object { $_.replace($from, $to) }
     }
+
+    # Remove lines in Yaml content
+    [void] Remove([int] $start, [int] $count) {
+        $this.content = $this.content[0..$start] + $this.content[($start+$count)..($this.content.Count-1)]
+    }
 }

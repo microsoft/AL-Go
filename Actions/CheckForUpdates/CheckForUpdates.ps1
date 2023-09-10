@@ -319,10 +319,13 @@ try {
                     }
 
                     # Add events
-                    $start = 0
-                    $end = 0
-                    if ($yaml.Find('jobs:/BuildALGoProject:/steps:/- name: PreBuild', [ref] $start, [ref] $end)) {
-                        Write-Host "FOUND PREBUILD $Start $End"
+                    foreach($eventName in 'PreBuild','PostBuild1','PostBuild2') {
+                        $start = 0
+                        $count = 0
+                        if ($yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $eventName", [ref] $start, [ref] $count)) {
+                            $yaml.remove($start, $count)
+                            Write-Host "Remove $eventName $Start $count"
+                        }
                     }
 
                     # combine all the yaml file lines into a single string with LF line endings
