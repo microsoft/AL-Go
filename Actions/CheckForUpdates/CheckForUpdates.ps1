@@ -183,10 +183,7 @@ try {
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
                     $yaml = [Yaml]::Load($srcFile)
-                    
-                    Write-Host "-------------------------------------"
-                    $yaml.Content | Out-Host
-                    
+
                     $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
                     $workflowScheduleKey = "$($baseName)Schedule"
 
