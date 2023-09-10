@@ -130,6 +130,9 @@ jobs:
             buildMode: ${{ inputs.buildMode }}
             projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
 
+        - name: PreBuild
+          run: Write-Host 'This step will never run. It will be replaced by .github/workflows/folder/prebuild.yaml (if it exists)'
+
         - name: Run pipeline
           id: RunPipeline
           uses: microsoft/AL-Go-Actions/RunPipeline@main
@@ -144,6 +147,9 @@ jobs:
             buildMode: ${{ inputs.buildMode }}
             installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
             installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+
+        - name: PostBuild1
+          run: Write-Host 'This step will never run. It will be replaced by .github/workflows/folder/postbuild1.yaml (if it exists)'
 
         - name: Sign
           if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
@@ -248,6 +254,9 @@ jobs:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
             project: ${{ inputs.project }}
+
+        - name: PostBuild2
+          run: Write-Host 'This step will never run. It will be replaced by .github/workflows/folder/postbuild2.yaml (if it exists)'
 
         - name: Cleanup
           if: always()

@@ -316,6 +316,14 @@ try {
                             }
                         }
                     }
+
+                    # Add events
+                    $start = 0
+                    $end = 0
+                    if ($yaml.Find('name: PreBuild', [ref] $start, [ref] $end)) {
+                        Write-Host "FOUND PREBUILD $Start $End"
+                    }
+
                     # combine all the yaml file lines into a single string with LF line endings
                     $srcContent = $yaml.content -join "`n"
                 }
