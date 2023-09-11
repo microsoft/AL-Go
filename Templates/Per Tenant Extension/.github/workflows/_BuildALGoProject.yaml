@@ -77,7 +77,7 @@ env:
 
 defaults:
   run:
-    shell: ${{ inputs.shell }}
+    shell: powershell
 
 jobs:
   BuildALGoProject:
