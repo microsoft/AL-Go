@@ -153,7 +153,7 @@ function GetDependencies {
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
-                            if ($mask -eq 'TestApps') {
+                            if ($mask -like '*TestApps') {
                                 $downloadedList += @("($($_.FullName))")
                             }
                             else {
@@ -163,8 +163,8 @@ function GetDependencies {
                         }
                     }
                     elseif ($mask -notlike '*TestApps') {
-                        Write-Host "$_ not built, downloading from artifacts"
-                        $missingProjects += @($_)
+                        Write-Host "$project not built, downloading from artifacts"
+                        $missingProjects += @($project)
                     }
                 }
                 if ($missingProjects) {
@@ -181,7 +181,7 @@ function GetDependencies {
                     $artifacts | ForEach-Object {
                         $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $_
                         if ($download) {
-                            if ($mask -eq 'TestApps') {
+                            if ($mask -like '*TestApps') {
                                 $downloadedList += @("($download)")
                             }
                             else {
@@ -216,7 +216,7 @@ function GetDependencies {
 
                 $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
                 if ($download) {
-                    if ($mask -eq 'TestApps') {
+                    if ($mask -like '*TestApps') {
                         $downloadedList += @("($download)")
                     }
                     else {
