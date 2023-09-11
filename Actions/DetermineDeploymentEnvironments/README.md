@@ -20,5 +20,6 @@ Determines the environments to be used for a build or a publish
 | EnvironmentsMatrixJson | The Environment matrix to use for the Deploy step in compressed JSON format |
 | DeploymentEnvironmentsJson | Deployment Environments with settings in compressed JSON format |
 | EnvironmentCount | Number of Deployment Environments |
+| UnknownEnvironment | Flag determining whether we try to publish to an unknown environment (invoke device code flow) |
 
 ### ENV variables

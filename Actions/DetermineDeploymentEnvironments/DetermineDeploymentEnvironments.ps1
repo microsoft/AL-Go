@@ -51,11 +51,12 @@ $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
 $deploymentEnvironments = @{}
+$unknownEnvironment = 0
 
 if (!($environments)) {
     # If no environments are defined and the user specified a single environment, use that environment
@@ -64,6 +65,7 @@ if (!($environments)) {
         $envName = $getEnvironments.Split(' ')[0]
         $deploymentEnvironments += @{
             "$getEnvironments" = @{
+                "EnvironmentType" = "SaaS"
                 "EnvironmentName" = $envName
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
@@ -73,6 +75,7 @@ if (!($environments)) {
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
             }
         }
+        $unknownEnvironment = 1
     }
 }
 else {
@@ -178,3 +181,6 @@ Write-Host "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
+
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
+Write-Host "UnknownEnvironment=$unknownEnvironment"
