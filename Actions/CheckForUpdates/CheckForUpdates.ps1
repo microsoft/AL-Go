@@ -331,14 +331,14 @@ try {
                             $endStart = 0
                             $endCount = 0
                             if ($yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $startStart, [ref] $startCount) -and $yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $endStart, [ref] $endCount)) {
-                                Write-Host "Found in source $startStart $startCount $endStart $endCount $eventName"
+                                Write-Host "PlaceHolder for $eventName found in source YAML: $startStart $startCount $endStart $endCount"
                                 $dstStartStart = 0
                                 $dstStartCount = 0
                                 $dstEndStart = 0
                                 $dstEndCount = 0
                                 if ($dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $dstStartStart, [ref] $dstStartCount) -and $dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $dstEndStart, [ref] $dstEndCount)) {
-                                    Write-Host "Found in dst $dstStartStart $dstStartCount $dstEndStart $dstEndCount"
-                                    $yaml.content = $yaml.content[0..($startStart+$startCount)]+$dstYaml.content[($dstStartStart+$dstStartCount)..($dstEndStart-1)]+$yaml.content[$endStart..($yaml.content.Count-1)]
+                                    Write-Host "PlaceHolder found in destination YAML: $dstStartStart $dstStartCount $dstEndStart $dstEndCount"
+                                    $yaml.content = $yaml.content[0..($startStart+$startCount-1)]+$dstYaml.content[($dstStartStart+$dstStartCount)..($dstEndStart-1)]+$yaml.content[$endStart..($yaml.content.Count-1)]
                                 }
                             }
                         }
