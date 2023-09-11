@@ -186,7 +186,12 @@ try {
                     # for workflow files, we might need to modify the file based on the settings
                     $yaml = [Yaml]::Load($srcFile)
                     if ($dstFileExists) {
-                        $dstYaml = [Yaml]::Load($dstFile)
+                        try {
+                            $dstYaml = [Yaml]::Load($dstFile)
+                        }
+                        catch {
+                            $dstYaml = $null
+                        }
                     }
 
                     $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
@@ -324,7 +329,7 @@ try {
                     }
 
                     # Add events
-                    if ($dstFileExists) {
+                    if ($dstYaml) {
                         foreach($eventName in 'Initialize','PreBuild','PostBuild','Finalize') {
                             $startStart = 0
                             $startCount = 0
