@@ -371,8 +371,7 @@ try {
                 }
                 elseif ($dstFileExists) {
                     if ($type -eq 'workflow') {
-                        $yamlLines = @($srcContent.Split("`n"))
-                        $yaml = [Yaml]::Load($yamlLines)
+                        $yaml = [Yaml]::new($srcContent.Split("`n"))
                         try {
                             $dstYaml = [Yaml]::Load($dstFile)
                         }
