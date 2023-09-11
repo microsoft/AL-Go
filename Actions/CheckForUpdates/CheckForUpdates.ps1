@@ -336,9 +336,9 @@ try {
                                 $dstStartCount = 0
                                 $dstEndStart = 0
                                 $dstEndCount = 0
-                                if ($dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $dstStartStart, [ref] $dstStartCount) -and $yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $dstEndStart, [ref] $dstEndCount)) {
+                                if ($dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $dstStartStart, [ref] $dstStartCount) -and $dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $dstEndStart, [ref] $dstEndCount)) {
                                     Write-Host "Found in dst $dstStartStart $dstStartCount $dstEndStart $dstEndCount"
-                                    $yaml.content = $yaml.content[0..($startStart+$startCount)]+$dstYaml.content[($dstStartStart+$dstStartCount)..($dstEndStart-1)]+$yaml.content[($endStart+$endCount)..($yaml.content.Count-1)]
+                                    $yaml.content = $yaml.content[0..($startStart+$startCount)]+$dstYaml.content[($dstStartStart+$dstStartCount)..($dstEndStart-1)]+$yaml.content[$endStart..($yaml.content.Count-1)]
                                 }
                             }
                         }
