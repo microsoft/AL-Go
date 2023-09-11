@@ -130,8 +130,16 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
 
-      - name: PreBuild
-        run: Write-Host 'This step will never run. It will be replaced by .github/workflows/folder/prebuild.yaml (if it exists)'
+      - name: PreBuild.Start
+        if: false
+        run: |
+          # All steps between PreBuild.Start and PreBuild.End will be preserved when updating AL-Go System Files
+          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
+          Write-Host "::group::PreBuild.Start"
+
+      - name: PreBuild.End
+        if: false
+        run: Write-Host "::group::PreBuild.End"
 
       - name: Run pipeline
         id: RunPipeline

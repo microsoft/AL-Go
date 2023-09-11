@@ -177,12 +177,17 @@ try {
                 # Compare the modified file with the file in the current repository
                 $srcFile = $_.FullName
                 $fileName = $_.Name
+                $dstFile = Join-Path $dstFolder $fileName
+                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 Write-Host "- $filename"
                 $baseName = $_.BaseName
                 $name = $type
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
                     $yaml = [Yaml]::Load($srcFile)
+                    if ($dstFileExists) {
+                        $dstYaml = [Yaml]::Load($dstFile)
+                    }
 
                     $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
                     $workflowScheduleKey = "$($baseName)Schedule"
@@ -319,12 +324,22 @@ try {
                     }
 
                     # Add events
-                    foreach($eventName in 'PreBuild','PostBuild1','PostBuild2') {
-                        $start = 0
-                        $count = 0
-                        if ($yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $eventName", [ref] $start, [ref] $count)) {
-                            $yaml.remove($start, $count)
-                            Write-Host "Remove $eventName $Start $count"
+                    if ($dstFileExists) {
+                        foreach($eventName in 'PreBuild','PostBuild1','PostBuild2') {
+                            $startStart = 0
+                            $startCount = 0
+                            $endStart = 0
+                            $endCount = 0
+                            if ($yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $startStart, [ref] $startCount) -and $yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $endStart, [ref] $endCount)) {
+                                Write-Host "Found in source $startStart $startCount $endStart $endCount $eventName"
+                                $dstStartStart = 0
+                                $dstStartCount = 0
+                                $dstEndStart = 0
+                                $dstEndCount = 0
+                                if ($dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $dstStartStart, [ref] $dstStartCount) -and $yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $dstEndStart, [ref] $dstEndCount)) {
+                                    Write-Host "Found in dst $dstStartStart $dstStartCount $dstEndStart $dstEndCount"
+                                }
+                            }
                         }
                     }
 
@@ -371,8 +386,6 @@ try {
                     $srcContent = $lines -join "`n"
                 }
 
-                $dstFile = Join-Path $dstFolder $fileName
-                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 if ($unusedALGoSystemFiles -contains $fileName) {
                     # file is not used by ALGo, remove it if it exists
                     # do not add it to $updateFiles if it does not exist
