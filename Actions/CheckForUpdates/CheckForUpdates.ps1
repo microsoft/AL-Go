@@ -325,7 +325,7 @@ try {
 
                     # Add events
                     if ($dstFileExists) {
-                        foreach($eventName in 'PreBuild','PostBuild1','PostBuild2') {
+                        foreach($eventName in 'Initialize,PreBuild','PostBuild','Finalize') {
                             $startStart = 0
                             $startCount = 0
                             $endStart = 0

@@ -93,6 +93,15 @@ jobs:
           project: ${{ inputs.project }}
           get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
 
+      - name: Initialize.Start
+        run: |
+          # All steps between Initialize.Start and Initialize.End will be preserved when updating AL-Go System Files
+          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
+          Write-Host "::group::Initialize.Start"
+  
+      - name: Initialize.End
+        run: Write-Host "::group::Initialize.End"
+
       - name: Read secrets
         id: ReadSecrets
         if: github.event_name != 'pull_request'
@@ -131,14 +140,12 @@ jobs:
           projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
 
       - name: PreBuild.Start
-        if: false
         run: |
           # All steps between PreBuild.Start and PreBuild.End will be preserved when updating AL-Go System Files
           # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
           Write-Host "::group::PreBuild.Start"
 
       - name: PreBuild.End
-        if: false
         run: Write-Host "::group::PreBuild.End"
 
       - name: Run pipeline
@@ -156,8 +163,14 @@ jobs:
           installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
-      - name: PostBuild1
-        run: Write-Host 'This step will never run. It will be replaced by .github/workflows/folder/postbuild1.yaml (if it exists)'
+      - name: PostBuild.Start
+        run: |
+          # All steps between PostBuild.Start and PostBuild.End will be preserved when updating AL-Go System Files
+          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
+          Write-Host "::group::PostBuild.Start"
+  
+      - name: PostBuild.End
+        run: Write-Host "::group::PostBuild.End"
 
       - name: Sign
         if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
@@ -263,8 +276,14 @@ jobs:
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
           project: ${{ inputs.project }}
 
-      - name: PostBuild2
-        run: Write-Host 'This step will never run. It will be replaced by .github/workflows/folder/postbuild2.yaml (if it exists)'
+      - name: Finalize.Start
+        run: |
+          # All steps between Finalize.Start and Finalize.End will be preserved when updating AL-Go System Files
+          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
+          Write-Host "::group::Finalize.Start"
+  
+      - name: Finalize.End
+        run: Write-Host "::group::Finalize.End"
 
       - name: Cleanup
         if: always()
