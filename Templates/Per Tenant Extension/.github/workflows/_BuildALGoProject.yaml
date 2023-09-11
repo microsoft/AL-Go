@@ -75,6 +75,10 @@ env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
+defaults:
+  run:
+    shell: ${{ inputs.shell }}
+
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
