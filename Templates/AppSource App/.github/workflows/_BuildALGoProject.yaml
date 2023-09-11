@@ -75,13 +75,12 @@ env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
-defaults:
-  run:
-    shell: powershell
-
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
+    defaults:
+      run:
+        shell: ${{ inputs.shell }}
     name: ${{ inputs.projectName }} (${{ inputs.buildMode }})
     steps:
       - name: Checkout
@@ -98,13 +97,15 @@ jobs:
           get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
 
       - name: Initialize.Start
+        if: false
         run: |
           # All steps between Initialize.Start and Initialize.End will be preserved when updating AL-Go System Files
           # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-          Write-Host "::group::Initialize.Start"
   
       - name: Initialize.End
-        run: Write-Host "::group::Initialize.End"
+        if: false
+        run: |
+          # End of custom Initialize block
 
       - name: Read secrets
         id: ReadSecrets
@@ -144,13 +145,15 @@ jobs:
           projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
 
       - name: PreBuild.Start
+        if: false
         run: |
           # All steps between PreBuild.Start and PreBuild.End will be preserved when updating AL-Go System Files
           # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-          Write-Host "::group::PreBuild.Start"
 
       - name: PreBuild.End
-        run: Write-Host "::group::PreBuild.End"
+        if: false
+        run: |
+          # End of custom PreBuild block
 
       - name: Run pipeline
         id: RunPipeline
@@ -168,13 +171,15 @@ jobs:
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
       - name: PostBuild.Start
+        if: false
         run: |
           # All steps between PostBuild.Start and PostBuild.End will be preserved when updating AL-Go System Files
           # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-          Write-Host "::group::PostBuild.Start"
   
       - name: PostBuild.End
-        run: Write-Host "::group::PostBuild.End"
+        if: false
+        run: |
+          # End of custom PostBuild block
 
       - name: Sign
         if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
@@ -281,13 +286,15 @@ jobs:
           project: ${{ inputs.project }}
 
       - name: Finalize.Start
+        if: false
         run: |
           # All steps between Finalize.Start and Finalize.End will be preserved when updating AL-Go System Files
           # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-          Write-Host "::group::Finalize.Start"
   
       - name: Finalize.End
-        run: Write-Host "::group::Finalize.End"
+        if: false
+        run: |
+            # End of custom Finalize block
 
       - name: Cleanup
         if: always()
