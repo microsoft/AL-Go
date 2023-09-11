@@ -177,23 +177,12 @@ try {
                 # Compare the modified file with the file in the current repository
                 $srcFile = $_.FullName
                 $fileName = $_.Name
-                $dstFile = Join-Path $dstFolder $fileName
-                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 Write-Host "- $filename"
                 $baseName = $_.BaseName
                 $name = $type
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
                     $yaml = [Yaml]::Load($srcFile)
-                    if ($dstFileExists) {
-                        try {
-                            $dstYaml = [Yaml]::Load($dstFile)
-                        }
-                        catch {
-                            $dstYaml = $null
-                        }
-                    }
-
                     $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
                     $workflowScheduleKey = "$($baseName)Schedule"
 
@@ -328,27 +317,6 @@ try {
                         }
                     }
 
-                    # Add events
-                    if ($dstYaml) {
-                        foreach($eventName in 'Initialize','PreBuild','PostBuild','Finalize') {
-                            $startStart = 0
-                            $startCount = 0
-                            $endStart = 0
-                            $endCount = 0
-                            if ($yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $startStart, [ref] $startCount) -and $yaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $endStart, [ref] $endCount)) {
-                                Write-Host "PlaceHolder for $eventName found in source YAML: $startStart $startCount $endStart $endCount"
-                                $dstStartStart = 0
-                                $dstStartCount = 0
-                                $dstEndStart = 0
-                                $dstEndCount = 0
-                                if ($dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).Start", [ref] $dstStartStart, [ref] $dstStartCount) -and $dstYaml.Find("jobs:/BuildALGoProject:/steps:/- name: $($eventName).End", [ref] $dstEndStart, [ref] $dstEndCount)) {
-                                    Write-Host "PlaceHolder found in destination YAML: $dstStartStart $dstStartCount $dstEndStart $dstEndCount"
-                                    $yaml.content = $yaml.content[0..($startStart+$startCount-1)]+$dstYaml.content[($dstStartStart+$dstStartCount)..($dstEndStart-1)]+$yaml.content[$endStart..($yaml.content.Count-1)]
-                                }
-                            }
-                        }
-                    }
-
                     # combine all the yaml file lines into a single string with LF line endings
                     $srcContent = $yaml.content -join "`n"
                 }
@@ -392,6 +360,8 @@ try {
                     $srcContent = $lines -join "`n"
                 }
 
+                $dstFile = Join-Path $dstFolder $fileName
+                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 if ($unusedALGoSystemFiles -contains $fileName) {
                     # file is not used by ALGo, remove it if it exists
                     # do not add it to $updateFiles if it does not exist
@@ -400,6 +370,38 @@ try {
                     }
                 }
                 elseif ($dstFileExists) {
+                    if ($type -eq 'workflow') {
+                        $yaml = [Yaml]::Load($srcContent.Split("`n"))
+                        try {
+                            $dstYaml = [Yaml]::Load($dstFile)
+                        }
+                        catch {
+                            $dstYaml = $null
+                        }
+                        if ($dstYaml) {
+                            # Destination YAML was readable - grab customizations from placeholders
+                            foreach($placeholderName in 'BuildALGoProject:Initialize','BuildALGoProject:PreBuild','BuildALGoProject:PostBuild','BuildALGoProject:Finalize') {
+                                $jobName = "$($placeholderName.Split(':')[0]):"
+                                $stepName = $placeholderName.Split(':')[1]
+                                $startStart = 0
+                                $startCount = 0
+                                $endStart = 0
+                                $endCount = 0
+                                if ($yaml.Find("jobs:/$jobName/steps:/- name: $($stepName).Start", [ref] $startStart, [ref] $startCount) -and $yaml.Find("jobs:/$jobName/steps:/- name: $($stepName).End", [ref] $endStart, [ref] $endCount)) {
+                                    Write-Host "PlaceHolder for $placeholderName found in source YAML: $startStart $startCount $endStart $endCount"
+                                    $dstStartStart = 0
+                                    $dstStartCount = 0
+                                    $dstEndStart = 0
+                                    $dstEndCount = 0
+                                    if ($dstYaml.Find("jobs:/$jobName/steps:/- name: $($stepName).Start", [ref] $dstStartStart, [ref] $dstStartCount) -and $dstYaml.Find("jobs:/$jobName/steps:/- name: $($stepName).End", [ref] $dstEndStart, [ref] $dstEndCount)) {
+                                        Write-Host "PlaceHolder for $placeholderName found in destination YAML: $dstStartStart $dstStartCount $dstEndStart $dstEndCount"
+                                        $yaml.content = $yaml.content[0..($startStart+$startCount-1)]+$dstYaml.content[($dstStartStart+$dstStartCount)..($dstEndStart-1)]+$yaml.content[$endStart..($yaml.content.Count-1)]
+                                    }
+                                }
+                            }
+                            $srcContent = $yaml.content -join "`n"
+                        }
+                    }
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {

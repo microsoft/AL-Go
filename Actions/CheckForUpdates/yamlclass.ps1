@@ -32,7 +32,6 @@ class Yaml {
     # If $line ends with '/', then the lines for the section are returned only
     # If $line doesn't end with '/', then the line + the lines for the section are returned (and the lines for the section are indented)
     [bool] Find([string] $line, [ref] $start, [ref] $count) {
-        Write-Host "-- FIND: $line"
         if ($line.Contains('/')) {
             $idx = $line.IndexOf('/')
             $find = $line.Split('/')[0]
@@ -44,7 +43,6 @@ class Yaml {
                 if ($yaml) {
                    $start.value = $s1+1
                    $count.value = $c1-1
-                   Write-Host "TRUE $($start.Value) $($count.Value)"
                    return $true
                 }
             }
@@ -56,12 +54,10 @@ class Yaml {
                     if ($yaml.Find($rest, [ref] $s2, [ref] $c2)) {
                         $start.value = $s1+$s2
                         $count.value = $c2
-                        Write-Host "TRUE $($start.Value) $($count.Value)"
                         return $true
                     }
                 }
             }
-            Write-Host "FALSE"
             return $false
         }
         else {
@@ -76,7 +72,6 @@ class Yaml {
                     else {
                         $start.value = $i
                         $count.value = 1
-                        Write-Host "TRUE $($start.Value) $($count.Value)"
                         return $true
                     }
                 }
@@ -87,17 +82,14 @@ class Yaml {
                     else {
                         $count.value = ($i-$start.value)
                     }
-                    Write-Host "TRUE $($start.Value) $($count.Value)"
                     return $true
                 }
             }
             if ($start.value -ne -1) {
                 $count.value = $this.content.Count-$start.value
-                Write-Host "TRUE $($start.Value) $($count.Value)"
                 return $true
             }
             else {
-                Write-Host "FALSE"
                 return $false
             }
         }
