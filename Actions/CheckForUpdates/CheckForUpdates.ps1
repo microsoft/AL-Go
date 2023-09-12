@@ -399,6 +399,25 @@ try {
                                     }
                                 }
                             }
+                            # Locate custom jobs in destination YAML
+                            $jobs = $yaml.GetNextLevel('jobs:/').Trim(':')
+                            $dstJobs = $dstYaml.GetNextLevel('jobs:/')
+                            $customJobs = ($dstJobs | Where-Object { $_ -like 'CustomJob*:' }).Trim(':')
+                            if ($customJobs) {
+                                $nativeJobs = ($jobs | Where-Object { $customJobs -notcontains $_.Trim(':') }).Trim(':')
+                                Write-Host "Custom Jobs:"
+                                foreach($customJob in $customJobs) {
+                                    Write-Host "- $customJob"
+                                    $jobsWithDependency = $nativeJobs | Where-Object { $yaml.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
+                                    Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
+                                    $jobsWithDependency | ForEach-Object {
+                                        if ($jobs -contains $_) {
+                                            # Add dependency to job
+                                            $yaml.Replace("jobs:/$($_):/needs:","needs: [ $(@($yaml.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob) -join ', ') ]")
+                                        }
+                                    }
+                                }
+                            }
                             $srcContent = $yaml.content -join "`n"
                         }
                     }
