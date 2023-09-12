@@ -126,8 +126,8 @@ try {
 
     if ($searchArtifacts) {
         New-Item $artifactsFolder -ItemType Directory | Out-Null
-        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $deploymentSettings.Projects -Version $artifacts -branch "main")
-        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $deploymentSettings.Projects -Version $artifacts -branch "main")
+        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $deploymentSettings.Projects -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
+        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $deploymentSettings.Projects -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
         if ($allArtifacts) {
             $allArtifacts | ForEach-Object {
                 $appFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
