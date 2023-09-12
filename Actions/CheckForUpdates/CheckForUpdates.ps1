@@ -419,6 +419,7 @@ try {
                                             }
                                         }
                                     }
+                                    $yaml.content += $dstYaml.Get("jobs:/$($customJob):/").content
                                 }
                             }
                             $srcContent = $yaml.content -join "`n"
