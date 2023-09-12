@@ -38,6 +38,7 @@ env:
 
 jobs:
   Initialization:
+    needs: [ ]
     runs-on: [ windows-latest ]
     outputs:
       deviceCode: ${{ steps.authenticate.outputs.deviceCode }}
@@ -91,12 +92,12 @@ jobs:
           }
 
   CreateDevelopmentEnvironment:
+    needs: [ Initialization ]
     runs-on: ${{ fromJson(needs.Initialization.outputs.githubRunner) }}
     defaults:
       run:
         shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
     name: Create Development Environment
-    needs: [ Initialization ]
     env:
       deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
     steps:

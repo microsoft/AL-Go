@@ -56,6 +56,7 @@ env:
 
 jobs:
   CreateRelease:
+    needs: [ ]
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -206,8 +207,8 @@ jobs:
             core.setOutput('releaseId', releaseId);
 
   UploadArtifacts:
-    runs-on: [ windows-latest ]
     needs: [ CreateRelease ]
+    runs-on: [ windows-latest ]
     strategy:
       matrix: ${{ fromJson(needs.CreateRelease.outputs.artifacts) }}
       fail-fast: true
@@ -285,9 +286,9 @@ jobs:
           atypes: 'Apps,TestApps,Dependencies'
 
   CreateReleaseBranch:
+    needs: [ CreateRelease, UploadArtifacts ]
     if: ${{ github.event.inputs.createReleaseBranch=='Y' }}
     runs-on: [ windows-latest ]
-    needs: [ CreateRelease, UploadArtifacts ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -304,9 +305,9 @@ jobs:
           git push origin ${{ needs.CreateRelease.outputs.releaseBranch }}
 
   UpdateVersionNumber:
+    needs: [ CreateRelease, UploadArtifacts ]
     if: ${{ github.event.inputs.updateVersionNumber!='' }}
     runs-on: [ windows-latest ]
-    needs: [ CreateRelease, UploadArtifacts ]
     steps:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -332,9 +333,9 @@ jobs:
           directCommit: ${{ github.event.inputs.directCommit }}
 
   PostProcess:
+    needs: [ CreateRelease, UploadArtifacts, CreateReleaseBranch, UpdateVersionNumber ]
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ CreateRelease, UploadArtifacts, CreateReleaseBranch, UpdateVersionNumber ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3

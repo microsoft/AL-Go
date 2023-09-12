@@ -25,6 +25,7 @@ env:
 
 jobs:
   Initialization:
+    needs: [ ]
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -155,9 +156,9 @@ jobs:
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   PostProcess:
+    needs: [ Initialization, Deploy ]
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ Initialization, Deploy ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3

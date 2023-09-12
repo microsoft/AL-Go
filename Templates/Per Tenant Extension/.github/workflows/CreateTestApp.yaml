@@ -46,6 +46,7 @@ env:
 
 jobs:
   CreateTestApp:
+    needs: [ ]
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout

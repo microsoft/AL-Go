@@ -50,6 +50,7 @@ env:
 
 jobs:
   CreatePerformanceTestApp:
+    needs: [ ]
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout

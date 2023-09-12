@@ -98,9 +98,9 @@ jobs:
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
 
   StatusCheck:
-    runs-on: [ windows-latest ]
     needs: [ Initialization, Build ]
     if: (!cancelled())
+    runs-on: [ windows-latest ]
     name: Pull Request Status Check
     steps:
       - name: Pull Request Status Check

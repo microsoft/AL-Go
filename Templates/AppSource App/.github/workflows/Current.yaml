@@ -17,6 +17,7 @@ env:
 
 jobs:
   Initialization:
+    needs: [ ]
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -80,9 +81,9 @@ jobs:
       artifactsNameSuffix: 'Current'
 
   PostProcess:
+    needs: [ Initialization, Build ]
     if: always()
     runs-on: [ windows-latest ]
-    needs: [ Initialization, Build ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
