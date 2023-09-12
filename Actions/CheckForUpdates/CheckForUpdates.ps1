@@ -419,7 +419,7 @@ try {
                                             }
                                         }
                                     }
-                                    $yaml.content += $dstYaml.Get("jobs:/$($customJob):/").content
+                                    $yaml.content += @('') + @($dstYaml.Get("jobs:/$($customJob):").content | ForEach-Object { "  $_" })
                                 }
                             }
                             $srcContent = $yaml.content -join "`n"
