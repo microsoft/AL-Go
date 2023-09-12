@@ -24,6 +24,7 @@ env:
 
 jobs:
   Initialization:
+    needs: [ ]
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}

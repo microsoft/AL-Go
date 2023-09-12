@@ -404,16 +404,19 @@ try {
                             $dstJobs = $dstYaml.GetNextLevel('jobs:/')
                             $customJobs = ($dstJobs | Where-Object { $_ -like 'CustomJob*:' }).Trim(':')
                             if ($customJobs) {
-                                $nativeJobs = ($jobs | Where-Object { $customJobs -notcontains $_.Trim(':') }).Trim(':')
+                                $nativeJobs = ($dstJobs | Where-Object { $customJobs -notcontains $_.Trim(':') }).Trim(':')
                                 Write-Host "Custom Jobs:"
                                 foreach($customJob in $customJobs) {
                                     Write-Host "- $customJob"
-                                    $jobsWithDependency = $nativeJobs | Where-Object { $yaml.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
-                                    Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
-                                    $jobsWithDependency | ForEach-Object {
-                                        if ($jobs -contains $_) {
-                                            # Add dependency to job
-                                            $yaml.Replace("jobs:/$($_):/needs:","needs: [ $(@($yaml.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob) -join ', ') ]")
+                                    $jobsWithDependency = $nativeJobs | Where-Object { $dstYaml.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
+                                    if ($jobsWithDependency) {
+                                        Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
+                                        $jobsWithDependency = 'Build'
+                                        $jobsWithDependency | ForEach-Object {
+                                            if ($jobs -contains $_) {
+                                                # Add dependency to job
+                                                $yaml.Replace("jobs:/$($_):/needs:","needs: [ $(@($yaml.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob) -join ', ') ]")
+                                            }
                                         }
                                     }
                                 }
