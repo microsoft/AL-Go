@@ -401,8 +401,8 @@ try {
                             }
                             # Locate custom jobs in destination YAML
                             $jobs = $yaml.GetNextLevel('jobs:/').Trim(':')
-                            $dstJobs = $dstYaml.GetNextLevel('jobs:/')
-                            $customJobs = ($dstJobs | Where-Object { $_ -like 'CustomJob*:' }).Trim(':')
+                            $dstJobs = $dstYaml.GetNextLevel('jobs:/').Trim(':')
+                            $customJobs = @($dstJobs | Where-Object { $_ -like 'CustomJob*:' } | ForEach-Object { $_.Trim(':') })
                             if ($customJobs) {
                                 $nativeJobs = ($dstJobs | Where-Object { $customJobs -notcontains $_.Trim(':') }).Trim(':')
                                 Write-Host "Custom Jobs:"
