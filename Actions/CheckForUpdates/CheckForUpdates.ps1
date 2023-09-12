@@ -401,7 +401,7 @@ try {
                             }
                             # Locate custom jobs in destination YAML
                             $jobs = $yaml.GetNextLevel('jobs:/').Trim(':')
-                            $dstJobs = $dstYaml.GetNextLevel('jobs:/').Trim(':')
+                            $dstJobs = $dstYaml.GetNextLevel('jobs:/')
                             $customJobs = @($dstJobs | Where-Object { $_ -like 'CustomJob*:' } | ForEach-Object { $_.Trim(':') })
                             if ($customJobs) {
                                 $nativeJobs = ($dstJobs | Where-Object { $customJobs -notcontains $_.Trim(':') }).Trim(':')
@@ -411,7 +411,6 @@ try {
                                     $jobsWithDependency = $nativeJobs | Where-Object { $dstYaml.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
                                     if ($jobsWithDependency) {
                                         Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
-                                        $jobsWithDependency = 'Build'
                                         $jobsWithDependency | ForEach-Object {
                                             if ($jobs -contains $_) {
                                                 # Add dependency to job
