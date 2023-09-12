@@ -59,7 +59,8 @@ function Test-SettingsJson {
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -should
     }
     if ($type -eq 'Project') {
-        # Test for things that should / should not exist in a project settings file
+        # GitHubRunner should not be in a project settings file (only read from repo or workflow settings)
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'githubRunner' -shouldnot
     }
     if ($type -eq 'Workflow') {
         # Test for things that should / should not exist in a workflow settings file
@@ -72,7 +73,8 @@ function Test-SettingsJson {
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -maynot
 
         # schedules and runs-on should not be in Project or Workflow settings
-        'nextMajorSchedule','nextMinorSchedule','currentSchedule','githubRunner','runs-on' | ForEach-Object {
+        # These properties are used in Update AL-Go System Files, hence they should only be in Repo settings
+        'nextMajorSchedule','nextMinorSchedule','currentSchedule','runs-on' | ForEach-Object {
             Test-Property -settingsDescription $settingsDescription -json $json -key $_ -shouldnot
         }
     }
