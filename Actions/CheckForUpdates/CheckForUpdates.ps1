@@ -10,7 +10,7 @@
     [Parameter(HelpMessage = "Branch in template repository to use for the update (default is the default branch)", Mandatory = $false)]
     [string] $templateBranch = "",
     [Parameter(HelpMessage = "Set this input to Y in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $false)]
-    [bool] $downloadLatest = "",
+    [bool] $downloadLatest,
     [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
     [bool] $update,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]

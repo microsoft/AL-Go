@@ -32,7 +32,7 @@ inputs:
   downloadLatest:
     description: Set this input to Y in order to download latest version of the template repository (else it will reuse the SHA from last update)
     required: false
-    default: 'Y'
+    default: 'N'
   update:
     description: Set this input to Y in order to update AL-Go System Files if needed
     required: false
@@ -56,13 +56,14 @@ runs:
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _templateUrl: ${{ inputs.templateUrl }}
         _templateBranch: ${{ inputs.templateBranch }}
+        _downloadLatest: ${{ inputs.downloadLatest }}
         _update: ${{ inputs.update }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -templateUrl $ENV:_templateUrl -templateBranch $ENV:_templateBranch -update ($ENV:_update -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
+          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -templateUrl $ENV:_templateUrl -templateBranch $ENV:_templateBranch -downloadLatest ($ENV:_downloadLatest -eq 'Y') -update ($ENV:_update -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
