@@ -89,18 +89,27 @@ try {
     $templateUrl = $templateUrl.Split('@')[0]
     $templateOwner = $templateUrl.Split('/')[3]
 
-    # Build the $archiceUrl instead of using the GitHub API
-    # The GitHub API has a rate limit of 60 requests per hour, which is not enough for a large number of repositories using AL-Go
+    # Construct API URL
     $apiUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")"
 
     Write-Host "Using template from $templateUrl@$templateBranch"
     Write-Host "Using ApiUrl $apiUrl"
 
     # Download the template repository and unpack to a temp folder
+    # Use Authenticated API request to avoid the 60 API calls per hour limit
     $headers = @{
         "Accept" = "application/vnd.github.baptiste-preview+json"
         "Authorization" = "Bearer $token"
     }
+
+    if ($directALGo) {
+        $repoIsTemplate = $true
+    }
+    else {
+        $response = InvokeWebRequest -Headers $headers -Uri $apiUrl -retry
+        $repoIsTemplate = ($response.content | ConvertFrom-Json).is_template
+    }
+    Write-Host "Template repository: $repoIsTemplate"
 
     $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
     $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $templateBranch }
@@ -122,6 +131,17 @@ try {
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
+
+    if (!$directALGo) {
+        $ALGoSettingsFile = Join-Path $tempName "*/.github/AL-Go-Settings.json"
+        if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
+            $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+            if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
+                # Template repository has a different template url than the one we are using
+                Write-Host "The template repository has a different template url than the one we are using."
+            }
+        }
+    }
 
     # CheckFiles is an array of hashtables with the following properties:
     # dstPath: The path to the file in the current repository

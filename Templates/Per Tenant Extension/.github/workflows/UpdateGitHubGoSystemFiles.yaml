@@ -32,6 +32,17 @@ jobs:
     needs: [ ]
     runs-on: [ windows-latest ]
     steps:
+      - name: Input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          Write-Host "Inputs:"
+          $eventPath = Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          $eventPath.inputs.psObject.Properties | Sort-Object { $_.Name } | ForEach-Object {
+            $property = $_.Name
+            $value = $eventPath.inputs."$property"
+            Write-Host "- $property = '$value'"
+          }
+
       - name: Checkout
         uses: actions/checkout@v3
 
