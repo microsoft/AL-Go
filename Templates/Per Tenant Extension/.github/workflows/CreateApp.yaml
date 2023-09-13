@@ -27,7 +27,7 @@ on:
         type: boolean
         default: false
       useGhTokenWorkflow:
-        description: Use GhTokenWorkflow for Pull Request/Commit?
+        description: Use GhTokenWorkflow for PR/Commit?
         type: boolean
         default: false
 
