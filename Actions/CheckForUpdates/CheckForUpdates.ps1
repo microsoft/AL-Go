@@ -73,10 +73,14 @@ try {
     $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 
     # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
-    $updateSettings = $true
     if ($repoSettings.templateUrl -eq $templateUrl) {
         # No need to update settings file
         $updateSettings = $false
+    }
+    else {
+        # New repository, download latest and update settings
+        $updateSettings = $true
+        $downloadLatest = $true
     }
 
     AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
@@ -103,18 +107,16 @@ try {
     if (!$branchInfo) {
         throw "Branch $templateBranch not found in template repository"
     }
-    $sha = $branchInfo.commit.sha
-    Write-Host "SHA: $sha"
-    if ($sha -eq $templateSha -or ($templateSha -and !$downloadLatest)) {
-        # SHA is the same as last time, or downloadLatest is not set, download the templateSha
-        $archiveUrl = "$apiUrl/zipball/$templateSha"
-    }
-    else {
+    $templateRepoSha = $branchInfo.commit.sha
+    Write-Host "Template Repository SHA: $templateRepoSha"
+
+    if (!$templateSha -or ($downloadLatest -and $templateRepoSha -ne $templateSha)) {
         # Download latest and update templateSha in repo settings
-        $archiveUrl = "$apiUrl/zipball/$templateBranch"
-        $templateSha = $sha
+        $templateSha = $templateRepoSha
         $updateSettings = $true
     }
+    Write-Host "Using SHA: $templateSha"
+    $archiveUrl = "$apiUrl/zipball/$templateSha"
 
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
