@@ -67,6 +67,7 @@ try {
 
     # Get Repo settings as a hashtable
     $repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable
+    $templateSha = $repoSettings.templateSha
     $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 
     # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
@@ -85,10 +86,9 @@ try {
     # Build the $archiceUrl instead of using the GitHub API
     # The GitHub API has a rate limit of 60 requests per hour, which is not enough for a large number of repositories using AL-Go
     $apiUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")"
-    $archiveUrl = "$apiUrl/zipball/$templateBranch"
 
     Write-Host "Using template from $templateUrl@$templateBranch"
-    Write-Host "Using ArchiveUrl $archiveUrl"
+    Write-Host "Using ApiUrl $apiUrl"
 
     if ($token) { Write-Host "USING TOKEN" }
 
@@ -98,17 +98,22 @@ try {
         "Authorization" = "Bearer $token"
     }
 
-
-
-    $response = Invoke-WebRequest -Uri "$apiUrl/branches" -Headers $headers -Method GET -UseBasicParsing
-    Write-Host "HEADERS:-------------------------------------"
-    $response.Headers | Out-Host
-    Write-Host "main:----------------------------------------"
-    ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $templateBranch } | Out-Host
-    Write-Host "---------------------------------------------"
+    $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
+    $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $templateBranch }
+    if (!$branchInfo) {
+        throw "Branch $templateBranch not found in template repository"
+    }
+    $sha = $branchInfo.commit.sha
+    if ($sha -eq $templateSha) {
+        Write-Host "================ SAME SHA ================"
+    }
+    else {
+        # Update templateSha in repo settings
+        $templateSha = $sha
+    }
 
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
+    InvokeWebRequest -Headers $headers -Uri "$apiUrl/zipball/$templateBranch" -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
 
@@ -519,6 +524,13 @@ try {
                 else {
                     # Add the property if it doesn't exist
                     $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
+                }
+                if ($repoSettings.PSObject.Properties.Name -eq "templateSha") {
+                    $repoSettings.templateSha = $templateSha
+                }
+                else {
+                    # Add the property if it doesn't exist
+                    $repoSettings | Add-Member -MemberType NoteProperty -Name "templateSha" -Value $templateSha
                 }
                 # Save the file with LF line endings and UTF8 encoding
                 $repoSettings | Set-JsonContentLF -path $repoSettingsFile

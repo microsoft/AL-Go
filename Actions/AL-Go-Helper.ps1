@@ -596,6 +596,7 @@ function ReadSettings {
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
         "templateUrl"                                   = ""
+        "templateSha"                                   = ""
         "templateBranch"                                = ""
         "appDependencyProbingPaths"                     = @()
         "useProjectDependencies"                        = $false
