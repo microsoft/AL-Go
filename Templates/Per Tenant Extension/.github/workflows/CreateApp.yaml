@@ -53,7 +53,9 @@ jobs:
           Write-Host "Inputs:"
           $eventPath = Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
           $eventPath.inputs.psObject.Properties | ForEach-Object {
-             Write-Host "$($_.Name) = '$($eventPath.inputs."$_.Name")'"
+            $property = $_.Name
+            $value = $eventPath.inputs."$property"
+            Write-Host "$property = '$value'"
           }
 
       - name: Checkout
