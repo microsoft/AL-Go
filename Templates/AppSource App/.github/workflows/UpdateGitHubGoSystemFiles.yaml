@@ -14,6 +14,7 @@ on:
       directCommit:
         description: Direct COMMIT
         type: boolean
+        default: false
 
 permissions:
   contents: read
