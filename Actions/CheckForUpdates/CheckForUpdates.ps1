@@ -84,7 +84,8 @@ try {
 
     # Build the $archiceUrl instead of using the GitHub API
     # The GitHub API has a rate limit of 60 requests per hour, which is not enough for a large number of repositories using AL-Go
-    $archiveUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")/zipball/$templateBranch"
+    $apiUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")"
+    $archiveUrl = "$apiUrl/zipball/$templateBranch"
 
     Write-Host "Using template from $templateUrl@$templateBranch"
     Write-Host "Using ArchiveUrl $archiveUrl"
@@ -92,8 +93,16 @@ try {
     # Download the template repository and unpack to a temp folder
     $headers = @{
         "Accept" = "application/vnd.github.baptiste-preview+json"
-        "token" = $token
+        "Authorization" = "Bearer $token"
     }
+
+    $response = Invoke-WebRequest -Uri "$apiUrl/branches" -Headers $headers -Method GET -UseBasicParsing
+    Write-Host "HEADERS:-------------------------------------"
+    $response.Headers | Out-Host
+    Write-Host "main:----------------------------------------"
+    ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $templateBranch } | Out-Host
+    Write-Host "---------------------------------------------"
+
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
