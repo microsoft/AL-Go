@@ -104,12 +104,14 @@ try {
         throw "Branch $templateBranch not found in template repository"
     }
     $sha = $branchInfo.commit.sha
+    Write-Host "SHA: $sha"
     if ($sha -eq $templateSha) {
         Write-Host "================ SAME SHA ================"
     }
     else {
         # Update templateSha in repo settings
         $templateSha = $sha
+        $updateSettings = $true
     }
 
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
