@@ -8,13 +8,11 @@ on:
         required: false
         default: ''
       downloadLatest:
-        description: Download latest from template repository (Y/N)
-        required: false
-        default: 'Y'
+        description: Download latest from template repository
+        type: boolean
       directCommit:
-        description: Direct COMMIT (Y/N)
-        required: false
-        default: 'N'
+        description: Direct COMMIT
+        type: boolean
 
 permissions:
   contents: read
@@ -67,19 +65,23 @@ jobs:
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
           }
 
-      - name: Calculate DirectCommit
+      - name: Calculate Input
         env:
-          directCommit: ${{ github.event.inputs.directCommit }}
+          directCommit: '${{ github.event.inputs.directCommit }}'
+          downloadLatest: ${{ github.event.inputs.downloadLatest }}
           eventName: ${{ github.event_name }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $directCommit = $ENV:directCommit
+          $downloadLatest = $ENV:downloadLatest
           Write-Host $ENV:eventName
           if ($ENV:eventName -eq 'schedule') {
-            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit = Y"
-            $directCommit = 'Y'
+            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit amd DownloadLatest to true"
+            $directCommit = 'true'
+            $downloadLatest = 'true'
           }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "DirectCommit=$directCommit"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
 
       - name: Update AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
@@ -87,8 +89,8 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
-          DownloadLatest: ${{ github.event.inputs.downloadLatest }}
-          Update: Y
+          DownloadLatest: ${{ env.downloadLatest }}
+          Update: true
           templateUrl: ${{ env.templateUrl }}
           directCommit: ${{ env.directCommit }}
 
