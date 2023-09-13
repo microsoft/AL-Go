@@ -98,8 +98,6 @@ try {
         "Authorization" = "Bearer $token"
     }
 
-    $headers | Out-Host
-
     $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
     $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $templateBranch }
     if (!$branchInfo) {
