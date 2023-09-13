@@ -29,6 +29,13 @@ jobs:
           excludeRule: '"PSAvoidUsingInvokeExpression", "PSUseShouldProcessForStateChangingFunctions", "PSAvoidUsingWriteHost", "PSAvoidUsingCmdletAliases"'
           output: results.sarif
 
+      - name: Upload SARIF as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Sarif
+          path: results.sarif
+          if-no-files-found: ignore
+
       # Upload the SARIF file generated in the previous step
       - name: Upload SARIF results file
         uses: github/codeql-action/upload-sarif@v2
