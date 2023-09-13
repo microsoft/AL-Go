@@ -11,7 +11,7 @@ on:
         default: '.'
       name:
         description: Name
-        required: true      
+        required: true
       publisher:
         description: Publisher
         required: true

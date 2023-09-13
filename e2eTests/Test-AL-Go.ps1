@@ -1,4 +1,5 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -15,15 +16,15 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  ______           _ ___                _    _           _                                    _       
-# |  ____|         | |__ \              | |  | |         | |                                  (_)      
-# | |__   _ __   __| |  ) |___ _ __   __| |  | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___  
-# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \ 
+#  ______           _ ___                _    _           _                                    _
+# |  ____|         | |__ \              | |  | |         | |                                  (_)
+# | |__   _ __   __| |  ) |___ _ __   __| |  | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___
+# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \
 # | |____| | | | (_| |/ /_  __/ | | | (_| |  | |_  __\__ \ |_   \__ \ (__  __/ | | | (_| | |  | | (_) |
-# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/ 
+# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/
 #
 # This scenario runs for both PTE template and AppSource App template and as single project and multi project repositories
-#                                                                                                      
+#
 # - Login to GitHub
 # - Create a new repository based on the selected template
 # - If (AppSource App) Create a licensefileurl secret
@@ -59,7 +60,7 @@ Write-Host -ForegroundColor Yellow @'
 # - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 
@@ -111,13 +112,13 @@ $repoPath = (Get-Location).Path
 Start-Sleep -Seconds 60
 
 # Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)
-$runs = Get-NumberOfRuns -repository $repository
+$runs = GetNumberOfRuns -repository $repository
 
 # Add Existing App
 if ($appSourceApp) {
     SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
 }
-Run-AddExistingAppOrTestApp @project1Param -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
+RunAddExistingAppOrTestApp @project1Param -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
 $runs++
 if ($appSourceApp) {
     Pull -branch $branch
@@ -126,7 +127,7 @@ if ($appSourceApp) {
 }
 
 # Add Existing Test App
-Run-AddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch | Out-Null
+RunAddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch | Out-Null
 $runs++
 
 # Merge and run CI/CD + Tests
@@ -134,10 +135,10 @@ MergePRandPull -branch $branch | Out-Null
 $runs++
 
 # Wait for CI/CD to finish
-$run = Run-CICD -wait -branch $branch
+$run = RunCICD -wait -branch $branch
 $runs++
 
-if ($useCompilerFolder) { 
+if ($useCompilerFolder) {
     # If using compiler folder duing tests, doNotPublishApps is also set to true (for now), which means that apps are not published and tests are not run
     # Later we will fix this to include test runs as well, but for now, expected number of tests is 0
     $expectedNumberOfTests = 0
@@ -145,15 +146,15 @@ if ($useCompilerFolder) {
 else {
     $expectedNumberOfTests = 1
 }
-Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
+TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Create Release
-Run-CreateRelease -appVersion "1.0.$($runs-2).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
+RunCreateRelease -appVersion "1.0.$($runs-2).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
 $runs++
 
 # Create New App
-Run-CreateApp @project2Param -name "My App" -publisher "My Publisher" -idrange "$($idRange.from)..$($idRange.to)" -directCommit -wait -branch $branch | Out-Null
+RunCreateApp @project2Param -name "My App" -publisher "My Publisher" -idrange "$($idRange.from)..$($idRange.to)" -directCommit -wait -branch $branch | Out-Null
 $runs++
 Pull -branch $branch
 if ($appSourceApp) {
@@ -178,7 +179,7 @@ if ($appSourceApp) {
 Test-PropertiesInJsonFile -jsonFile "$($project2folder)My App\app.json" -properties @{ "name" = "My App"; "publisher" = "My Publisher"; 'idRanges[0].from' = $idRange.from; "idRanges[0].to" = $idRange.to; 'idRanges.Count' = 1 }
 
 # Create New Test App
-Run-CreateTestApp @project2Param -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
+RunCreateTestApp @project2Param -name "My TestApp" -publisher "My Publisher" -idrange "58000..59000" -directCommit -wait -branch $branch | Out-Null
 $runs++
 if ($expectedNumberOfTests) { $expectedNumberOfTests++ }
 
@@ -188,12 +189,12 @@ Test-PropertiesInJsonFile -jsonFile "$($project2folder)My TestApp\app.json" -pro
 # Create Online Development Environment
 if ($adminCenterApiToken -and -not $multiProject) {
     SetRepositorySecret -repository $repository -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiToken
-    Run-CreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
+    RunCreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
     $runs++
 }
 
 # Increment version number on one project
-Run-IncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
+RunIncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
 $runs++
 $run = MergePRandPull -branch $branch -wait
 $runs++
@@ -203,7 +204,7 @@ if ($multiProject) {
 else {
     Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
 }
-Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
+TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 # Modify versioning strategy
 $projectSettingsFiles | Select-Object -Last 1 | ForEach-Object {
@@ -217,19 +218,19 @@ CommitAndPush -commitMessage "Version strategy change"
 $runs++
 
 # Increment version number on all project (and on all apps)
-Run-IncrementVersionNumber @allProjectsParam -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
+RunIncrementVersionNumber @allProjectsParam -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
 $runs++
 Pull -branch $branch
 if (Test-Path "$($project1Folder).AL-Go\*.ps1") { throw "Local PowerShell scripts in the .AL-Go folder should have been removed" }
 if (Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml") { throw "AddExistingAppOrTestApp.yaml should have been removed" }
-$run = Run-CICD -wait -branch $branch
+$run = RunCICD -wait -branch $branch
 $runs++
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts3' -repoVersion '3.0' -appVersion '3.0'
 
 # Update AL-Go System Files
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-Run-UpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
 $runs++
 MergePRandPull -branch $branch | Out-Null
 $runs += 2
@@ -237,13 +238,13 @@ if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scr
 if (!(Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml")) { throw "AddExistingAppOrTestApp.yaml was not updated by Update AL-Go System Files" }
 
 # Create Release
-Run-CreateRelease -appVersion latest -name "v3.0" -tag "3.0.0" -wait -branch $branch | Out-Null
+RunCreateRelease -appVersion latest -name "v3.0" -tag "3.0.0" -wait -branch $branch | Out-Null
 $runs++
 
 # Launch Current, NextMinor and NextMajor builds
-$runTestCurrent = Run-TestCurrent -branch $branch
-$runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+$runTestCurrent = RunTestCurrent -branch $branch
+$runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
+$runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
 
 # TODO: Test workspace
 
@@ -264,7 +265,7 @@ $runs++
 WaitWorkflow -runid $runTestCurrent.id -noDelay
 $runs++
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
+TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 Set-Location $prevLocation
 
@@ -276,5 +277,7 @@ if ($adminCenterApiToken) {
         $authContext = New-BcAuthContext @params
         Remove-BcEnvironment -bcAuthContext $authContext -environment $repoName -doNotWait
     }
-    catch {}
+    catch {
+        Write-Host "::WARNING::Failed to remove environment $repoName"
+    }
 }

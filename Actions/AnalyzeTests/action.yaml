@@ -5,14 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  actor:
-    description: The GitHub actor running the action
-    required: false
-    default: ${{ github.actor }}
-  token:
-    description: The GitHub token running the action
-    required: false
-    default: ${{ github.token }}
   parentTelemetryScopeJson:
     description: Specifies the parent telemetry scope for the telemetry signal
     required: false
@@ -31,14 +23,12 @@ runs:
       shell: ${{ inputs.shell }}
       id: AnalyzeTests
       env:
-        _actor: ${{ inputs.actor }}
-        _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/AnalyzeTests.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project
+          ${{ github.action_path }}/AnalyzeTests.ps1 -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

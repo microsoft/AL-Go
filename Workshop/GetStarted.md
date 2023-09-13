@@ -20,7 +20,7 @@ Click **Actions**, select the **CI/CD** workflow, click **Run workflow** and run
 | ![image](https://user-images.githubusercontent.com/10775043/231540402-05af1336-0f60-45e7-a86c-501a95a657de.png) |
 |-|
 
-Note the three warnings explaining that no apps have been added.  The CI/CD workflow doesn't have anything to compile yet as you didn't add any source code. 
+Note the three warnings explaining that no apps have been added.  The CI/CD workflow doesn't have anything to compile yet as you didn't add any source code.
 
 After this step, we are done setting up a basic AL-Go for GitHub repository and we only need to add our apps.
 

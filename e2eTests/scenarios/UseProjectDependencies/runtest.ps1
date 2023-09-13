@@ -1,4 +1,6 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -11,17 +13,17 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  _    _          _____           _           _   _____                            _                 _           
-# | |  | |        |  __ \         (_)         | | |  __ \                          | |               (_)          
-# | |  | |___  ___| |__) | __ ___  _  ___  ___| |_| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___ 
+#  _    _          _____           _           _   _____                            _                 _
+# | |  | |        |  __ \         (_)         | | |  __ \                          | |               (_)
+# | |  | |___  ___| |__) | __ ___  _  ___  ___| |_| |  | | ___ _ __   ___ _ __   __| | ___ _ __   ___ _  ___  ___
 # | |  | / __|/ _ \  ___/ '__/ _ \| |/ _ \/ __| __| |  | |/ _ \ '_ \ / _ \ '_ \ / _` |/ _ \ '_ \ / __| |/ _ \/ __|
 # | |__| \__ \  __/ |   | | | (_) | |  __/ (__| |_| |__| |  __/ |_) |  __/ | | | (_| |  __/ | | | (__| |  __/\__ \
 #  \____/|___/\___|_|   |_|  \___/| |\___|\___|\__|_____/ \___| .__/ \___|_| |_|\__,_|\___|_| |_|\___|_|\___||___/
-#                                _/ |                         | |                                                 
+#                                _/ |                         | |
 #                               |__/                          |_|
 #
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template with 5 projects and useProjectDependencies set to true
 #    - P1/app1 with dependency to P1/app2
 #    - P1/app2 with no dependencies
@@ -38,7 +40,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""
@@ -72,24 +74,24 @@ CreateAlGoRepository `
         Add-PropertiesToJsonFile -path (Join-Path $path 'P2\.AL-Go\settings.json') -properties @{ "country" = "w1" }
         $id4 = CreateNewAppInFolder -folder (Join-Path $path 'P3') -name app4 -objID 50004 -dependencies @( @{ "id" = $id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P3\.AL-Go\settings.json') -properties @{ "country" = "w1" }
-        $id5 = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $null = CreateNewAppInFolder -folder (Join-Path $path 'P4') -name app5 -objID 50005 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P4\.AL-Go\settings.json') -properties @{ "country" = "it" }
-        $id6 = CreateNewAppInFolder -folder (Join-Path $path 'P0') -name app6 -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $null = CreateNewAppInFolder -folder (Join-Path $path 'P0') -name app6 -objID 50006 -dependencies @( @{ "id" = $id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         Add-PropertiesToJsonFile -path (Join-Path $path 'P0\.AL-Go\settings.json') -properties @{ "country" = "dk" }
     }
 
 $repoPath = (Get-Location).Path
 
 # Update AL-Go System Files to uptake UseProjectDependencies setting
-Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
 
 # Run CI/CD workflow
-$run = Run-CICD -branch $branch
+$run = RunCICD -branch $branch
 
 # Launch Current, NextMinor and NextMajor builds
-$runTestCurrent = Run-TestCurrent -branch $branch
-$runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+$runTestCurrent = RunTestCurrent -branch $branch
+$runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
+$runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
 
 # Wait for all workflows to finish
 WaitWorkflow -runid $run.id

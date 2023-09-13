@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
 Describe "Get-ProjectsToBuild" {
     BeforeAll {
@@ -10,6 +10,7 @@ Describe "Get-ProjectsToBuild" {
     }
 
     BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'baseFolder', Justification = 'False positive.')]
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
     }
 

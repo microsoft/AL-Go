@@ -1,4 +1,6 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -11,16 +13,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  ____        _ _     _ __  __           _           
-# |  _ \      (_) |   | |  \/  |         | |          
-# | |_) |_   _ _| | __| | \  / | ___   __| | ___  ___ 
+#  ____        _ _     _ __  __           _
+# |  _ \      (_) |   | |  \/  |         | |
+# | |_) |_   _ _| | __| | \  / | ___   __| | ___  ___
 # |  _ <| | | | | |/ _` | |\/| |/ _ \ / _` |/ _ \/ __|
 # | |_) | |_| | | | (_| | |  | | (_) | (_| |  __/\__ \
 # |____/ \__,_|_|_|\__,_|_|  |_|\___/ \__,_|\___||___/
-#                                                     
+#
 #
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template with a single project HelloWorld app
 #    - add BuildModes and CleanModePreprocessorSymbols to the repo settings
 #  - Run the "CI/CD" workflow
@@ -28,7 +30,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 $repoPath = ""
@@ -60,7 +62,7 @@ $repoPath = (Get-Location).Path
 Start-Process $repoPath
 
 # Run CI/CD workflow
-$run = Run-CICD -repository $repository -branch $branch -wait
+$run = RunCICD -repository $repository -branch $branch -wait
 
 # Test number of artifacts
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1} -repoVersion '1.0' -appVersion '1.0'

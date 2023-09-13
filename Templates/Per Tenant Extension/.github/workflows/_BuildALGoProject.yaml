@@ -10,7 +10,7 @@ on:
         required: false
         default: powershell
         type: string
-      runsOn: 
+      runsOn:
         description: JSON-formatted string og the types of machine to run the build job on
         required: true
         type: string
@@ -21,6 +21,10 @@ on:
         type: string
       project:
         description: Name of the built project
+        required: true
+        type: string
+      projectName:
+        description: Friendly name of the built project
         required: true
         type: string
       projectDependenciesJson:
@@ -66,10 +70,15 @@ on:
         description: Specifies the telemetry scope for the telemetry signal
         required: false
         type: string
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
 jobs:
   BuildALGoProject:
     runs-on: ${{ fromJson(inputs.runsOn) }}
-    name: ${{ inputs.project }} - ${{ inputs.buildMode }}
+    name: ${{ inputs.projectName }} (${{ inputs.buildMode }})
     steps:
         - name: Checkout
           uses: actions/checkout@v3
@@ -174,7 +183,7 @@ jobs:
             path: '${{ inputs.project }}/.buildartifacts/TestApps/'
             if-no-files-found: ignore
             retention-days: 1
-        
+
         - name: Publish artifacts - apps
           uses: actions/upload-artifact@v3
           if: inputs.publishArtifacts

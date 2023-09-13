@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -37,7 +37,7 @@ function EnsureAzStorageModule() {
             Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
         }
         else {
-            Write-Host "Installing and importing Az.Storage." 
+            Write-Host "Installing and importing Az.Storage."
             Install-Module 'Az.Storage' -Force
             Import-Module  'Az.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
         }
@@ -78,15 +78,14 @@ try {
         throw "No projects matches the pattern '$projects'"
     }
     if ($deliveryTarget -eq "AppSource") {
-        $atypes = "Apps,Dependencies"        
+        $atypes = "Apps,Dependencies"
     }
     Write-Host "Artifacts $artifacts"
     Write-Host "Projects:"
     $projectList | Out-Host
 
     $secrets = $env:Secrets | ConvertFrom-Json
-    $projectList | ForEach-Object {
-        $thisProject = $_
+    foreach($thisProject in $projectList) {
         # $project should be the project part of the artifact name generated from the build
         if ($thisProject -and ($thisProject -ne '.')) {
             $project = $thisProject.Replace('\','_').Replace('/','_')
@@ -175,7 +174,7 @@ try {
 
         if (Test-Path $customScript -PathType Leaf) {
             Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
-            
+
             $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
             $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
             $parameters = @{
@@ -187,7 +186,7 @@ try {
                 "ProjectSettings" = $projectSettings
             }
             #Calculate the folders per artifact type
-            
+
             #Calculate the folders per artifact type
             'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
                 $artifactType = $_
@@ -219,7 +218,7 @@ try {
                     $parameters[$artifactType.ToLowerInvariant() + "Folders"] = $artifactFolders.FullName
                 }
             }
-            
+
             Write-Host "Calling custom script: $customScript"
             . $customScript -parameters $parameters
         }
@@ -426,7 +425,6 @@ try {
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
                 $mainAppJson = Get-Content -Path (Join-Path $baseFolder "$thisProject/$AppSourceMainAppFolder/app.json") -Encoding UTF8 | ConvertFrom-Json
-                $mainAppVersion = [Version]$mainAppJson.Version
                 $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
                 $artfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($artFolder.Count -eq 0) {

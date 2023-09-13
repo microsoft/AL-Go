@@ -1,4 +1,4 @@
-Describe "AL-Go-Helper tests" {
+﻿Describe "AL-Go-Helper tests" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
     }
@@ -40,7 +40,7 @@ Describe "AL-Go-Helper tests" {
         } | ConvertTo-Json | ConvertFrom-Json
         $src.int2 = [Int32]3
         $src.int3 = [Int32]4
-        
+
         # Merge the settings
         MergeCustomObjectIntoOrderedDictionary -dst $dest -src $src
         $dest.Count | Should -Be 13
@@ -61,7 +61,7 @@ Describe "AL-Go-Helper tests" {
             'obj2' = [ordered]@{'c' = 'c'; 'd' = 'd'; 'e' = 'e'}
             'obj3' = [ordered]@{'d' = 'd'; 'e' = 'e'; 'f' = 'f'}
         } | ConvertTo-Json | ConvertFrom-Json
-        
+
         # Check that applying the same settings twice doesn't change the result
         1..2 | ForEach-Object {
             MergeCustomObjectIntoOrderedDictionary -dst $dest -src $src
@@ -95,17 +95,17 @@ Describe "AL-Go-Helper tests" {
 
         New-Item -Path (Join-Path $tempName "projectx/$ALGoFolderName") -ItemType Directory | Out-Null
         New-Item -Path (Join-Path $tempName "projecty/$ALGoFolderName") -ItemType Directory | Out-Null
-        
+
         # Create settings files
-        # Property:    Repo:               Project (single):   Project (multi):    Workflow:           Workflow:           User:               
+        # Property:    Repo:               Project (single):   Project (multi):    Workflow:           Workflow:           User:
         #                                                                                              if(branch=dev):
-        # Property1    repo1               single1             multi1                                  branch1             user1               
-        # Property2    repo2                                                       workflow2                                                   
-        # Property3    repo3                                                                                                                   
-        # Arr1         @("repo1","repo2")                                                                                                      
-        # Property4                        single4                                                     branch4                                 
-        # property5                                            multi5                                                                          
-        # property6                                                                                                        user6               
+        # Property1    repo1               single1             multi1                                  branch1             user1
+        # Property2    repo2                                                       workflow2
+        # Property3    repo3
+        # Arr1         @("repo1","repo2")
+        # Property4                        single4                                                     branch4
+        # property5                                            multi5
+        # property6                                                                                                        user6
         @{ "property1" = "repo1"; "property2" = "repo2"; "property3" = "repo3"; "arr1" = @("repo1","repo2") } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
         @{ "property1" = "single1"; "property4" = "single4" } | ConvertTo-Json -Depth 99 |
@@ -262,7 +262,7 @@ Describe "AL-Go-Helper tests" {
         # Invalid Org(var) setting should throw
         $ENV:ALGoOrgSettings = 'this is not json'
         { ReadSettings -baseFolder $tempName -project 'Project' } | Should -Throw
-        
+
         $ENV:ALGoOrgSettings = ''
         $ENV:ALGoRepoSettings = ''
 

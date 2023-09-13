@@ -1,4 +1,5 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -12,14 +13,14 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  ______           _ ___                _    _    _                           _         _           _                                    _       
-# |  ____|         | |__ \              | |  | |  | |                         | |       | |         | |                                  (_)      
-# | |__   _ __   __| |  ) |___ _ __   __| |  | |  | |_ __   __ _ _ __ __ _  __| | ___   | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___  
-# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | |  | | '_ \ / _` | '__/ _` |/ _` |/ _ \  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \ 
+#  ______           _ ___                _    _    _                           _         _           _                                    _
+# |  ____|         | |__ \              | |  | |  | |                         | |       | |         | |                                  (_)
+# | |__   _ __   __| |  ) |___ _ __   __| |  | |  | |_ __   __ _ _ __ __ _  __| | ___   | |_ ___ ___| |_    ___  ___ ___ _ __   __ _ _ __ _  ___
+# |  __| | '_ \ / _` | / // _ \ '_ \ / _` |  | |  | | '_ \ / _` | '__/ _` |/ _` |/ _ \  | __/ _ \ __| __|  / __|/ __/ _ \ '_ \ / _` | '__| |/ _ \
 # | |____| | | | (_| |/ /_  __/ | | | (_| |  | |__| | |_) | (_| | | | (_| | (_| |  __/  | |_  __\__ \ |_   \__ \ (__  __/ | | | (_| | |  | | (_) |
-# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \____/| .__/ \__, |_|  \__,_|\__,_|\___|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/ 
-#                                                   | |     __/ |                                                                                 
-#                                                   |_|    |___/                                                                                  
+# |______|_| |_|\__,_|____\___|_| |_|\__,_|   \____/| .__/ \__, |_|  \__,_|\__,_|\___|   \__\___|___/\__|  |___/\___\___|_| |_|\__,_|_|  |_|\___/
+#                                                   | |     __/ |
+#                                                   |_|    |___/
 #
 # This scenario runs for every previously released version of GitHub Go - both for PTEs and AppSource Apps
 # The scenario tests that we do not break existing CI/CD workflows and that existing repositories can upgrade to newest version
@@ -71,7 +72,7 @@ CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -co
 $repoPath = (Get-Location).Path
 
 # Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)
-$runs = Get-NumberOfRuns -repository $repository
+$runs = GetNumberOfRuns -repository $repository
 
 # Add AppFolders and TestFolders
 $settingsFile = Join-Path $repoPath '.AL-Go\settings.json'
@@ -94,15 +95,15 @@ if ($appSourceApp) {
 }
 
 # Run CI/CD and wait
-$run = Run-CICD -wait -branch $branch
+$run = RunCICD -wait -branch $branch
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Expected Run: CI/CD triggered on workflow_dispatch
-$runs++ 
+$runs++
 
 # Update AL-Go System Files
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch
 $runs++
@@ -112,24 +113,24 @@ Start-Sleep -seconds 100
 MergePRandPull -branch $branch | Out-Null
 if ($releaseVersion -ge [System.Version]"2.2") {
     # Expected Run: Pull Request Handler triggered by pull_request_target
-    $runs++ 
-    
+    $runs++
+
     if ($releaseVersion -le [System.Version]"2.4") {
         # Expected Run: CICD triggered by workflow_run (after Pull Request Handler has finished)
-        $runs++ 
+        $runs++
     }
 }
 # Expected Run: CICD run on push (after PR is merged)
 $runs++
 
 # Run CI/CD and wait
-$run = Run-CICD -wait -branch $branch
+$run = RunCICD -wait -branch $branch
 
 # Expected Run: CICD run on workflow_dispatch
 $runs++
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0' -appVersion ''
 
-Test-NumberOfRuns -expectedNumberOfRuns $runs -repository $repository
+TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 Set-Location $prevLocation
 

@@ -16,7 +16,7 @@ on:
       directCommit:
         type: boolean
         description: Push directly to the target branch. If not set, a PR will be created.
-        required: false 
+        required: false
         default: false
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
@@ -34,11 +34,11 @@ jobs:
     steps:
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
-        env: 
+        env:
           branch: ${{ github.event.inputs.branch }}
           repository: ${{ github.repository }}
           runId: ${{ github.run_id }}
-        run: | 
+        run: |
           if ($env:branch -match 'preview') {
             Write-Host "Deploying to preview branch. No validation required"
           } else {

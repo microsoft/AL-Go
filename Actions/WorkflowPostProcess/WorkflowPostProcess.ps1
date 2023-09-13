@@ -1,4 +1,4 @@
-Param(
+﻿Param(
     [Parameter(HelpMessage = "The event Id of the initiating workflow", Mandatory = $true)]
     [string] $eventId,
     [Parameter(HelpMessage = "Telemetry scope generated during the workflow initialization", Mandatory = $false)]
@@ -12,6 +12,7 @@ try {
     DownloadAndImportBcContainerHelper
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
+    Write-Host "Post-processing workflow $eventId"
     if ($telemetryScopeJson -and $telemetryScopeJson -ne '7b7d') {
         $telemetryScope = RegisterTelemetryScope (hexStrToStr -hexStr $telemetryScopeJson)
         TrackTrace -telemetryScope $telemetryScope

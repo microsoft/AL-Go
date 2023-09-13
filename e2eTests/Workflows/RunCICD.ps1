@@ -1,16 +1,12 @@
-﻿function Run-PublishToEnvironment {
+﻿function RunCICD {
     Param(
-        [string] $appVersion,
-        [string] $environmentName,
         [switch] $wait,
         [string] $repository,
         [string] $branch = "main"
     )
 
-    $workflowName = 'Publish To Environment'
+    $workflowName = 'CI/CD'
     $parameters = @{
-        "appVersion" = $appVersion
-        "environmentName" = $environmentName
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

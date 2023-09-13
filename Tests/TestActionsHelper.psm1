@@ -21,6 +21,10 @@ function iReplace {
     $string
 }
 
+<#
+.SYNOPSIS
+Get the action script from a script file
+#>
 function GetActionScript {
     Param(
         [string] $scriptRoot,
@@ -38,6 +42,10 @@ function GetActionScript {
     $actionScript
 }
 
+<#
+.SYNOPSIS
+Test the yaml structure of an action
+#>
 function YamlTest {
     Param(
         [string] $scriptRoot,
@@ -53,7 +61,7 @@ function YamlTest {
     $systemParameters = @($emptyCmd.Parameters.Keys.GetEnumerator() | ForEach-Object { $_ })
 
     Invoke-Expression $actionScript
-    
+
     $yaml = [System.Text.StringBuilder]::new()
     $yaml.AppendLine("name: *") | Out-Null
     $yaml.AppendLine("author: *") | Out-Null
@@ -151,7 +159,7 @@ function YamlTest {
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null
     $yaml.Append("  color: blue") | Out-Null
-    
+
     $yamlLines = $yaml.ToString().Replace("`r","").Split("`n")
     $actualYaml = @(Get-Content -path (Join-Path $scriptRoot "action.yaml"))
 
@@ -166,6 +174,10 @@ function YamlTest {
     $yamlLines.Count | Should -be $actualYaml.Count
 }
 
+<#
+.SYNOPSIS
+Test that all actions are referenced from microsoft/AL-Go-Actions@<main|preview> or actions/ (by GitHub)
+#>
 function TestActionsReferences {
     param(
         [Parameter(Mandatory)]
@@ -194,6 +206,10 @@ function TestActionsReferences {
     }
 }
 
+<#
+.SYNOPSIS
+Test that all referenced workflows are coming from .github/workflows/
+#>
 function TestWorkflowReferences {
     param(
         [Parameter(Mandatory)]
@@ -215,12 +231,18 @@ function TestWorkflowReferences {
     }
 }
 
+<#
+.SYNOPSIS
+Get all workflows in a path
+#>
 function GetWorkflowsInPath {
     param(
         [Parameter(Mandatory, ValueFromPipeline = $true)]
         [string]$Path
     )
-    return (Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml'))
+    Process {
+        return (Get-ChildItem -Path $Path -File -Recurse -Include ('*.yaml', '*.yml'))
+    }
 }
 
 function PesterMatchHashtable($ActualValue, $ExpectedValue, [switch] $Negate) {

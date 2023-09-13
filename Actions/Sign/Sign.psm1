@@ -1,7 +1,7 @@
-function Get-NavSipFromArtifacts
+function GetNavSipFromArtifacts
 (
     [string] $NavSipDestination
-) 
+)
 {
     $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 
@@ -18,12 +18,16 @@ function Get-NavSipFromArtifacts
     }
 }
 
+<#
+.SYNOPSIS
+Register the navsip.dll in the system32 folder
+#>
 function Register-NavSip() {
     $navSipDestination = "C:\Windows\System32"
     $navSipDllPath = Join-Path $navSipDestination "navsip.dll"
     try {
         if (-not (Test-Path $navSipDllPath)) {
-            Get-NavSipFromArtifacts -NavSipDestination $navSipDllPath
+            GetNavSipFromArtifacts -NavSipDestination $navSipDllPath
         }
 
         Write-Host "Unregistering dll $navSipDllPath"

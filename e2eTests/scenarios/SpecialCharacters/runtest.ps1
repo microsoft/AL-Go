@@ -1,4 +1,6 @@
-﻿Param(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
@@ -11,16 +13,16 @@
 )
 
 Write-Host -ForegroundColor Yellow @'
-#   _____                 _       _    _____ _                          _                
-#  / ____|               (_)     | |  / ____| |                        | |               
-# | (___  _ __   ___  ___ _  __ _| | | |    | |__   __ _ _ __ __ _  ___| |_ ___ _ __ ___ 
+#   _____                 _       _    _____ _                          _
+#  / ____|               (_)     | |  / ____| |                        | |
+# | (___  _ __   ___  ___ _  __ _| | | |    | |__   __ _ _ __ __ _  ___| |_ ___ _ __ ___
 #  \___ \| '_ \ / _ \/ __| |/ _` | | | |    | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__/ __|
 #  ____) | |_) |  __/ (__| | (_| | | | |____| | | | (_| | | | (_| | (__| ||  __/ |  \__ \
 # |_____/| .__/ \___|\___|_|\__,_|_|  \_____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|  |___/
-#        | |                                                                             
-#        |_|                                                                             
+#        | |
+#        |_|
 # This test tests the following scenario:
-#                                                                                                      
+#
 #  - Create a new repository based on the PTE template with 1 app
 #    - Æøå-app with publisher Süß
 #    - Set RepoName to Privé
@@ -32,7 +34,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cleanup repositories
 #
 '@
-  
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 
@@ -59,12 +61,12 @@ CreateAlGoRepository `
     -branch $branch `
     -contentScript {
         Param([string] $path)
-        $global:id = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
+        $null = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
         Add-PropertiesToJsonFile -path (Join-Path $path '.github/AL-Go-Settings.json') -properties @{ "RepoName" = $repoName }
     }
 
 $repoPath = (Get-Location).Path
-$run = Run-CICD -repository $repository -branch $branch
+$run = RunCICD -repository $repository -branch $branch
 
 # Wait for CI/CD workflow of repository1 to finish
 WaitWorkflow -repository $repository -runid $run.id
@@ -87,9 +89,9 @@ Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "run
 CommitAndPush -commitMessage 'Shift to Linux'
 
 # Upgrade AL-Go System Files
-Run-UpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
+RunUpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
 
-$run = Run-CICD -repository $repository -branch $branch -wait
+$run = RunCICD -repository $repository -branch $branch -wait
 
 # test artifacts generated in repository1
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'

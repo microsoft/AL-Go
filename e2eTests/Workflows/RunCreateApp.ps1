@@ -1,17 +1,21 @@
-﻿function Run-CreateOnlineDevelopmentEnvironment {
+﻿function RunCreateApp {
     Param(
-        [string] $environmentName,
-        [switch] $reUseExistingEnvironment,
+        [string] $project,
+        [string] $name,
+        [string] $publisher,
+        [string] $idrange,
         [switch] $directCommit,
         [switch] $wait,
         [string] $repository,
         [string] $branch = "main"
     )
 
-    $workflowName = 'Create Online Dev. Environment'
+    $workflowName = 'Create a new app'
     $parameters = @{
-        "environmentName" = $environmentName
-        "reUseExistingEnvironment" = @("Y","N")[!$reUseExistingEnvironment]
+        "project" = $project
+        "name" = $name
+        "publisher" = $publisher
+        "idrange" = $idrange
         "directCommit" = @("Y","N")[!$directCommit]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository

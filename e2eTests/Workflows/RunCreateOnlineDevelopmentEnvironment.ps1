@@ -1,17 +1,17 @@
-﻿function Run-IncrementVersionNumber {
+﻿function RunCreateOnlineDevelopmentEnvironment {
     Param(
-        [string] $project,
-        [string] $versionNumber,
+        [string] $environmentName,
+        [switch] $reUseExistingEnvironment,
         [switch] $directCommit,
         [switch] $wait,
         [string] $repository,
         [string] $branch = "main"
     )
 
-    $workflowName = 'Increment Version Number'
+    $workflowName = 'Create Online Dev. Environment'
     $parameters = @{
-        "project" = $project
-        "versionNumber" = $versionNumber
+        "environmentName" = $environmentName
+        "reUseExistingEnvironment" = @("Y","N")[!$reUseExistingEnvironment]
         "directCommit" = @("Y","N")[!$directCommit]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository

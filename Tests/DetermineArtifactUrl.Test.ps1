@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
 # Settings, which affects the behavior of DetermineArtifactUrl
 # - artifact - specifies an artifactUrl (or pattern) to use
@@ -65,6 +65,7 @@ Describe "DetermineArtifactUrl" {
     }
 
     BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'projectSettings', Justification = 'False positive.')]
         $projectSettings = @{
             'artifact' = ''
             'updateDependencies' = $false
@@ -75,41 +76,41 @@ Describe "DetermineArtifactUrl" {
     }
 
     It 'Default Artifact URL' {
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12346/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12346/us'
     }
 
     It 'Default Artifact URL with additionalCountries' {
         $projectSettings.additionalCountries = @('dk')
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
     }
 
     It 'Default Artifact URL when using UpdateDependencies' {
         $projectSettings.UpdateDependencies = $true
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.0.55555.44444/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.0.55555.44444/us'
     }
 
     It 'Fixed Artifact URL' {
         $projectSettings.artifact = 'https://bcartifacts/onprem/21.0.54157.55112/w1'
         $projectSettings.country = 'w1'
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/21.0.54157.55112/w1'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/21.0.54157.55112/w1'
     }
 
     It 'Artifact setting' {
         $projectSettings.artifact = 'bcartifacts/onprem/20.1/us'
         $projectSettings.country = 'us'
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/20.1.0.0/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/20.1.0.0/us'
     }
 
     It 'NextMajor' {
         $projectSettings.country = 'dk'
         $projectSettings.artifact = "////nextmajor/{INSIDERSASTOKEN}"
-        Determine-ArtifactUrl -projectSettings $projectSettings -sasToken = '?[SASTOKEN]' | should -be 'https://bcinsider/sandbox/23.0.33333.0/dk?[SASTOKEN]'
+        DetermineArtifactUrl -projectSettings $projectSettings -sasToken = '?[SASTOKEN]' | should -be 'https://bcinsider/sandbox/23.0.33333.0/dk?[SASTOKEN]'
     }
 
     It 'Artifact setting wins over country setting' {
         $projectSettings.country = 'dk'
         $projectSettings.artifact = "///us/latest"
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
     }
 }
 
@@ -119,6 +120,7 @@ Describe "DetermineArtifactUrl Action Test" {
         $actionName = "DetermineArtifactUrl"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
     }
 

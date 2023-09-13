@@ -1,4 +1,4 @@
-function Test-Property {
+﻿function Test-Property {
     Param(
         [HashTable] $json,
         [string] $settingsDescription,
@@ -43,7 +43,7 @@ function Test-Shell {
     }
 }
 
-function Test-Json {
+function Test-SettingsJson {
     Param(
         [hashtable] $json,
         [string] $settingsDescription,
@@ -59,7 +59,8 @@ function Test-Json {
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -should
     }
     if ($type -eq 'Project') {
-        # Test for things that should / should not exist in a project settings file
+        # GitHubRunner should not be in a project settings file (only read from repo or workflow settings)
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'githubRunner' -shouldnot
     }
     if ($type -eq 'Workflow') {
         # Test for things that should / should not exist in a workflow settings file
@@ -71,8 +72,9 @@ function Test-Json {
         # templateUrl should not be in Project or Workflow settings
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -maynot
 
-        # schedules and runs-on should not be in Project or Workflow settings        
-        'nextMajorSchedule','nextMinorSchedule','currentSchedule','githubRunner','runs-on' | ForEach-Object {
+        # schedules and runs-on should not be in Project or Workflow settings
+        # These properties are used in Update AL-Go System Files, hence they should only be in Repo settings
+        'nextMajorSchedule','nextMinorSchedule','currentSchedule','runs-on' | ForEach-Object {
             Test-Property -settingsDescription $settingsDescription -json $json -key $_ -shouldnot
         }
     }
@@ -92,7 +94,7 @@ function Test-JsonStr {
 
     try {
         $json = $jsonStr | ConvertFrom-Json | ConvertTo-HashTable
-        Test-Json -json $json -settingsDescription $settingsDescription -type:$type
+        Test-SettingsJson -json $json -settingsDescription $settingsDescription -type:$type
     }
     catch {
         throw "$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"
@@ -118,7 +120,7 @@ function Test-ALGoRepository {
     Param(
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE
     )
-    
+
     if ($ENV:ALGoOrgSettings) {
         Write-Host "Checking AL-Go Org Settings variable (ALGoOrgSettings)"
         Test-JsonStr -jsonStr "$ENV:ALGoOrgSettings" -settingsDescription 'ALGoOrgSettings variable' -type 'Variable'
@@ -149,141 +151,140 @@ function Test-ALGoRepository {
 }
 
 function Write-Big {
-Param(
-    [string] $str
-)
-$chars = @{
-"0" = @'
-   ___  
-  / _ \ 
- | | | |
- | | | |
- | |_| |
-  \___/ 
-'@.Split("`n")
-"1" = @'
-  __
- /_ |
-  | |
-  | |
-  | |
-  |_|
-'@.Split("`n")
-"2" = @'
-  ___  
- |__ \ 
-    ) |
-   / / 
-  / /_ 
- |____|
-'@.Split("`n")
-"3" = @'
-  ____  
- |___ \ 
-   __) |
-  |__ < 
-  ___) |
- |____/ 
-'@.Split("`n")
-"4" = @'
-  _  _   
- | || |  
- | || |_ 
- |__   _|
-    | |  
-    |_|  
-'@.Split("`n")
-"5" = @'
-  _____ 
- | ____|
- | |__  
- |___ \ 
-  ___) |
- |____/ 
-'@.Split("`n")
-"6" = @'
-    __  
-   / /  
-  / /_  
- | '_ \ 
- | (_) |
-  \___/ 
-'@.Split("`n")
-"7" = @'
-  ______ 
- |____  |
-     / / 
-    / /  
-   / /   
-  /_/    
-'@.Split("`n")
-"8" = @'
-   ___  
-  / _ \ 
- | (_) |
-  > _ < 
- | (_) |
-  \___/ 
-'@.Split("`n")
-"9" = @'
-   ___  
-  / _ \ 
- | (_) |
-  \__, |
-    / / 
-   /_/  
-'@.Split("`n")
-"." = @'
-    
-    
-    
-    
-  _ 
- (_)
-'@.Split("`n")
-"v" = @'
-        
-        
- __   __
- \ \ / /
-  \ V / 
-   \_(_)
-'@.Split("`n")
-"p" = @'
-  _____                _               
- |  __ \              (_)              
- | |__) | __ _____   ___  _____      __
- |  ___/ '__/ _ \ \ / / |/ _ \ \ /\ / /
- | |   | | |  __/\ V /| |  __/\ V  V / 
- |_|   |_|  \___| \_/ |_|\___| \_/\_/  
-'@.Split("`n")
-"d" = @'
-  _____             
- |  __ \            
- | |  | | _____   __
- | |  | |/ _ \ \ / /
- | |__| |  __/\ V / 
- |_____/ \___| \_(_)
-'@.Split("`n")
-"a" = @'
-           _           _____          __              _____ _ _   _    _       _       
-     /\   | |         / ____|        / _|            / ____(_) | | |  | |     | |      
-    /  \  | |  ______| |  __  ___   | |_ ___  _ __  | |  __ _| |_| |__| |_   _| |__    
-   / /\ \ | | |______| | |_ |/ _ \  |  _/ _ \| '__| | | |_ | | __|  __  | | | | '_ \   
-  / ____ \| |____    | |__| | (_) | | || (_) | |    | |__| | | |_| |  | | |_| | |_) |  
- /_/    \_\______|    \_____|\___/  |_| \___/|_|     \_____|_|\__|_|  |_|\__,_|_.__/   
-'@.Split("`n")
-}
-
-
-0..5 | ForEach-Object {
-    $line = $_
-    $str.ToCharArray() | ForEach-Object {
-        if ($chars.Keys -contains $_) {
-            $ch = $chars."$_"
-            Write-Host -noNewline $ch[$line]
-        }
+    Param(
+        [string] $str
+    )
+    $chars = @{
+        "0" = @(
+            "  ___  "
+            " / _ \ "
+            "| | | |"
+            "| | | |"
+            "| |_| |"
+            " \___/ "
+        )
+        "1" = @(
+            " __ "
+            "/_ |"
+            " | |"
+            " | |"
+            " | |"
+            " |_|"
+        )
+        "2" = @(
+            " ___  "
+            "|__ \ "
+            "   ) |"
+            "  / / "
+            " / /_ "
+            "|____|"
+        )
+        "3" = @(
+            " ____  "
+            "|___ \ "
+            "  __) |"
+            " |__ < "
+            " ___) |"
+            "|____/ "
+        )
+        "4" = @(
+            " _  _   "
+            "| || |  "
+            "| || |_ "
+            "|__   _|"
+            "   | |  "
+            "   |_|  "
+        )
+        "5" = @(
+            " _____ "
+            "| ____|"
+            "| |__  "
+            "|___ \ "
+            " ___) |"
+            "|____/ "
+        )
+        "6" = @(
+            "   __  "
+            "  / /  "
+            " / /_  "
+            "| '_ \ "
+            "| (_) |"
+            " \___/ "
+        )
+        "7" = @(
+            " ______ "
+            "|____  |"
+            "    / / "
+            "   / /  "
+            "  / /   "
+            " /_/    "
+        )
+        "8" = @(
+            "  ___  "
+            " / _ \ "
+            "| (_) |"
+            " > _ < "
+            "| (_) |"
+            " \___/ "
+        )
+        "9" = @(
+            "  ___  "
+            " / _ \ "
+            "| (_) |"
+            " \__, |"
+            "   / / "
+            "  /_/  "
+        )
+        "." = @(
+            "   "
+            "   "
+            "   "
+            "   "
+            " _ "
+            "(_)"
+        )
+        "v" = @(
+            "       "
+            "       "
+            "__   __"
+            "\ \ / /"
+            " \ V / "
+            "  \_(_)"
+        )
+        "p" = @(
+            " _____                _               "
+            "|  __ \              (_)              "
+            "| |__) | __ _____   ___  _____      __"
+            "|  ___/ '__/ _ \ \ / / |/ _ \ \ /\ / /"
+            "| |   | | |  __/\ V /| |  __/\ V  V / "
+            "|_|   |_|  \___| \_/ |_|\___| \_/\_/  "
+        )
+        "d" = @(
+            " _____             "
+            "|  __ \            "
+            "| |  | | _____   __"
+            "| |  | |/ _ \ \ / /"
+            "| |__| |  __/\ V / "
+            "|_____/ \___| \_(_)"
+        )
+        "a" = @(
+            "          _           _____          __              _____ _ _   _    _       _       "
+            "    /\   | |         / ____|        / _|            / ____(_) | | |  | |     | |      "
+            "   /  \  | |  ______| |  __  ___   | |_ ___  _ __  | |  __ _| |_| |__| |_   _| |__    "
+            "  / /\ \ | | |______| | |_ |/ _ \  |  _/ _ \| '__| | | |_ | | __|  __  | | | | '_ \   "
+            " / ____ \| |____    | |__| | (_) | | || (_) | |    | |__| | | |_| |  | | |_| | |_) |  "
+            "/_/    \_\______|    \_____|\___/  |_| \___/|_|     \_____|_|\__|_|  |_|\__,_|_.__/   "
+        )
     }
-    Write-Host
-}
+
+    $lines = $chars."a".Count
+    for ($line = 0; $line -lt $lines; $line++) {
+        foreach ($ch in $str.ToCharArray()) {
+            if ($chars.Keys -contains $ch) {
+                $bigCh = $chars."$ch"
+                Write-Host -noNewline $bigCh[$line]
+            }
+        }
+        Write-Host
+    }
 }

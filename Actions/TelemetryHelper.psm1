@@ -16,7 +16,7 @@ $signals = @{
 
     "DO0084" = "AL-Go action ran: DetermineArtifactUrl"
     "DO0085" = "AL-Go action ran: DetermineProjectsToBuild"
-    
+
     "DO0090" = "AL-Go workflow ran: AddExistingAppOrTestApp"
     "DO0091" = "AL-Go workflow ran: CICD"
     "DO0092" = "AL-Go workflow ran: CreateApp"
@@ -63,7 +63,7 @@ function CreateScope {
         [string] $parentTelemetryScopeJson = '7b7d'
     )
 
-    $signalName = $signals[$eventId] 
+    $signalName = $signals[$eventId]
     if (-not $signalName) {
         throw "Invalid event id ($eventId) is enountered."
     }

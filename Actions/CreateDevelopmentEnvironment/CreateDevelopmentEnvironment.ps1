@@ -1,3 +1,4 @@
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
@@ -16,7 +17,7 @@ Param(
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
-    [bool] $directCommit    
+    [bool] $directCommit
 )
 
 $telemetryScope = $null
@@ -36,10 +37,6 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0073' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($adminCenterApiCredentials))
-
-    Write-Host "Reading $ALGoSettingsFile"
-    $settingsJson = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-
     CreateDevEnv `
         -kind cloud `
         -caller GitHubActions `

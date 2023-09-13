@@ -85,7 +85,7 @@ jobs:
           project: ${{ github.event.inputs.project }}
           versionNumber: ${{ github.event.inputs.versionNumber }}
           directCommit: ${{ github.event.inputs.directCommit }}
-  
+
       - name: Finalize the workflow
         if: always()
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main

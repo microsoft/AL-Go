@@ -1,3 +1,4 @@
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 param(
     [Parameter(HelpMessage = "Azure Credentials secret", Mandatory = $true)]
     [string] $AzureCredentialsJson,
@@ -26,23 +27,25 @@ try {
 
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
-    $Files | ForEach-Object { 
-        Write-Host "- $_" 
+    $Files | ForEach-Object {
+        Write-Host "- $_"
     }
 
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
     $settings = $env:Settings | ConvertFrom-Json
-    if ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
-        $AzureKeyVaultName = $AzureCredentials.keyVaultName
-    } elseif ($settings.PSobject.Properties.name -eq "keyVaultName") {
+    if ($settings.keyVaultName) {
         $AzureKeyVaultName = $settings.keyVaultName
-    } else {
+    }
+    elseif ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
+        $AzureKeyVaultName = $AzureCredentials.keyVaultName
+    }
+    else {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
-    Retry-Command -Command {
+    RetryCommand -Command { Param( $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Certificate, $Files)
         Write-Host "::group::Register NavSip"
-        Register-NavSip 
+        Register-NavSip
         Write-Host "::endgroup::"
 
         AzureSignTool sign --file-digest $digestAlgorithm `
@@ -50,12 +53,12 @@ try {
             --azure-key-vault-client-id $AzureCredentials.clientId `
             --azure-key-vault-tenant-id $AzureCredentials.tenantId `
             --azure-key-vault-client-secret $AzureCredentials.clientSecret `
-            --azure-key-vault-certificate $Settings.keyVaultCodesignCertificateName `
+            --azure-key-vault-certificate $Certificate `
             --timestamp-rfc3161 "$TimestampService" `
             --timestamp-digest $digestAlgorithm `
             $Files
-    } -MaxRetries 3
-    
+    } -MaxRetries 3 -ArgumentList $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Settings.keyVaultCodesignCertificateName, $Files
+
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
