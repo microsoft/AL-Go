@@ -90,11 +90,15 @@ try {
     Write-Host "Using template from $templateUrl@$templateBranch"
     Write-Host "Using ArchiveUrl $archiveUrl"
 
+    if ($token) { Write-Host "USING TOKEN" }
+
     # Download the template repository and unpack to a temp folder
     $headers = @{
         "Accept" = "application/vnd.github.baptiste-preview+json"
         "Authorization" = "Bearer $token"
     }
+
+
 
     $response = Invoke-WebRequest -Uri "$apiUrl/branches" -Headers $headers -Method GET -UseBasicParsing
     Write-Host "HEADERS:-------------------------------------"
