@@ -125,6 +125,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           templateUrl: ${{ env.templateUrl }}
+          downloadLatest: Y
 
   Build:
     needs: [ Initialization ]

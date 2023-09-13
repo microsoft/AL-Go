@@ -7,6 +7,10 @@ on:
         description: Template Repository URL (current is {TEMPLATEURL})
         required: false
         default: ''
+      downloadLatest:
+        description: Download latest from template repository (Y/N)
+        required: false
+        default: 'Y'
       directCommit:
         description: Direct COMMIT (Y/N)
         required: false
@@ -83,6 +87,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+          DownloadLatest: ${{ github.event.inputs.downloadLatest }}
           Update: Y
           templateUrl: ${{ env.templateUrl }}
           directCommit: ${{ env.directCommit }}

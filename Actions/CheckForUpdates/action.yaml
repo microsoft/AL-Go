@@ -29,6 +29,10 @@ inputs:
     description: Branch in template repository to use for the update (default is the default branch)
     required: false
     default: ''
+  downloadLatest:
+    description: Set this input to Y in order to download latest version of the template repository (else it will reuse the SHA from last update)
+    required: false
+    default: 'Y'
   update:
     description: Set this input to Y in order to update AL-Go System Files if needed
     required: false

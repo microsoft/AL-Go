@@ -9,6 +9,8 @@
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Branch in template repository to use for the update (default is the default branch)", Mandatory = $false)]
     [string] $templateBranch = "",
+    [Parameter(HelpMessage = "Set this input to Y in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $false)]
+    [bool] $downloadLatest = "",
     [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
     [bool] $update,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
@@ -90,8 +92,6 @@ try {
     Write-Host "Using template from $templateUrl@$templateBranch"
     Write-Host "Using ApiUrl $apiUrl"
 
-    if ($token) { Write-Host "USING TOKEN" }
-
     # Download the template repository and unpack to a temp folder
     $headers = @{
         "Accept" = "application/vnd.github.baptiste-preview+json"
@@ -105,17 +105,19 @@ try {
     }
     $sha = $branchInfo.commit.sha
     Write-Host "SHA: $sha"
-    if ($sha -eq $templateSha) {
-        Write-Host "================ SAME SHA ================"
+    if ($sha -eq $templateSha -or ($templateSha -and !$downloadLatest)) {
+        # SHA is the same as last time, or downloadLatest is not set, download the templateSha
+        $archiveUrl = "$apiUrl/zipball/$templateSha"
     }
     else {
-        # Update templateSha in repo settings
+        # Download latest and update templateSha in repo settings
+        $archiveUrl = "$apiUrl/zipball/$templateBranch"
         $templateSha = $sha
         $updateSettings = $true
     }
 
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    InvokeWebRequest -Headers $headers -Uri "$apiUrl/zipball/$templateBranch" -OutFile "$tempName.zip" -retry
+    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
 

@@ -94,6 +94,7 @@ jobs:
           shell: powershell
           parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           templateUrl: ${{ env.templateUrl }}
+          downloadLatest: Y
 
       - name: Analyze Artifacts
         id: analyzeartifacts
