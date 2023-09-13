@@ -2183,13 +2183,14 @@ function RetryCommand {
         [Parameter(Mandatory = $false)]
         [int]$MaxRetries = 3,
         [Parameter(Mandatory = $false)]
-        [int]$RetryDelaySeconds = 5
+        [int]$RetryDelaySeconds = 5,
+        [Object[]] $argumentList
     )
 
     $retryCount = 0
     while ($retryCount -lt $MaxRetries) {
         try {
-            Invoke-Command $Command
+            Invoke-Command $Command -ArgumentList $argumentList
             if ($LASTEXITCODE -ne 0) {
                 throw "Command failed with exit code $LASTEXITCODE"
             }
