@@ -48,6 +48,14 @@ jobs:
     needs: [ ]
     runs-on: [ windows-latest ]
     steps:
+      - name: Input
+        run: |
+          Write-Host "Inputs:"
+          $eventPath = Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          $eventPath.psObject.Properties | ForEach-Object {
+             Write-Host "$_ = '$($eventPath."$_")'"
+          }
+
       - name: Checkout
         uses: actions/checkout@v3
 
