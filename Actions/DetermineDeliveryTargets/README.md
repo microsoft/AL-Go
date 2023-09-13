@@ -14,7 +14,7 @@ Determines the delivery targets to use for the build
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | projectsJson | | Projects folder if repository is setup for multiple projects | . |
-| checkContextSecrets | | Determines whether to check that delivery targets have a corresponding context secret defined | Y |
+| checkContextSecrets | | Determines whether to check that delivery targets have a corresponding context secret defined | true |
 
 ## OUTPUT
 | Name | Description |

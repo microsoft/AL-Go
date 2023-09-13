@@ -43,14 +43,12 @@ on:
         type: string
       publishThisBuildArtifacts:
         description: Flag indicating whether this build artifacts should be published
-        required: false
-        default: false
         type: boolean
+        default: false
       publishArtifacts:
         description: Flag indicating whether the artifacts should be published
-        required: false
-        default: false
         type: boolean
+        default: false
       artifactsNameSuffix:
         description: Suffix to add to the artifacts names
         required: false
@@ -58,14 +56,12 @@ on:
         type: string
       signArtifacts:
         description: Flag indicating whether the apps should be signed
-        required: false
-        default: false
         type: boolean
+        default: false
       useArtifactCache:
         description: Flag determining whether to use the Artifacts Cache
-        required: false
-        default: false
         type: boolean
+        default: false
       parentTelemetryScopeJson:
         description: Specifies the telemetry scope for the telemetry signal
         required: false

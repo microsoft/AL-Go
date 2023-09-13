@@ -76,7 +76,7 @@ jobs:
         with:
           shell: powershell
           projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
-          checkContextSecrets: 'N'
+          checkContextSecrets: 'false'
 
       - name: Read secrets
         id: ReadSecrets

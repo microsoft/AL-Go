@@ -21,7 +21,7 @@ Deliver App to deliveryTarget (AppSource, Storage, or...)
 | artifacts | Yes | The artifacts to deliver | |
 | type | | Type of delivery (CD or Release) | CD |
 | atypes | | Artifact types to deliver | Apps,Dependencies,TestApps |
-| goLive | | Only relevant for AppSource delivery type. Promote AppSource App to Go Live? | N |
+| goLive | | Only relevant for AppSource delivery type. Promote AppSource App to Go Live? | false |
 
 ## OUTPUT
 none

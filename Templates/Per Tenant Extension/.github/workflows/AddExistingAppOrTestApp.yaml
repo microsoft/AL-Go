@@ -13,12 +13,13 @@ on:
         description: Direct Download Url of .app or .zip file
         required: true
       directCommit:
-        description: Direct COMMIT (Y/N)
-        required: false
-        default: 'N'
-      useGhTokenWorkflow:
-        description: Use GhTokenWorkflow for Pull Request/COMMIT
+        description: Direct Commit?
         type: boolean
+        default: false
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for Pull Request/Commit?
+        type: boolean
+        default: false
 
 permissions:
   contents: write

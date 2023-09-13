@@ -12,9 +12,9 @@ on:
         required: false
         default: '*'
       GoLive:
-        description: Promote AppSource App to go live if it passes technical validation? (Y/N)
-        required: false
-        default: 'N'
+        description: Promote AppSource App to go live if it passes technical validation?
+        type: boolean
+        default: false
 
 permissions:
   contents: read

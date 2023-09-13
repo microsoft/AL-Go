@@ -16,7 +16,7 @@
     [string] $type = "CD",
     [Parameter(HelpMessage = "Types of artifacts to deliver (Apps,Dependencies,TestApps)", Mandatory = $false)]
     [string] $atypes = "Apps,Dependencies,TestApps",
-    [Parameter(HelpMessage = "Promote AppSource App to Go Live? (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Promote AppSource App to Go Live?", Mandatory = $false)]
     [bool] $goLive
 )
 

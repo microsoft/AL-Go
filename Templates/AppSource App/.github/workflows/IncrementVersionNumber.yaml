@@ -13,12 +13,13 @@ on:
         description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
         required: true
       directCommit:
-        description: Direct COMMIT (Y/N)
-        required: false
-        default: 'N'
-      useGhTokenWorkflow:
-        description: Use GhTokenWorkflow for Pull Request/COMMIT
+        description: Direct Commit?
         type: boolean
+        default: false
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for Pull Request/Commit?
+        type: boolean
+        default: false
 
 permissions:
   contents: write

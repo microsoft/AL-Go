@@ -16,7 +16,7 @@ none
 | project | | Project name if the repository is setup for multiple projects | . |
 | versionnumber | Yes | Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change | |
 | updateBranch | | Which branch should the app be added to | github.ref_name |
-| directCommit | | Y if the action should create a direct commit against the branch or N to create a Pull Request | N |
+| directCommit | | true if the action should create a direct commit against the branch or false to create a Pull Request | false |
 
 ## OUTPUT
 none

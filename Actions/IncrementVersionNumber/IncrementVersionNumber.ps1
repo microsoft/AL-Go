@@ -11,7 +11,7 @@
     [string] $versionnumber,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
-    [Parameter(HelpMessage = "Direct commit (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Direct commit?", Mandatory = $false)]
     [bool] $directCommit
 )
 

@@ -16,13 +16,13 @@
     [string] $publisher,
     [Parameter(HelpMessage = "ID range", Mandatory = $true)]
     [string] $idrange,
-    [Parameter(HelpMessage = "Include Sample Code (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Include Sample Code?", Mandatory = $false)]
     [bool] $sampleCode,
-    [Parameter(HelpMessage = "Include Sample BCPT Suite (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Include Sample BCPT Suite?", Mandatory = $false)]
     [bool] $sampleSuite,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
-    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Direct Commit?", Mandatory = $false)]
     [bool] $directCommit
 )
 

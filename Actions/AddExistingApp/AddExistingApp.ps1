@@ -11,7 +11,7 @@
     [string] $url,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
-    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Direct Commit?", Mandatory = $false)]
     [bool] $directCommit
 )
 

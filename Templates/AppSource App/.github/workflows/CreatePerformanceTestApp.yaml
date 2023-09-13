@@ -21,20 +21,21 @@ on:
         required: true
         default: '50000..99999'
       sampleCode:
-        description: Include Sample code (Y/N)
-        required: false
-        default: 'Y'
-      sampleSuite:
-        description: Include Sample BCPT Suite (Y/N)
-        required: false
-        default: 'Y'
-      directCommit:
-        description: Direct COMMIT (Y/N)
-        required: false
-        default: 'N'
-      useGhTokenWorkflow:
-        description: Use GhTokenWorkflow for Pull Request/COMMIT
+        description: Include Sample code?
         type: boolean
+        default: true
+      sampleSuite:
+        description: Include Sample BCPT Suite?
+        type: boolean
+        default: true
+      directCommit:
+        description: Direct Commit?
+        type: boolean
+        default: false
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for Pull Request/Commit?
+        type: boolean
+        default: false
 
 permissions:
   contents: write

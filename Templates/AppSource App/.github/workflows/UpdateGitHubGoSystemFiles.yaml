@@ -12,7 +12,7 @@ on:
         type: boolean
         default: true
       directCommit:
-        description: Direct COMMIT
+        description: Direct Commit
         type: boolean
         default: false
 

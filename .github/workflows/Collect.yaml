@@ -10,9 +10,9 @@ on:
         required: false
         default: 'main'
       directCommit:
-        description: Direct COMMIT (Y/N)
-        required: false
-        default: "N"
+        description: Direct Commit?
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -33,6 +33,8 @@ jobs:
           }
 
       - name: Collect
+        env:
+          _directCommit: ${{ github.event.inputs.directCommit }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
@@ -53,7 +55,7 @@ jobs:
               }
               $settingsFile = Join-Path $settings.baseFolder "deploy.json"
               $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
-              . ".\Internal\Collect.ps1" -configName $settingsFile -githubOwner $githubOwner -token $token -directCOMMIT:('${{ github.event.inputs.directCOMMIT }}' -eq 'Y')
+              . ".\Internal\Collect.ps1" -configName $settingsFile -githubOwner $githubOwner -token $token -directCommit:($ENV:_directCommit -eq 'true'- or $ENV:_directCommit -eq 'Y')
             }
           }
           catch {

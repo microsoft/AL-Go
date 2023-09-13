@@ -16,28 +16,29 @@ on:
         required: true
         default: ''
       prerelease:
-        description: Prerelease (Y/N)
-        required: false
-        default: 'N'
+        description: Prerelease?
+        type: boolean
+        default: false
       draft:
-        description: Draft (Y/N)
-        required: false
-        default: 'N'
+        description: Draft?
+        type: boolean
+        default: false
       createReleaseBranch:
-        description: Create Release Branch (Y/N)
-        required: false
-        default: 'N'
+        description: Create Release Branch?
+        type: boolean
+        default: false
       updateVersionNumber:
         description: New Version Number in main branch. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
         required: false
         default: ''
       directCommit:
-        description: Direct COMMIT (Y/N)
-        required: false
-        default: 'N'
-      useGhTokenWorkflow:
-        description: Use GhTokenWorkflow for Pull Request/COMMIT
+        description: Direct Commit?
         type: boolean
+        default: false
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for Pull Request/Commit?
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -197,8 +198,8 @@ jobs:
               tag_name: '${{ github.event.inputs.tag }}',
               name: '${{ github.event.inputs.name }}',
               body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
-              draft: ${{ github.event.inputs.draft=='Y' }},
-              prerelease: ${{ github.event.inputs.prerelease=='Y' }},
+              draft: ${{ github.event.inputs.draft=='true' || github.event.inputs.draft=='Y' }},
+              prerelease: ${{ github.event.inputs.prerelease=='true' || github.event.inputs.prerelease=='Y' }},
               make_latest: 'legacy',
               target_commitish: '${{ steps.analyzeartifacts.outputs.commitish }}'
             });
@@ -288,7 +289,7 @@ jobs:
 
   CreateReleaseBranch:
     needs: [ CreateRelease, UploadArtifacts ]
-    if: ${{ github.event.inputs.createReleaseBranch=='Y' }}
+    if: ${{ github.event.inputs.createReleaseBranch=='true' || github.event.inputs.createReleaseBranch=='Y' }}
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
