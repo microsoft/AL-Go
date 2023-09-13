@@ -10,6 +10,7 @@ on:
       downloadLatest:
         description: Download latest from template repository
         type: boolean
+        default: true
       directCommit:
         description: Direct COMMIT
         type: boolean
