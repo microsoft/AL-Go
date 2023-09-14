@@ -1559,7 +1559,7 @@ function CreateDevEnv {
                         }
                         if ($settings.keyVaultName) {
                             $secret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $secretName
-                            if ($secret) { 
+                            if ($secret) {
                                 $secrets."$secretName" = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($secret.SecretValue | Get-PlainText)))
                             }
                         }
