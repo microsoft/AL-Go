@@ -143,7 +143,7 @@ if (!$directALGo) {
 
     # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
     foreach($checkfile in $checkfiles) {
-        Write-Host "Checking $($_.srcPath)\$($_.pattern)"
+        Write-Host "Checking $($checkfile.srcPath)\$($checkfile.pattern)"
         $type = $checkfile.type
         $srcPath = $checkfile.srcPath
         $dstPath = $checkfile.dstPath
@@ -151,13 +151,12 @@ if (!$directALGo) {
         $srcFolder = Resolve-Path -path (Join-Path $tempName "*\$($srcPath)") -ErrorAction SilentlyContinue
         if ($srcFolder) {
             # Loop through all files in the template repository matching the pattern
-            Get-ChildItem -Path $srcFolder -Filter $_.pattern | ForEach-Object {
+            Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
                 # Read the template file and modify it based on the settings
                 # Compare the modified file with the file in the current repository
                 $srcFile = $_.FullName
                 $fileName = $_.Name
                 Write-Host "- $filename"
-                $baseName = $_.BaseName
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
                     $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
