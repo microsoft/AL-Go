@@ -43,7 +43,8 @@ if (-not $templateUrl.Contains('@')) {
 if ($templateUrl -notlike "https://*") {
     $templateUrl = "https://github.com/$templateUrl"
 }
-$templateUrl = $templateUrl -replace 'https://www.github.com/','https://github.com/'
+# Remove www part (if exists)
+$templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 
 # DirectALGo is used to determine if the template is a direct link to an AL-Go repository
 $directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
@@ -83,8 +84,7 @@ if (!$directALGo) {
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
             # Template repository has a different template url than the one we are using
             # This means that the template repository is another AL-Go repository and not a template repository
-            # 
-            Write-Host "The template repository has a different template url than the one we are using."
+            throw "The template repository has a different template url than the one we are using."
         }
     }
 }
@@ -113,31 +113,20 @@ if (!$directALGo) {
         @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path $srcGitHubPath 'workflows'; "pattern" = "*"; "type" = "workflow" },
         @{ "dstPath" = ".github"; "srcPath" = $srcGitHubPath; "pattern" = "*.copy.md"; "type" = "releasenotes" }
     )
+
     # Get the list of projects in the current repository
     $baseFolder = $ENV:GITHUB_WORKSPACE
-    if ($repoSettings.projects) {
-        $projects = $repoSettings.projects
-    }
-    else {
-        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 -Force | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-    }
-    # To support single project repositories, we check for the .AL-Go folder in the root
-    if (Test-Path (Join-Path $baseFolder ".AL-Go")) {
-        $projects += @(".")
-    }
-    $projects | ForEach-Object {
-        $checkfiles += @(@{ "dstPath" = Join-Path $_ ".AL-Go"; "srcPath" = $srcALGoPath; "pattern" = "*.ps1"; "type" = "script" })
+    $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
+    Write-Host "Projects found: $($projects.Count)"
+    foreach($project in $projects) {
+        Write-Host "- $project"
+        $checkfiles += @(@{ "dstPath" = Join-Path $project ".AL-Go"; "srcPath" = $srcALGoPath; "pattern" = "*.ps1"; "type" = "script" })
     }
 
     # $updateFiles will hold an array of files, which needs to be updated
     $updateFiles = @()
     # $removeFiles will hold an array of files, which needs to be removed
     $removeFiles = @()
-
-    Write-Host "Projects found: $($projects.Count)"
-    $projects | ForEach-Object {
-        Write-Host "- $_"
-    }
 
     # If useProjectDependencies is true, we need to calculate the dependency depth for all projects
     # Dependency depth determines how many build jobs we need to run sequentially
@@ -153,11 +142,11 @@ if (!$directALGo) {
     }
 
     # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
-    $checkfiles | ForEach-Object {
+    foreach($checkfile in $checkfiles) {
         Write-Host "Checking $($_.srcPath)\$($_.pattern)"
-        $type = $_.type
-        $srcPath = $_.srcPath
-        $dstPath = $_.dstPath
+        $type = $checkfile.type
+        $srcPath = $checkfile.srcPath
+        $dstPath = $checkfile.dstPath
         $dstFolder = Join-Path $baseFolder $dstPath
         $srcFolder = Resolve-Path -path (Join-Path $tempName "*\$($srcPath)") -ErrorAction SilentlyContinue
         if ($srcFolder) {
@@ -169,153 +158,19 @@ if (!$directALGo) {
                 $fileName = $_.Name
                 Write-Host "- $filename"
                 $baseName = $_.BaseName
-                $name = $type
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
-                    $yaml = [Yaml]::Load($srcFile)
-                    $name = "$type $($yaml.get('name:').content[0].SubString(5).trim())"
-                    $workflowScheduleKey = "$($baseName)Schedule"
-
-                    # Any workflow (except for the PullRequestHandler) can have a RepoSetting called <workflowname>Schedule, which will be used to set the schedule for the workflow
-                    if ($baseName -ne "PullRequestHandler") {
-                        if ($repoSettings.Keys -contains $workflowScheduleKey) {
-                            # Read the section under the on: key and add the schedule section
-                            $yamlOn = $yaml.Get('on:/')
-                            $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
-                        }
-                    }
-
-                    # The CICD workflow can have a RepoSetting called CICDPushBranches, which will be used to set the branches for the workflow
-                    # Setting the CICDSchedule will disable the push trigger for the CI/CD workflow (unless CICDPushBranches is set)
-                    if ($baseName -eq "CICD") {
-                        if ($repoSettings.Keys -contains 'CICDPushBranches') {
-                            $CICDPushBranches = $repoSettings.CICDPushBranches
-                        }
-                        elseif ($repoSettings.Keys -contains $workflowScheduleKey) {
-                            $CICDPushBranches = ''
-                        }
-                        else {
-                            $CICDPushBranches = $defaultCICDPushBranches
-                        }
-                        # update the branches: line with the new branches
-                        if ($CICDPushBranches) {
-                            $yaml.Replace('on:/push:/branches:', "branches: [ '$($cicdPushBranches -join "', '")' ]")
-                        }
-                        else {
-                            $yaml.Replace('on:/push:',@())
-                        }
-                    }
-
-                    if ($baseName -eq "PullRequestHandler") {
-                        # The PullRequestHandler workflow can have a RepoSetting called PullRequestTrigger which specifies the trigger to use for Pull Requests
-                        $triggerSection = $yaml.Get('on:/pull')
-                        $triggerSection.content = "$($repoSettings.PullRequestTrigger):"
-                        $yaml.Replace('on:/pull', $triggerSection.Content)
-
-                        # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
-                        if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
-                            $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
-                        }
-                        else {
-                            $CICDPullRequestBranches = $defaultCICDPullRequestBranches
-                        }
-
-                        # update the branches: line with the new branches
-                        $yaml.Replace("on:/$($repoSettings.PullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
-                    }
-
-                    # Repo Setting runs-on and shell determines which GitHub runner is used for all non-build jobs (build jobs are run using the GitHubRunner/GitHubRunnerShell repo settings)
-                    # The default for runs-on is windows-latest and the default for shell is powershell
-                    # The default for GitHubRunner/GitHubRunnerShell is runs-on/shell (unless Ubuntu-latest are selected here, as build jobs cannot run on Ubuntu)
-                    # We do not change runs-on in Update AL Go System Files and Pull Request Handler workflows
-                    # These workflows will always run on windows-latest (or maybe Ubuntu-latest later) and not follow settings
-                    # Reasons:
-                    # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself
-                    # - Pull Request Handler workflow for security reasons
-                    if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler") {
-                        if ($repoSettings."runs-on" -ne "windows-latest") {
-                            Write-Host "Setting runs-on to [ $($repoSettings."runs-on") ]"
-                            $yaml.ReplaceAll('runs-on: [ windows-latest ]', "runs-on: [ $($repoSettings."runs-on") ]")
-                        }
-                        if ($repoSettings.shell -ne "powershell") {
-                            Write-Host "Setting shell to $($repoSettings.shell)"
-                            $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings.shell)")
-                        }
-                    }
-
-                    # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
-                    # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
-                    if ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
-                        $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
-
-                        if ($depth -gt 1) {
-                            # Also, duplicate the build job for each dependency depth
-
-                            $build = $yaml.Get('jobs:/Build:/')
-                            if($build)
-                            {
-                                $newBuild = @()
-
-                                1..$depth | ForEach-Object {
-                                    $index = $_-1
-
-                                    # All build job needs to have a dependency on the Initialization job
-                                    $needs = @('Initialization')
-                                    if ($_ -eq 1) {
-                                        # First build job needs to have a dependency on the Initialization job only
-                                        # Example (depth 1):
-                                        #    needs: [ Initialization ]
-                                        #    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
-                                        $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
-                                    }
-                                    else {
-                                        # Subsequent build jobs needs to have a dependency on all previous build jobs
-                                        # Example (depth 2):
-                                        #    needs: [ Initialization, Build1 ]
-                                        #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
-                                        # Another example (depth 3):
-                                        #    needs: [ Initialization, Build2, Build1 ]
-                                        #    if: (!failure()) && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
-                                        $newBuild += @('')
-                                        $ifpart = ""
-                                        ($_-1)..1 | ForEach-Object {
-                                            $needs += @("Build$_")
-                                            $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
-                                        }
-                                        $if = "if: (!failure()) && (!cancelled())$ifpart && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
-                                    }
-
-                                    # Replace the if:, the needs: and the strategy/matrix/project: in the build job with the correct values
-                                    $build.Replace('if:', $if)
-                                    $build.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-                                    $build.Replace('strategy:/matrix:/include:',"include: `${{ fromJson(needs.Initialization.outputs.buildOrderJson)[$index].buildDimensions }}")
-
-                                    # Last build job is called build, all other build jobs are called build1, build2, etc.
-                                    if ($depth -eq $_) {
-                                        $newBuild += @("Build:")
-                                    }
-                                    else {
-                                        $newBuild += @("Build$($_):")
-                                    }
-                                    # Add the content of the calculated build job to the new build job list with an indentation of 2 spaces
-                                    $build.content | ForEach-Object { $newBuild += @("  $_") }
-                                }
-
-                                # Replace the entire build: job with the new build job list
-                                $yaml.Replace('jobs:/Build:', $newBuild)
-                            }
-                        }
-                    }
-
-                    # combine all the yaml file lines into a single string with LF line endings
-                    $srcContent = $yaml.content -join "`n"
+                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
                 }
                 else {
                     # For non-workflow files, just read the file content
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
+                # Replace placeholders
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
+
+
                 if ($directALGo) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
                     $lines = $srcContent.Split("`n")
@@ -417,13 +272,13 @@ if (!$directALGo) {
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {
-                        Write-Host "Updated $name ($(Join-Path $dstPath $filename)) available"
+                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
                         $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                     }
                 }
                 else {
                     # new file, add to $updateFiles
-                    Write-Host "New $name ($(Join-Path $dstPath $filename)) available"
+                    Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
                     $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }

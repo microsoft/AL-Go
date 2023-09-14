@@ -53,30 +53,11 @@ try {
 
     $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
 
-    if ($projects -eq '') { $projects = "*" }
-    if ($projects.StartsWith('[')) {
-        $projects = ($projects | ConvertFrom-Json) -join ","
-    }
-
     $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
 
     $baseFolder = $ENV:GITHUB_WORKSPACE
     $settings = ReadSettings -baseFolder $baseFolder
-    if ($settings.projects) {
-        $projectList = $settings.projects | Where-Object { $_ -like $projects }
-    }
-    else {
-        $projectList = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-        if (Test-Path (Join-Path $baseFolder ".AL-Go") -PathType Container) {
-            $projectList += @(".")
-        }
-    }
-    $projectArr = $projects.Split(',')
-    $projectList = @($projectList | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
-
-    if ($projectList.Count -eq 0) {
-        throw "No projects matches the pattern '$projects'"
-    }
+    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
     if ($deliveryTarget -eq "AppSource") {
         $atypes = "Apps,Dependencies"
     }

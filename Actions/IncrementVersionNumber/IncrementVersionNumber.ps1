@@ -5,8 +5,8 @@
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d',
-    [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
-    [string] $project = '*',
+    [Parameter(HelpMessage = "List of project names if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
+    [string] $projects = '*',
     [Parameter(HelpMessage = "Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.", Mandatory = $true)]
     [string] $versionnumber,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
@@ -42,25 +42,8 @@ try {
         throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
     }
 
-    if (!$project) { $project = '*' }
-
-    if ($project -ne '.') {
-        $projects = @(Get-ChildItem -Path $baseFolder -Directory -Recurse -Depth 2 | Where-Object { Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) } | Where-Object { $_ -like $project })
-        if ($projects.Count -eq 0) {
-            if ($project -eq '*') {
-                $projects = @( '.' )
-            }
-            else {
-                throw "Project folder $project not found"
-            }
-        }
-    }
-    else {
-        $projects = @( '.' )
-    }
-
-    $projects | ForEach-Object {
-        $project = $_
+    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+    foreach($project in $projectList) {
         try {
             Write-Host "Reading settings from $project\$ALGoSettingsFile"
             $settingsJson = Get-Content "$project\$ALGoSettingsFile" -Encoding UTF8 | ConvertFrom-Json

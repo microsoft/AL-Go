@@ -2204,3 +2204,35 @@ function RetryCommand {
         }
     }
 }
+
+function GetProjectsFromRepository {
+    Param(
+        [string] $baseFolder,
+        [string[]] $projectsFromSettings,
+        [string] $selectProjects = ''
+    )
+    
+    if ($projectsFromSettings) {
+        $projects = $projectsFromSettings
+    }
+    else {
+        # For multiple projects, get all folders in two levels below the base folder containing an .AL-Go folder with a settings.json file
+        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 -Force | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
+        # To support single project repositories, we check for the .AL-Go folder in the root
+        if (Test-Path (Join-Path $baseFolder ".AL-Go/settings.json") -PathType Leaf) {
+            $projects += @(".")
+        }
+    }
+    if ($selectProjects) {
+        # Filter the project list based on the projects parameter
+        if ($selectProjects.StartsWith('[')) {
+            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
+        }
+        $projectArr = $selectProjects.Split(',').Trim()
+        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
+        if ($projects.Count -eq 0) {
+            throw "No projects matches '$selectProjects'"
+        }
+    }
+    return $projects
+}
