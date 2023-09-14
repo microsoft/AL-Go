@@ -16,10 +16,11 @@
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.psm1" -Resolve)
 
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
+
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.psm1" -Resolve)
 
 if ($update) {
     if (-not $token) {
