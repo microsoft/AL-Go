@@ -1560,7 +1560,7 @@ function CreateDevEnv {
                         if ($settings.keyVaultName) {
                             $secret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $secretName
                             if ($secret) { 
-                                $secrets."$secretName" = $secret.SecretValue | Get-PlainText
+                                $secrets."$secretName" = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secret.SecretValue | Get-PlainText))
                             }
                         }
                         else {
@@ -1568,7 +1568,7 @@ function CreateDevEnv {
                             $retry = $true
                             while ($retry) {
                                 try {
-                                    $secrets."$secretName" = invoke-gh -silent -returnValue auth token
+                                    $secrets."$secretName" = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((invoke-gh -silent -returnValue auth token)))
                                     $retry = $false
                                 }
                                 catch {
