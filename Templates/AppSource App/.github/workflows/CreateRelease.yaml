@@ -104,7 +104,6 @@ jobs:
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
           templateUrl: ${{ env.templateUrl }}
           downloadLatest: true
 
