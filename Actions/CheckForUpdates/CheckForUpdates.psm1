@@ -34,7 +34,7 @@ function DownloadTemplateRepository {
     # Download template repository
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
-    Expand-Archive -Path "$tempName.zip" -DestinationPath $tempName
+    Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     $tempName
 }

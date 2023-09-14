@@ -18,6 +18,9 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.psm1" -Resolve)
 
+# ContainerHelper is used for determining project folders and dependencies
+DownloadAndImportBcContainerHelper
+
 if ($update) {
     if (-not $token) {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
