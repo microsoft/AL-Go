@@ -17,11 +17,10 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
+. (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
 
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
-
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.psm1" -Resolve)
 
 if ($update) {
     if (-not $token) {
@@ -68,7 +67,7 @@ $templateSha = $repoSettings.templateSha
 $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 
 # If templateUrl has changed, download latest version of the template repository (ignore templateSha)
-if ($repoSettings.templateUrl -ne $templateUrl) {
+if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
     $downloadLatest = $true
 }
 

@@ -14,10 +14,6 @@ function DownloadTemplateRepository {
     Write-Host "TemplateSha: $($templateSha.Value)"
     Write-Host "DownloadLatest: $downloadLatest"
 
-    if (!$templateSha.Value) {
-        $downloadLatest = $true
-    }
-
     if ($downloadLatest) {
         # Get Branches from template repository
         $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
@@ -38,5 +34,3 @@ function DownloadTemplateRepository {
     Remove-Item -Path "$tempName.zip"
     $tempName
 }
-
-Export-ModuleMember DownloadTemplateRepository
