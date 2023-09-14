@@ -166,9 +166,8 @@ if (!$directALGo) {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
-                # Replace placeholders
+                # Replace static placeholders
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
-
 
                 if ($directALGo) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
