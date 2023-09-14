@@ -16,6 +16,7 @@
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
 
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
