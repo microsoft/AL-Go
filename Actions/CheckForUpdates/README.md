@@ -12,8 +12,7 @@ none
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | actor | | The GitHub actor running the action | github.actor |
 | token | | The GitHub token running the action | github.token |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| templateBranch | | Branch in template repository to use for the update | default branch |
+| templateUrl | | URL of the template repository (default is the template repository used to create the repository) | default |
 | downloadLatest | | Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update) | false |
 | update | | Set this input to true in order to update AL-Go System Files if needed | false |
 | updateBranch | | Set the branch to update. In case `directCommit` parameter is set to true, then the branch the action is run on will be updated | github.ref_name |

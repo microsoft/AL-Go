@@ -3,12 +3,8 @@
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
-    [Parameter(HelpMessage = "Branch in template repository to use for the update (default is the default branch)", Mandatory = $false)]
-    [string] $templateBranch = "",
     [Parameter(HelpMessage = "Set this input to Y in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $false)]
     [bool] $downloadLatest,
     [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
@@ -19,129 +15,75 @@
     [bool] $directCommit
 )
 
-$telemetryScope = $null
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.psm1" -Resolve)
 
-try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    . (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
-
-    DownloadAndImportBcContainerHelper
-
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0071' -parentTelemetryScopeJson $parentTelemetryScopeJson
-
-    if ($update) {
-        if (-not $token) {
-            throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
-        }
-        else {
-            $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
-        }
-    }
-
-    # Support old calling convention
-    if (-not $templateUrl.Contains('@')) {
-        if ($templateBranch) {
-            $templateUrl += "@$templateBranch"
-        }
-        else {
-            $templateUrl += "@main"
-        }
-    }
-    if ($templateUrl -notlike "https://*") {
-        $templateUrl = "https://github.com/$templateUrl"
-    }
-
-    # DirectALGo is used to determine if the template is a direct link to an AL-Go repository
-    $directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
-    if ($directALGo) {
-        if ($templateUrl -like 'https://github.com/microsoft/AL-Go@*') {
-            throw "You cannot use microsoft/AL-Go as a template repository. Please use a fork of AL-Go instead."
-        }
-    }
-
-    # TemplateUrl is now always a full url + @ and a branch name
-
-    # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
-    # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on", "UseProjectDependencies", etc.
-    # if $update is set to true, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
-    # if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
-
-    # Get Repo settings as a hashtable
-    $repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable
-    $templateSha = $repoSettings.templateSha
-    $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
-
-    # if UpdateSettings is true, we need to update the settings file with the new template url (i.e. there are changes to your AL-Go System files)
-    if ($repoSettings.templateUrl -eq $templateUrl) {
-        # No need to update settings file
-        $updateSettings = $false
+if ($update) {
+    if (-not $token) {
+        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
     }
     else {
-        # New repository, download latest and update settings
-        $updateSettings = $true
-        $downloadLatest = $true
+        $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
     }
+}
 
-    AddTelemetryProperty -telemetryScope $telemetryScope -key "templateUrl" -value $templateUrl
+# Use Authenticated API request to avoid the 60 API calls per hour limit
+$headers = @{
+    "Accept" = "application/vnd.github.baptiste-preview+json"
+    "Authorization" = "Bearer $token"
+}
 
-    $templateBranch = $templateUrl.Split('@')[1]
-    $templateUrl = $templateUrl.Split('@')[0]
-    $templateOwner = $templateUrl.Split('/')[3]
+if (-not $templateUrl.Contains('@')) {
+    $templateUrl += "@main"
+}
+if ($templateUrl -notlike "https://*") {
+    $templateUrl = "https://github.com/$templateUrl"
+}
+$templateUrl = $templateUrl -replace 'https://www.github.com/','https://github.com/'
 
-    # Construct API URL
-    $apiUrl = "$($templateUrl -replace "https://www.github.com/","$ENV:GITHUB_API_URL/repos/" -replace "https://github.com/","$ENV:GITHUB_API_URL/repos/")"
-
-    Write-Host "Using template from $templateUrl@$templateBranch"
-    Write-Host "Using ApiUrl $apiUrl"
-
-    # Download the template repository and unpack to a temp folder
-    # Use Authenticated API request to avoid the 60 API calls per hour limit
-    $headers = @{
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-        "Authorization" = "Bearer $token"
+# DirectALGo is used to determine if the template is a direct link to an AL-Go repository
+$directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
+if ($directALGo) {
+    if ($templateUrl -like 'https://github.com/microsoft/AL-Go@*') {
+        throw "You cannot use microsoft/AL-Go as a template repository. Please use a fork of AL-Go instead."
     }
+}
 
-    if ($directALGo) {
-        $repoIsTemplate = $true
-    }
-    else {
-        $response = InvokeWebRequest -Headers $headers -Uri $apiUrl -retry
-        $repoIsTemplate = ($response.content | ConvertFrom-Json).is_template
-    }
-    Write-Host "Template repository: $repoIsTemplate"
+# TemplateUrl is now always a full url + @ and a branch name
 
-    $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
-    $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $templateBranch }
-    if (!$branchInfo) {
-        throw "Branch $templateBranch not found in template repository"
-    }
-    $templateRepoSha = $branchInfo.commit.sha
-    Write-Host "Template Repository SHA: $templateRepoSha"
+# CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
+# CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on", "UseProjectDependencies", etc.
+# if $update is set to true, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
+# if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
+# if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
-    if (!$templateSha -or ($downloadLatest -and $templateRepoSha -ne $templateSha)) {
-        # Download latest and update templateSha in repo settings
-        $templateSha = $templateRepoSha
-        $updateSettings = $true
-    }
-    Write-Host "Using SHA: $templateSha"
-    $archiveUrl = "$apiUrl/zipball/$templateSha"
+# Get Repo settings as a hashtable
+$repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable
+$templateSha = $repoSettings.templateSha
+$unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 
-    $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
-    Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
-    Remove-Item -Path "$tempName.zip"
+# If templateUrl has changed, download latest version of the template repository (ignore templateSha)
+if ($repoSettings.templateUrl -ne $templateUrl) {
+    $downloadLatest = $true
+}
 
-    if (!$directALGo) {
-        $ALGoSettingsFile = Join-Path $tempName "*/.github/AL-Go-Settings.json"
-        if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
-            $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
-            if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
-                # Template repository has a different template url than the one we are using
-                Write-Host "The template repository has a different template url than the one we are using."
-            }
+$tempName = DownloadTemplateRepository -headers $headers -templateUrl ([ref]$templateUrl) -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+
+$templateBranch = $templateUrl.Split('@')[1]
+$templateOwner = $templateUrl.Split('/')[3]
+
+if (!$directALGo) {
+    $ALGoSettingsFile = Join-Path $tempName "*/.github/AL-Go-Settings.json"
+    if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
+        $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+        if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
+            # Template repository has a different template url than the one we are using
+            # This means that the template repository is another AL-Go repository and not a template repository
+            # 
+            Write-Host "The template repository has a different template url than the one we are using."
         }
     }
+}
 
     # CheckFiles is an array of hashtables with the following properties:
     # dstPath: The path to the file in the current repository
@@ -369,7 +311,7 @@ try {
                     $srcContent = Get-ContentLF -Path $srcFile
                 }
 
-                $srcContent = $srcContent.Replace('{TEMPLATEURL}', "$($templateUrl)@$($templateBranch)")
+                $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
                 if ($directALGo) {
                     # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
                     $lines = $srcContent.Split("`n")
@@ -484,15 +426,14 @@ try {
         }
     }
 
+    $updateSettings = ($repoSettings.templateUrl -ne $templateUrl -or $repoSettings.templateSha -ne $templateSha)
     if (-not $update) {
         # $update not set, just issue a warning in the CI/CD workflow that updates are available
         if (($updateFiles) -or ($removeFiles)) {
             OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
-            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $true
         }
         else {
             Write-Host "No updates available for AL-Go for GitHub."
-            AddTelemetryProperty -telemetryScope $telemetryScope -key "updatesExists" -value $false
         }
     }
     else {
@@ -536,7 +477,6 @@ try {
                 invoke-git status
 
                 # Update Repo Settings file with the template URL
-                $templateUrl = "$templateUrl@$templateBranch"
                 $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
                 if (Test-Path $RepoSettingsFile) {
                     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
@@ -637,12 +577,3 @@ try {
             OutputWarning "No updates available for AL-Go for GitHub."
         }
     }
-
-    TrackTrace -telemetryScope $telemetryScope
-}
-catch {
-    if (Get-Module BcContainerHelper) {
-        TrackException -telemetryScope $telemetryScope -errorRecord $_
-    }
-    throw
-}
