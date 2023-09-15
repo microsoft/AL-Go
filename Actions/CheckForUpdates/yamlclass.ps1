@@ -210,7 +210,7 @@ class Yaml {
     # Example:
     # GetCustomJobsFromYaml() returns @("CustomJob1", "CustomJob2")
     # GetCustomJobsFromYaml("Build*") returns @("Build1","Build2","Build")
-    [hashtable[]] GetCustomJobsFromYaml([string] $name = 'CustomJob*') {
+    [hashtable[]] GetCustomJobsFromYaml([string] $name) {
         $result = @()
         $allJobs = $this.GetNextLevel('jobs:/').Trim(':')
         $customJobs = @($allJobs | Where-Object { $_ -like $name })

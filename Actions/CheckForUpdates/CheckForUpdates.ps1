@@ -243,7 +243,7 @@ if (!$directALGo) {
                                 }
                             }
                             # Locate custom jobs in destination YAML
-                            $customJobs = @($dstYaml.GetCustomJobsFromYaml())
+                            $customJobs = @($dstYaml.GetCustomJobsFromYaml('CustomJob*'))
 
                             # Add custom jobs to template YAML
                             $yaml.AddCustomJobsToYaml($customJobs)
