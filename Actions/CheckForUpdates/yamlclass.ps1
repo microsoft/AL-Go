@@ -207,13 +207,15 @@ class Yaml {
 
     
     # Locate jobs in YAML based on a name pattern
-    [hashtable[]] GetCustomJobsFromYaml() {
-        $name = 'CustomJob*'
+    # Example:
+    # GetCustomJobsFromYaml() returns @("CustomJob1", "CustomJob2")
+    # GetCustomJobsFromYaml("Build*") returns @("Build1","Build2","Build")
+    [hashtable[]] GetCustomJobsFromYaml([string] $name = 'CustomJob*') {
         $result = @()
-        $jobs = $this.GetNextLevel('jobs:/').Trim(':')
-        $customJobs = @($jobs | Where-Object { $_ -like $name })
+        $allJobs = $this.GetNextLevel('jobs:/').Trim(':')
+        $customJobs = @($allJobs | Where-Object { $_ -like $name })
         if ($customJobs) {
-            $nativeJobs = @($jobs | Where-Object { $customJobs -notcontains $_ })
+            $nativeJobs = @($allJobs | Where-Object { $customJobs -notcontains $_ })
             Write-Host "Native Jobs:"
             foreach($nativeJob in $nativeJobs) {
                 Write-Host "- $nativeJob"
@@ -222,8 +224,10 @@ class Yaml {
             foreach($customJob in $customJobs) {
                 Write-Host "- $customJob"
                 $jobsWithDependency = $nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
-                # Remove Dependencies from Build1, Build2,... - only keep only Build
-                $jobsWithDependency = $jobsWithDependency | ForEach-Object { $_ -replace "(Build).*", '$1' } | Select-Object -Unique
+                # If a Build Job has a dependency on this CustomJob, add it to all Build Jobs
+                if ($jobsWithDependency | Where-Object { $_ -like 'Build*' }) {
+                    $jobsWithDependency = @($jobsWithDependency | Where-Object { $_ -notlike 'Build*' }) + @($nativeJobs | Where-Object { $_ -like 'Build*' })
+                }
                 if ($jobsWithDependency) {
                     Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
                     $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = @($jobsWithDependency) })
@@ -234,17 +238,23 @@ class Yaml {
     }
 
     # Add jobs to Yaml and update Needs section from native jobs which needs this custom Job
+    # $customJobs is an array of hashtables with Name, Content and NeedsThis
+    # Example:
+    # $customJobs = @(@{ "Name" = "CustomJob1"; "Content" = @("  - pwsh","  -File Build1"); "NeedsThis" = @("Initialization", "Build") })
+    # AddCustomJobsToYaml($customJobs)
+    # The function will add the job CustomJob1 to the Yaml file and update the Needs section of Initialization and Build
+    # The function will not add the job CustomJob1 if it already exists
     [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
-        $jobs = $this.GetNextLevel('jobs:/').Trim(':')
+        $existingJobs = $this.GetNextLevel('jobs:/').Trim(':')
         Write-Host "Adding New Jobs"
         foreach($customJob in $customJobs) {
-            if ($jobs -contains $customJob.Name) {
+            if ($existingJobs -contains $customJob.Name) {
                 Write-Host "Job $($customJob.Name) already exists"
                 continue
             }
             Write-Host "$($customJob.Name), Dependencies from $($customJob.NeedsThis -join ',')"
             foreach($needsthis in $customJob.NeedsThis) {
-                if ($jobs -contains $needsthis) {
+                if ($existingJobs -contains $needsthis) {
                     # Add dependency to job
                     $this.Replace("jobs:/$($needsthis):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) -join ', ') ]")
                 }
