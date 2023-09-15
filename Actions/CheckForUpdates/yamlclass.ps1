@@ -204,4 +204,48 @@ class Yaml {
     [void] Remove([int] $start, [int] $count) {
         $this.content = $this.content[0..$start] + $this.content[($start+$count)..($this.content.Count-1)]
     }
+
+    
+    # Locate jobs in YAML based on a name pattern
+    [hashtable[]] GetCustomJobsFromYaml() {
+        $name = 'CustomJob*'
+        $result = @()
+        $jobs = $this.GetNextLevel('jobs:/').Trim(':')
+        $customJobs = @($jobs | Where-Object { $_ -like $name })
+        if ($customJobs) {
+            $nativeJobs = @($jobs | Where-Object { $customJobs -notcontains $_ })
+            Write-Host "Native Jobs:"
+            foreach($nativeJob in $nativeJobs) {
+                Write-Host "- $nativeJob"
+            }
+            Write-Host "Custom Jobs:"
+            foreach($customJob in $customJobs) {
+                Write-Host "- $customJob"
+                $jobsWithDependency = $nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
+                # Remove Dependencies from Build1, Build2,... - only keep only Build
+                $jobsWithDependency = $jobsWithDependency | ForEach-Object { $_ -replace "(Build).*", '$1' } | Select-Object -Unique
+                if ($jobsWithDependency) {
+                    Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
+                    $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = @($jobsWithDependency) })
+                }
+            }
+        }
+        return $result
+    }
+
+    # Add jobs to Yaml and update Needs section from native jobs which needs this custom Job
+    [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
+        $jobs = $this.GetNextLevel('jobs:/').Trim(':')
+        Write-Host "Adding New Jobs"
+        foreach($customJob in $customJobs) {
+            Write-Host "$($customJob.Name), Dependencies from $($customJob.NeedsThis -join ',')"
+            foreach($needsthis in $customJob.NeedsThis) {
+                if ($jobs -contains $needsthis) {
+                    # Add dependency to job
+                    $this.Replace("jobs:/$($needsthis):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) -join ', ') ]")
+                }
+            }
+            $this.content += @('') + @($customJob.content | ForEach-Object { "  $_" })
+        }
+    }
 }

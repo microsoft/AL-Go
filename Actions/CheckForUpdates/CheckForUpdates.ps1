@@ -243,27 +243,11 @@ if (!$directALGo) {
                                 }
                             }
                             # Locate custom jobs in destination YAML
-                            $jobs = $yaml.GetNextLevel('jobs:/').Trim(':')
-                            $dstJobs = $dstYaml.GetNextLevel('jobs:/')
-                            $customJobs = @($dstJobs | Where-Object { $_ -like 'CustomJob*:' } | ForEach-Object { $_.Trim(':') })
-                            if ($customJobs) {
-                                $nativeJobs = ($dstJobs | Where-Object { $customJobs -notcontains $_.Trim(':') }).Trim(':')
-                                Write-Host "Custom Jobs:"
-                                foreach($customJob in $customJobs) {
-                                    Write-Host "- $customJob"
-                                    $jobsWithDependency = $nativeJobs | Where-Object { $dstYaml.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
-                                    if ($jobsWithDependency) {
-                                        Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
-                                        $jobsWithDependency | ForEach-Object {
-                                            if ($jobs -contains $_) {
-                                                # Add dependency to job
-                                                $yaml.Replace("jobs:/$($_):/needs:","needs: [ $(@($yaml.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob) -join ', ') ]")
-                                            }
-                                        }
-                                    }
-                                    $yaml.content += @('') + @($dstYaml.Get("jobs:/$($customJob):").content | ForEach-Object { "  $_" })
-                                }
-                            }
+                            $customJobs = @($dstYaml.GetCustomJobsFromYaml())
+
+                            # Add custom jobs to template YAML
+                            $yaml.AddCustomJobsToYaml($customJobs)
+
                             $srcContent = $yaml.content -join "`n"
                         }
                     }
