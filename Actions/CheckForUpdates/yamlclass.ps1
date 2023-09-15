@@ -238,6 +238,10 @@ class Yaml {
         $jobs = $this.GetNextLevel('jobs:/').Trim(':')
         Write-Host "Adding New Jobs"
         foreach($customJob in $customJobs) {
+            if ($jobs -contains $customJob.Name) {
+                Write-Host "Job $($customJob.Name) already exists"
+                continue
+            }
             Write-Host "$($customJob.Name), Dependencies from $($customJob.NeedsThis -join ',')"
             foreach($needsthis in $customJob.NeedsThis) {
                 if ($jobs -contains $needsthis) {
