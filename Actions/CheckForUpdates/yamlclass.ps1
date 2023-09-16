@@ -180,15 +180,8 @@ class Yaml {
             else {
                 $yamlContent = $content
             }
-            if ($start -eq 0) {
-                $this.content = $yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
-            }
-            elseif ($start+$count -eq $this.content.Count) {
-                $this.content = $this.content[0..($start-1)]+$yamlContent
-            }
-            else {
-                $this.content = $this.content[0..($start-1)]+$yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
-            }
+            $this.Remove($start, $count)
+            $this.Insert($start, $yamlContent)
         }
         else {
             Write-Host -ForegroundColor Red "cannot locate $line"
@@ -202,10 +195,28 @@ class Yaml {
 
     # Remove lines in Yaml content
     [void] Remove([int] $start, [int] $count) {
+        if ($count -eq 0) {
+            return
+        }
         $this.content = $this.content[0..$start] + $this.content[($start+$count)..($this.content.Count-1)]
     }
 
-    
+    # Insert lines in Yaml content
+    [void] Insert([int] $index, [string[]] $content) {
+        if (!$content) {
+            return
+        }
+        if ($index -eq 0) {
+            $this.content = $content + $this.content
+        }
+        elseif ($index -eq $this.content.Count) {
+            $this.content = $this.content + $content
+        }
+        else {
+            $this.content = $this.content[0..$index] + $content + $this.content[($index+1)..($this.content.Count-1)]
+        }
+    }
+
     # Locate jobs in YAML based on a name pattern
     # Example:
     # GetCustomJobsFromYaml() returns @("CustomJob1", "CustomJob2")
@@ -260,6 +271,100 @@ class Yaml {
                 }
             }
             $this.content += @('') + @($customJob.content | ForEach-Object { "  $_" })
+        }
+    }
+
+    [string[]] GetStepsFromJob([string] $job) {
+        $steps = $this.GetNextLevel("Jobs:/$($job):/steps:/") | Where-Object { $_ -like '- name: *' } | ForEach-Object { $_.Substring(8).Trim() }
+        if ($steps | Group-Object | Where-Object { $_.Count -gt 1 }) {
+            Write-Host "Duplicate step names in job '$job'"
+            return @()
+        }
+        return $steps
+    }
+
+    [hashtable[]] GetCustomStepsFromAnchor([string] $job, [string] $anchorStep, [bool] $before) {
+        $steps = $this.GetStepsFromJob($job)
+        $anchorIdx = $steps.IndexOf($anchorStep)
+        if ($anchorIdx -lt 0) {
+            Write-Host "Cannot find anchor step '$anchorStep' in job '$job'"
+            return @()
+        }
+        $idx = $anchorIdx
+        $customSteps = @()
+        if ($before) {
+            while ($idx -gt 0 -and $steps[$idx-1] -like 'CustomStep*') {
+                $idx--
+            }
+            if ($idx -ne $anchorIdx) {
+                $customSteps = @($steps[$idx..($anchorIdx-1)])
+                # Reverse the order of the custom steps in order to apply in correct order from the anchor step
+                [array]::Reverse($customSteps)
+            }
+        }
+        else {
+            while ($idx -lt $steps.Count-1 -and $steps[$idx+1] -like 'CustomStep*') {
+                $idx++
+            }
+            if ($idx -ne $anchorIdx) {
+                $customSteps = @($steps[($anchorIdx+1)..$idx])
+            }
+        }
+        $result = @()
+        foreach($customStep in $customSteps) {
+            $stepContent = $this.Get("Jobs:/$($job):/steps:/- name: $($customStep)").content
+            $result += @(@{"Name" = $customStep; "Content" =  $stepContent; "AnchorStep" = $anchorStep; "Before" = $before })
+        }
+        return $result
+    }
+
+    [hashtable[]] GetCustomStepsFromYaml([string] $job, [hashtable[]] $anchors) {
+        $steps = $this.GetStepsFromJob($job)
+        $result = @()
+        foreach($anchor in $anchors) {
+            $result += $this.GetCustomStepsFromAnchor($job, $anchor.Step, $anchor.Before)
+        }
+        foreach($step in $steps) {
+            if ($step -like 'CustomStep*') {
+                if (-not ($result | Where-Object { $_.Name -eq $step })) {
+                    Write-Host "Custom step '$step' does not belong to a supported anchor"
+                }
+            }
+        }
+        return $result
+    }
+
+    [void] AddCustomStepsToAnchor([string] $job, [hashtable[]] $customSteps, [string] $anchorStep, [bool] $before) {
+        $steps = $this.GetStepsFromJob($job)
+        $anchorIdx = $steps.IndexOf($anchorStep)
+        if ($anchorIdx -lt 0) {
+            Write-Host "Cannot find anchor step '$anchorStep' in job '$job'"
+            return
+        }
+        foreach($customStep in $customSteps | Where-Object { $_.AnchorStep -eq $anchorStep -and $_.Before -eq $before }) {
+            if ($steps -contains $customStep.Name) {
+                Write-Host "Custom step '$($customStep.Name)' already exists in job '$job'"
+            }
+            else {
+                $anchorStart = 0
+                $anchorCount = 0
+                if ($this.Find("Jobs:/$($job):/steps:/- name: $($anchorStep)", [ref] $anchorStart, [ref] $anchorCount)) {
+                    if ($before) {
+                        $this.Insert($anchorStart-1, @($customStep.Content | ForEach-Object { "      $_" }) + @(''))
+                    }
+                    else {
+                        $this.Insert($anchorStart+$anchorCount, @($customStep.Content | ForEach-Object { "      $_" }) + @(''))
+                    }
+                }
+            }
+            # Use added step as anchor for next step
+            $anchorStep = $customStep.Name
+        }
+    }
+
+    [void] AddCustomStepsToYaml([string] $job, [hashtable[]] $customSteps, [hashtable[]] $anchors) {
+        foreach($anchor in $anchors) {
+            $this.AddCustomStepsToAnchor($job, $customSteps, $anchor.Step, $anchor.Before)
         }
     }
 }

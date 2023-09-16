@@ -222,31 +222,33 @@ if (!$directALGo) {
                             $dstYaml = $null
                         }
                         if ($dstYaml) {
-                            # Destination YAML was readable - grab customizations from placeholders
-                            foreach($placeholderName in 'BuildALGoProject:Initialize','BuildALGoProject:PreBuild','BuildALGoProject:PostBuild','BuildALGoProject:Finalize') {
-                                $jobName = "$($placeholderName.Split(':')[0]):"
-                                $stepName = $placeholderName.Split(':')[1]
-                                $startStart = 0
-                                $startCount = 0
-                                $endStart = 0
-                                $endCount = 0
-                                if ($yaml.Find("jobs:/$jobName/steps:/- name: $($stepName).Start", [ref] $startStart, [ref] $startCount) -and $yaml.Find("jobs:/$jobName/steps:/- name: $($stepName).End", [ref] $endStart, [ref] $endCount)) {
-                                    Write-Host "PlaceHolder for $placeholderName found in source YAML: $startStart $startCount $endStart $endCount"
-                                    $dstStartStart = 0
-                                    $dstStartCount = 0
-                                    $dstEndStart = 0
-                                    $dstEndCount = 0
-                                    if ($dstYaml.Find("jobs:/$jobName/steps:/- name: $($stepName).Start", [ref] $dstStartStart, [ref] $dstStartCount) -and $dstYaml.Find("jobs:/$jobName/steps:/- name: $($stepName).End", [ref] $dstEndStart, [ref] $dstEndCount)) {
-                                        Write-Host "PlaceHolder for $placeholderName found in destination YAML: $dstStartStart $dstStartCount $dstEndStart $dstEndCount"
-                                        $yaml.content = $yaml.content[0..($startStart+$startCount-1)]+$dstYaml.content[($dstStartStart+$dstStartCount)..($dstEndStart-1)]+$yaml.content[$endStart..($yaml.content.Count-1)]
+                            $anchors = @{
+                                "_BuildALGoProject.yaml" = @{
+                                    "BuildALGoProject" = @(
+                                        @{ "Step" = 'Read settings'; "Before" = $false }
+                                        @{ "Step" = 'Read secrets'; "Before" = $false }
+                                        @{ "Step" = 'Build'; "Before" = $true }
+                                        @{ "Step" = 'Build'; "Before" = $false }
+                                        @{ "Step" = 'Cleanup'; "Before" = $true }
+                                    )
+                                }
+                            }
+                            if ($anchors.ContainsKey($filename)) {
+                                $fileAnchors = $anchors."$filename"
+                                foreach($job in $fileAnchors.Keys) {
+                                    # Locate custom steps in destination YAML
+                                    $customSteps = $dstYaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
+                                    if ($customSteps) {
+                                        $yaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
                                     }
                                 }
                             }
                             # Locate custom jobs in destination YAML
                             $customJobs = @($dstYaml.GetCustomJobsFromYaml('CustomJob*'))
-
-                            # Add custom jobs to template YAML
-                            $yaml.AddCustomJobsToYaml($customJobs)
+                            if ($customJobs) {
+                                # Add custom jobs to template YAML
+                                $yaml.AddCustomJobsToYaml($customJobs)
+                            }
 
                             $srcContent = $yaml.content -join "`n"
                         }

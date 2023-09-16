@@ -93,17 +93,6 @@ jobs:
           project: ${{ inputs.project }}
           get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
 
-      - name: Initialize.Start
-        if: false
-        run: |
-          # All steps between Initialize.Start and Initialize.End will be preserved when updating AL-Go System Files
-          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-  
-      - name: Initialize.End
-        if: false
-        run: |
-          # End of custom Initialize block
-
       - name: Read secrets
         id: ReadSecrets
         if: github.event_name != 'pull_request'
@@ -141,19 +130,7 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
 
-      - name: PreBuild.Start
-        if: false
-        run: |
-          # All steps between PreBuild.Start and PreBuild.End will be preserved when updating AL-Go System Files
-          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-
-      - name: PreBuild.End
-        if: false
-        run: |
-          # End of custom PreBuild block
-
-      - name: Run pipeline
-        id: RunPipeline
+      - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -166,17 +143,6 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
-
-      - name: PostBuild.Start
-        if: false
-        run: |
-          # All steps between PostBuild.Start and PostBuild.End will be preserved when updating AL-Go System Files
-          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-  
-      - name: PostBuild.End
-        if: false
-        run: |
-          # End of custom PostBuild block
 
       - name: Sign
         if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
@@ -281,17 +247,6 @@ jobs:
           shell: ${{ inputs.shell }}
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
           project: ${{ inputs.project }}
-
-      - name: Finalize.Start
-        if: false
-        run: |
-          # All steps between Finalize.Start and Finalize.End will be preserved when updating AL-Go System Files
-          # Note that changes to the base workflow might cause your steps in this section to break, please update them accordingly
-  
-      - name: Finalize.End
-        if: false
-        run: |
-            # End of custom Finalize block
 
       - name: Cleanup
         if: always()
