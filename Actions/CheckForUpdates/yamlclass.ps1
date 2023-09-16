@@ -180,6 +180,15 @@ class Yaml {
             else {
                 $yamlContent = $content
             }
+            if ($start -eq 0) {
+                $this.content = $yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
+            }
+            elseif ($start+$count -eq $this.content.Count) {
+                $this.content = $this.content[0..($start-1)]+$yamlContent
+            }
+            else {
+                $this.content = $this.content[0..($start-1)]+$yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
+            }
             $this.Remove($start, $count)
             $this.Insert($start, $yamlContent)
         }
@@ -198,22 +207,22 @@ class Yaml {
         if ($count -eq 0) {
             return
         }
-        $this.content = $this.content[0..$start] + $this.content[($start+$count)..($this.content.Count-1)]
+        $this.content = $this.content[0..$start-1] + $this.content[($start+$count)..($this.content.Count-1)]
     }
 
     # Insert lines in Yaml content
-    [void] Insert([int] $index, [string[]] $content) {
-        if (!$content) {
+    [void] Insert([int] $index, [string[]] $yamlContent) {
+        if (!$yamlContent) {
             return
         }
         if ($index -eq 0) {
-            $this.content = $content + $this.content
+            $this.content = $yamlContent + $this.content
         }
         elseif ($index -eq $this.content.Count) {
-            $this.content = $this.content + $content
+            $this.content = $this.content + $yamlContent
         }
         else {
-            $this.content = $this.content[0..$index] + $content + $this.content[($index+1)..($this.content.Count-1)]
+            $this.content = $this.content[0..$index] + $yamlContent + $this.content[($index+1)..($this.content.Count-1)]
         }
     }
 
