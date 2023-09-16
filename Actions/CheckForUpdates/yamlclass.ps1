@@ -180,15 +180,6 @@ class Yaml {
             else {
                 $yamlContent = $content
             }
-            if ($start -eq 0) {
-                $this.content = $yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
-            }
-            elseif ($start+$count -eq $this.content.Count) {
-                $this.content = $this.content[0..($start-1)]+$yamlContent
-            }
-            else {
-                $this.content = $this.content[0..($start-1)]+$yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
-            }
             $this.Remove($start, $count)
             $this.Insert($start, $yamlContent)
         }
