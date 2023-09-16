@@ -213,7 +213,7 @@ class Yaml {
             $this.content = $this.content + $yamlContent
         }
         else {
-            $this.content = $this.content[0..$index] + $yamlContent + $this.content[($index+1)..($this.content.Count-1)]
+            $this.content = $this.content[0..$index-1] + $yamlContent + $this.content[$index..($this.content.Count-1)]
         }
     }
 
@@ -350,10 +350,10 @@ class Yaml {
                 $anchorCount = 0
                 if ($this.Find("Jobs:/$($job):/steps:/- name: $($anchorStep)", [ref] $anchorStart, [ref] $anchorCount)) {
                     if ($before) {
-                        $this.Insert($anchorStart-1, @($customStep.Content | ForEach-Object { "      $_" }) + @(''))
+                        $this.Insert($anchorStart-1, @('') + @($customStep.Content | ForEach-Object { "      $_" }))
                     }
                     else {
-                        $this.Insert($anchorStart+$anchorCount, @($customStep.Content | ForEach-Object { "      $_" }) + @(''))
+                        $this.Insert($anchorStart+$anchorCount, @('') + @($customStep.Content | ForEach-Object { "      $_" }))
                     }
                 }
             }
