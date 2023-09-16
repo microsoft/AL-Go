@@ -213,7 +213,7 @@ class Yaml {
             $this.content = $this.content + $yamlContent
         }
         else {
-            $this.content = $this.content[0..$index-1] + $yamlContent + $this.content[$index..($this.content.Count-1)]
+            $this.content = $this.content[0..($index-1)] + $yamlContent + $this.content[$index..($this.content.Count-1)]
         }
     }
 
