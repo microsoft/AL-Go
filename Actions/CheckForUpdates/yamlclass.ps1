@@ -201,7 +201,12 @@ class Yaml {
         if ($count -eq 0) {
             return
         }
-        $this.content = $this.content[0..($start-1)] + $this.content[($start+$count)..($this.content.Count-1)]
+        if ($start -eq 0) {
+            $this.content = $this.content[$count..($this.content.Count-1)]
+        }
+        else {
+            $this.content = $this.content[0..($start-1)] + $this.content[($start+$count)..($this.content.Count-1)]
+        }
     }
 
     # Insert lines in Yaml content
