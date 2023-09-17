@@ -89,334 +89,253 @@ if (!$directALGo) {
     }
 }
 
-    # CheckFiles is an array of hashtables with the following properties:
-    # dstPath: The path to the file in the current repository
-    # srcPath: The path to the file in the template repository
-    # pattern: The pattern to use when searching for files in the template repository
-    # type: The type of file (script, workflow, releasenotes)
-    # The files currently checked are:
-    # - All files in .github/workflows
-    # - All files in .github that ends with .copy.md
-    # - All PowerShell scripts in .AL-Go folders (all projects)
-    $srcGitHubPath = '.github'
-    $srcALGoPath = '.AL-Go'
-    if ($directALGo) {
-        # When using a direct link to an AL-Go repository, the files are in a subfolder of the template repository
-        $typePath = $repoSettings.type
-        if ($typePath -eq "PTE") {
-            $typePath = "Per Tenant Extension"
-        }
-        $srcGitHubPath = Join-Path "Templates/$typePath" $srcGitHubPath
-        $srcALGoPath = Join-Path "Templates/$typePath" $srcALGoPath
+# CheckFiles is an array of hashtables with the following properties:
+# dstPath: The path to the file in the current repository
+# srcPath: The path to the file in the template repository
+# pattern: The pattern to use when searching for files in the template repository
+# type: The type of file (script, workflow, releasenotes)
+# The files currently checked are:
+# - All files in .github/workflows
+# - All files in .github that ends with .copy.md
+# - All PowerShell scripts in .AL-Go folders (all projects)
+$srcGitHubPath = '.github'
+$srcALGoPath = '.AL-Go'
+if ($directALGo) {
+    # When using a direct link to an AL-Go repository, the files are in a subfolder of the template repository
+    $typePath = $repoSettings.type
+    if ($typePath -eq "PTE") {
+        $typePath = "Per Tenant Extension"
     }
-    $checkfiles = @(
-        @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path $srcGitHubPath 'workflows'; "pattern" = "*"; "type" = "workflow" },
-        @{ "dstPath" = ".github"; "srcPath" = $srcGitHubPath; "pattern" = "*.copy.md"; "type" = "releasenotes" }
-    )
+    $srcGitHubPath = Join-Path "Templates/$typePath" $srcGitHubPath
+    $srcALGoPath = Join-Path "Templates/$typePath" $srcALGoPath
+}
+$checkfiles = @(
+    @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path $srcGitHubPath 'workflows'; "pattern" = "*"; "type" = "workflow" },
+    @{ "dstPath" = ".github"; "srcPath" = $srcGitHubPath; "pattern" = "*.copy.md"; "type" = "releasenotes" }
+)
 
-    # Get the list of projects in the current repository
-    $baseFolder = $ENV:GITHUB_WORKSPACE
-    $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
-    Write-Host "Projects found: $($projects.Count)"
-    foreach($project in $projects) {
-        Write-Host "- $project"
-        $checkfiles += @(@{ "dstPath" = Join-Path $project ".AL-Go"; "srcPath" = $srcALGoPath; "pattern" = "*.ps1"; "type" = "script" })
-    }
+# Get the list of projects in the current repository
+$baseFolder = $ENV:GITHUB_WORKSPACE
+$projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
+Write-Host "Projects found: $($projects.Count)"
+foreach($project in $projects) {
+    Write-Host "- $project"
+    $checkfiles += @(@{ "dstPath" = Join-Path $project ".AL-Go"; "srcPath" = $srcALGoPath; "pattern" = "*.ps1"; "type" = "script" })
+}
 
-    # $updateFiles will hold an array of files, which needs to be updated
-    $updateFiles = @()
-    # $removeFiles will hold an array of files, which needs to be removed
-    $removeFiles = @()
+# $updateFiles will hold an array of files, which needs to be updated
+$updateFiles = @()
+# $removeFiles will hold an array of files, which needs to be removed
+$removeFiles = @()
 
-    # If useProjectDependencies is true, we need to calculate the dependency depth for all projects
-    # Dependency depth determines how many build jobs we need to run sequentially
-    # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
-    $depth = 1
-    if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
-        $buildAlso = @{}
-        $projectDependencies = @{}
-        $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+# If useProjectDependencies is true, we need to calculate the dependency depth for all projects
+# Dependency depth determines how many build jobs we need to run sequentially
+# Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
+$depth = 1
+if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
+    $buildAlso = @{}
+    $projectDependencies = @{}
+    $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+    $depth = $projectsOrder.Count
+    Write-Host "Calculated dependency depth to be $depth"
+}
 
-        $depth = $projectsOrder.Count
-        Write-Host "Calculated dependency depth to be $depth"
-    }
+# Loop through all folders in CheckFiles and check if there are any files that needs to be updated
+foreach($checkfile in $checkfiles) {
+    Write-Host "Checking $($checkfile.srcPath)\$($checkfile.pattern)"
+    $type = $checkfile.type
+    $srcPath = $checkfile.srcPath
+    $dstPath = $checkfile.dstPath
+    $dstFolder = Join-Path $baseFolder $dstPath
+    $srcFolder = Resolve-Path -path (Join-Path $tempName "*\$($srcPath)") -ErrorAction SilentlyContinue
+    if ($srcFolder) {
+        # Loop through all files in the template repository matching the pattern
+        Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
+            # Read the template file and modify it based on the settings
+            # Compare the modified file with the file in the current repository
+            $srcFile = $_.FullName
+            $fileName = $_.Name
+            Write-Host "- $filename"
+            if ($type -eq "workflow") {
+                # for workflow files, we might need to modify the file based on the settings
+                $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
+            }
+            else {
+                # For non-workflow files, just read the file content
+                $srcContent = Get-ContentLF -Path $srcFile
+            }
 
-    # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
-    foreach($checkfile in $checkfiles) {
-        Write-Host "Checking $($checkfile.srcPath)\$($checkfile.pattern)"
-        $type = $checkfile.type
-        $srcPath = $checkfile.srcPath
-        $dstPath = $checkfile.dstPath
-        $dstFolder = Join-Path $baseFolder $dstPath
-        $srcFolder = Resolve-Path -path (Join-Path $tempName "*\$($srcPath)") -ErrorAction SilentlyContinue
-        if ($srcFolder) {
-            # Loop through all files in the template repository matching the pattern
-            Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
-                # Read the template file and modify it based on the settings
-                # Compare the modified file with the file in the current repository
-                $srcFile = $_.FullName
-                $fileName = $_.Name
-                Write-Host "- $filename"
-                if ($type -eq "workflow") {
-                    # for workflow files, we might need to modify the file based on the settings
-                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
+            # Replace static placeholders
+            $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
+
+            if ($directALGo) {
+                # If we are using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+                ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
+            }
+
+            $dstFile = Join-Path $dstFolder $fileName
+            $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
+            if ($unusedALGoSystemFiles -contains $fileName) {
+                # file is not used by ALGo, remove it if it exists
+                # do not add it to $updateFiles if it does not exist
+                if ($dstFileExists) {
+                    $removeFiles += @(Join-Path $dstPath $filename)
                 }
-                else {
-                    # For non-workflow files, just read the file content
-                    $srcContent = Get-ContentLF -Path $srcFile
-                }
-
-                # Replace static placeholders
-                $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
-
-                if ($directALGo) {
-                    # If we are using the direct AL-Go repo, we need to change the owner and repo names in the workflow
-                    $lines = $srcContent.Split("`n")
-
-                    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
-                    $originalOwnerAndRepo = @{
-                        "actionsRepo" = "microsoft/AL-Go-Actions"
-                        "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
-                        "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
+            }
+            elseif ($dstFileExists) {
+                if ($type -eq 'workflow') {
+                    $yaml = [Yaml]::new($srcContent.Split("`n"))
+                    try {
+                        $dstYaml = [Yaml]::Load($dstFile)
                     }
-                    # Original branch is always main
-                    $originalBranch = "main"
-
-                    # Modify the file to use repository names based on whether or not we are using the direct AL-Go repo
-                    $templateRepos = @{
-                        "actionsRepo" = "AL-Go/Actions"
-                        "perTenantExtensionRepo" = "AL-Go"
-                        "appSourceAppRepo" = "AL-Go"
+                    catch {
+                        $dstYaml = $null
                     }
-
-                    # Replace URL's to actions repository first
-                    $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
-                    $replace = "`${1}https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`${2}"
-                    $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
-
-                    # Replace the owner and repo names in the workflow
-                    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
-                        $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
-                        $replace = "`${1}$($templateOwner)/$($templateRepos."$_")`${2}$($templateBranch)`${3}"
-                        $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
-                    }
-                    $srcContent = $lines -join "`n"
-                }
-
-                $dstFile = Join-Path $dstFolder $fileName
-                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
-                if ($unusedALGoSystemFiles -contains $fileName) {
-                    # file is not used by ALGo, remove it if it exists
-                    # do not add it to $updateFiles if it does not exist
-                    if ($dstFileExists) {
-                        $removeFiles += @(Join-Path $dstPath $filename)
-                    }
-                }
-                elseif ($dstFileExists) {
-                    if ($type -eq 'workflow') {
-                        $yaml = [Yaml]::new($srcContent.Split("`n"))
-                        try {
-                            $dstYaml = [Yaml]::Load($dstFile)
+                    if ($dstYaml) {
+                        $anchors = @{
+                            "_BuildALGoProject.yaml" = @{
+                                "BuildALGoProject" = @(
+                                    @{ "Step" = 'Read settings'; "Before" = $false }
+                                    @{ "Step" = 'Read secrets'; "Before" = $false }
+                                    @{ "Step" = 'Build'; "Before" = $true }
+                                    @{ "Step" = 'Build'; "Before" = $false }
+                                    @{ "Step" = 'Cleanup'; "Before" = $true }
+                                )
+                            }
                         }
-                        catch {
-                            $dstYaml = $null
-                        }
-                        if ($dstYaml) {
-                            $anchors = @{
-                                "_BuildALGoProject.yaml" = @{
-                                    "BuildALGoProject" = @(
-                                        @{ "Step" = 'Read settings'; "Before" = $false }
-                                        @{ "Step" = 'Read secrets'; "Before" = $false }
-                                        @{ "Step" = 'Build'; "Before" = $true }
-                                        @{ "Step" = 'Build'; "Before" = $false }
-                                        @{ "Step" = 'Cleanup'; "Before" = $true }
-                                    )
+                        if ($anchors.ContainsKey($filename)) {
+                            $fileAnchors = $anchors."$filename"
+                            foreach($job in $fileAnchors.Keys) {
+                                # Locate custom steps in destination YAML
+                                $customSteps = $dstYaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
+                                if ($customSteps) {
+                                    $yaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
                                 }
                             }
-                            if ($anchors.ContainsKey($filename)) {
-                                $fileAnchors = $anchors."$filename"
-                                foreach($job in $fileAnchors.Keys) {
-                                    # Locate custom steps in destination YAML
-                                    $customSteps = $dstYaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
-                                    if ($customSteps) {
-                                        $yaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
-                                    }
-                                }
-                            }
-                            # Locate custom jobs in destination YAML
-                            $customJobs = @($dstYaml.GetCustomJobsFromYaml('CustomJob*'))
-                            if ($customJobs) {
-                                # Add custom jobs to template YAML
-                                $yaml.AddCustomJobsToYaml($customJobs)
-                            }
-
-                            $srcContent = $yaml.content -join "`n"
                         }
-                    }
-                    # file exists, compare and add to $updateFiles if different
-                    $dstContent = Get-ContentLF -Path $dstFile
-                    if ($dstContent -cne $srcContent) {
-                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
-                        $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+                        # Locate custom jobs in destination YAML
+                        $customJobs = @($dstYaml.GetCustomJobsFromYaml('CustomJob*'))
+                        if ($customJobs) {
+                            # Add custom jobs to template YAML
+                            $yaml.AddCustomJobsToYaml($customJobs)
+                        }
+                        $srcContent = $yaml.content -join "`n"
                     }
                 }
-                else {
-                    # new file, add to $updateFiles
-                    Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
+                # file exists, compare and add to $updateFiles if different
+                $dstContent = Get-ContentLF -Path $dstFile
+                if ($dstContent -cne $srcContent) {
+                    Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
                     $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }
+            else {
+                # new file, add to $updateFiles
+                Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
+                $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+            }
         }
     }
+}
 
-    $updateSettings = ($repoSettings.templateUrl -ne $templateUrl -or $repoSettings.templateSha -ne $templateSha)
-    if (-not $update) {
-        # $update not set, just issue a warning in the CI/CD workflow that updates are available
-        if (($updateFiles) -or ($removeFiles)) {
-            OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
-        }
-        else {
-            Write-Host "No updates available for AL-Go for GitHub."
-        }
+$updateSettings = ($repoSettings.templateUrl -ne $templateUrl -or $repoSettings.templateSha -ne $templateSha)
+if (-not $update) {
+    # $update not set, just issue a warning in the CI/CD workflow that updates are available
+    if (($updateFiles) -or ($removeFiles)) {
+        OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
     }
     else {
-        # $update set, update the files
-        if ($updateSettings -or ($updateFiles) -or ($removeFiles)) {
-            try {
-                # URL for git commands
-                $tempRepo = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-                New-Item $tempRepo -ItemType Directory | Out-Null
-                Set-Location $tempRepo
-                $serverUri = [Uri]::new($env:GITHUB_SERVER_URL)
-                $url = "$($serverUri.Scheme)://$($actor):$($token)@$($serverUri.Host)/$($env:GITHUB_REPOSITORY)"
+        Write-Host "No updates available for AL-Go for GitHub."
+    }
+}
+else {
+    # $update set, update the files
+    if ($updateSettings -or ($updateFiles) -or ($removeFiles)) {
+        try {
+            # If $directCommit, then changes are made directly to the default branch
+            $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
 
-                # Environment variables for hub commands
-                $env:GITHUB_USER = $actor
-                $env:GITHUB_TOKEN = $token
+            invoke-git status
 
-                # Configure git
-                invoke-git config --global user.email "$actor@users.noreply.github.com"
-                invoke-git config --global user.name "$actor"
-                invoke-git config --global hub.protocol https
-                invoke-git config --global core.autocrlf false
+            # Update Repo Settings file with the template URL
+            $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
+            if (Test-Path $RepoSettingsFile) {
+                $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
+            }
+            else {
+                $repoSettings = [PSCustomObject]@{}
+            }
+            if ($repoSettings.PSObject.Properties.Name -eq "templateUrl") {
+                $repoSettings.templateUrl = $templateUrl
+            }
+            else {
+                # Add the property if it doesn't exist
+                $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
+            }
+            if ($repoSettings.PSObject.Properties.Name -eq "templateSha") {
+                $repoSettings.templateSha = $templateSha
+            }
+            else {
+                # Add the property if it doesn't exist
+                $repoSettings | Add-Member -MemberType NoteProperty -Name "templateSha" -Value $templateSha
+            }
+            # Save the file with LF line endings and UTF8 encoding
+            $repoSettings | Set-JsonContentLF -path $repoSettingsFile
 
-                # Clone URL
-                invoke-git clone $url
-
-                # Set current location to the repository folder
-                Set-Location -Path *
-
-                # checkout branch to update
-                invoke-git checkout $updateBranch
-
-                # If $directCommit, then changes are made directly to the default branch
-                if (!$directcommit) {
-                    # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
-                    $branch = "update-al-go-system-files/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. update-al-go-system-files/main/210101120000
-                    invoke-git checkout -b $branch
+            # Update the files
+            # Calculate the release notes, while updating
+            $releaseNotes = ""
+            $updateFiles | ForEach-Object {
+                # Create the destination folder if it doesn't exist
+                $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
+                if (-not (Test-Path -path $path -PathType Container)) {
+                    New-Item -Path $path -ItemType Directory | Out-Null
                 }
-
-                # Show git status
-                invoke-git status
-
-                # Update Repo Settings file with the template URL
-                $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
-                if (Test-Path $RepoSettingsFile) {
-                    $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-                }
-                else {
-                    $repoSettings = [PSCustomObject]@{}
-                }
-                if ($repoSettings.PSObject.Properties.Name -eq "templateUrl") {
-                    $repoSettings.templateUrl = $templateUrl
-                }
-                else {
-                    # Add the property if it doesn't exist
-                    $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
-                }
-                if ($repoSettings.PSObject.Properties.Name -eq "templateSha") {
-                    $repoSettings.templateSha = $templateSha
-                }
-                else {
-                    # Add the property if it doesn't exist
-                    $repoSettings | Add-Member -MemberType NoteProperty -Name "templateSha" -Value $templateSha
-                }
-                # Save the file with LF line endings and UTF8 encoding
-                $repoSettings | Set-JsonContentLF -path $repoSettingsFile
-
-                # Update the files
-                # Calculate the release notes, while updating
-                $releaseNotes = ""
-                $updateFiles | ForEach-Object {
-                    # Create the destination folder if it doesn't exist
-                    $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
-                    if (-not (Test-Path -path $path -PathType Container)) {
-                        New-Item -Path $path -ItemType Directory | Out-Null
-                    }
-                    if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                        $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
-                        while ($oldReleaseNotes) {
-                            $releaseNotes = $_.Content
-                            if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
-                                $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
-                                $oldReleaseNotes = ""
+                if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
+                    $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
+                    while ($oldReleaseNotes) {
+                        $releaseNotes = $_.Content
+                        if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
+                            $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
+                            $oldReleaseNotes = ""
+                        }
+                        else {
+                            $idx = $oldReleaseNotes.IndexOf("`n## ")
+                            if ($idx -gt 0) {
+                                $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
                             }
                             else {
-                                $idx = $oldReleaseNotes.IndexOf("`n## ")
-                                if ($idx -gt 0) {
-                                    $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
-                                }
-                                else {
-                                    $oldReleaseNotes = ""
-                                }
+                                $oldReleaseNotes = ""
                             }
                         }
                     }
-                    Write-Host "Update $($_.DstFile)"
-                    $_.Content | Set-ContentLF -Path $_.DstFile
                 }
-                if ($releaseNotes -eq "") {
-                    $releaseNotes = "No release notes available!"
-                }
-                $removeFiles | ForEach-Object {
-                    Write-Host "Remove $_"
-                    Remove-Item (Join-Path (Get-Location).Path $_) -Force
-                }
-
-                # Add changes files to git changeset
-                invoke-git add *
-
-                Write-Host "ReleaseNotes:"
-                Write-Host $releaseNotes
-
-                $status = invoke-git -returnValue status --porcelain=v1
-                if ($status) {
-                    $message = "Updated AL-Go System Files"
-
-                    invoke-git commit --allow-empty -m "$message"
-
-                    if ($directcommit) {
-                        invoke-git push $url
-                    }
-                    else {
-                        invoke-git push -u $url $branch
-                        invoke-gh pr create --fill --head $branch --base $updateBranch --repo $env:GITHUB_REPOSITORY --body "$releaseNotes"
-                    }
-                }
-                else {
-                    Write-Host "No changes detected in files"
-                }
+                Write-Host "Update $($_.DstFile)"
+                $_.Content | Set-ContentLF -Path $_.DstFile
             }
-            catch {
-                if ($directCommit) {
-                    throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-                }
-                else {
-                    throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-                }
+            if ($releaseNotes -eq "") {
+                $releaseNotes = "No release notes available!"
             }
+            $removeFiles | ForEach-Object {
+                Write-Host "Remove $_"
+                Remove-Item (Join-Path (Get-Location).Path $_) -Force
+            }
+
+            Write-Host "ReleaseNotes:"
+            Write-Host $releaseNotes
+
+            CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Update AL-Go System Files" -branch $branch
         }
-        else {
-            OutputWarning "No updates available for AL-Go for GitHub."
+        catch {
+            if ($directCommit) {
+                throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            }
+            else {
+                throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            }
         }
     }
+    else {
+        OutputWarning "No updates available for AL-Go for GitHub."
+    }
+}

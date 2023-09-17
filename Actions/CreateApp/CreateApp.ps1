@@ -31,12 +31,7 @@ $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToSt
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $branch = ''
-    if (!$directcommit) {
-        # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
-        $branch = "create-$($type.replace(' ','-').ToLowerInvariant())/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-pte/main/210101120000
-    }
-    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix "create-$($type.replace(' ','-').ToLowerInvariant())"
     $baseFolder = (Get-Location).Path
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 

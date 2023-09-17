@@ -82,12 +82,7 @@ $telemetryScope = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $branch = ''
-    if (!$directcommit) {
-        # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
-        $branch = "add-existing-app/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. add-existing-app/main/210101120000
-    }
-    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'add-existing-app'
     $baseFolder = (Get-Location).path
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 

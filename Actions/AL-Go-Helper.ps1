@@ -1248,7 +1248,9 @@ function CloneIntoNewFolder {
     Param(
         [string] $actor,
         [string] $token,
-        [string] $branch
+        [string] $updateBranch = $ENV:GITHUB_REF_NAME,
+        [string] $newBranchPrefix = '',
+        [bool] $directCommit
     )
 
     $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -1270,13 +1272,16 @@ function CloneIntoNewFolder {
     invoke-git clone $serverUrl
 
     Set-Location *
-    invoke-git checkout $ENV:GITHUB_REF_NAME
+    invoke-git checkout $updateBranch
 
-    if ($branch) {
+    $branch = ''
+    if ($directCommit) {
+        $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
         invoke-git checkout -b $branch
     }
 
     $serverUrl
+    $branch
 }
 
 function CommitFromNewFolder {
@@ -1287,21 +1292,27 @@ function CommitFromNewFolder {
     )
 
     invoke-git add *
-    if ($commitMessage.Length -gt 250) {
-        $commitMessage = "$($commitMessage.Substring(0,250))...)"
-    }
-    invoke-git commit --allow-empty -m "'$commitMessage'"
-    if ($branch) {
-        invoke-git push -u $serverUrl $branch
-        try {
-            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+    $status = invoke-git -returnValue status --porcelain=v1
+    if ($status) {
+        if ($commitMessage.Length -gt 250) {
+            $commitMessage = "$($commitMessage.Substring(0,250))...)"
         }
-        catch {
-            OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch.")
+        invoke-git commit --allow-empty -m "'$commitMessage'"
+        if ($branch) {
+            invoke-git push -u $serverUrl $branch
+            try {
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+            }
+            catch {
+                OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch.")
+            }
+        }
+        else {
+            invoke-git push $serverUrl
         }
     }
     else {
-        invoke-git push $serverUrl
+        Write-Host "No changes detected in files"
     }
 }
 

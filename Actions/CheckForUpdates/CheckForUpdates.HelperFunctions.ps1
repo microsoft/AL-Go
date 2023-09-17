@@ -211,3 +211,43 @@ function GetWorkflowContentWithChangesFromSettings {
     # combine all the yaml file lines into a single string with LF line endings
     $yaml.content -join "`n"
 }
+
+# Using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+function ReplaceOwnerRepoAndBranch {
+    Param(
+        [ref] $srcContent,
+        [string] $templateOwner,
+        [string] $templateBranch
+    )
+
+    $lines = $srcContent.Value.Split("`n")
+
+    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
+    $originalOwnerAndRepo = @{
+        "actionsRepo" = "microsoft/AL-Go-Actions"
+        "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
+        "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
+    }
+    # Original branch is always main
+    $originalBranch = "main"
+
+    # Modify the file to use repository names based on whether or not we are using the direct AL-Go repo
+    $templateRepos = @{
+        "actionsRepo" = "AL-Go/Actions"
+        "perTenantExtensionRepo" = "AL-Go"
+        "appSourceAppRepo" = "AL-Go"
+    }
+
+    # Replace URL's to actions repository first
+    $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
+    $replace = "`${1}https://raw.githubusercontent.com/$($templateOwner)/AL-Go/$($templateBranch)/Actions`${2}"
+    $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+
+    # Replace the owner and repo names in the workflow
+    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+        $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
+        $replace = "`${1}$($templateOwner)/$($templateRepos."$_")`${2}$($templateBranch)`${3}"
+        $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+    }
+    $srcContent.Value = $lines -join "`n"
+}
