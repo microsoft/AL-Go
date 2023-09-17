@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       shell:
-        description: Shell in which you want to run the action (powershell or pwsh)
+        description: Shell in which you want to run the action (powershell or pwsh)!!!
         required: false
         default: powershell
         type: string
