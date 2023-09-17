@@ -1275,7 +1275,7 @@ function CloneIntoNewFolder {
     invoke-git checkout $updateBranch
 
     $branch = ''
-    if ($directCommit) {
+    if (!$directCommit) {
         $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
         invoke-git checkout -b $branch
     }
