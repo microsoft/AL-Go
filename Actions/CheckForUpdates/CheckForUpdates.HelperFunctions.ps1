@@ -271,6 +271,9 @@ function GetSrcFolder {
         [string] $templateFolder,
         [string] $srcPath
     )
+    Write-Host $templateUrl
+    Write-Host $templateFolder
+    Write-Host $srcPath
     if (!$templateUrl) {
         return ''
     }
@@ -286,7 +289,7 @@ function GetSrcFolder {
                 throw "Unknown repository type"
             }
         }
-        $path = Join-Path "Templates/$typePath/$templateFolder" "*/$srcPath"
+        $path = Join-Path $templateFolder "*/Templates/$typePath/$srcPath"
     }
     else {
         $path = Join-Path $templateFolder "*/$srcPath"
