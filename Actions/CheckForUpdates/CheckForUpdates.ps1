@@ -78,6 +78,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 
 $realTemplateFolder = $null
 $templateFolder = DownloadTemplateRepository -headers $headers -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+Write-Host $templateFolder
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
@@ -99,6 +100,7 @@ if (IsDirectALGo -templateUrl $templateUrl) {
             }
             # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
             $realTemplateFolder = DownloadTemplateRepository -headers $headers -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
+            Write-Host $realTemplateFolder
             
             # Set TemplateBranch and TemplateOwner
             # Keep TemplateUrl and TemplateSha pointing to the indirect template repository
@@ -174,12 +176,16 @@ foreach($checkfile in $checkfiles) {
                 $srcFile = $_.FullName
                 $realSrcFile = $srcFile
                 $isFileDirectALGo = IsDirectALGo -templateUrl $templateUrl
+                Write-Host "IsDirectALGo: $isFileDirectALGo"
+                Write-Host "SrcFolder: $srcFolder"
                 if ($realSrcFolder) {
                     # if SrcFile is an indirect template repository, we need to find the file in the "real" template repository
                     $fname = Join-Path $realSrcFolder (Resolve-Path $srcFile -Relative)
+                    Write-Host $fname
                     if (Test-Path -Path $fname -PathType Leaf) {
                         $realSrcFile = $fname
                         $isFileDirectALGo = IsDirectALGo -templateUrl $tealTemplateUrl
+                        Write-Host "IsDirectALGo: $isFileDirectALGo"
                     }
                 }
                 if ($type -eq "workflow") {
