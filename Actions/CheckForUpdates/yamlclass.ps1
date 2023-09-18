@@ -380,6 +380,8 @@ class Yaml {
     }
 
     static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [hashtable] $anchors) {
+        Write-Host $srcContent.Value
+        Write-Host $yamlFile
         $srcYaml = [Yaml]::new($srcContent.Value)
         try {
             $yaml = [Yaml]::Load($yamlFile)

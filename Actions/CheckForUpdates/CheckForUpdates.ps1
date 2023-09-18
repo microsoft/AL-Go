@@ -207,7 +207,7 @@ foreach($checkfile in $checkfiles) {
                 if ($type -eq 'workflow' -and $realSrcFile -ne $srcFile) {
                     # Apply customizations from indirect template repository
                     Write-Host "Apply customizations from indirect template repository: $srcFile"
-                    [Yaml]::ApplyCustomizations([ref] $srcContent,$srcFile, $anchors)
+                    [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $anchors)
                 }
 
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
