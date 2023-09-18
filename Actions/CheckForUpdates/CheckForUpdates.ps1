@@ -165,7 +165,9 @@ foreach($checkfile in $checkfiles) {
     $dstPath = $checkfile.dstPath
     $dstFolder = Join-Path $baseFolder $dstPath
     $srcFolder = GetSrcFolder -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
-    $realSrcFolder = GetSrcFolder -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
+    if ($realTemplateFolder) {
+        $realSrcFolder = GetSrcFolder -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
+    }
     if ($srcFolder) {
         Push-Location -Path $srcFolder
         try {
