@@ -131,11 +131,15 @@ class Yaml {
     # Example:
     # GetNextLevel("jobs:/") returns @("Initialization:","CheckForUpdates:","Build:","Deploy:",...)
     [string[]] GetNextLevel([string] $line) {
+        Write-Host "GetNextLevel $line"
         [int]$start = 0
         [int]$count = 0
         [Yaml] $yaml = $this
         if ($line) {
-            [Yaml] $yaml = $this.Get($line, [ref] $start, [ref] $count)
+            $yaml = $this.Get($line, [ref] $start, [ref] $count)
+            Write-Host $start
+            Write-Host $count
+            Write-Host $yaml.content
         }
         return $yaml.content | Where-Object { $_ -and -not $_.StartsWith(' ') }
     }
