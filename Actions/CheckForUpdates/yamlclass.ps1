@@ -135,6 +135,7 @@ class Yaml {
         [int]$start = 0
         [int]$count = 0
         [Yaml] $yaml = $this
+        Write-Host $yaml.content
         if ($line) {
             $yaml = $this.Get($line, [ref] $start, [ref] $count)
             Write-Host $start
