@@ -22,6 +22,18 @@
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
+$anchors = @{
+    "_BuildALGoProject.yaml" = @{
+        "BuildALGoProject" = @(
+            @{ "Step" = 'Read settings'; "Before" = $false }
+            @{ "Step" = 'Read secrets'; "Before" = $false }
+            @{ "Step" = 'Build'; "Before" = $true }
+            @{ "Step" = 'Build'; "Before" = $false }
+            @{ "Step" = 'Cleanup'; "Before" = $true }
+        )
+    }
+}
+
 if ($update) {
     if (-not $token) {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
@@ -72,22 +84,38 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
     $downloadLatest = $true
 }
 
-$tempName = DownloadTemplateRepository -headers $headers -templateUrl ([ref]$templateUrl) -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+$realTemplateFolder = $null
+$templateFolder = DownloadTemplateRepository -headers $headers -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
 
-if (!$directALGo) {
-    $ALGoSettingsFile = Join-Path $tempName "*/.github/AL-Go-Settings.json"
+if (IsDirectALGo -templateUrl $templateUrl) {
+    $ALGoSettingsFile = Join-Path $templateFolder "*/.github/AL-Go-Settings.json"
     if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
-            # Template repository has a different template url than the one we are using
-            # This means that the template repository is another AL-Go repository and not a template repository
-            throw "The template repository has a different template url than the one we are using."
+            # The template repository is a url to another AL-Go repository (an indirect template repository)
+            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the indirect template reposotiry points to the "real" template repository
+            # Copy files and folders from the indirect template repository, but grab the unmodified file from the "real" template repository if it exists and apply customizations
+            $realTemplateUrl = $templateRepoSettings.templateUrl
+            if ($templateRepoSettings.Keys -contains "templateSha") {
+                $realTemplateSha = $templateRepoSettings.templateSha
+            }
+            else {
+                $realTemplateSha = ""
+            }
+            # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
+            $realTemplateFolder = DownloadTemplateRepository -headers $headers -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
+            
+            # Set TemplateBranch and TemplateOwner
+            # Keep TemplateUrl and TemplateSha pointing to the indirect template repository
+            $templateBranch = $realTemplateUrl.Split('@')[1]
+            $templateOwner = $realTemplateUrl.Split('/')[3]
         }
     }
 }
+
 
 # CheckFiles is an array of hashtables with the following properties:
 # dstPath: The path to the file in the current repository
@@ -98,20 +126,9 @@ if (!$directALGo) {
 # - All files in .github/workflows
 # - All files in .github that ends with .copy.md
 # - All PowerShell scripts in .AL-Go folders (all projects)
-$srcGitHubPath = '.github'
-$srcALGoPath = '.AL-Go'
-if ($directALGo) {
-    # When using a direct link to an AL-Go repository, the files are in a subfolder of the template repository
-    $typePath = $repoSettings.type
-    if ($typePath -eq "PTE") {
-        $typePath = "Per Tenant Extension"
-    }
-    $srcGitHubPath = Join-Path "Templates/$typePath" $srcGitHubPath
-    $srcALGoPath = Join-Path "Templates/$typePath" $srcALGoPath
-}
 $checkfiles = @(
-    @{ "dstPath" = Join-Path ".github" "workflows"; "srcPath" = Join-Path $srcGitHubPath 'workflows'; "pattern" = "*"; "type" = "workflow" },
-    @{ "dstPath" = ".github"; "srcPath" = $srcGitHubPath; "pattern" = "*.copy.md"; "type" = "releasenotes" }
+    @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
+    @{ 'dstPath' = '.github'; 'srcPath' = '.AL-Go'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
 )
 
 # Get the list of projects in the current repository
@@ -120,7 +137,7 @@ $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSet
 Write-Host "Projects found: $($projects.Count)"
 foreach($project in $projects) {
     Write-Host "- $project"
-    $checkfiles += @(@{ "dstPath" = Join-Path $project ".AL-Go"; "srcPath" = $srcALGoPath; "pattern" = "*.ps1"; "type" = "script" })
+    $checkfiles += @(@{ 'dstPath' = Join-Path $project '.AL-Go'; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' })
 }
 
 # $updateFiles will hold an array of files, which needs to be updated
@@ -147,93 +164,79 @@ foreach($checkfile in $checkfiles) {
     $srcPath = $checkfile.srcPath
     $dstPath = $checkfile.dstPath
     $dstFolder = Join-Path $baseFolder $dstPath
-    $srcFolder = Resolve-Path -path (Join-Path $tempName "*\$($srcPath)") -ErrorAction SilentlyContinue
+    $srcFolder = GetSrcFolder -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
+    $realSrcFolder = GetSrcFolder -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
     if ($srcFolder) {
-        # Loop through all files in the template repository matching the pattern
-        Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
-            # Read the template file and modify it based on the settings
-            # Compare the modified file with the file in the current repository
-            $srcFile = $_.FullName
-            $fileName = $_.Name
-            Write-Host "- $filename"
-            if ($type -eq "workflow") {
-                # for workflow files, we might need to modify the file based on the settings
-                $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
-            }
-            else {
-                # For non-workflow files, just read the file content
-                $srcContent = Get-ContentLF -Path $srcFile
-            }
-
-            # Replace static placeholders
-            $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
-
-            if ($directALGo) {
-                # If we are using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
-                ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
-            }
-
-            $dstFile = Join-Path $dstFolder $fileName
-            $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
-            if ($unusedALGoSystemFiles -contains $fileName) {
-                # file is not used by ALGo, remove it if it exists
-                # do not add it to $updateFiles if it does not exist
-                if ($dstFileExists) {
-                    $removeFiles += @(Join-Path $dstPath $filename)
+        Push-Location -Path $srcFolder
+        try {
+            # Loop through all files in the template repository matching the pattern
+            Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
+                # Read the template file and modify it based on the settings
+                # Compare the modified file with the file in the current repository
+                $dstFile = Join-Path $dstFolder $fileName
+                $srcFile = $_.FullName
+                $realSrcFile = $srcFile
+                $isFileDirectALGo = IsDirectALGo -templateUrl $templateUrl
+                if ($realSrcFolder) {
+                    $fname = Join-Path $realSrcFolder (Resolve-Path $srcFile -Relative)
+                    if (Test-Path -Path $fname -PathType Leaf) {
+                        $realSrcFile = $fname
+                        $isFileDirectALGo = IsDirectALGo -templateUrl $tealTemplateUrl
+                    }
                 }
-            }
-            elseif ($dstFileExists) {
-                if ($type -eq 'workflow') {
-                    $yaml = [Yaml]::new($srcContent.Split("`n"))
-                    try {
-                        $dstYaml = [Yaml]::Load($dstFile)
+                $fileName = $_.Name
+                Write-Host "- $filename"
+                if ($type -eq "workflow") {
+                    # for workflow files, we might need to modify the file based on the settings
+                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $realSrcFile -repoSettings $repoSettings -depth $depth
+                }
+                else {
+                    # For non-workflow files, just read the file content
+                    $srcContent = Get-ContentLF -Path $srcFile
+                }
+
+                # Replace static placeholders
+                $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
+
+                if ($isFileDirectALGo) {
+                    # If we are using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+                    ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
+                }
+
+                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
+                if ($unusedALGoSystemFiles -contains $fileName) {
+                    # file is not used by ALGo, remove it if it exists
+                    # do not add it to $updateFiles if it does not exist
+                    if ($dstFileExists) {
+                        $removeFiles += @(Join-Path $dstPath $filename)
                     }
-                    catch {
-                        $dstYaml = $null
-                    }
-                    if ($dstYaml) {
-                        $anchors = @{
-                            "_BuildALGoProject.yaml" = @{
-                                "BuildALGoProject" = @(
-                                    @{ "Step" = 'Read settings'; "Before" = $false }
-                                    @{ "Step" = 'Read secrets'; "Before" = $false }
-                                    @{ "Step" = 'Build'; "Before" = $true }
-                                    @{ "Step" = 'Build'; "Before" = $false }
-                                    @{ "Step" = 'Cleanup'; "Before" = $true }
-                                )
-                            }
+                }
+                elseif ($dstFileExists) {
+                    if ($type -eq 'workflow') {
+                        $yaml = [Yaml]::new($srcContent.Split("`n"))
+                        if ($realSrcFile -ne $srcFile) {
+                            # Apply customizations from indirect template repository
+                            $yaml.ApplyCustomizationsFrom($srcFile, $anchors)
                         }
-                        if ($anchors.ContainsKey($filename)) {
-                            $fileAnchors = $anchors."$filename"
-                            foreach($job in $fileAnchors.Keys) {
-                                # Locate custom steps in destination YAML
-                                $customSteps = $dstYaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
-                                if ($customSteps) {
-                                    $yaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
-                                }
-                            }
-                        }
-                        # Locate custom jobs in destination YAML
-                        $customJobs = @($dstYaml.GetCustomJobsFromYaml('CustomJob*'))
-                        if ($customJobs) {
-                            # Add custom jobs to template YAML
-                            $yaml.AddCustomJobsToYaml($customJobs)
-                        }
+                        $yaml.ApplyCustomizationsFrom($dstFile, $anchors)
                         $srcContent = $yaml.content -join "`n"
                     }
+                    # file exists, compare and add to $updateFiles if different
+                    $dstContent = Get-ContentLF -Path $dstFile
+                    if ($dstContent -cne $srcContent) {
+                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
+                        $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+                    }
                 }
-                # file exists, compare and add to $updateFiles if different
-                $dstContent = Get-ContentLF -Path $dstFile
-                if ($dstContent -cne $srcContent) {
-                    Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
+                else {
+                    # new file, add to $updateFiles
+                    Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
                     $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }
-            else {
-                # new file, add to $updateFiles
-                Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
-                $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
-            }
+        }
+        finally {
+            Pop-Location
         }
     }
 }

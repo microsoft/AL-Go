@@ -1,16 +1,16 @@
 function DownloadTemplateRepository {
     Param(
         [hashtable] $headers,
-        [ref] $templateUrl,
+        [string] $templateUrl,
         [ref] $templateSha,
         [bool] $downloadLatest
     )
 
     # Construct API URL
-    $apiUrl = $templateUrl.Value.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
-    $branch = $templateUrl.Value.Split('@')[1]
+    $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
+    $branch = $templateUrl.Split('@')[1]
 
-    Write-Host "TemplateUrl: $($templateUrl.Value)"
+    Write-Host "TemplateUrl: $templateUrl"
     Write-Host "TemplateSha: $($templateSha.Value)"
     Write-Host "DownloadLatest: $downloadLatest"
 
@@ -19,10 +19,10 @@ function DownloadTemplateRepository {
         $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
         $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
         if (!$branchInfo) {
-            throw "$($templateUrl.Value) doesn't exist"
+            throw "$templateUrl doesn't exist"
         }
         $templateSha.Value = $branchInfo.commit.sha
-        Write-Host "Latest SHA for $($templateUrl.Value): $($templateSha.Value)"
+        Write-Host "Latest SHA for $($templateUrl): $($templateSha.Value)"
     }
     $archiveUrl = "$apiUrl/zipball/$($templateSha.Value)"
     Write-Host "Using ArchiveUrl: $archiveUrl"
@@ -250,4 +250,46 @@ function ReplaceOwnerRepoAndBranch {
         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
     }
     $srcContent.Value = $lines -join "`n"
+}
+
+function IsDirectALGo {
+    param (
+        [string] $templateUrl
+    )
+    $directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
+    if ($directALGo) {
+        if ($templateUrl -like 'https://github.com/microsoft/AL-Go@*') {
+            throw "You cannot use microsoft/AL-Go as a template repository. Please use a fork of AL-Go instead."
+        }
+    }
+    return $directALGo
+}
+
+function GetSrcFolder {
+    Param(
+        [string] $templateUrl,
+        [string] $templateFolder,
+        [string] $srcPath
+    )
+    if (!$templateUrl) {
+        return ''
+    }
+    if (IsDirectALGo -templateUrl $templateUrl) {
+        switch ($repoSettings.type) {
+            "PTE" {
+                $typePath = "Per Tenant Extension"
+            }
+            "AppSource App" {
+                $typePath = "AppSource App"
+            }
+            default {
+                throw "Unknown repository type"
+            }
+        }
+        $path = Join-Path "Templates/$typePath/$templateFolder" "*/$srcPath"
+    }
+    else {
+        $path = Join-Path $templateFolder "*/$srcPath"
+    }
+    Resolve-Path -Path $path -ErrorAction SilentlyContinue
 }

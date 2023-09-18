@@ -375,4 +375,30 @@ class Yaml {
             $this.AddCustomStepsToAnchor($job, $customSteps, $anchor.Step, $anchor.Before)
         }
     }
+
+    [void] ApplyCustomizationsFrom([string] $yamlFile, [hashtable] $anchors) {
+        try {
+            $yaml = [Yaml]::Load($yamlFile)
+        }
+        catch {
+            return
+        }
+        $filename = [System.IO.Path]::GetFileName($yamlFile)
+        if ($anchors.ContainsKey($filename)) {
+            $fileAnchors = $anchors."$filename"
+            foreach($job in $fileAnchors.Keys) {
+                # Locate custom steps in destination YAML
+                $customSteps = $yaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
+                if ($customSteps) {
+                    $this.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
+                }
+            }
+        }
+        # Locate custom jobs in destination YAML
+        $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
+        if ($customJobs) {
+            # Add custom jobs to template YAML
+            $this.AddCustomJobsToYaml($customJobs)
+        }
+    }
 }
