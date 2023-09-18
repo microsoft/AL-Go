@@ -296,3 +296,29 @@ function GetSrcFolder {
     }
     Resolve-Path -Path $path -ErrorAction SilentlyContinue
 }
+
+function UpdateSettingsFile {
+    Param(
+        [string] $settingsFile,
+        [hashtable] $updateSettings
+    )
+
+    # Update Repo Settings file with the template URL
+    if (Test-Path $settingsFile) {
+        $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+    }
+    else {
+        $settings = [PSCustomObject]@{}
+    }
+    foreach($key in $updateSettings.Keys) {
+        if ($settings.PSObject.Properties.Name -eq $key) {
+            $settings."$key" = $updateSettings."$key"
+        }
+        else {
+            # Add the property if it doesn't exist
+            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
+        }
+    }
+    # Save the file with LF line endings and UTF8 encoding
+    $settings | Set-JsonContentLF -path $settingsFile
+}

@@ -78,7 +78,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 
 $realTemplateFolder = $null
 $templateFolder = DownloadTemplateRepository -headers $headers -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
-Write-Host $templateFolder
+Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
@@ -91,6 +91,7 @@ if (-not (IsDirectALGo -templateUrl $templateUrl)) {
             # The template repository is a url to another AL-Go repository (an indirect template repository)
             # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the indirect template reposotiry points to the "real" template repository
             # Copy files and folders from the indirect template repository, but grab the unmodified file from the "real" template repository if it exists and apply customizations
+            Write-Host "Indirect AL-Go template repository detected, downloading the 'real' template repository"
             $realTemplateUrl = $templateRepoSettings.templateUrl
             if ($templateRepoSettings.Keys -contains "templateSha") {
                 $realTemplateSha = $templateRepoSettings.templateSha
@@ -100,7 +101,7 @@ if (-not (IsDirectALGo -templateUrl $templateUrl)) {
             }
             # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
             $realTemplateFolder = DownloadTemplateRepository -headers $headers -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
-            Write-Host $realTemplateFolder
+            Write-Host "Real Template Folder: $realTemplateFolder"
             
             # Set TemplateBranch and TemplateOwner
             # Keep TemplateUrl and TemplateSha pointing to the indirect template repository
@@ -176,16 +177,14 @@ foreach($checkfile in $checkfiles) {
                 $srcFile = $_.FullName
                 $realSrcFile = $srcFile
                 $isFileDirectALGo = IsDirectALGo -templateUrl $templateUrl
-                Write-Host "IsDirectALGo: $isFileDirectALGo"
                 Write-Host "SrcFolder: $srcFolder"
                 if ($realSrcFolder) {
                     # if SrcFile is an indirect template repository, we need to find the file in the "real" template repository
                     $fname = Join-Path $realSrcFolder (Resolve-Path $srcFile -Relative)
-                    Write-Host $fname
                     if (Test-Path -Path $fname -PathType Leaf) {
+                        Write-Host "File is available in the 'real' template repository"
                         $realSrcFile = $fname
                         $isFileDirectALGo = IsDirectALGo -templateUrl $realTemplateUrl
-                        Write-Host "IsDirectALGo: $isFileDirectALGo"
                     }
                 }
                 if ($type -eq "workflow") {
@@ -205,6 +204,12 @@ foreach($checkfile in $checkfiles) {
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
+                if ($type -eq 'workflow' -and $realSrcFile -ne $srcFile) {
+                    # Apply customizations from indirect template repository
+                    Write-Host "Apply customizations from indirect template repository: $srcFile"
+                    [Yaml]::ApplyCustomizations([ref] $srcContent,$srcFile, $anchors)
+                }
+
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 if ($unusedALGoSystemFiles -contains $fileName) {
                     # file is not used by ALGo, remove it if it exists
@@ -215,15 +220,8 @@ foreach($checkfile in $checkfiles) {
                 }
                 elseif ($dstFileExists) {
                     if ($type -eq 'workflow') {
-                        $yaml = [Yaml]::new($srcContent.Split("`n"))
-                        if ($realSrcFile -ne $srcFile) {
-                            # Apply customizations from indirect template repository
-                            Write-Host "APPLY CUSTOMIZATIONS FROM INDIRECT TEMPLATE REPOSITORY $srcFile"
-                            $yaml.ApplyCustomizationsFrom($srcFile, $anchors)
-                        }
-                        Write-Host "APPLY MY CUSTOMIZATIONS $dstFile"
-                        $yaml.ApplyCustomizationsFrom($dstFile, $anchors)
-                        $srcContent = $yaml.content -join "`n"
+                        Write-Host "Apply customizations from my repository: $dstFile"
+                        [Yaml]::ApplyCustomizations([ref] $srcContent,$dstFile, $anchors)
                     }
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
@@ -264,30 +262,7 @@ else {
 
             invoke-git status
 
-            # Update Repo Settings file with the template URL
-            $RepoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
-            if (Test-Path $RepoSettingsFile) {
-                $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
-            }
-            else {
-                $repoSettings = [PSCustomObject]@{}
-            }
-            if ($repoSettings.PSObject.Properties.Name -eq "templateUrl") {
-                $repoSettings.templateUrl = $templateUrl
-            }
-            else {
-                # Add the property if it doesn't exist
-                $repoSettings | Add-Member -MemberType NoteProperty -Name "templateUrl" -Value $templateUrl
-            }
-            if ($repoSettings.PSObject.Properties.Name -eq "templateSha") {
-                $repoSettings.templateSha = $templateSha
-            }
-            else {
-                # Add the property if it doesn't exist
-                $repoSettings | Add-Member -MemberType NoteProperty -Name "templateSha" -Value $templateSha
-            }
-            # Save the file with LF line endings and UTF8 encoding
-            $repoSettings | Set-JsonContentLF -path $repoSettingsFile
+            UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
 
             # Update the files
             # Calculate the release notes, while updating

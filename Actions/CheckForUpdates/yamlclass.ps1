@@ -379,7 +379,8 @@ class Yaml {
         }
     }
 
-    [void] ApplyCustomizationsFrom([string] $yamlFile, [hashtable] $anchors) {
+    static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [hashtable] $anchors) {
+        $srcYaml = [Yaml]::new($srcContent.Value)
         try {
             $yaml = [Yaml]::Load($yamlFile)
         }
@@ -393,7 +394,7 @@ class Yaml {
                 # Locate custom steps in destination YAML
                 $customSteps = $yaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
                 if ($customSteps) {
-                    $this.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
+                    $srcYaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
                 }
             }
         }
@@ -401,7 +402,8 @@ class Yaml {
         $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
         if ($customJobs) {
             # Add custom jobs to template YAML
-            $this.AddCustomJobsToYaml($customJobs)
+            $srcYaml.AddCustomJobsToYaml($customJobs)
         }
+        $srcContent.Value = $srcYaml.content -join "`n"
     }
 }
