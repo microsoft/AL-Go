@@ -212,8 +212,10 @@ foreach($checkfile in $checkfiles) {
                         $yaml = [Yaml]::new($srcContent.Split("`n"))
                         if ($realSrcFile -ne $srcFile) {
                             # Apply customizations from indirect template repository
+                            Write-Host "APPLY CUSTOMIZATIONS FROM INDIRECT TEMPLATE REPOSITORY $srcFile"
                             $yaml.ApplyCustomizationsFrom($srcFile, $anchors)
                         }
+                        Write-Host "APPLY MY CUSTOMIZATIONS $dstFile"
                         $yaml.ApplyCustomizationsFrom($dstFile, $anchors)
                         $srcContent = $yaml.content -join "`n"
                     }

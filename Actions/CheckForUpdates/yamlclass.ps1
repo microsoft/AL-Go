@@ -180,9 +180,6 @@ class Yaml {
             else {
                 $yamlContent = $content
             }
-            Write-Host "REPLACE--------------------"
-            Write-Host "$start $count"
-            $yamlContent | Out-Host
             $this.Remove($start, $count)
             $this.Insert($start, $yamlContent)
         }
