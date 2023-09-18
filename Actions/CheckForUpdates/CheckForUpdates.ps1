@@ -184,7 +184,7 @@ foreach($checkfile in $checkfiles) {
                     Write-Host $fname
                     if (Test-Path -Path $fname -PathType Leaf) {
                         $realSrcFile = $fname
-                        $isFileDirectALGo = IsDirectALGo -templateUrl $tealTemplateUrl
+                        $isFileDirectALGo = IsDirectALGo -templateUrl $realTemplateUrl
                         Write-Host "IsDirectALGo: $isFileDirectALGo"
                     }
                 }
