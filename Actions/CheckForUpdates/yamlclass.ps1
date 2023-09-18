@@ -266,6 +266,9 @@ class Yaml {
     # The function will add the job CustomJob1 to the Yaml file and update the Needs section of Initialization and Build
     # The function will not add the job CustomJob1 if it already exists
     [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
+        Write-Host "-------------------------"
+        $this.content | Out-Host
+        Write-Host "-------------------------"
         $existingJobs = $this.GetNextLevel('jobs:/').Trim(':')
         Write-Host "Adding New Jobs"
         foreach($customJob in $customJobs) {
