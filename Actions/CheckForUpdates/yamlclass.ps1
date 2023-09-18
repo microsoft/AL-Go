@@ -397,9 +397,11 @@ class Yaml {
                 $customSteps = $yaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
                 if ($customSteps) {
                     $srcYaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
+                    $srcYaml.content | Out-Host
                 }
             }
         }
+        $srcYaml.content | Out-Host
         # Locate custom jobs in destination YAML
         $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
         if ($customJobs) {
