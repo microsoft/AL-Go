@@ -175,19 +175,20 @@ foreach($checkfile in $checkfiles) {
             Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
                 # Read the template file and modify it based on the settings
                 # Compare the modified file with the file in the current repository
+                $fileName = $_.Name
+                Write-Host "- $filename"
                 $dstFile = Join-Path $dstFolder $fileName
                 $srcFile = $_.FullName
                 $realSrcFile = $srcFile
                 $isFileDirectALGo = IsDirectALGo -templateUrl $templateUrl
                 if ($realSrcFolder) {
+                    # if SrcFile is an indirect template repository, we need to find the file in the "real" template repository
                     $fname = Join-Path $realSrcFolder (Resolve-Path $srcFile -Relative)
                     if (Test-Path -Path $fname -PathType Leaf) {
                         $realSrcFile = $fname
                         $isFileDirectALGo = IsDirectALGo -templateUrl $tealTemplateUrl
                     }
                 }
-                $fileName = $_.Name
-                Write-Host "- $filename"
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
                     $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $realSrcFile -repoSettings $repoSettings -depth $depth
