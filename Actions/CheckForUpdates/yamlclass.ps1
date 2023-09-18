@@ -240,9 +240,9 @@ class Yaml {
             foreach($customJob in $customJobs) {
                 Write-Host "- $customJob"
                 $jobsWithDependency = $nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
-                # If a Build Job has a dependency on this CustomJob, add it to all Build Jobs
+                # If any Build Job has a dependency on this CustomJob, add will be added to all build jobs later
                 if ($jobsWithDependency | Where-Object { $_ -like 'Build*' }) {
-                    $jobsWithDependency = @($jobsWithDependency | Where-Object { $_ -notlike 'Build*' }) + @($nativeJobs | Where-Object { $_ -like 'Build*' })
+                    $jobsWithDependency = @($jobsWithDependency | Where-Object { $_ -notlike 'Build*' }) + @('Build')
                 }
                 if ($jobsWithDependency) {
                     Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
@@ -268,9 +268,15 @@ class Yaml {
                 Write-Host "Job $($customJob.Name) already exists"
                 continue
             }
-            Write-Host "$($customJob.Name), Dependencies from $($customJob.NeedsThis -join ',')"
+            Write-Host "$($customJob.Name) has dependencies from $($customJob.NeedsThis -join ',')"
             foreach($needsthis in $customJob.NeedsThis) {
-                if ($existingJobs -contains $needsthis) {
+                if ($needsthis -eq 'Build') {
+                    $existingJobs | Where-Object { $_ -like 'Build*'} | ForEach-Object {
+                        # Add dependency to all build jobs
+                        $this.Replace("jobs:/$($_):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob.Name) -join ', ') ]")
+                    }
+                }
+                elseif ($existingJobs -contains $needsthis) {
                     # Add dependency to job
                     $this.Replace("jobs:/$($needsthis):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) -join ', ') ]")
                 }
