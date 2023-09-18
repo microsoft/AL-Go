@@ -131,16 +131,11 @@ class Yaml {
     # Example:
     # GetNextLevel("jobs:/") returns @("Initialization:","CheckForUpdates:","Build:","Deploy:",...)
     [string[]] GetNextLevel([string] $line) {
-        Write-Host "GetNextLevel $line"
         [int]$start = 0
         [int]$count = 0
         [Yaml] $yaml = $this
-        Write-Host $yaml.content
         if ($line) {
             $yaml = $this.Get($line, [ref] $start, [ref] $count)
-            Write-Host $start
-            Write-Host $count
-            Write-Host $yaml.content
         }
         return $yaml.content | Where-Object { $_ -and -not $_.StartsWith(' ') }
     }
@@ -266,9 +261,6 @@ class Yaml {
     # The function will add the job CustomJob1 to the Yaml file and update the Needs section of Initialization and Build
     # The function will not add the job CustomJob1 if it already exists
     [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
-        Write-Host "-------------------------"
-        $this.content | Out-Host
-        Write-Host "-------------------------"
         $existingJobs = $this.GetNextLevel('jobs:/').Trim(':')
         Write-Host "Adding New Jobs"
         foreach($customJob in $customJobs) {
@@ -388,9 +380,7 @@ class Yaml {
     }
 
     static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [hashtable] $anchors) {
-        Write-Host $yamlFile
-        $srcYaml = [Yaml]::new($srcContent.Value)
-        $srcYaml.content | Out-Host
+        $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
         try {
             $yaml = [Yaml]::Load($yamlFile)
         }
@@ -405,11 +395,9 @@ class Yaml {
                 $customSteps = $yaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
                 if ($customSteps) {
                     $srcYaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
-                    $srcYaml.content | Out-Host
                 }
             }
         }
-        $srcYaml.content | Out-Host
         # Locate custom jobs in destination YAML
         $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
         if ($customJobs) {
