@@ -44,7 +44,7 @@ runs:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-        _project: ${{ inputs.projects }}
+        _projects: ${{ inputs.projects }}
         _versionnumber: ${{ inputs.versionnumber }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}

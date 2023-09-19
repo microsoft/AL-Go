@@ -5,9 +5,9 @@
     [string] $token,
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
-    [Parameter(HelpMessage = "Set this input to Y in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $false)]
     [bool] $downloadLatest,
-    [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
+    [Parameter(HelpMessage = "Set this input to true in order to update AL-Go System Files if needed", Mandatory = $false)]
     [bool] $update,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,

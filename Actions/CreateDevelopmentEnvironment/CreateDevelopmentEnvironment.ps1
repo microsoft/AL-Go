@@ -12,7 +12,7 @@ Param(
     [string] $project = '.',
     [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $false)]
     [string] $adminCenterApiCredentials,
-    [Parameter(HelpMessage = "Reuse environment if it exists", Mandatory = $false)]
+    [Parameter(HelpMessage = "Reuse environment if it exists?", Mandatory = $false)]
     [bool] $reUseExistingEnvironment,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
