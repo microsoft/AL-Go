@@ -176,10 +176,12 @@ foreach($checkfile in $checkfiles) {
     if ($srcFolder) {
         Push-Location -Path $srcFolder
         try {
-            if ($srcPath -eq '.AL-Go' -and $realSrcFolder) {
+            if ($srcPath -eq '.AL-Go' -and $type -eq "script" -and $realSrcFolder) {
                 Write-Host "Update Project Settings"
                 # Copy settings from the indirect template repository (if the setting doesn't exist in the project folder)
-                UpdateSettingsFile -settingsFile (Join-Path $srcFolder "settings.json") -updateSettings @{} -otherSettings $indirectTemplateProjectSettings
+                Write-Host "$(Join-Path $srcFolder "settings.json")"
+                UpdateSettingsFile -settingsFile (Join-Path $srcFolder "settings.json") -updateSettings @{} -otherSettings $indirectTemplateProjectSettings | out-null
+                Write-Host "done"
             }
             # Loop through all files in the template repository matching the pattern
             Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
