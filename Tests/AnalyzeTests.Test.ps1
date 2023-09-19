@@ -130,9 +130,9 @@ Describe "AnalyzeTests Action Tests" {
         [regex]::Matches($md, '\|Codeunit.\|').Count | should -Be 2
         [regex]::Matches($md, '\|Operation.\|').Count | should -Be 10
         [regex]::Matches($md, '\|N\/A\|').Count | should -Be 4
-        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 4
+        [regex]::Matches($md, "\|$statusOK\|").Count | should -Be 0
         [regex]::Matches($md, "\|$statusWarning\|").Count | should -Be 4
-        [regex]::Matches($md, "\|$statusError\|").Count | should -Be 0
+        [regex]::Matches($md, "\|$statusError\|").Count | should -Be 4
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
         $script:errorCount | Should -be 0
         $script:warningCount | Should -be 2
