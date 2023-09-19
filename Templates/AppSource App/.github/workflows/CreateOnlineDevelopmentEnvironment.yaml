@@ -14,8 +14,8 @@ on:
         required: true
       reUseExistingEnvironment:
         description: Reuse environment if it exists?
-        required: false
-        default: 'false'
+        type: boolean
+        default: false
       directCommit:
         description: Direct Commit?
         type: boolean
@@ -47,6 +47,17 @@ jobs:
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
     steps:
+      - name: Input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          Write-Host "Inputs:"
+          $eventPath = Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          $eventPath.inputs.psObject.Properties | Sort-Object { $_.Name } | ForEach-Object {
+            $property = $_.Name
+            $value = $eventPath.inputs."$property"
+            Write-Host "- $property = '$value'"
+          }
+
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -102,17 +113,6 @@ jobs:
     env:
       deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
     steps:
-      - name: Input
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          Write-Host "Inputs:"
-          $eventPath = Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
-          $eventPath.inputs.psObject.Properties | Sort-Object { $_.Name } | ForEach-Object {
-            $property = $_.Name
-            $value = $eventPath.inputs."$property"
-            Write-Host "- $property = '$value'"
-          }
-
       - name: Checkout
         uses: actions/checkout@v3
 
