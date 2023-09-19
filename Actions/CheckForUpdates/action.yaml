@@ -23,8 +23,7 @@ inputs:
     default: ''
   downloadLatest:
     description: Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)
-    required: false
-    default: 'true'
+    required: true
   update:
     description: Set this input to true in order to update AL-Go System Files if needed
     required: false
