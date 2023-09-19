@@ -112,7 +112,9 @@ if (-not (IsDirectALGo -templateUrl $templateUrl)) {
 
             $indirectTemplateRepoSettings = $templateRepoSettings
             $projectSettingsFile = Join-Path $templateFolder "*/.AL-Go/settings.json"
+            Write-Host "------------ $projectSettingsFile"
             if (Test-Path $projectSettingsFile -PathType Leaf) {
+                Write-Host "read project settings"
                 $indirectTemplateProjectSettings = Get-Content $projectSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
             }
         }
@@ -175,6 +177,7 @@ foreach($checkfile in $checkfiles) {
         Push-Location -Path $srcFolder
         try {
             if ($srcPath -eq '.AL-Go' -and $realSrcFolder) {
+                Write-Host "Update Project Settings"
                 # Copy settings from the indirect template repository (if the setting doesn't exist in the project folder)
                 UpdateSettingsFile -settingsFile (Join-Path $srcFolder "settings.json") -updateSettings @{} -otherSettings $indirectTemplateProjectSettings
             }
