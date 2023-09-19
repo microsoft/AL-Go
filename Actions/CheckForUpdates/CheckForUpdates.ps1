@@ -83,6 +83,8 @@ Write-Host "Template Folder: $templateFolder"
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
 
+$indirectTemplateRepoSettings = @{}
+$indirectTemplateProjectSettings = @{}
 if (-not (IsDirectALGo -templateUrl $templateUrl)) {
     $ALGoSettingsFile = Join-Path $templateFolder "*/.github/AL-Go-Settings.json"
     if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
@@ -107,10 +109,15 @@ if (-not (IsDirectALGo -templateUrl $templateUrl)) {
             # Keep TemplateUrl and TemplateSha pointing to the indirect template repository
             $templateBranch = $realTemplateUrl.Split('@')[1]
             $templateOwner = $realTemplateUrl.Split('/')[3]
+
+            $indirectTemplateRepoSettings = $templateRepoSettings
+            $projectSettingsFile = Join-Path $templateFolder "*/.AL-Go/settings.json"
+            if (Test-Path $projectSettingsFile -PathType Leaf) {
+                $indirectTemplateProjectSettings = Get-Content $projectSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+            }
         }
     }
 }
-
 
 # CheckFiles is an array of hashtables with the following properties:
 # dstPath: The path to the file in the current repository
@@ -167,6 +174,10 @@ foreach($checkfile in $checkfiles) {
     if ($srcFolder) {
         Push-Location -Path $srcFolder
         try {
+            if ($srcPath -eq '.AL-Go' -and $realSrcFolder) {
+                # Copy settings from the indirect template repository (if the setting doesn't exist in the project folder)
+                UpdateSettingsFile -settingsFile (Join-Path $srcFolder "settings.json") -updateSettings @{} -otherSettings $indirectTemplateProjectSettings
+            }
             # Loop through all files in the template repository matching the pattern
             Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
                 # Read the template file and modify it based on the settings
@@ -243,7 +254,6 @@ foreach($checkfile in $checkfiles) {
     }
 }
 
-$updateSettings = ($repoSettings.templateUrl -ne $templateUrl -or $repoSettings.templateSha -ne $templateSha)
 if (-not $update) {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available
     if (($updateFiles) -or ($removeFiles)) {
@@ -255,69 +265,66 @@ if (-not $update) {
 }
 else {
     # $update set, update the files
-    if ($updateSettings -or ($updateFiles) -or ($removeFiles)) {
-        try {
-            # If $directCommit, then changes are made directly to the default branch
-            $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
+    try {
+        # If $directCommit, then changes are made directly to the default branch
+        $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
 
-            invoke-git status
+        invoke-git status
 
-            UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
+        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha } -otherSettings $indirectTemplateRepoSettings
 
-            # Update the files
-            # Calculate the release notes, while updating
-            $releaseNotes = ""
-            $updateFiles | ForEach-Object {
-                # Create the destination folder if it doesn't exist
-                $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
-                if (-not (Test-Path -path $path -PathType Container)) {
-                    New-Item -Path $path -ItemType Directory | Out-Null
-                }
-                if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                    $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
-                    while ($oldReleaseNotes) {
-                        $releaseNotes = $_.Content
-                        if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
-                            $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
-                            $oldReleaseNotes = ""
+        # Update the files
+        # Calculate the release notes, while updating
+        $releaseNotes = ""
+        $updateFiles | ForEach-Object {
+            # Create the destination folder if it doesn't exist
+            $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
+            if (-not (Test-Path -path $path -PathType Container)) {
+                New-Item -Path $path -ItemType Directory | Out-Null
+            }
+            if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
+                $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
+                while ($oldReleaseNotes) {
+                    $releaseNotes = $_.Content
+                    if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
+                        $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
+                        $oldReleaseNotes = ""
+                    }
+                    else {
+                        $idx = $oldReleaseNotes.IndexOf("`n## ")
+                        if ($idx -gt 0) {
+                            $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
                         }
                         else {
-                            $idx = $oldReleaseNotes.IndexOf("`n## ")
-                            if ($idx -gt 0) {
-                                $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
-                            }
-                            else {
-                                $oldReleaseNotes = ""
-                            }
+                            $oldReleaseNotes = ""
                         }
                     }
                 }
-                Write-Host "Update $($_.DstFile)"
-                $_.Content | Set-ContentLF -Path $_.DstFile
             }
-            if ($releaseNotes -eq "") {
-                $releaseNotes = "No release notes available!"
-            }
-            $removeFiles | ForEach-Object {
-                Write-Host "Remove $_"
-                Remove-Item (Join-Path (Get-Location).Path $_) -Force
-            }
-
-            Write-Host "ReleaseNotes:"
-            Write-Host $releaseNotes
-
-            CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Update AL-Go System Files" -branch $branch
+            Write-Host "Update $($_.DstFile)"
+            $_.Content | Set-ContentLF -Path $_.DstFile
         }
-        catch {
-            if ($directCommit) {
-                throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-            }
-            else {
-                throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-            }
+        if ($releaseNotes -eq "") {
+            $releaseNotes = "No release notes available!"
+        }
+        $removeFiles | ForEach-Object {
+            Write-Host "Remove $_"
+            Remove-Item (Join-Path (Get-Location).Path $_) -Force
+        }
+
+        Write-Host "ReleaseNotes:"
+        Write-Host $releaseNotes
+
+        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Update AL-Go System Files" -branch $branch)) {
+            OutputWarning "No updates available for AL-Go for GitHub."
         }
     }
-    else {
-        OutputWarning "No updates available for AL-Go for GitHub."
+    catch {
+        if ($directCommit) {
+            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+        }
+        else {
+            throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+        }
     }
 }

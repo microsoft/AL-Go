@@ -299,7 +299,8 @@ function GetSrcFolder {
 function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
-        [hashtable] $updateSettings
+        [hashtable] $updateSettings,
+        [hashtable] $otherSettings
     )
 
     # Update Repo Settings file with the template URL
@@ -316,6 +317,13 @@ function UpdateSettingsFile {
         else {
             # Add the property if it doesn't exist
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
+        }
+    }
+    # Grab settings from otherSettings if they are not already in settings
+    foreach($key in $otherSettings.Keys) {
+        if ($settings.PSObject.Properties.Name -ne $key) {
+            # Add the property if it doesn't exist
+            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $otherSettings."$key"
         }
     }
     # Save the file with LF line endings and UTF8 encoding

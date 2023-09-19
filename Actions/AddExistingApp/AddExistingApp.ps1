@@ -214,7 +214,7 @@ try {
         }
     }
     Set-Location $baseFolder
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Add existing apps ($($appNames -join ', '))" -branch $branch
+    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Add existing apps ($($appNames -join ', '))" -branch $branch | Out-Null
 
     TrackTrace -telemetryScope $telemetryScope
 }

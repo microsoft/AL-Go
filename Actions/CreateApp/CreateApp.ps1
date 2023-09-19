@@ -129,7 +129,7 @@ try {
     UpdateWorkspaces -projectFolder $projectFolder -appName $folderName
 
     Set-Location $baseFolder
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch
+    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch | Out-Null
 
     TrackTrace -telemetryScope $telemetryScope
 

@@ -1297,7 +1297,7 @@ function CommitFromNewFolder {
         if ($commitMessage.Length -gt 250) {
             $commitMessage = "$($commitMessage.Substring(0,250))...)"
         }
-        invoke-git commit --allow-empty -m "'$commitMessage'"
+        invoke-git commit --allow-empty -m "$commitMessage"
         if ($branch) {
             invoke-git push -u $serverUrl $branch
             try {
@@ -1310,9 +1310,11 @@ function CommitFromNewFolder {
         else {
             invoke-git push $serverUrl
         }
+        return $true
     }
     else {
         Write-Host "No changes detected in files"
+        return $false
     }
 }
 
