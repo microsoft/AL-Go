@@ -56,7 +56,7 @@ Describe "AnalyzeTests Action Tests" {
         $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 4 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 0
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'thresholdsFile', Justification = 'False positive.')]
         $thresholdsFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([GUID]::NewGuid().ToString()).json"
-        @{ "WarningNumberOfSqlStmtsThreshold" = 1; "ErrorNumberOfSqlStmtsThreshold" = 2 } | ConvertTo-Json | Set-Content -Path $thresholdsFile -Encoding UTF8
+        @{ "NumberOfSqlStmtsThresholdWarning" = 1; "NumberOfSqlStmtsThresholdError" = 2 } | ConvertTo-Json | Set-Content -Path $thresholdsFile -Encoding UTF8
     }
 
     It 'Compile Action' {
@@ -121,7 +121,7 @@ Describe "AnalyzeTests Action Tests" {
         $script:warningCount = 0
         Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
 
-        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine2 -thresholdsPath $thresholdsFile -warningDurationThreshold 1 -errorDurationThreshold 2
+        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine2 -thresholdsPath $thresholdsFile -durationThresholdWarning 1 -durationThresholdError 2
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 13
@@ -135,7 +135,7 @@ Describe "AnalyzeTests Action Tests" {
         [regex]::Matches($md, "\|$statusError\|").Count | should -Be 0
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
         $script:errorCount | Should -be 0
-        $script:warningCount | Should -be 0
+        $script:warningCount | Should -be 2
     }
 
     AfterAll {

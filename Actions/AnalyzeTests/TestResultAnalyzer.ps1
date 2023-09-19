@@ -167,6 +167,7 @@ function GetBcptSummaryMD {
     $baseLine = ReadBcptFile -path $baseLinePath
     # Override thresholds if thresholds file exists
     if ($thresholdsPath -and (Test-Path -path $thresholdsPath)) {
+        Write-Host "Reading thresholds from $thresholdsPath"
         $thresholds = Get-Content -Path $thresholdsPath -Encoding UTF8 | ConvertFrom-Json
         foreach($threshold in 'DurationThresholdWarning', 'DurationThresholdError', 'NumberOfSqlStmtsThresholdWarning', 'NumberOfSqlStmtsThresholdError') {
             if ($thresholds.PSObject.Properties.Name -eq $threshold) {
@@ -179,7 +180,7 @@ function GetBcptSummaryMD {
     Write-Host "- DurationThresholdError: $DurationThresholdError"
     Write-Host "- NumberOfSqlStmtsThresholdWarning: $NumberOfSqlStmtsThresholdWarning"
     Write-Host "- NumberOfSqlStmtsThresholdError: $NumberOfSqlStmtsThresholdError"
-    
+
     $summarySb = [System.Text.StringBuilder]::new()
     if ($baseLine) {
         $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration (ms)|Duration base (ms)|Duration diff (ms)|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
