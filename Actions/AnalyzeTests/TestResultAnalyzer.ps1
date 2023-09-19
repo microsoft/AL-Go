@@ -174,6 +174,12 @@ function GetBcptSummaryMD {
             }
         }
     }
+    Write-Host "Using thresholds:"
+    Write-Host "- DurationThresholdWarning: $DurationThresholdWarning"    
+    Write-Host "- DurationThresholdError: $DurationThresholdError"
+    Write-Host "- NumberOfSqlStmtsThresholdWarning: $NumberOfSqlStmtsThresholdWarning"
+    Write-Host "- NumberOfSqlStmtsThresholdError: $NumberOfSqlStmtsThresholdError"
+    
     $summarySb = [System.Text.StringBuilder]::new()
     if ($baseLine) {
         $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration (ms)|Duration base (ms)|Duration diff (ms)|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
