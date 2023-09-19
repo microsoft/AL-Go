@@ -321,7 +321,7 @@ function UpdateSettingsFile {
     }
     # Grab settings from otherSettings if they are not already in settings
     foreach($key in $otherSettings.Keys) {
-        if ($settings.PSObject.Properties.Name -ne $key) {
+        if (!($settings.PSObject.Properties.Name -eq $key)) {
             # Add the property if it doesn't exist
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $otherSettings."$key"
         }
