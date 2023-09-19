@@ -2239,7 +2239,6 @@ function GetProjectsFromRepository {
         [string[]] $projectsFromSettings,
         [string] $selectProjects = ''
     )
-    
     if ($projectsFromSettings) {
         $projects = $projectsFromSettings
     }

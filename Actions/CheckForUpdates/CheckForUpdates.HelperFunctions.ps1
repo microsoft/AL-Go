@@ -110,7 +110,6 @@ function ModifyRunsOnAndShell {
 function ModifyBuildWorkflows {
     Param(
         [Yaml] $yaml,
-        [hashtable] $repoSettings,
         [int] $depth
     )
 
@@ -205,7 +204,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
-        ModifyBuildWorkflows -yaml $yaml -repoSettings $repoSettings -depth $depth
+        ModifyBuildWorkflows -yaml $yaml -depth $depth
     }
 
     # combine all the yaml file lines into a single string with LF line endings

@@ -102,7 +102,7 @@ if (-not (IsDirectALGo -templateUrl $templateUrl)) {
             # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
             $realTemplateFolder = DownloadTemplateRepository -headers $headers -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
             Write-Host "Real Template Folder: $realTemplateFolder"
-            
+
             # Set TemplateBranch and TemplateOwner
             # Keep TemplateUrl and TemplateSha pointing to the indirect template repository
             $templateBranch = $realTemplateUrl.Split('@')[1]
