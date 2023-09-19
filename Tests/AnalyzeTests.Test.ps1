@@ -54,6 +54,9 @@ Describe "AnalyzeTests Action Tests" {
         # BaseLine2 has overall lower duration and less SQL statements than bcptFilename (+ one less opearion)
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'bcptBaseLine2', Justification = 'False positive.')]
         $bcptBaseLine2 = GetBcptTestResultFile -noOfSuites 1 -noOfCodeunits 2 -noOfOperations 4 -noOfMeasurements 4 -durationOffset -2 -numberOfSQLStmtsOffset 0
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'thresholdsFile', Justification = 'False positive.')]
+        $thresholdsFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([GUID]::NewGuid().ToString()).json"
+        @{ "WarningNumberOfSqlStmtsThreshold" = 1; "ErrorNumberOfSqlStmtsThreshold" = 2 } | ConvertTo-Json | Set-Content -Path $thresholdsFile -Encoding UTF8
     }
 
     It 'Compile Action' {
@@ -95,7 +98,7 @@ Describe "AnalyzeTests Action Tests" {
     It 'Test GetBcptSummaryMD (with worse baseline)' {
         . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
-        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine1
+        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine1
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 13
@@ -118,7 +121,7 @@ Describe "AnalyzeTests Action Tests" {
         $script:warningCount = 0
         Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
 
-        $md = GetBcptSummaryMD -path $bcptFilename -baseline $bcptBaseLine2 -warningDurationThreshold 1 -errorDurationThreshold 2 -warningNumberOfSqlStmtsThreshold 1 -errorNumberOfSqlStmtsThreshold 2
+        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine2 -thresholdsPath $thresholdsFile -warningDurationThreshold 1 -errorDurationThreshold 2
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 13

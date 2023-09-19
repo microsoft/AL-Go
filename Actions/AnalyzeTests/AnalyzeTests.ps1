@@ -22,9 +22,11 @@ try {
     $settings = $env:Settings | ConvertFrom-Json
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
     $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
+    $bcptThresholdsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptThresholds.json"
     $bcptSummaryMD = GetBcptSummaryMD `
         -path $bcptTestResultsFile `
         -baseLinePath $bcptBaseLineFile `
+        -thresholdsPath $bcptThresholdsFile `
         -DurationThresholdWarning $settings.DurationThresholdWarning `
         -DurationThresholdError $settings.DurationThresholdError `
         -NumberOfSqlStmtsThresholdWarning $settings.NumberOfSqlStmtsThresholdWarning `
