@@ -210,9 +210,6 @@ function GetBcptSummaryMD {
                 $durationMin = ($measurements | ForEach-Object { $_.durationMin } | Measure-Object -Minimum).Minimum
                 $numberOfSQLStmts = ($measurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Minimum).Minimum
 
-                Write-Host "DurationMin: $durationMin"
-                Write-Host "NumberOfSQLStmts: $numberOfSQLStmts"
-
                 $baseLineFound = $true
                 try {
                     $baseLineMeasurements = @($baseLine."$suiteName"."$codeUnitID"."operations"."$operationName"."measurements" | Sort-Object -Descending { $_.durationMin } | Select-Object -Skip $skipMeasurements)
@@ -223,8 +220,6 @@ function GetBcptSummaryMD {
                     $diffDurationMin = $durationMin-$baseDurationMin
                     $baseNumberOfSQLStmts = ($baseLineMeasurements | ForEach-Object { $_.numberOfSQLStmts } | Measure-Object -Minimum).Minimum
                     $diffNumberOfSQLStmts = $numberOfSQLStmts-$baseNumberOfSQLStmts
-                    Write-Host "BaseDurationMin: $baseDurationMin"
-                    Write-Host "BaseNumberOfSQLStmts: $baseNumberOfSQLStmts"
                 }
                 catch {
                     $baseLineFound = $false
