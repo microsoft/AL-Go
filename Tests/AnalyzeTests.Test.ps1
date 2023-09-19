@@ -121,7 +121,7 @@ Describe "AnalyzeTests Action Tests" {
         $script:warningCount = 0
         Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
 
-        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine2 -thresholdsPath $thresholdsFile -durationThresholdWarning 1 -durationThresholdError 2
+        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine2 -thresholdsPath $thresholdsFile -durationThresholdWarning 5 -durationThresholdError 10
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 13

@@ -176,7 +176,7 @@ function GetBcptSummaryMD {
         }
     }
     Write-Host "Using thresholds:"
-    Write-Host "- DurationThresholdWarning: $DurationThresholdWarning"    
+    Write-Host "- DurationThresholdWarning: $DurationThresholdWarning"
     Write-Host "- DurationThresholdError: $DurationThresholdError"
     Write-Host "- NumberOfSqlStmtsThresholdWarning: $NumberOfSqlStmtsThresholdWarning"
     Write-Host "- NumberOfSqlStmtsThresholdError: $NumberOfSqlStmtsThresholdError"
