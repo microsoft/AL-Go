@@ -1526,7 +1526,15 @@ function CreateDevEnv {
     $dependenciesFolder = Join-Path $projectFolder ".dependencies"
     $runAlPipelineParams = @{}
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+    $removeEnvSecrets = $false
     try {
+        if ($env:Secrets) {
+            $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+        }
+        else {
+            $secrets = @{}
+            $removeEnvSecrets = $true
+        }
         if ($caller -eq "local") {
             $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
             if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -1558,17 +1566,21 @@ function CreateDevEnv {
                 $settings.appDependencyProbingPaths | ForEach-Object {
                     if ($_.Contains("AuthTokenSecret")) {
                         $secretName = $_.authTokenSecret
-                        $_.Remove('authTokenSecret')
+                        if (!$secrets.ContainsKey($secretName)) {
+                            $secrets."$secretName" = ''
+                        }
                         if ($settings.keyVaultName) {
                             $secret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $secretName
-                            if ($secret) { $_.authTokenSecret = $secret.SecretValue | Get-PlainText }
+                            if ($secret) {
+                                $secrets."$secretName" = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($secret.SecretValue | Get-PlainText)))
+                            }
                         }
                         else {
                             Write-Host "Not using Azure KeyVault, attempting to retrieve an auth token using gh auth token"
                             $retry = $true
                             while ($retry) {
                                 try {
-                                    $_.authTokenSecret = invoke-gh -silent -returnValue auth token
+                                    $secrets."$secretName" = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((invoke-gh -silent -returnValue auth token)))
                                     $retry = $false
                                 }
                                 catch {
@@ -1580,6 +1592,7 @@ function CreateDevEnv {
                         }
                     }
                 }
+                $env:Secrets = $secrets | ConvertTo-Json
             }
 
             if (($settings.keyVaultName) -and -not ($bcAuthContext)) {
@@ -1865,6 +1878,9 @@ function CreateDevEnv {
             -keepContainer
     }
     finally {
+        if ($removeEnvSecrets -and $env:Secrets) {
+            Remove-Item Env:\Secrets
+        }
         if (Test-Path $dependenciesFolder) {
             Get-ChildItem -Path $dependenciesFolder -Include * -File | ForEach-Object { $_.Delete() }
         }
@@ -2191,13 +2207,14 @@ function RetryCommand {
         [Parameter(Mandatory = $false)]
         [int]$MaxRetries = 3,
         [Parameter(Mandatory = $false)]
-        [int]$RetryDelaySeconds = 5
+        [int]$RetryDelaySeconds = 5,
+        [Object[]] $argumentList
     )
 
     $retryCount = 0
     while ($retryCount -lt $MaxRetries) {
         try {
-            Invoke-Command $Command
+            Invoke-Command $Command -ArgumentList $argumentList
             if ($LASTEXITCODE -ne 0) {
                 throw "Command failed with exit code $LASTEXITCODE"
             }

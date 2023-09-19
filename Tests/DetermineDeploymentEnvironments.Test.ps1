@@ -43,6 +43,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             "EnvironmentsMatrixJson" = "The Environment matrix to use for the Deploy step in compressed JSON format"
             "DeploymentEnvironmentsJson" = "Deployment Environments with settings in compressed JSON format"
             "EnvironmentCount" = "Number of Deployment Environments"
+            "UnknownEnvironment" = "Flag determining whether the environment is unknown"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
@@ -202,7 +203,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
     }
 
     # 2 environments defined in Settings - one PROD and one non-PROD (settings based)
@@ -234,6 +235,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
     }
 }
