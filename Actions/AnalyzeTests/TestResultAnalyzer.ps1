@@ -117,7 +117,7 @@ function ReadBcptFile {
 
     # Read BCPT file
     $bcptResult = Get-Content -Path $path -Encoding UTF8 | ConvertFrom-Json
-    $suites = @{}
+    $suites = [ordered]@{}
     # Sort by bcptCode, codeunitID, operation
     foreach($measure in $bcptResult) {
         $bcptCode = $measure.bcptCode
@@ -126,18 +126,18 @@ function ReadBcptFile {
         $operation = $measure.operation
 
         # Create Suite if it doesn't exist
-        if(-not $suites.containsKey($bcptCode)) {
-            $suites."$bcptCode" = @{}
+        if(-not $suites.Contains($bcptCode)) {
+            $suites."$bcptCode" = [ordered]@{}
         }
         # Create Codeunit under Suite if it doesn't exist
-        if (-not $suites."$bcptCode".ContainsKey("$codeunitID")) {
+        if (-not $suites."$bcptCode".Contains("$codeunitID")) {
             $suites."$bcptCode"."$codeunitID" = @{
                 "codeunitName" = $codeunitName
-                "operations" = @{}
+                "operations" = [ordered]@{}
             }
         }
         # Create Operation under Codeunit if it doesn't exist
-        if (-not $suites."$bcptCode"."$codeunitID"."operations".ContainsKey($operation)) {
+        if (-not $suites."$bcptCode"."$codeunitID"."operations".Contains($operation)) {
             $suites."$bcptCode"."$codeunitID"."operations"."$operation" = @{
                 "measurements" = @()
             }

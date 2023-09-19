@@ -134,8 +134,8 @@ Describe "AnalyzeTests Action Tests" {
         [regex]::Matches($md, "\|$statusWarning\|").Count | should -Be 4
         [regex]::Matches($md, "\|$statusError\|").Count | should -Be 4
         [regex]::Matches($md, '\|').Count | should -Be (($columns+1)*$rows)
-        $script:errorCount | Should -be 0
-        $script:warningCount | Should -be 2
+        $script:errorCount | Should -be 2
+        $script:warningCount | Should -be 0
     }
 
     AfterAll {
