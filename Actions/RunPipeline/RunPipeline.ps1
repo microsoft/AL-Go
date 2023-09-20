@@ -77,7 +77,6 @@ try {
 
     Write-Host "use settings and secrets"
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    Write-Host "secrets: $env:Secrets"
     if ($env:Secrets) {
         $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     }
