@@ -16,8 +16,13 @@ try {
 
     #region Action: Determine artifacts to use
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
-    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
-    $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
+
+    $insiderSasToken = ""
+    if ($env:Secrets) {
+        $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+        $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
+    }
+    
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $settings = AnalyzeRepo -settings $settings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $artifactUrl = DetermineArtifactUrl -projectSettings $settings -insiderSasToken $insiderSasToken
