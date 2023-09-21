@@ -77,7 +77,14 @@ try {
 
     Write-Host "use settings and secrets"
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    # ENV:Secrets is not set when running Pull_Request trigger
+    if ($env:Secrets) {
+        $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    else {
+        $secrets = @{}
+    }
+
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
     'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
