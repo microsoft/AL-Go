@@ -18,6 +18,7 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0084' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $insiderSasToken = ""
+    # ENV:Secrets is not set when running Pull_Request trigger
     if ($env:Secrets) {
         $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
         $insiderSasToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.insiderSasToken))
