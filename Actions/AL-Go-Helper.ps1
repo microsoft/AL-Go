@@ -367,7 +367,9 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
         }
     }
     $env:BcContainerHelperPath = $bcContainerHelperPath
-    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$bcContainerHelperPath"
+    if ($ENV:GITHUB_ENV) {
+        Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV "BcContainerHelperPath=$bcContainerHelperPath"
+    }
     return $bcContainerHelperPath
 }
 
