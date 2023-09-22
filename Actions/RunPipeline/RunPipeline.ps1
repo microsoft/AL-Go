@@ -282,6 +282,7 @@ try {
                             $packageId = $_.Split(',')[1]
                             UploadImportAndApply-ConfigPackageInBcContainer `
                                 -containerName $parameters.containerName `
+                                -companyName $settings.companyName `
                                 -Credential $parameters.credential `
                                 -Tenant $parameters.tenant `
                                 -ConfigPackage $configPackage `
