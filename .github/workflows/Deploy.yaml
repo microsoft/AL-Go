@@ -35,11 +35,13 @@ jobs:
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
         env:
+          GH_TOKEN: ${{ github.token }}
           branch: ${{ github.event.inputs.branch }}
           repository: ${{ github.repository }}
           runId: ${{ github.run_id }}
         run: |
-          if ($env:branch -match 'preview') {
+          $errorActionPreference = "Stop"
+          if ($env:branch -eq 'preview') {
             Write-Host "Deploying to preview branch. No validation required"
           } else {
             $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
