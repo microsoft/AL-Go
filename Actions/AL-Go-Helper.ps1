@@ -36,6 +36,8 @@ $runAlPipelineOverrides = @(
     "GetBcContainerAppRuntimePackage"
     "RemoveBcContainer"
     "InstallMissingDependencies"
+    "PreCompileApp"
+    "PostCompileApp"
 )
 
 # Well known AppIds
