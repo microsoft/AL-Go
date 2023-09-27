@@ -399,6 +399,7 @@ try {
         -failOn $settings.failOn `
         -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
         -rulesetFile $settings.rulesetFile `
+        -enableExternalRulesets:$settings.enableExternalRulesets `
         -appSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
         -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `

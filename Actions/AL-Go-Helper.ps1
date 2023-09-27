@@ -587,6 +587,7 @@ function ReadSettings {
         "failOn"                                        = "error"
         "treatTestFailuresAsWarnings"                   = $false
         "rulesetFile"                                   = ""
+        "enableExternalRulesets"                        = $false
         "vsixFile"                                      = ""
         "assignPremiumPlan"                             = $false
         "enableTaskScheduler"                           = $false
@@ -1862,6 +1863,7 @@ function CreateDevEnv {
             -failOn $settings.failOn `
             -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
             -rulesetFile $settings.rulesetFile `
+            -enableExternalRulesets:$settings.enableExternalRulesets `
             -AppSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
             -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
             -doNotRunTests `
