@@ -40,6 +40,7 @@ jobs:
           repository: ${{ github.repository }}
           runId: ${{ github.run_id }}
         run: |
+          $errorActionPreference = "Stop"
           if ($env:branch -eq 'preview') {
             Write-Host "Deploying to preview branch. No validation required"
           } else {
