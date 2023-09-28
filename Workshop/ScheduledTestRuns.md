@@ -3,11 +3,6 @@ Building and testing your apps with the latest and the upcoming versions of Busi
 
 To be able to run the workflows for testing against **Next Minor** and **Next Major** versions of Business Central, you will need an **insider SAS Token**, which is available on https://aka.ms/collaborate (Select **Packages** and **Working with Business Central insider builds**). The Direct URL is [here](https://partner.microsoft.com/en-us/dashboard/collaborate/packages/9387), but you will have to have an account with collaborate in order to use the link.
 
-Create an organizatonal secret called **INSIDERSASTOKEN**, containing the insider SAS Token from collaborate.
-
-| ![image](https://user-images.githubusercontent.com/10775043/232338769-abe5c76d-6ac5-4b1a-8fb8-a972333f0e44.png) |
-|-|
-
 Use **https://crontab.guru** to create a crontab for the schedule you want to run your workflows on. I have selected the following:
 - I want to run the **Test Current** workflow every day at 2 in the morning. The crontab for that is: 0 2 * * *
 - I want to run the **Test Next Minor** workflow every Saturday at 2 in the morning. The crontab for that is: 0 2 * * 6
