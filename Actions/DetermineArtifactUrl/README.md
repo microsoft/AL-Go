@@ -7,7 +7,6 @@ Determines the artifactUrl to use for a given project
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
-| Secrets | env.Secrets with insiderSasToken must be read by a prior call to the ReadSecrets Action |
 
 ### Parameters
 | Name | Required | Description | Default value |

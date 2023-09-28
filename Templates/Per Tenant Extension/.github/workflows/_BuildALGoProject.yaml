@@ -105,8 +105,6 @@ jobs:
       - name: Determine ArtifactUrl
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
         id: determineArtifactUrl
-        env:
-          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: ${{ inputs.shell }}
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}

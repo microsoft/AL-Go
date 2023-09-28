@@ -8,8 +8,7 @@ Param(
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText)
+    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -85,8 +84,8 @@ $repoPath = (Get-Location).Path
 
     # Launch Current, NextMinor and NextMajor builds
     $runTestCurrent = RunTestCurrent -branch $branch
-    $runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-    $runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+    $runTestNextMinor = RunTestNextMinor -branch $branch
+    $runTestNextMajor = RunTestNextMajor -branch $branch
 
     # Wait for CI/CD workflow to finish
     WaitWorkflow -runid $run.id
