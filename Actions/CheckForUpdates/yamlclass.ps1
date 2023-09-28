@@ -347,9 +347,13 @@ class Yaml {
 
     [void] AddCustomStepsToAnchor([string] $job, [hashtable[]] $customSteps, [string] $anchorStep, [bool] $before) {
         $steps = $this.GetStepsFromJob($job)
+        if (!$steps) {
+            Write-Host "::Warning::Cannot find job '$job'"
+            return
+        }
         $anchorIdx = $steps.IndexOf($anchorStep)
         if ($anchorIdx -lt 0) {
-            Write-Host "Cannot find anchor step '$anchorStep' in job '$job'"
+            Write-Host "::Warning::Cannot find anchor step '$anchorStep' in job '$job'"
             return
         }
         foreach($customStep in $customSteps | Where-Object { $_.AnchorStep -eq $anchorStep -and $_.Before -eq $before }) {
