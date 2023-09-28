@@ -8,8 +8,7 @@ Param(
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText)
+    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
