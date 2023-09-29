@@ -8,7 +8,8 @@ Param(
     [string] $auth = "",
     [pscredential] $credential = $null,
     [string] $licenseFileUrl = "",
-    [switch] $fromVSCode
+    [switch] $fromVSCode,
+    [switch] $accept_insiderEula
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -129,7 +130,8 @@ CreateDevEnv `
     -project $project `
     -auth $auth `
     -credential $credential `
-    -licenseFileUrl $licenseFileUrl
+    -licenseFileUrl $licenseFileUrl `
+    -accept_insiderEula:$accept_insiderEula
 }
 catch {
     Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"
