@@ -46,7 +46,7 @@ Describe 'CreateReleaseNotes Tests' {
         Mock DownloadAndImportBcContainerHelper  {}
         Mock CreateScope  {}
 
-        . $scriptPath -token "" -actor "" -tag_name "1.0.5" -parentTelemetryScopeJson "{}"
+        . $scriptPath -token "" -tag_name "1.0.5" -parentTelemetryScopeJson "{}"
 
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.5" -and $previous_tag_name -eq "1.0.0.0" }
@@ -63,7 +63,7 @@ Describe 'CreateReleaseNotes Tests' {
         Mock DownloadAndImportBcContainerHelper  {}
         Mock CreateScope  {}
 
-        . $scriptPath -token "" -actor "" -tag_name "1.0.5" -parentTelemetryScopeJson "{}"
+        . $scriptPath -token "" -tag_name "1.0.5" -parentTelemetryScopeJson "{}"
 
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.5" -and $previous_tag_name -eq "" }

@@ -8,8 +8,7 @@ Param(
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText)
+    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -83,15 +82,15 @@ CreateAlGoRepository `
 $repoPath = (Get-Location).Path
 
 # Update AL-Go System Files to uptake UseProjectDependencies setting
-Run-UpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
 
 # Run CI/CD workflow
-$run = Run-CICD -branch $branch
+$run = RunCICD -branch $branch
 
 # Launch Current, NextMinor and NextMajor builds
-$runTestCurrent = Run-TestCurrent -branch $branch
-$runTestNextMinor = Run-TestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = Run-TestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+$runTestCurrent = RunTestCurrent -branch $branch
+$runTestNextMinor = RunTestNextMinor -branch $branch
+$runTestNextMajor = RunTestNextMajor -branch $branch
 
 # Wait for all workflows to finish
 WaitWorkflow -runid $run.id

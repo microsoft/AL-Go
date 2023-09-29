@@ -1,4 +1,4 @@
-﻿function Run-CreateTestApp {
+﻿function RunCreateTestApp {
     Param(
         [string] $project,
         [string] $name,

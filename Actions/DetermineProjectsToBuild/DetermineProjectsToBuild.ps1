@@ -8,7 +8,7 @@
     - project: The name of the AL-Go project
     - buildMode: The build mode to use for the project
 #>
-function New-BuildDimensions(
+function CreateBuildDimensions(
     [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
     $projects = @(),
     $baseFolder
@@ -16,9 +16,7 @@ function New-BuildDimensions(
 {
     $buildDimensions = @()
 
-    $projects | ForEach-Object {
-        $project = $_
-
+    foreach($project in $projects) {
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         $buildModes = @($projectSettings.buildModes)
 
@@ -27,10 +25,10 @@ function New-BuildDimensions(
             $buildModes = @('Default')
         }
 
-        $buildModes | ForEach-Object {
-            $buildMode = $_
+        foreach($buildMode in $buildModes) {
             $buildDimensions += @{
                 project = $project
+                projectName = $projectSettings.projectName
                 buildMode = $buildMode
             }
         }
@@ -88,7 +86,7 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
     foreach($project in $projects)
     {
         if (Test-Path -Path (Join-Path $baseFolder "$project/.AL-Go/settings.json")) {
-            $projectFolders = Get-ProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
+            $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
             $modifiedProjectFolders = @($projectFolders | Where-Object {
                 $projectFolder = Join-Path $baseFolder "$_/*"
@@ -184,7 +182,7 @@ function Get-ProjectsToBuild(
 
                 if ($projectsOnDepth) {
                     # Create build dimensions for the projects on the current depth
-                    $buildDimensions = New-BuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
+                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
                     $projectsOrderToBuild += @{
                         projects = $projectsOnDepth
                         projectsCount = $projectsOnDepth.Count

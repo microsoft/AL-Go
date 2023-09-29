@@ -1,6 +1,4 @@
 ﻿Param(
-    [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
-    [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
@@ -33,8 +31,8 @@ try {
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
         Start-Job -ScriptBlock {
-            docker pull --quiet $genericImageName
-        } -ArgumentList $genericImageName | Out-Null
+            docker pull --quiet $using:genericImageName
+        } | Out-Null
     }
 
     $containerName = GetContainerName($project)
@@ -79,10 +77,17 @@ try {
 
     Write-Host "use settings and secrets"
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    # ENV:Secrets is not set when running Pull_Request trigger
+    if ($env:Secrets) {
+        $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    else {
+        $secrets = @{}
+    }
+
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -117,7 +122,7 @@ try {
         }
     }
 
-    $settings = AnalyzeRepo -settings $settings -token $token -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
+    $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
@@ -277,6 +282,7 @@ try {
                             $packageId = $_.Split(',')[1]
                             UploadImportAndApply-ConfigPackageInBcContainer `
                                 -containerName $parameters.containerName `
+                                -companyName $settings.companyName `
                                 -Credential $parameters.credential `
                                 -Tenant $parameters.tenant `
                                 -ConfigPackage $configPackage `
@@ -363,12 +369,13 @@ try {
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
+        -accept_insiderEula `
         -pipelinename $workflowName `
         -containerName $containerName `
         -imageName $imageName `
         -bcAuthContext $authContext `
         -environment $environmentName `
-        -artifact $settings.artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -artifact $settings.artifact.replace('{INSIDERSASTOKEN}','') `
         -vsixFile $settings.vsixFile `
         -companyName $settings.companyName `
         -memoryLimit $settings.memoryLimit `
@@ -431,7 +438,9 @@ finally {
             Copy-Item -Path $containerEventLogFile -Destination $destFolder
         }
     }
-    catch {}
+    catch {
+        Write-Host "Error getting event log from container: $($_.Exception.Message)"
+    }
     if ($containerBaseFolder -and (Test-Path $containerBaseFolder) -and $projectPath -and (Test-Path $projectPath)) {
         Write-Host "Removing temp folder"
         Remove-Item -Path (Join-Path $projectPath '*') -Recurse -Force

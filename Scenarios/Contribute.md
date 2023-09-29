@@ -56,7 +56,6 @@ In your personal fork, you can now run the end to end tests, if the following pr
   - E2EPAT needs to be a Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_
   - AdminCenterApiCredentials needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
   - LicenseFileUrl needs to be a direct download URL to a developer .bclicense file
-  - InsiderSasToken needs to contain the Insider Sas Token from https://aka.ms/collaborate
 - Beside the secrets, you need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)
 
 Run the End to end tests by running the *End to end tests* workflow and specify your organization in the corresponding field.
@@ -71,7 +70,6 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |$global:SecureE2EPAT| SecureString | A personal access token with workflow permissions |
 |$global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
 |$global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
-|$global:SecureInsiderSasToken | SecureString | The Insider SAS Token from https://aka.ms/collaborate  |
 |$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
 |$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
 

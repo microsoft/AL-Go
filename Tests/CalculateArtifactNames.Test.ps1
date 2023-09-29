@@ -13,6 +13,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
         $env:Settings = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'project', Justification = 'False positive.')]
         $project = "ALGOProject"
     }
 

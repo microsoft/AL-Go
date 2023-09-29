@@ -12,37 +12,37 @@ Describe "DetermineArtifactUrl" {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
-        Mock -CommandName Get-BcArtifactUrl -MockWith { Param([string] $storageAccount, [string] $type = 'sandbox', [string] $version, [string] $country = '*', [string] $select = 'Latest', [string] $sasToken = '')
+        Mock -CommandName Get-BcArtifactUrl -MockWith { Param([string] $storageAccount, [string] $type = 'sandbox', [string] $version, [string] $country = '*', [string] $select = 'Latest')
 
             if ($select -eq 'nextmajor') { $storageAccount = 'bcinsider' }
             if (-not $storageAccount) { $storageAccount = 'bcartifacts' }
             if (-not $version) { $version = '*' }
-            Write-Host "Get-BcArtifactUrl -storageAccount '$storageAccount' -type '$type' -version '$version' -country '$country' -select '$select' -sasToken '$sasToken'"
+            Write-Host "Get-BcArtifactUrl -storageAccount '$storageAccount' -type '$type' -version '$version' -country '$country' -select '$select'"
 
             $allArtifacts = @(
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'at'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'dk'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'us'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'w1'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'at'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'dk'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'us'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'w1'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'at'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'dk'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'us'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'w1'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'at'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'dk'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'us'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'w1'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12346'; "country" = 'dk'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12346'; "country" = 'us'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12346'; "country" = 'w1'; "sasToken" = '' }
-                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'at'; "sasToken" = '?[SASTOKEN]' }
-                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'dk'; "sasToken" = '?[SASTOKEN]' }
-                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'us'; "sasToken" = '?[SASTOKEN]' }
-                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'w1'; "sasToken" = '?[SASTOKEN]' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'at' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'dk' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'us' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '20.1.0.0'; "country" = 'w1' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'at' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'dk' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'us' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'onprem'; "version" = '21.0.11111.0'; "country" = 'w1' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'at' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'dk' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'us' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.0.55555.44444'; "country" = 'w1' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'at' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'dk' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'us' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12345'; "country" = 'w1' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12346'; "country" = 'dk' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12346'; "country" = 'us' }
+                @{ "storageAccount" = 'bcartifacts'; "type" = 'sandbox'; "version" = '22.1.12345.12346'; "country" = 'w1' }
+                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'at' }
+                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'dk' }
+                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'us' }
+                @{ "storageAccount" = 'bcinsider'; "type" = 'sandbox'; "version" = '23.0.33333.0'; "country" = 'w1' }
             )
 
             if ($version -ne '*') {
@@ -53,18 +53,19 @@ Describe "DetermineArtifactUrl" {
                 }
             }
 
-            $artifacts = $allArtifacts | Where-Object { $storageAccount -eq $_.StorageAccount -and $type -eq $_.type -and $_.version -like "$version" -and $_.country -like $country -and $sasToken -eq $_.sasToken }
+            $artifacts = $allArtifacts | Where-Object { $storageAccount -eq $_.StorageAccount -and $type -eq $_.type -and $_.version -like "$version" -and $_.country -like $country }
             if ($select -eq 'latest') {
                 $artifacts = $artifacts | Select-Object -Last 1
             }
             $artifacts | ForEach-Object {
-                Write-Host "https://$($_.storageAccount)/$($_.type)/$($_.version)/$($_.country)$($_.sasToken)"
-                "https://$($_.storageAccount)/$($_.type)/$($_.version)/$($_.country)$($_.sasToken)"
+                Write-Host "https://$($_.storageAccount)/$($_.type)/$($_.version)/$($_.country)"
+                "https://$($_.storageAccount)/$($_.type)/$($_.version)/$($_.country)"
             }
         }
     }
 
     BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'projectSettings', Justification = 'False positive.')]
         $projectSettings = @{
             'artifact' = ''
             'updateDependencies' = $false
@@ -75,41 +76,41 @@ Describe "DetermineArtifactUrl" {
     }
 
     It 'Default Artifact URL' {
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12346/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12346/us'
     }
 
     It 'Default Artifact URL with additionalCountries' {
         $projectSettings.additionalCountries = @('dk')
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
     }
 
     It 'Default Artifact URL when using UpdateDependencies' {
         $projectSettings.UpdateDependencies = $true
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.0.55555.44444/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.0.55555.44444/us'
     }
 
     It 'Fixed Artifact URL' {
         $projectSettings.artifact = 'https://bcartifacts/onprem/21.0.54157.55112/w1'
         $projectSettings.country = 'w1'
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/21.0.54157.55112/w1'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/21.0.54157.55112/w1'
     }
 
     It 'Artifact setting' {
         $projectSettings.artifact = 'bcartifacts/onprem/20.1/us'
         $projectSettings.country = 'us'
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/20.1.0.0/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/onprem/20.1.0.0/us'
     }
 
     It 'NextMajor' {
         $projectSettings.country = 'dk'
-        $projectSettings.artifact = "////nextmajor/{INSIDERSASTOKEN}"
-        Determine-ArtifactUrl -projectSettings $projectSettings -sasToken = '?[SASTOKEN]' | should -be 'https://bcinsider/sandbox/23.0.33333.0/dk?[SASTOKEN]'
+        $projectSettings.artifact = "////nextmajor"
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcinsider/sandbox/23.0.33333.0/dk'
     }
 
     It 'Artifact setting wins over country setting' {
         $projectSettings.country = 'dk'
         $projectSettings.artifact = "///us/latest"
-        Determine-ArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
     }
 }
 

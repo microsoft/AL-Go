@@ -1,6 +1,14 @@
 ## Preview
 
-Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
+Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
+
+### Removal of the InsiderSasToken
+
+As of October 1st 2023, Business Central insider builds are now publicly available. When creating local containers with the insider builds, you will have to accept the insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) in order to continue.
+
+AL-Go for GitHub allows you to build and test using insider builds without any explicit approval, but please note that the insider artifacts contains the insider Eula and you automatically accept this when using the builds.
+
+## v3.3
 
 ### Issues
 
@@ -12,6 +20,7 @@ Note that when using the preview version of AL-Go for GitHub, you need to Update
 - After configuring deployment branches for an environment in GitHub and setting Deployment Branch Policy to **Protected Branches**, AL-Go for GitHub would fail during initialization (trying to get environments for deployment)
 - The DetermineDeploymentEnvironments doesn't work in private repositories (needs the GITHUB_TOKEN)
 - Issue 683 Settings from GitHub variables ALGoRepoSettings and ALGoOrgSettings are not applied during build pipeline
+- Issue 708 Inconsistent AuthTokenSecret Behavior in Multiple Projects: 'Secrets are not available'
 
 ### Breaking changes
 
@@ -26,6 +35,7 @@ Earlier, you could also specify the projects you want to deploy to an environmen
 - `DetermineDeploymentEnvironments`: Determine which deployment environments should be used for the workflow.
 
 ### New Settings
+- `projectName`: project setting used as friendly name for an AL-Go project, to be used in the UI for various workflows, e.g. CICD, Pull Request Build.
 - `fullBuildPatterns`: used by `DetermineProjectsToBuild` action to specify changes in which files and folders would trigger a full build (building all AL-Go projects).
 - `excludeEnvironments`: used by `DetermineDeploymentEnvironments` action to exclude environments from the list of environments considered for deployment.
 - `deployTo<environmentName>`: is not really new, but has new properties. The complete list of properties is here:

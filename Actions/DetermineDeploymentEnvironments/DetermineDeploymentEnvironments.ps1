@@ -51,11 +51,12 @@ $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
 $deploymentEnvironments = @{}
+$unknownEnvironment = 0
 
 if (!($environments)) {
     # If no environments are defined and the user specified a single environment, use that environment
@@ -64,6 +65,7 @@ if (!($environments)) {
         $envName = $getEnvironments.Split(' ')[0]
         $deploymentEnvironments += @{
             "$getEnvironments" = @{
+                "EnvironmentType" = "SaaS"
                 "EnvironmentName" = $envName
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
@@ -73,18 +75,18 @@ if (!($environments)) {
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
             }
         }
+        $unknownEnvironment = 1
     }
 }
 else {
-    $environments | ForEach-Object {
-        $environmentName = $_
+    foreach($environmentName in $environments) {
         Write-Host "Environment: $environmentName"
-        $envName = $_.Split(' ')[0]
+        $envName = $environmentName.Split(' ')[0]
 
         # Check Obsolete Settings
-        "$($envName)-Projects","$($envName)_Projects" | ForEach-Object {
-            if ($settings.Contains($_)) {
-                throw "The setting $_ is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
+        foreach($obsoleteSetting in "$($envName)-Projects","$($envName)_Projects") {
+            if ($settings.Contains($obsoleteSetting)) {
+                throw "The setting $obsoleteSetting is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
             }
         }
 
@@ -110,9 +112,9 @@ else {
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             $deployTo = $settings."$settingsName"
-            'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on' | ForEach-Object {
-                if ($deployTo.ContainsKey($_)) {
-                    $deploymentSettings."$_" = $deployTo."$_"
+            foreach($key in 'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on') {
+                if ($deployTo.ContainsKey($key)) {
+                    $deploymentSettings."$key" = $deployTo."$key"
                 }
             }
         }
@@ -125,7 +127,7 @@ else {
         # - Type is not Continous Deployment
         # - Environment is setup for Continuous Deployment (in settings)
         # - Continuous Deployment is unset in settings and environment name doesn't contain PROD or FAT tags
-        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($deploymentSettings.ContinuousDeployment -eq $null -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
+        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($null -eq $deploymentSettings.ContinuousDeployment -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
 
         # Check branch policies and settings
         if (-not $includeEnvironment) {
@@ -179,3 +181,6 @@ Write-Host "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
+
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
+Write-Host "UnknownEnvironment=$unknownEnvironment"

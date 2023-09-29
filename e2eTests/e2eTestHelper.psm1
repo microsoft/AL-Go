@@ -43,12 +43,14 @@ function Get-PlainText {
         [parameter(ValueFromPipeline, Mandatory = $true)]
         [System.Security.SecureString] $SecureString
     )
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString);
-    try {
-        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);
-    }
-    finally {
-        [Runtime.InteropServices.Marshal]::FreeBSTR($bstr);
+    Process {
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString);
+        try {
+            return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);
+        }
+        finally {
+            [Runtime.InteropServices.Marshal]::FreeBSTR($bstr);
+        }
     }
 }
 
@@ -572,17 +574,17 @@ function Test-LogContainsFromRun {
     Remove-Item -Path 'logs' -Recurse -Force
 }
 
-. (Join-Path $PSScriptRoot "Workflows\Run-AddExistingAppOrTestApp.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-CICD.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-CreateApp.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-CreateOnlineDevelopmentEnvironment.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-CreateRelease.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-CreateTestApp.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-IncrementVersionNumber.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-PublishToEnvironment.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-UpdateAlGoSystemFiles.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-TestCurrent.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-TestNextMinor.ps1")
-. (Join-Path $PSScriptRoot "Workflows\Run-TestNextMajor.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunAddExistingAppOrTestApp.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunCICD.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunCreateApp.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunCreateOnlineDevelopmentEnvironment.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunCreateRelease.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunCreateTestApp.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunIncrementVersionNumber.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunPublishToEnvironment.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunUpdateAlGoSystemFiles.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunTestCurrent.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunTestNextMinor.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunTestNextMajor.ps1")
 
 . (Join-Path $PSScriptRoot "Test-Functions.ps1")

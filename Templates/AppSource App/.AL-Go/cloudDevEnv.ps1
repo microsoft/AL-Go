@@ -51,8 +51,6 @@ if (Test-Path (Join-Path $PSScriptRoot "NewBcContainer.ps1")) {
     Write-Host -ForegroundColor Red "WARNING: The project has a NewBcContainer override defined. Typically, this means that you cannot run a cloud development environment"
 }
 
-$settings = ReadSettings -baseFolder $baseFolder -project $project -userName $env:USERNAME
-
 Write-Host
 
 if (-not $environmentName) {
