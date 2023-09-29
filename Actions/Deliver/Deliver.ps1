@@ -34,6 +34,7 @@ function EnsureAzStorageModule() {
             Import-Module  'Azure.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
             Set-Alias -Name New-AzStorageContext -Value New-AzureStorageContext -Scope Script
             Set-Alias -Name Get-AzStorageContainer -Value Get-AzureStorageContainer -Scope Script
+            Set-Alias -Name New-AzStorageContainer -Value New-AzureStorageContainer -Scope Script
             Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
         }
         else {
@@ -361,7 +362,7 @@ try {
                 $containerExists = $false
             }
 
-            if (-not $containerExists -and $settings.ContainsKey('DeliverToStorage') -and $settings['DeliverToStorage'].ContainsKey('createContainerIfNotExist') -and $settings.DeliverToStorage['createContainerIfNotExist'] -eq $true) {
+            if (-not $containerExists -and $settings.ContainsKey('DeliverToStorage') -and $settings['DeliverToStorage'].ContainsKey('CreateContainerIfNotExist') -and $settings.DeliverToStorage['createContainerIfNotExist'] -eq $true) {
                 Write-Host "Container $storageContainerName does not exist. Creating..."
                 New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
             }
