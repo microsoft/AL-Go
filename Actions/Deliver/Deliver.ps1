@@ -362,7 +362,7 @@ try {
                 $containerExists = $false
             }
 
-            if (-not $containerExists -and $settings.ContainsKey('DeliverToStorage') -and $settings['DeliverToStorage'].ContainsKey('CreateContainerIfNotExist') -and $settings.DeliverToStorage['createContainerIfNotExist'] -eq $true) {
+            if (-not $containerExists -and $settings.Contains."DeliverToStorage" -and $settings."DeliverToStorage".Contains('CreateContainerIfNotExist') -and $settings."DeliverToStorage"."CreateContainerIfNotExist" -eq $true) {
                 Write-Host "Container $storageContainerName does not exist. Creating..."
                 New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
             }
