@@ -24,6 +24,7 @@
     - enableCodeCop, see https://aka.ms/algosettings#enableCodeCop
     - enableUICop, see https://aka.ms/algosettings#enableUICop
     - rulesetFile, see https://aka.ms/algosettings#rulesetFile
+    - enableExternalRulesets, see https://aka.ms/algosettings#enableExternalRulesets
     - runNumberOffset, see https://aka.ms/algosettings#runNumberOffset
 
     Also, if you are migrating an AppSource App, you will need to create a secret called LicenseFileUrl, which should contain a secure direct download URL to your license file, as mentioned [here](SetupCiCdForExistingAppSourceApp.md).
