@@ -1649,7 +1649,7 @@ function CreateDevEnv {
         $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @params
         $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -project $project
 
-        if (!$accept_insiderEula -and ($repo.artifact -like 'https://bcinsider.blob.core.windows.net/*' -or $repo.artifact -like 'https://bcinsider.azureedge.net/*')) {
+        if (!$accept_insiderEula -and ($settings.artifact -like 'https://bcinsider.blob.core.windows.net/*' -or $settings.artifact -like 'https://bcinsider.azureedge.net/*')) {
             Read-Host 'Press ENTER to accept the Business Central insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) or break the script to cancel'
             $accept_insiderEula = $true
         }
