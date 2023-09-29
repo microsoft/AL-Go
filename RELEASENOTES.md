@@ -8,6 +8,13 @@ As of October 1st 2023, Business Central insider builds are now publicly availab
 
 AL-Go for GitHub allows you to build and test using insider builds without any explicit approval, but please note that the insider artifacts contains the insider Eula and you automatically accept this when using the builds.
 
+### Issues
+- Issue 730 Support for external rulesets.
+
+### New Settings
+- `enableExternalRulesets`: set this setting to true if you want to allow AL-Go to automatically download external references in rulesets.
+
+
 ## v3.3
 
 ### Issues
