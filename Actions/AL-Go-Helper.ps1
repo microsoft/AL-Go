@@ -339,7 +339,6 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
         if ($bcContainerHelperVersion -notlike "https://*") {
             # Check whether the version is already available in the cache
-            #$version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
             $version = [System.IO.File]::ReadAllText((Join-Path $tempName 'BcContainerHelper/Version.txt'), [System.Text.Encoding]::UTF8)
             $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
             # To avoid two agents on the same machine downloading the same version at the same time, use a mutex
@@ -360,8 +359,6 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
                     Remove-Item $tempName -Recurse -Force
                 }
                 else {
-                    Write-Host $tempName
-                    Write-Host $version
                     Rename-Item -Path $tempName -NewName $version
                 }
             }
