@@ -11,6 +11,7 @@ AL-Go for GitHub allows you to build and test using insider builds without any e
 ### Issues
 - Issue 730 Support for external rulesets.
 - Issue 739 Workflow specific KeyVault settings doesn't work for localDevEnv
+- Using self-hosted runners while using Azure KeyVault for secrets or signing might fail with C:\Modules doesn't exist
 
 ### New Settings
 - `enableExternalRulesets`: set this setting to true if you want to allow AL-Go to automatically download external references in rulesets.
