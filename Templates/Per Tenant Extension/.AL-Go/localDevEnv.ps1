@@ -15,6 +15,18 @@ Param(
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 try {
+Clear-Host
+Write-Host
+Write-Host -ForegroundColor Yellow @'
+  _                     _   _____             ______
+ | |                   | | |  __ \           |  ____|
+ | |     ___   ___ __ _| | | |  | | _____   __ |__   _ ____   __
+ | |    / _ \ / __/ _` | | | |  | |/ _ \ \ / /  __| | '_ \ \ / /
+ | |____ (_) | (__ (_| | | | |__| |  __/\ V /| |____| | | \ V /
+ |______\___/ \___\__,_|_| |_____/ \___| \_/ |______|_| |_|\_/
+
+'@
+
 $webClient = New-Object System.Net.WebClient
 $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
 $webClient.Encoding = [System.Text.Encoding]::UTF8
@@ -33,19 +45,8 @@ Import-Module $GitHubHelperPath
 $baseFolder = GetBaseFolder -folder $PSScriptRoot
 $project = GetProject -baseFolder $baseFolder -projectALGoFolder $PSScriptRoot
 
-Clear-Host
-Write-Host
-Write-Host -ForegroundColor Yellow @'
-  _                     _   _____             ______
- | |                   | | |  __ \           |  ____|
- | |     ___   ___ __ _| | | |  | | _____   __ |__   _ ____   __
- | |    / _ \ / __/ _` | | | |  | |/ _ \ \ / /  __| | '_ \ \ / /
- | |____ (_) | (__ (_| | | | |__| |  __/\ V /| |____| | | \ V /
- |______\___/ \___\__,_|_| |_____/ \___| \_/ |______|_| |_|\_/
-
-'@
-
 Write-Host @'
+
 This script will create a docker based local development environment for your project.
 
 NOTE: You need to have Docker installed, configured and be able to create Business Central containers for this to work.

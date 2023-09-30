@@ -12,6 +12,18 @@ Param(
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 try {
+Clear-Host
+Write-Host
+Write-Host -ForegroundColor Yellow @'
+   _____ _                 _   _____             ______
+  / ____| |               | | |  __ \           |  ____|
+ | |    | | ___  _   _  __| | | |  | | _____   __ |__   _ ____   __
+ | |    | |/ _ \| | | |/ _` | | |  | |/ _ \ \ / /  __| | '_ \ \ / /
+ | |____| | (_) | |_| | (_| | | |__| |  __/\ V /| |____| | | \ V /
+  \_____|_|\___/ \__,_|\__,_| |_____/ \___| \_/ |______|_| |_|\_/
+
+'@
+
 $webClient = New-Object System.Net.WebClient
 $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
 $webClient.Encoding = [System.Text.Encoding]::UTF8
@@ -30,19 +42,8 @@ Import-Module $GitHubHelperPath
 $baseFolder = GetBaseFolder -folder $PSScriptRoot
 $project = GetProject -baseFolder $baseFolder -projectALGoFolder $PSScriptRoot
 
-Clear-Host
-Write-Host
-Write-Host -ForegroundColor Yellow @'
-   _____ _                 _   _____             ______
-  / ____| |               | | |  __ \           |  ____|
- | |    | | ___  _   _  __| | | |  | | _____   __ |__   _ ____   __
- | |    | |/ _ \| | | |/ _` | | |  | |/ _ \ \ / /  __| | '_ \ \ / /
- | |____| | (_) | |_| | (_| | | |__| |  __/\ V /| |____| | | \ V /
-  \_____|_|\___/ \__,_|\__,_| |_____/ \___| \_/ |______|_| |_|\_/
-
-'@
-
 Write-Host @'
+
 This script will create a cloud based development environment (Business Central SaaS Sandbox) for your project.
 All apps and test apps will be compiled and published to the environment in the development scope.
 The script will also modify launch.json to have a "Cloud Sandbox (<name>)" configuration point to your environment.
