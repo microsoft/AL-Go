@@ -359,6 +359,8 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
                     Remove-Item $tempName -Recurse -Force
                 }
                 else {
+                    Write-Host $tempName
+                    Write-Host $version
                     Rename-Item -Path $tempName -NewName $version
                 }
             }
