@@ -109,7 +109,7 @@ function GetKeyVaultCredentials {
 }
 
 function InstallKeyVaultModuleIfNeeded {
-    if ($isWindows) {
+    if ($isWindows -and (Test-Path 'C:\Modules\az_*')) {
         $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
         if ($azModulesPath) {
           Write-Host $azModulesPath.FullName
