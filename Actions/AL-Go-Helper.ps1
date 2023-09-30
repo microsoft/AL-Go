@@ -530,6 +530,9 @@ function ReadSettings {
                 throw "Error reading $path. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
             }
         }
+        else {
+            Write-Host "No settings found in $path"
+        }
         return $null
     }
 
