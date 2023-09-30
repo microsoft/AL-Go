@@ -2075,7 +2075,7 @@ function GetBaseFolder {
 
     Push-Location $folder
     try {
-        $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
+        $baseFolder = invoke-git -silent rev-parse --show-toplevel -returnValue
     }
     finally {
         Pop-Location
