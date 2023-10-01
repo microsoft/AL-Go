@@ -226,8 +226,17 @@ try {
                 $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
             }
             if ($_.Name -eq "AL-Go-Helper.ps1" -and ($config.ContainsKey("defaultBcContainerHelperVersion") -and $config.defaultBcContainerHelperVersion)) {
-                # replace defaultBcContainerHelperVersion (even if a version is set)
-                $lines = $lines | ForEach-Object { $_ -replace '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$', "`${1}`$defaultBcContainerHelperVersion`${2}=`${3}""$($config.defaultBcContainerHelperVersion)"" # `${5}" }
+                # replace defaultBcContainerHelperVersion
+                $found = $false
+                for($idx=0; $idx -lt $lines.count; $idx++) {
+                    if ($lines[$idx] -match '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$') {
+                        $lines[$idx] = "$($Matches[1])`$defaultBcContainerHelperVersion$($Matches[2])=$($Matches[3])""$($config.defaultBcContainerHelperVersion)"" # $($Matches[5])"
+                        $found = $true
+                    }
+                }
+                if (-not $found) {
+                    throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helpers.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$"'
+                }
             }
             [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
         }
