@@ -20,7 +20,7 @@ Describe "Deploy Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-            "environmentUrl" = The URL of the deployed environment
+            "environmentUrl" = "The URL of the deployed environment"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

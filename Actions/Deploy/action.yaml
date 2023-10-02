@@ -34,8 +34,8 @@ runs:
   using: composite
   steps:
     - name: run
-      id: Deploy
       shell: ${{ inputs.shell }}
+      id: Deploy
       env:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
