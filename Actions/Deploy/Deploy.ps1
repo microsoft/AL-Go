@@ -169,8 +169,10 @@ try {
             throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
         }
 
-        Write-Host "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$($deploymentSettings.EnvironmentName)/deployment/url"
-        $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$($deploymentSettings.EnvironmentName)/deployment/url"
+        $environmentUrl = "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$($deploymentSettings.EnvironmentName)"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "environmentUrl=$environmentUrl"
+        Write-Host "EnvironmentUrl: $environmentUrl"
+        $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$environmentUrl/deployment/url"
         if ($response.Status -eq "DoesNotExist") {
             OutputError -message "Environment with name $($deploymentSettings.EnvironmentName) does not exist in the current authorization context."
             exit
