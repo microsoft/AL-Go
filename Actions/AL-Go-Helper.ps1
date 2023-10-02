@@ -339,7 +339,7 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
         if ($bcContainerHelperVersion -notlike "https://*") {
             # Check whether the version is already available in the cache
-            $version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
+            $version = ([System.IO.File]::ReadAllText((Join-Path $tempName 'BcContainerHelper/Version.txt'), [System.Text.Encoding]::UTF8)).Trim()
             $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
             # To avoid two agents on the same machine downloading the same version at the same time, use a mutex
             $buildMutexName = "DownloadAndImportBcContainerHelper"
@@ -529,6 +529,9 @@ function ReadSettings {
             catch {
                 throw "Error reading $path. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
             }
+        }
+        else {
+            Write-Host "No settings found in $path"
         }
         return $null
     }
@@ -2076,7 +2079,7 @@ function GetBaseFolder {
 
     Push-Location $folder
     try {
-        $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
+        $baseFolder = invoke-git -silent rev-parse --show-toplevel -returnValue
     }
     finally {
         Pop-Location
