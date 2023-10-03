@@ -271,7 +271,7 @@ jobs:
   PostProcess:
     if: (!cancelled())
     runs-on: [ windows-latest ]
-    needs: [ Initialization, Build, Deploy, Deliver ]
+    needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
