@@ -149,6 +149,37 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
 
+  BuildALDoc:
+    needs: [ Initialization, Build ]
+    if: always() && needs.Build.result == 'Success'
+    runs-on: ubuntu-latest
+    name: Build ALDoc Documentation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Build ALDoc Documentation
+        uses: microsoft/AL-Go-Actions/BuildALDoc@main
+        with:
+          shell: powershell
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v2
+
+  DeployALDoc:
+    needs: BuildALDoc
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
   Deploy:
     needs: [ Initialization, Build ]
     if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
