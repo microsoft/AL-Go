@@ -149,11 +149,14 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
 
-  BuildALDoc:
+  DeployALDoc:
     needs: [ Initialization, Build ]
     if: always() && needs.Build.result == 'Success'
     runs-on: ubuntu-latest
-    name: Build ALDoc Documentation
+    name: Deploy ALDoc Documentation
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -169,13 +172,6 @@ jobs:
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v2
 
-  DeployALDoc:
-    needs: BuildALDoc
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
