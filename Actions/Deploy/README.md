@@ -22,4 +22,6 @@ Deploy Apps to online environment
 | type | | Type of delivery (CD or Release) | CD |
 
 ## OUTPUT
-none
+| Name | Description |
+| :-- | :-- |
+| environmentUrl | The URL for the environment. This URL is presented in the Deploy Step in summary under the environment name |
