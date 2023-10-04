@@ -19,10 +19,8 @@ if ($maxReleases -gt 0) {
     $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First $maxReleases
 }
 
-#$docsPath = Join-Path $ENV:GITHUB_WORKSPACE ".aldoc"
-#New-Item $docsPath -ItemType Directory | Out-Null
-
-$docsPath = $ENV:GITHUB_WORKSPACE
+$docsPath = Join-Path $ENV:GITHUB_WORKSPACE ".aldoc"
+New-Item $docsPath -ItemType Directory | Out-Null
 
 Write-Host (Get-Location)
 Write-Host (Test-Path -Path (Get-Location))
