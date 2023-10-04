@@ -44,6 +44,9 @@ function GenerateDocsSite {
         [switch] $hostIt
     )
 
+    Write-Host (Get-Location)
+    Write-Host (Get-Location)
+
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -path $docfxPath -ItemType Directory | Out-Null
     try {

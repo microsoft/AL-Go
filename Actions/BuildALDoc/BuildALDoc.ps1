@@ -22,6 +22,9 @@ if ($maxReleases -gt 0) {
 
 $docsPath = $ENV:GITHUB_WORKSPACE
 Set-Location $docsPath
+
+Write-Host $docsPath
+
 $loglevel = 'Verbose'
 
 $versions = @($releases.Name)
