@@ -5,7 +5,7 @@
         [string] $branch = "main"
     )
 
-    $workflowName = 'Test Next Minor'
+    $workflowName = 'Test Next Major'   # TODO - replace back to Minor
     $parameters = @{
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
