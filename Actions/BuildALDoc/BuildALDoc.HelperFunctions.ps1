@@ -1,17 +1,20 @@
 ﻿function DownloadAlDoc {
-    $artifactUrl = Get-BCArtifactUrl -storageAccount bcinsider -type sandbox -country core -select Latest -accept_insiderEula
-    $folder = Download-Artifacts $artifactUrl
-    $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
-    $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    New-Item -Path $tempFolder -ItemType Directory | Out-Null
-    Expand-Archive -Path $alLanguageVsix -DestinationPath $tempFolder -Force
-    $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
-    if ($isPsCore -and $isLinux) {
-        $global:aldocPath = Join-Path $tempFolder 'extension/bin/Linux/aldoc'
+    if ("$ENV:aldocPath" -eq "") {
+        $artifactUrl = Get-BCArtifactUrl -storageAccount bcinsider -type sandbox -country core -select Latest -accept_insiderEula
+        $folder = Download-Artifacts $artifactUrl
+        $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
+        $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        New-Item -Path $tempFolder -ItemType Directory | Out-Null
+        Expand-Archive -Path $alLanguageVsix -DestinationPath $tempFolder -Force
+        $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
+        if ($isPsCore -and $isLinux) {
+            $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/Linux/aldoc'
+        }
+        else {
+            $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
+        }
     }
-    else {
-        $global:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
-    }
+    $ENV:aldocPath
 }
 
 function SanitizeFileName([string] $filename) {
@@ -44,8 +47,9 @@ function GenerateDocsSite {
         [switch] $hostIt
     )
 
+    $alDocPath = DownloadAlDoc
     Write-Host (Get-Location)
-    Write-Host (Get-Location)
+    Write-Host (Test-Path -Path (Get-Location))
 
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -path $docfxPath -ItemType Directory | Out-Null
@@ -76,7 +80,7 @@ function GenerateDocsSite {
             }
         }
 
-        CmdDo -command $global:aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
+        CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
         # Update docfx.json
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
@@ -90,7 +94,7 @@ function GenerateDocsSite {
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
 
         $apps | ForEach-Object {
-            CmdDo -command $global:aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
+            CmdDo -command $aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
         }
 
         # Set release notes

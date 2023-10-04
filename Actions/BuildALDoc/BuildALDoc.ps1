@@ -6,11 +6,13 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "BuildALDoc.HelperFunctions.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
-DownloadAlDoc
 
 $projects = '*'
 $maxReleases = 2
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
+
+Write-Host $artifactsFolder
+Write-Host (Test-Path $artifactsFolder)
 
 $releases = @()
 if ($maxReleases -gt 0) {
@@ -21,7 +23,9 @@ if ($maxReleases -gt 0) {
 #New-Item $docsPath -ItemType Directory | Out-Null
 
 $docsPath = $ENV:GITHUB_WORKSPACE
-Set-Location $docsPath
+
+Write-Host (Get-Location)
+Write-Host (Test-Path -Path (Get-Location))
 
 Write-Host $docsPath
 
@@ -37,7 +41,7 @@ foreach($release in $releases) {
             DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
         }
         Write-Host "$($release.Name):"
-        Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length))" }
+        Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
         $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
         $version = $release.Name
         $header = "Documentation for $ENV:GITHUB_REPOSITORY $version"
@@ -62,18 +66,12 @@ foreach($release in $releases) {
 $releasesPath = Join-Path $docsPath "_site/releases"
 New-Item -Path $releasesPath -ItemType Directory | Out-Null
 foreach($version in $versions) {
-    Move-Item  -Path (join-Path $docsPath $version) -Destination $releasesPath
+    Move-Item -Path (join-Path $docsPath $version) -Destination $releasesPath
 }
 
 Write-Host "main:"
 Get-ChildItem -Path $artifactsFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
 $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
-
-Write-Host "-------------------------"
-$allApps | Out-Host
-Write-Host "-------------------------"
-$allDependencies | Out-Host
-Write-Host "-------------------------"
 
 $version = 'main'
 $header = "Documentation for $ENV:GITHUB_REPOSITORY"
