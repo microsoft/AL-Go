@@ -16,6 +16,9 @@ AL-Go for GitHub allows you to build and test using insider builds without any e
 
 ### New Settings
 - `enableExternalRulesets`: set this setting to true if you want to allow AL-Go to automatically download external references in rulesets.
+- `deliverTo<deliveryTarget>`: is not really new, but has new properties and wasn't documented. The complete list of properties is here (note that some properties are deliveryTarget specific):
+  - **Branches** = an array of branch patterns, which are allowed to deliver to this deliveryTarget. (Default [ "main" ])
+  - **CreateContainerIfNotExist** = *[Only for DeliverToStorage]* Create Blob Storage Container if it doesn't already exist. (Default false)
 
 ### Deployment
 Environment URL is now displayed underneath the environment being deployed to in the build summary. For Custom Deployment, the script can set the GitHub Output variable `environmentUrl` in order to show a custom URL.
