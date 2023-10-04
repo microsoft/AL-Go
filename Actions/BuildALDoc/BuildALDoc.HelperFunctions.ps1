@@ -95,11 +95,10 @@ function GenerateDocsSite {
         Write-Host "-----------------------JSON-----------------------"
         Get-Content $docfxJsonFile -Encoding utf8 | Out-Host
 
-        Write-Host "-----------------------ORGTOC-----------------------"
-        Get-Content $tocYmlFile -Encoding utf8 | Out-Host
-
         # Create new toc.yml
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
+        Write-Host "-----------------------ORGTOC-----------------------"
+        Get-Content $tocYmlFile -Encoding utf8 | Out-Host
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
 
         Write-Host "-----------------------NEWTOC-----------------------"
