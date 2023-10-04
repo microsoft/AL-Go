@@ -13,6 +13,8 @@
         else {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
         }
+
+        dotnet tool update -g docfx
     }
     $ENV:aldocPath
 }
