@@ -7,10 +7,10 @@
     Expand-Archive -Path $alLanguageVsix -DestinationPath $tempFolder -Force
     $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
     if ($isPsCore -and $isLinux) {
-        $script:aldocPath = Join-Path $tempFolder 'extension/bin/Linux/aldoc'
+        $global:aldocPath = Join-Path $tempFolder 'extension/bin/Linux/aldoc'
     }
     else {
-        $script:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
+        $global:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
     }
 }
 
@@ -73,7 +73,7 @@ function GenerateDocsSite {
             }
         }
 
-        CmdDo -command $script:aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
+        CmdDo -command $global:aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
         # Update docfx.json
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
@@ -87,7 +87,7 @@ function GenerateDocsSite {
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
 
         $apps | ForEach-Object {
-            CmdDo -command $script:aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
+            CmdDo -command $global:aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
         }
 
         # Set release notes
