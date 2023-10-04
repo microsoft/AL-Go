@@ -103,7 +103,13 @@ function GenerateDocsSite {
         # Set release notes
         Set-Content -path (Join-Path $docfxpath 'index.md') -value $releaseNotes -encoding utf8
 
-        $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", $docfxJsonFile)
+        Write-Host $docsPath
+        Write-Host (Test-Path $docsPath)
+        Write-Host $docfxJsonFile
+        Write-Host (Test-Path $docfxJsonFile)
+
+
+        $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {
             $arguments += @('-s')
             Write-Host "Generate and host site"
