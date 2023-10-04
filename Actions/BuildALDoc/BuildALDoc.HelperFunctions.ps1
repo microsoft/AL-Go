@@ -89,16 +89,26 @@ function GenerateDocsSite {
         $docfxJson.build.globalMetadata._appFooter = $footer
         $docfxJson | ConvertTo-Json -Depth 99 | Set-Content -Path $docfxJsonFile -Encoding utf8
 
+        Write-Host "-----------------------JSON-----------------------"
+        Get-Content $docfxJsonFile -Encoding utf8 | Out-Host
+
         # Create new toc.yml
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
 
+        Write-Host "-----------------------TOC-----------------------"
+        Get-Content $tocYmlFile -Encoding utf8 | Out-Host
+
         $apps | ForEach-Object {
+            Write-Host "Build $_  $(Test-Path $_))"
             CmdDo -command $aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
         }
 
         # Set release notes
         Set-Content -path (Join-Path $docfxpath 'index.md') -value $releaseNotes -encoding utf8
+
+        Write-Host "CALL DOCFX with this:"
+        get-childitem -path "$docfxPath/*" -Recurse | % { Write-Host $_.FullName }
 
         $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {
