@@ -16,6 +16,7 @@
 
         CmdDo -command dotnet -arguments @('tool','update','-g docfx')
     }
+    Write-Host (Test-Path $ENV:aldocPath)
     $ENV:aldocPath
 }
 
