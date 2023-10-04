@@ -27,7 +27,7 @@ try {
         Add-Content -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultSummary.Replace("\n","`n"))`n"
     }
     else {
-        Add-Content -path $ENV:GITHUB_STEP_SUMMARY -value "*Test results not found*`n`n"
+        Write-Host "Test results not found"
     }
 
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\BCPTTestResults.json"
