@@ -19,7 +19,7 @@ on:
         required: false
         default: false
       defaultBcContainerHelperVersion:
-        description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip - leave empty to use latest)'
+        description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip). Leave empty to use latest (or preview for preview branches)'
         required: false
         default: ''
 
@@ -35,11 +35,13 @@ jobs:
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
         env:
+          GH_TOKEN: ${{ github.token }}
           branch: ${{ github.event.inputs.branch }}
           repository: ${{ github.repository }}
           runId: ${{ github.run_id }}
         run: |
-          if ($env:branch -match 'preview') {
+          $errorActionPreference = "Stop"
+          if ($env:branch -eq 'preview') {
             Write-Host "Deploying to preview branch. No validation required"
           } else {
             $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
@@ -66,6 +68,13 @@ jobs:
               throw "In order to run the Deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token"
             }
             $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
+            if ("$env:defaultBcContainerHelperVersion" -eq "") {
+              if ($env:branch -eq 'preview') {
+                $env:defaultBcContainerHelperVersion = 'preview'
+              } else {
+                $env:defaultBcContainerHelperVersion = 'latest'
+              }
+            }
             $config = @{
                   "githubOwner" = $githubOwner
                   "actionsRepo" = "AL-Go-Actions"

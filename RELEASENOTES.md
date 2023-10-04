@@ -1,6 +1,29 @@
 ## Preview
 
-Note that when using the preview version of AL-Go for GitHub, you need to Update your AL-Go system files, as soon as possible when told to do so.
+Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
+
+### Removal of the InsiderSasToken
+
+As of October 1st 2023, Business Central insider builds are now publicly available. When creating local containers with the insider builds, you will have to accept the insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) in order to continue.
+
+AL-Go for GitHub allows you to build and test using insider builds without any explicit approval, but please note that the insider artifacts contains the insider Eula and you automatically accept this when using the builds.
+
+### Issues
+- Issue 730 Support for external rulesets.
+- Issue 739 Workflow specific KeyVault settings doesn't work for localDevEnv
+- Using self-hosted runners while using Azure KeyVault for secrets or signing might fail with C:\Modules doesn't exist
+- PullRequestHandler wasn't triggered if only .md files where changes. This lead to PRs which couldn't be merged if a PR status check was mandatory.
+
+### New Settings
+- `enableExternalRulesets`: set this setting to true if you want to allow AL-Go to automatically download external references in rulesets.
+- `deliverTo<deliveryTarget>`: is not really new, but has new properties and wasn't documented. The complete list of properties is here (note that some properties are deliveryTarget specific):
+  - **Branches** = an array of branch patterns, which are allowed to deliver to this deliveryTarget. (Default [ "main" ])
+  - **CreateContainerIfNotExist** = *[Only for DeliverToStorage]* Create Blob Storage Container if it doesn't already exist. (Default false)
+
+### Deployment
+Environment URL is now displayed underneath the environment being deployed to in the build summary. For Custom Deployment, the script can set the GitHub Output variable `environmentUrl` in order to show a custom URL.
+
+## v3.3
 
 ### Issues
 

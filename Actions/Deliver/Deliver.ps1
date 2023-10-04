@@ -34,6 +34,7 @@ function EnsureAzStorageModule() {
             Import-Module  'Azure.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
             Set-Alias -Name New-AzStorageContext -Value New-AzureStorageContext -Scope Script
             Set-Alias -Name Get-AzStorageContainer -Value Get-AzureStorageContainer -Scope Script
+            Set-Alias -Name New-AzStorageContainer -Value New-AzureStorageContainer -Scope Script
             Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
         }
         else {
@@ -352,7 +353,20 @@ try {
             $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
             Write-Host "Storage Container Name is $storageContainerName"
             Write-Host "Storage Blob Name is $storageBlobName"
-            Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
+
+            $containerExists = $true
+            try {
+                Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
+            }
+            catch {
+                $containerExists = $false
+            }
+
+            if (-not $containerExists -and $settings.Contains('DeliverToStorage') -and $settings."DeliverToStorage".Contains('CreateContainerIfNotExist') -and $settings."DeliverToStorage"."CreateContainerIfNotExist" -eq $true) {
+                Write-Host "Container $storageContainerName does not exist. Creating..."
+                New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
+            }
+
             Write-Host "Delivering to $storageContainerName in $($storageAccount.StorageAccountName)"
             $atypes.Split(',') | ForEach-Object {
                 $atype = $_

@@ -91,7 +91,7 @@ jobs:
           with:
             shell: ${{ inputs.shell }}
             project: ${{ inputs.project }}
-            get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,artifact
+            get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact
 
         - name: Read secrets
           id: ReadSecrets
@@ -105,8 +105,6 @@ jobs:
         - name: Determine ArtifactUrl
           uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
           id: determineArtifactUrl
-          env:
-            Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           with:
             shell: ${{ inputs.shell }}
             parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
@@ -242,7 +240,7 @@ jobs:
 
         - name: Analyze Test Results
           id: analyzeTestResults
-          if: success() || failure()
+          if: (success() || failure()) && env.doNotRunTests == 'False'
           uses: microsoft/AL-Go-Actions/AnalyzeTests@main
           with:
             shell: ${{ inputs.shell }}

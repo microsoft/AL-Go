@@ -143,7 +143,7 @@ jobs:
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
-      secrets: 'licenseFileUrl,insiderSasToken,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
+      secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
       publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
       signArtifacts: true
@@ -157,6 +157,7 @@ jobs:
     name: Deploy to ${{ matrix.environment }}
     environment:
       name: ${{ matrix.environment }}
+      url: ${{ steps.Deploy.outputs.environmentUrl }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -187,6 +188,7 @@ jobs:
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
 
       - name: Deploy
+        id: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
