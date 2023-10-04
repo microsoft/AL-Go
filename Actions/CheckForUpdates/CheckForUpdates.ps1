@@ -22,18 +22,6 @@
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
-$anchors = @{
-    "_BuildALGoProject.yaml" = @{
-        "BuildALGoProject" = @(
-            @{ "Step" = 'Read settings'; "Before" = $false }
-            @{ "Step" = 'Read secrets'; "Before" = $false }
-            @{ "Step" = 'Build'; "Before" = $true }
-            @{ "Step" = 'Build'; "Before" = $false }
-            @{ "Step" = 'Cleanup'; "Before" = $true }
-        )
-    }
-}
-
 if ($update) {
     if (-not $token) {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
@@ -76,46 +64,18 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
     $downloadLatest = $true
 }
 
-$realTemplateFolder = $null
 $templateFolder = DownloadTemplateRepository -headers $headers -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
 
-$indirectTemplateRepoSettings = @{}
-$indirectTemplateProjectSettings = @{}
 if (-not (IsDirectALGo -templateUrl $templateUrl)) {
     $ALGoSettingsFile = Join-Path $templateFolder "*/.github/AL-Go-Settings.json"
     if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
-            # The template repository is a url to another AL-Go repository (an indirect template repository)
-            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the indirect template reposotiry points to the "real" template repository
-            # Copy files and folders from the indirect template repository, but grab the unmodified file from the "real" template repository if it exists and apply customizations
-            Write-Host "Indirect AL-Go template repository detected, downloading the 'real' template repository"
-            $realTemplateUrl = $templateRepoSettings.templateUrl
-            if ($templateRepoSettings.Keys -contains "templateSha") {
-                $realTemplateSha = $templateRepoSettings.templateSha
-            }
-            else {
-                $realTemplateSha = ""
-            }
-            # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
-            $realTemplateFolder = DownloadTemplateRepository -headers $headers -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
-            Write-Host "Real Template Folder: $realTemplateFolder"
-
-            # Set TemplateBranch and TemplateOwner
-            # Keep TemplateUrl and TemplateSha pointing to the indirect template repository
-            $templateBranch = $realTemplateUrl.Split('@')[1]
-            $templateOwner = $realTemplateUrl.Split('/')[3]
-
-            $indirectTemplateRepoSettings = $templateRepoSettings
-            $projectSettingsFile = Join-Path $templateFolder "*/.AL-Go/settings.json"
-            if (Test-Path $projectSettingsFile -PathType Leaf) {
-                Write-Host "Read project settings from indirect template repository"
-                $indirectTemplateProjectSettings = Get-Content $projectSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
-            }
+            throw "The specified template repository is not a template repository, but instead another AL-Go repository. This is not supported."
         }
     }
 }
@@ -168,20 +128,9 @@ foreach($checkfile in $checkfiles) {
     $dstPath = $checkfile.dstPath
     $dstFolder = Join-Path $baseFolder $dstPath
     $srcFolder = GetSrcFolder -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
-    $realSrcFolder = $null
-    if ($realTemplateFolder) {
-        $realSrcFolder = GetSrcFolder -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
-    }
     if ($srcFolder) {
         Push-Location -Path $srcFolder
         try {
-            if ($srcPath -eq '.AL-Go' -and $type -eq "script" -and $realSrcFolder) {
-                Write-Host "Update Project Settings"
-                # Copy individual settings from the indirect template repository .AL-Go/settings.json (if the setting doesn't exist in the project folder)
-                $projectSettingsFile = Join-Path $dstFolder "settings.json"
-                UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -otherSettings $indirectTemplateProjectSettings
-                $updateFiles += @{ "DstFile" = Join-Path $dstPath "settings.json"; "content" = (Get-Content -Path $projectSettingsFile -Encoding UTF8 -Raw) }
-            }
             # Loop through all files in the template repository matching the pattern
             Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
                 # Read the template file and modify it based on the settings
@@ -190,21 +139,11 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "- $filename"
                 $dstFile = Join-Path $dstFolder $fileName
                 $srcFile = $_.FullName
-                $realSrcFile = $srcFile
                 $isFileDirectALGo = IsDirectALGo -templateUrl $templateUrl
                 Write-Host "SrcFolder: $srcFolder"
-                if ($realSrcFolder) {
-                    # if SrcFile is an indirect template repository, we need to find the file in the "real" template repository
-                    $fname = Join-Path $realSrcFolder (Resolve-Path $srcFile -Relative)
-                    if (Test-Path -Path $fname -PathType Leaf) {
-                        Write-Host "File is available in the 'real' template repository"
-                        $realSrcFile = $fname
-                        $isFileDirectALGo = IsDirectALGo -templateUrl $realTemplateUrl
-                    }
-                }
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
-                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $realSrcFile -repoSettings $repoSettings -depth $depth
+                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
                 }
                 else {
                     # For non-workflow files, just read the file content
@@ -219,12 +158,6 @@ foreach($checkfile in $checkfiles) {
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
-                if ($type -eq 'workflow' -and $realSrcFile -ne $srcFile) {
-                    # Apply customizations from indirect template repository
-                    Write-Host "Apply customizations from indirect template repository: $srcFile"
-                    [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $anchors)
-                }
-
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 if ($unusedALGoSystemFiles -contains $fileName) {
                     # file is not used by ALGo, remove it if it exists
@@ -234,10 +167,6 @@ foreach($checkfile in $checkfiles) {
                     }
                 }
                 elseif ($dstFileExists) {
-                    if ($type -eq 'workflow') {
-                        Write-Host "Apply customizations from my repository: $dstFile"
-                        [Yaml]::ApplyCustomizations([ref] $srcContent,$dstFile, $anchors)
-                    }
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {
@@ -275,7 +204,7 @@ else {
 
         invoke-git status
 
-        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha } -otherSettings $indirectTemplateRepoSettings
+        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
 
         # Update the files
         # Calculate the release notes, while updating
