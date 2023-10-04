@@ -117,7 +117,6 @@ function CalculateProjectsAndApps {
     foreach($mask in 'Apps','Dependencies') {
         $allApps = @{}
         Get-ChildItem -Path $tempFolder -Directory | ForEach-Object {
-            Write-Host $_.Name
             if ($_.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") {
                 $project = $Matches[1]
                 if ($projectList | Where-Object { $project -like $_ }) {
@@ -128,7 +127,6 @@ function CalculateProjectsAndApps {
                 }
             }
         }
-        $allApps | Out-Host
         $allApps
     }
 }

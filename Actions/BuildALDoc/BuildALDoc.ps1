@@ -21,6 +21,7 @@ if ($maxReleases -gt 0) {
 #New-Item $docsPath -ItemType Directory | Out-Null
 
 $docsPath = $ENV:GITHUB_WORKSPACE
+Set-Location $docsPath
 $loglevel = 'Verbose'
 
 $versions = @($releases.Name)
@@ -35,11 +36,6 @@ foreach($release in $releases) {
         Write-Host "$($release.Name):"
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length))" }
         $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
-        Write-Host "-------------------------"
-        $allApps | Out-Host
-        Write-Host "-------------------------"
-        $allDependencies | Out-Host
-        Write-Host "-------------------------"
         $version = $release.Name
         $header = "Documentation for $ENV:GITHUB_REPOSITORY $version"
         $releaseNotes = $release.body
