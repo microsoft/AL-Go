@@ -31,7 +31,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $env:GITHUB_REF_NAME = "main"
         & $scriptPath `
                 -project $project `
-                -buildMode $buildMode `
+                -buildMode $buildMode
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-CleanApps"
