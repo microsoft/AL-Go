@@ -126,45 +126,6 @@ class Yaml {
         return $this.Get($line, [ref] $start, [ref] $count)
     }
 
-    # Locate all lines in the next level of a yaml path
-    # if $line is empty, you get all first level lines
-    # Example:
-    # GetNextLevel("jobs:/") returns @("Initialization:","CheckForUpdates:","Build:","Deploy:",...)
-    [string[]] GetNextLevel([string] $line) {
-        [int]$start = 0
-        [int]$count = 0
-        [Yaml] $yaml = $this
-        if ($line) {
-            $yaml = $this.Get($line, [ref] $start, [ref] $count)
-        }
-        return $yaml.content | Where-Object { $_ -and -not $_.StartsWith(' ') }
-    }
-
-    # Get the value of a property as a string
-    # Example:
-    # GetProperty("jobs:/Build:/needs:") returns "[ Initialization, Build1 ]"
-    [string] GetProperty([string] $line) {
-        [int]$start = 0
-        [int]$count = 0
-        [Yaml] $yaml = $this.Get($line, [ref] $start, [ref] $count)
-        if ($yaml -and $yaml.content.Count -eq 1) {
-            return $yaml.content[0].SubString($yaml.content[0].IndexOf(':')+1).Trim()
-        }
-        return $null
-    }
-
-    # Get the value of a property as a string array
-    # Example:
-    # GetPropertyArray("jobs:/Build:/needs:") returns @("Initialization", "Build")
-    [string[]] GetPropertyArray([string] $line) {
-        $prop = $this.GetProperty($line)
-        if ($prop) {
-            # "needs: [ Initialization, Build ]" becomes @("Initialization", "Build")
-            return $prop.TrimStart('[').TrimEnd(']').Split(',').Trim()
-        }
-        return $null
-    }
-
     # Replace the lines for the specified Yaml path, given by $line with the lines in $content
     # If $line ends with '/', then the lines for the section are replaced only
     # If $line doesn't end with '/', then the line + the lines for the section are replaced
