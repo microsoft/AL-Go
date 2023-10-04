@@ -50,9 +50,6 @@ function GenerateDocsSite {
     )
 
     $alDocPath = DownloadAlDoc
-    Write-Host (Get-Location)
-    Write-Host (Test-Path -Path (Get-Location))
-
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -path $docfxPath -ItemType Directory | Out-Null
     try {
@@ -82,9 +79,6 @@ function GenerateDocsSite {
             }
         }
 
-        Write-Host (Get-Location)
-        Write-Host (Test-Path -Path (Get-Location))
-    
         CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
         # Update docfx.json
@@ -104,12 +98,6 @@ function GenerateDocsSite {
 
         # Set release notes
         Set-Content -path (Join-Path $docfxpath 'index.md') -value $releaseNotes -encoding utf8
-
-        Write-Host $docsPath
-        Write-Host (Test-Path $docsPath)
-        Write-Host $docfxJsonFile
-        Write-Host (Test-Path $docfxJsonFile)
-
 
         $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {

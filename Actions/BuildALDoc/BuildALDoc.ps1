@@ -11,9 +11,6 @@ $projects = '*'
 $maxReleases = 2
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
-Write-Host $artifactsFolder
-Write-Host (Test-Path $artifactsFolder)
-
 $releases = @()
 if ($maxReleases -gt 0) {
     $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First $maxReleases
@@ -21,12 +18,6 @@ if ($maxReleases -gt 0) {
 
 $docsPath = Join-Path $ENV:GITHUB_WORKSPACE ".aldoc"
 New-Item $docsPath -ItemType Directory | Out-Null
-
-Write-Host (Get-Location)
-Write-Host (Test-Path -Path (Get-Location))
-
-Write-Host $docsPath
-
 $loglevel = 'Verbose'
 
 $versions = @($releases.Name)
