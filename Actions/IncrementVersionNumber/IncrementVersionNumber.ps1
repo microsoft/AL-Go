@@ -37,6 +37,7 @@ try {
         throw "Version number ($versionNumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
     }
 
+    $settings = $env:Settings | ConvertFrom-Json
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
     foreach($project in $projectList) {
         try {
