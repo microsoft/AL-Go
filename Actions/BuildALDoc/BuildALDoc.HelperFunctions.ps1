@@ -9,6 +9,7 @@
         $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
         if ($isPsCore -and $isLinux) {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/Linux/aldoc'
+            & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
         }
         else {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
