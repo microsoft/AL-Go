@@ -80,10 +80,11 @@ else {
     $idRange = @{ "from" = 55000; "to" = 56000 }
 }
 if ($multiProject) {
-    $project1Param = @{ "projects" = "P1" }
+    $project1Param = @{ "project" = "P1" }
     $project1Folder = 'P1\'
-    $project2Param = @{ "projects" = "P2" }
+    $project2Param = @{ "project" = "P2" }
     $project2Folder = 'P2\'
+    $p2ProjectsParam = @{ "projects" = "P2" }
     $allProjectsParam = @{ "projects" = "*" }
     $projectSettingsFiles = @("P1\.AL-Go\settings.json", "P2\.AL-Go\settings.json")
 }
@@ -92,6 +93,7 @@ else {
     $project1Folder = ""
     $project2Param = @{}
     $project2Folder = ""
+    $p2ProjectsParam = @{}
     $allProjectsParam = @{}
     $projectSettingsFiles = @(".AL-Go\settings.json")
 }
@@ -193,7 +195,7 @@ if ($adminCenterApiToken -and -not $multiProject) {
 }
 
 # Increment version number on one project
-RunIncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
+RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.0 -wait -branch $branch | Out-Null
 $runs++
 $run = MergePRandPull -branch $branch -wait
 $runs++
