@@ -41,24 +41,24 @@ foreach($release in $releases) {
         Write-Host "-------------------------"
         $allDependencies | Out-Host
         Write-Host "-------------------------"
+        $version = $release.Name
+        $header = "Documentation for $ENV:GITHUB_REPOSITORY $version"
+        $releaseNotes = $release.body
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
+        do {
+            try {
+                $retry = $false
+                Start-Sleep -Seconds 2
+                Rename-Item -Path (join-Path $docsPath "_site") -NewName $version
+            }
+            catch {
+                $retry = $true    
+            }
+        } while ($retry)
     }
     finally {
         Remove-Item -Path $tempFolder -Recurse -Force
     }
-    $version = $release.Name
-    $header = "Documentation for $ENV:GITHUB_REPOSITORY $version"
-    $releaseNotes = $release.body
-    GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
-    do {
-        try {
-            $retry = $false
-            Start-Sleep -Seconds 2
-            Rename-Item -Path (join-Path $docsPath "_site") -NewName $version
-        }
-        catch {
-            $retry = $true    
-        }
-    } while ($retry)
 }
 
 $releasesPath = Join-Path $docsPath "_site/releases"
