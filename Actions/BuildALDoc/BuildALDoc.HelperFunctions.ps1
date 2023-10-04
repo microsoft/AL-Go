@@ -120,8 +120,7 @@ function CalculateProjectsAndApps {
             Write-Host $_.Name
             if ($_.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") {
                 $project = $Matches[1]
-                Write-Host $project
-                if ($projectList | Where-Object { $_ -like $project }) {
+                if ($projectList | Where-Object { $project -like $_ }) {
                     $allApps."$project" = @()
                     Get-ChildItem -Path $_.FullName -Filter '*.app' -Recurse | ForEach-Object {
                         $allApps."$project" += @($_.FullName)
