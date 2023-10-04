@@ -166,6 +166,11 @@ jobs:
         with:
           path: '.artifacts'
 
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
