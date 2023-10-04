@@ -24,6 +24,8 @@ if ($maxReleases -gt 0) {
 $docsPath = $ENV:GITHUB_WORKSPACE
 $loglevel = 'Verbose'
 
+$versions = @($releases.Name)
+
 foreach($release in $releases) {
     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -Path $tempFolder -ItemType Directory | Out-Null
