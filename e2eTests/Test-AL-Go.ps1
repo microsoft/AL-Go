@@ -80,11 +80,11 @@ else {
     $idRange = @{ "from" = 55000; "to" = 56000 }
 }
 if ($multiProject) {
-    $project1Param = @{ "project" = "P1" }
+    $project1Param = @{ "projects" = "P1" }
     $project1Folder = 'P1\'
-    $project2Param = @{ "project" = "P2" }
+    $project2Param = @{ "projects" = "P2" }
     $project2Folder = 'P2\'
-    $allProjectsParam = @{ "project" = "*" }
+    $allProjectsParam = @{ "projects" = "*" }
     $projectSettingsFiles = @("P1\.AL-Go\settings.json", "P2\.AL-Go\settings.json")
 }
 else {
@@ -216,7 +216,7 @@ Remove-Item -Path ".github\workflows\AddExistingAppOrTestApp.yaml" -Force
 CommitAndPush -commitMessage "Version strategy change"
 $runs++
 
-# Increment version number on all project (and on all apps)
+# Increment version number on all projects (and on all apps)
 RunIncrementVersionNumber @allProjectsParam -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
 $runs++
 Pull -branch $branch
