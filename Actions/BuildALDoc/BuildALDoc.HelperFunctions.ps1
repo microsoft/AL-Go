@@ -80,6 +80,9 @@ function GenerateDocsSite {
             }
         }
 
+        Write-Host (Get-Location)
+        Write-Host (Test-Path -Path (Get-Location))
+    
         CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
         # Update docfx.json
