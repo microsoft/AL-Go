@@ -82,6 +82,9 @@ function GenerateDocsSite {
 
         CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
+        Write-Host "Back from aldoc init:"
+        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host $_.FullName }
+
         # Update docfx.json
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
         $docfxJson = Get-Content -Encoding utf8 -Path $docfxJsonFile | ConvertFrom-Json
@@ -92,11 +95,14 @@ function GenerateDocsSite {
         Write-Host "-----------------------JSON-----------------------"
         Get-Content $docfxJsonFile -Encoding utf8 | Out-Host
 
+        Write-Host "-----------------------ORGTOC-----------------------"
+        Get-Content $tocYmlFile -Encoding utf8 | Out-Host
+
         # Create new toc.yml
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
 
-        Write-Host "-----------------------TOC-----------------------"
+        Write-Host "-----------------------NEWTOC-----------------------"
         Get-Content $tocYmlFile -Encoding utf8 | Out-Host
 
         $apps | ForEach-Object {
@@ -108,7 +114,7 @@ function GenerateDocsSite {
         Set-Content -path (Join-Path $docfxpath 'index.md') -value $releaseNotes -encoding utf8
 
         Write-Host "CALL DOCFX with this:"
-        get-childitem -path "$docfxPath/*" -Recurse | % { Write-Host $_.FullName }
+        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host $_.FullName }
 
         $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {
