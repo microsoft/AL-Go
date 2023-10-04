@@ -627,7 +627,7 @@ function DownloadRelease {
             Write-Host $uri
             $filename = Join-Path $path $asset.name
             InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
-            return $filename
+            $filename
         }
     }
 }
