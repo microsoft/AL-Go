@@ -17,7 +17,6 @@
 
         CmdDo -command dotnet -arguments @('tool','update','-g docfx')
     }
-    Write-Host (Test-Path $ENV:aldocPath)
     $ENV:aldocPath
 }
 
@@ -59,7 +58,7 @@ function GenerateDocsSite {
         # Generate new toc.yml and calculate apps - releases and projects
         $newTocYml = @('items:','  - name: Releases','    items:','    - name: main','      href: /')
         foreach($ver in $allVersions) {
-            $newTocYml += @("    - name: $ver","      href: /releases/$ver")
+            $newTocYml += @("    - name: $ver","      href: releases/$ver")
         }
         if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq '.') {
             # Single prokect repo
