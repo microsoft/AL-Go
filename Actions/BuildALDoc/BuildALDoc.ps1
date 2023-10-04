@@ -11,6 +11,8 @@ $maxReleases = 2
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
 # locate all artifacts folders in .artifacts
+Write-Host "CURRENT:"
+Get-ChildItem -Path $artifactsFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName)" }
 $apps = @()
 $dependencies = @()
 if (Test-Path $artifactsFolder -PathType Container) {
@@ -47,7 +49,7 @@ foreach($release in $releases) {
     foreach($mask in 'Apps', 'Dependencies') {
         DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
     }
-    Get-ChildItem -Path $tempFolder -Recurse | ForEach-Object { $_.FullName } | Out-Host
+    Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName)" }
 }
 
 $allApps | Out-Host

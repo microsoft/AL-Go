@@ -619,10 +619,6 @@ function DownloadRelease {
         $assetPattern1 = "$project-*-$mask-*.zip"
         $assetPattern2 = "$project-$mask-*.zip"
         Write-Host "AssetPatterns: '$assetPattern1' | '$assetPattern2'"
-        Write-Host "Assets:"
-        $release.assets | ForEach-Object {
-            Write-Host "- $($_.name)"
-        }
         $assets = @($release.assets | Where-Object { $_.name -like $assetPattern1 -or $_.name -like $assetPattern2 })
         foreach($asset in $assets) {
             $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
