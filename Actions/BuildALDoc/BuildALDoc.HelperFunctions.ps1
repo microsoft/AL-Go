@@ -122,9 +122,9 @@ function CalculateProjectsAndApps {
                 $project = $Matches[1]
                 Write-Host $project
                 if ($projectList -contains $project) {
-                    $allApps.Add($project, @())
+                    $allApps."$project" = @()
                     Get-ChildItem -Path $_.FullName -Filter '*.app' -Recurse | ForEach-Object {
-                        $allApps[$project] += @($_.FullName)
+                        $allApps."$project" += @($_.FullName)
                     }
                 }
             }
