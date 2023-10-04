@@ -45,9 +45,9 @@ foreach($release in $releases) {
     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -Path $tempFolder -ItemType Directory | Out-Null
     foreach($mask in 'Apps', 'Dependencies') {
-        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask
+        DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
     }
-    Get-ChildItem -Path $tempFolder | ForEach-Object { $_.FullName } | Out-Host
+    Get-ChildItem -Path $tempFolder -Recurse | ForEach-Object { $_.FullName } | Out-Host
 }
 
 $allApps | Out-Host

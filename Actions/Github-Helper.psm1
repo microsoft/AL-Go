@@ -602,7 +602,9 @@ function DownloadRelease {
         [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $path,
         [string] $mask = "Apps",
+        [switch] $unpack,
         $release
+
     )
 
     if ($projects -eq "") { $projects = "*" }
@@ -627,6 +629,15 @@ function DownloadRelease {
             Write-Host $uri
             $filename = Join-Path $path $asset.name
             InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
+            if ($unpack) {
+                $unzipPath = Join-Path $path $asset.name.Replace('.zip','')
+                if (Test-Path $unzipPath) {
+                    Remove-Item $unzipPath -Recurse -Force
+                }
+                Expand-Archive -Path $filename -DestinationPath $unzipPath
+                Remove-Item $filename -Force
+                $filename = $unzipPath
+            }
             $filename
         }
     }
