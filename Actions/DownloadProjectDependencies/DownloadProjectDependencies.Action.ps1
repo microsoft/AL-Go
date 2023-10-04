@@ -42,8 +42,8 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
 
         $currentBranch = $ENV:GITHUB_REF_NAME
 
-        $baseBranch = $ENV:GITHUB_BASE_REF_NAME
-        # $ENV:GITHUB_BASE_REF_NAME is specified only for pull requests, so if it is not specified, use the current branch
+        $baseBranch = $ENV:GITHUB_BASE_REF
+        # $ENV:GITHUB_BASE_REF is specified only for pull requests, so if it is not specified, use the current branch
         if (!$baseBranch) {
             $baseBranch = $currentBranch
         }
