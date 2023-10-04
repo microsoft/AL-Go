@@ -300,13 +300,11 @@ function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
         [hashtable] $updateSettings,
-        [hashtable] $otherSettings
+        [hashtable] $otherSettings = @{}
     )
 
-    Write-Host $settingsFile
     # Update Repo Settings file with the template URL
     if (Test-Path $settingsFile) {
-        Write-Host "READ"
         $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
     }
     else {
