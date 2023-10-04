@@ -24,7 +24,7 @@ inputs:
     description: List of project names if the repository is setup for multiple projects (* for all projects)
     required: false
     default: '*'
-  versionnumber:
+  versionNumber:
     description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
     required: true
   updateBranch:
@@ -45,13 +45,13 @@ runs:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _projects: ${{ inputs.projects }}
-        _versionnumber: ${{ inputs.versionnumber }}
+        _versionNumber: ${{ inputs.versionNumber }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -projects $ENV:_projects -versionnumber $ENV:_versionnumber -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true' -or $ENV:_directCommit -eq 'Y')
+          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -projects $ENV:_projects -versionNumber $ENV:_versionNumber -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true' -or $ENV:_directCommit -eq 'Y')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

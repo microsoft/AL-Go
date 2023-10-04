@@ -8,7 +8,7 @@
     [Parameter(HelpMessage = "List of project names if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
     [string] $projects = '*',
     [Parameter(HelpMessage = "Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.", Mandatory = $true)]
-    [string] $versionnumber,
+    [string] $versionNumber,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct commit?", Mandatory = $false)]
@@ -26,15 +26,15 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    $addToVersionNumber = "$versionnumber".StartsWith('+')
+    $addToVersionNumber = "$versionNumber".StartsWith('+')
     if ($addToVersionNumber) {
-        $versionnumber = $versionnumber.Substring(1)
+        $versionNumber = $versionNumber.Substring(1)
     }
     try {
-        $newVersion = [System.Version]"$($versionnumber).0.0"
+        $newVersion = [System.Version]"$($versionNumber).0.0"
     }
     catch {
-        throw "Version number ($versionnumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
+        throw "Version number ($versionNumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
     }
 
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)

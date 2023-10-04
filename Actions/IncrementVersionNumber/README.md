@@ -14,7 +14,7 @@ none
 | token | | The GitHub token running the action | github.token |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | projects | | List of project names if the repository is setup for multiple projects (* for all projects) | * |
-| versionnumber | Yes | Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change | |
+| versionNumber | Yes | Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change | |
 | updateBranch | | Which branch should the app be added to | github.ref_name |
 | directCommit | | true if the action should create a direct commit against the branch or false to create a Pull Request | false |
 
