@@ -28,7 +28,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should include buildmode name in artifact name if buildmode is not default' {
         $buildMode = "Clean"
-        $env:GITHUB_REF_NAME = "main"
+        $env:GITHUB_HEAD_REF = "main"
         & $scriptPath `
                 -project $project `
                 -buildMode $buildMode
@@ -49,7 +49,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should not include buildmode name in artifact name if buildmode is default' {
         $buildMode = "Default"
-        $env:GITHUB_REF_NAME= "main"
+        $env:GITHUB_HEAD_REF = "main"
         & $scriptPath `
                 -project $project `
                 -buildMode $buildMode
@@ -68,7 +68,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should escape slashes and backslashes in artifact name' {
         $buildMode = "Default"
-        $env:GITHUB_REF_NAME= "releases/1.0"
+        $env:GITHUB_HEAD_REF = "releases/1.0"
         & $scriptPath `
                 -project $project `
                 -buildMode $buildMode
@@ -87,7 +87,7 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should use the specified suffix if provided' {
         $buildMode = "Default"
-        $env:GITHUB_REF_NAME = "releases/1.0"
+        $env:GITHUB_HEAD_REF  = "releases/1.0"
         $suffix = "Current"
         & $scriptPath `
                 -project $project `
@@ -113,7 +113,7 @@ Describe 'CalculateArtifactNames Action Tests' {
     It 'handles special characters in project name' {
         $project = "ALGOProject_øåæ"
         $buildMode = "Default"
-        $env:GITHUB_REF_NAME= "releases/1.0"
+        $env:GITHUB_HEAD_REF = "releases/1.0"
         $suffix = "Current"
         & $scriptPath `
                 -project $project `
