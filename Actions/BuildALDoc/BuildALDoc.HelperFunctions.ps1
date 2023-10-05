@@ -83,7 +83,7 @@ function GenerateDocsSite {
         CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
         Write-Host "Back from aldoc init:"
-        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host $_.FullName }
+        get-childitem -path "$docfxPath/*" -Recurse | % { Write-Host "$($_.FullName) ($($_.Attributes))" }
 
         # Update docfx.json
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
@@ -107,6 +107,9 @@ function GenerateDocsSite {
         $apps | ForEach-Object {
             Write-Host "Build $_  $(Test-Path $_))"
             CmdDo -command $aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
+
+            Write-Host "Back from aldoc build:"
+            get-childitem -path "$docfxPath/*" -Recurse | % { Write-Host "$($_.FullName) ($($_.Attributes))" }
         }
 
         # Set release notes
