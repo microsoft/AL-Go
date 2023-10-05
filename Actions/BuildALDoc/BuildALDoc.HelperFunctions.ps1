@@ -83,7 +83,7 @@ function GenerateDocsSite {
         CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
         Write-Host "Back from aldoc init:"
-        get-childitem -path "$docfxPath/*" -Recurse | % { Write-Host "$($_.FullName) ($($_.Attributes))" }
+        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host "$($_.Directory.Name)  [$($_.Name)]" }
 
         # Update docfx.json
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
@@ -109,14 +109,14 @@ function GenerateDocsSite {
             CmdDo -command $aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
 
             Write-Host "Back from aldoc build:"
-            get-childitem -path "$docfxPath/*" -Recurse | % { Write-Host "$($_.FullName) ($($_.Attributes))" }
+            get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host "$($_.Directory.Name)  [$($_.Name)]" }
         }
 
         # Set release notes
         Set-Content -path (Join-Path $docfxpath 'index.md') -value $releaseNotes -encoding utf8
 
         Write-Host "CALL DOCFX with this:"
-        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host $_.FullName }
+        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host "$($_.Directory.Name)  [$($_.Name)]" }
 
         $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {
