@@ -44,6 +44,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             "DeploymentEnvironmentsJson" = "Deployment Environments with settings in compressed JSON format"
             "EnvironmentCount" = "Number of Deployment Environments"
             "UnknownEnvironment" = "Flag determining whether the environment is unknown"
+            "GenerateALDocArtifact" = "Flag determining whether to generate the ALDoc artifact"
+            "DeployALDocArtifact" = "Flag determining whether to deploy the ALDoc artifact to GitHub Pages"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

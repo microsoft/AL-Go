@@ -622,6 +622,8 @@ function ReadSettings {
         "PullRequestTrigger"                            = "pull_request_target"
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
+        "generateALDocArtifact"                          = $false
+        "deployALDocArtifact"                           = $false
     }
 
     # Read settings from files and merge them into the settings object

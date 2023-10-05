@@ -30,6 +30,8 @@ jobs:
       environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
       environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
       deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
+      generateALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.GenerateALDocArtifact }}
+      deployALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.DeployALDocArtifact }}
       deliveryTargetsJson: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
@@ -151,7 +153,7 @@ jobs:
 
   DeployALDoc:
     needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success'
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 'true'
     runs-on: ubuntu-latest
     name: Deploy ALDoc Documentation
     environment:
@@ -172,6 +174,7 @@ jobs:
           shell: powershell
 
       - name: Setup Pages
+        if: needs.Initialization.outputs.deployALDocArtifact == 'true'
         uses: actions/configure-pages@v3
 
       - name: Build ALDoc Documentation
@@ -183,6 +186,7 @@ jobs:
         uses: actions/upload-pages-artifact@v2
 
       - name: Deploy to GitHub Pages
+        if: needs.Initialization.outputs.deployALDocArtifact == 'true'
         id: deployment
         uses: actions/deploy-pages@v2
 
