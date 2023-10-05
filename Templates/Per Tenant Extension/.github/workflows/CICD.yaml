@@ -16,6 +16,8 @@ defaults:
 permissions:
   contents: read
   actions: read
+  pages: write
+  id-token: write
 
 env:
   workflowDepth: 1
