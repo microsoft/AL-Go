@@ -13,14 +13,15 @@ $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
 $releases = @()
 if ($maxReleases -gt 0) {
-    $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY | Where-Object { $_ -and (-not ($_.prerelease -or $_.draft)) } | Select-Object -First $maxReleases
+    $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY | Where-Object { $_ } | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First $maxReleases
+    $releases | Out-Host
 }
 
 $docsPath = Join-Path $ENV:GITHUB_WORKSPACE ".aldoc"
 New-Item $docsPath -ItemType Directory | Out-Null
 $loglevel = 'Info'
 
-$versions = @($releases.Name)
+$versions = @($releases | ForEach-Object { $_.Name })
 
 foreach($release in $releases) {
     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
