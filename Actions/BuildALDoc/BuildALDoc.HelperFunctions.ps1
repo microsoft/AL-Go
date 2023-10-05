@@ -28,8 +28,10 @@ function DownloadAlDoc {
         $folder = Download-Artifacts $artifactUrl
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        Copy-Item -Path $alLanguageVsix -Destination "$($tempFolder).zip"
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
-        Expand-Archive -Path $alLanguageVsix -DestinationPath $tempFolder -Force
+        Expand-Archive -Path "$($tempFolder).zip" -DestinationPath $tempFolder -Force
+        Remove-Item -Path "$($tempFolder).zip" -Force
         if (RunningOnLinux) {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc'
             & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
