@@ -80,73 +80,61 @@ function GenerateDocsSite {
             }
         }
 
-        CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
+        $arguments = @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
+        Write-Host "aldoc init $arguments"
+        CmdDo -command $aldocPath -arguments $arguments
 
-        Write-Host "Back from aldoc init:"
-        $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { Write-Host "$($_.Directory.FullName)  [$($_.Name)]"; $_.FullName })
+        $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
         $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
             $newName = $_.Replace('\','/')
             $folder = Split-Path -Path $newName -Parent
-            Write-Host "Folder: $folder"
             if (-not (Test-Path $folder -PathType Container)) {
-                Write-Host "Create folder"
                 New-Item -Path $folder -ItemType Directory | Out-Null
             }
-            Write-Host "Fix: $_ -> $newName"
             & cp $_ $newName
             & rm $_
         }
 
         # Update docfx.json
+        Write-Host "Update docfx.json"
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
         $docfxJson = Get-Content -Encoding utf8 -Path $docfxJsonFile | ConvertFrom-Json
         $docfxJson.build.globalMetadata._appName = $header
         $docfxJson.build.globalMetadata._appFooter = $footer
         $docfxJson | ConvertTo-Json -Depth 99 | Set-Content -Path $docfxJsonFile -Encoding utf8
 
-        Write-Host "-----------------------JSON-----------------------"
-        Get-Content $docfxJsonFile -Encoding utf8 | Out-Host
-
         # Create new toc.yml
+        Write-Host "Create new toc.yml"
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
-        Write-Host "-----------------------ORGTOC-----------------------"
-        Get-Content $tocYmlFile -Encoding utf8 | Out-Host
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
 
-        Write-Host "-----------------------NEWTOC-----------------------"
-        Get-Content $tocYmlFile -Encoding utf8 | Out-Host
-
         $apps | ForEach-Object {
-            Write-Host "Build $_  $(Test-Path $_))"
-            CmdDo -command $aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
+            $arguments = @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
+            Write-Host "aldoc build $arguments"
+            CmdDo -command $aldocPath -arguments $arguments
 
-            Write-Host "Back from aldoc build:"
-            $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { Write-Host "$($_.Directory.FullName)  [$($_.Name)]"; $_.FullName })
+            $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
             $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
                 $newName = $_.Replace('\','/')
                 $folder = Split-Path -Path $newName -Parent
-                Write-Host "Folder: $folder"
                 if (-not (Test-Path $folder -PathType Container)) {
-                    Write-Host "Create folder"
                     New-Item -Path $folder -ItemType Directory | Out-Null
                 }
-                Write-Host "Fix: $_ -> $newName"
                 & cp $_ $newName
                 & rm $_
             }
         }
 
         # Set release notes
+        Write-Host "Update index.md"
         Set-Content -path (Join-Path $docfxpath 'index.md') -value $releaseNotes -encoding utf8
-
-        Write-Host "CALL DOCFX with this:"
-        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host "$($_.Directory.FullName)  [$($_.Name)]" }
 
         $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {
             $arguments += @('-s')
             Write-Host "Generate and host site"
         }
+        Write-Host "invoke doxfx $arguments"
         CmdDo -command docfx -arguments $arguments
     }
     finally {
