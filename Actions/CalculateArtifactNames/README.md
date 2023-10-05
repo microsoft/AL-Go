@@ -14,7 +14,6 @@ Calculate Artifact Names for AL-Go workflows
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | project | Yes | Name of the built project or . if the repository is setup for single project | |
 | buildMode | Yes |Build mode used when building the artifacts | |
-| branchName | Yes | Name of the branch the workflow is running on | |
 | suffix | | A suffix to add to artifacts names. **Note:** if a suffix is specified, the current date will be added extra | Build version |
 
 ## OUTPUT
