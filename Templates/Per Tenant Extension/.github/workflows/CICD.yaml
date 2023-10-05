@@ -184,6 +184,8 @@ jobs:
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v2
+        with:
+          path: .aldoc
 
       - name: Deploy to GitHub Pages
         if: needs.Initialization.outputs.deployALDocArtifact == 1
