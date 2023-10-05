@@ -123,7 +123,8 @@ function GetDependencies {
     Param(
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies")
+        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies"),
+        [string[]] $masks = @('Apps','TestApps')
     )
 
     if (!(Test-Path $saveToPath)) {
@@ -131,7 +132,7 @@ function GetDependencies {
     }
 
     $downloadedList = @()
-    foreach($mask in 'Apps','TestApps') {
+    foreach($mask in $masks) {
         foreach($dependency in $probingPathsJson) {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
