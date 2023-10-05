@@ -87,11 +87,13 @@ function GenerateDocsSite {
         $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
             $newName = $_.Replace('\','/')
             $folder = Split-Path -Path $newName -Parent
+            Write-Host "Folder: $folder"
             if (-not (Test-Path $folder -PathType Container)) {
+                Write-Host "Create folder"
                 New-Item -Path $folder -ItemType Directory | Out-Null
             }
             Write-Host "Fix: $_ -> $newName"
-            Copy-Item $_ $newName -Force
+            Copy-Item -Path $_ -Destination $newName -Force
             Remove-Item $_ -Force
         }
 
