@@ -194,6 +194,11 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v2
 
+      - name: fail
+        run: |
+          $erroractionpreference = "Stop"
+          throw "FAIL"
+
   Deploy:
     needs: [ Initialization, Build ]
     if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0

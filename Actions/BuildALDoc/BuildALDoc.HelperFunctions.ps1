@@ -81,9 +81,12 @@ function GenerateDocsSite {
     try {
         $apps = @()
         # Generate new toc.yml and calculate apps - releases and projects
-        $newTocYml = @('items:','  - name: Releases','    items:','    - name: main','      href: /')
-        foreach($ver in $allVersions) {
-            $newTocYml += @("    - name: $ver","      href: releases/$ver")
+        $newTocYml = @('items:')
+        if ($allVersions.Count -gt 0) {
+            $newTocYml += @('  - name: Releases','    items:','    - name: main','      href: index.html')
+            foreach($ver in $allVersions) {
+                $newTocYml += @("    - name: $ver","      href: releases/$ver")
+            }
         }
         if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq '.') {
             # Single prokect repo
