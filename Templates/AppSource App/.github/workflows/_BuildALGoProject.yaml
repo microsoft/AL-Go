@@ -161,7 +161,6 @@ jobs:
             shell: ${{ inputs.shell }}
             project: ${{ inputs.project }}
             buildMode: ${{ inputs.buildMode }}
-            branchName: ${{ github.ref_name }}
             suffix: ${{ inputs.artifactsNameSuffix }}
 
         - name: Upload thisbuild artifacts - apps
