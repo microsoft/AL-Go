@@ -83,7 +83,17 @@ function GenerateDocsSite {
         CmdDo -command $aldocPath -arguments @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
 
         Write-Host "Back from aldoc init:"
-        get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host "$($_.Directory.FullName)  [$($_.Name)]" }
+        $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { Write-Host "$($_.Directory.FullName)  [$($_.Name)]"; $_.FullName })
+        $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
+            $newName = $_.Replace('\','/')
+            $folder = Split-Path -Path $newName -Parent
+            if (-not (Test-Path $folder -PathType Container)) {
+                New-Item -Path $folder -ItemType Directory | Out-Null
+            }
+            Write-Host "Fix: $_ -> $newName"
+            Copy-Item $_ $newName -Force
+            Remove-Item $_ -Force
+        }
 
         # Update docfx.json
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
@@ -109,7 +119,17 @@ function GenerateDocsSite {
             CmdDo -command $aldocPath -arguments @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
 
             Write-Host "Back from aldoc build:"
-            get-childitem -path "$docfxPath/*" -Recurse -File | % { Write-Host "$($_.Directory.FullName)  [$($_.Name)]" }
+            $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { Write-Host "$($_.Directory.FullName)  [$($_.Name)]"; $_.FullName })
+            $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
+                $newName = $_.Replace('\','/')
+                $folder = Split-Path -Path $newName -Parent
+                if (-not (Test-Path $folder -PathType Container)) {
+                    New-Item -Path $folder -ItemType Directory | Out-Null
+                }
+                Write-Host "Fix: $_ -> $newName"
+                Copy-Item $_ $newName -Force
+                Remove-Item $_ -Force
+            }
         }
 
         # Set release notes
