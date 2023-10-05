@@ -153,7 +153,7 @@ jobs:
 
   DeployALDoc:
     needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 'true'
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1
     runs-on: ubuntu-latest
     name: Deploy ALDoc Documentation
     environment:
@@ -174,7 +174,7 @@ jobs:
           shell: powershell
 
       - name: Setup Pages
-        if: needs.Initialization.outputs.deployALDocArtifact == 'true'
+        if: needs.Initialization.outputs.deployALDocArtifact == 1
         uses: actions/configure-pages@v3
 
       - name: Build ALDoc Documentation
@@ -186,7 +186,7 @@ jobs:
         uses: actions/upload-pages-artifact@v2
 
       - name: Deploy to GitHub Pages
-        if: needs.Initialization.outputs.deployALDocArtifact == 'true'
+        if: needs.Initialization.outputs.deployALDocArtifact == 1
         id: deployment
         uses: actions/deploy-pages@v2
 
