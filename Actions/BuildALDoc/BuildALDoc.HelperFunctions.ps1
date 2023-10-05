@@ -81,7 +81,7 @@ function GenerateDocsSite {
         }
 
         $arguments = @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
-        Write-Host "aldoc init $arguments"
+        Write-Host "invoke aldoc $arguments"
         CmdDo -command $aldocPath -arguments $arguments
 
         $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
@@ -110,7 +110,7 @@ function GenerateDocsSite {
 
         $apps | ForEach-Object {
             $arguments = @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
-            Write-Host "aldoc build $arguments"
+            Write-Host "invoke aldoc $arguments"
             CmdDo -command $aldocPath -arguments $arguments
 
             $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
