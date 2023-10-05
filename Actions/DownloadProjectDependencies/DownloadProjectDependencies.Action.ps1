@@ -49,7 +49,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
         $baseBranch = $ENV:GITHUB_BASE_REF
         # $ENV:GITHUB_BASE_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
         if (!$baseBranch) {
-            $baseBranch = $GITHUB_REF_NAME
+            $baseBranch = $ENV:GITHUB_REF_NAME
         }
 
         $dependeciesProbingPaths += @(@{
