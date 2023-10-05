@@ -1,4 +1,28 @@
-﻿function DownloadAlDoc {
+﻿function RunningOnLinux {
+    $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
+    return ($isPsCore -and $isLinux)
+}
+
+function FixBackslashes {
+    Param(
+        [string] $docfxPath
+    )
+
+    if (-not (RunningOnLinux)) {
+        return
+    }
+    $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
+    $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
+        $newName = $_.Replace('\','/')
+        $folder = Split-Path -Path $newName -Parent
+        if (-not (Test-Path $folder -PathType Container)) {
+            New-Item -Path $folder -ItemType Directory | Out-Null
+        }
+        & cp $_ $newName
+        & rm $_
+    }
+}
+function DownloadAlDoc {
     if ("$ENV:aldocPath" -eq "") {
         $artifactUrl = Get-BCArtifactUrl -storageAccount bcinsider -type sandbox -country core -select Latest -accept_insiderEula
         $folder = Download-Artifacts $artifactUrl
@@ -6,8 +30,7 @@
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
         Expand-Archive -Path $alLanguageVsix -DestinationPath $tempFolder -Force
-        $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
-        if ($isPsCore -and $isLinux) {
+        if (RunningOnLinux) {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc'
             & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
         }
@@ -83,17 +106,7 @@ function GenerateDocsSite {
         $arguments = @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
         Write-Host "invoke aldoc $arguments"
         CmdDo -command $aldocPath -arguments $arguments
-
-        $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
-        $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
-            $newName = $_.Replace('\','/')
-            $folder = Split-Path -Path $newName -Parent
-            if (-not (Test-Path $folder -PathType Container)) {
-                New-Item -Path $folder -ItemType Directory | Out-Null
-            }
-            & cp $_ $newName
-            & rm $_
-        }
+        FixBackslashes -docfxPath $docfxPath
 
         # Update docfx.json
         Write-Host "Update docfx.json"
@@ -112,17 +125,7 @@ function GenerateDocsSite {
             $arguments = @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
             Write-Host "invoke aldoc $arguments"
             CmdDo -command $aldocPath -arguments $arguments
-
-            $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
-            $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
-                $newName = $_.Replace('\','/')
-                $folder = Split-Path -Path $newName -Parent
-                if (-not (Test-Path $folder -PathType Container)) {
-                    New-Item -Path $folder -ItemType Directory | Out-Null
-                }
-                & cp $_ $newName
-                & rm $_
-            }
+            FixBackslashes -docfxPath $docfxPath
         }
 
         # Set release notes
