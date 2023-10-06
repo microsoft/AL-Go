@@ -14,8 +14,10 @@ defaults:
     shell: powershell
 
 permissions:
-  contents: read
+  contents: write
   actions: read
+  pages: write
+  id-token: write
 
 env:
   workflowDepth: 1
@@ -30,6 +32,8 @@ jobs:
       environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
       environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
       deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
+      generateALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.GenerateALDocArtifact }}
+      deployALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.DeployALDocArtifact }}
       deliveryTargetsJson: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
@@ -144,10 +148,56 @@ jobs:
       buildMode: ${{ matrix.buildMode }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
-      publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
+      publishThisBuildArtifacts: true
       publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
       signArtifacts: true
       useArtifactCache: true
+
+  DeployALDoc:
+    needs: [ Initialization, Build ]
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1
+    runs-on: windows-latest
+    name: Deploy ALDoc Documentation
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: '.artifacts'
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
+      - name: Setup Pages
+        if: needs.Initialization.outputs.deployALDocArtifact == 1
+        uses: actions/configure-pages@v3
+
+      - name: Build ALDoc Documentation
+        uses: microsoft/AL-Go-Actions/BuildALDoc@main
+        with:
+          shell: powershell
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ".aldoc/_site/"
+
+      - name: Deploy to GitHub Pages
+        if: needs.Initialization.outputs.deployALDocArtifact == 1
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+      - name: fail
+        run: |
+          $erroractionpreference = "Stop"
+          throw "FAIL"
 
   Deploy:
     needs: [ Initialization, Build ]
@@ -244,7 +294,7 @@ jobs:
   PostProcess:
     if: (!cancelled())
     runs-on: [ windows-latest ]
-    needs: [ Initialization, Build, Deploy, Deliver ]
+    needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
