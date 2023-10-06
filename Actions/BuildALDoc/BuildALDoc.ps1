@@ -66,5 +66,4 @@ $header = "Documentation for $ENV:GITHUB_REPOSITORY"
 Write-Host "Latest release tag: $latestReleaseTag"
 Write-Host "Commitish: $ENV:GITHUB_SHA"
 $releaseNotes = GetReleaseNotes -token $token -tag_name 'vnext' -previous_tag_name $latestReleaseTag -target_commitish $ENV:GITHUB_SHA | ConvertFrom-Json
-$releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
 GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
