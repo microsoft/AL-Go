@@ -90,7 +90,7 @@ function GenerateDocsSite {
     if (-not (Test-Path $indexTemplatePath)) {
         $indexTemplatePath = Join-Path $ENV:GITHUB_WORKSPACE $indexTemplateRelativePath
     }
-    if (Test-Path (Join-Path $indexTemplatePath)) {
+    if (Test-Path $indexTemplatePath) {
         $indexTemplate = Get-Content -Encoding utf8 -Path $indexTemplatePath -Raw
     }
     else {
