@@ -10,9 +10,9 @@ inputs:
     required: false
     default: ${{ github.token }}
   projects:
-    description: The GitHub token running the action
+    description: Projects to include in the documentation
     required: false
-    default: ${{ github.token }}
+    default: '*'
 runs:
   using: composite
   steps:
@@ -21,10 +21,11 @@ runs:
       id: BuildALDoc
       env:
         _token: ${{ inputs.token }}
+        _projects: ${{ inputs.projects }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/BuildALDoc.ps1 -token $ENV:_token
+          ${{ github.action_path }}/BuildALDoc.ps1 -token $ENV:_token -projects $ENV:_projects
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

@@ -1,13 +1,14 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token
+    [string] $token,
+    [Parameter(HelpMessage = "Projects to include in the documentation", Mandatory = $false)]
+    [string] $projects = '*'
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "BuildALDoc.HelperFunctions.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
-$projects = '*'
 $maxReleases = 2
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
