@@ -75,6 +75,8 @@ function GenerateDocsSite {
         [switch] $hostIt
     )
 
+    Write-Host "Release Notes: '$releaseNotes'"
+
     $alDocPath = DownloadAlDoc
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -path $docfxPath -ItemType Directory | Out-Null
