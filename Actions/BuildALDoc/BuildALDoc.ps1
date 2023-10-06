@@ -29,7 +29,7 @@ foreach($release in $releases) {
         foreach($mask in 'Apps', 'Dependencies') {
             DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
         }
-        Write-Host "$($release.Name):"
+        Write-Host "Version: $($release.Name):"
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
         $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
         $version = $release.Name
@@ -58,13 +58,8 @@ foreach($version in $versions) {
     Move-Item -Path (join-Path $docsPath $version) -Destination $releasesPath
 }
 
-Write-Host "main:"
-
-
-
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
 $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
-$version = 'main'
 $header = "Documentation for $ENV:GITHUB_REPOSITORY"
 $releaseNotes = "Documentation for current branch"
-GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
