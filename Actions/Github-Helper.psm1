@@ -582,7 +582,7 @@ function GetReleaseNotes {
     Write-Host "Generating release note $api_url/repos/$repository/releases/generate-notes"
 
     $postParams = @{
-        tag_name = $tag_name;
+        tag_name = $tag_name
     }
 
     if ($previous_tag_name) {
