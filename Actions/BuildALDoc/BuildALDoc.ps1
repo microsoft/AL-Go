@@ -63,8 +63,6 @@ foreach($version in $versions) {
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
 $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
 $header = "Documentation for $ENV:GITHUB_REPOSITORY"
-Write-Host "Latest release tag: $latestReleaseTag"
-Write-Host "Commitish: $ENV:GITHUB_SHA"
 try {
     $releaseNotes = (GetReleaseNotes -token $token -tag_name 'main' -previous_tag_name $latestReleaseTag -target_commitish $ENV:GITHUB_SHA | ConvertFrom-Json).body
 }
