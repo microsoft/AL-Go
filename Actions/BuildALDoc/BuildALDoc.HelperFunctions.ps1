@@ -24,12 +24,15 @@ function FixBackslashes {
 }
 function DownloadAlDoc {
     if ("$ENV:aldocPath" -eq "") {
+        Write-Host "Locating aldoc"
         $artifactUrl = Get-BCArtifactUrl -storageAccount bcinsider -type sandbox -country core -select Latest -accept_insiderEula
+        Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         Copy-Item -Path $alLanguageVsix -Destination "$($tempFolder).zip"
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
+        Write-Host "Extracting aldoc"
         Expand-Archive -Path "$($tempFolder).zip" -DestinationPath $tempFolder -Force
         Remove-Item -Path "$($tempFolder).zip" -Force
         if (RunningOnLinux) {
@@ -40,6 +43,7 @@ function DownloadAlDoc {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
         }
 
+        Write-Host "Installing/Updating docfx"
         CmdDo -command dotnet -arguments @('tool','update','-g docfx')
     }
     $ENV:aldocPath
