@@ -21,6 +21,7 @@ New-Item $docsPath -ItemType Directory | Out-Null
 $loglevel = 'Info'
 
 $versions = @($releases | ForEach-Object { $_.Name })
+$latestReleaseTag = $releases | Select-Object -First 1 -ExpandProperty tag_name
 
 foreach($release in $releases) {
     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -61,5 +62,6 @@ foreach($version in $versions) {
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
 $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
 $header = "Documentation for $ENV:GITHUB_REPOSITORY"
-$releaseNotes = "Documentation for current branch"
+$releaseNotes = GetReleaseNotes -token $token -tag_name 'main' -previous_tag_name $latestReleaseTag -target_commitish $ENV:GITHUB_SHA | ConvertFrom-Json
+$releaseNotes = $releaseNotes.body -replace '%','%25' -replace '\n','%0A' -replace '\r','%0D' # supports a multiline text
 GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
