@@ -79,7 +79,24 @@ function GenerateDocsSite {
         [switch] $hostIt
     )
 
-    Write-Host "Release Notes: '$releaseNotes'"
+    $indexTemplateRelativePath = '.aldoc/index.md'
+    if ($version) {
+        $thisTemplateRelativePath = '.aldoc/release.md'
+    }
+    else {
+        $thisTemplateRelativePath = $indexTemplateRelativePath
+    }
+    $indexTemplatePath = Join-Path $ENV:GITHUB_WORKSPACE $thisTemplateRelativePath
+    if (-not (Test-Path $indexTemplatePath)) {
+        $indexTemplatePath = Join-Path $ENV:GITHUB_WORKSPACE $indexTemplateRelativePath
+    }
+    if (Test-Path (Join-Path $indexTemplatePath)) {
+        $indexTemplate = Get-Content -Encoding utf8 -Path $indexTemplatePath -Raw
+    }
+    else {
+        $indexTemplate = "## ALDoc Documentation`n`n{RELEASENOTES}`n`n**Create a file named {INDEXTEMPLATERELATIVEPATH} in your repository to customize this page.**"
+    }
+    $indexContent = $indexTemplate.Replace('{RELEASENOTES}',$releaseNotes).Replace('{VERSION}',$version).Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
 
     $alDocPath = DownloadAlDoc
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -145,7 +162,7 @@ function GenerateDocsSite {
 
         # Set release notes
         Write-Host "Update index.md"
-        Set-Content -path (Join-Path $docfxpath 'index.md') -value $releaseNotes -encoding utf8
+        Set-Content -path (Join-Path $docfxpath 'index.md') -value $indexContent -encoding utf8
 
         $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {
