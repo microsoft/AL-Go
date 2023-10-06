@@ -166,7 +166,7 @@ function CalculateProjectsAndApps {
                 $project = $Matches[1]
                 if ($projectList | Where-Object { $project -like $_ }) {
                     $allApps."$project" = @()
-                    Get-ChildItem -Path $_.FullName -Filter '*.app' -Recurse | ForEach-Object {
+                    Get-ChildItem -Path $_.FullName -Filter '*.app' | ForEach-Object {
                         $allApps."$project" += @($_.FullName)
                     }
                 }
