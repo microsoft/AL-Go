@@ -27,9 +27,9 @@ try {
 
     Test-ALGoRepository
 
-    Test-RunnerPrerequisites
-
     DownloadAndImportBcContainerHelper
+
+    Test-RunnerPrerequisites
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId $eventId
