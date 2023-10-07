@@ -116,7 +116,7 @@ function Test-JsonFile {
     Test-JsonStr -org -jsonStr (Get-Content -Path $jsonFile -Raw -Encoding UTF8) -settingsDescription $settingsFile -type $type
 }
 
-function Test-RunnerPrerequisites {
+function TestRunnerPrerequisites {
     try {
         invoke-gh version
     }
@@ -131,7 +131,7 @@ function Test-RunnerPrerequisites {
     }
 }
 
-function Test-ALGoRepository {
+function TestALGoRepository {
     Param(
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE
     )
