@@ -27,6 +27,8 @@ try {
 
     Test-ALGoRepository
 
+    Test-RunnerPrerequisites
+
     DownloadAndImportBcContainerHelper
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
