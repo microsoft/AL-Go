@@ -25,9 +25,11 @@ try {
 
     Write-Big -str "a$verstr"
 
-    Test-ALGoRepository
+    TestALGoRepository
 
     DownloadAndImportBcContainerHelper
+
+    TestRunnerPrerequisites
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId $eventId

@@ -309,18 +309,16 @@ function invoke-gh {
         $arguments = "$command "
         foreach($parameter in $remaining) {
             if ("$parameter".IndexOf(" ") -ge 0 -or "$parameter".IndexOf('"') -ge 0) {
+                if ($parameter.length -gt 15000) {
+                    $parameter = "$($parameter.Substring(0,15000))...`n`n**Truncated due to size limits!**"
+                }
                 $arguments += """$($parameter.Replace('"','\"'))"" "
             }
             else {
                 $arguments += "$parameter "
             }
         }
-        try {
-            cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
-        }
-        catch [System.Management.Automation.MethodInvocationException] {
-            throw "It looks like GitHub CLI is not installed. Please install GitHub CLI from https://cli.github.com/"
-        }
+        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
     }
 }
 
@@ -344,12 +342,7 @@ function invoke-git {
                 $arguments += "$parameter "
             }
         }
-        try {
-            cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
-        }
-        catch [System.Management.Automation.MethodInvocationException] {
-            throw "It looks like Git is not installed. Please install Git from https://git-scm.com/download"
-        }
+        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
     }
 }
 
