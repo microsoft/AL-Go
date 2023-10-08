@@ -72,7 +72,6 @@ function GenerateDocsSite {
         [string[]] $allVersions,
         [hashtable] $allApps,
         [string] $repoName,
-        [string] $releaseNotes,
         [string] $header,
         [string] $footer,
         [string] $defaultIndexMD,
@@ -102,7 +101,7 @@ function GenerateDocsSite {
     else {
         $indexTemplate = $thisDefaultMD
     }
-    $indexContent = $indexTemplate.Replace('{RELEASENOTES}',$releaseNotes).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
+    $indexContent = $indexTemplate.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version).Replace('{RELEASENOTES}',$releaseNotes).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
 
     $alDocPath = DownloadAlDoc
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())

@@ -38,10 +38,10 @@ foreach($release in $releases) {
         $version = $release.Name
         $header = $settings.ALDoc.Header.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
         $footer = $settings.ALDoc.Footer.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
-        $defaultIndexMD = $settings.ALDoc.DefaultIndexMD.Replace('\n',"`n").Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
-        $defaultReleaseMD = $settings.ALDoc.DefaultReleaseMD.Replace('\n',"`n").Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
+        $defaultIndexMD = $settings.ALDoc.DefaultIndexMD.Replace('\n',"`n")
+        $defaultReleaseMD = $settings.ALDoc.DefaultReleaseMD.Replace('\n',"`n")
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -docsPath $docsPath -logLevel $logLevel
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel
         do {
             try {
                 $retry = $false
@@ -79,4 +79,4 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -docsPath $docsPath -logLevel $logLevel
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel
