@@ -10,6 +10,7 @@ DownloadAndImportBcContainerHelper
 $settings = $env:Settings | ConvertFrom-Json
 $projects = $settings.ALDocProjects
 $excludeProjects = $settings.ALDocExcludeProjects
+$excludeProjects = @("System Application Modules")
 $maxReleases = $settings.ALDocMaxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
