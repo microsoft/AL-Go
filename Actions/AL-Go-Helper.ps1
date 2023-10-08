@@ -624,7 +624,7 @@ function ReadSettings {
         "excludeEnvironments"                           = @()
         "generateALDocArtifact"                         = $false
         "deployALDocArtifact"                           = $false
-        "ALDocMaxReleases"  	                        = 3
+        "ALDocMaxReleases"  	                        = 0
     }
 
     # Read settings from files and merge them into the settings object

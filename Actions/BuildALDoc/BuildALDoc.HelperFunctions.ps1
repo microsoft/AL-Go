@@ -95,7 +95,7 @@ function GenerateDocsSite {
         $indexTemplate = Get-Content -Encoding utf8 -Path $indexTemplatePath -Raw
     }
     else {
-        $indexTemplate = "## [{REPOSITORY}](https://github.com/{REPOSITORY}) reference documentation`n`nThis is the landing page for your generated reference documentation.`n`nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.`n`nYou can change this content by editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository`n`n{RELEASENOTES}"
+        $indexTemplate = "## Reference documentation`n`nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).`n`nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.`n`nYou can change this content by editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository`n`n{RELEASENOTES}"
     }
     $indexContent = $indexTemplate.Replace('{RELEASENOTES}',$releaseNotes).Replace('{VERSION}',$version).Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
 
@@ -150,10 +150,16 @@ function GenerateDocsSite {
         $docfxJson.build.globalMetadata._appFooter = $footer
         $docfxJson | ConvertTo-Json -Depth 99 | Set-Content -Path $docfxJsonFile -Encoding utf8
 
+        Write-Host "docfx.json:"
+        Get-Content $docfxJsonFile | Out-Host
+
         # Create new toc.yml
         Write-Host "Create new toc.yml"
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
+
+        Write-Host "TOC:"
+        Get-Content $tocYmlFile | Out-Host
 
         $apps | ForEach-Object {
             $arguments = @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
@@ -164,7 +170,12 @@ function GenerateDocsSite {
 
         # Set release notes
         Write-Host "Update index.md"
-        Set-Content -path (Join-Path $docfxpath 'index.md') -value $indexContent -encoding utf8
+        $indexMdFile = Join-Path $docfxpath 'index.md'
+        Set-Content -path $indexMdFile -value $indexContent -encoding utf8
+
+        Write-Host "index.md:"
+        Get-Content $indexMdFile | Out-Host
+
 
         $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
         if ($hostIt) {
