@@ -457,7 +457,7 @@ function MergeCustomObjectIntoOrderedDictionary {
             $srcProp = $src."$prop"
             $dstPropType = $dstProp.GetType().Name
             $srcPropType = $srcProp.GetType().Name
-            if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
+            if ($srcPropType -eq "PSCustomObject" -and ($dstPropType -eq "OrderedDictionary" -or $dstPropType -eq "Hashtable")) {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
