@@ -622,6 +622,13 @@ function ReadSettings {
         "PullRequestTrigger"                            = "pull_request_target"
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
+        "ALDoc"                                         = @{
+            "ContinuousDeployment"                      = $false
+            "DeployToGitHubPages"                       = $false
+            "MaxReleases"                               = 3
+            "Projects"                                  = @()
+            "ExcludeProjects"                           = @()
+        }
         "generateALDocArtifact"                         = $false
         "deployALDocArtifact"                           = $false
         "ALDocMaxReleases"  	                        = 0
