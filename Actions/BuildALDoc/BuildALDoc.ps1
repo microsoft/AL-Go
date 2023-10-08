@@ -1,8 +1,6 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token,
-    [Parameter(HelpMessage = "Projects to include in the documentation", Mandatory = $false)]
-    [string] $projects = '*'
+    [string] $token
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -10,7 +8,8 @@
 DownloadAndImportBcContainerHelper
 
 $settings = $env:Settings | ConvertFrom-Json
-
+$projects = $settings.ALDocProjects
+$excludeProjects = $settings.ALDocExcludeProjects
 $maxReleases = $settings.ALDocMaxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
@@ -31,11 +30,11 @@ foreach($release in $releases) {
     New-Item -Path $tempFolder -ItemType Directory | Out-Null
     try {
         foreach($mask in 'Apps', 'Dependencies') {
-            DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
+            DownloadRelease -token $token -projects "$($projects -join ',')" -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
         }
         Write-Host "Version: $($release.Name):"
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
-        $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
+        $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects -refname $ENV:GITHUB_REF_NAME
         $version = $release.Name
         $header = "Documentation for $ENV:GITHUB_REPOSITORY $version"
         $releaseNotes = $release.body
@@ -63,7 +62,7 @@ foreach($version in $versions) {
 }
 
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
-$allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -refname $ENV:GITHUB_REF_NAME
+$allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -excludeProjects $excludeProjects -refname $ENV:GITHUB_REF_NAME
 $header = "Documentation for $ENV:GITHUB_REPOSITORY"
 $releaseNotes = ''
 if ($latestReleaseTag) {

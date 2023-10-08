@@ -156,7 +156,7 @@ function GenerateDocsSite {
         # Create new toc.yml
         Write-Host "Create new toc.yml"
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
-        
+
         Write-Host "ORGTOC:"
         Get-Content $tocYmlFile | Out-Host
 
@@ -197,21 +197,24 @@ function GenerateDocsSite {
 function CalculateProjectsAndApps {
     Param(
         [string] $tempFolder,
-        [string] $projects,
-        [string] $refname
+        [string[]] $projects,
+        [string[]] $excludeProjects
     )
 
-    if ($projects -eq "") { $projects = "*" }
-    $projectList = @($projects.Split(',') | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    if ($projects.Count -eq 0) { $projects = @('*') }
+    $projectList = @($projects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    $excludeProjectList = @($excludeProjects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
     foreach($mask in 'Apps','Dependencies') {
         $allApps = @{}
         Get-ChildItem -Path $tempFolder -Directory | ForEach-Object {
             if ($_.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") {
                 $project = $Matches[1]
                 if ($projectList | Where-Object { $project -like $_ }) {
-                    $allApps."$project" = @()
-                    Get-ChildItem -Path $_.FullName -Filter '*.app' | ForEach-Object {
-                        $allApps."$project" += @($_.FullName)
+                    if (-not ($excludeProjectList | Where-Object { $project -like $_ })) {
+                        $allApps."$project" = @()
+                        Get-ChildItem -Path $_.FullName -Filter '*.app' | ForEach-Object {
+                            $allApps."$project" += @($_.FullName)
+                        }
                     }
                 }
             }
