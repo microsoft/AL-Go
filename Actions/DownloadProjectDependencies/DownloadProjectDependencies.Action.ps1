@@ -40,12 +40,16 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             $dependencyBuildMode = 'Default';
         }
 
-        $currentBranch = $ENV:GITHUB_REF_NAME
+        $headBranch = $ENV:GITHUB_HEAD_REF
+        # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+        if (!$headBranch) {
+            $headBranch = $ENV:GITHUB_REF_NAME
+        }
 
-        $baseBranch = $ENV:GITHUB_BASE_REF_NAME
-        # $ENV:GITHUB_BASE_REF_NAME is specified only for pull requests, so if it is not specified, use the current branch
+        $baseBranch = $ENV:GITHUB_BASE_REF
+        # $ENV:GITHUB_BASE_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
         if (!$baseBranch) {
-            $baseBranch = $currentBranch
+            $baseBranch = $ENV:GITHUB_REF_NAME
         }
 
         $dependeciesProbingPaths += @(@{
@@ -54,7 +58,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             "buildMode"       = $dependencyBuildMode
             "projects"        = $dependencyProject
             "repo"            = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-            "branch"          = $currentBranch
+            "branch"          = $headBranch
             "baseBranch"      = $baseBranch
             "authTokenSecret" = $token
         })

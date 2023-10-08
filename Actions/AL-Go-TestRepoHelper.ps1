@@ -116,7 +116,22 @@ function Test-JsonFile {
     Test-JsonStr -org -jsonStr (Get-Content -Path $jsonFile -Raw -Encoding UTF8) -settingsDescription $settingsFile -type $type
 }
 
-function Test-ALGoRepository {
+function TestRunnerPrerequisites {
+    try {
+        invoke-gh version
+    }
+    catch {
+        Write-Host "::Warning::GitHub CLI is not installed"
+    }
+    try {
+        invoke-git version
+    }
+    catch {
+        Write-Host "::Warning::Git is not installed"
+    }
+}
+
+function TestALGoRepository {
     Param(
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE
     )
