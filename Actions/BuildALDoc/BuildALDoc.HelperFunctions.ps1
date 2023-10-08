@@ -73,8 +73,10 @@ function GenerateDocsSite {
         [hashtable] $allApps,
         [string] $repoName,
         [string] $releaseNotes,
-        [string] $header = "Documentation",
-        [string] $footer = "Made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>",
+        [string] $header,
+        [string] $footer,
+        [string] $defaultIndexMD,
+        [string] $defaultReleaseMD,
         [string] $docsPath,
         [string] $logLevel,
         [switch] $hostIt
@@ -83,10 +85,13 @@ function GenerateDocsSite {
     $indexTemplateRelativePath = '.aldoc/index.md'
     if ($version) {
         $thisTemplateRelativePath = '.aldoc/release.md'
+        $thisDefaultMD = $defaultReleaseMD
     }
     else {
         $thisTemplateRelativePath = $indexTemplateRelativePath
+        $thisDefaultMD = $defaultIndexMD
     }
+
     $indexTemplatePath = Join-Path $ENV:GITHUB_WORKSPACE $thisTemplateRelativePath
     if (-not (Test-Path $indexTemplatePath)) {
         $indexTemplatePath = Join-Path $ENV:GITHUB_WORKSPACE $indexTemplateRelativePath
@@ -95,9 +100,9 @@ function GenerateDocsSite {
         $indexTemplate = Get-Content -Encoding utf8 -Path $indexTemplatePath -Raw
     }
     else {
-        $indexTemplate = "## Reference documentation`n`nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).`n`nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.`n`nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository`n`n{RELEASENOTES}"
+        $indexTemplate = $thisDefaultMD
     }
-    $indexContent = $indexTemplate.Replace('{RELEASENOTES}',$releaseNotes).Replace('{VERSION}',$version).Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
+    $indexContent = $indexTemplate.Replace('{RELEASENOTES}',$releaseNotes).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
 
     $alDocPath = DownloadAlDoc
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
