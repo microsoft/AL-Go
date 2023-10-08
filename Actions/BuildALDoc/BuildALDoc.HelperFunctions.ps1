@@ -79,6 +79,7 @@ function GenerateDocsSite {
         [switch] $hostIt
     )
 
+    $settings = $env:Settings | ConvertFrom-Json
     $indexTemplateRelativePath = '.aldoc/index.md'
     if ($version) {
         $thisTemplateRelativePath = '.aldoc/release.md'
@@ -115,7 +116,8 @@ function GenerateDocsSite {
                 $newTocYml += @("    - name: $ver","      href: $($prefix)releases/$ver/index.html")
             }
         }
-        if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq '.') {
+        $allApps | ConvertTo-Json -Depth 99 | Out-Host
+        if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $settings.repoName) {
             # Single prokect repo
             foreach($appFile in $allApps.".") {
                 $apps += @($appFile)
