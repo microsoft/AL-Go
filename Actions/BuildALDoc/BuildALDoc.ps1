@@ -78,5 +78,3 @@ else {
     $releaseNotes = ''
 }
 GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
-
-throw 'x'
