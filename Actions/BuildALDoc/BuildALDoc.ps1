@@ -12,6 +12,10 @@ $projects = $settings.ALDoc.Projects
 $excludeProjects = $settings.ALDoc.ExcludeProjects
 $maxReleases = $settings.ALDoc.MaxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
+$header = $settings.ALDoc.Header.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
+$footer = $settings.ALDoc.Footer.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
+$defaultIndexMD = $settings.ALDoc.DefaultIndexMD.Replace('\n',"`n")
+$defaultReleaseMD = $settings.ALDoc.DefaultReleaseMD.Replace('\n',"`n")
 
 $releases = @()
 if ($maxReleases -gt 0) {
@@ -36,10 +40,6 @@ foreach($release in $releases) {
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
         $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects -refname $ENV:GITHUB_REF_NAME
         $version = $release.Name
-        $header = $settings.ALDoc.Header.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
-        $footer = $settings.ALDoc.Footer.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
-        $defaultIndexMD = $settings.ALDoc.DefaultIndexMD.Replace('\n',"`n")
-        $defaultReleaseMD = $settings.ALDoc.DefaultReleaseMD.Replace('\n',"`n")
         $releaseNotes = $release.body
         GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel
         do {
