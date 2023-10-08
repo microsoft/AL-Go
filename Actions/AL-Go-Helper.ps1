@@ -628,12 +628,9 @@ function ReadSettings {
             "MaxReleases"                               = 3
             "Projects"                                  = @()
             "ExcludeProjects"                           = @()
+            "Header"                                    = "Documentation for {REPOSITORY} {VERSION}"
+            "Footer"                                    = "Made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
         }
-        "generateALDocArtifact"                         = $false
-        "deployALDocArtifact"                           = $false
-        "ALDocMaxReleases"  	                        = 0
-        "ALDocProjects"                                 = @()
-        "ALDocExcludeProjects"                          = @()
     }
 
     # Read settings from files and merge them into the settings object

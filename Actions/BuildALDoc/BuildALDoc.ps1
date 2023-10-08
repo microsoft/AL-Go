@@ -8,9 +8,9 @@
 DownloadAndImportBcContainerHelper
 
 $settings = $env:Settings | ConvertFrom-Json
-$projects = $settings.ALDocProjects
-$excludeProjects = $settings.ALDocExcludeProjects
-$maxReleases = $settings.ALDocMaxReleases
+$projects = $settings.ALDoc.Projects
+$excludeProjects = $settings.ALDoc.ExcludeProjects
+$maxReleases = $settings.ALDoc.MaxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
 $releases = @()
@@ -36,9 +36,10 @@ foreach($release in $releases) {
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
         $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects -refname $ENV:GITHUB_REF_NAME
         $version = $release.Name
-        $header = "Documentation for $ENV:GITHUB_REPOSITORY $version"
+        $header = $settings.ALDoc.Header.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
+        $footer = $settings.ALDoc.Footer.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -docsPath $docsPath -logLevel $logLevel
         do {
             try {
                 $retry = $false
@@ -46,7 +47,7 @@ foreach($release in $releases) {
                 Rename-Item -Path (join-Path $docsPath "_site") -NewName $version
             }
             catch {
-                $retry = $true    
+                $retry = $true
             }
         } while ($retry)
     }
@@ -76,4 +77,4 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -docsPath $docsPath -logLevel $logLevel
