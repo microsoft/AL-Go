@@ -156,6 +156,10 @@ function GenerateDocsSite {
         # Create new toc.yml
         Write-Host "Create new toc.yml"
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
+        
+        Write-Host "ORGTOC:"
+        Get-Content $tocYmlFile | Out-Host
+
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
 
         Write-Host "TOC:"
