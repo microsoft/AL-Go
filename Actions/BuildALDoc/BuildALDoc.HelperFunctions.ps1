@@ -72,6 +72,7 @@ function GenerateDocsSite {
         [string[]] $allVersions,
         [hashtable] $allApps,
         [string] $repoName,
+        [string] $releaseNotes,
         [string] $header,
         [string] $footer,
         [string] $defaultIndexMD,
@@ -80,6 +81,10 @@ function GenerateDocsSite {
         [string] $logLevel,
         [switch] $hostIt
     )
+
+    function ReplacePlaceHolders([string] $str) {
+        return $str.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version).Replace('{RELEASENOTES}',$releaseNotes)
+    }
 
     $indexTemplateRelativePath = '.aldoc/index.md'
     if ($version) {
@@ -101,7 +106,7 @@ function GenerateDocsSite {
     else {
         $indexTemplate = $thisDefaultMD
     }
-    $indexContent = $indexTemplate.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version).Replace('{RELEASENOTES}',$releaseNotes).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
+    $indexContent = ReplacePlaceHolders -str $indexTemplate.Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
 
     $alDocPath = DownloadAlDoc
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -150,8 +155,8 @@ function GenerateDocsSite {
         Write-Host "Update docfx.json"
         $docfxJsonFile = Join-Path $docfxPath 'docfx.json'
         $docfxJson = Get-Content -Encoding utf8 -Path $docfxJsonFile | ConvertFrom-Json
-        $docfxJson.build.globalMetadata._appName = $header
-        $docfxJson.build.globalMetadata._appFooter = $footer
+        $docfxJson.build.globalMetadata._appName = ReplacePlaceHolders -str $header
+        $docfxJson.build.globalMetadata._appFooter = ReplacePlaceHolders -str $footer
         $docfxJson | ConvertTo-Json -Depth 99 | Set-Content -Path $docfxJsonFile -Encoding utf8
 
         Write-Host "docfx.json:"

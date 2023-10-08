@@ -12,8 +12,8 @@ $projects = $settings.ALDoc.Projects
 $excludeProjects = $settings.ALDoc.ExcludeProjects
 $maxReleases = $settings.ALDoc.MaxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
-$header = $settings.ALDoc.Header.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
-$footer = $settings.ALDoc.Footer.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version)
+$header = $settings.ALDoc.Header
+$footer = $settings.ALDoc.Footer
 $defaultIndexMD = $settings.ALDoc.DefaultIndexMD.Replace('\n',"`n")
 $defaultReleaseMD = $settings.ALDoc.DefaultReleaseMD.Replace('\n',"`n")
 
