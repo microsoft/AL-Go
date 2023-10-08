@@ -624,7 +624,7 @@ function ReadSettings {
         "excludeEnvironments"                           = @()
         "ALDoc"                                         = [ordered]@{
             "ContinuousDeployment"                      = $false
-            "DeployToGitHubPages"                       = $false
+            "DeployToGitHubPages"                       = $true
             "MaxReleases"                               = 3
             "Projects"                                  = @()
             "ExcludeProjects"                           = @()

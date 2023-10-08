@@ -185,8 +185,8 @@ Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
 Write-Host "UnknownEnvironment=$unknownEnvironment"
 
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]($settings.ALDoc.ContinuousDeployment -or $settings.ALDoc.DeployToGitHubPages))"
-Write-Host "GenerateALDocArtifact=$([int]($settings.ALDoc.ContinuousDeployment -or $settings.ALDoc.DeployToGitHubPages))"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
+Write-Host "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$settings.ALDoc.DeployToGitHubPages)"
 Write-Host "DeployALDocArtifact=$([int]$settings.ALDoc.DeployToGitHubPages)"
