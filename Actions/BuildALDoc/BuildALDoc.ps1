@@ -66,7 +66,6 @@ foreach($version in $versions) {
 
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
 $allApps,$allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -excludeProjects $excludeProjects -refname $ENV:GITHUB_REF_NAME
-$header = "Documentation for $ENV:GITHUB_REPOSITORY"
 $releaseNotes = ''
 if ($latestReleaseTag) {
     try {
