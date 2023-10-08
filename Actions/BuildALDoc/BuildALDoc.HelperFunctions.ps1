@@ -95,7 +95,7 @@ function GenerateDocsSite {
         $indexTemplate = Get-Content -Encoding utf8 -Path $indexTemplatePath -Raw
     }
     else {
-        $indexTemplate = "## Reference documentation`n`nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).`n`nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.`n`nYou can change this content by editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository`n`n{RELEASENOTES}"
+        $indexTemplate = "## Reference documentation`n`nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).`n`nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.`n`nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository`n`n{RELEASENOTES}"
     }
     $indexContent = $indexTemplate.Replace('{RELEASENOTES}',$releaseNotes).Replace('{VERSION}',$version).Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath)
 
