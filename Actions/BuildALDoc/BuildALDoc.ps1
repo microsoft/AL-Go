@@ -9,7 +9,9 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "BuildALDoc.HelperFunctions.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
-$maxReleases = 2
+$settings = $env:Settings | ConvertFrom-Json
+
+$maxReleases = $settings.ALDocMaxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 
 $releases = @()
@@ -37,7 +39,7 @@ foreach($release in $releases) {
         $version = $release.Name
         $header = "Documentation for $ENV:GITHUB_REPOSITORY $version"
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
         do {
             try {
                 $retry = $false
@@ -75,4 +77,4 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -docsPath $docsPath -logLevel $logLevel

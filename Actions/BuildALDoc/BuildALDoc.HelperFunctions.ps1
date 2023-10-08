@@ -71,6 +71,7 @@ function GenerateDocsSite {
         [string] $version,
         [string[]] $allVersions,
         [hashtable] $allApps,
+        [string] $repoName,
         [string] $releaseNotes,
         [string] $header = "Documentation",
         [string] $footer = "Made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>",
@@ -79,7 +80,6 @@ function GenerateDocsSite {
         [switch] $hostIt
     )
 
-    $settings = $env:Settings | ConvertFrom-Json
     $indexTemplateRelativePath = '.aldoc/index.md'
     if ($version) {
         $thisTemplateRelativePath = '.aldoc/release.md'
@@ -117,7 +117,7 @@ function GenerateDocsSite {
             }
         }
         $allApps | ConvertTo-Json -Depth 99 | Out-Host
-        if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $settings.repoName) {
+        if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
             # Single prokect repo
             foreach($appFile in $allApps.".") {
                 $apps += @($appFile)
