@@ -723,6 +723,7 @@ function GetArtifacts {
     $allArtifacts = @()
     $per_page = 100
     $page = 1
+    $workflowrunid = 0
     if ($version -eq 'latest') { $version = '*' }
     Write-Host "Analyzing artifacts"
     do {
@@ -734,6 +735,10 @@ function GetArtifacts {
         $artifactPattern = "*-$branch-$mask-$version"
         Write-Host "ArtifactPattern: $artifactPattern"
         $allArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
+        if ($allArtifacts.Count -gt 0) {
+            # We found the runid of the workflow containing the requested version
+            $workflowrunid = $allArtifacts[0].workflow_run.id
+        }
         $result = @()
         $allArtifactsFound = $true
         foreach($project in $projects.Split(',')) {
@@ -746,7 +751,8 @@ function GetArtifacts {
                 $result += @($projectArtifact)
             }
             else {
-                $allArtifactsFound = $false
+                # If the last artifact read is not from the same workflow run, we have read all artifacts
+                $allArtifactsFound = $allArtifacts[$allArtifacts.Count-1].workflow_run.id -ne $workflowrunid
                 $result = @()
             }
         }
