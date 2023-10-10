@@ -1532,7 +1532,7 @@ function CreateDevEnv {
     if ("$repository" -eq "") {
         Push-Location $baseFolder
         try {
-            $repoInfo = invoke-gh repo view --json "owner,name"
+            $repoInfo = invoke-gh -silent -returnValue repo view --json "owner,name"
             $repository = "$($repoInfo.owner.login)/$($repoInfo.name)"
         }
         finally {
