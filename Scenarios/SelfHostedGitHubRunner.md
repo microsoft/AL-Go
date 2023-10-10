@@ -7,10 +7,14 @@ GitHub runners can be registered for an organization (accessible for all reposit
 
 1. Navigate to [https://github.com/organizations/{organization}/settings/actions/runners/new](https://github.com/organizations/{organization}/settings/actions/runners/new) to create a self-hosted runner for your organization. Use [https://github.com/{organization}/{repository}/settings/actions/runners](https://github.com/{organization}/{repository}/settings/actions/runners) to create a self-hosted runner for a single repository.
 ![Organization new runner](https://github.com/microsoft/AL-Go/assets/10775043/f09af5ee-73b5-40e3-bad1-98f0c7b0ddaa)
-1. Now, you can either [Create your self-hosted runner manually](#create-your-self-hosted-runner-manually) or you can [Use the Azure VM Template to create your self-hosted runner](use-the-azure-vm-template-to-create-your-self-hosted-runner)
+1. Now, you can either [Create your self-hosted runner manually](#create-your-self-hosted-runner-manually) or you can [Use the Azure VM Template to create your self-hosted runner](#use-the-azure-vm-template-to-create-your-self-hosted-runner)
 
 ## Create your self-hosted runner manually
 1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
+1. Make sure that the following software is installed on the computer:
+   - Docker (I use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM.
+   - ddd
+    
 1. go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
 
 ## Use the Azure VM Template to create your self-hosted runner
