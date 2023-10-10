@@ -787,7 +787,7 @@ function GetArtifacts {
     }
     if (-not $result) {
         Write-Host "- No matching artifacts found"
-    }   
+    }
 }
 
 function DownloadArtifact {
