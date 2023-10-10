@@ -46,7 +46,7 @@ GitHub runners can be registered for an organization (accessible for all reposit
 ## GitHubRunner vs. runs-on
 You might have noticed that there are two settings in the repository settings file controlling which runners are selected, [GitHubRunner](https://aka.ms/algosettings#githubrunner) and [Runs-On](https://aka.ms/algosettings#runs-on).
 
-`"runs-on"` is used for all jobs, which doesn't build/test your app. This is jobs that doesn't require a lot of machine power, jobs which doesn't require a docker container. AL-Go for GitHub supports using ubuntu-latest for runs-on, which are faster and cheaper than windows-latest (which is the default). There are many jobs running in parallel using these runners and we do not recommend using self-hosted runners for this type of jobs.
+`"runs-on"` is used for all jobs that don’t build/test your app, such as jobs that don’t require a lot of machine power or a docker container. AL-Go for GitHub supports using ubuntu-latest for runs-on, which is faster and cheaper than windows-latest (which is the default). Many jobs run in parallel using these runners, and we do not recommend using self-hosted runners for this type of job.
 
 `"githubRunner"` is used for build/test jobs, which require more memory and a container. 
 
