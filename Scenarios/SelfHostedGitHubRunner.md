@@ -11,14 +11,14 @@ GitHub runners can be registered for an organization (accessible for all reposit
 
 ## Create your self-hosted runner manually
 1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
-1. Make sure that the following software is installed on the computer:
-   - Docker (I use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM)
-   - The AZ PowerShell module (I use `Install-Module az -force`)
-   - GIT (I use `choco install git --force --params "/NoAutoCrlf"` (after installing choco using `https://chocolatey.org/install.ps1`))
-   - 7zip (I use `choco install 7zip`)
-   - GitHub CLI (I use `choco install gh`)
-   - PowerShell 7 (I use `choco install pwsh -y`)
-   - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (I use `choco install vcredist140 -y`)
+1. Make sure that the following software is installed on the computer (the suggestion in parentheses explains the mechanism used in https://aka.ms/getbuildagent)
+   - Docker (https://aka.ms/getbuildagent use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM)
+   - The AZ PowerShell module (https://aka.ms/getbuildagent use `Install-Module az -force`)
+   - GIT (https://aka.ms/getbuildagent use `choco install git --force --params "/NoAutoCrlf"` after installing choco using `https://chocolatey.org/install.ps1`))
+   - 7zip (https://aka.ms/getbuildagent use `choco install 7zip`)
+   - GitHub CLI (https://aka.ms/getbuildagent use `choco install gh`)
+   - PowerShell 7 (https://aka.ms/getbuildagent use `choco install pwsh -y`)
+   - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (https://aka.ms/getbuildagent use `choco install vcredist140 -y`)
 
 1. Go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
 
