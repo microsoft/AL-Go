@@ -726,8 +726,8 @@ function GetArtifacts {
     # We might have results from multiple workflow runs, but we will have all artifacts from the workflow run that created the first matching artifact
     # Use the buildOutput artifact to determine the workflow run id (as that will always be there)
     $artifactPattern = "*-$branch-*-$version"
-    # Use buildOutput artifact to determine the workflow run id
-    # Reason: A project called xx-main will match the artifact pattern *-main-*-version
+    # Use buildOutput artifact to determine the workflow run id to avoid excessive API calls
+    # Reason: A project called xx-main will match the artifact pattern *-main-*-version, and there might not be any artifacts matching the mask
     $buildOutputPattern = "*-$branch-BuildOutput-$version"
     Write-Host "Analyzing artifacts matching $artifactPattern"
     while ($true) {
