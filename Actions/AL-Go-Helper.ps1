@@ -1085,6 +1085,7 @@ function CheckAppDependencyProbingPaths {
         [hashTable] $settings,
         $token,
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $project = '.',
         [string[]] $includeOnlyAppIds
     )
@@ -1105,10 +1106,10 @@ function CheckAppDependencyProbingPaths {
                 throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
             }
             if ($dependency.Repo -eq ".") {
-                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                $dependency.Repo = "https://github.com/$repository"
             }
             elseif ($dependency.Repo -notlike "https://*") {
-                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$($dependency.Repo)"
+                $dependency.Repo = "https://github.com/$($dependency.Repo)"
             }
             if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
                 $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
@@ -1170,7 +1171,7 @@ function CheckAppDependencyProbingPaths {
                             $thisIncludeOnlyAppIds = @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps)
                             $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
                             $depSettings = AnalyzeRepo -settings $depSettings -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
-                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
+                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -repository $repository -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
 
                             $projectPath = Join-Path $baseFolder $project -Resolve
                             Push-Location $projectPath
@@ -1500,6 +1501,8 @@ function CreateDevEnv {
         [string] $caller = 'local',
         [Parameter(Mandatory = $true)]
         [string] $baseFolder,
+        [Parameter(Mandatory = $true)]
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $project,
         [string] $userName = $env:Username,
 
@@ -1527,6 +1530,16 @@ function CreateDevEnv {
         throw "Specified parameters doesn't match kind=$kind"
     }
 
+    if ("$repository" -eq "") {
+        Push-Location $baseFolder
+        try {
+            $repoInfo = invoke-gh repo view --json owner,name
+            $repository = "$($repoInfo.owner.login)/$($repoInfo.name)"
+        }
+        finally {
+            Pop-Location
+        }
+    }
     $projectFolder = Join-Path $baseFolder $project -Resolve
     $dependenciesFolder = Join-Path $projectFolder ".dependencies"
     $runAlPipelineParams = @{}
