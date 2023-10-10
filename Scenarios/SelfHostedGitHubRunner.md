@@ -7,21 +7,7 @@ GitHub runners can be registered for an organization (accessible for all reposit
 
 1. Navigate to [https://github.com/organizations/{organization}/settings/actions/runners/new](https://github.com/organizations/{organization}/settings/actions/runners/new) to create a self-hosted runner for your organization. Use [https://github.com/{organization}/{repository}/settings/actions/runners](https://github.com/{organization}/{repository}/settings/actions/runners) to create a self-hosted runner for a single repository.
 ![Organization new runner](https://github.com/microsoft/AL-Go/assets/10775043/f09af5ee-73b5-40e3-bad1-98f0c7b0ddaa)
-1. Now, you can either [Create your self-hosted runner manually](#create-your-self-hosted-runner-manually) or you can [Use the Azure VM Template to create your self-hosted runner](#use-the-azure-vm-template-to-create-your-self-hosted-runner)
-
-## Create your self-hosted runner manually
-1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
-1. Make sure that the following software is installed on the computer (the suggestion in parentheses explains the mechanism used in https://aka.ms/getbuildagent)
-   - Docker (https://aka.ms/getbuildagent use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM)
-   - The AZ PowerShell module (https://aka.ms/getbuildagent use `Install-Module az -force`)
-   - GIT (https://aka.ms/getbuildagent use `choco install git --force --params "/NoAutoCrlf"` after installing choco using `https://chocolatey.org/install.ps1`))
-   - 7zip (https://aka.ms/getbuildagent use `choco install 7zip`)
-   - GitHub CLI (https://aka.ms/getbuildagent use `choco install gh`)
-   - PowerShell 7 (https://aka.ms/getbuildagent use `choco install pwsh -y`)
-   - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (https://aka.ms/getbuildagent use `choco install vcredist140 -y`)
-   - nuget.org added as dotnet nuget source (https://aka.ms/getbuildagent use `dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org`)
-
-1. Go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
+1. Now, you can either [Use the Azure VM Template to create your self-hosted runner](#use-the-azure-vm-template-to-create-your-self-hosted-runner) or you can [Create your self-hosted runner manually](#create-your-self-hosted-runner-manually)
 
 ## Use the Azure VM Template to create your self-hosted runner
 1. To create an Azure VM hosting x self-hosted runners, open a new tab and navigate to [https://aka.ms/getbuildagent](https://aka.ms/getbuildagent).
@@ -32,6 +18,19 @@ GitHub runners can be registered for an organization (accessible for all reposit
 1. Select **Review and Create** and then review the deployment and choose **Create**.
 1. Wait for the Azure VM creation to finalize, navigate back to see that the Runners have been registered and are ready to use.
 ![Runners](https://github.com/microsoft/AL-Go/assets/10775043/ba90e239-a8ee-4297-8bed-a30e3fc3db8a)
+1. Go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
+
+## Create your self-hosted runner manually
+1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
+1. Make sure that the following software is installed on the computer (the suggestion in parentheses explains the mechanism used in https://aka.ms/getbuildagent)
+   - Docker (getbuildagent use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM)
+   - The AZ PowerShell module (getbuildagent use `Install-Module az -force`)
+   - GIT (getbuildagent use `choco install git --force --params "/NoAutoCrlf"` after installing choco using `https://chocolatey.org/install.ps1`))
+   - 7zip (getbuildagent use `choco install 7zip`)
+   - GitHub CLI (getbuildagent use `choco install gh`)
+   - PowerShell 7 (getbuildagent use `choco install pwsh -y`)
+   - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (getbuildagent use `choco install vcredist140 -y`)
+   - nuget.org added as dotnet nuget source (getbuildagent use `dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org`)
 
 ## Allow your repository access to your runners
 1. On the list of Runners on GitHub, choose the runner group **Default** and allow public repositories if your repository is public.
