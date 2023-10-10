@@ -48,7 +48,7 @@ You might have noticed that there are two settings in the repository settings fi
 
 `"runs-on"` is used for all jobs, which doesn't build/test your app. This is jobs that doesn't require a lot of machine power, jobs which doesn't require a docker container. AL-Go for GitHub supports using ubuntu-latest for runs-on, which are faster and cheaper than windows-latest (which is the default). There are many jobs running in parallel using these runners and we do not recommend using self-hosted runners for this type of jobs.
 
-`"githubRunner"` is used for build/test jobs. This is jobs, which requires more memory, jobs which require a container. We do recommend self-hosted runners for these jobs if you want to increase build performance.
+`"githubRunner"` is used for build/test jobs, which require more memory and a container. 
 
 ## Additional info on build performance
 
