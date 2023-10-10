@@ -1501,8 +1501,7 @@ function CreateDevEnv {
         [string] $caller = 'local',
         [Parameter(Mandatory = $true)]
         [string] $baseFolder,
-        [Parameter(Mandatory = $true)]
-        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [string] $repository = "$ENV:GITHUB_REPOSITORY",
         [string] $project,
         [string] $userName = $env:Username,
 
