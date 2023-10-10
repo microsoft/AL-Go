@@ -30,6 +30,8 @@ GitHub runners can be registered for an organization (accessible for all reposit
    - GitHub CLI (getbuildagent use `choco install gh`)
    - PowerShell 7 (getbuildagent use `choco install pwsh -y`)
    - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (getbuildagent use `choco install vcredist140 -y`)
+   - Microsoft .NET (getbuildagent use `choco install dotnet -y`)
+   - Microsoft .NET SDK (getbuildagent use `choco install dotnet-sdk -y`)
    - nuget.org added as dotnet nuget source (getbuildagent use `dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org`)
 
 ## Allow your repository access to your runners
