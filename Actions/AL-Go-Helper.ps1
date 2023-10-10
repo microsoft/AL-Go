@@ -1156,7 +1156,7 @@ function CheckAppDependencyProbingPaths {
             }
 
             if ($dependency.release_status -eq "include") {
-                if ($dependency.Repo -ne "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY") {
+                if ($dependency.Repo -ne "https://github.com/$repository") {
                     OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
                 }
                 else {
