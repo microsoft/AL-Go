@@ -12,9 +12,14 @@ GitHub runners can be registered for an organization (accessible for all reposit
 ## Create your self-hosted runner manually
 1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
 1. Make sure that the following software is installed on the computer:
-   - Docker (I use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM.
-   - ddd
-    
+   - Docker (I use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM)
+   - The AZ PowerShell module (I use `Install-Module az -force`)
+   - GIT (I use `choco install git --force --params "/NoAutoCrlf"` (after installing choco using `https://chocolatey.org/install.ps1`))
+   - 7zip (I use `choco install 7zip`)
+   - GitHub CLI (I use `choco install gh`)
+   - PowerShell 7 (I use `choco install pwsh -y`)
+   - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (I use `choco install vcredist140 -y`)
+
 1. go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
 
 ## Use the Azure VM Template to create your self-hosted runner
@@ -27,17 +32,23 @@ GitHub runners can be registered for an organization (accessible for all reposit
 1. Wait for the Azure VM creation to finalize, navigate back to see that the Runners have been registered and are ready to use.
 ![Runners](https://github.com/microsoft/AL-Go/assets/10775043/ba90e239-a8ee-4297-8bed-a30e3fc3db8a)
 
-
-
 ## Allow your repository access to your runners
 1. On the list of Runners on GitHub, choose the runner group **Default** and allow public repositories if your repository is public.
 ![public](https://github.com/microsoft/AL-Go/assets/10775043/9bdd01ab-ac67-44bf-bfd1-af5c5ec91364)
 1. Now navigate to your project settings file (.AL-Go/settings.json) and set **gitHubRunner** to **self-hosted**.
+   - Note that you can use other tags than **self-hosted** to identify special runners for GitHub jobs, or you can set gitHubRunner to "self-hosted, Windows" to ensure that a Windows version is selected if you have self-hosted linux runners as well.
 1. Save and inspect your workflows performance increase on the second run.
 1. Inspect that one of the runners pick up the workflow.
 ![Active](https://github.com/microsoft/AL-Go/assets/10775043/dfcd369c-ad54-427e-92d4-153afda30b53)
 1. Clicking the runner reveals that the job it is running.
 ![Job](https://github.com/microsoft/AL-Go/assets/10775043/0ae30c22-9352-4864-a80e-81ed4ecd93e1)
+
+## GitHubRunner vs. runs-on
+You might have noticed that there are two settings in the repository settings file controlling which runners are selected, [GitHubRunner](https://aka.ms/algosettings#githubrunner) and [Runs-On](https://aka.ms/algosettings#runs-on).
+
+`"runs-on"` is used for all jobs, which doesn't build/test your app. This is jobs that doesn't require a lot of machine power, jobs which doesn't require a docker container. AL-Go for GitHub supports using ubuntu-latest for runs-on, which are faster and cheaper than windows-latest (which is the default). There are many jobs running in parallel using these runners and we do not recommend using self-hosted runners for this type of jobs.
+
+`"githubRunner"` is used for build/test jobs. This is jobs, which requires more memory, jobs which require a container. We do recommend self-hosted runners for these jobs if you want to increase build performance.
 
 ## Additional info on build performance
 
