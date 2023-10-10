@@ -7,7 +7,13 @@ GitHub runners can be registered for an organization (accessible for all reposit
 
 1. Navigate to [https://github.com/organizations/{organization}/settings/actions/runners/new](https://github.com/organizations/{organization}/settings/actions/runners/new) to create a self-hosted runner for your organization. Use [https://github.com/{organization}/{repository}/settings/actions/runners](https://github.com/{organization}/{repository}/settings/actions/runners) to create a self-hosted runner for a single repository.
 ![Organization new runner](https://github.com/microsoft/AL-Go/assets/10775043/f09af5ee-73b5-40e3-bad1-98f0c7b0ddaa)
-1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually, then go to step 9 to continue the configuration.
+1. Now, you can either [Create your self-hosted runner manually](#create-your-self-hosted-runner-manually) or you can [Use the Azure VM Template to create your self-hosted runner](use-the-azure-vm-template-to-create-your-self-hosted-runner)
+
+## Create your self-hosted runner manually
+1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
+1. go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
+
+## Use the Azure VM Template to create your self-hosted runner
 1. To create an Azure VM hosting x self-hosted runners, open a new tab and navigate to [https://aka.ms/getbuildagent](https://aka.ms/getbuildagent).
 1. Enter the **Resource Group name**, **Region**, **VM Name**, **Admin Password** of your choice.
 1. Enter the **number of agents** you want to create on the VM.
@@ -16,6 +22,10 @@ GitHub runners can be registered for an organization (accessible for all reposit
 1. Select **Review and Create** and then review the deployment and choose **Create**.
 1. Wait for the Azure VM creation to finalize, navigate back to see that the Runners have been registered and are ready to use.
 ![Runners](https://github.com/microsoft/AL-Go/assets/10775043/ba90e239-a8ee-4297-8bed-a30e3fc3db8a)
+
+
+
+## Allow your repository access to your runners
 1. On the list of Runners on GitHub, choose the runner group **Default** and allow public repositories if your repository is public.
 ![public](https://github.com/microsoft/AL-Go/assets/10775043/9bdd01ab-ac67-44bf-bfd1-af5c5ec91364)
 1. Now navigate to your project settings file (.AL-Go/settings.json) and set **gitHubRunner** to **self-hosted**.
