@@ -20,7 +20,7 @@ GitHub runners can be registered for an organization (accessible for all reposit
    - PowerShell 7 (I use `choco install pwsh -y`)
    - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (I use `choco install vcredist140 -y`)
 
-1. go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
+1. Go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
 
 ## Use the Azure VM Template to create your self-hosted runner
 1. To create an Azure VM hosting x self-hosted runners, open a new tab and navigate to [https://aka.ms/getbuildagent](https://aka.ms/getbuildagent).
