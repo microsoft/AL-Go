@@ -739,7 +739,6 @@ function GetArtifacts {
             $page_no = 1
         }
         $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page_no)"
-        $page_no += 1
         Write-Host $uri
         $artifacts = InvokeWebRequest -Headers $headers -Uri $uri | ConvertFrom-Json
         # If no artifacts are read, we are done
@@ -763,10 +762,11 @@ function GetArtifacts {
                 break
             }
         }
-        if ($total_count -le $page*$per_page) {
+        if ($total_count -le $page_no*$per_page) {
             # no more pages
             break
         }
+        $page_no += 1
     }
     if ($buildOutputArtifacts.Count -eq 0) {
         Write-Host "No matching buildOutput artifacts found"
