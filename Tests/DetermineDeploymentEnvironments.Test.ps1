@@ -193,7 +193,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         }
 
         # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ) }
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "ALDoc" = @{ "ContinuousDeployment" = $false; "DeployToGitHubPages" = $false } }
         $env:Settings = $settings | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
