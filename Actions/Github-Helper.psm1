@@ -309,18 +309,16 @@ function invoke-gh {
         $arguments = "$command "
         foreach($parameter in $remaining) {
             if ("$parameter".IndexOf(" ") -ge 0 -or "$parameter".IndexOf('"') -ge 0) {
+                if ($parameter.length -gt 15000) {
+                    $parameter = "$($parameter.Substring(0,15000))...`n`n**Truncated due to size limits!**"
+                }
                 $arguments += """$($parameter.Replace('"','\"'))"" "
             }
             else {
                 $arguments += "$parameter "
             }
         }
-        try {
-            cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
-        }
-        catch [System.Management.Automation.MethodInvocationException] {
-            throw "It looks like GitHub CLI is not installed. Please install GitHub CLI from https://cli.github.com/"
-        }
+        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
     }
 }
 
@@ -344,12 +342,7 @@ function invoke-git {
                 $arguments += "$parameter "
             }
         }
-        try {
-            cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
-        }
-        catch [System.Management.Automation.MethodInvocationException] {
-            throw "It looks like Git is not installed. Please install Git from https://git-scm.com/download"
-        }
+        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
     }
 }
 
@@ -623,7 +616,7 @@ function DownloadRelease {
             Write-Host $uri
             $filename = Join-Path $path $asset.name
             InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
-            return $filename
+            $filename
         }
     }
 }
@@ -727,38 +720,74 @@ function GetArtifacts {
     )
 
     $headers = GetHeader -token $token
-    $allArtifacts = @()
-    $per_page = 100
-    $page = 1
+    $total_count = 0
     if ($version -eq 'latest') { $version = '*' }
-    Write-Host "Analyzing artifacts"
-    do {
-        $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page)"
+    # Download all artifacts matching branch and version
+    # We might have results from multiple workflow runs, but we will have all artifacts from the workflow run that created the first matching artifact
+    # Use the buildOutput artifact to determine the workflow run id (as that will always be there)
+    $artifactPattern = "*-$branch-*-$version"
+    # Use buildOutput artifact to determine the workflow run id to avoid excessive API calls
+    # Reason: A project called xx-main will match the artifact pattern *-main-*-version, and there might not be any artifacts matching the mask
+    $buildOutputPattern = "*-$branch-BuildOutput-$version"
+    Write-Host "Analyzing artifacts matching $artifactPattern"
+    while ($true) {
+        if ($total_count -eq 0) {
+            # First iteration - initialize variables
+            $matchingArtifacts = @()
+            $buildOutputArtifacts = @()
+            $per_page = 100
+            $page_no = 1
+        }
+        $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page_no)"
         Write-Host $uri
-        $artifactsJson = InvokeWebRequest -Headers $headers -Uri $uri
-        $artifacts = $artifactsJson | ConvertFrom-Json
-        $page++
-        $artifactPattern = "*-$branch-$mask-$version"
-        Write-Host "ArtifactPattern: $artifactPattern"
-        $allArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
-        $result = @()
-        $allArtifactsFound = $true
-        foreach($project in $projects.Split(',')) {
-            $project = $project.Replace('\','_').Replace('/','_')
-            Write-Host "Project: $project"
-            $artifactPattern = "$project-$branch-$mask-$version"
-            Write-Host "ArtifactPattern: $artifactPattern"
-            $projectArtifact = $allArtifacts | Where-Object { $_.name -like $artifactPattern } | Select-Object -First 1
-            if ($projectArtifact) {
-                $result += @($projectArtifact)
-            }
-            else {
-                $allArtifactsFound = $false
-                $result = @()
+        $artifacts = InvokeWebRequest -Headers $headers -Uri $uri | ConvertFrom-Json
+        # If no artifacts are read, we are done
+        if ($artifacts.artifacts.Count -eq 0) {
+            break
+        }
+        if ($total_count -eq 0) {
+            $total_count = $artifacts.total_count
+        }
+        elseif ($total_count -ne $artifacts.total_count) {
+            # The total count changed, restart the loop
+            $total_count = 0
+            continue
+        }
+        $matchingArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
+        $buildOutputArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $buildOutputPattern })
+        if ($buildOutputArtifacts.Count -gt 0) {
+            # We have matching artifacts.
+            # If the last artifact in the list of artifacts read is not from the same workflow run, there are no more matching artifacts
+            if ($artifacts.artifacts[$artifacts.artifacts.Count-1].workflow_run.id -ne $buildOutputArtifacts[0].workflow_run.id) {
+                break
             }
         }
-    } while (!$allArtifactsFound -and $artifacts.total_count -gt $page*$per_page)
-    $result
+        if ($total_count -le $page_no*$per_page) {
+            # no more pages
+            break
+        }
+        $page_no += 1
+    }
+    if ($buildOutputArtifacts.Count -eq 0) {
+        Write-Host "No matching buildOutput artifacts found"
+        return
+    }
+    Write-Host "Matching artifacts:"
+    # We have all matching artifacts from the workflow run (and maybe more runs)
+    # Now we need to filter out the artifacts that match the projects we need
+    $result = $matchingArtifacts | Where-Object { $_.workflow_run.id -eq $buildOutputArtifacts[0].workflow_run.id } | ForEach-Object {
+        foreach($project in $projects.Split(',')) {
+            $project = $project.Replace('\','_').Replace('/','_')
+            $artifactPattern = "$project-$branch-$mask-$version"
+            if ($_.name -like $artifactPattern) {
+                Write-Host "- $($_.name)"
+                return $_
+            }
+        }
+    }
+    if (-not $result) {
+        Write-Host "- No matching artifacts found"
+    }
 }
 
 function DownloadArtifact {

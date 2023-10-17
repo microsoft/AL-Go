@@ -26,11 +26,16 @@ inputs:
   deploymentEnvironmentsJson:
     description: The settings for all Deployment Environments
     required: true
+outputs:
+  environmentUrl:
+    description: The URL of the deployed environment
+    value: ${{ steps.Deploy.outputs.environmentUrl }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      id: Deploy
       env:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
