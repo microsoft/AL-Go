@@ -800,6 +800,7 @@ function GetArtifacts {
     if (-not $result) {
         Write-Host "- No matching artifacts found"
     }
+    $result
 }
 
 function DownloadArtifact {
