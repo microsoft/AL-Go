@@ -9,10 +9,11 @@ The template repositories to use as starting point are:
 - [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [https://aka.ms/algopte](https://aka.ms/algopte) is the GitHub repository template for Per Tenant Extensions. When creating a Per Tenant Extensions, this is your starting point.
 - [https://github.com/microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) or [https://aka.ms/algoappsource](https://aka.ms/algoappsource) is the GitHub repository template for AppSource apps. When creating an AppSource App, this is your starting point.
 
+## AL-Go Workshop
 
-The below usage scenarios takes you through how to get started and how to perform the most common tasks.
+Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth workshop on AL-Go for GitHub functionality or examine the below usage scenarios, which explains how to get started and how to perform the most common tasks.
 
-## Usage scenarios:
+## Usage scenarios
 1. [Create a new per-tenant extension (like AL Go) and start developing in VS Code](Scenarios/GetStarted.md)
 2. [Add a test app to an existing project](Scenarios/AddATestApp.md)
 3. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/RegisterSandboxEnvironment.md)
