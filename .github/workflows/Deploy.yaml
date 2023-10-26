@@ -41,15 +41,12 @@ jobs:
           runId: ${{ github.run_id }}
         run: |
           $errorActionPreference = "Stop"
-          if ($env:branch -eq 'preview') {
-            Write-Host "Deploying to preview branch. No validation required"
-          } else {
-            $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
-            $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
+          
+          $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
+          $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
 
-            if ($approval.user.login -eq $run.actor.login) {
-              throw "You cannot approve your own deployment"
-            }
+          if ($approval.user.login -eq $run.actor.login) {
+            throw "You cannot approve your own deployment"
           }
 
       - uses: actions/checkout@v3
