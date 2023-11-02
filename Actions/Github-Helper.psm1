@@ -729,6 +729,8 @@ function GetArtifacts {
     # Use buildOutput artifact to determine the workflow run id to avoid excessive API calls
     # Reason: A project called xx-main will match the artifact pattern *-main-*-version, and there might not be any artifacts matching the mask
     $buildOutputPattern = "*-$branch-BuildOutput-$version"
+    # Build Output from TestCurrent, TestNextMinor and TestNextMajor are named differently and should be ignored
+    $ignoreBuildOutputPattern = "*-$branch-BuildOutput-*-*"
     Write-Host "Analyzing artifacts matching $artifactPattern"
     while ($true) {
         if ($total_count -eq 0) {
@@ -754,7 +756,7 @@ function GetArtifacts {
             continue
         }
         $matchingArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
-        $buildOutputArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $buildOutputPattern })
+        $buildOutputArtifacts += @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $buildOutputPattern -and $_.name -notlike $ignoreBuildOutputPattern })
         if ($buildOutputArtifacts.Count -gt 0) {
             # We have matching artifacts.
             # If the last artifact in the list of artifacts read is not from the same workflow run, there are no more matching artifacts
