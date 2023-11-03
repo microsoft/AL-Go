@@ -752,6 +752,8 @@ function GetArtifactsFromLastSuccessfulCICDRun {
 
     $page = 1
 
+    if($version -eq 'latest') { $version = '*' }
+
     $projects = @($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') }
     $foundProjects = @()
     
