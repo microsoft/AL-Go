@@ -741,7 +741,7 @@ function GetArtifactsFromLastSuccessfulCICDRun {
             Write-Host "Found last successful CICD run: $($LastSuccessfulCICDRun)"
             break;
         }
-        
+
         $page += 1
     }
 
@@ -754,7 +754,7 @@ function GetArtifactsFromLastSuccessfulCICDRun {
 
     $projects = @($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') }
     $foundProjects = @()
-    
+
     $foundArtifacts = @()
 
     # Get the artifacts from the last successful CICD run
