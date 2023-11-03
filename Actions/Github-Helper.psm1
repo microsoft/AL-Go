@@ -752,8 +752,6 @@ function GetArtifactsFromLastSuccessfulCICDRun {
 
     $page = 1
 
-    if($version -eq 'latest') { $version = '*' }
-
     $projects = @($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') }
     $foundProjects = @()
     
@@ -818,6 +816,12 @@ function GetArtifacts {
     $headers = GetHeader -token $token
     $total_count = 0
     if ($version -eq 'latest') { $version = '*' }
+
+    if($version -eq '*') {
+        # For latest version, use the artifacts from the last successful CICD run
+        return GetArtifactsFromLastSuccessfulCICDRun -token $token -api_url $api_url -repository $repository -mask $mask -branch $branch -projects $projects
+    }
+
     # Download all artifacts matching branch and version
     # We might have results from multiple workflow runs, but we will have all artifacts from the workflow run that created the first matching artifact
     # Use the buildOutput artifact to determine the workflow run id (as that will always be there)
