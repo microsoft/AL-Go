@@ -708,6 +708,23 @@ function Set-JsonContentLF {
     }
 }
 
+<#
+    Gets the artifacts for the specified projects from the last successful CICD run for the specified branch and mask.
+    The artifacts are returned as an array of artifact objects.
+
+    The artifact object has the following properties:
+        url: the URL to the artifact
+        id: the artifact id
+        node_id: the artifact node id
+        name: the artifact name
+        size_in_bytes: the size of the artifact in bytes
+        url: the URL to the artifact
+        archive_download_url: the URL to download the artifact
+        expired: true if the artifact has expired, false otherwise
+        created_at: the creation date of the artifact
+        updated_at: the last update date of the artifact
+        workflow_run: the workflow run that created the artifact (object)
+#>
 function GetArtifactsFromLastSuccessfulCICDRun {
     Param(
         [string] $token,
