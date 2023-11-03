@@ -708,6 +708,100 @@ function Set-JsonContentLF {
     }
 }
 
+function GetArtifactsFromLastSuccessfulCICDRun {
+    Param(
+        [string] $token,
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [string] $mask = "Apps",
+        [string] $branch = "main",
+        [string] $projects,
+        [string] $version
+    )
+
+    $headers = GetHeader -token $token
+    $lastSuccessfulCICDRun = 0
+    $per_page = 100
+    $page = 1
+
+    # Get the latest CICD workflow run
+    while($true) {
+        $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=success&branch=$branch"
+        $workflowRuns = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
+
+        if($workflowRuns.workflow_runs.Count -eq 0) {
+            Write-Host "No more workflow runs found"
+            break
+        }
+
+        $CICDRuns = $workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' }
+
+        if ($CICDRuns.Count -gt 0) {
+            $lastSuccessfulCICDRun = $CICDRuns[0].id
+            Write-Host "Found last successful CICD run: $($LastSuccessfulCICDRun)"
+            break;
+        }
+        
+        $page += 1
+    }
+
+    if ($lastSuccessfulCICDRun -eq 0) {
+        Write-Host "No successful CICD runs found for branch $branch in repository $repository"
+        return
+    }
+
+    $page = 1
+
+    $projects = @($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') }
+    $foundProjects = @()
+    
+    $foundArtifacts = @()
+
+    # Get the artifacts from the last successful CICD run
+    while($true) {
+        $artifactsURI = "$api_url/repos/$repository/actions/runs/$lastSuccessfulCICDRun/artifacts?per_page=$per_page&page=$page"
+
+        $artifacts = InvokeWebRequest -Headers $headers -Uri $artifactsURI | ConvertFrom-Json
+
+        if($artifacts.artifacts.Count -eq 0) {
+            Write-Host "No more artifacts found"
+            break
+        }
+
+        foreach($project in $projects) {
+            #sanitize project name
+            $project = $project.Replace('\','_').Replace('/','_')
+
+            $artifactPattern = "$project-$branch-$mask-$version"
+
+            $matchingArtifacts = @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
+
+            if ($matchingArtifacts.Count -eq 0) {
+                continue
+            }
+
+            if ($matchingArtifacts.Count -gt 1) {
+                Write-Host "::Warning:: Found more than one matching artifact for pattern $artifactPattern. Taking the first one: $($matchingArtifacts[0].name)"
+            }
+
+            $foundArtifacts += $matchingArtifacts[0]
+            $foundProjects += $project
+        }
+
+        if ($foundProjects.Count -eq $projects.Count) {
+            break
+        }
+
+        $page += 1
+    }
+
+    if ($foundProjects.Count -ne $projects.Count) {
+        Write-Host "::Warning:: Could not find artifacts for all projects. Found artifacts for $($foundProjects.Count) out of $($projects.Count) projects. Missing project: $($projects | Where-Object { $foundProjects -notcontains $_ } -join)"
+    }
+
+    return $foundArtifacts
+}
+
 function GetArtifacts {
     Param(
         [string] $token,
