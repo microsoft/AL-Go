@@ -715,8 +715,7 @@ function GetArtifactsFromLastSuccessfulCICDRun {
         [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $mask = "Apps",
         [string] $branch = "main",
-        [string] $projects,
-        [string] $version
+        [string] $projects
     )
 
     $headers = GetHeader -token $token
@@ -750,12 +749,11 @@ function GetArtifactsFromLastSuccessfulCICDRun {
         return
     }
 
-    $page = 1
-
-    $projects = @($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') }
+    # Get sanitized project names (the way they appear in the artifact names)
+    $projects = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
     $foundProjects = @()
-
     $foundArtifacts = @()
+    $page = 1
 
     # Get the artifacts from the last successful CICD run
     while($true) {
@@ -769,11 +767,7 @@ function GetArtifactsFromLastSuccessfulCICDRun {
         }
 
         foreach($project in $projects) {
-            #sanitize project name
-            $project = $project.Replace('\','_').Replace('/','_')
-
-            $artifactPattern = "$project-$branch-$mask-$version"
-
+            $artifactPattern = "$project-$branch-$mask-*" # * should mathch the version
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {
@@ -788,15 +782,19 @@ function GetArtifactsFromLastSuccessfulCICDRun {
             $foundProjects += $project
         }
 
-        if ($foundProjects.Count -eq $projects.Count) {
+        # Remove found projects from the list of projects to find
+        $projects = $projects | Where-Object { $foundProjects -notcontains $_ }
+
+        if ($projects.Count -eq 0) {
+            Write-Host "Found all project artifacts"
             break
         }
 
         $page += 1
     }
 
-    if ($foundProjects.Count -ne $projects.Count) {
-        Write-Host "::Warning:: Could not find artifacts for all projects. Found artifacts for $($foundProjects.Count) out of $($projects.Count) projects. Missing project: $($projects | Where-Object { $foundProjects -notcontains $_ } -join)"
+    if ($projects.Count -gt 0) {
+        Write-Host "::Warning:: Could not find artifacts for projects: $($projects -join ', ')"
     }
 
     return $foundArtifacts
