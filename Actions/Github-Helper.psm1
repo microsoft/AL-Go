@@ -784,7 +784,7 @@ function GetArtifactsFromLastSuccessfulCICDRun {
         }
 
         foreach($project in $projects) {
-            $artifactPattern = "$project-$branch-$mask-*" # * should mathch the version
+            $artifactPattern = "$project-$branch-$mask-*" # * should match the version
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { !$_.expired -and $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {
