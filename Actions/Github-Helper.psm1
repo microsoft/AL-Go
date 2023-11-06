@@ -734,10 +734,11 @@ function FindLatestSuccessfulCICDRun {
     # Get the latest CICD workflow run
     while($true) {
         $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=success&branch=$branch"
+        Write-Host "- $runsURI"
         $workflowRuns = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
         if($workflowRuns.workflow_runs.Count -eq 0) {
-            Write-Host "No more workflow runs found"
+            # No more workflow runs, breaking out of the loop
             break
         }
 
@@ -789,7 +790,7 @@ function FindCICDRunForVersion {
 
     while ($true) {
         $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page)&name=$escapedArtifactPattern"
-        Write-Host $uri
+        Write-Host "- $uri"
         $artifacts = InvokeWebRequest -Headers $headers -Uri $uri | ConvertFrom-Json
 
         # If no artifacts are read, we are done
@@ -807,6 +808,7 @@ function FindCICDRunForVersion {
 
             # Get the workflow run
             $runsURI = "$api_url/repos/$repository/actions/runs/$($artifact.workflow_run.id)"
+            Write-Host "- $runsURI"
             $workflowRun = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
             if($workflowRun.name -ne ' CI/CD') {
@@ -875,7 +877,7 @@ function GetArtifacts {
     }
 
     if ($CICDrun -eq 0) {
-        Write-Host "No successful CICD runs found for branch $branch and version $version in repository $repository"
+        Write-Host "::Warning:: No successful CICD runs found for branch $branch and version $version in repository $repository"
         return
     }
 
