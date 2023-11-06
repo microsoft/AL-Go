@@ -742,7 +742,7 @@ function FindLatestSuccessfulCICDRun {
             break
         }
 
-        $CICDRuns = $workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' }
+        $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
 
         if ($CICDRuns.Count -gt 0) {
             $lastSuccessfulCICDRun = $CICDRuns[0].id
