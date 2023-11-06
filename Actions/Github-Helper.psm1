@@ -832,6 +832,7 @@ function FindCICDRunForVersion {
 
         if ($CICDRun -ne 0) {
             # CICD run was found, breaking out of the loop
+            Write-Host "Found CICD run $CICDRun that built version $version"
             break
         }
 
@@ -877,11 +878,11 @@ function GetArtifacts {
     }
 
     if ($CICDrun -eq 0) {
-        Write-Host "::Warning:: No successful CICD runs found for branch $branch and version $version in repository $repository"
+        Write-Host "No successful CICD runs found for branch $branch and version $version in repository $repository"
         return
     }
 
-    Write-Host "Using CICD run $CICDrun to get artifacts"
+    Write-Host "Using CICD run $CICDrun to get artifacts for mask $maks and projects: $($projects -join ', ')"
 
     $foundProjects = @()
     $foundArtifacts = @()
@@ -923,7 +924,7 @@ function GetArtifacts {
         $projects = $projects | Where-Object { $foundProjects -notcontains $_ }
 
         if ($projects.Count -eq 0) {
-            Write-Host "Found all project artifacts"
+            Write-Host "Found all project artifacts in CICD run $CICDrun for mask $mask"
             break
         }
 
@@ -931,7 +932,7 @@ function GetArtifacts {
     }
 
     if ($projects.Count -gt 0) {
-        Write-Host "::Warning:: Could not find non-expired artifacts for projects: $($projects -join ', ')"
+        Write-Host "::Warning:: Could not find non-expired artifacts for mask $mask and projects: $($projects -join ', ')"
     }
 
     return $foundArtifacts
