@@ -852,12 +852,19 @@ function FindCICDRunForVersion {
 #>
 function GetArtifacts {
     Param(
+        [Parameter(Mandatory = $true)]
         [string] $token,
-        [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string] $mask = "Apps",
-        [string] $branch = "main",
+        [Parameter(Mandatory = $true)]
+        [string] $api_url,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $mask,
+        [Parameter(Mandatory = $true)]
+        [string] $branch,
+        [Parameter(Mandatory = $true)]
         [string] $projects,
+        [Parameter(Mandatory = $true)]
         [string] $version
     )
 
@@ -895,7 +902,7 @@ function GetArtifacts {
         $artifacts = InvokeWebRequest -Headers $headers -Uri $artifactsURI | ConvertFrom-Json
 
         if($artifacts.artifacts.Count -eq 0) {
-            Write-Host "No more artifacts found"
+            Write-Host "No more artifacts found for CICD run $CICDrun"
             break
         }
 
