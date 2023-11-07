@@ -50,7 +50,7 @@ runs:
 
       - name: Who am I (username)
         if: ${{ env.ppUserName != '' }}
-        uses: microsoft/powerplatform-actions/who-am-i@v0
+        uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
           environment-url: ${{env.ppEnvironmentUrl}}
           user-name: ${{env.ppUserName}}
@@ -76,7 +76,7 @@ runs:
 
       - name: export-solution action (username)
         if: ${{ env.ppUserName != '' }}
-        uses: microsoft/powerplatform-actions/export-solution@v0
+        uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           user-name: ${{env.ppUserName}}
           password-secret: ${{env.ppPassword}}

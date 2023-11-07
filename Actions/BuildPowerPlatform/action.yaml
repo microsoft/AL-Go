@@ -51,7 +51,7 @@ runs:
   using: composite
   steps:
     - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1
+      uses: microsoft/powerplatform-actions/actions-install@v1
 
     - name: Update solution settings
       if: ${{ inputs.appBuild != '' }}
