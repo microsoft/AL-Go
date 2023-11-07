@@ -713,7 +713,6 @@ function Set-JsonContentLF {
 
     If no successful CICD run is found, 0 is returned.
 #>
-
 function FindLatestSuccessfulCICDRun {
     Param(
         [Parameter(Mandatory = $true)]
@@ -812,17 +811,17 @@ function FindCICDRunForVersion {
             $workflowRun = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
             if($workflowRun.name -ne ' CI/CD') {
-                Write-Host "Workflow run $($workflowRun.id) (name: $($workflowRun.name)) is not a CI/CD run"
+                Write-Verbose "Workflow run $($workflowRun.id) (name: $($workflowRun.name)) is not a CI/CD run"
                 continue
             }
 
             if($workflowRun.status -ne "completed") {
-                Write-Host "Workflow run $($workflowRun.id) (name: $($workflowRun.name)) is not completed"
+                Write-Verbose "Workflow run $($workflowRun.id) (name: $($workflowRun.name)) is not completed"
                 continue
             }
 
             if($workflowRun.conclusion -ne "success") {
-                Write-Host "Workflow run $($workflowRun.id) (name: $($workflowRun.name)) did not succeed"
+                Write-Verbose "Workflow run $($workflowRun.id) (name: $($workflowRun.name)) did not succeed"
                 continue
             }
 
