@@ -45,7 +45,7 @@ runs:
         authSettings: ${{ inputs.authSettings }}
 
     - name: Who am I (username)
-      if: env.userName != ''
+      if: env.ppUserName != ''
       uses: microsoft/powerplatform-actions/who-am-i@v0
       with:
         environment-url: ${{env.ppEnvironmentUrl}}
@@ -98,7 +98,7 @@ runs:
         environmentName: ${{ env.environmentName }}
 
     - name: Publish solution to Power Platform (userName)
-      if: env.userName != ''
+      if: env.ppUserName != ''
       uses: microsoft/powerplatform-actions/import-solution@v0
       with:
         user-name: ${{env.ppUserName}}

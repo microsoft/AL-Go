@@ -49,7 +49,7 @@ runs:
           authSettings: ${{ inputs.authSettings }}
 
       - name: Who am I (username)
-        if: ${{ env.userName != '' }}
+        if: ${{ env.ppUserName != '' }}
         uses: microsoft/powerplatform-actions/who-am-i@v0
         with:
           environment-url: ${{env.ppEnvironmentUrl}}
@@ -75,7 +75,7 @@ runs:
         run: ${{ github.action_path }}\GitCloneReponsitory.ps1 -Actor $ENV:_actor -Token $ENV:_token -ParentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -DirectCommit $ENV:_directCommit
 
       - name: export-solution action (username)
-        if: ${{ env.userName != '' }}
+        if: ${{ env.ppUserName != '' }}
         uses: microsoft/powerplatform-actions/export-solution@v0
         with:
           user-name: ${{env.ppUserName}}
