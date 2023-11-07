@@ -747,7 +747,7 @@ function FindLatestSuccessfulCICDRun {
         if ($CICDRuns.Count -gt 0) {
             $lastSuccessfulCICDRun = $CICDRuns[0].id
             Write-Host "Found last successful CICD run: $($LastSuccessfulCICDRun)"
-            break;
+            break
         }
 
         $page += 1
