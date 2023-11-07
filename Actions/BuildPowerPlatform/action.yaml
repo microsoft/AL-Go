@@ -50,6 +50,9 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
     - name: Update solution settings
       if: ${{ inputs.appBuild != '' }}
       shell: ${{ inputs.shell }}
@@ -71,7 +74,7 @@ runs:
         ${{ github.action_path }}\updateEnvironmentAndCompany.ps1 -companyId $ENV:_companyId -environmentName $ENV:_environmentName -solutionFolder $ENV:_solutionFolder
     
     - name: Test Pack (Not real - just workaround for https://github.com/microsoft/powerplatform-vscode/issues/412)
-      uses: microsoft/powerplatform-actions/pack-solution@v0
+      uses: microsoft/powerplatform-actions/pack-solution@v1
       with:
         solution-file: forgetMe.zip
         solution-folder: ${{inputs.solutionFolder}}
@@ -83,7 +86,7 @@ runs:
         Remove-Item -Path forgetMe.zip -Force
 
     - name: Pack Solution
-      uses: microsoft/powerplatform-actions/pack-solution@v0
+      uses: microsoft/powerplatform-actions/pack-solution@v1
       with:
         solution-file: ${{inputs.outputFolder}}/${{inputs.outputFileName}}.zip
         solution-folder: ${{inputs.solutionFolder}}

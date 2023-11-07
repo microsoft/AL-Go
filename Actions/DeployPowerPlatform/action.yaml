@@ -33,6 +33,9 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install Power Platform Tools
+          uses: microsoft/powerplatform-actions/actions-install@v1
+
     - name: Parse DeployToSettings and AuthContext
       uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@PPPreview
       with:
@@ -43,7 +46,7 @@ runs:
 
     - name: Who am I (username)
       if: env.ppUserName != ''
-      uses: microsoft/powerplatform-actions/who-am-i@v0
+      uses: microsoft/powerplatform-actions/who-am-i@v1
       with:
         environment-url: ${{env.ppEnvironmentUrl}}
         user-name: ${{env.ppUserName}}
@@ -51,7 +54,7 @@ runs:
 
     - name: Who am I (application ID)
       if: env.ppApplicationId != ''
-      uses: microsoft/powerplatform-actions/who-am-i@v0
+      uses: microsoft/powerplatform-actions/who-am-i@v1
       with:
         environment-url: ${{env.ppEnvironmentUrl}}
         tenant-id: ${{env.ppTenantId}}
@@ -76,7 +79,7 @@ runs:
             throw "Not able to find Power Platform solution file in $ENV:_artifactPath that contains the artifact keyword '-PowerPlatformSolution-'"
   
     - name: Unpack solution artifact
-      uses: microsoft/powerplatform-actions/unpack-solution@v0
+      uses: microsoft/powerplatform-actions/unpack-solution@v1
       with:
         solution-file: ${{ env.powerPlatformSolutionPath }}
         solution-folder: .artifacts/tempPPSolution/source
@@ -96,7 +99,7 @@ runs:
 
     - name: Publish solution to Power Platform (userName)
       if: env.ppUserName != ''
-      uses: microsoft/powerplatform-actions/import-solution@v0
+      uses: microsoft/powerplatform-actions/import-solution@v1
       with:
         user-name: ${{env.ppUserName}}
         password-secret: ${{env.ppPassword}}
@@ -107,7 +110,7 @@ runs:
 
     - name: Publish solution to Power Platform (ApplicationId)
       if: env.ppApplicationId != ''
-      uses: microsoft/powerplatform-actions/import-solution@v0
+      uses: microsoft/powerplatform-actions/import-solution@v1
       with:
         environment-url: ${{env.ppEnvironmentUrl}}
         tenant-id: ${{env.ppTenantId}}

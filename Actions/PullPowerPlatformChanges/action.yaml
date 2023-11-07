@@ -37,6 +37,9 @@ inputs:
 runs:
   using: composite
   steps:
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
       - name: Parse DeployToSettings and AuthContext
         uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@PPPreview
         with:
@@ -47,7 +50,7 @@ runs:
 
       - name: Who am I (username)
         if: ${{ env.ppUserName != '' }}
-        uses: microsoft/powerplatform-actions/who-am-i@v0
+        uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
           environment-url: ${{env.ppEnvironmentUrl}}
           user-name: ${{env.ppUserName}}
@@ -55,7 +58,7 @@ runs:
 
       - name: Who am I (application ID)
         if: ${{ env.ppApplicationId != '' }}
-        uses: microsoft/powerplatform-actions/who-am-i@v0
+        uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
           environment-url: ${{env.ppEnvironmentUrl}}
           tenant-id: ${{env.ppTenantId}}
@@ -73,7 +76,7 @@ runs:
 
       - name: export-solution action (username)
         if: ${{ env.ppUserName != '' }}
-        uses: microsoft/powerplatform-actions/export-solution@v0
+        uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           user-name: ${{env.ppUserName}}
           password-secret: ${{env.ppPassword}}
@@ -83,7 +86,7 @@ runs:
 
       - name: export-solution action (application ID)
         if: ${{ env.ppApplicationId != '' }}
-        uses: microsoft/powerplatform-actions/export-solution@v0
+        uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           environment-url: ${{env.ppEnvironmentUrl}}
           tenant-id: ${{env.ppTenantId}}
@@ -93,7 +96,7 @@ runs:
           solution-output-file: ${{env.clonedRepoPath}}/${{inputs.solutionName}}.zip
 
       - name: unpack-solution action
-        uses: microsoft/powerplatform-actions/unpack-solution@v0
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
           solution-file: ${{env.clonedRepoPath}}/${{inputs.solutionName}}.zip
           solution-folder: ${{env.clonedRepoPath}}/${{inputs.solutionName}}
