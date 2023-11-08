@@ -796,7 +796,7 @@ function GetArtifactsFromCICDRun {
         $artifacts = InvokeWebRequest -Headers $headers -Uri $artifactsURI | ConvertFrom-Json
 
         if($artifacts.artifacts.Count -eq 0) {
-            Write-Host "No more artifacts found for CICD run $CICDrun"
+            Write-Verbose "No more artifacts found for CICD run $CICDrun"
             break
         }
 
