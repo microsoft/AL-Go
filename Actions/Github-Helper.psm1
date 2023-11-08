@@ -830,14 +830,27 @@ function GetArtifactsFromCICDRun {
     return $foundArtifacts
 }
 
+<#
+    Gets the project artifacts for the specified repository, branch, mask and version.
+    The project artifacts are returned as an array of artifact objects.
+    If the version is 'latest', the artifacts from the last successful CICD run are returned.
+    Otherwise, the artifacts from the CICD run that built the specified project, mask and version are returned.
+#>
 function GetArtifacts {
     Param(
+        [Parameter(Mandatory = $true)]
         [string] $token,
-        [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string] $mask = "Apps",
-        [string] $branch = "main",
+        [Parameter(Mandatory = $true)]
+        [string] $api_url,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $mask,
+        [Parameter(Mandatory = $true)]
+        [string] $branch,
+        [Parameter(Mandatory = $true)]
         [string] $projects,
+        [Parameter(Mandatory = $true)]
         [string] $version
     )
 
