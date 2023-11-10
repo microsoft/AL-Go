@@ -207,4 +207,4 @@ if ($deployToGitHubPages) {
     $deployToGitHubPages = IsGitHubPagesAvailable
 }
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$deployToGitHubPages)"
-Write-Host "DeployALDocArtifact=$([int]$settings.ALDoc.DeployToGitHubPages)"
+Write-Host "DeployALDocArtifact=$([int]$deployToGitHubPages)"
