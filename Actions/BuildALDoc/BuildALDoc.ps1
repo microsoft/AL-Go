@@ -28,7 +28,8 @@ else {
             if (!(Test-Path $filename)) {
                 throw "Unable to download artifact $($_.name)"
             }
-            Expand-Archive -Path $filename -DestinationPath $artifactsFolder -Force
+            $destFolder = Join-Path $artifactsFolder [System.IO.Path]::GetFileName($filename)
+            Expand-Archive -Path $filename -DestinationPath $destFolder -Force
             Remove-Item -Path $filename -Force
         }
     }
