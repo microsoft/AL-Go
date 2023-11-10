@@ -28,7 +28,7 @@ else {
             if (!(Test-Path $filename)) {
                 throw "Unable to download artifact $($_.name)"
             }
-            Expand-Archive -Path $filename -DestinationPath $artifactFolder -Force
+            Expand-Archive -Path $filename -DestinationPath $artifactsFolder -Force
             Remove-Item -Path $filename -Force
         }
     }
