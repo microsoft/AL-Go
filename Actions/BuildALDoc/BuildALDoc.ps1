@@ -24,10 +24,12 @@ else {
     $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version 'latest' -branch $ENV:GITHUB_REF_NAME)
     if ($allArtifacts) {
         $allArtifacts | ForEach-Object {
-            $appFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
-            if (!(Test-Path $appFile)) {
+            $filename = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
+            if (!(Test-Path $filename)) {
                 throw "Unable to download artifact $($_.name)"
             }
+            Expand-Archive -Path $filename -DestinationPath $artifactFolder -Force
+            Remove-Item -Path $filename -Force
         }
     }
 }
