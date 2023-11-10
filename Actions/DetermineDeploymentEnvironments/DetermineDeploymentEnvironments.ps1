@@ -6,6 +6,19 @@
     [string] $type
 )
 
+function IsGitHubPagesAvailable() {
+    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
+    try {
+        Write-Host "Requesting GitHub Pages settings from GitHub"
+        $ghPages = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json
+        return $ghPages.build_type -eq 'workflow'
+    }
+    catch {
+        return $false
+    }
+}
+
 function GetGitHubEnvironments() {
     $headers = GetHeader -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
@@ -188,5 +201,5 @@ Write-Host "UnknownEnvironment=$unknownEnvironment"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
 Write-Host "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
 
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$settings.ALDoc.DeployToGitHubPages)"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]($settings.ALDoc.DeployToGitHubPages -and (IsGitHubPagesAvailable())))"
 Write-Host "DeployALDocArtifact=$([int]$settings.ALDoc.DeployToGitHubPages)"
