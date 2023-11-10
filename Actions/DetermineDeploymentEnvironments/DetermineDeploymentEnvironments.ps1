@@ -12,7 +12,8 @@ function IsGitHubPagesAvailable() {
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
         $ghPages = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json
-        return $ghPages.build_type -eq 'workflow'
+        $ghPages | Out-Host
+        return ($ghPages.build_type -eq 'workflow')
     }
     catch {
         return $false
