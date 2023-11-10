@@ -1,0 +1,204 @@
+name: ' Publish ALDoc Reference Documentation'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: powershell
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
+jobs:
+  Initialization:
+    runs-on: [ windows-latest ]
+    name: Deploy ALDoc Documentation
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Initialize the workflow
+        id: init
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
+        with:
+          shell: powershell
+          eventId: "DO0097"
+        
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
+      - name: Determine Deployment Environments
+        id: DetermineDeploymentEnvironments
+        uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          shell: powershell
+          getEnvironments: '-'
+          type: 'Publish'
+            
+      - name: Setup Pages
+        if: steps.DetermineDeploymentEnvironments.outputs.deployALDocArtifact == 1
+        uses: actions/configure-pages@v3
+        
+      - name: Build ALDoc Documentation
+        uses: microsoft/AL-Go-Actions/BuildALDoc@main
+        with:
+          shell: powershell
+          artifacts: 'latest'
+        
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ".aldoc/_site/"
+        
+      - name: Deploy to GitHub Pages
+        if: steps.DetermineDeploymentEnvironments.outputs.deployALDocArtifact == 1
+        id: deployment
+        uses: actions/deploy-pages@v2
+        
+
+
+
+
+
+
+      - name: Read settings
+        id: ReadSettings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
+      - name: Determine Deployment Environments
+        id: DetermineDeploymentEnvironments
+        uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          shell: powershell
+          getEnvironments: ${{ github.event.inputs.environmentName }}
+          type: 'Publish'
+
+      - name: EnvName
+        id: envName
+        if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.environmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
+
+      - name: Read secrets
+        id: ReadSecrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
+        with:
+          shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+
+      - name: Authenticate
+        id: Authenticate
+        if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
+        run: |
+          $envName = '${{ steps.envName.outputs.envName }}'
+          $secretName = ''
+          $secrets = '${{ steps.ReadSecrets.outputs.Secrets }}' | ConvertFrom-Json
+          $authContext = $null
+          "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
+            if (!($authContext)) {
+              if ($secrets."$_") {
+                Write-Host "Using $_ secret as AuthContext"
+                $authContext = $secrets."$_"
+                $secretName = $_
+              }
+            }
+          }
+          if ($authContext) {
+            Write-Host "AuthContext provided in secret $secretName!"
+            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AuthContext was provided in a secret called $secretName. Using this information for authentication."
+          }
+          else {
+            Write-Host "No AuthContext provided for $envName, initiating Device Code flow"
+            $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
+            $webClient = New-Object System.Net.WebClient
+            $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
+            . $ALGoHelperPath
+            DownloadAndImportBcContainerHelper
+            $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
+            Set-Content -Path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Environment $('${{ steps.envName.outputs.envName }}'.Split(' ')[0]) and could not locate a secret called ${{ steps.envName.outputs.envName }}_AuthContext`n`n$($authContext.message)"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
+          }
+
+  Deploy:
+    needs: [ Initialization ]
+    if: needs.Initialization.outputs.environmentCount > 0
+    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
+    runs-on: ${{ fromJson(matrix.os) }}
+    name: Deploy to ${{ matrix.environment }}
+    environment:
+      name: ${{ matrix.environment }}
+      url: ${{ steps.Deploy.outputs.environmentUrl }}
+    env:
+      deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: EnvName
+        id: envName
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $envName = '${{ matrix.environment }}'.split(' ')[0]
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
+      - name: Read secrets
+        id: ReadSecrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        with:
+          shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
+
+      - name: Deploy
+        id: Deploy
+        uses: microsoft/AL-Go-Actions/Deploy@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: powershell
+          environmentName: ${{ matrix.environment }}
+          artifacts: ${{ github.event.inputs.appVersion }}
+          type: 'Publish'
+          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+
+  PostProcess:
+    if: always()
+    runs-on: [ windows-latest ]
+    needs: [ Initialization, Deploy ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Finalize the workflow
+        id: PostProcess
+        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        with:
+          shell: powershell
+          eventId: "DO0097"
+          telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}

@@ -1,6 +1,8 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token
+    [string] $token,
+    [Parameter(HelpMessage = "Artifacts to build documentation for", Mandatory = $true)]
+    [string] $artifacts
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -12,6 +14,24 @@ $projects = $settings.ALDoc.Projects
 $excludeProjects = $settings.ALDoc.ExcludeProjects
 $maxReleases = $settings.ALDoc.MaxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
+$artifactsFolderCreated = $false
+if ($artifacts -eq ".artifacts") {
+    $artifacts = $artifactsFolder
+}
+else {
+    $artifactsFolderCreated = $true
+    New-Item $artifactsFolder -ItemType Directory | Out-Null
+    $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version 'latest' -branch $ENV:GITHUB_REF_NAME)
+    if ($allArtifacts) {
+        $allArtifacts | ForEach-Object {
+            $appFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
+            if (!(Test-Path $appFile)) {
+                throw "Unable to download artifact $($_.name)"
+            }
+        }
+    }
+}
+
 $header = $settings.ALDoc.Header
 $footer = $settings.ALDoc.Footer
 $defaultIndexMD = $settings.ALDoc.DefaultIndexMD.Replace('\n',"`n")
@@ -79,3 +99,7 @@ else {
     $releaseNotes = ''
 }
 GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel
+
+if ($artifactsFolderCreated) {
+    Remove-Item $artifactsFolder -Recurse -Force
+}

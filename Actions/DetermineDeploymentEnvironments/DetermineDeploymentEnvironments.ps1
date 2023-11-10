@@ -12,7 +12,6 @@ function IsGitHubPagesAvailable() {
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
         $ghPages = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json
-        $ghPages | Out-Host
         return ($ghPages.build_type -eq 'workflow')
     }
     catch {
@@ -60,6 +59,22 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+
+$generateALDocArtifact = ($type -eq 'Publish') -or $settings.ALDoc.ContinuousDeployment
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
+Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
+
+$deployToGitHubPages = $settings.ALDoc.DeployToGitHubPages
+if ($deployToGitHubPages) {
+    $deployToGitHubPages = IsGitHubPagesAvailable
+}
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$deployToGitHubPages)"
+Write-Host "DeployALDocArtifact=$([int]$deployToGitHubPages)"
+
+if ($getEnvironments -eq '-') {
+    exit 0
+}
+
 Write-Host "Environment pattern to use: $getEnvironments"
 $ghEnvironments = @(GetGitHubEnvironments)
 
@@ -198,13 +213,3 @@ Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
 Write-Host "UnknownEnvironment=$unknownEnvironment"
-
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
-Write-Host "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
-
-$deployToGitHubPages = $settings.ALDoc.DeployToGitHubPages
-if ($deployToGitHubPages) {
-    $deployToGitHubPages = IsGitHubPagesAvailable
-}
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$deployToGitHubPages)"
-Write-Host "DeployALDocArtifact=$([int]$deployToGitHubPages)"

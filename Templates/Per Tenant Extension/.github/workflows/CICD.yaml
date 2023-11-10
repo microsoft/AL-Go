@@ -183,6 +183,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/BuildALDoc@main
         with:
           shell: powershell
+          artifacts: '.artifacts'
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v2
