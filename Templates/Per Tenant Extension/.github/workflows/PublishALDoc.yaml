@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   actions: read
+  pages: write
 
 defaults:
   run:
