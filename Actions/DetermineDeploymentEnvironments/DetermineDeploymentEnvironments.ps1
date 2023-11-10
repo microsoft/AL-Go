@@ -201,5 +201,9 @@ Write-Host "UnknownEnvironment=$unknownEnvironment"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
 Write-Host "GenerateALDocArtifact=$([int]$settings.ALDoc.ContinuousDeployment)"
 
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]($settings.ALDoc.DeployToGitHubPages -and (IsGitHubPagesAvailable())))"
+$deployToGitHubPages = $settings.ALDoc.DeployToGitHubPages
+if ($deployToGitHubPages) {
+    $deployToGitHubPages = IsGitHubPagesAvailable
+}
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$deployToGitHubPages)"
 Write-Host "DeployALDocArtifact=$([int]$settings.ALDoc.DeployToGitHubPages)"
