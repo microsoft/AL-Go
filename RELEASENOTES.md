@@ -2,6 +2,16 @@
 
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available. 
 
+### New Settings
+- `TemplateSha`: The Sha of the version of AL-Go currently used
+
+### New Actions
+- `DumpWorkflowInfo`: Dump information about running workflow
+
+### Update AL-Go System Files
+Add another property when running Update AL-Go System Files, called Download latest from template repository. Default value is true.
+If false, the TemplateSha is used to use existing AL-Go System Files when calculating new files.
+
 ## v4.0
 
 ### Removal of the InsiderSasToken
