@@ -71,7 +71,7 @@ $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
 
 if (-not (IsDirectALGo -templateUrl $templateUrl)) {
-    $ALGoSettingsFile = Join-Path $templateFolder "*/.github/AL-Go-Settings.json"
+    $ALGoSettingsFile = Join-Path $templateFolder "*/$repoSettingsFile"
     if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
