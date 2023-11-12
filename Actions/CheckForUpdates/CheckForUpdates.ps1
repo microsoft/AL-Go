@@ -70,7 +70,8 @@ Write-Host "Template Folder: $templateFolder"
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
 
-if (-not (IsDirectALGo -templateUrl $templateUrl)) {
+$isDirectALGo = IsDirectALGo -templateUrl $templateUrl
+if (-not $isDirectALGo) {
     $ALGoSettingsFile = Join-Path $templateFolder "*/$repoSettingsFile"
     if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
@@ -127,7 +128,7 @@ foreach($checkfile in $checkfiles) {
     $srcPath = $checkfile.srcPath
     $dstPath = $checkfile.dstPath
     $dstFolder = Join-Path $baseFolder $dstPath
-    $srcFolder = GetSrcFolder -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
+    $srcFolder = GetSrcFolder -repoSettings $repoSettings -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
     if ($srcFolder) {
         Push-Location -Path $srcFolder
         try {
@@ -139,7 +140,6 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "- $filename"
                 $dstFile = Join-Path $dstFolder $fileName
                 $srcFile = $_.FullName
-                $isFileDirectALGo = IsDirectALGo -templateUrl $templateUrl
                 Write-Host "SrcFolder: $srcFolder"
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
@@ -153,7 +153,7 @@ foreach($checkfile in $checkfiles) {
                 # Replace static placeholders
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
 
-                if ($isFileDirectALGo) {
+                if ($isDirectALGo) {
                     # If we are using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }

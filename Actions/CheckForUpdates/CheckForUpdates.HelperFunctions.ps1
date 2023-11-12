@@ -266,6 +266,7 @@ function IsDirectALGo {
 
 function GetSrcFolder {
     Param(
+        [hashtable] $repoSettings,
         [string] $templateUrl,
         [string] $templateFolder,
         [string] $srcPath
