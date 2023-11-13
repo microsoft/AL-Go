@@ -730,6 +730,8 @@ function FindLatestSuccessfulCICDRun {
     $per_page = 100
     $page = 1
 
+    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository"
+
     # Get the latest CICD workflow run
     while($true) {
         $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=success&branch=$branch"
@@ -752,13 +754,15 @@ function FindLatestSuccessfulCICDRun {
         $page += 1
     }
 
+    if($lastSuccessfulCICDRun -eq 0) {
+        Write-Host "No successful CICD run found for branch $branch in repository $repository"
+    }
+
     return $lastSuccessfulCICDRun
 }
 
 <#
-    Gets the artifacts from the specified CICD run.
-
-    If no artifacts are found, an empty array is returned.
+    Gets the non-expired artifacts from the specified CICD run.
 #>
 function GetArtifactsFromCICDRun {
     param (
@@ -779,6 +783,8 @@ function GetArtifactsFromCICDRun {
         [Parameter(Mandatory = $true)]
         [string] $version
     )
+
+    Write-Host "Getting artifacts for CICD run $CICDrun, mask $mask, projects $projects and version $version"
 
     $headers = GetHeader -token $token
 
@@ -862,7 +868,6 @@ function GetArtifacts {
         $CICDrun = FindLatestSuccessfulCICDRun -token $token -api_url $api_url -repository $repository -branch $branch
 
         if($CICDrun -eq 0) {
-            Write-Host "No successful CICD run found for branch $branch in repository $repository"
             return @()
         }
 
