@@ -796,7 +796,7 @@ function GetArtifactsFromCICDRun {
         $artifacts = InvokeWebRequest -Headers $headers -Uri $artifactsURI | ConvertFrom-Json
 
         if($artifacts.artifacts.Count -eq 0) {
-            Write-Verbose "No more artifacts found for CICD run $CICDrun"
+            Write-Host "No more artifacts found for CICD run $CICDrun"
             break
         }
 
@@ -814,7 +814,7 @@ function GetArtifactsFromCICDRun {
                 Write-Host "Found artifact $($artifact.name) (ID: $($artifact.id)) for mask $mask and project $project"
 
                 if($artifact.expired) {
-                    Write-Verbose "Artifact $($artifact.name) (ID: $($artifact.id)) expired on $($artifact.expired_at)"
+                    Write-Host "Artifact $($artifact.name) (ID: $($artifact.id)) expired on $($artifact.expired_at)"
                     continue
                 }
 
