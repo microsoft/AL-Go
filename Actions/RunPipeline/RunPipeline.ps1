@@ -434,8 +434,12 @@ finally {
         if (Test-BcContainer -containerName $containerName) {
             Write-Host "Get Event Log from container"
             $eventlogFile = Get-BcContainerEventLog -containerName $containerName -doNotOpen
+            Write-Host $eventlogFile
+            Write-Host $containerEventLogFile
             Copy-Item -Path $eventLogFile -Destination $containerEventLogFile
+            Write-Host "project: $project"
             $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+            Write-Host "destFolder: $destFolder"
             Copy-Item -Path $containerEventLogFile -Destination $destFolder
         }
     }
