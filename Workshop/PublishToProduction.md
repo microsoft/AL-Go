@@ -12,7 +12,7 @@ Then that environment will not be picked up for **continuous deployment**, but c
 
 Publish to the production environment by running the workflow and specifying which version to deploy, and which environment to deploy to.
 
-**Note** that the default version is "current" - this will deploy the **release** with the name "current". If you want to just use the latest *build*, you would specify "latest":
+**Note** that the default version is "current" - this will deploy the latest **release** (i.e. the release flagged with latest in your repository). If you want to just use the latest *build*, you would specify "latest":
 
 | ![image](https://user-images.githubusercontent.com/10775043/232312134-0028a08d-1004-43f2-8127-aeeee8ed1a5e.png) |
 |-|
