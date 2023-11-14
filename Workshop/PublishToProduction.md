@@ -12,7 +12,7 @@ Then that environment will not be picked up for **continuous deployment**, but c
 
 Publish to the production environment by running the workflow and specifying which version to deploy, and which environment to deploy to.
 
-**Note** that the default version is "current". This will deploy the **latest release**, if you specify *latest* you will get the **latest build**
+**Note** that the default version is "current". This will deploy the **latest release**. If you specify *latest* you will get the **latest build**
 
 > Current is the **latest release**, which is the release flagged with *Latest* in your repository
 > 
