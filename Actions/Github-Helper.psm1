@@ -725,18 +725,36 @@ function IsCICDSuccessful {
     )
 
     $headers = GetHeader -token $token
+    $per_page = 100
+    $page = 1
 
-    $jobsURI = "$api_url/repos/$repository/actions/runs/$CICDRunId/jobs"
-    Write-Host "- $jobsURI"
-    $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
+    $isSuccessful = $true
 
-    $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
+    while($true) {
+        $jobsURI = "$api_url/repos/$repository/actions/runs/$CICDRunId/jobs?per_page=$per_page&page=$page"
+        Write-Host "- $jobsURI"
+        $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
-    if($buildJobs.conclusion -ne 'success') {
-        return $false
+        if($workflowJobs.jobs.Count -eq 0) {
+            # No more jobs, breaking out of the loop
+            break
+        }
+        $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
+
+        if($buildJobs.conclusion -ne 'success') {
+            # If there is a build job that is not successful, the CICD run is not successful
+            $isSuccessful = $false
+        }
+
+        if(-not $isSuccessful) {
+            # CICD run is not successful, breaking out of the loop
+            break
+        }
+
+        $page += 1
     }
 
-    return $true
+    return $isSuccessful
 }
 
 <#
