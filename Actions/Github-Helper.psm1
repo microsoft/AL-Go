@@ -778,7 +778,7 @@ function FindLatestSuccessfulCICDRun {
         $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
 
         foreach($CICDRun in $CICDRuns) {
-            $isCICDSuccessful = IsCICDSuccessful -CICDRunId $CICDRun.id -token $token -api_url $api_url -repository $repository -branch $branch
+            $isCICDSuccessful = IsCICDSuccessful -CICDRunId $CICDRun.id -token $token -api_url $api_url -repository $repository
             if($isCICDSuccessful) {
                 $lastSuccessfulCICDRun = $CICDRun.id
                 break
