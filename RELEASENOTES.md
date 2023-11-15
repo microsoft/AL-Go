@@ -12,6 +12,9 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 Add another property when running Update AL-Go System Files, called Download latest from template repository. Default value is true.
 If false, the TemplateSha is used to use existing AL-Go System Files when calculating new files.
 
+### Issues
+- Issue 782 Exclude '.altestrunner/' from template .gitignore
+
 ## v4.0
 
 ### Removal of the InsiderSasToken
