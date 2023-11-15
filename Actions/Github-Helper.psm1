@@ -781,6 +781,8 @@ function FindLatestSuccessfulCICDRun {
                 $lastSuccessfulCICDRun = $CICDRun.id
                 break
             }
+
+            Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
         }
 
         if($lastSuccessfulCICDRun -ne 0) {
