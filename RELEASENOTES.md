@@ -4,7 +4,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 
 ### Issues
 - Issue 782 Exclude '.altestrunner/' from template .gitignore
-- App artifacts for version 'latest' are now fetched from the latest _successful_ CICD run for the corresponding branch.
+- App artifacts for version 'latest' are now fetched from the latest CICD run that successfully built all the projects for the corresponding branch.
 
 ## v4.0
 

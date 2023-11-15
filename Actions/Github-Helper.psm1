@@ -709,7 +709,37 @@ function Set-JsonContentLF {
 }
 
 <#
+    Checks if a CICD workflow run is successful.
+    CICD run is successful if all the build jobs are successful.
+#>
+function IsCICDSuccessful {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $api_url,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $CICDRunId
+    )
+
+    $jobsURI = "$api_url/r/repos/$repository/actions/runs/$CICDRunId/jobs"
+    Write-Host "- $jobsURI"
+    $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
+
+    $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
+
+    if($buildJobs.conclusion -ne 'success') {
+        return $false
+    }
+
+    return $true
+}
+
+<#
     Gets the last successful CICD run ID for the specified repository and branch.
+    Successful CICD runs are those that have a workflow run named ' CI/CD' and successfully built all the projects.
 
     If no successful CICD run is found, 0 is returned.
 #>
@@ -734,7 +764,7 @@ function FindLatestSuccessfulCICDRun {
 
     # Get the latest CICD workflow run
     while($true) {
-        $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=success&branch=$branch"
+        $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch"
         Write-Host "- $runsURI"
         $workflowRuns = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
@@ -745,9 +775,16 @@ function FindLatestSuccessfulCICDRun {
 
         $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
 
-        if ($CICDRuns.Count -gt 0) {
-            $lastSuccessfulCICDRun = $CICDRuns[0].id
-            Write-Host "Found last successful CICD run: $($LastSuccessfulCICDRun)"
+        foreach($CICDRun in $CICDRuns) {
+            $isCICDSuccessful = IsCICDSuccessful -CICDRunId $CICDRun.id -token $token -api_url $api_url -repository $repository -branch $branch
+            if($isCICDSuccessful) {
+                $lastSuccessfulCICDRun = $CICDRun.id
+                break
+            }
+        }
+
+        if($lastSuccessfulCICDRun -ne 0) {
+            Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun)"
             break
         }
 
