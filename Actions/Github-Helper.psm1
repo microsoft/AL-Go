@@ -726,7 +726,7 @@ function IsCICDSuccessful {
 
     $headers = GetHeader -token $token
 
-    $jobsURI = "$api_url/r/repos/$repository/actions/runs/$CICDRunId/jobs"
+    $jobsURI = "$api_url/repos/$repository/actions/runs/$CICDRunId/jobs"
     Write-Host "- $jobsURI"
     $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
