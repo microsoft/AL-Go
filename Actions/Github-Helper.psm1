@@ -131,7 +131,7 @@ function GetDependencies {
     }
 
     $downloadedList = @()
-    foreach($mask in 'Apps','TestApps') {
+    foreach($mask in 'Apps','Dependencies','TestApps') {
         foreach($dependency in $probingPathsJson) {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
