@@ -145,6 +145,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         }
         $outputs = [ordered]@{
             "ThisBuildAppsArtifactsName" = "Artifact name for apps being built in the current workflow run"
+            "ThisBuildDependenciesArtifactsName" = "Artifact name for dependencies of apps being built in the current workflow run"
             "ThisBuildTestAppsArtifactsName" = "Artifact name for test apps being built in the current workflow run"
             "AppsArtifactsName" = "Artifacts name for Apps"
             "DependenciesArtifactsName" = "Artifacts name for Dependencies"
