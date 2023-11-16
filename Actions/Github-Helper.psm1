@@ -709,10 +709,9 @@ function Set-JsonContentLF {
 }
 
 <#
-    Checks if a CICD workflow run is successful.
-    CICD run is successful if all the build jobs are successful.
+    Checks if all build jobs in a workflow run completed successfully.
 #>
-function IsCICDSuccessful {
+function CheckBuildJobsInWorkflowRun {
     Param(
         [Parameter(Mandatory = $true)]
         [string] $token,
@@ -721,17 +720,17 @@ function IsCICDSuccessful {
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
-        [string] $CICDRunId
+        [string] $WorkflowRunId
     )
 
     $headers = GetHeader -token $token
     $per_page = 100
     $page = 1
 
-    $isSuccessful = $true
+    $allSuccessful = $true
 
     while($true) {
-        $jobsURI = "$api_url/repos/$repository/actions/runs/$CICDRunId/jobs?per_page=$per_page&page=$page"
+        $jobsURI = "$api_url/repos/$repository/actions/runs/$WorkflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
         $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
@@ -742,19 +741,19 @@ function IsCICDSuccessful {
         $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
 
         if($buildJobs.conclusion -ne 'success') {
-            # If there is a build job that is not successful, the CICD run is not successful
-            $isSuccessful = $false
+            # If there is a build job that is not successful, there is not need to check further
+            $allSuccessful = $false
         }
 
-        if(-not $isSuccessful) {
-            # CICD run is not successful, breaking out of the loop
+        if(-not $allSuccessful) {
+            # there is a non-successful build job, no need to check further
             break
         }
 
         $page += 1
     }
 
-    return $isSuccessful
+    return $allSuccessful
 }
 
 <#
@@ -796,8 +795,16 @@ function FindLatestSuccessfulCICDRun {
         $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
 
         foreach($CICDRun in $CICDRuns) {
-            $isCICDSuccessful = IsCICDSuccessful -CICDRunId $CICDRun.id -token $token -api_url $api_url -repository $repository
-            if($isCICDSuccessful) {
+            if($CICDRun.conclusion -eq 'success') {
+                # CICD run is successful
+                $lastSuccessfulCICDRun = $CICDRun.id
+                break
+            }
+
+            # CICD run is considered successful if all build jobs were successful
+            $areBuildJobSuccessful = CheckBuildJobsInWorkflowRun -WorkflowRunId -$CICDRun.id -token $token -api_url $api_url -repository $repository
+
+            if($areBuildJobSuccessful) {
                 $lastSuccessfulCICDRun = $CICDRun.id
                 break
             }
