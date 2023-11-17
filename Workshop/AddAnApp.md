@@ -26,12 +26,12 @@ Enter the following values in the form:
 
 Wait a few minutes until the workflow completes and click **Pull requests** to see that there is a Pull request open for review.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231541168-7f38a62a-84a3-4d31-9e44-4836f51ec9c0.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/b1dd7d78-d8e0-4d19-99bf-8a555a076071) |
 |-|
 
 Open the **Pull request** and click **Files changed** to see what the Pull request will add to your repository.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231541315-9c738120-3b16-4746-b066-1e22345fb1a8.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/af9ffee2-ebae-46b0-ae81-6bffb51ddd08) |
 |-|
 
 The changes made by the workflow includes adding the new app path to the **al.code-workspace**, and adding an app folder with **app.json**, **HelloWorld.al** (sample code) and **.vscode/launch.json**.
@@ -39,12 +39,12 @@ The **Create a new app** workflow doesn't do anything else than just adding thes
 
 Select **Conversation** and merge the pull request by clicking **Merge the pull request**, **Confirm merge** and then delete the temporary branch created for the pull request, by clicking **Delete branch**. Select **Actions** and see that a merge commit workflow was kicked off:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231541665-e9a29056-e681-42fc-b272-ff0fd0ce3d94.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/b4cc814a-6ed4-4730-ab53-81a88a4b54b3) |
 |-|
 
 When the merge commit is **done**, click the workflow line and **scroll down** to see the artifacts created by this build:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231544822-71bf956d-a050-4d18-b429-69fdb08083f9.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/09b8013e-0cd7-46f7-b45c-a4dcaccfb788) |
 |-|
 
 Note that my artifacts are created with version **1.0.2.0** - that might not be the same in your repository.
