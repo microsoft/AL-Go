@@ -83,7 +83,7 @@ jobs:
           $downloadLatest = $ENV:downloadLatest
           Write-Host $ENV:eventName
           if ($ENV:eventName -eq 'schedule') {
-            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit amd DownloadLatest to true"
+            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit and DownloadLatest to true"
             $directCommit = 'true'
             $downloadLatest = 'true'
           }
