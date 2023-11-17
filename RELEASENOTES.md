@@ -5,6 +5,26 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 ### Issues
 - Issue 782 Exclude '.altestrunner/' from template .gitignore
 
+### New Settings
+
+- `alDoc` : Structure with properties for the ALDoc reference document generation
+  - **ContinuousDeployment** = Determines if reference documentation will be deployed continuously as part of CI/CD. You can run the **Deploy Reference Documentation** workflow to deploy manually or on a schedule. (Default false)
+  - **DeployToGitHubPages** = Determines whether or not the reference documentation site should be deployed to GitHub Pages for the repository. In order to deploy to GitHub Pages, GitHub Pages must be enabled and set to GitHub Actuibs. (Default true)
+  - **MaxReleases** = Maximum number of releases to include in the reference documentation. (Default 3)
+  - **Projects** = An array of projects to include in the reference documentation. (Default all)
+  - **ExcludeProjects** = An array of projects to exclude in the reference documentation. (Default none)-
+  - **Header** = Header for the documentation site. (Default: Documentation for...)
+  - **Footer** = Footer for the documentation site. (Default: Made with...)
+  - **DefaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)
+  - **DefaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)
+  - *Note that in Header, Footer, DefaultIndexMD and DefaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* 
+
+### New Workflows
+- **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.
+
+### Support for ALDoc reference documentation tool
+ALDoc reference documentation tool is now supported for generating and deploying reference documentation for your projects either continuously or manually/scheduled.
+
 ## v4.0
 
 ### Removal of the InsiderSasToken
