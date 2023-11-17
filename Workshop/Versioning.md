@@ -4,7 +4,7 @@ Understanding how AL-Go for GitHub is doing **versioning** and **naming** is imp
 As we saw earlier, the **artifacts** from the first successful build in my repository was called version **repo1-main-Apps-1.0.2.0**.
 Downloading the artifact and unpacking reveals the app inside. The app inside is using the same naming strategy as VS Code: `<publisher>_<name>_<version>`
 
-| ![image](https://user-images.githubusercontent.com/10775043/231545533-be33a8f6-88ea-4b05-b343-d71aaf9ee5d4.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/a74da044-e6c4-4d96-8f75-6fbfa1bddaa2) |
 |-|
 
 Here, the app has the same version number as the artifact, but is it always like that?
