@@ -21,7 +21,7 @@ Enter the following values in the form:
 | Include Sample Code | `Y` |
 | Direct COMMIT | `N` |
 
-| ![image](https://user-images.githubusercontent.com/10775043/231540732-4a1ef920-abe2-4611-a2b0-9ac9a8310e3b.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/3520147b-cb0c-4ee9-90f4-f6efeb81b23f) |
 |-|
 
 Wait a few minutes until the workflow completes and click **Pull requests** to see that there is a Pull request open for review.
