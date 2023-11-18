@@ -8,19 +8,19 @@ This topic describes two ways to handle dependencies to apps within another proj
 ## useProjectDependencies
 Let's go ahead and add the dependencies and see what happens. Grab the **id**, **name**, **publisher** and **version** from the **mysolution.w1** app.json and use them to add a dependency to that app into **mysolution.dk** and **mysolution.us**.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231805415-2e8f345c-f228-4940-9f77-9a05514bd8c0.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/a1627453-c7c6-4877-bec7-ea322f9339dd) |
 |-|
 
 **Stage** your changes, **Commit** them and **Sync** your changes.
 
-Another **CI/CD** workflow will be kicked off. Two of the jobs should fail fairly quickly.
+Another **CI/CD** workflow will be kicked off. Two of the jobs (the DK and the US apps) should fail fairly quickly as AL-Go cannot find the W1 app dependency anywhere.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231809668-a914793d-3e7f-4c02-9deb-13f7a1fce3e7.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/9bcfaa43-64ea-4e07-9505-ad1bd463c97c) |
 |-|
 
 At this time, the error message displayed in the annotations isn't very clear - we will fix that. If you drill into the failing workflow and into the compile step, you will find the real error:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231810146-8ffe7305-da1d-4d43-ab2a-20952628632e.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/23685295-5ce3-4b08-8850-f342407316ea) |
 |-|
 
 It cannot find the mysolution.w1 app on which the two other apps depend, but we kind of knew that.
@@ -28,7 +28,7 @@ It cannot find the mysolution.w1 app on which the two other apps depend, but we 
 The recommended solution to this problem is to set a repository setting called **useProjectDependencies** to **true** and then run Update AL-Go System files.
 Repository settings are in **.github/AL-Go-Settings.json**
 
-| ![image](https://user-images.githubusercontent.com/10775043/231811594-fd29cc88-2aed-425d-bffb-eb84bfca0463.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/627a68a3-2d0e-4525-a7ff-88f901d786c0) |
 |-|
 
 Changing the settings file will kick off another build, which also will fail.
