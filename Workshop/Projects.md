@@ -30,9 +30,7 @@ So, let's setup a multi-project repository like this. Navigate to **https://aka.
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/7e66ca01-0850-4031-8b80-616ee819ebde) |
 |-|
 
-Like when we ran GetStarted, we want to use the preview version of AL-Go for GitHub. Select **Actions**, select the **Update AL-Go System Files** workflow and click **Run workflow**.
-
-Specify **microsoft/AL-Go-PTE@preview** as template repository, **Y** in Direct COMMIT and click **Run workflow**. You don't have to wait for the CI/CD workflow to complete. You can locate the **Create a new app** workflow in the list of workflows and run it with the following parameters:
+You can locate the **Create a new app** workflow in the list of workflows and run it with the following parameters:
 
 | Name | Value |
 | :-- | :-- |
@@ -43,19 +41,20 @@ Specify **microsoft/AL-Go-PTE@preview** as template repository, **Y** in Direct 
 | Include Sample Code | `Y` |
 | Direct COMMIT | `N` |
 
-| ![image](https://user-images.githubusercontent.com/10775043/231755134-303a59b3-f616-4d08-b46d-47810e459a1b.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/04f69e2c-de5f-45ae-89fc-48c543d14c60) |
 |-|
 
-Select **Pull requests**, click the **New PTE** pull request and select **Files changed** to inspect what changes was done to the repo:
+When the **Create a new app in [main]** workflow has completed, select **Pull requests**, click the **New PTE** pull request and select **Files changed** to inspect what changes was done to the repo:
 
-![image](https://user-images.githubusercontent.com/10775043/231753510-4a0cb9a9-c1b8-4fc8-9481-4e7a4ea80c89.png)
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/8db3c739-674f-4172-9c92-52c6a0edadb3) |
+|-|
 
 Notice that:
 1. The .AL-Go folder was moved from the root of the repo and into the US folder.
 2. A new US.code-workspace was created as a workspace for this project
 3. An app was added under the US folder called mysolution.us
 
-Go ahead and **merge the pull request** and **delete** the temporary branch.
+Go ahead click **Conversation**, **merge the pull request** and **delete** the temporary branch.
 
 You don't have to wait for the **CI/CD workflow** to complete, just go ahead and run the **Create a new app** again. This time with the following parameters:
 
@@ -79,38 +78,38 @@ and run the same workflow again with these parameters:
 | Include Sample Code | `Y` |
 | Direct COMMIT | `N` |
 
-When the **New App (mysolution.dk)** and **New App (mysolution.w1)** pull requests are created, **merge the pull request** and **delete** the temporary branch.
+When the **New PTE (mysolution.dk)** and **New PTE (mysolution.w1)** pull requests are created, merge both pull request and delete the temporary branches.
 
 Now select Actions and see that a number of workflows have been kicked off. Some are completed, some might still be running.
 
 Click the latest CI/CD commit workflow and notice the 3 jobs (you can expand the jobs by clicking show all jobs):
 
-| ![image](https://user-images.githubusercontent.com/10775043/231756744-8952ba6b-edaa-47d8-b1ad-cf74990ba86d.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/19707351-d77c-4a46-8082-c0fcf6f7fc3a) |
 |-|
 
 At this time, all apps will be using US as localization and use the same Business Central version as we entered when setting up prerequisites.
 
-After the build completes, you can inspecting the artifacts created from this multi-project repository:
+After the build completes, you can inspect the artifacts created from this multi-project repository, by clicking Summary and scrolling down:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231757819-64d9a4b8-bda2-4b36-974b-540052007c76.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/aad8cbed-26ba-4155-8d3f-55aa14655a7c) |
 |-|
 
-DK, US and W1 all have an artifact of the type **Apps** generated, but they are obviously wrong. We need **DK** to be build using the danish localization and **W1** using W1.
+DK, US and W1 all have an artifact of the type **Apps** generated, but they are wrong, since they are all build using the US localization. We need **DK** to be build using the danish localization and **W1** using W1.
 
 Note also the CheckForUpdates annotation. AL-Go says that there are system files updates. This is because when creating a new project, AL-Go will (at the next system file update) place scripts in the .AL-Go folder for creating local and cloud development environments.
 
 Before running **Update AL-Go System Files** however, let's make some changes to the repository and we will do this from VS Code. Select **Code** and click the **Code** dropdown to copy the GIT URL for the repo:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231759163-33006212-6191-4ed6-8a96-84ff0c7d944e.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/d169c50a-ccc6-4236-8816-bde96036beae) |
 |-|
 
  Open **VS Code** and run **Git Clone** to clone your repository to your local machine:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231759374-671a9933-9602-4ec0-bc06-ea5c7236b457.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/ce2c8991-a371-4fd8-9c0e-05854f885cbc) |
 |-|
 
 Open the repository (do not open the workspace) and perform the following changes:
-- in **DK/.AL-Go/settings.json**, add **"artifact": "https://bcartifacts.azureedge.net/sandbox/22.0.54157.55210/dk"**
+- in **DK/.AL-Go/settings.json**, add **"artifact": "https://bcartifacts.azureedge.net/sandbox/23.0.12034.13450/dk"**
 - in **DK/.AL-Go/settings.json**, change **country** to **"dk"**
 - in **DK/mysolution.dk/HelloWorld.al**, add DK to the pageextension name (i.e. CustomerListExt to **CustomerListExtDK**)
 - in **US/.AL-Go/settings.json**, add **"artifact": "https://bcartifacts.azureedge.net/sandbox/22.0.54157.55210/us"**
@@ -119,16 +118,19 @@ Open the repository (do not open the workspace) and perform the following change
 - in **W1/.AL-Go/settings.json**, change **country** to **"w1"**
 - in **W1/mysolution.w1/HelloWorld.al**, add W1 to the pageextension name (i.e. CustomerListExt to **CustomerListExtW1**)
 
-**Stage the changes** in **VS Code**, **Commit** the changes and **Sync**.
+**Stage the changes** in **VS Code**, **Commit** the changes and **Sync**. Wait for the **CI/CD** workflow to complete:
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/99eb407c-497b-428a-a376-6e5cdb6f3db6) |
+|-|
 
 Now, we can create a release and inspect that. Run the **Create release** workflow and release v1.0 like this:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231798204-2b7c4689-596b-42a6-ac5b-62093192e595.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/541bd90c-b60b-485f-9c10-c7947cfaaade) |
 |-|
 
-After this is done, select **Code** and click the newly created release to see the artifacts (which also reveals a bug)
+After this is done, select **Code** and click the newly created release to see the artifacts. In the auto generated release notes, you will see all merged Pull Requests under **What's Changed** and by clicking the **Full Changelog** link you will find all commits.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231798973-1ed29f6d-fb08-4b8e-b2f1-efd415b20bf1.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/446616b6-a464-4721-bd58-08270a18e3f8) |
 |-|
 
 OK - so that's fine, but normally in a solution like this, DK and US have a dependency on W1 or a common app - you don't have all code duplicated 3 times - how does AL-Go handle dependencies?
