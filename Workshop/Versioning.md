@@ -17,48 +17,48 @@ As you know, the build number consists of 4 tuples: **major.minor.build.revision
 
 In order to better understand this, select **Code** and navigate to the **app.json** file under the **app1** folder. Edit the file and change the version number to **1.2.5.6**.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231559564-43683818-c540-4ba3-86b4-832c67545ae4.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/5c758cf1-6f52-4814-81ad-0c506e63324c) |
 |-|
 
-**Commit** the changes, select **Actions** and wait for the build to complete.
+**Commit** the changes directly, select **Actions** and wait for the build to complete.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231547295-accc7f9d-7c19-472f-80df-71d1897d91a5.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/912a32fa-6ca8-4ef0-8e38-cfded6eee44d) |
 |-|
 
 Select the **Update app.json** workflow, **scroll down** to the artifacts and **download** the new apps artifact.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231559045-1e071522-80c3-456c-9379-9b51a550f60a.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/e1df08a6-5516-4923-abe9-fee93f315ff0) |
 |-|
 
 Now the project (in this case the repository), which really is a collection of apps, is still version **1.0** (RepoVersion never changed - is still 1.0 = default) and **app1** is **1.2** (major and minor from app.json). Build is **3** (3rd build) and revision is still **0**.
 
 Scroll back up, locate the **Re-run all jobs** button and click it. Wait for the **2nd attempt** to complete and inspect the artifact for the re-run.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231560877-bc9354ff-40e9-4705-91d4-6217133a1e73.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/4e4df417-e257-4a61-bc07-666f98413be1) |
 |-|
 
 Now revision became **1** as we had another attempt at building the app.
 
-Next, let's create another app in the same repo. **app2** with ID range **56000..56100** and enter **Y** in **Direct COMMIT**.
+Next, let's create another app, by running the **Create a new app** workflow again in the same repo. **app2** with ID range **56000..56100** and enter **Y** in **Direct COMMIT**.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231561391-7350981e-e20d-49a1-9479-4271a7e6ddd8.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/06d4a03c-f025-44d6-a317-b2a0a79f7e8e) |
 |-|
 
-When the **Create a new app workflow** is done, select the **CI/CD** workflow and click **Run workflow** to run the workflow manually. When the workflow is complete, download and inspect the artifacts generated
+When the **Create a new app** workflow is done, click **Actions**, select the **CI/CD** workflow and click **Run workflow** to run the workflow manually. When the workflow is complete, download and inspect the artifacts generated
 
-| ![image](https://user-images.githubusercontent.com/10775043/231564490-b8c414a8-cf6b-4660-bd81-4c98571812a6.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/d654b75c-2e63-4bd3-a39a-dce6bf835c30) |
 |-|
 
 **App2** still has version **1.0** in **app.json**, hence the **1.0.4.0** version number.
 
-If we want to increment the version number of the project and all apps, you can run the **Increment Version Number** workflow.
+If we want to increment the version number of the project and all apps, you can run the **Increment Version Number** workflow, and keep the **N** in **Direct COMMIT**.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231565483-5f92751e-ed59-40c9-ba80-c90effc9a4e3.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/d9da5fcc-3e57-42b1-92b4-23d17ccfbbf9) |
 |-|
 
 Specifying **+0.1** will add 1 to the minor version of all apps and to the repo version number. Wait for the workflow to complete, select **Pull requests** and select the **Increment Version Number by 0.1** Pull request and inspect what the workflow is trying to change for you. At this time, we will **NOT** merge the Pull request as changing version numbers like this is typically done during a release.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231566085-3fd6ae4a-e88e-4dfd-be60-3ac95767d14a.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/1b16ac1f-1717-4ea7-9bd0-b98e5df8bfe2) |
 |-|
 
 Select **Conversation**, click **Close pull request** and **delete the branch**.
