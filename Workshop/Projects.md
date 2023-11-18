@@ -5,6 +5,11 @@ Every repository can have any number of projects, which each can have any number
 
 Up until now we have worked with a repository which contained 2 apps. This is called a single-project repository.
 
+Things that are determined at the app level:
+- Version of the app
+- Dependencies to other apps
+- Functionality of the app (obviously)
+
 Things that are determined at the project level:
 - Version and localization of Business Central to use during build
 - Dependencies to other projects
@@ -22,7 +27,7 @@ A multi-project repository could look like this:
 
 So, let's setup a multi-project repository like this. Navigate to **https://aka.ms/algopte** to create a new repository. Click **Use this template** and select **Create a new repository**. Select your **organization** as owner, specify a **name** and select **Public**.
 
-| ![image](https://user-images.githubusercontent.com/10775043/231751252-51f0c80a-dd74-4f32-95d5-39a363e2b2ff.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/7e66ca01-0850-4031-8b80-616ee819ebde) |
 |-|
 
 Like when we ran GetStarted, we want to use the preview version of AL-Go for GitHub. Select **Actions**, select the **Update AL-Go System Files** workflow and click **Run workflow**.
