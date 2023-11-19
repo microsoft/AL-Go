@@ -5,12 +5,10 @@ With AL-Go for GitHub, the recommendation is to create a Common repository, whic
 
 So, let's setup a single-project common repository like this. Navigate to https://aka.ms/algopte to create a new repository. Click Use this template and select Create a new repository. Select your organization as owner, specify a name and select Public.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232203510-095f1f0d-e407-413d-9e17-7a3e3e43b821.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/c79dac2e-bf52-4f3a-b86e-6a3f8cc1f392) |
 |-|
 
-Run Update **AL-Go System Files** with **microsoft/AL-Go-PTE@preview** as the template URL and **Y** in Direct COMMIT.
-
-When upgrade is done, create 2 apps within the repository using the **Create a new app** workflow called **Common** and **Licensing**, using the following parameters:
+Create 2 apps within the repository using the **Create a new app** workflow called **Common** and **Licensing**, using the following parameters:
 
 | Name | Value |
 | :-- | :-- |
@@ -34,7 +32,7 @@ and
 
 Leaving out the sample code in order to avoid name clashes.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232205313-3e3df750-55d3-44ac-bb27-40f84971a9a0.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/94ec923f-9e6a-4dc4-a689-b70ab4290e55) |
 |-|
 
 Wait for both workflows to complete.
@@ -43,7 +41,7 @@ Under **Code** locate the **app.json** file for the **Common** app and copy **id
 
 Now locate the **app.json** file for the **Licensing** app and create a dependency to the **Common** app and commit the changes.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232205817-c0c2adef-a61f-4406-8880-5d7db55c7804.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/f9918c5e-7363-46a1-8d3d-2a3acc7efa0c) |
 |-|
 
 Also copy the **id**, **name**, **publisher** and **version** from the **Licensing** app to the clipboard as well.
@@ -54,7 +52,7 @@ Now, navigate back to your multi-project repository, which you created [here](Pr
 
 Add a dependency to the **Licensing** app from the **Common** repository, from the **mysolution.w1** app in the **W1** project.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232206403-bd93b016-3fe5-44fa-8aae-057323735034.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/6149aa2f-8bbc-4b63-9190-371a27ca593d) |
 |-|
 
 And as expected, the builds will fail.
