@@ -135,7 +135,7 @@ Next, navigate to your **MySolution** repository (where you deleted the ALGOREPO
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/4ebbc94e-a55c-47cd-a361-4e78828bed7c) |
 |-|
 
-Looking into the logs under the RunPipeline step, you will find that Resolving Dependencies will find that it is missing the Licensing dependency and then, it searches GitHub Packages to locate the missing dependencies.
+Looking into the logs under the **RunPipeline** step, you will find that **Resolving Dependencies** will find that it is missing the **Licensing** dependency and then, under **installing app dependencies**, it searches GitHub Packages to locate the missing dependencies (+ their dependencies)
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/c2e48b09-7239-4cb2-881e-cd52ee5d6508) |
 |-|
