@@ -708,20 +708,241 @@ function Set-JsonContentLF {
     }
 }
 
+<#
+    Checks if all build jobs in a workflow run completed successfully.
+#>
+function CheckBuildJobsInWorkflowRun {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $api_url,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $WorkflowRunId
+    )
+
+    $headers = GetHeader -token $token
+    $per_page = 100
+    $page = 1
+
+    $allSuccessful = $true
+
+    while($true) {
+        $jobsURI = "$api_url/repos/$repository/actions/runs/$WorkflowRunId/jobs?per_page=$per_page&page=$page"
+        Write-Host "- $jobsURI"
+        $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
+
+        if($workflowJobs.jobs.Count -eq 0) {
+            # No more jobs, breaking out of the loop
+            break
+        }
+        $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
+
+        if($buildJobs.conclusion -ne 'success') {
+            # If there is a build job that is not successful, there is not need to check further
+            $allSuccessful = $false
+        }
+
+        if(-not $allSuccessful) {
+            # there is a non-successful build job, no need to check further
+            break
+        }
+
+        $page += 1
+    }
+
+    return $allSuccessful
+}
+
+<#
+    Gets the last successful CICD run ID for the specified repository and branch.
+    Successful CICD runs are those that have a workflow run named ' CI/CD' and successfully built all the projects.
+
+    If no successful CICD run is found, 0 is returned.
+#>
+function FindLatestSuccessfulCICDRun {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $api_url,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $branch
+    )
+
+    $headers = GetHeader -token $token
+    $lastSuccessfulCICDRun = 0
+    $per_page = 100
+    $page = 1
+
+    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository"
+
+    # Get the latest CICD workflow run
+    while($true) {
+        $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch"
+        Write-Host "- $runsURI"
+        $workflowRuns = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
+
+        if($workflowRuns.workflow_runs.Count -eq 0) {
+            # No more workflow runs, breaking out of the loop
+            break
+        }
+
+        $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
+
+        foreach($CICDRun in $CICDRuns) {
+            if($CICDRun.conclusion -eq 'success') {
+                # CICD run is successful
+                $lastSuccessfulCICDRun = $CICDRun.id
+                break
+            }
+
+            # CICD run is considered successful if all build jobs were successful
+            $areBuildJobSuccessful = CheckBuildJobsInWorkflowRun -WorkflowRunId -$CICDRun.id -token $token -api_url $api_url -repository $repository
+
+            if($areBuildJobSuccessful) {
+                $lastSuccessfulCICDRun = $CICDRun.id
+                break
+            }
+
+            Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
+        }
+
+        if($lastSuccessfulCICDRun -ne 0) {
+            Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun)"
+            break
+        }
+
+        $page += 1
+    }
+
+    if($lastSuccessfulCICDRun -eq 0) {
+        Write-Host "No successful CICD run found for branch $branch in repository $repository"
+    }
+
+    return $lastSuccessfulCICDRun
+}
+
+<#
+    Gets the non-expired artifacts from the specified CICD run.
+#>
+function GetArtifactsFromCICDRun {
+    param (
+        [Parameter(Mandatory = $true)]
+        $CICDrun,
+        [Parameter(Mandatory = $true)]
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $api_url,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $mask,
+        [Parameter(Mandatory = $true)]
+        [string] $branch,
+        [Parameter(Mandatory = $true)]
+        [string] $projects,
+        [Parameter(Mandatory = $true)]
+        [string] $version
+    )
+
+    Write-Host "Getting artifacts for CICD run $CICDrun, mask $mask, projects $projects and version $version"
+
+    $headers = GetHeader -token $token
+
+    $foundArtifacts = @()
+    $per_page = 100
+    $page = 1
+
+    # Get sanitized project names (the way they appear in the artifact names)
+    $projects = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+
+    # Get the artifacts from the the CICD run
+    while($true) {
+        $artifactsURI = "$api_url/repos/$repository/actions/runs/$CICDrun/artifacts?per_page=$per_page&page=$page"
+
+        $artifacts = InvokeWebRequest -Headers $headers -Uri $artifactsURI | ConvertFrom-Json
+
+        if($artifacts.artifacts.Count -eq 0) {
+            Write-Host "No more artifacts found for CICD run $CICDrun"
+            break
+        }
+
+        foreach($project in $projects) {
+            $artifactPattern = "$project-$branch-$mask-$version"
+            $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
+
+            if ($matchingArtifacts.Count -eq 0) {
+                continue
+            }
+
+            $matchingArtifacts = @($matchingArtifacts) #enforce array
+
+            foreach($artifact in $matchingArtifacts) {
+                Write-Host "Found artifact $($artifact.name) (ID: $($artifact.id)) for mask $mask and project $project"
+
+                if($artifact.expired) {
+                    Write-Host "Artifact $($artifact.name) (ID: $($artifact.id)) expired on $($artifact.expired_at)"
+                    continue
+                }
+
+                $foundArtifacts += $artifact
+            }
+        }
+
+        $page += 1
+    }
+
+    Write-Host "Found $($foundArtifacts.Count) artifacts for mask $mask and projects $($projects -join ',') in CICD run $CICDrun"
+
+    return $foundArtifacts
+}
+
+<#
+    Gets the project artifacts for the specified repository, branch, mask and version.
+    The project artifacts are returned as an array of artifact objects.
+    If the version is 'latest', the artifacts from the last successful CICD run are returned.
+    Otherwise, the artifacts from the CICD run that built the specified project, mask and version are returned.
+#>
 function GetArtifacts {
     Param(
+        [Parameter(Mandatory = $true)]
         [string] $token,
-        [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string] $mask = "Apps",
-        [string] $branch = "main",
+        [Parameter(Mandatory = $true)]
+        [string] $api_url,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $mask,
+        [Parameter(Mandatory = $true)]
+        [string] $branch,
+        [Parameter(Mandatory = $true)]
         [string] $projects,
+        [Parameter(Mandatory = $true)]
         [string] $version
     )
 
     $headers = GetHeader -token $token
-    $total_count = 0
     if ($version -eq 'latest') { $version = '*' }
+
+    # For latest version, use the artifacts from the last successful CICD run
+    if($version -eq '*') {
+        $CICDrun = FindLatestSuccessfulCICDRun -token $token -api_url $api_url -repository $repository -branch $branch
+
+        if($CICDrun -eq 0) {
+            return @()
+        }
+
+        $result = GetArtifactsFromCICDRun -CICDrun $CICDrun -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects -version $version -branch $branch
+        return $result
+    }
+
+    $total_count = 0
+
     # Download all artifacts matching branch and version
     # We might have results from multiple workflow runs, but we will have all artifacts from the workflow run that created the first matching artifact
     # Use the buildOutput artifact to determine the workflow run id (as that will always be there)
