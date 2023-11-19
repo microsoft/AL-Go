@@ -101,13 +101,16 @@ In order to use GitHub Packages for dependency resolution, we need to create an 
 {"token":"ghp_XXXX","serverUrl":"https://nuget.pkg.github.com/freddydkorg/index.json"}
 ```
 
-Where **ghp_XXX** should be replaced by your **personal access token** with permissions to **Packages** and **freddydkorg** should be replaced by your **organization name**.
+Where **ghp_XXX** should be replaced by a **personal access token** with permissions to **write:packages** and **freddydkorg** should be replaced by your **organization name**.
+
+> [!NOTE]
+> Fine-grained personal access tokens doesn't support packages at this time, you need to use classic personal access tokens.
 
 You can also use BcContainerHelper and the function **New-ALGoNuGetContext** to create a JSON structure in the right format.
 
 Go to your organization settings and create an **organizational secret** called **GitHubPackagesContext** with the value above.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232253023-7131dba1-1be1-4cac-8786-27715899200b.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/bd7ae71b-88b8-490c-a7bf-12792c59634b) |
 |-|
 
 Now, navigate to your **Common** repository and run the **CI/CD** Workflow. Inspect the workflow summary after completion:
