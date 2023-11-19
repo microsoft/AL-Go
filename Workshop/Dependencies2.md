@@ -115,28 +115,32 @@ Go to your organization settings and create an **organizational secret** called 
 
 Now, navigate to your **Common** repository and run the **CI/CD** Workflow. Inspect the workflow summary after completion:
 
-| ![image](https://user-images.githubusercontent.com/10775043/232253742-7728e4a2-587e-40fa-a547-4c95ba4e9951.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/4a449287-2521-49b1-b5c9-e57d7047319f) |
 |-|
 
-Notice the **Deliver to GitHub Packages** job, by creating the **GitHubPackagesContext** secret, you have enabled Continuous Delivery to GitHub Packages.
+Notice the **Deliver to GitHubPackages** job. By creating the **GitHubPackagesContext** secret, you have enabled Continuous Delivery to GitHub Packages.
 
-Now, navigate to your organization and select **Packages** and you will see GitHub Packages created for the two apps in **Common**.
+Now, click **Code** and see that you have 2 Packages delivered from the repository:
 
-| ![image](https://user-images.githubusercontent.com/10775043/232253790-7aee6c91-a858-4dd9-b85c-5f22a67394b5.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/eeeb6675-f565-47c6-8582-5c94c2b26971) |
 |-|
 
-Next, navigate to your **MySolution** repository and run the **CI/CD** workflow and magically, all dependencies are now also resolved.
+Click **Packages**, which will take you to Packages in your organizational profile. All packages are stored on the organization with a link to the owning repository:
 
-| ![image](https://user-images.githubusercontent.com/10775043/232286871-845f02ea-a59a-46e8-b720-5ff1d6927ffe.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/010defe6-b3a7-4585-9326-d0d1de303157) |
 |-|
 
-And GitHub Packages have been published for the 3 apps in MySolution as well
+Next, navigate to your **MySolution** repository (where you deleted the ALGOREPOSETTINGS repository variable) and run the **CI/CD** workflow and magically, all dependencies are now also resolved.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232286814-4d4572f3-fa14-460e-84ba-f18fa071860f.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/4ebbc94e-a55c-47cd-a361-4e78828bed7c) |
+|-|
+
+Looking into the logs under the RunPipeline step, you will find that Resolving Dependencies will find that it is missing the Licensing dependency and then, it searches GitHub Packages to locate the missing dependencies.
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/c2e48b09-7239-4cb2-881e-cd52ee5d6508) |
 |-|
 
 Continuous Delivery is not only GitHub Packages. Let's have a look at continuous delivery...
 
 ---
 [Index](Index.md)&nbsp;&nbsp;[next](ContinuousDelivery.md)
-
