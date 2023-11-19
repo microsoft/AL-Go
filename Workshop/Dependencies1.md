@@ -59,7 +59,7 @@ If you already set up **useProjectDependencies**, please remove this setting fro
 
 Now, modify **DK/.AL-Go/settings.json** and **US/.AL-Go/settings.json** by adding this property
 
-```
+```json
   "appDependencyProbingPaths": [
     {
       "repo": ".",
