@@ -11,7 +11,8 @@ You will need:
    - The secret should be available to all public repositories (you cannot have organizational secret accessible for private repos in Free GitHub)
 1. An organizational variable called ALGOORGSETTINGS
    - Containing the following JSON structure (for performance reasons)
-```
+
+```json
     {
         "useCompilerFolder": true,
         "doNotPublishApps": true,
