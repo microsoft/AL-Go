@@ -140,6 +140,21 @@ Looking into the logs under the **RunPipeline** step, you will find that **Resol
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/c2e48b09-7239-4cb2-881e-cd52ee5d6508) |
 |-|
 
+and looking at packages for the organization, we will now see that there are 5 packages - 3 of them published from the MySolutions repository:
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/a94bac82-cc70-40b6-acb6-682623e061c1) |
+|-|
+
+Now, if we remove the **appDependencyProbingPaths** settting in the **DK** and **US** project in **MySolution**, we will see that all projects still build. The reason for this is, that they will now download the W1 package from GitHub Packages, instead of including the W1 project when building DK and US:
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/6bf22151-321f-4494-8acf-da28763932da) |
+|-|
+
+Note though that this means that the DK and US projects will use the previously delivered version of the W1 dependency and not the one that is build in parallel with DK and US. If we set **useProjectDependencies** to true and run **Update AL-Go System Files**, projects will now be build in order and project dependencies from the same repository will be taken from the same build, while external dependencies will be taken from GitHub Packages. In the summary, we can also see that the newly build apps are also delivered to GitHub packages:
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/3342e737-24a8-416e-98ea-355d8f6a6a5d) |
+|-|
+
 Continuous Delivery is not only GitHub Packages. Let's have a look at continuous delivery...
 
 ---
