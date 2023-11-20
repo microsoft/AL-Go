@@ -5,6 +5,7 @@ Currently, the following targets are supported:
 - GitHub Packages
 - Storage
 - AppSource
+- NuGet (work in progress)
 - Custom
 
 This workshop has already described how to setup continuous delivery for GitHub Packages [here](Dependencies2.md).
