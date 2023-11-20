@@ -1,12 +1,24 @@
 # Publish To Production
 In [this](ContinuousDeployment.md) section you learned how to setup a QA environment for continuous deployment.
 
-If you follow the same process for setting up an environment, but postfix your environment name with **(Production)**, like:
+If you follow the same process and setup an environment called PROD:
 
-| ![image](https://user-images.githubusercontent.com/10775043/232310956-96179562-e101-4b90-9a01-12c8c316cfd3.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/98d4a06f-05cb-489b-afcf-4a46d9a06020) |
 |-|
 
-Then that environment will not be picked up for **continuous deployment**, but can only be deployed to using the **Publish To Environment** workflow.
+By default, all environments will be picked up for **continuous deployment**, but production environments will be skipped unless you add the ContinuousDeployment setting from the previous chapter. The Deployment job will succeed, but looking into the step, you will see:
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/4b4f70ec-b503-44d9-b417-5c0ba3e65c0d) |
+|-|
+
+By adding a setting like:
+
+```json
+
+
+```
+
+should be but can only be deployed to using the **Publish To Environment** workflow.
 
 **Note** that there are plans to update the mechanism for when an environment is picked up for deployment, to allow deployment to environments postfixed with **(Production)**. This will be done by including some settings. But until those settings are present, the mechanism will work as described here.
 
