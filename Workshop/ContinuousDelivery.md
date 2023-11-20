@@ -55,7 +55,7 @@ Checking the storage account using Storage Explorer reveals the new container an
 Continuous delivery to **AppSource** is supported by the AppSource template and will be included in the workshop later, but basically, creating a secret called **AppSourceContext** and setting a **AppSourceContinuousDelivery** to true in the repository settings file.
 
 ## NuGet
-Still work-in-progress. Delivery to NuGet is supposed to be delivery to a NuGet feed, where your partners can get access to your apps or runtime packages.
+Still work-in-progress. Delivery to NuGet is supposed to be delivery to a NuGet feed, where your partners can get access to your apps or runtime packages. This section will be updated when we release delivery to NuGet in it's final version.
 
 ## Custom delivery
 Custom delivery will be handled in an advanced part of this workshop later.
