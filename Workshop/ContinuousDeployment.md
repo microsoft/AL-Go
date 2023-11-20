@@ -67,9 +67,9 @@ Paste the value from the clipboard into the "Value" field of the **AuthContext**
 > [!NOTE]
 > The Environments tab in repository **Settings** is only supported in **paid SKUs** of GitHub or for **public repositories**. It is possible to use repository or organizational secrets for authenticating to environments defined in **Settings**, as an alternative to using environment secrets as we have done here, but this is not part of this workshop.
 
-## What about deployments to on-premises installations of Business Central
+## Custom Deployments
 
-Currently 
+The 
 
 Now you might think, if this only supports sandbox environments, how do you then publish to production?
 
