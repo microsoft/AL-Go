@@ -1,12 +1,10 @@
 # Continuous Deployment
 
-Continuous Deployment is currently only supporting sandox environments (like **QA** or **FAT** environments)
+Using Continuous Deployment you can deploy your apps to an online environment continuously. Much like with continuous delivery, you need to setup an authentication context and then you need to setup an environment.
 
-Much like with continuous delivery, you need to setup an authentication context and then you need to setup an environment.
+The authentication context can use **impersonation** (which uses a **refreshtoken**, which typically is valid for **90** days) or **S2S** (which uses **ClientId** and **ClientSecret**, which needs to be **registered** inside your **Business Central Environment**.
 
-The authentication context can use **impersonation** (which uses a **refreshtoken** that is valid for **90** days) or **S2S** (which uses **ClientId** and **ClientSecret**, which needs to be **registered** inside your **Business Central Environment**.
-
-First thing we need to do is to create an **environment** in your **GitHub repository**, which the same name as your Business Central environment.
+First thing we need to do is to create an **environment** in your **GitHub repository** with a name, which identifies your Business Central environment for you.
 
 Navigate to your single-project repository (**repo1**), select **Settings** and **Environments** and click **New environment**. Enter the name of your Business Central environment and click **Configure environment**
 
