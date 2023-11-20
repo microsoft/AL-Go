@@ -6,7 +6,7 @@ If you follow the same process and setup an environment called PROD:
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/98d4a06f-05cb-489b-afcf-4a46d9a06020) |
 |-|
 
-By default, all environments will be picked up for **continuous deployment**, but production environments will be skipped unless you add the ContinuousDeployment setting from the previous chapter. The Deployment job will succeed, but looking into the step, you will see:
+By default, all environments will be picked up for **continuous deployment**, but production environments will be skipped unless you add the ContinuousDeployment setting from the previous chapter. The Deployment job will succeed, but looking into the step, you will see that the PROD environment is ignored:
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/4b4f70ec-b503-44d9-b417-5c0ba3e65c0d) |
 |-|
@@ -14,25 +14,35 @@ By default, all environments will be picked up for **continuous deployment**, bu
 By adding a setting like:
 
 ```json
-
-
+{
+    "DeployToPROD": {
+        "ContinuousDeployment": false
+    }
+}
 ```
 
-should be but can only be deployed to using the **Publish To Environment** workflow.
+The PROD environment is not even included in the CI/CD workflow, and again, setting the ContinuousDeployment to true will enable continuous deployment to the production environment.
 
-**Note** that there are plans to update the mechanism for when an environment is picked up for deployment, to allow deployment to environments postfixed with **(Production)**. This will be done by including some settings. But until those settings are present, the mechanism will work as described here.
+## Publish to Environment
 
-Publish to the production environment by running the workflow and specifying which version to deploy, and which environment to deploy to.
+Menually publishing to environments is done by running the **Publish To Environment** workflow and specifying which version to publish.
 
-**Note** that the default version is "current". This will deploy the **current release**. If you specify *latest* you will get the **latest build**
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/57f8441b-d414-4225-9cf4-dc2f7ce185a0) |
+|-|
 
-> Current is the **current release**, which is the release tagged with *Latest* in your repository
+> [!NOTE]
+> The default version is **current**. This will deploy the **current release**, which is the release tagged with *Latest* in your repository
 > 
 > ![image](https://github.com/microsoft/AL-Go/assets/10775043/236f1eac-3045-4b19-90a1-1f81e2ad26a6)
 
-And... again, if you want to just use the latest *build*, you would specify "latest":
+If you want to deploy the latest *build*, you would specify "latest" and if you want to deploy a specific version, you should specify the project version number to deploy.
 
-| ![image](https://user-images.githubusercontent.com/10775043/232312134-0028a08d-1004-43f2-8127-aeeee8ed1a5e.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/ab6878fb-3480-46ec-948e-2f55efc572a5) |
+|-|
+
+Investigating the **Publish To Environment** workflow run, you will see a Deploy step like the one in CI/CD, which also includes a link to the environment.
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/de8958a5-c9fb-4c9b-912c-bf037096c0bd) |
 |-|
 
 But... - would you do that without running automated tests?
