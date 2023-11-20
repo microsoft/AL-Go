@@ -69,7 +69,7 @@ Paste the value from the clipboard into the "Value" field of the **AuthContext**
 
 ## Custom Deployments
 
-The 
+AL-Go can also be setup for custom deployment when you want to deploy to non-SaaS environments. More about this in the advanced section.
 
 Now you might think, if this only supports sandbox environments, how do you then publish to production?
 
