@@ -4,6 +4,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 
 ### Issues
 - Issue 782 Exclude '.altestrunner/' from template .gitignore
+- Issue 823 Dependencies from prior build jobs are not included when using useProjectDependencies
 - App artifacts for version 'latest' are now fetched from the latest CICD run that completed and successfully built all the projects for the corresponding branch.
 
 ## v4.0
