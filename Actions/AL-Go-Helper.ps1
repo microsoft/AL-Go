@@ -1841,6 +1841,13 @@ function CreateDevEnv {
             $sharedFolder = $baseFolder
         }
 
+        # If UseCompilerFolder is set, set the parameter on Run-AlPipeline
+        if ($settings.useCompilerFolder) {
+            $runAlPipelineParams += @{
+                "useCompilerFolder" = $true
+            }
+        }
+
         Run-AlPipeline @runAlPipelineParams `
             -accept_insiderEula:$accept_insiderEula `
             -vsixFile $settings.vsixFile `
