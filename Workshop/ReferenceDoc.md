@@ -82,7 +82,7 @@ Adding this to the ALGOORGSETTINGS organizational variable causes all repositori
 
 But you can also add the setting to a repository settings variable called **ALGOREPOSETTINGS** or to the repository settings file **.github/AL-Go-Settings.json** if you only want to enable this for a single repository.
 
-Running CI/CD after enabling continuous deployment reveals the **Deploy Reference Docuemntation** job being run and the link to the reference documentation is available in the job.
+Running CI/CD after enabling continuous deployment reveals the **Deploy Reference Documentation** job being run and the link to the reference documentation is available in the job.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/8a89e9b8-95db-4747-8136-fda4fa78350a) |
 |-|
