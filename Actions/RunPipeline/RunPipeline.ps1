@@ -101,12 +101,7 @@ try {
     }
 
     $analyzeRepoParams = @{}
-    # If UseCompilerFolder is set, set the parameter on Run-AlPipeline
-    if ($settings.useCompilerFolder) {
-        $runAlPipelineParams += @{
-            "useCompilerFolder" = $true
-        }
-    }
+
     if ($artifact) {
         # Avoid checking the artifact setting in AnalyzeRepo if we have an artifactUrl
         $settings.artifact = $artifact
@@ -340,7 +335,8 @@ try {
     "enableCodeCop",
     "enableAppSourceCop",
     "enablePerTenantExtensionCop",
-    "enableUICop" | ForEach-Object {
+    "enableUICop",
+    "useCompilerFolder" | ForEach-Object {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
