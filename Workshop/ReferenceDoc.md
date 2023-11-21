@@ -51,9 +51,41 @@ Clicking the link on the multi-project repository, in which we did a release ear
 
 You will see the three projects as "folders" and the apps, which are built in these projects, are listed below. You will also find a **Releases** folder under which earlier versions of the apps from the repository are listed.
 
+## Deploying the reference documentation daily
 
+To allow daily generation of the reference documentation, modify the .github/AL-Go-Settings.json and add a setting like this:
 
+```json
+  "DeployReferenceDocumentationSchedule": "0 4 * * *"
+```
 
+> [!NOTE]
+> This will update the reference documentation every night at 4
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/5b3a1c0a-6696-483c-857a-590e39dfa860) |
+|-|
+
+## Deploying the reference documentation continuously
+
+If you want to setup continuous deployment of the reference documentation, you can add this setting:
+
+```json
+  "ALDoc": {
+    "ContinuousDeployment": true
+  }
+```
+
+Adding this to the ALGOORGSETTINGS organizational variable causes all repositories to continuously deploy reference documentation:
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/898a58ab-f560-4507-9924-c34985d608cb) |
+|-|
+
+But you can also add the setting to a repository settings variable called **ALGOREPOSETTINGS** or to the repository settings file **.github/AL-Go-Settings.json** if you only want to enable this for a single repository.
+
+Running CI/CD after enabling continuous deployment reveals the **Deploy Reference Docuemntation** job being run and the link to the reference documentation is available in the job.
+
+|  |
+|-|
 
 
 Maybe it is about time to actually explain how you create a development environment and code your app?
