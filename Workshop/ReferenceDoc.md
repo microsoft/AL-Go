@@ -75,6 +75,9 @@ If you want to setup continuous deployment of the reference documentation, you c
   }
 ```
 
+> [!NOTE]
+> There are other settings in the ALDoc settings structure, which controls the generation of the reference documentation. Inspect [https://aka.ms/algosettings#aldoc](https://aka.ms/algosettings#aldoc) to see them all.
+
 Adding this to the ALGOORGSETTINGS organizational variable causes all repositories to continuously deploy reference documentation:
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/898a58ab-f560-4507-9924-c34985d608cb) |
