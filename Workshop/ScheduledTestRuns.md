@@ -40,7 +40,7 @@ Now, modify **.github/Test Current.settings.json** and add the two settings (use
 Which now means that your Test Current workflow, which runs every night will run all tests and other workflows will not.
 
 > [!NOTE]
-> While the name of the workflow specific settings file is based on the workflow title, the workflow schedule setting needs to be in AL-Go-Settings.json and is based on the filename of the workflow (NextMajor.yaml here):
+> While the name of the workflow specific settings file is based on the workflow title (**Test Next Major.settings.json**), the workflow schedule setting needs to be in AL-Go-Settings.json and is based on the filename of the workflow (**NextMajorSchedule**):
 > 
 > ![image](https://github.com/microsoft/AL-Go/assets/10775043/b3abf297-2ee6-4160-b1c1-ddeeab985cda)
 
