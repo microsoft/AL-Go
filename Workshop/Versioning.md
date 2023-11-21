@@ -44,7 +44,7 @@ Next, let's create another app, by running the **Create a new app** workflow aga
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/06d4a03c-f025-44d6-a317-b2a0a79f7e8e) |
 |-|
 
-When the **Create a new app** workflow is done, click **Actions**, select the **CI/CD** workflow and click **Run workflow** to run the workflow manually. When the workflow is complete, download and inspect the artifacts generated
+When the **Create a new app** workflow is done, navigate to Code and modify the name of the object in the **HelloWorld.al** file to **CustomerListExt2**. This will kick off another CI/CD workflow. When the workflow is complete, download and inspect the artifacts generated
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/d654b75c-2e63-4bd3-a39a-dce6bf835c30) |
 |-|
