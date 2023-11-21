@@ -385,7 +385,7 @@ try {
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-        -generateDependencyArtifact:$settings.generateDependencyArtifact `
+        -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
         -previousApps $previousApps `
         -appFolders $settings.appFolders `

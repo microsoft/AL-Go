@@ -49,7 +49,7 @@ else {
 }
 
 # Set this build artifacts name
-'Apps', 'TestApps' | ForEach-Object {
+'Apps', 'Dependencies', 'TestApps' | ForEach-Object {
     $name = "ThisBuild$($_)ArtifactsName"
     $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
     Set-OutputVariable -name $name -value $value
