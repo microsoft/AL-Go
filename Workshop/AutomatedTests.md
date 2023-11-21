@@ -4,10 +4,8 @@ In order to run automated tests, you need to change a few things in settings.
 During prerequisites we added two AL-Go settings to the ALGOORGSETTINGS organizational variable:
 
 ```json
-{
-    "useCompilerFolder": true,
-    "doNotPublishApps": true
-}
+  "useCompilerFolder": true,
+  "doNotPublishApps": true
 ```
 
 These settings means that AL-Go will use a CompilerFolder functionality to compile the apps instead of a container and that we will never actually publish the apps (meaning that Test runs are also disabled).
@@ -17,10 +15,8 @@ In this step, we will add a test app to the single-project repository and see ho
 So, navigate single-project repository, locate the .github/AL-Go-Settings.json file and add the following two settings:
 
 ```json
-{
-    "useCompilerFolder": false,
-    "doNotPublishApps": false
-}
+  "useCompilerFolder": false,
+  "doNotPublishApps": false
 ```
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/f94be356-0187-4add-9c3e-f3eaf1423cd8) |
