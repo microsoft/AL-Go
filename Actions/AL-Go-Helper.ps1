@@ -1855,7 +1855,8 @@ function CreateDevEnv {
         "enableCodeCop",
         "enableAppSourceCop",
         "enablePerTenantExtensionCop",
-        "enableUICop" | ForEach-Object {
+        "enableUICop",
+        "useCompilerFolder" | ForEach-Object {
             if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
         }
 
