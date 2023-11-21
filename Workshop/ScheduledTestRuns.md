@@ -19,9 +19,9 @@ Use **https://crontab.guru** to create a crontab for the schedule you want to ru
 In your single-project repository, select **Code**, navigate to **.github/AL-Go-Settings.json**, remove the 2 settings (**useCompilerFolder** and **doNotPublishApps** ) we added to run tests and add 3 new settings:
 
 ```json
-"CurrentSchedule": "0 2 * * *",
-"NextMinorSchedule": "0 2 * * 6",
-"NextMajorSchedule": "0 2 * * 0"
+  "CurrentSchedule": "0 2 * * *",
+  "NextMinorSchedule": "0 2 * * 6",
+  "NextMajorSchedule": "0 2 * * 0"
 ```
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/480c759b-c276-439e-9d89-af26ce4780dd) |
