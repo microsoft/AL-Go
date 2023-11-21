@@ -14,11 +14,11 @@ You will need:
    - Containing the following JSON structure (for performance reasons)
 
 ```json
-    {
-        "useCompilerFolder": true,
-        "doNotPublishApps": true,
-        "artifact": "https://bcartifacts.azureedge.net/sandbox/23.0.12034.13450/us"
-    }
+  {
+    "useCompilerFolder": true,
+    "doNotPublishApps": true,
+    "artifact": "https://bcartifacts.azureedge.net/sandbox/23.0.12034.13450/us"
+  }
 ```
 
 The combination of useCompilerFolder and doNotPublishApps, means that AL-Go will never actually create a container, which saves a great amount of time.
