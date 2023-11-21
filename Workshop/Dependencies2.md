@@ -69,14 +69,12 @@ In this workshop, I will describe two ways to to make this work.
 In the MySolution repository, navigate to Settings -> Secrets and Variables -> Actions and select Variables. Create a new repository variable called **ALGOREPOSETTINGS** with this content:
 
 ```json
-{
-    "appDependencyProbingPaths": [
-        {
-            "repo": "freddydkorg/Common",
-            "release_status": "latestBuild"
-        }
-    ]
-}
+  "appDependencyProbingPaths": [
+    {
+      "repo": "freddydkorg/Common",
+      "release_status": "latestBuild"
+    }
+  ]
 ```
 
 replacing **freddydkorg** with your organization name obviously.
