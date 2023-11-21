@@ -84,9 +84,8 @@ But you can also add the setting to a repository settings variable called **ALGO
 
 Running CI/CD after enabling continuous deployment reveals the **Deploy Reference Docuemntation** job being run and the link to the reference documentation is available in the job.
 
-|  |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/8a89e9b8-95db-4747-8136-fda4fa78350a) |
 |-|
-
 
 Maybe it is about time to actually explain how you create a development environment and code your app?
 
