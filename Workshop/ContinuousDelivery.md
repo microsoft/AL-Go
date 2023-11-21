@@ -22,7 +22,7 @@ Create an organizational secret called **StorageContext**. The format of the sec
 or
 
 ```json
-{"storageAccountName":"accountnanme","sasToken":""?sv=2021-10-04\u0026ss=b\u0026srt=sco...","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}
+{"storageAccountName":"accountnanme","sasToken":"?sv=2021-10-04\u0026ss=b\u0026srt=sco...","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}
 ```
 
 ContainerName and BlobName can contain placeholders, like {project}, {version} and {type} which will be replaced by the real values when delivering.
