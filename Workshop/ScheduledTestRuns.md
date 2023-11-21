@@ -11,7 +11,7 @@ These workflows can be run manually by simply selecting the workflow and clickin
 
 Microsoft recommands running these workflows on a schedule to ensure that your app is ready for upcoming releases at all times and at the same time keeping compatibility with the versions you want to support.
 
-Use **https://crontab.guru** to create a crontab for the schedule you want to run your workflows on. I have selected the following for some of my apps:
+Use **Bing Copilot Chat** and ask it to generate the crontab you want (ex. *Create a crontab which triggers every saturday at 2am*) or use **https://crontab.guru** to create a crontab for the schedule you want to run your workflows on. I have selected the following for some of my apps:
 - I want to run the **Test Current** workflow every day at 2 in the morning. The crontab for that is: 0 2 * * *
 - I want to run the **Test Next Minor** workflow every Saturday at 2 in the morning. The crontab for that is: 0 2 * * 6
 - I want to run the **Test Next Major** workflow every Sunday at 2 in the morning. The crontab for that is: 0 2 * * 0
