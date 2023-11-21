@@ -17,12 +17,10 @@ After creating the environment and the AUTHCONTEXT secret, you should create a s
 If your actual Business Central environment has a different name than your GitHub environment, you can add an EnvironmentName property to the DeliverTo settings like:
 
 ```json
-{
-    "DeployToMy-QA": {
-        "EnvironmentName": "QA",
-        "ContinuousDeployment": true
-    }
-}
+  "DeployToMy-QA": {
+    "EnvironmentName": "QA",
+    "ContinuousDeployment": true
+  }
 ```
 
 At this time, these settings cannot be added as environment variables, we might add this in the future.
