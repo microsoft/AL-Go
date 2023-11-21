@@ -14,11 +14,9 @@ By default, all environments will be picked up for **continuous deployment**, bu
 By adding a setting like:
 
 ```json
-{
-    "DeployToPROD": {
-        "ContinuousDeployment": false
-    }
-}
+  "DeployToPROD": {
+    "ContinuousDeployment": false
+  }
 ```
 
 The PROD environment is not even included in the CI/CD workflow, and again, setting the ContinuousDeployment to true will enable continuous deployment to the production environment.
