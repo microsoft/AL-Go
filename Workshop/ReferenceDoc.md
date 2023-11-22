@@ -9,7 +9,7 @@ AL-Go for GitHub supports deploying the reference documentation to GitHub Pages.
 
 ## GitHub Pages
 
-> [!NOTE}
+> [!NOTE]
 > GitHub Pages is available in public repositories with GitHub Free and GitHub Free for organizations, and in public and private repositories with GitHub Pro, GitHub Team, GitHub Enterprise Cloud, and GitHub Enterprise Server. For more information, see [GitHub’s plans](https://docs.github.com/en/get-started/learning-about-github/githubs-plans).
 
 Navigate to your Common repository, go to **Settings** -> **Pages** and under **Build and deployment** select **GitHub Actions** as the source.
