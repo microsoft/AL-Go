@@ -1,6 +1,6 @@
 ## Preview
 
-Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available. 
+Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
 ### New Settings
 - `templateSha`: The Sha of the version of AL-Go currently used
@@ -14,6 +14,9 @@ If false, the TemplateSha is used to use existing AL-Go System Files when calcul
 
 ### Issues
 - Issue 782 Exclude '.altestrunner/' from template .gitignore
+- Issue 823 Dependencies from prior build jobs are not included when using useProjectDependencies
+- App artifacts for version 'latest' are now fetched from the latest CICD run that completed and successfully built all the projects for the corresponding branch.
+- Issue 824 Utilize `useCompilerFolder` setting when creating an development environment for an AL-Go project.
 
 ## v4.0
 
