@@ -44,7 +44,7 @@ function DownloadTemplateRepository {
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
-    retutn $tempName
+    return $tempName
 }
 
 function ModifyCICDWorkflow {
