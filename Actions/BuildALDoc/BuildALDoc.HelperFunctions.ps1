@@ -118,7 +118,7 @@ function GenerateDocsSite {
         }
         $allApps | ConvertTo-Json -Depth 99 | Out-Host
         if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
-            # Single prokect repo
+            # Single project repo
             foreach($appFile in $allApps."$repoName") {
                 $apps += @($appFile)
                 $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
