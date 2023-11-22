@@ -1,3 +1,22 @@
+<#
+SYOPSIS
+Helper functions for the CheckForUpdates workflow
+#>
+
+
+
+<#
+.SYNOPSIS
+Downloads a template repository and returns the path to the downloaded folder
+.PARAMETER headers
+The headers to use when calling the GitHub API
+.PARAMETER templateUrl
+The URL to the template repository
+.PARAMETER templateSha
+The SHA of the template repository (returned by reference if downloadLatest is true)
+.PARAMETER downloadLatest
+If true, the latest SHA of the template repository will be downloaded
+#>
 function DownloadTemplateRepository {
     Param(
         [hashtable] $headers,
@@ -32,7 +51,7 @@ function DownloadTemplateRepository {
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
-    $tempName
+    retutn $tempName
 }
 
 function ModifyCICDWorkflow {

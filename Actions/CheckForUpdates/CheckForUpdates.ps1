@@ -17,7 +17,7 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
-. (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.HelperFunctions.psm1")
 
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
@@ -54,8 +54,8 @@ $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 # if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
-# Get Repo settings as a hashtable
-$repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable
+# Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
+$repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 
