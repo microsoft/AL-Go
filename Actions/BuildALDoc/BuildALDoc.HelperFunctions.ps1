@@ -1,28 +1,4 @@
-﻿function RunningOnLinux {
-    $isPsCore = $PSVersionTable.PSVersion -ge "6.0.0"
-    return ($isPsCore -and $isLinux)
-}
-
-function FixBackslashes {
-    Param(
-        [string] $docfxPath
-    )
-
-    if (-not (RunningOnLinux)) {
-        return
-    }
-    $allFiles = @(get-childitem -path "$docfxPath/*" -Recurse -File | ForEach-Object { $_.FullName })
-    $allFiles | Where-Object { $_.Contains('\') } | ForEach-Object {
-        $newName = $_.Replace('\','/')
-        $folder = Split-Path -Path $newName -Parent
-        if (-not (Test-Path $folder -PathType Container)) {
-            New-Item -Path $folder -ItemType Directory | Out-Null
-        }
-        & cp $_ $newName
-        & rm $_
-    }
-}
-function DownloadAlDoc {
+﻿function DownloadAlDoc {
     if ("$ENV:aldocPath" -eq "") {
         Write-Host "Locating aldoc"
         $artifactUrl = Get-BCArtifactUrl -storageAccount bcinsider -type sandbox -country core -select Latest -accept_insiderEula
@@ -35,7 +11,7 @@ function DownloadAlDoc {
         Write-Host "Extracting aldoc"
         Expand-Archive -Path "$($tempFolder).zip" -DestinationPath $tempFolder -Force
         Remove-Item -Path "$($tempFolder).zip" -Force
-        if (RunningOnLinux) {
+        if ($IsLinux) {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc'
             & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
         }
@@ -154,7 +130,6 @@ function GenerateDocsSite {
         $arguments = @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
         Write-Host "invoke aldoc $arguments"
         CmdDo -command $aldocPath -arguments $arguments
-        FixBackslashes -docfxPath $docfxPath
 
         # Update docfx.json
         Write-Host "Update docfx.json"
@@ -183,7 +158,6 @@ function GenerateDocsSite {
             $arguments = @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
             Write-Host "invoke aldoc $arguments"
             CmdDo -command $aldocPath -arguments $arguments
-            FixBackslashes -docfxPath $docfxPath
         }
 
         # Set release notes
