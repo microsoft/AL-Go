@@ -1759,142 +1759,147 @@ function CreateDevEnv {
             Remove-Item $testResultsFiles -Force
         }
 
-        Set-Location $projectFolder
-        $runAlPipelineOverrides | ForEach-Object {
-            $scriptName = $_
-            $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-            if (Test-Path -Path $scriptPath -Type Leaf) {
-                Write-Host "Add override for $scriptName"
-                $runAlPipelineParams += @{
-                    "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+        Push-Location $projectFolder
+        try {
+            $runAlPipelineOverrides | ForEach-Object {
+                $scriptName = $_
+                $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
+                if (Test-Path -Path $scriptPath -Type Leaf) {
+                    Write-Host "Add override for $scriptName"
+                    $runAlPipelineParams += @{
+                        "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+                    }
                 }
-            }
-        }
-
-        if ($kind -eq "local") {
-            $runAlPipelineParams += @{
-                "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
-                "auth"       = $auth
-                "credential" = $credential
-            }
-            if ($containerName) {
-                $runAlPipelineParams += @{
-                    "updateLaunchJson" = "Local Sandbox ($containerName)"
-                    "containerName"    = $containerName
-                }
-            }
-            else {
-                $runAlPipelineParams += @{
-                    "updateLaunchJson" = "Local Sandbox"
-                }
-            }
-        }
-        elseif ($kind -eq "cloud") {
-            if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
-                throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
             }
 
-            if ($bcAuthContext) {
-                $authContext = Renew-BcAuthContext $bcAuthContext
+            if ($kind -eq "local") {
+                $runAlPipelineParams += @{
+                    "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
+                    "auth"       = $auth
+                    "credential" = $credential
+                }
+                if ($containerName) {
+                    $runAlPipelineParams += @{
+                        "updateLaunchJson" = "Local Sandbox ($containerName)"
+                        "containerName"    = $containerName
+                    }
+                }
+                else {
+                    $runAlPipelineParams += @{
+                        "updateLaunchJson" = "Local Sandbox"
+                    }
+                }
             }
-            else {
-                $authContext = New-BcAuthContext @adminCenterApiCredentials -includeDeviceLogin:($caller -eq "local")
-            }
+            elseif ($kind -eq "cloud") {
+                if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
+                    throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
+                }
 
-            $existingEnvironment = Get-BcEnvironments -bcAuthContext $authContext | Where-Object { $_.Name -eq $environmentName }
-            if ($existingEnvironment) {
-                if ($existingEnvironment.type -ne "Sandbox") {
-                    throw "Environment $environmentName already exists and it is not a sandbox environment"
+                if ($bcAuthContext) {
+                    $authContext = Renew-BcAuthContext $bcAuthContext
                 }
-                if (!$reuseExistingEnvironment) {
-                    Remove-BcEnvironment -bcAuthContext $authContext -environment $environmentName
-                    $existingEnvironment = $null
+                else {
+                    $authContext = New-BcAuthContext @adminCenterApiCredentials -includeDeviceLogin:($caller -eq "local")
                 }
-            }
-            if ($existingEnvironment) {
-                $countryCode = $existingEnvironment.CountryCode.ToLowerInvariant()
-                $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
-            }
-            else {
-                $countryCode = $settings.country
-                New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
-                do {
-                    Start-Sleep -Seconds 10
+
+                $existingEnvironment = Get-BcEnvironments -bcAuthContext $authContext | Where-Object { $_.Name -eq $environmentName }
+                if ($existingEnvironment) {
+                    if ($existingEnvironment.type -ne "Sandbox") {
+                        throw "Environment $environmentName already exists and it is not a sandbox environment"
+                    }
+                    if (!$reuseExistingEnvironment) {
+                        Remove-BcEnvironment -bcAuthContext $authContext -environment $environmentName
+                        $existingEnvironment = $null
+                    }
+                }
+                if ($existingEnvironment) {
+                    $countryCode = $existingEnvironment.CountryCode.ToLowerInvariant()
                     $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
-                } while (!($baseApp))
-                $baseapp | Out-Host
+                }
+                else {
+                    $countryCode = $settings.country
+                    New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
+                    do {
+                        Start-Sleep -Seconds 10
+                        $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
+                    } while (!($baseApp))
+                    $baseapp | Out-Host
+                }
+
+                $artifact = Get-BCArtifactUrl `
+                    -country $countryCode `
+                    -version $baseApp.Version `
+                    -select Closest
+
+                if ($artifact) {
+                    Write-Host "Using Artifacts: $artifact"
+                }
+                else {
+                    throw "No artifacts available"
+                }
+
+                $runAlPipelineParams += @{
+                    "artifact"         = $artifact
+                    "bcAuthContext"    = $authContext
+                    "environment"      = $environmentName
+                    "containerName"    = "bcServerFilesOnly"
+                    "updateLaunchJson" = "Cloud Sandbox ($environmentName)"
+                }
             }
 
-            $artifact = Get-BCArtifactUrl `
-                -country $countryCode `
-                -version $baseApp.Version `
-                -select Closest
+            "enableTaskScheduler",
+            "assignPremiumPlan",
+            "installTestRunner",
+            "installTestFramework",
+            "installTestLibraries",
+            "installPerformanceToolkit",
+            "enableCodeCop",
+            "enableAppSourceCop",
+            "enablePerTenantExtensionCop",
+            "enableUICop",
+            "useCompilerFolder" | ForEach-Object {
+                if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+            }
 
-            if ($artifact) {
-                Write-Host "Using Artifacts: $artifact"
-            }
-            else {
-                throw "No artifacts available"
+            $sharedFolder = ""
+            if ($project) {
+                $sharedFolder = $baseFolder
             }
 
-            $runAlPipelineParams += @{
-                "artifact"         = $artifact
-                "bcAuthContext"    = $authContext
-                "environment"      = $environmentName
-                "containerName"    = "bcServerFilesOnly"
-                "updateLaunchJson" = "Cloud Sandbox ($environmentName)"
-            }
+            Run-AlPipeline @runAlPipelineParams `
+                -accept_insiderEula:$accept_insiderEula `
+                -vsixFile $settings.vsixFile `
+                -pipelinename $workflowName `
+                -imageName "" `
+                -memoryLimit $settings.memoryLimit `
+                -baseFolder $projectFolder `
+                -sharedFolder $sharedFolder `
+                -licenseFile $licenseFileUrl `
+                -installApps $installApps `
+                -installTestApps $installTestApps `
+                -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
+                -appFolders $settings.appFolders `
+                -testFolders $settings.testFolders `
+                -testResultsFile $testResultsFile `
+                -testResultsFormat 'JUnit' `
+                -customCodeCops $settings.customCodeCops `
+                -azureDevOps:($caller -eq 'AzureDevOps') `
+                -gitLab:($caller -eq 'GitLab') `
+                -gitHubActions:($caller -eq 'GitHubActions') `
+                -failOn $settings.failOn `
+                -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
+                -rulesetFile $settings.rulesetFile `
+                -enableExternalRulesets:$settings.enableExternalRulesets `
+                -AppSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
+                -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
+                -doNotRunTests `
+                -doNotRunBcptTests `
+                -useDevEndpoint `
+                -keepContainer
         }
-
-        "enableTaskScheduler",
-        "assignPremiumPlan",
-        "installTestRunner",
-        "installTestFramework",
-        "installTestLibraries",
-        "installPerformanceToolkit",
-        "enableCodeCop",
-        "enableAppSourceCop",
-        "enablePerTenantExtensionCop",
-        "enableUICop",
-        "useCompilerFolder" | ForEach-Object {
-            if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+        finally {
+            Pop-Location
         }
-
-        $sharedFolder = ""
-        if ($project) {
-            $sharedFolder = $baseFolder
-        }
-
-        Run-AlPipeline @runAlPipelineParams `
-            -accept_insiderEula:$accept_insiderEula `
-            -vsixFile $settings.vsixFile `
-            -pipelinename $workflowName `
-            -imageName "" `
-            -memoryLimit $settings.memoryLimit `
-            -baseFolder $projectFolder `
-            -sharedFolder $sharedFolder `
-            -licenseFile $licenseFileUrl `
-            -installApps $installApps `
-            -installTestApps $installTestApps `
-            -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-            -appFolders $settings.appFolders `
-            -testFolders $settings.testFolders `
-            -testResultsFile $testResultsFile `
-            -testResultsFormat 'JUnit' `
-            -customCodeCops $settings.customCodeCops `
-            -azureDevOps:($caller -eq 'AzureDevOps') `
-            -gitLab:($caller -eq 'GitLab') `
-            -gitHubActions:($caller -eq 'GitHubActions') `
-            -failOn $settings.failOn `
-            -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
-            -rulesetFile $settings.rulesetFile `
-            -enableExternalRulesets:$settings.enableExternalRulesets `
-            -AppSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
-            -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
-            -doNotRunTests `
-            -doNotRunBcptTests `
-            -useDevEndpoint `
-            -keepContainer
     }
     finally {
         if ($removeEnvSecrets -and $env:Secrets) {
