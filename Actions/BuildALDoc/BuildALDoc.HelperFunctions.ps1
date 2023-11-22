@@ -20,7 +20,7 @@
         }
 
         Write-Host "Installing/Updating docfx"
-        CmdDo -command dotnet -arguments @('tool','update','-g docfx')
+        CmdDo -command dotnet -arguments @("tool","update","-g docfx")
     }
     $ENV:aldocPath
 }
@@ -99,11 +99,21 @@ function GenerateDocsSite {
         if ($version) {
             $prefix = "../../"
         }
-        $newTocYml = @('items:')
+        $newTocYml = @(
+            "items:"
+            )
         if ($allVersions.Count -gt 0) {
-            $newTocYml += @("  - name: Releases","    items:","    - name: main","      href: $($prefix)index.html")
+            $newTocYml += @(
+                "  - name: Releases"
+                "    items:"
+                "    - name: main"
+                "      href: $($prefix)index.html"
+                )
             foreach($ver in $allVersions) {
-                $newTocYml += @("    - name: $ver","      href: $($prefix)releases/$ver/index.html")
+                $newTocYml += @(
+                    "    - name: $ver"
+                    "      href: $($prefix)releases/$ver/index.html"
+                    )
             }
         }
         $allApps | ConvertTo-Json -Depth 99 | Out-Host
@@ -112,22 +122,36 @@ function GenerateDocsSite {
             foreach($appFile in $allApps."$repoName") {
                 $apps += @($appFile)
                 $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
-                $newTocYml += @("  - name: $appName","    href: reference/$appFolder/toc.yml")
+                $newTocYml += @(
+                    "  - name: $appName"
+                    "    href: reference/$appFolder/toc.yml"
+                    )
             }
         }
         else {
             # Multi project repo add all apps
             foreach($project in $allApps.Keys) {
-                $newTocYml += @("  - name: $project",'    items:')
+                $newTocYml += @(
+                    "  - name: $project"
+                    "    items:"
+                    )
                 foreach($appFile in $allApps."$project") {
                     $apps += @($appFile)
                     $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
-                    $newTocYml += @("    - name: $appName","      href: reference/$appFolder/toc.yml")
+                    $newTocYml += @(
+                        "    - name: $appName"
+                        "      href: reference/$appFolder/toc.yml"
+                        )
                 }
             }
         }
 
-        $arguments = @("init","--output ""$docfxpath""","--loglevel $loglevel","--targetpackages ""$($apps -join '","')""")
+        $arguments = @(
+            "init"
+            "--output ""$docfxpath"""
+            "--loglevel $loglevel"
+            "--targetpackages ""$($apps -join '","')"""
+            )
         Write-Host "invoke aldoc $arguments"
         CmdDo -command $aldocPath -arguments $arguments
 
@@ -155,7 +179,12 @@ function GenerateDocsSite {
         Get-Content $tocYmlFile | Out-Host
 
         $apps | ForEach-Object {
-            $arguments = @("build","--output ""$docfxpath""","--loglevel $loglevel","--source ""$_""")
+            $arguments = @(
+                "build"
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--source ""$_"""
+                )
             Write-Host "invoke aldoc $arguments"
             CmdDo -command $aldocPath -arguments $arguments
         }
@@ -169,9 +198,14 @@ function GenerateDocsSite {
         Get-Content $indexMdFile | Out-Host
 
 
-        $arguments = @("build", "--output ""$docsPath""", "--logLevel $loglevel", """$docfxJsonFile""")
+        $arguments = @(
+            "build"
+            "--output ""$docsPath"""
+            "--logLevel $loglevel"
+            """$docfxJsonFile"""
+            )
         if ($hostIt) {
-            $arguments += @('-s')
+            $arguments += @("-s")
             Write-Host "Generate and host site"
         }
         Write-Host "invoke doxfx $arguments"
@@ -189,7 +223,7 @@ function CalculateProjectsAndApps {
         [string[]] $excludeProjects
     )
 
-    if ($projects.Count -eq 0) { $projects = @('*') }
+    if ($projects.Count -eq 0) { $projects = @("*") }
     $projectList = @($projects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
     $excludeProjectList = @($excludeProjects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
     foreach($mask in 'Apps','Dependencies') {

@@ -14,10 +14,8 @@ defaults:
     shell: powershell
 
 permissions:
-  contents: write
+  contents: read
   actions: read
-  pages: write
-  id-token: write
 
 env:
   workflowDepth: 1
@@ -158,6 +156,11 @@ jobs:
     if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1
     runs-on: windows-latest
     name: Deploy Reference Documentation
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
