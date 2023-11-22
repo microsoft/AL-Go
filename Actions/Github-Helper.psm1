@@ -598,7 +598,6 @@ function DownloadRelease {
         [string] $mask = "Apps",
         [switch] $unpack,
         $release
-
     )
 
     if ($projects -eq "") { $projects = "*" }
