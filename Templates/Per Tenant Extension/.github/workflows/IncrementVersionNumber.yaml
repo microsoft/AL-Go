@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       projects:
-        description: Comma seperated list of project names if the repository is setup for multiple projects (default is * for all projects)
+        description: Comma seperated list of project name patterns if the repository is setup for multiple projects (default is * for all projects)
         required: false
         default: '*'
       versionNumber:
