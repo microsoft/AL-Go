@@ -6,7 +6,8 @@ In a browser, navigate to https://aka.ms/algopte:
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/e00a3a4e-0443-4369-9cad-6a4041fd9c58) |
 |-|
 
-And you shouold see:
+And you should see:
+
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/ba6520ef-2c24-454e-9227-2298a26931e2) |
 |-|
