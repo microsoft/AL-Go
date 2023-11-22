@@ -1,11 +1,4 @@
 <#
-SYOPSIS
-Helper functions for the CheckForUpdates workflow
-#>
-
-
-
-<#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
 .PARAMETER headers
