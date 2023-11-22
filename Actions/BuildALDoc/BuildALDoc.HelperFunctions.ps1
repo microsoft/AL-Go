@@ -118,7 +118,7 @@ function GenerateDocsSite {
         }
         $allApps | ConvertTo-Json -Depth 99 | Out-Host
         if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
-            # Single prokect repo
+            # Single project repo
             foreach($appFile in $allApps."$repoName") {
                 $apps += @($appFile)
                 $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
@@ -170,7 +170,7 @@ function GenerateDocsSite {
         Write-Host "Create new toc.yml"
         $tocYmlFile = Join-Path $docfxpath 'toc.yml'
 
-        Write-Host "ORGTOC:"
+        Write-Host "Original TOC (from aldoc)):"
         Get-Content $tocYmlFile | Out-Host
 
         Set-Content -Path $tocYmlFile -Value ($newTocYml -join "`n") -Encoding utf8
