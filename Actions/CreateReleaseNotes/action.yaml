@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Pooya Kharamesh
+name: Create Release Notes
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write

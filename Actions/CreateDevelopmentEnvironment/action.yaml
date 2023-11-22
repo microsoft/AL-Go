@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Create Development Environment
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write

@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Check For Updates
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write
