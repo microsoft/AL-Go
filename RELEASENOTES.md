@@ -9,7 +9,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - `DumpWorkflowInfo`: Dump information about running workflow
 
 ### Update AL-Go System Files
-Add another property when running Update AL-Go System Files, called Download latest from template repository. Default value is true.
+Add another parameter when running Update AL-Go System Files, called downloadLatest, used to indicate whether to download latest version from template repository. Default value is true.
 If false, the TemplateSha is used to use existing AL-Go System Files when calculating new files.
 
 ### Issues
