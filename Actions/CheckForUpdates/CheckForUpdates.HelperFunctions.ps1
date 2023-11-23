@@ -313,7 +313,7 @@ function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
         [hashtable] $updateSettings,
-        [hashtable] $otherSettings = @{}
+        [hashtable] $additionalSettings = @{}
     )
 
     # Update Repo Settings file with the template URL
@@ -332,11 +332,11 @@ function UpdateSettingsFile {
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
         }
     }
-    # Grab settings from otherSettings if they are not already in settings
-    foreach($key in $otherSettings.Keys) {
+    # Grab settings from additionalSettings if they are not already in settings
+    foreach($key in $additionalSettings.Keys) {
         if (!($settings.PSObject.Properties.Name -eq $key)) {
             # Add the property if it doesn't exist
-            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $otherSettings."$key"
+            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $additionalSettings."$key"
         }
     }
     # Save the file with LF line endings and UTF8 encoding
