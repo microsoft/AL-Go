@@ -225,7 +225,11 @@ function CalculateProjectsAndApps {
 
     if ($projects.Count -eq 0) { $projects = @("*") }
     $projectList = @($projects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    Write-Host "Include Project Patterns"
+    $projectList | ForEach-Object { Write-Host "- $_" }
     $excludeProjectList = @($excludeProjects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    Write-Host "Exclude Project Patterns"
+    $excludeProjectList | ForEach-Object { Write-Host "- $_" }
     foreach($mask in 'Apps','Dependencies') {
         $allApps = @{}
         Get-ChildItem -Path $tempFolder -Directory | ForEach-Object {
