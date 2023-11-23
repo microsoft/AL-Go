@@ -42,6 +42,10 @@ function GetAppNameAndFolder {
     Remove-Item -Path $tmpFolder -Recurse -Force
 }
 
+#
+# Generate Reference documentation for a branch or a release.
+# All Apps to use for the ref. doc. are downloaded from the release or latest build of the branch.
+#
 function GenerateDocsSite {
     Param(
         [string] $version,
@@ -97,6 +101,7 @@ function GenerateDocsSite {
         # Generate new toc.yml and calculate apps - releases and projects
         $prefix = ''
         if ($version) {
+            # If $version is set, then we are generating reference documentation for a release
             $prefix = "../../"
         }
         $newTocYml = @(
@@ -196,7 +201,6 @@ function GenerateDocsSite {
 
         Write-Host "index.md:"
         Get-Content $indexMdFile | Out-Host
-
 
         $arguments = @(
             "build"
