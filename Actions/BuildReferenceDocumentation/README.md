@@ -1,4 +1,4 @@
-# BuildALDoc
+# BuildReferenceDocumentation
 Build documentation using [ALDoc](https://go.microsoft.com/fwlink/?linkid=2247728) and [DocFx](https://dotnet.github.io/docfx)
 
 ## INPUT
