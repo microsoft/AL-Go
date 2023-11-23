@@ -58,7 +58,7 @@ foreach($release in $releases) {
         }
         Write-Host "Version: $($release.Name):"
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
-        $allApps = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects
+        $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects
         $version = $release.Name
         $releaseNotes = $release.body
         GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel
@@ -85,7 +85,7 @@ foreach($version in $versions) {
 }
 
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
-$allApps = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -excludeProjects $excludeProjects
+$allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -excludeProjects $excludeProjects
 $releaseNotes = ''
 if ($latestReleaseTag) {
     try {
