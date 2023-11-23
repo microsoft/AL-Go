@@ -202,8 +202,8 @@ jobs:
               tag_name: '${{ github.event.inputs.tag }}',
               name: '${{ github.event.inputs.name }}',
               body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
-              draft: ${{ github.event.inputs.draft=='true' || github.event.inputs.draft=='Y' }},
-              prerelease: ${{ github.event.inputs.prerelease=='true' || github.event.inputs.prerelease=='Y' }},
+              draft: ${{ github.event.inputs.draft=='true' }},
+              prerelease: ${{ github.event.inputs.prerelease=='true' }},
               make_latest: 'legacy',
               target_commitish: '${{ steps.analyzeartifacts.outputs.commitish }}'
             });
@@ -293,7 +293,7 @@ jobs:
 
   CreateReleaseBranch:
     needs: [ CreateRelease, UploadArtifacts ]
-    if: ${{ github.event.inputs.createReleaseBranch=='true' || github.event.inputs.createReleaseBranch=='Y' }}
+    if: ${{ github.event.inputs.createReleaseBranch=='true' }}
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout

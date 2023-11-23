@@ -99,7 +99,7 @@ jobs:
         with:
           shell: powershell
           projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
-          checkContextSecrets: 'Y'
+          checkContextSecrets: 'true'
 
       - name: Determine Deployment Environments
         id: DetermineDeploymentEnvironments
