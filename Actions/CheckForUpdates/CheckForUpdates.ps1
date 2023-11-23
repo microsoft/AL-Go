@@ -7,8 +7,8 @@
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $true)]
     [bool] $downloadLatest,
-    [Parameter(HelpMessage = "Set this input to true in order to update AL-Go System Files if needed", Mandatory = $false)]
-    [bool] $update,
+    [Parameter(HelpMessage = "Set this input to Y in order to update AL-Go System Files if needed", Mandatory = $false)]
+    [string] $update = 'N',
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct Commit?", Mandatory = $false)]
@@ -22,7 +22,7 @@
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
-if ($update) {
+if ($update -eq 'Y') {
     if (-not $token) {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
     }
@@ -50,8 +50,8 @@ $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
 # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on", "useProjectDependencies", etc.
-# if $update is set to true, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
-# if $update is set to false, CheckForUpdates will only check for updates and output a warning if there are updates available
+# if $update is set to Y, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
+# if $update is set to N, CheckForUpdates will only check for updates and output a warning if there are updates available
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
 # Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
@@ -187,7 +187,7 @@ foreach($checkfile in $checkfiles) {
     }
 }
 
-if (-not $update) {
+if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available
     if (($updateFiles) -or ($removeFiles)) {
         OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."

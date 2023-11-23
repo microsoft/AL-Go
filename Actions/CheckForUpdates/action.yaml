@@ -25,9 +25,9 @@ inputs:
     description: Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)
     required: true
   update:
-    description: Set this input to true in order to update AL-Go System Files if needed
+    description: Set this input to Y in order to update AL-Go System Files if needed
     required: false
-    default: 'false'
+    default: 'N'
   updateBranch:
     description: Set the branch to update
     required: false
@@ -52,7 +52,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -templateUrl $ENV:_templateUrl -downloadLatest ($ENV:_downloadLatest -eq 'true') -update ($ENV:_update -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -templateUrl $ENV:_templateUrl -downloadLatest ($ENV:_downloadLatest -eq 'true') -update $ENV:_update -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
