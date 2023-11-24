@@ -728,9 +728,8 @@ function CheckBuildJobsInWorkflowRun {
     $page = 1
 
     $allSuccessful = $true
-    $buildJobsCount = 0
+    $anySuccessful = $false
 
-    # Get all build jobs in the workflow run
     while($true) {
         $jobsURI = "$api_url/repos/$repository/actions/runs/$WorkflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
@@ -743,22 +742,20 @@ function CheckBuildJobsInWorkflowRun {
 
         $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
 
+        if($buildJobs.conclusion -eq 'success') {
+            $anySuccessful = $true
+        }
+
         if($buildJobs.conclusion -ne 'success') {
             # If there is a build job that is not successful, there is not need to check further
             $allSuccessful = $false
             break
         }
 
-        $buildJobsCount += $buildJobs.Count
         $page += 1
     }
 
-    if($buildJobsCount -eq 0) {
-        # No build jobs found, the workflow was probably cancelled
-        $allSuccessful = $false
-    }
-
-    return $allSuccessful
+    return ($allSuccessful -and $anySuccessful)
 }
 
 <#
