@@ -59,6 +59,7 @@ function GenerateDocsSite {
         [string] $defaultReleaseMD,
         [string] $docsPath,
         [string] $logLevel,
+        [switch] $useProjectsAsFolders,
         [switch] $hostIt
     )
 
@@ -123,31 +124,27 @@ function GenerateDocsSite {
         }
         $allApps | ConvertTo-Json -Depth 99 | Out-Host
         if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
-            # Single project repo
-            foreach($appFile in $allApps."$repoName") {
-                $apps += @($appFile)
-                $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
-                $newTocYml += @(
-                    "  - name: $appName"
-                    "    href: reference/$appFolder/toc.yml"
-                    )
-            }
+            # Single project repo - do not use project names as folders
+            $useProjectsAsFolders = $false
         }
-        else {
-            # Multi project repo add all apps
-            foreach($project in $allApps.Keys) {
+        foreach($project in $allApps.Keys) {
+            if ($useProjectsAsFolders) {
                 $newTocYml += @(
                     "  - name: $project"
                     "    items:"
                     )
-                foreach($appFile in $allApps."$project") {
-                    $apps += @($appFile)
-                    $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
-                    $newTocYml += @(
-                        "    - name: $appName"
-                        "      href: reference/$appFolder/toc.yml"
-                        )
-                }
+                $indent = "    "
+            }
+            else {
+                $indent = "  "
+            }
+            foreach($appFile in $allApps."$project") {
+                $apps += @($appFile)
+                $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
+                $newTocYml += @(
+                    "$($indent)- name: $appName"
+                    "$($indent)  href: reference/$appFolder/toc.yml"
+                    )
             }
         }
 

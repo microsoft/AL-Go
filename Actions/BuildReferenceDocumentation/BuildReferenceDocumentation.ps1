@@ -61,7 +61,7 @@ foreach($release in $releases) {
         $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects
         $version = $release.Name
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.ALDoc.useProjectsAsFolders
         do {
             try {
                 $retry = $false
@@ -98,7 +98,7 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.ALDoc.useProjectsAsFolders
 
 if ($artifactsFolderCreated) {
     Remove-Item $artifactsFolder -Recurse -Force
