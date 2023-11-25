@@ -247,7 +247,7 @@ function CalculateProjectsAndApps {
                 Write-Host "Project: $project"
                 if ($projectList | Where-Object { $project -like $_ }) {
                     if (-not ($excludeProjectList | Where-Object { $project -like $_ })) {
-                        if ($useProjectsAsFolders) {
+                        if (-not $useProjectsAsFolders) {
                             $project = 'dummy'
                         }
                         if (-not $allApps.ContainsKey("$project")) {
