@@ -241,8 +241,8 @@ function CalculateProjectsAndApps {
     $excludeProjectList | ForEach-Object { Write-Host "- $_" }
     foreach($mask in 'Apps','Dependencies') {
         $allApps = @{}
-        Get-ChildItem -Path $tempFolder -Directory | ForEach-Object {
-            if ($_.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") {
+        foreach($ci in (Get-ChildItem -Path $tempFolder -Directory)) {
+            if ($ci.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") {
                 $project = $Matches[1]
                 Write-Host "Project: $project"
                 if ($projectList | Where-Object { $project -like $_ }) {
