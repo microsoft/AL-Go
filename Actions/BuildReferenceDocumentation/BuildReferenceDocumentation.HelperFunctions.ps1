@@ -247,10 +247,12 @@ function CalculateProjectsAndApps {
                 Write-Host "Project: $project"
                 if ($projectList | Where-Object { $project -like $_ }) {
                     if (-not ($excludeProjectList | Where-Object { $project -like $_ })) {
-                        if (-not $useProjectsAsFolders) {
+                        if ($useProjectsAsFolders) {
                             $project = 'dummy'
                         }
-                        $allApps."$project" = @()
+                        if (-not $allApps.ContainsKey("$project")) {
+                            $allApps."$project" = @()
+                        }
                         Get-ChildItem -Path $_.FullName -Filter '*.app' | ForEach-Object {
                             $allApps."$project" += @($_.FullName)
                         }
