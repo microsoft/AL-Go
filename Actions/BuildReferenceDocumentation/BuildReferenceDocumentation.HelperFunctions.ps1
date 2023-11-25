@@ -127,7 +127,8 @@ function GenerateDocsSite {
             # Single project repo - do not use project names as folders
             $useProjectsAsFolders = $false
         }
-        foreach($project in $allApps.Keys) {
+        $projects = @($allApps.Keys.GetEnumerator() | Sort-Object)
+        foreach($project in $projects) {
             if ($useProjectsAsFolders) {
                 $newTocYml += @(
                     "  - name: $project"
@@ -138,12 +139,18 @@ function GenerateDocsSite {
             else {
                 $indent = "  "
             }
+            $theseApps = @{}
+            # Get all apps for this project
             foreach($appFile in $allApps."$project") {
                 $apps += @($appFile)
                 $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
+                $theseApps."$appName" = $appFolder
+            }
+            # Add all apps sorted by name
+            $theseApps.Keys.GetEnumerator() | Sort-Object | ForEach-Object {
                 $newTocYml += @(
-                    "$($indent)- name: $appName"
-                    "$($indent)  href: reference/$appFolder/toc.yml"
+                    "$($indent)- name: $($_.key)"
+                    "$($indent)  href: reference/$($_.value)/toc.yml"
                     )
             }
         }
@@ -221,7 +228,8 @@ function CalculateProjectsAndApps {
     Param(
         [string] $tempFolder,
         [string[]] $projects,
-        [string[]] $excludeProjects
+        [string[]] $excludeProjects,
+        [switch] $useProjectsAsFolders
     )
 
     if ($projects.Count -eq 0) { $projects = @("*") }
@@ -239,7 +247,9 @@ function CalculateProjectsAndApps {
                 Write-Host "Project: $project"
                 if ($projectList | Where-Object { $project -like $_ }) {
                     if (-not ($excludeProjectList | Where-Object { $project -like $_ })) {
-                        Write-Host "inlude"
+                        if (-not $useProjectsAsFolders) {
+                            $project = 'dummy'
+                        }
                         $allApps."$project" = @()
                         Get-ChildItem -Path $_.FullName -Filter '*.app' | ForEach-Object {
                             $allApps."$project" += @($_.FullName)
