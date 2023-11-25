@@ -253,8 +253,8 @@ function CalculateProjectsAndApps {
                         if (-not $allApps.ContainsKey("$project")) {
                             $allApps."$project" = @()
                         }
-                        Get-ChildItem -Path $_.FullName -Filter '*.app' | ForEach-Object {
-                            $allApps."$project" += @($_.FullName)
+                        Get-ChildItem -Path $ci.FullName -Filter '*.app' | ForEach-Object {
+                            $allApps."$project" += @($ci.FullName)
                         }
                     }
                 }
