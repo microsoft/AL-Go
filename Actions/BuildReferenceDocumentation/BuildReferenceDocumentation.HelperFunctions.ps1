@@ -149,8 +149,8 @@ function GenerateDocsSite {
             # Add all apps sorted by name
             $theseApps.Keys.GetEnumerator() | Sort-Object | ForEach-Object {
                 $newTocYml += @(
-                    "$($indent)- name: $($_.key)"
-                    "$($indent)  href: reference/$($_.value)/toc.yml"
+                    "$($indent)- name: $($_)"
+                    "$($indent)  href: reference/$($theseApps."$_")/toc.yml"
                     )
             }
         }
