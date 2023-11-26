@@ -29,7 +29,7 @@ Describe "BuildReferenceDocumentation Action Tests" {
 
         Mock Get-ChildItem {
             if ($filter -eq '*.app') {
-                $project = $path.Substring($path.LastIndexOf('\')+1,2)
+                $project = [System.IO.Path]::GetFileName($path).Substring(0,2)
                 $noOfApps = [int]$project.substring(1,1)
                 $apps = @()
                 for($i=1; $i -le $noOfApps; $i++) {
