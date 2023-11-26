@@ -17,7 +17,6 @@ runs:
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      id: BuildReferenceDocumentation
       env:
         _token: ${{ inputs.token }}
         _artifacts: ${{ inputs.artifacts }}
