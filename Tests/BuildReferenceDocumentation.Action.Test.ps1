@@ -28,15 +28,7 @@ Describe "BuildReferenceDocumentation Action Tests" {
         . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
 
         Mock Get-ChildItem {
-            if ($directory) {
-                return @(
-                    [PSCustomObject]@{ Name = 'P1-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P1-main-Apps-1.0.0.0' }
-                    [PSCustomObject]@{ Name = 'P2-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P2-main-Apps-1.0.0.0' }
-                    [PSCustomObject]@{ Name = 'P3-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P3-main-Apps-1.0.0.0' }
-                    [PSCustomObject]@{ Name = 'P4-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P4-main-Apps-1.0.0.0' }
-                )
-            }
-            else {
+            if ($filter -eq '*.app') {
                 $project = $path.Substring($path.LastIndexOf('\')+1,2)
                 $noOfApps = [int]$project.substring(1,1)
                 $apps = @()
@@ -44,6 +36,14 @@ Describe "BuildReferenceDocumentation Action Tests" {
                     $apps += [PSCustomObject]@{ FullName = Join-Path $path "$($project)_app$i.app" }
                 }
                 return $apps
+            }
+            else {
+                return @(
+                    [PSCustomObject]@{ Name = 'P1-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P1-main-Apps-1.0.0.0'; "PsIsContainer" = $true }
+                    [PSCustomObject]@{ Name = 'P2-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P2-main-Apps-1.0.0.0'; "PsIsContainer" = $true }
+                    [PSCustomObject]@{ Name = 'P3-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P3-main-Apps-1.0.0.0'; "PsIsContainer" = $true }
+                    [PSCustomObject]@{ Name = 'P4-main-Apps-1.0.0.0'; FullName = Join-Path $path 'P4-main-Apps-1.0.0.0'; "PsIsContainer" = $true }
+                )
             }
         }
 
