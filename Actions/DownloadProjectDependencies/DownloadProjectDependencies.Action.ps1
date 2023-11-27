@@ -4,7 +4,7 @@
     [string] $baseFolder,
     [string] $buildMode = 'Default',
     [string] $projectsDependenciesJson,
-    [integer] $baselineWorkflowRunID = 0,
+    [int] $baselineWorkflowRunID = 0,
     [string] $destinationPath,
     [string] $token
 )
