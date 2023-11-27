@@ -4,7 +4,7 @@
     [string] $baseFolder,
     [string] $buildMode = 'Default',
     [string] $projectsDependenciesJson,
-    [integer] $baselineWorkflowID = 0,
+    [integer] $baselineWorkflowRunID = 0,
     [string] $destinationPath,
     [string] $token
 )
@@ -61,7 +61,7 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             "repo"            = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
             "branch"          = $headBranch
             "baseBranch"      = $baseBranch
-            "baselineWorkflowID" = $baselineWorkflowID
+            "baselineWorkflowID" = $baselineWorkflowRunID
             "authTokenSecret" = $token
         })
     }
@@ -73,9 +73,9 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
         $project = $probingPath.projects
         $branch = $probingPath.branch
         $baseBranch = $probingPath.baseBranch
-        $baselineWorkflowID = $probingPath.baselineWorkflowID
+        $baselineWorkflowRunID = $probingPath.baselineWorkflowID
 
-        Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowID"
+        Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowRunID"
 
         $dependency = GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ }
         $downloadedDependencies += $dependency
