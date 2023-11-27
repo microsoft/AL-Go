@@ -18,7 +18,7 @@ outputs:
     description: An array of Delivery Targets in compressed JSON format
     value: ${{ steps.determineDeliveryTargets.outputs.DeliveryTargetsJson }}
   ContextSecrets:
-    description: A comma-seperated list of Context Secret names used
+    description: A comma-separated list of Context Secret names used
     value: ${{ steps.determineDeliveryTargets.outputs.ContextSecrets }}
 runs:
   using: composite
