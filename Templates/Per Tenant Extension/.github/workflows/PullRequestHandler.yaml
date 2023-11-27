@@ -41,6 +41,7 @@ jobs:
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
       workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
+      baselineWorkflowRunId: ${{ steps.CalculateBaselineWorkflowRun.outputs.BaselineWorkflowRunId }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -73,6 +74,12 @@ jobs:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
 
+      - name: Calculate baseline workflow run
+        id: CalculateBaselineWorkflowRun
+        uses: microsoft/AL-Go-Actions/CalculateBaselineWorkflowRun@main
+        with:
+          shell: powershell
+
   Build:
     needs: [ Initialization ]
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
@@ -92,6 +99,7 @@ jobs:
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
+      baselineWorkflowRunId: ${{ needs.Initialization.outputs.baselineWorkflowRunId }}
       secrets: 'licenseFileUrl,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
       artifactsNameSuffix: 'PR${{ github.event.number }}'
