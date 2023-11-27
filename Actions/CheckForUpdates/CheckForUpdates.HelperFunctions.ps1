@@ -223,7 +223,8 @@ function GetWorkflowContentWithChangesFromSettings {
     $yaml.content -join "`n"
 }
 
-# Using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+# Using direct AL-Go repo, we need to change the owner to the templateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+
 function ReplaceOwnerRepoAndBranch {
     Param(
         [ref] $srcContent,
