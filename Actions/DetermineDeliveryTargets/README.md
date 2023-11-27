@@ -20,6 +20,6 @@ Determines the delivery targets to use for the build
 | Name | Description |
 | :-- | :-- |
 | deliveryTargets | Compressed JSON array containing all delivery targets to use for the build |
-| contextSecrets | A comma separated string with the names of the secrets to pass to ReadSecrets |
+| contextSecrets | A comma-separated string with the names of the secrets to pass to ReadSecrets |
 
 ### ENV variables
