@@ -38,8 +38,8 @@ You can locate the **Create a new app** workflow in the list of workflows and ru
 | Name | `mysolution.us` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `50000..50100` |
-| Include Sample Code | `Y` |
-| Direct COMMIT | `N` |
+| Include Sample Code | `yes` |
+| Direct Commit | `no` |
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/04f69e2c-de5f-45ae-89fc-48c543d14c60) |
 |-|
@@ -64,8 +64,8 @@ You don't have to wait for the **CI/CD workflow** to complete, just go ahead and
 | Name | `mysolution.dk` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `51000..51100` |
-| Include Sample Code | `Y` |
-| Direct COMMIT | `N` |
+| Include Sample Code | `yes` |
+| Direct Commit | `no` |
 
 and run the same workflow again with these parameters:
 
@@ -75,8 +75,8 @@ and run the same workflow again with these parameters:
 | Name | `mysolution.w1` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `52000..52100` |
-| Include Sample Code | `Y` |
-| Direct COMMIT | `N` |
+| Include Sample Code | `yes` |
+| Direct Commit | `no` |
 
 When the **New PTE (mysolution.dk)** and **New PTE (mysolution.w1)** pull requests are created, merge both pull request and delete the temporary branches.
 

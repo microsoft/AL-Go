@@ -18,8 +18,8 @@ Enter the following values in the form:
 | Name | `app1` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `55000..55100` |
-| Include Sample Code | `Y` |
-| Direct COMMIT | `N` |
+| Include Sample Code | `yes` |
+| Direct Commit | `no` |
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/3520147b-cb0c-4ee9-90f4-f6efeb81b23f) |
 |-|

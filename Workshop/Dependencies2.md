@@ -16,8 +16,8 @@ Create 2 apps within the repository using the **Create a new app** workflow call
 | Name | `Common` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `60000..60099` |
-| Include Sample Code | `N` |
-| Direct COMMIT | `Y` |
+| Include Sample Code | `no` |
+| Direct Commit | `yes` |
 
 and
 
@@ -27,8 +27,8 @@ and
 | Name | `Licensing` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `60100..60199` |
-| Include Sample Code | `N` |
-| Direct COMMIT | `Y` |
+| Include Sample Code | `no` |
+| Direct Commit | `yes` |
 
 Leaving out the sample code in order to avoid name clashes.
 

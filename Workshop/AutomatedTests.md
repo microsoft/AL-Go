@@ -30,8 +30,8 @@ Now select **Actions** and locate the **Create a new test app** action and click
 | Name | `app1.test` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `70000..99999` |
-| Include Sample Code | `Y` |
-| Direct COMMIT | `N` |
+| Include Sample Code | `yes` |
+| Direct Commit | `no` |
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/eab3a42e-a73c-4c13-bc05-7cc2c7a4b05e) |
 |-|

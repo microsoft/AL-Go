@@ -107,9 +107,9 @@ function YamlTest {
                     }
                 }
                 elseif ($type -eq "System.Boolean") {
-                    $parameterString += " -$($name) (`$ENV:_$($name) -eq 'Y')"
+                    $parameterString += " -$($name) (`$ENV:_$($name) -eq 'true')"
                     if (!$required) {
-                        $yaml.AppendLine("    default: 'N'") | Out-Null
+                        $yaml.AppendLine("    default: 'false'") | Out-Null
                     }
                 }
                 else {

@@ -17,11 +17,11 @@ Select **Actions**, select the **Create Release** workflow and click **Run workf
 | App version | `latest` |
 | Name of this release | `v1.0` |
 | Tag of this release | `1.0.4` |
-| Prerelease | `N` |
-| Draft | `N` |
-| Create Release Branch | `Y` |
+| Prerelease | `no` |
+| Draft | `no` |
+| Create Release Branch | `yes` |
 | New Version Number | `+1.0` |
-| Direct COMMIT | `N` |
+| Direct Commit | `no` |
 
 After completion of the **Create release** workflow, you can select **Code** and see that you have 1 release:
 

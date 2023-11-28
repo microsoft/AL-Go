@@ -139,21 +139,7 @@ function Get-ProjectsToBuild(
 
     try {
         $settings = $env:Settings | ConvertFrom-Json
-
-        if ($settings.projects) {
-            Write-Host "Projects specified in settings"
-            $projects = $settings.projects
-        }
-        else {
-            # Get all projects that have a settings.json file
-            $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-
-            # If the repo has a settings.json file, add it to the list of projects to build
-            if (Test-Path (Join-Path ".AL-Go" "settings.json") -PathType Leaf) {
-                $projects += @(".")
-            }
-        }
-
+        $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
         $projectsToBuild = @()
