@@ -12,11 +12,11 @@ Param(
     [string] $project = '.',
     [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $false)]
     [string] $adminCenterApiCredentials,
-    [Parameter(HelpMessage = "Reuse environment if it exists", Mandatory = $false)]
+    [Parameter(HelpMessage = "Reuse environment if it exists?", Mandatory = $false)]
     [bool] $reUseExistingEnvironment,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
-    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Direct Commit?", Mandatory = $false)]
     [bool] $directCommit
 )
 
@@ -24,12 +24,7 @@ $telemetryScope = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $branch = ''
-    if (!$directcommit) {
-        # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
-        $branch = "create-development-environment/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
-    }
-    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'create-development-environment'
     $baseFolder = (Get-Location).Path
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
@@ -46,7 +41,7 @@ try {
         -project $project `
         -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
 
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Create a development environment $environmentName" -branch $branch
+    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Create a development environment $environmentName" -branch $branch | Out-Null
 
     TrackTrace -telemetryScope $telemetryScope
 }

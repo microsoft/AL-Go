@@ -8,7 +8,7 @@ So, let's setup a single-project common repository like this. Navigate to https:
 | ![image](https://user-images.githubusercontent.com/10775043/232203510-095f1f0d-e407-413d-9e17-7a3e3e43b821.png) |
 |-|
 
-Run Update **AL-Go System Files** with **microsoft/AL-Go-PTE@preview** as the template URL and **Y** in Direct COMMIT.
+Run Update **AL-Go System Files** with **microsoft/AL-Go-PTE@preview** as the template URL and **Y** in Direct Commit.
 
 When upgrade is done, create 2 apps within the repository using the **Create a new app** workflow called **Common** and **Licensing**, using the following parameters:
 
@@ -18,8 +18,8 @@ When upgrade is done, create 2 apps within the repository using the **Create a n
 | Name | `Common` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `60000..60099` |
-| Include Sample Code | `N` |
-| Direct COMMIT | `Y` |
+| Include Sample Code | `no` |
+| Direct Commit | `yes` |
 
 and
 
@@ -29,8 +29,8 @@ and
 | Name | `Licensing` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `60100..60199` |
-| Include Sample Code | `N` |
-| Direct COMMIT | `Y` |
+| Include Sample Code | `no` |
+| Direct Commit | `yes` |
 
 Leaving out the sample code in order to avoid name clashes.
 

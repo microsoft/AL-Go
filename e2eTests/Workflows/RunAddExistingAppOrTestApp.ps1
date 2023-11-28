@@ -12,7 +12,7 @@
     $parameters = @{
         "project" = $project
         "url" = $url
-        "directCommit" = @("Y","N")[!$directCommit]
+        "directCommit" = @("true","false")[!$directCommit]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

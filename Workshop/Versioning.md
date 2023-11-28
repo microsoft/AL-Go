@@ -39,7 +39,7 @@ Scroll back up, locate the **Re-run all jobs** button and click it. Wait for the
 
 Now revision became **1** as we had another attempt at building the app.
 
-Next, let's create another app in the same repo. **app2** with ID range **56000..56100** and enter **Y** in **Direct COMMIT**.
+Next, let's create another app in the same repo. **app2** with ID range **56000..56100** and enter **Y** in **Direct Commit**.
 
 | ![image](https://user-images.githubusercontent.com/10775043/231561391-7350981e-e20d-49a1-9479-4271a7e6ddd8.png) |
 |-|

@@ -10,15 +10,15 @@ inputs:
     required: false
     default: '["."]'
   checkContextSecrets:
-    description: Check whether context secret exists
+    description: Check whether context secret exists?
     required: false
-    default: 'N'
+    default: 'false'
 outputs:
   DeliveryTargetsJson:
     description: An array of Delivery Targets in compressed JSON format
     value: ${{ steps.determineDeliveryTargets.outputs.DeliveryTargetsJson }}
   ContextSecrets:
-    description: A comma seperated list of Context Secret names used
+    description: A comma-separated list of Context Secret names used
     value: ${{ steps.determineDeliveryTargets.outputs.ContextSecrets }}
 runs:
   using: composite
@@ -32,7 +32,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/DetermineDeliveryTargets.ps1 -projectsJson $ENV:_projectsJson -checkContextSecrets ($ENV:_checkContextSecrets -eq 'Y')
+          ${{ github.action_path }}/DetermineDeliveryTargets.ps1 -projectsJson $ENV:_projectsJson -checkContextSecrets ($ENV:_checkContextSecrets -eq 'true')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
