@@ -1,4 +1,4 @@
-name: Calculate Baseline Workflow Run
+name: Determine Baseline Workflow Run
 author: Microsoft Corporation
 inputs:
   shell:
@@ -8,13 +8,13 @@ inputs:
 outputs:
   BaselineWorkflowRunId:
     description: The ID of the baseline workflow run
-    value: ${{ steps.calculateBaselineWorkflowRun.outputs.WorkflowRunID }}
+    value: ${{ steps.determineBaselineWorkflowRun.outputs.WorkflowRunID }}
 runs:
   using: composite
   steps:
     - name: Determine Projects to Build
       shell: ${{ inputs.shell }}
-      id: calculateBaselineWorkflowRun
+      id: determineBaselineWorkflowRun
       env:
         _gitHubToken: ${{ github.token }}
         _branch: ${{ github.base_ref }}
@@ -22,7 +22,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/CalculateBaselineWorkflowRun.ps1 -branch $env:_branch -repository $env:_repository -token $env:_gitHubToken
+          ${{ github.action_path }}/DetermineBaselineWorkflowRun.ps1 -branch $env:_branch -repository $env:_repository -token $env:_gitHubToken
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
