@@ -19,6 +19,9 @@ outputs:
   ThisBuildAppsArtifactsName:
     description: Artifact name for apps being built in the current workflow run
     value: ${{ steps.calculateartifactnames.outputs.ThisBuildAppsArtifactsName }}
+  ThisBuildDependenciesArtifactsName:
+    description: Artifact name for dependencies of apps being built in the current workflow run
+    value: ${{ steps.calculateartifactnames.outputs.ThisBuildDependenciesArtifactsName }}
   ThisBuildTestAppsArtifactsName:
     description: Artifact name for test apps being built in the current workflow run
     value: ${{ steps.calculateartifactnames.outputs.ThisBuildTestAppsArtifactsName }}

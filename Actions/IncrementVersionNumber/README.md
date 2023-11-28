@@ -4,7 +4,9 @@ Increment version number in AL-Go repository
 ## INPUT
 
 ### ENV variables
-none
+| Name | Description |
+| :-- | :-- |
+| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
 
 ### Parameters
 | Name | Required | Description | Default value |
@@ -13,10 +15,10 @@ none
 | actor | | The GitHub actor running the action | github.actor |
 | token | | The GitHub token running the action | github.token |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| project | | Project name if the repository is setup for multiple projects | . |
-| versionnumber | Yes | Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change | |
+| projects | | List of project names if the repository is setup for multiple projects (* for all projects) | * |
+| versionNumber | Yes | Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change | |
 | updateBranch | | Which branch should the app be added to | github.ref_name |
-| directCommit | | Y if the action should create a direct commit against the branch or N to create a Pull Request | N |
+| directCommit | | true if the action should create a direct commit against the branch or false to create a Pull Request | false |
 
 ## OUTPUT
 none

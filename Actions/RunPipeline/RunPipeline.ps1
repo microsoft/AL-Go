@@ -101,12 +101,7 @@ try {
     }
 
     $analyzeRepoParams = @{}
-    # If UseCompilerFolder is set, set the parameter on Run-AlPipeline
-    if ($settings.useCompilerFolder) {
-        $runAlPipelineParams += @{
-            "useCompilerFolder" = $true
-        }
-    }
+
     if ($artifact) {
         # Avoid checking the artifact setting in AnalyzeRepo if we have an artifactUrl
         $settings.artifact = $artifact
@@ -340,7 +335,8 @@ try {
     "enableCodeCop",
     "enableAppSourceCop",
     "enablePerTenantExtensionCop",
-    "enableUICop" | ForEach-Object {
+    "enableUICop",
+    "useCompilerFolder" | ForEach-Object {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
@@ -385,7 +381,7 @@ try {
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-        -generateDependencyArtifact:$settings.generateDependencyArtifact `
+        -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
         -previousApps $previousApps `
         -appFolders $settings.appFolders `
@@ -435,8 +431,11 @@ finally {
             Write-Host "Get Event Log from container"
             $eventlogFile = Get-BcContainerEventLog -containerName $containerName -doNotOpen
             Copy-Item -Path $eventLogFile -Destination $containerEventLogFile
-            $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
-            Copy-Item -Path $containerEventLogFile -Destination $destFolder
+            if ($project) {
+                # Copy event log to project folder if multiproject
+                $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+                Copy-Item -Path $containerEventLogFile -Destination $destFolder
+            }
         }
     }
     catch {

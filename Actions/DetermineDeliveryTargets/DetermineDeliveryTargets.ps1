@@ -1,7 +1,7 @@
 ﻿Param(
     [Parameter(HelpMessage = "Projects to investigate", Mandatory = $false)]
     [string] $projectsJson = '["."]',
-    [Parameter(HelpMessage = "Check whether context secret exists", Mandatory = $false)]
+    [Parameter(HelpMessage = "Check whether context secret exists?", Mandatory = $false)]
     [bool] $checkContextSecrets
 )
 

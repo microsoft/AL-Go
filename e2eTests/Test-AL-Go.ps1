@@ -84,7 +84,8 @@ if ($multiProject) {
     $project1Folder = 'P1\'
     $project2Param = @{ "project" = "P2" }
     $project2Folder = 'P2\'
-    $allProjectsParam = @{ "project" = "*" }
+    $p2ProjectsParam = @{ "projects" = "P2" }
+    $allProjectsParam = @{ "projects" = "*" }
     $projectSettingsFiles = @("P1\.AL-Go\settings.json", "P2\.AL-Go\settings.json")
 }
 else {
@@ -92,6 +93,7 @@ else {
     $project1Folder = ""
     $project2Param = @{}
     $project2Folder = ""
+    $p2ProjectsParam = @{}
     $allProjectsParam = @{}
     $projectSettingsFiles = @(".AL-Go\settings.json")
 }
@@ -193,7 +195,7 @@ if ($adminCenterApiToken -and -not $multiProject) {
 }
 
 # Increment version number on one project
-RunIncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
+RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.0 -wait -branch $branch | Out-Null
 $runs++
 $run = MergePRandPull -branch $branch -wait
 $runs++
@@ -216,7 +218,7 @@ Remove-Item -Path ".github\workflows\AddExistingAppOrTestApp.yaml" -Force
 CommitAndPush -commitMessage "Version strategy change"
 $runs++
 
-# Increment version number on all project (and on all apps)
+# Increment version number on all projects (and on all apps)
 RunIncrementVersionNumber @allProjectsParam -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
 $runs++
 Pull -branch $branch

@@ -16,7 +16,7 @@
         "name" = $name
         "publisher" = $publisher
         "idrange" = $idrange
-        "directCommit" = @("Y","N")[!$directCommit]
+        "directCommit" = @("true","false")[!$directCommit]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }
