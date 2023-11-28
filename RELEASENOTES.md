@@ -20,7 +20,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
 
 ### New Settings
 
-- `alDoc` : Structure with properties for the ALDoc reference document generation
+- `alDoc` : JSON object with properties for the ALDoc reference document generation
   - **ContinuousDeployment** = Determines if reference documentation will be deployed continuously as part of CI/CD. You can run the **Deploy Reference Documentation** workflow to deploy manually or on a schedule. (Default false)
   - **DeployToGitHubPages** = Determines whether or not the reference documentation site should be deployed to GitHub Pages for the repository. In order to deploy to GitHub Pages, GitHub Pages must be enabled and set to GitHub Actuibs. (Default true)
   - **MaxReleases** = Maximum number of releases to include in the reference documentation. (Default 3)
