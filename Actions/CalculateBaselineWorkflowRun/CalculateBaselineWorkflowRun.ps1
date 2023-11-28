@@ -7,6 +7,8 @@
     [string] $token
 )
 
+Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
+
 <#
     Checks if all build jobs in a workflow run completed successfully.
 #>
