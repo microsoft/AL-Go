@@ -714,7 +714,7 @@ function Set-JsonContentLF {
 function GetArtifactsFromWorkflowRun {
     param (
         [Parameter(Mandatory = $true)]
-        $workflowRun,
+        [string] $workflowRun,
         [Parameter(Mandatory = $true)]
         [string] $token,
         [Parameter(Mandatory = $true)]
@@ -802,7 +802,7 @@ function GetArtifacts {
         [Parameter(Mandatory = $true)]
         [string] $version,
         [Parameter(Mandatory = $false)]
-        [int] $baselineWorkflowID = 0
+        [string] $baselineWorkflowID = '0'
     )
 
     $headers = GetHeader -token $token
@@ -810,11 +810,11 @@ function GetArtifacts {
 
     # For latest version, use the artifacts from the last successful CICD run
     if($version -eq '*') {
-        if($baselineWorkflowID -eq 0) {
+        if($baselineWorkflowID -eq '0') {
             return @()
         }
 
-        $result = GetArtifactsFromWorkflowRun -CICDrun $baselineWorkflowID -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects
+        $result = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowID -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects
     }
 
     $total_count = 0
