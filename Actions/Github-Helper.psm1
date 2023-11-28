@@ -815,6 +815,7 @@ function GetArtifacts {
         }
 
         $result = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowID -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects
+        return $result
     }
 
     $total_count = 0
