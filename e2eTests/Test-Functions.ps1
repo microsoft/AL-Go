@@ -14,7 +14,12 @@
         $runs = gh run list --limit 1000 --repo $repository --json $returnFields | ConvertFrom-Json | Where-Object { $_.workflowName -ne "workflow_run" }
     }
     $runs | Out-Host
-    $runs.Count
+    if ($runs) {
+        return $runs.Count
+    }
+    else {
+        return 0
+    }
 }
 
 function TestNumberOfRuns {

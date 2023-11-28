@@ -30,8 +30,8 @@ Now select **Actions** and locate the **Create a new test app** action and click
 | Name | `app1.test` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `70000..99999` |
-| Include Sample Code | `Y` |
-| Direct COMMIT | `N` |
+| Include Sample Code | `yes` |
+| Direct Commit | `no` |
 
 | ![image](https://user-images.githubusercontent.com/10775043/232327235-bd4350f7-d05f-423b-a69b-0b0c226180b3.png) |
 |-|

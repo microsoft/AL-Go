@@ -603,6 +603,7 @@ function ReadSettings {
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
         "templateUrl"                                   = ""
+        "templateSha"                                   = ""
         "templateBranch"                                = ""
         "appDependencyProbingPaths"                     = @()
         "useProjectDependencies"                        = $false
@@ -1253,7 +1254,9 @@ function CloneIntoNewFolder {
     Param(
         [string] $actor,
         [string] $token,
-        [string] $branch
+        [string] $updateBranch = $ENV:GITHUB_REF_NAME,
+        [string] $newBranchPrefix = '',
+        [bool] $directCommit
     )
 
     $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -1275,13 +1278,16 @@ function CloneIntoNewFolder {
     invoke-git clone $serverUrl
 
     Set-Location *
-    invoke-git checkout $ENV:GITHUB_REF_NAME
+    invoke-git checkout $updateBranch
 
-    if ($branch) {
+    $branch = ''
+    if (!$directCommit) {
+        $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
         invoke-git checkout -b $branch
     }
 
     $serverUrl
+    $branch
 }
 
 function CommitFromNewFolder {
@@ -1292,21 +1298,29 @@ function CommitFromNewFolder {
     )
 
     invoke-git add *
-    if ($commitMessage.Length -gt 250) {
-        $commitMessage = "$($commitMessage.Substring(0,250))...)"
-    }
-    invoke-git commit --allow-empty -m "'$commitMessage'"
-    if ($branch) {
-        invoke-git push -u $serverUrl $branch
-        try {
-            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+    $status = invoke-git -returnValue status --porcelain=v1
+    if ($status) {
+        if ($commitMessage.Length -gt 250) {
+            $commitMessage = "$($commitMessage.Substring(0,250))...)"
         }
-        catch {
-            OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+        invoke-git commit --allow-empty -m "$commitMessage"
+        if ($branch) {
+            invoke-git push -u $serverUrl $branch
+            try {
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+            }
+            catch {
+                OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+            }
         }
+        else {
+            invoke-git push $serverUrl
+        }
+        return $true
     }
     else {
-        invoke-git push $serverUrl
+        Write-Host "No changes detected in files"
+        return $false
     }
 }
 
@@ -2221,4 +2235,35 @@ function RetryCommand {
             }
         }
     }
+}
+
+function GetProjectsFromRepository {
+    Param(
+        [string] $baseFolder,
+        [string[]] $projectsFromSettings,
+        [string] $selectProjects = ''
+    )
+    if ($projectsFromSettings) {
+        $projects = $projectsFromSettings
+    }
+    else {
+        # For multiple projects, get all folders in two levels below the base folder containing an .AL-Go folder with a settings.json file
+        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 -Force | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
+        # To support single project repositories, we check for the .AL-Go folder in the root
+        if (Test-Path (Join-Path $baseFolder ".AL-Go/settings.json") -PathType Leaf) {
+            $projects += @(".")
+        }
+    }
+    if ($selectProjects) {
+        # Filter the project list based on the projects parameter
+        if ($selectProjects.StartsWith('[')) {
+            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
+        }
+        $projectArr = $selectProjects.Split(',').Trim()
+        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
+        if ($projects.Count -eq 0) {
+            throw "No projects matches '$selectProjects'"
+        }
+    }
+    return $projects
 }
