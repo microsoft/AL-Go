@@ -25,7 +25,7 @@ inputs:
     description: Delivery target (AppSource or Storage)
     required: true
   artifacts:
-    description: Artifacts to deliver
+    description: The artifacts to deliver or a folder in which the artifacts have been downloaded
     required: true
   type:
     description: Type of delivery (CD or Release)

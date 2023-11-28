@@ -10,7 +10,7 @@ inputs:
     required: false
     default: ${{ github.token }}
   artifacts:
-    description: Artifacts to build documentation for
+    description: The artifacts to build documentation for or a folder in which the artifacts have been downloaded
     required: true
 runs:
   using: composite

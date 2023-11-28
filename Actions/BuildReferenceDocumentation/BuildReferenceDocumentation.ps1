@@ -1,7 +1,7 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Artifacts to build documentation for", Mandatory = $true)]
+    [Parameter(HelpMessage = "The artifacts to build documentation for or a folder in which the artifacts have been downloaded", Mandatory = $true)]
     [string] $artifacts
 )
 
@@ -58,10 +58,10 @@ foreach($release in $releases) {
         }
         Write-Host "Version: $($release.Name):"
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
-        $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects -useProjectsAsFolders:$settings.ALDoc.useProjectsAsFolders
+        $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -projects $projects -excludeProjects $excludeProjects -useProjectsAsFolders:$settings.ALDoc.UseProjectsAsFolders
         $version = $release.Name
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.ALDoc.useProjectsAsFolders
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.ALDoc.UseProjectsAsFolders
         do {
             try {
                 $retry = $false
@@ -85,7 +85,7 @@ foreach($version in $versions) {
 }
 
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
-$allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -excludeProjects $excludeProjects -useProjectsAsFolders:$settings.ALDoc.useProjectsAsFolders
+$allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -projects $projects -excludeProjects $excludeProjects -useProjectsAsFolders:$settings.ALDoc.UseProjectsAsFolders
 $releaseNotes = ''
 if ($latestReleaseTag) {
     try {
@@ -98,7 +98,7 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.ALDoc.useProjectsAsFolders
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.ALDoc.UseProjectsAsFolders
 
 if ($artifactsFolderCreated) {
     Remove-Item $artifactsFolder -Recurse -Force

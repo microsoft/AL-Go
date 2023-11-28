@@ -103,6 +103,9 @@ function GenerateDocsSite {
         $prefix = ''
         if ($version) {
             # If $version is set, then we are generating reference documentation for a release
+            # all releases will be in a subfolder called releases/$version
+            # prefix is used to reference links in the root of the site relative to the site we are building now
+            # We cannot use / as prefix, because that will not work when hosting the site on GitHub pages
             $prefix = "../../"
         }
         $newTocYml = @(
@@ -224,6 +227,10 @@ function GenerateDocsSite {
     }
 }
 
+# Build a list of all projects (folders) and apps to use when building reference documentation
+# return value is a hashtable for all apps and a hashtable for all dependencies
+# Every hashtable has project name as key and an array of app files as value
+# if useProjectsAsFolders is false, all apps will be collected in one "project" called "dummy", which is never displayed
 function CalculateProjectsAndApps {
     Param(
         [string] $tempFolder,
@@ -244,10 +251,12 @@ function CalculateProjectsAndApps {
         foreach($folder in (Get-ChildItem -Path $tempFolder -Filter '*' | Where-Object { $_.PSIsContainer })) {
             if ($folder.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") {
                 $project = $Matches[1]
-                Write-Host "Project: $project"
-                if ($projectList | Where-Object { $project -like $_ }) {
-                    if (-not ($excludeProjectList | Where-Object { $project -like $_ })) {
+                $includeIt = $null -ne ($projectList | Where-Object { $project -like $_ })
+                if ($includeIt) {
+                    $excludeIt = $null -ne ($excludeProjectList | Where-Object { $project -like $_ })
+                    if (-not $excludeIt) {
                         if (-not $useProjectsAsFolders) {
+                            # use project name dummy for all apps when not using projects as folders
                             $project = 'dummy'
                         }
                         if (-not $allApps.ContainsKey("$project")) {

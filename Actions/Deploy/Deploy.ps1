@@ -5,7 +5,7 @@
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
     [string] $environmentName,
-    [Parameter(HelpMessage = "Artifacts to deploy", Mandatory = $true)]
+    [Parameter(HelpMessage = "The artifacts to deploy or a folder in which the artifacts have been downloaded", Mandatory = $true)]
     [string] $artifacts,
     [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
     [ValidateSet('CD','Publish')]

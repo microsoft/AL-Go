@@ -24,7 +24,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
   - **ContinuousDeployment** = Determines if reference documentation will be deployed continuously as part of CI/CD. You can run the **Deploy Reference Documentation** workflow to deploy manually or on a schedule. (Default false)
   - **DeployToGitHubPages** = Determines whether or not the reference documentation site should be deployed to GitHub Pages for the repository. In order to deploy to GitHub Pages, GitHub Pages must be enabled and set to GitHub Actions. (Default true)
   - **MaxReleases** = Maximum number of releases to include in the reference documentation. (Default 3)
-  - **useProjectsAsFolders** = Determines whether projects in multi-project repositories are used as folders in reference documentation
+  - **UseProjectsAsFolders** = Determines whether projects in multi-project repositories are used as folders in reference documentation
   - **Projects** = An array of projects to include in the reference documentation. (Default all)
   - **ExcludeProjects** = An array of projects to exclude in the reference documentation. (Default none)-
   - **Header** = Header for the documentation site. (Default: Documentation for...)
