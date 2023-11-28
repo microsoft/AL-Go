@@ -8,7 +8,7 @@ inputs:
 outputs:
   BaselineWorkflowRunId:
     description: The ID of the baseline workflow run
-    value: ${{ steps.calculateBaselineWorkflowRun.outputs.BaselineWorkflowRunId }}
+    value: ${{ steps.calculateBaselineWorkflowRun.outputs.WorkflowRunID }}
 runs:
   using: composite
   steps:
