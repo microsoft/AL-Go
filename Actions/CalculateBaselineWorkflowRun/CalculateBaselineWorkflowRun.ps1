@@ -124,7 +124,7 @@ function FindLatestSuccessfulCICDRun {
     return $lastSuccessfulCICDRun
 }
 
-$workflowRunID = FindLatestSuccessfulCICDRun -token $token -api_url $api_url -repository $repository -branch $ENV:GITHUB_BASE_REF
+$workflowRunID = FindLatestSuccessfulCICDRun -token $token -repository $repository -branch $branch
 
 # Set output variables
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowRunID=$workflowRunID"

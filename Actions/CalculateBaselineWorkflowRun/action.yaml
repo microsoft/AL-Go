@@ -17,12 +17,12 @@ runs:
       id: calculateBaselineWorkflowRun
       env:
         _gitHubToken: ${{ github.token }}
-        _baseBranch: ${{ github.base_ref }}
+        _branch: ${{ github.base_ref }}
         _repository: ${{ github.repository }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/CalculateBaselineWorkflowRun.ps1 -baseBranch $env:_baseBranch -repository $env:_repository -token $env:_gitHubToken
+          ${{ github.action_path }}/CalculateBaselineWorkflowRun.ps1 -branch $env:_branch -repository $env:_repository -token $env:_gitHubToken
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
