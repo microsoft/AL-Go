@@ -19,7 +19,7 @@ If your actual Business Central environment has a different name than your GitHu
 ```json
   "DeployToMy-QA": {
     "EnvironmentName": "QA",
-    "ContinuousDeployment": true
+    "continuousDeployment": true
   }
 ```
 

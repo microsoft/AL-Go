@@ -254,13 +254,13 @@ function GenerateDocsSite {
 function CalculateProjectsAndApps {
     Param(
         [string] $tempFolder,
-        [string[]] $projects,
+        [string[]] $includeProjects,
         [string[]] $excludeProjects,
         [switch] $useProjectsAsFolders
     )
 
-    if ($projects.Count -eq 0) { $projects = @("*") }
-    $projectList = @($projects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    if ($includeProjects.Count -eq 0) { $includeProjects = @("*") }
+    $projectList = @($includeProjects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
     Write-Host "Include Project Patterns"
     $projectList | ForEach-Object { Write-Host "- $_" }
     $excludeProjectList = @($excludeProjects | ForEach-Object { $_.Replace('\','_').Replace('/','_') })

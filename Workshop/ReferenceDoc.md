@@ -70,8 +70,8 @@ To allow daily generation of the reference documentation, modify the .github/AL-
 If you want to setup continuous deployment of the reference documentation, you can add this setting:
 
 ```json
-  "ALDoc": {
-    "ContinuousDeployment": true
+  "alDoc": {
+    "continuousDeployment": true
   }
 ```
 

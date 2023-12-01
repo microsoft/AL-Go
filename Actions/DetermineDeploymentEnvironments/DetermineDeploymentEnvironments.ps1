@@ -60,11 +60,11 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
-$generateALDocArtifact = ($type -eq 'Publish') -or $settings.ALDoc.ContinuousDeployment
+$generateALDocArtifact = ($type -eq 'Publish') -or $settings.alDoc.continuousDeployment
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 
-$deployToGitHubPages = $settings.ALDoc.DeployToGitHubPages
+$deployToGitHubPages = $settings.alDoc.DeployToGitHubPages
 if ($deployToGitHubPages) {
     $deployToGitHubPages = IsGitHubPagesAvailable
     if (!$deployToGitHubPages) {
@@ -104,7 +104,7 @@ if (!($environments)) {
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
                 "SyncMode" = $null
-                "ContinuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
+                "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
             }
         }
@@ -136,7 +136,7 @@ else {
             "BranchesFromPolicy" = @()
             "Projects" = '*'
             "SyncMode" = $null
-            "ContinuousDeployment" = $null
+            "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
         }
 

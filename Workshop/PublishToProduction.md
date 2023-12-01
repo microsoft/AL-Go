@@ -15,7 +15,7 @@ By adding a setting like:
 
 ```json
   "DeployToPROD": {
-    "ContinuousDeployment": false
+    "continuousDeployment": false
   }
 ```
 

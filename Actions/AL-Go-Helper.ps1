@@ -620,20 +620,20 @@ function ReadSettings {
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
-        "PullRequestTrigger"                            = "pull_request_target"
+        "pullRequestTrigger"                            = "pull_request_target"
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
-        "ALDoc"                                         = [ordered]@{
-            "ContinuousDeployment"                      = $false
-            "DeployToGitHubPages"                       = $true
-            "MaxReleases"                               = 3
-            "UseProjectsAsFolders"                      = $true
-            "Projects"                                  = @()
-            "ExcludeProjects"                           = @()
-            "Header"                                    = "Documentation for {REPOSITORY} {VERSION}"
-            "Footer"                                    = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
-            "DefaultIndexMD"                            = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the ALDoc:DefaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
-            "DefaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the ALDoc:DefaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+        "alDoc"                                         = [ordered]@{
+            "continuousDeployment"                      = $false
+            "deployToGitHubPages"                       = $true
+            "maxReleases"                               = 3
+            "useProjectsAsFolders"                      = $true
+            "includeProjects"                           = @()
+            "excludeProjects"                           = @()
+            "header"                                    = "Documentation for {REPOSITORY} {VERSION}"
+            "footer"                                    = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
+            "defaultIndexMD"                            = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
     }
 

@@ -201,7 +201,7 @@ try {
                 Write-Host "Publishing apps using development endpoint"
                 Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
             }
-            elseif (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.ContinuousDeployment)) {
+            elseif (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.continuousDeployment)) {
                 # Continuous deployment is undefined in settings - we will not deploy to production environments
                 Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
             }
