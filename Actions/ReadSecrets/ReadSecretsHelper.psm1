@@ -9,6 +9,32 @@ $script:azureRm210 = $false
 $script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
 $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
+#
+# Check GitHub Secrets for common mistakes
+# If GitHub secrets are multi-line, then every line in any GitHub secret available to the workflow will be masked individually by GitHub
+# This can cause problems if these values are used as elsewhere - f.ex. if a line contains a { or a } character, then no JSON string can be parsed from one job to another
+# This function checks for multi-line secrets displays warnings if multi-line secrets with lines containing short strings
+#
+function CheckSecrets {
+    foreach($secretName in $script:gitHubSecrets.PSObject.Properties.Name) {
+        $secretValue = $script:gitHubSecrets."$secretName"
+        if ($secretValue.contains("`n")) {
+            try {
+                $json = $secretValue | ConvertFrom-Json
+            }
+            catch {
+                $json = [PSCustomObject]@{}
+            }
+            if ($json.PSObject.Properties.Name.Count -gt 0) {
+                Write-Host "::WARNING::JSON Secret $secretName contains line breaks. JSON Secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
+            }
+            else {
+                Write-Host "::WARNING::Secret $secretName contains line breaks. GitHub Secrets available to AL-Go for GitHub should not contain line breaks."
+            }
+        }
+    }
+}
+
 function IsKeyVaultSet {
     return $script:isKeyvaultSet
 }
