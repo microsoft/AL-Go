@@ -17,6 +17,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
 - Issue 823 Dependencies from prior build jobs are not included when using useProjectDependencies
 - App artifacts for version 'latest' are now fetched from the latest CICD run that completed and successfully built all the projects for the corresponding branch.
 - Issue 824 Utilize `useCompilerFolder` setting when creating an development environment for an AL-Go project.
+- Issue 828 and 825 display warnings for secrets, which might cause AL-Go for GitHub to malfunction
 
 ## v4.0
 
