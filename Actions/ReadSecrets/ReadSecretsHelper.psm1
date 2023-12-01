@@ -15,7 +15,7 @@ $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',
 # This can cause problems if these values are used as elsewhere - f.ex. if a line contains a { or a } character, then no JSON string can be parsed from one job to another
 # This function checks for multi-line secrets displays warnings if multi-line secrets with lines containing short strings
 #
-function CheckSecrets {
+function CheckSecretsForCommonMistakes {
     foreach($secretName in $script:gitHubSecrets.PSObject.Properties.Name) {
         $secretValue = $script:gitHubSecrets."$secretName"
         if ($secretValue.contains("`n")) {

@@ -90,6 +90,7 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: ${{ steps.DetermineDeliveryTargetSecrets.outputs.ContextSecrets }}
+          checkSecretsForCommonMistakes: 'true'
 
       - name: Determine Delivery Targets
         id: DetermineDeliveryTargets
