@@ -18,7 +18,9 @@
         else {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
         }
-
+        if (-not (Test-Path $ENV:aldocPath)) {
+            throw "aldoc tool not found at $ENV:aldocPath"
+        }
         Write-Host "Installing/Updating docfx"
         CmdDo -command dotnet -arguments @("tool","update","-g docfx")
     }
@@ -41,6 +43,74 @@ function GetAppNameAndFolder {
     (SanitizeFileName -filename $appJson.name).ToLower()
     Remove-Item -Path $tmpFolder -Recurse -Force
 }
+
+function GenerateTocYml {
+    Param(
+        [string] $version,
+        [string[]] $allVersions,
+        [hashtable] $allApps,
+        [switch] $useProjectsAsFolders
+    )
+
+    $prefix = ''
+    if ($version) {
+        # If $version is set, then we are generating reference documentation for a release
+        # all releases will be in a subfolder called releases/$version
+        # prefix is used to reference links in the root of the site relative to the site we are building now
+        # We cannot use / as prefix, because that will not work when hosting the site on GitHub pages
+        $prefix = "../../"
+    }
+    $tocYml = @(
+        "items:"
+        )
+    if ($allVersions.Count -gt 0) {
+        $tocYml += @(
+            "  - name: Releases"
+            "    items:"
+            "    - name: main"
+            "      href: $($prefix)index.html"
+            )
+        foreach($ver in $allVersions) {
+            $tocYml += @(
+                "    - name: $ver"
+                "      href: $($prefix)releases/$ver/index.html"
+                )
+        }
+    }
+    $allApps | ConvertTo-Json -Depth 99 | Out-Host
+    if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
+        # Single project repo - do not use project names as folders
+        $useProjectsAsFolders = $false
+    }
+    $projects = @($allApps.Keys.GetEnumerator() | Sort-Object)
+    foreach($project in $projects) {
+        if ($useProjectsAsFolders) {
+            $tocYml += @(
+                "  - name: $project"
+                "    items:"
+                )
+            $indent = "    "
+        }
+        else {
+            $indent = "  "
+        }
+        $theseApps = @{}
+        # Get all apps for this project
+        foreach($appFile in $allApps."$project") {
+            $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
+            $theseApps."$appName" = $appFolder
+        }
+        # Add all apps sorted by name
+        $theseApps.Keys.GetEnumerator() | Sort-Object | ForEach-Object {
+            $tocYml += @(
+                "$($indent)- name: $($_)"
+                "$($indent)  href: reference/$($theseApps."$_")/toc.yml"
+                )
+        }
+    }
+    $tocYml
+}
+
 
 #
 # Generate Reference documentation for a branch or a release.
@@ -98,65 +168,15 @@ function GenerateDocsSite {
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -path $docfxPath -ItemType Directory | Out-Null
     try {
+        # Generate new toc.yml with releases and apps
+        $newTocYml = GenerateTocYml -version $version -allVersions $allVersions -allApps $allApps -repoName $repoName -useProjectsAsFolders $useProjectsAsFolders
+
+        # calculate apps for aldoc
         $apps = @()
-        # Generate new toc.yml and calculate apps - releases and projects
-        $prefix = ''
-        if ($version) {
-            # If $version is set, then we are generating reference documentation for a release
-            # all releases will be in a subfolder called releases/$version
-            # prefix is used to reference links in the root of the site relative to the site we are building now
-            # We cannot use / as prefix, because that will not work when hosting the site on GitHub pages
-            $prefix = "../../"
+        foreach($value in $allApps.Values) {
+            $apps += @($value)
         }
-        $newTocYml = @(
-            "items:"
-            )
-        if ($allVersions.Count -gt 0) {
-            $newTocYml += @(
-                "  - name: Releases"
-                "    items:"
-                "    - name: main"
-                "      href: $($prefix)index.html"
-                )
-            foreach($ver in $allVersions) {
-                $newTocYml += @(
-                    "    - name: $ver"
-                    "      href: $($prefix)releases/$ver/index.html"
-                    )
-            }
-        }
-        $allApps | ConvertTo-Json -Depth 99 | Out-Host
-        if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
-            # Single project repo - do not use project names as folders
-            $useProjectsAsFolders = $false
-        }
-        $projects = @($allApps.Keys.GetEnumerator() | Sort-Object)
-        foreach($project in $projects) {
-            if ($useProjectsAsFolders) {
-                $newTocYml += @(
-                    "  - name: $project"
-                    "    items:"
-                    )
-                $indent = "    "
-            }
-            else {
-                $indent = "  "
-            }
-            $theseApps = @{}
-            # Get all apps for this project
-            foreach($appFile in $allApps."$project") {
-                $apps += @($appFile)
-                $appName, $appFolder = GetAppNameAndFolder -appFile $appFile
-                $theseApps."$appName" = $appFolder
-            }
-            # Add all apps sorted by name
-            $theseApps.Keys.GetEnumerator() | Sort-Object | ForEach-Object {
-                $newTocYml += @(
-                    "$($indent)- name: $($_)"
-                    "$($indent)  href: reference/$($theseApps."$_")/toc.yml"
-                    )
-            }
-        }
+        $apps = @($apps | Select-Object -Unique)
 
         $arguments = @(
             "init"
