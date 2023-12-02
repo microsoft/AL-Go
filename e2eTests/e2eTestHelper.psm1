@@ -207,11 +207,45 @@ function DownloadWorkflowLog {
     Expand-Archive -Path $tempFileName -DestinationPath $path
 }
 
+function CancelAllWorkflows {
+    Param(
+        [string] $repository,
+        [switch] $noDelay
+    )
+    if (-not $noDelay.IsPresent) {
+        Start-Sleep -Seconds 60
+    }
+    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    foreach($run in $runs.workflow_runs) {
+        Write-Host $run.name
+        if ($run.status -eq 'in_progress') {
+            Write-Host "Cancelling $($run.name) run $($run.id)"
+            gh api --method POST /repos/$repository/actions/runs/$($run.id)/cancel | Out-Null
+        }
+    }
+}
+
+function WaitAllWorkflows {
+    Param(
+        [string] $repository,
+        [switch] $noDelay,
+        [switch] $noError
+    )
+    if (-not $noDelay.IsPresent) {
+        Start-Sleep -Seconds 60
+    }
+    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    foreach($run in $runs.workflow_runs) {
+        WaitWorkflow -repository $repository -runid $run.id -noDelay -noError:$noError
+    }
+}
+
 function WaitWorkflow {
     Param(
         [string] $repository,
         [string] $runid,
-        [switch] $noDelay
+        [switch] $noDelay,
+        [switch] $noError
     )
 
     $delay = !$noDelay.IsPresent
@@ -237,7 +271,7 @@ function WaitWorkflow {
     Write-Host
     Write-Host $run.conclusion
     if ($run.conclusion -ne "Success") {
-        throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)"
+        if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
     }
 }
 
