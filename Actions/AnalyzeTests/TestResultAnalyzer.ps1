@@ -40,7 +40,7 @@
             Write-Host "- $appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds"
             $summarySb.Append("|$appName|$appTests|") | Out-Null
             if ($appPassed -gt 0) {
-                $summarySb.Append("$($appPassed):white_check_mark:") | Out-Null
+                $summarySb.Append("$($appPassed) :white_check_mark:") | Out-Null
             }
             $summarySb.Append("|") | Out-Null
             if ($appFailed -gt 0) {
