@@ -611,6 +611,7 @@ function Test-LogContainsFromRun {
 . (Join-Path $PSScriptRoot "Workflows\RunAddExistingAppOrTestApp.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCICD.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateApp.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunDeployReferenceDocumentation.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateOnlineDevelopmentEnvironment.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateRelease.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateTestApp.ps1")
