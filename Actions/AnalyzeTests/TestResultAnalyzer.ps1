@@ -44,11 +44,11 @@
             }
             $summarySb.Append("|") | Out-Null
             if ($appFailed -gt 0) {
-                $summarySb.Append("$($appFailed):x:") | Out-Null
+                $summarySb.Append("$($appFailed) :x:") | Out-Null
             }
             $summarySb.Append("|") | Out-Null
             if ($appSkipped -gt 0) {
-                $summarySb.Append("$($appSkipped):white_circle:") | Out-Null
+                $summarySb.Append("$($appSkipped) :white_circle:") | Out-Null
             }
             $summarySb.Append("|$($appTime)s|\n") | Out-Null
             if ($appFailed -gt 0) {
