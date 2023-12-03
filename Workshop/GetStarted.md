@@ -3,33 +3,32 @@ With our prerequisites in place, it is time to get started and create our first 
 
 In a browser, navigate to https://aka.ms/algopte:
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/e00a3a4e-0443-4369-9cad-6a4041fd9c58) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/1c6a3d1d-b712-4837-9654-58fccbdd911e) |
 |-|
 
 And you should see:
 
-
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/ba6520ef-2c24-454e-9227-2298a26931e2) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/7e74715a-0e9a-4f7a-b261-a7107fad8888) |
 |-|
 
-Click **Use This Template** and select **Create a new repository**. Select your **organizational account** as **owner** and enter **repo1** as repository name. Make the repo **public** and click **Create repository form template**.
+Click **Use This Template** and select **Create a new repository**. Select your **organizational account** as **owner** and enter **repo1** as repository name. Make the repo **public** and click **Create repository**.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/8f529957-5023-4967-ad8c-2bc4399cec47) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/32ce5b05-b347-4174-b83d-e344756f2d06) |
 |-|
 
 After a few seconds, your new repository should be ready for you.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/a56e6b5f-8978-4065-828b-946ba324f525) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/11d7f51d-f38c-4163-a929-a55f2360911d) |
 |-|
 
 Click **Actions**, and you should see that a CI/CD workflow has already been kicked off on our empty repository.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/8e75c3b6-741f-4802-b061-b574c7673b46) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/e13fc12d-c36d-4014-bbe5-0f8003c90bb0) |
 |-|
 
 Wait for the CI/CD workflow to complete and click the completed workflow to see details.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/9389fe37-c8e8-4bbb-8283-eb9cf4fa4424) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/cc181fb1-0496-45aa-87c5-69fd000d772f) |
 |-|
 
 Note the warnings explaining that no apps have been added. The CI/CD workflow doesn't have anything to compile yet as you didn't add any source code.

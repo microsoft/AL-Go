@@ -18,10 +18,11 @@ Enter the following values in the form:
 | Name | `app1` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `55000..55100` |
-| Include Sample Code | `yes` |
-| Direct Commit | `no` |
+| Include Sample Code | :ballot_box_with_check: |
+| Direct Commit | :black_square_button: |
+| Use GhTokenWorkflow | :black_square_button: |
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/3520147b-cb0c-4ee9-90f4-f6efeb81b23f) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/b556ae00-469c-4156-9b1b-925ee4632e4d) |
 |-|
 
 Wait a few minutes until the workflow completes and click **Pull requests** to see that there is a Pull request open for review.
