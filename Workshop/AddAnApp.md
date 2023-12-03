@@ -14,6 +14,7 @@ Enter the following values in the form:
 
 | Name | Value |
 | :-- | :-- |
+| Use workflow from | `Branch: main` |
 | Project name | `.` |
 | Name | `app1` |
 | Publisher | `<your publisher name>` |
@@ -27,28 +28,28 @@ Enter the following values in the form:
 
 Wait a few minutes until the workflow completes and click **Pull requests** to see that there is a Pull request open for review.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/b1dd7d78-d8e0-4d19-99bf-8a555a076071) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/295d2d32-1101-4471-af30-9192e63c1a3d) |
 |-|
 
 Open the **Pull request** and click **Files changed** to see what the Pull request will add to your repository.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/af9ffee2-ebae-46b0-ae81-6bffb51ddd08) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/79081ae2-2d98-41e0-9abd-25e5da4cfec8) |
 |-|
 
-The changes made by the workflow includes adding the new app path to the **al.code-workspace**, and adding an app folder with **app.json**, **HelloWorld.al** (sample code) and **.vscode/launch.json**.
+> [!NOTE] The changes made by the workflow includes adding the new app path to the **al.code-workspace**, and adding an app folder with **app.json**, **HelloWorld.al** (sample code) and **.vscode/launch.json**.
 The **Create a new app** workflow doesn't do anything else than just adding these changes, no magic behind the scenes.
 
 Select **Conversation** and merge the pull request by clicking **Merge the pull request**, **Confirm merge** and then delete the temporary branch created for the pull request, by clicking **Delete branch**. Select **Actions** and see that a merge commit workflow was kicked off:
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/b4cc814a-6ed4-4730-ab53-81a88a4b54b3) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/80b1c400-7ce2-4511-a9e2-febb7da9f171) |
 |-|
 
 When the merge commit is **done**, click the workflow line and **scroll down** to see the artifacts created by this build:
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/09b8013e-0cd7-46f7-b45c-a4dcaccfb788) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/ba90341f-75f5-47f3-be7f-b00e49e4ba19) |
 |-|
 
-Note that my artifacts are created with version **1.0.2.0** - that might not be the same in your repository.
+> [!NOTE] My artifacts are created with version **1.0.4.0** - that might not be the same in your repository.
 
 Let's talk about versioning and naming...
 

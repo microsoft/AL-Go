@@ -12,23 +12,27 @@ Create 2 apps within the repository using the **Create a new app** workflow call
 
 | Name | Value |
 | :-- | :-- |
+| Use workflow from | `Branch: main` |
 | Project name | `.` |
 | Name | `Common` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `60000..60099` |
-| Include Sample Code | `no` |
-| Direct Commit | `yes` |
+| Include Sample Code | :black_square_button: |
+| Direct Commit | :ballot_box_with_check: |
+| Use GhTokenWorkflow | :black_square_button: |
 
 and
 
 | Name | Value |
 | :-- | :-- |
+| Use workflow from | `Branch: main` |
 | Project name | `.` |
 | Name | `Licensing` |
 | Publisher | `<your publisher name>` |
 | ID Range (from..to) | `60100..60199` |
-| Include Sample Code | `no` |
-| Direct Commit | `yes` |
+| Include Sample Code | :black_square_button: |
+| Direct Commit | :ballot_box_with_check: |
+| Use GhTokenWorkflow | :black_square_button: |
 
 Leaving out the sample code in order to avoid name clashes.
 
