@@ -1,4 +1,4 @@
-# Dependencies to AL-Go projects in other repositories
+# Dependencies #2 - Dependencies to AL-Go projects in other repositories
 Many partners have a set of common helper functions, tables and other things, which they reuse in other apps.
 
 With AL-Go for GitHub, the recommendation is to create a Common repository, which has one or more projects, which can be used in several of your other apps.
