@@ -65,7 +65,7 @@ Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifac
 Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 
 $deployToGitHubPages = $settings.alDoc.DeployToGitHubPages
-if ($deployToGitHubPages) {
+if ($generateALDocArtifact -and $deployToGitHubPages) {
     $deployToGitHubPages = IsGitHubPagesAvailable
     if (!$deployToGitHubPages) {
         Write-Host "::Warning::GitHub Pages is not available in this repository (or GitHub Pages is not set to use GitHub Actions). Go to Settings -> Pages and set Source to GitHub Actions"
