@@ -36,7 +36,8 @@ Open the **Pull request** and click **Files changed** to see what the Pull reque
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/79081ae2-2d98-41e0-9abd-25e5da4cfec8) |
 |-|
 
-> [!NOTE] The changes made by the workflow includes adding the new app path to the **al.code-workspace**, and adding an app folder with **app.json**, **HelloWorld.al** (sample code) and **.vscode/launch.json**.
+> [!NOTE]
+> The changes made by the workflow includes adding the new app path to the **al.code-workspace**, and adding an app folder with **app.json**, **HelloWorld.al** (sample code) and **.vscode/launch.json**.
 The **Create a new app** workflow doesn't do anything else than just adding these changes, no magic behind the scenes.
 
 Select **Conversation** and merge the pull request by clicking **Merge the pull request**, **Confirm merge** and then delete the temporary branch created for the pull request, by clicking **Delete branch**. Select **Actions** and see that a merge commit workflow was kicked off:
@@ -49,7 +50,8 @@ When the merge commit is **done**, click the workflow line and **scroll down** t
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/ba90341f-75f5-47f3-be7f-b00e49e4ba19) |
 |-|
 
-> [!NOTE] My artifacts are created with version **1.0.4.0** - that might not be the same in your repository.
+> [!NOTE]
+> My artifacts are created with version **1.0.4.0** - that might not be the same in your repository.
 
 Let's talk about versioning and naming...
 

@@ -93,7 +93,8 @@ Click the latest CI/CD commit workflow and notice the 3 jobs (you can expand the
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/bae168e5-bc9e-4f32-9ac8-05a4b94a4a41) |
 |-|
 
-> [!NOTE] At this time, all apps will be using US as localization and use the same Business Central version as we entered when setting up prerequisites, but you can change this in the settings file for each individual project.
+> [!NOTE]
+> At this time, all apps will be using US as localization and use the same Business Central version as we entered when setting up prerequisites, but you can change this in the settings file for each individual project.
 
 After the build completes, you can inspect the artifacts created from this multi-project repository, by clicking Summary and scrolling down:
 
@@ -102,8 +103,8 @@ After the build completes, you can inspect the artifacts created from this multi
 
 DK, US and W1 all have an artifact of the type **Apps** generated, but as already stated, they are all build using the US localization. We need **DK** to be build using the Danish localization and **W1** using W1.
 
-> [!NOTE] The CheckForUpdates annotation.
-> AL-Go says that there are system files updates. This is because when creating a new project, AL-Go will (at the next system file update) place scripts in the .AL-Go folder for creating local and cloud development environments.
+> [!NOTE]
+> AL-Go states that there are system files updates (the CheckForUpdates annotation). This is because when creating a new project, AL-Go will (at the next system file update) place scripts in the .AL-Go folder for creating local and cloud development environments.
 
 Before running **Update AL-Go System Files** however, let's make some changes to the repository and we will do this from VS Code. Select **Code** and click the **Copy** button to copy the GIT URL for the repo:
 
@@ -155,7 +156,8 @@ Now, we can create a release and inspect that. Run the **Create release** workfl
 
 After this is done, select **Code** and click the newly created release to see the artifacts.
 
-> [!NOTE] In the auto generated release notes, you will see all merged Pull Requests under **What's Changed** and by clicking the **Full Changelog** link you will find all commits.
+> [!NOTE]
+> In the auto generated release notes, you will see all merged Pull Requests under **What's Changed** and by clicking the **Full Changelog** link you will find all commits.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/15c67508-33c1-4592-a227-05262651dcd6) |
 |-|
