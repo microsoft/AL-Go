@@ -78,6 +78,9 @@ function Get-IsPatialBuild {
         $fullBuildPatterns += $settings.fullBuildPatterns
     }
 
+    #Include the base folder in the modified files
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+
     foreach($fullBuildFolder in $fullBuildPatterns) {
         # The Join-Path is needed to make sure the path has the correct slashes
         $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
@@ -115,6 +118,9 @@ function ShouldBuildProject {
     $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
     Write-Host "Project folders: $($projectFolders -join ', ')"
+
+    #Include the base folder in the modified files
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
 
     $modifiedProjectFolders = @($projectFolders | Where-Object {
         $projectFolder = Join-Path $baseFolder "$_/*"
