@@ -67,8 +67,6 @@ function Get-IsFullBuildRequired {
         return $true
     }
 
-    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
-
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
         return $true

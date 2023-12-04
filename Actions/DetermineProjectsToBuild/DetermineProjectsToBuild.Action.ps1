@@ -25,6 +25,7 @@ try {
 
     Write-Host "::group::Get Modified Files"
     $modifiedFiles = Get-ModifiedFiles -token $token
+    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
     Write-Host "::endgroup::"
 
     Write-Host "::group::Determine Full Build"
