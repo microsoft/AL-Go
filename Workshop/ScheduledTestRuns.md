@@ -6,7 +6,7 @@ AL-Go for GitHub includes 3 workflows for this purpose: **Test Current**, **Test
 
 These workflows can be run manually by simply selecting the workflow and clicking **Run workflow**.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/5cec9a1b-04d0-4010-a647-bb631903e80e) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/7747d778-40f8-4d3e-9e26-02e3cf410834) |
 |-|
 
 Microsoft recommands running these workflows on a schedule to ensure that your app is ready for upcoming releases at all times and at the same time keeping compatibility with the versions you want to support.
@@ -24,17 +24,19 @@ In your single-project repository, select **Code**, navigate to **.github/AL-Go-
   "NextMajorSchedule": "0 2 * * 0"
 ```
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/480c759b-c276-439e-9d89-af26ce4780dd) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/c82e1393-e7b1-4e3a-8b64-488c107fff7b) |
 |-|
 
 Now, select **Actions** and run the **Update AL-Go System Files** workflow in order for the schedule to take effect. You can see the changes to the workflows done by the **Update AL-Go System Files** workflow in the **pull request**.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/e868a217-010d-4fea-8be8-e707e5e76900) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/4a65a694-12b5-4896-8323-1b49d26c1a56) |
 |-|
 
-Now, modify **.github/Test Current.settings.json** and add the two settings (useCompilerFolder and doNotPublishApps) in that one
+Merge the Pull Request and remove the temporary branch.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/1028a813-87db-438e-a271-ef8e87415799) |
+Now, you could modify **.github/Test Current.settings.json** and add the two settings (useCompilerFolder and doNotPublishApps) in that one
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/e17aaebc-4cb9-405e-89d7-9aee55eba66f) |
 |-|
 
 Which now means that your Test Current workflow, which runs every night will run all tests and other workflows will not.
@@ -42,7 +44,7 @@ Which now means that your Test Current workflow, which runs every night will run
 > [!NOTE]
 > While the name of the workflow specific settings file is based on the workflow title (**Test Next Major.settings.json**), the workflow schedule setting needs to be in AL-Go-Settings.json and is based on the filename of the workflow (**NextMajorSchedule**):
 > 
-> ![image](https://github.com/microsoft/AL-Go/assets/10775043/b3abf297-2ee6-4160-b1c1-ddeeab985cda)
+> ![image](https://github.com/microsoft/AL-Go/assets/10775043/6d8f15f3-8415-43d1-b7b6-3e08c545e500)
 
 Now we know when our app gets broken and doesn't work anymore, but what about performance regressions?
 

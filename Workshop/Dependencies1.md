@@ -1,4 +1,5 @@
 # Dependencies #1 - Dependencies to a project in the same repository
+
 Dependencies is a BIG topic, which is why it is handled in multiple sections in this workshop.
 
 In general, dependencies between apps in the same project are handled 100% automatically. AL-Go for GitHub will determine the order in which apps within the same project need to be built, and will use the apps built to satisfy dependencies from other apps.
@@ -58,7 +59,8 @@ Looking at the artifacts produced by the build, we can see
 ## include
 The other mechanism is to *include* the dependency projects in the project we are building. This is done by using the project setting **appDependencyProbingPaths**, which specifies where to search for dependencies in general.
 
-If you already set up **useProjectDependencies**, please remove this setting from **.github/AL-Go-Settings.json**. You don't need to run **Update AL-Go System Files** before building, but you will be notified to do so when building.
+> [!NOTE]
+> If you already set up **useProjectDependencies**, please remove this setting from **.github/AL-Go-Settings.json**. You don't need to run **Update AL-Go System Files** before building, but you will be notified to do so when building.
 
 Now, modify **DK/.AL-Go/settings.json** and **US/.AL-Go/settings.json** by adding this property
 

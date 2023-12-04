@@ -19,7 +19,7 @@ So, navigate single-project repository, locate the .github/AL-Go-Settings.json f
   "doNotPublishApps": false
 ```
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/f94be356-0187-4add-9c3e-f3eaf1423cd8) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/3860cb67-67d6-4954-966d-df6923dbfe56) |
 |-|
 
 Now select **Actions** and locate the **Create a new test app** action and click **Run workflow** and use the following parameters:
@@ -35,12 +35,17 @@ Now select **Actions** and locate the **Create a new test app** action and click
 | Direct Commit | :black_square_button: |
 | Use GhTokenWorkflow | :black_square_button: |
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/eab3a42e-a73c-4c13-bc05-7cc2c7a4b05e) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/4e4d69e2-2b65-4ed0-b56b-91270d5a7410) |
 |-|
 
-Inspect and **merge** the pull request. Now completion of the merge pull request **will be much slower than before**, as the GitHub hosted runners needs to download the Business Central Generic image and the artifacts every single time. When the workflow is done, you should see that below the artifacts produced by the **CI/CD** workflow, there is a summary field with the test results.
+When the workflow is complete, inspect and **merge** the pull request.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/f0f570ae-bd2b-4f41-b3e0-a9bc406d9ad3) |
+> [!NOTE]
+> Completion of the merge pull request **will be much slower than before**, as the GitHub hosted runners needs to download the Business Central Generic image and the artifacts every single time.
+
+When the workflow is done, you should see that below the artifacts produced by the **CI/CD** workflow, there is a summary field with the test results.
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/fb2aa04d-d75b-4651-8e4d-a7d76451a536) |
 |-|
 
 As already mentioned, running complete builds with full tests does take more time than containerless compiling. We are working on improving this.

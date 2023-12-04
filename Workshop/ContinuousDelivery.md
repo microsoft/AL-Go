@@ -13,7 +13,15 @@ This workshop has already described how to setup continuous delivery for GitHub 
 ## Storage
 Setting up continuous delivery to a storage account is done in the same mechanism as we did with GitHub Packages.
 
-Create an organizational secret called **StorageContext**. The format of the secret needs to be **compressed JSON**, containing 4 values: **storageAccountName**, **containerName**, **blobName** and either **storageAccountKey** or **sasToken**. Example:
+In order to setup **continuous delivery** to a **storage account**, you need to have an Azure Account and setup a storage account in the **Azure Portal**. You can create a **blob container** with the name of the the calculated container (based on containerName in the StorageContext) or you can add a setting called **DeliverToStorage** in your repository settings gile (.github/AL-Go-Settings.json) with a property called **CreateContainerIfNotExist** set to true for auto generation of the blob container. 
+
+```json
+  "DeliverToStorage": {
+    "CreateContainerIfNotExist": true
+  }
+```
+
+Now, create an organizational secret called **StorageContext**. The format of the secret needs to be **compressed JSON**, containing 4 values: **storageAccountName**, **containerName**, **blobName** and either **storageAccountKey** or **sasToken**. Example:
 
 ```json
 {"StorageAccountName":"accountnanme","StorageAccountKey":"HOaRhoNXXX==","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}
@@ -27,29 +35,30 @@ or
 
 ContainerName and BlobName can contain placeholders, like {project}, {version} and {type} which will be replaced by the real values when delivering.
 
-In order to setup **continuous delivery** to a **storage account**, you need to have an Azure Account and setup a storage account in the **Azure Portal**. You can create a **blob container** with the name of the the calculated container (based on containerName in the StorageContext) or you can add a setting called DeliverToStorage with a property called CreateContainerIfNotExist set to true for auto generation of the blob container. After this, create the secret value above manually or use the **New-ALGoStorageContext** from BcContainerHelper.
+> [!NOTE]
+> You can use the **BcContainerHelper** function **New-ALGoStorageContext** to assist in the correct format of the secret.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/7287e068-b2d5-4fc2-b428-d0ddd4ffa0e3) |
 |-|
 
 Now create an organizational secret called **StorageContext** with the secret value.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/8631d67f-d772-43f5-bae3-a0f342f89fdd) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/3e5b4ddc-bff2-4cf5-9b2a-1a3696189eaf) |
 |-|
 
 and add the deliverToStorage setting to the ALGOORGSETTINGS organizational variable:
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/9975ebbd-a98d-4bed-a57f-dae1c26546bd) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/6b7b4072-67d0-40b2-87ae-bfa2d130162b) |
 |-|
 
 When re-running **CI/CD** afterwards, you will see that continuous delivery is now setup for a storage account as well
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/2ec22ccd-76fa-4705-8e64-6b16a5867934) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/def2c115-e8c2-46dd-a7f8-4f745a93c2fb) |
 |-|
 
 Checking the storage account using Storage Explorer reveals the new container and the new app.
 
-| ![image](https://github.com/microsoft/AL-Go/assets/10775043/60db8d6e-7b4e-46cb-b426-aa1290b498aa) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/5b8317ca-64c2-4c10-9cf2-53bf61c4af07) |
 |-|
 
 ## AppSource
