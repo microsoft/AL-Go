@@ -105,6 +105,7 @@ function FindLatestSuccessfulCICDRun {
 
             if($areBuildJobsSuccessful) {
                 $lastSuccessfulCICDRun = $CICDRun.id
+                Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun), from $($CICDRun.created_at)"
                 break
             }
 
@@ -112,7 +113,6 @@ function FindLatestSuccessfulCICDRun {
         }
 
         if($lastSuccessfulCICDRun -ne 0) {
-            Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun)"
             break
         }
 
