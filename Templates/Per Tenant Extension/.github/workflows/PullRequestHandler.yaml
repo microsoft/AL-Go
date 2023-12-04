@@ -81,6 +81,7 @@ jobs:
 
       - name: Calculate baseline workflow run
         id: DetermineBaselineWorkflowRun
+        if: ${{ steps.determineProjectsToBuild.outputs.IsFullBuild -eq 'false' }}
         uses: microsoft/AL-Go-Actions/DetermineBaselineWorkflowRun@main
         with:
           shell: powershell

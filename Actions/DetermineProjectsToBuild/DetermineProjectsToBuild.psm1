@@ -1,74 +1,83 @@
 ﻿<#
-.Synopsis
-    Creates buils dimensions for a list of projects.
-
-.Outputs
-    An array of build dimensions for the projects and their corresponding build modes.
-    Each build dimension is a hashtable with the following keys:
-    - project: The name of the AL-Go project
-    - buildMode: The build mode to use for the project
+    .Synopsis
+        Gets the modified files in a GitHub pull request.
 #>
-function CreateBuildDimensions(
-    [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
-    $projects = @(),
-    $baseFolder
-)
-{
-    $buildDimensions = @()
+function Get-ModifiedFiles {
+    param(
+        [Parameter(HelpMessage = "The GitHub token to use to fetch the changed files", Mandatory = $false)]
+        [string] $token
+    )
 
-    foreach($project in $projects) {
-        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
-        $buildModes = @($projectSettings.buildModes)
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\GitHub-Helper.psm1" -Resolve) -DisableNameChecking
 
-        if(!$buildModes) {
-            Write-Host "No build modes found for project $project, using default build mode 'Default'."
-            $buildModes = @('Default')
-        }
-
-        foreach($buildMode in $buildModes) {
-            $buildDimensions += @{
-                project = $project
-                projectName = $projectSettings.projectName
-                buildMode = $buildMode
-            }
-        }
+    if(!$env:GITHUB_EVENT_PATH) {
+        Write-Host "GITHUB_EVENT_PATH not set, returning empty list of changed files"
+        return @()
     }
 
-    return @(, $buildDimensions) # force array
+    $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
+
+    if(-not ($ghEvent.PSObject.Properties.name -eq 'pull_request')) {
+        Write-Host "Not a pull request, returning empty list of changed files"
+        return @()
+    }
+
+    $url = "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ghEvent.pull_request.head.sha)"
+
+    $headers = @{
+        "Authorization" = "token $token"
+        "Accept" = "application/vnd.github.baptiste-preview+json"
+    }
+
+    $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
+
+    $modifiedFiles = @($response.files | ForEach-Object { $_.filename })
+
+    return $modifiedFiles
 }
 
 <#
 .Synopsis
-    Filters AL-Go projects based on modified files.
-
-.Outputs
-    An array of AL-Go projects to build.
+    Determines if a full build is required.
+.Description
+    Determines if a full build is required.
+    A full build is required if:
+    - The alwaysBuildAllProjects setting is set to true
+    - More than 250 files have been modified
+    - The modified files match one of the fullBuildPatterns
+    - No modified files are passed to the function (in this case all projects are built, because the current workflow is not triggered by a pull request)
 #>
-function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifiedFiles) {
+function Get-IsFullBuildRequired {
+    param(
+        [Parameter(HelpMessage = "The modified files", Mandatory = $true)]
+        [array] $modifiedFiles,
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder
+    )
+
+    $settings = $env:Settings | ConvertFrom-Json
+
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
-        return $projects
+        return $true
     }
 
     if (!$modifiedFiles) {
         Write-Host "No files modified, building all projects"
-        return $projects
+        return $true
     }
 
     Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
 
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
-        return $projects
+        return $true
     }
 
-    $fullBuildPatterns = @( Join-Path '.github' '*.json')
+    $fullBuildPatterns = @(Join-Path '.github' '*.json')
     if($settings.fullBuildPatterns) {
         $fullBuildPatterns += $settings.fullBuildPatterns
     }
-
-    #Include the base folder in the modified files
-    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
 
     foreach($fullBuildFolder in $fullBuildPatterns) {
         # The Join-Path is needed to make sure the path has the correct slashes
@@ -76,10 +85,29 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
 
         if ($modifiedFiles -like $fullBuildFolder) {
             Write-Host "Changes to $fullBuildFolder, building all projects"
-            return $projects
+            return $true
         }
     }
 
+    return $false
+}
+
+<#
+.Synopsis
+    Filters AL-Go projects based on modified files.
+
+.Outputs
+    An array of AL-Go projects, filtered based on the modified files.
+#>
+function FilterProjects {
+    param (
+        [Parameter(HelpMessage = "A list of AL-Go projects", Mandatory = $true)]
+        $projects,
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        $baseFolder,
+        [Parameter(HelpMessage = "A list of modified files", Mandatory = $true)]
+        $modifiedFiles
+    )
     Write-Host "Filtering projects to build based on the modified files"
 
     $filteredProjects = @()
@@ -106,6 +134,46 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
 
 <#
 .Synopsis
+    Creates buils dimensions for a list of projects.
+
+.Outputs
+    An array of build dimensions for the projects and their corresponding build modes.
+    Each build dimension is a hashtable with the following keys:
+    - project: The name of the AL-Go project
+    - buildMode: The build mode to use for the project
+#>
+function CreateBuildDimensions {
+    param(
+        [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
+        $projects = @(),
+        $baseFolder
+    )
+
+    $buildDimensions = @()
+
+    foreach($project in $projects) {
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        $buildModes = @($projectSettings.buildModes)
+
+        if(!$buildModes) {
+            Write-Host "No build modes found for project $project, using default build mode 'Default'."
+            $buildModes = @('Default')
+        }
+
+        foreach($buildMode in $buildModes) {
+            $buildDimensions += @{
+                project = $project
+                projectName = $projectSettings.projectName
+                buildMode = $buildMode
+            }
+        }
+    }
+
+    return @(, $buildDimensions) # force array
+}
+
+<#
+.Synopsis
     Analyzes a folder for AL-Go projects and determines the build order of these projects.
 
 .Description
@@ -124,15 +192,18 @@ function Get-FilteredProjectsToBuild($settings, $projects, $baseFolder, $modifie
             - project: The project to build
             - buildMode: The build mode to use
 #>
-function Get-ProjectsToBuild(
-    [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
-    $baseFolder,
-    [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-    $modifiedFiles = @(),
-    [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
-    $maxBuildDepth = 0
-)
-{
+function Get-ProjectsToBuild {
+    param (
+        [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
+        $baseFolder,
+        [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $true)]
+        [bool] $isFullBuild,
+        [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
+        $modifiedFiles = @(),
+        [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
+        $maxBuildDepth = 0
+    )
+
     Write-Host "Determining projects to build in $baseFolder"
 
     Push-Location $baseFolder
@@ -147,7 +218,14 @@ function Get-ProjectsToBuild(
         $projectsOrderToBuild = @()
 
         if ($projects) {
-            $projectsToBuild += Get-FilteredProjectsToBuild -baseFolder $baseFolder -settings $settings -projects $projects -modifiedFiles $modifiedFiles
+            if($isFullBuild) {
+                Write-Host "Full build required, building all projects"
+                $projectsToBuild = $projects
+            }
+            else {
+                Write-Host "Full build not required, filtering projects to build based on the modified files"
+                $projectsToBuild = FilterProjects -baseFolder $baseFolder -projects $projects -modifiedFiles $modifiedFiles
+            }
 
             if($settings.useProjectDependencies) {
                 $buildAlso = @{}
@@ -199,4 +277,4 @@ function Get-ProjectsToBuild(
     }
 }
 
-Export-ModuleMember Get-ProjectsToBuild
+Export-ModuleMember Get-ProjectsToBuild, Get-ModifiedFiles, Get-IsFullBuildRequired

@@ -23,6 +23,9 @@ outputs:
   BuildOrderJson:
     description: An array of objects that determine that build order, including build dimensions
     value: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+  IsFullBuild:
+    description: A boolean value that indicates whether the build is a full build or not
+    value: ${{ steps.determineProjectsToBuild.outputs.IsFullBuild }}
 runs:
   using: composite
   steps:
@@ -35,8 +38,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          $changedFiles = ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson -token ${{ github.token }}
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

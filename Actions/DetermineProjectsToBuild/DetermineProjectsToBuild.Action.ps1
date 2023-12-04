@@ -1,11 +1,10 @@
 ﻿Param(
     [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
     [string] $baseFolder,
-    [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-    [string[]] $modifiedFiles = @(),
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     [int] $maxBuildDepth = 0,
-
+    [Parameter(HelpMessage = "The GitHub token to use to fetch the modified files", Mandatory = $true)]
+    [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
@@ -24,23 +23,36 @@ try {
     #region Action: Determine projects to build
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+    Write-Host "::group::Get Modified Files"
+    $modifiedFiles = Get-ModifiedFiles -token $token
+    Write-Host "::endgroup::"
+
+    Write-Host "::group::Determine Full Build"
+    $isFullBuild = Get-IsFullBuildRequired -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    Write-Host "::endgroup::"
+
+    Write-Host "::group::Get Projects To Build"
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -isFullBuild $isFullBuild -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
+    Write-Host "::endgroup::"
     #endregion
 
     #region Action: Output
     $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
     $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
     $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
+    $isFullBuild = ConvertTo-Json $isFullBuild -Depth 99 -Compress
 
     # Set output variables
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "IsFullBuild=$isFullBuild"
 
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
+    Write-Host "IsFullBuild=$isFullBuild"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope
