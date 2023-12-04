@@ -100,38 +100,32 @@ function Get-IsPatialBuild {
 .Outputs
     An array of AL-Go projects, filtered based on the modified files.
 #>
-function FilterProjects {
+function ShouldBuildProject {
     param (
-        [Parameter(HelpMessage = "A list of AL-Go projects", Mandatory = $true)]
-        $projects,
+        [Parameter(HelpMessage = "An AL-Go project", Mandatory = $true)]
+        $project,
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         $baseFolder,
         [Parameter(HelpMessage = "A list of modified files", Mandatory = $true)]
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Used in a Where-Object filter')]
         $modifiedFiles
     )
-    Write-Host "Filtering projects to build based on the modified files"
+    Write-Host "Determining whether to build project $project based on modified files"
 
-    $filteredProjects = @()
-    foreach($project in $projects)
-    {
-        if (Test-Path -Path (Join-Path $baseFolder "$project/.AL-Go/settings.json")) {
-            $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
+    $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
-            $modifiedProjectFolders = @($projectFolders | Where-Object {
-                $projectFolder = Join-Path $baseFolder "$_/*"
+    $modifiedProjectFolders = @($projectFolders | Where-Object {
+        $projectFolder = Join-Path $baseFolder "$_/*"
 
-                return $($modifiedFiles -like $projectFolder)
-            })
+        return $($modifiedFiles -like $projectFolder)
+    })
 
-            if ($modifiedProjectFolders.Count -gt 0) {
-                # The project has been modified, add it to the list of projects to build
-                $filteredProjects += $project
-            }
-        }
+    if ($modifiedProjectFolders.Count -gt 0) {
+        Write-Host "Modified files found for project $project : $($modifiedProjectFolders -join ', ')"
+        return $true
     }
 
-    return $filteredProjects
+    return $false
 }
 
 <#
@@ -223,7 +217,7 @@ function Get-ProjectsToBuild {
         if ($projects) {
             if($isPartialBuild) {
                 Write-Host "Full build not required, filtering projects to build based on the modified files"
-                $projectsToBuild = FilterProjects -baseFolder $baseFolder -projects $projects -modifiedFiles $modifiedFiles
+                $projectsToBuild = $projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFiles }
             }
             else {
                 Write-Host "Full build required, building all projects"
