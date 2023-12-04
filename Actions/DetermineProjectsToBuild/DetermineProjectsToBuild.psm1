@@ -125,6 +125,7 @@ function ShouldBuildProject {
         return $true
     }
 
+    Write-Host "No modified files found for project $project. Not building project"
     return $false
 }
 
