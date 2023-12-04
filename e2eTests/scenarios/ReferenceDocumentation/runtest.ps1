@@ -39,7 +39,7 @@ Write-Host -ForegroundColor Yellow @'
 '@
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-$prevLocation = Get-Location
+Push-Location
 
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
@@ -122,6 +122,6 @@ $pagesInfo = gh api /repos/$repository/pages | ConvertFrom-Json
 $html = (Invoke-WebRequest -Uri $pagesInfo.html_url -UseBasicParsing).Content
 $html | Should -belike "*Documentazione per $repository*"
 
-Set-Location $prevLocation
+Pop-Location
 
 RemoveRepository -repository $repository -path $repoPath

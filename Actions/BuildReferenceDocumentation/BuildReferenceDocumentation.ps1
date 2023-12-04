@@ -16,6 +16,7 @@ $maxReleases = $settings.alDoc.maxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 $artifactsFolderCreated = $false
 if ($artifacts -ne ".artifacts") {
+    Write-Host "::group::Downloading artifacts"
     $artifactsFolderCreated = $true
     New-Item $artifactsFolder -ItemType Directory | Out-Null
     $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
@@ -30,6 +31,7 @@ if ($artifacts -ne ".artifacts") {
             Remove-Item -Path $filename -Force
         }
     }
+    Write-Host "::endgroup::"
 }
 
 $header = $settings.alDoc.header
@@ -53,10 +55,10 @@ foreach($release in $releases) {
     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -Path $tempFolder -ItemType Directory | Out-Null
     try {
+        Write-Host "::group::Version $($release.Name)"
         foreach($mask in 'Apps', 'Dependencies') {
             DownloadRelease -token $token -projects "$($includeProjects -join ',')" -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
         }
-        Write-Host "Version: $($release.Name):"
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
         $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
         $version = $release.Name
@@ -72,6 +74,7 @@ foreach($release in $releases) {
                 $retry = $true
             }
         } while ($retry)
+        Write-Host "::endgroup::"
     }
     finally {
         Remove-Item -Path $tempFolder -Recurse -Force
@@ -83,6 +86,8 @@ New-Item -Path $releasesPath -ItemType Directory | Out-Null
 foreach($version in $versions) {
     Move-Item -Path (join-Path $docsPath $version) -Destination $releasesPath
 }
+
+Write-Host "::group::main version"
 
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
 $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
@@ -99,6 +104,8 @@ else {
     $releaseNotes = ''
 }
 GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
+
+Write-Host "::endgroup::"
 
 if ($artifactsFolderCreated) {
     Remove-Item $artifactsFolder -Recurse -Force
