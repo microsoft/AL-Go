@@ -106,6 +106,7 @@ function FilterProjects {
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         $baseFolder,
         [Parameter(HelpMessage = "A list of modified files", Mandatory = $true)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Used in a Where-Object filter')]
         $modifiedFiles
     )
     Write-Host "Filtering projects to build based on the modified files"
