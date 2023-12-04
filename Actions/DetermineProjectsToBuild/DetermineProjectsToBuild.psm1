@@ -114,6 +114,8 @@ function ShouldBuildProject {
 
     $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
+    Write-Host "Project folders: $($projectFolders -join ', ')"
+
     $modifiedProjectFolders = @($projectFolders | Where-Object {
         $projectFolder = Join-Path $baseFolder "$_/*"
 

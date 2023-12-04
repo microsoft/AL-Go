@@ -853,6 +853,7 @@ function AnalyzeRepo {
 
     $settings = $settings | Copy-HashTable
 
+    $runningLocal = $true
     if (!$runningLocal) {
         Write-Host "::group::Analyzing repository"
     }
