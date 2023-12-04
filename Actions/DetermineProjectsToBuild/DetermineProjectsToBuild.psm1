@@ -50,10 +50,10 @@ function Get-ModifiedFiles {
 #>
 function Get-IsPatialBuild {
     param(
-        [Parameter(HelpMessage = "The modified files", Mandatory = $true)]
-        [array] $modifiedFiles,
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
-        [string] $baseFolder
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [array] $modifiedFiles = @()
     )
 
     $settings = $env:Settings | ConvertFrom-Json
