@@ -60,7 +60,8 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
-$generateALDocArtifact = ($type -eq 'Publish') -or $settings.alDoc.continuousDeployment
+$includeGitHubPages = $getEnvironments.Split(',') | Where-Object { 'github-pages' -like $_ }
+$generateALDocArtifact = ($includeGitHubPages) -and (($type -eq 'Publish') -or $settings.alDoc.continuousDeployment)
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 
