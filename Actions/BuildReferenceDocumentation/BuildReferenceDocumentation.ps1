@@ -55,7 +55,7 @@ foreach($release in $releases) {
     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item -Path $tempFolder -ItemType Directory | Out-Null
     try {
-        Write-Host "::group::Version $($release.Name)"
+        Write-Host "::group::Release $($release.Name)"
         foreach($mask in 'Apps', 'Dependencies') {
             DownloadRelease -token $token -projects "$($includeProjects -join ',')" -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $tempFolder -mask $mask -unpack
         }
@@ -87,7 +87,7 @@ foreach($version in $versions) {
     Move-Item -Path (join-Path $docsPath $version) -Destination $releasesPath
 }
 
-Write-Host "::group::main version"
+Write-Host "::group::Main"
 
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
 $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
