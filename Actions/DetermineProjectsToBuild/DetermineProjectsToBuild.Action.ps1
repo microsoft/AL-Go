@@ -13,7 +13,6 @@ $telemetryScope = $null
 
 try {
     #region Action: Setup
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
     #endregion
@@ -28,8 +27,8 @@ try {
     Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
     Write-Host "::endgroup::"
 
-    Write-Host "::group::Determine Full Build"
-    $isPartialBuild = -not (Get-IsFullBuildRequired -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
+    Write-Host "::group::Determine Partial Build"
+    $isPartialBuild = -Get-IsPatialBuild -modifiedFiles $modifiedFiles -baseFolder $baseFolder
     Write-Host "::endgroup::"
 
     Write-Host "::group::Get Projects To Build"

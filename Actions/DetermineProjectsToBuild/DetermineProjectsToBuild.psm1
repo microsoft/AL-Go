@@ -38,16 +38,17 @@ function Get-ModifiedFiles {
 
 <#
 .Synopsis
-    Determines if a full build is required.
+    Determines whether a partial build is required.
+.Outputs
+    A boolean indicating whether a partial build is required.
 .Description
-    Determines if a full build is required.
-    A full build is required if:
+    Determines whether a partial build is required.
+    A partial build is not required if:
     - The alwaysBuildAllProjects setting is set to true
     - More than 250 files have been modified
-    - The modified files match one of the fullBuildPatterns
-    - No modified files are passed to the function (in this case all projects are built, because the current workflow is not triggered by a pull request)
+    - The modified files contain a file that matches one of the fullBuildPatterns
 #>
-function Get-IsFullBuildRequired {
+function Get-IsPatialBuild {
     param(
         [Parameter(HelpMessage = "The modified files", Mandatory = $true)]
         [array] $modifiedFiles,
@@ -59,7 +60,7 @@ function Get-IsFullBuildRequired {
 
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
-        return $true
+        return $false
     }
 
     if (!$modifiedFiles) {
@@ -69,7 +70,7 @@ function Get-IsFullBuildRequired {
 
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
-        return $true
+        return $false
     }
 
     $fullBuildPatterns = @(Join-Path '.github' '*.json')
@@ -83,11 +84,13 @@ function Get-IsFullBuildRequired {
 
         if ($modifiedFiles -like $fullBuildFolder) {
             Write-Host "Changes to $fullBuildFolder, building all projects"
-            return $true
+            return $false
         }
     }
 
-    return $false
+    Write-Host "No changes to fullBuildPatterns, building only modified projects"
+
+    return $true
 }
 
 <#
@@ -203,10 +206,11 @@ function Get-ProjectsToBuild {
         $maxBuildDepth = 0
     )
 
+    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
     Write-Host "Determining projects to build in $baseFolder"
 
     Push-Location $baseFolder
-
     try {
         $settings = $env:Settings | ConvertFrom-Json
         $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
