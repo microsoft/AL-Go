@@ -28,11 +28,11 @@ try {
     Write-Host "::endgroup::"
 
     Write-Host "::group::Determine Full Build"
-    $isFullBuild = Get-IsFullBuildRequired -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    $isPartialBuild = -not (Get-IsFullBuildRequired -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
     Write-Host "::endgroup::"
 
     Write-Host "::group::Get Projects To Build"
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -isFullBuild $isFullBuild -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -isPartialBuild $isPartialBuild -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
     Write-Host "::endgroup::"
     #endregion
@@ -41,18 +41,18 @@ try {
     $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
     $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
     $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
-    $isFullBuild = ConvertTo-Json $isFullBuild -Depth 99 -Compress
+    $IsPartialBuildJson = ConvertTo-Json $IsPartialBuild -Depth 99 -Compress
 
     # Set output variables
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "IsFullBuild=$isFullBuild"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "IsPartialBuild=$IsPartialBuildJson"
 
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
-    Write-Host "IsFullBuild=$isFullBuild"
+    Write-Host "IsPartialBuildJson=$isPartialBuildJson"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

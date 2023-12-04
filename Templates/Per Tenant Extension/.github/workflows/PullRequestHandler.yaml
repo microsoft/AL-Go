@@ -79,9 +79,9 @@ jobs:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
 
-      - name: Calculate baseline workflow run
+      - name: Determine Baseline Workflow Run
         id: DetermineBaselineWorkflowRun
-        if: ${{ steps.determineProjectsToBuild.outputs.IsFullBuild -eq 'false' }}
+        if: ${{ fromJson(steps.determineProjectsToBuild.outputs.IsPartialBuild) }}
         uses: microsoft/AL-Go-Actions/DetermineBaselineWorkflowRun@main
         with:
           shell: powershell

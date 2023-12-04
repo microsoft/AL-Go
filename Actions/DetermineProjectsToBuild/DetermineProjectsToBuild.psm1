@@ -198,7 +198,7 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
         $baseFolder,
         [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $true)]
-        [bool] $isFullBuild,
+        [bool] $isPartialBuild,
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
         $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
@@ -219,13 +219,13 @@ function Get-ProjectsToBuild {
         $projectsOrderToBuild = @()
 
         if ($projects) {
-            if($isFullBuild) {
-                Write-Host "Full build required, building all projects"
-                $projectsToBuild = $projects
-            }
-            else {
+            if($isPartialBuild) {
                 Write-Host "Full build not required, filtering projects to build based on the modified files"
                 $projectsToBuild = FilterProjects -baseFolder $baseFolder -projects $projects -modifiedFiles $modifiedFiles
+            }
+            else {
+                Write-Host "Full build required, building all projects"
+                $projectsToBuild = $projects
             }
 
             if($settings.useProjectDependencies) {
