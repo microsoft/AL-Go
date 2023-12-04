@@ -25,12 +25,12 @@ try {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
     Write-Host "::group::Get Modified Files"
-    $modifiedFiles = Get-ModifiedFiles -token $token
+    $modifiedFiles = @(Get-ModifiedFiles -token $token)
     Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
     Write-Host "::endgroup::"
 
     Write-Host "::group::Determine Partial Build"
-    $isPartialBuild = -Get-IsPatialBuild -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    $isPartialBuild = Get-IsPatialBuild -modifiedFiles $modifiedFiles -baseFolder $baseFolder
     Write-Host "::endgroup::"
 
     Write-Host "::group::Get Projects To Build"
