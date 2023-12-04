@@ -627,7 +627,7 @@ function ReadSettings {
             "continuousDeployment"                      = $false
             "deployToGitHubPages"                       = $true
             "maxReleases"                               = 3
-            "useProjectsAsFolders"                      = $true
+            "groupByProject"                      = $true
             "includeProjects"                           = @()
             "excludeProjects"                           = @()
             "header"                                    = "Documentation for {REPOSITORY} {VERSION}"

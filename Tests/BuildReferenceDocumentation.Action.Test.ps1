@@ -53,7 +53,7 @@ Describe "BuildReferenceDocumentation Action Tests" {
         $allApps[0].ContainsKey('dummy') | Should -be $true
         $allApps[0]."dummy".Count | Should -be 3
 
-        $allApps = CalculateProjectsAndApps -tempFolder (Get-Location).Path -includeProjects @('*') -excludeProjects @('P3') -useProjectsAsFolders
+        $allApps = CalculateProjectsAndApps -tempFolder (Get-Location).Path -includeProjects @('*') -excludeProjects @('P3') -groupByProject
         $allApps.Count | Should -Be 2
         $allApps[0].Keys.Count | Should -be 3
         $allApps[0].ContainsKey('dummy') | Should -be $false

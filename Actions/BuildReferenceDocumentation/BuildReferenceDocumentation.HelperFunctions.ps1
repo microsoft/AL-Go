@@ -13,7 +13,6 @@
         Remove-Item -Path "$($tempFolder).zip" -Force
         if ($IsLinux) {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc'
-            & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
         }
         else {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
@@ -21,14 +20,17 @@
         if (-not (Test-Path $ENV:aldocPath)) {
             throw "aldoc tool not found at $ENV:aldocPath"
         }
+        if ($IsLinux) {
+            & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
+        }
         Write-Host "Installing/Updating docfx"
         CmdDo -command dotnet -arguments @("tool","update","-g docfx")
     }
-    $ENV:aldocPath
+    return $ENV:aldocPath
 }
 
-function SanitizeFileName([string] $filename) {
-    $filename.Replace('_','-').Replace('?','_').Replace('*','_').Replace(' ','-').Replace('\','-').Replace('/','-').Replace(':','-').Replace('<','-').Replace('>','-').Replace('|','-').Replace('%','pct')
+function SanitizeFileName([string] $fileName) {
+    $fileName.Replace('_','-').Replace('?','_').Replace('*','_').Replace(' ','-').Replace('\','-').Replace('/','-').Replace(':','-').Replace('<','-').Replace('>','-').Replace('|','-').Replace('%','pct')
 }
 
 function GetAppNameAndFolder {
@@ -40,7 +42,7 @@ function GetAppNameAndFolder {
     Extract-AppFileToFolder -appFilename $appFile -appFolder $tmpFolder -generateAppJson
     $appJson = Get-Content -Path (Join-Path $tmpFolder 'app.json') -Encoding utf8 | ConvertFrom-Json
     $appJson.name
-    (SanitizeFileName -filename $appJson.name).ToLower()
+    (SanitizeFileName -fileName $appJson.name).ToLower()
     Remove-Item -Path $tmpFolder -Recurse -Force
 }
 
@@ -49,7 +51,7 @@ function GenerateTocYml {
         [string] $version,
         [string[]] $allVersions,
         [hashtable] $allApps,
-        [switch] $useProjectsAsFolders
+        [switch] $groupByProject
     )
 
     $prefix = ''
@@ -80,11 +82,11 @@ function GenerateTocYml {
     $allApps | ConvertTo-Json -Depth 99 | Out-Host
     if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
         # Single project repo - do not use project names as folders
-        $useProjectsAsFolders = $false
+        $groupByProject = $false
     }
     $projects = @($allApps.Keys.GetEnumerator() | Sort-Object)
     foreach($project in $projects) {
-        if ($useProjectsAsFolders) {
+        if ($groupByProject) {
             $tocYml += @(
                 "  - name: $project"
                 "    items:"
@@ -129,7 +131,7 @@ function GenerateDocsSite {
         [string] $defaultReleaseMD,
         [string] $docsPath,
         [string] $logLevel,
-        [switch] $useProjectsAsFolders,
+        [switch] $groupByProject,
         [switch] $hostIt
     )
 
@@ -169,7 +171,7 @@ function GenerateDocsSite {
     New-Item -path $docfxPath -ItemType Directory | Out-Null
     try {
         # Generate new toc.yml with releases and apps
-        $newTocYml = GenerateTocYml -version $version -allVersions $allVersions -allApps $allApps -repoName $repoName -useProjectsAsFolders $useProjectsAsFolders
+        $newTocYml = GenerateTocYml -version $version -allVersions $allVersions -allApps $allApps -repoName $repoName -groupByProject $groupByProject
 
         # calculate apps for aldoc
         $apps = @()
@@ -250,13 +252,13 @@ function GenerateDocsSite {
 # Build a list of all projects (folders) and apps to use when building reference documentation
 # return value is a hashtable for all apps and a hashtable for all dependencies
 # Every hashtable has project name as key and an array of app files as value
-# if useProjectsAsFolders is false, all apps will be collected in one "project" called "dummy", which is never displayed
+# if groupByProject is false, all apps will be collected in one "project" called "dummy", which is never displayed
 function CalculateProjectsAndApps {
     Param(
         [string] $tempFolder,
         [string[]] $includeProjects,
         [string[]] $excludeProjects,
-        [switch] $useProjectsAsFolders
+        [switch] $groupByProject
     )
 
     if ($includeProjects.Count -eq 0) { $includeProjects = @("*") }
@@ -275,7 +277,7 @@ function CalculateProjectsAndApps {
                 if ($includeIt) {
                     $excludeIt = $null -ne ($excludeProjectList | Where-Object { $project -like $_ })
                     if (-not $excludeIt) {
-                        if (-not $useProjectsAsFolders) {
+                        if (-not $groupByProject) {
                             # use project name dummy for all apps when not using projects as folders
                             $project = 'dummy'
                         }

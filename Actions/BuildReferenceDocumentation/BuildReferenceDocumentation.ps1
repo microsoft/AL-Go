@@ -58,10 +58,10 @@ foreach($release in $releases) {
         }
         Write-Host "Version: $($release.Name):"
         Get-ChildItem -Path $tempFolder -Recurse -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($tempFolder.Length+1))" }
-        $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -useProjectsAsFolders:$settings.alDoc.useProjectsAsFolders
+        $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
         $version = $release.Name
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.alDoc.useProjectsAsFolders
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
         do {
             try {
                 $retry = $false
@@ -85,7 +85,7 @@ foreach($version in $versions) {
 }
 
 Get-ChildItem -Path $artifactsFolder -Depth 1 -File | ForEach-Object { Write-Host "- $($_.FullName.Substring($artifactsFolder.Length))" }
-$allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -useProjectsAsFolders:$settings.alDoc.useProjectsAsFolders
+$allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $artifactsFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
 $releaseNotes = ''
 if ($latestReleaseTag) {
     try {
@@ -98,7 +98,7 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -useProjectsAsFolders:$settings.alDoc.useProjectsAsFolders
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
 
 if ($artifactsFolderCreated) {
     Remove-Item $artifactsFolder -Recurse -Force
