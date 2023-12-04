@@ -32,7 +32,7 @@ function CheckBuildJobsInWorkflowRun {
     while($true) {
         $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
-        $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
+        $workflowJobs = InvokeWebRequest -Headers $headers -Uri $jobsURI | ConvertFrom-Json
 
         if($workflowJobs.jobs.Count -eq 0) {
             # No more jobs, breaking out of the loop
