@@ -103,9 +103,9 @@ function FindLatestSuccessfulCICDRun {
             }
 
             # CICD run is considered successful if all build jobs were successful
-            $areBuildJobSuccessful = CheckBuildJobsInWorkflowRun -WorkflowRunId -$CICDRun.id -token $token -api_url $api_url -repository $repository
+            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -WorkflowRunId -$CICDRun.id -token $token -api_url $api_url -repository $repository
 
-            if($areBuildJobSuccessful) {
+            if($areBuildJobsSuccessful) {
                 $lastSuccessfulCICDRun = $CICDRun.id
                 break
             }
