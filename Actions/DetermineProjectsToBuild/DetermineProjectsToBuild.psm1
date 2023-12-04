@@ -280,4 +280,4 @@ function Get-ProjectsToBuild {
     }
 }
 
-Export-ModuleMember Get-ProjectsToBuild, Get-ModifiedFiles, Get-IsFullBuildRequired
+Export-ModuleMember *-*
