@@ -198,3 +198,5 @@ function Get-ProjectsToBuild(
         Pop-Location
     }
 }
+
+Export-ModuleMember Get-ProjectsToBuild
