@@ -65,7 +65,7 @@ function Get-IsPatialBuild {
 
     if (!$modifiedFiles) {
         Write-Host "No files modified, building all projects"
-        return $true
+        return $false
     }
 
     if ($modifiedFiles.Count -ge 250) {
