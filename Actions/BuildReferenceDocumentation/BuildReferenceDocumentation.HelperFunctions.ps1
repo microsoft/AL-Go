@@ -138,10 +138,11 @@ function GenerateDocsSite {
     function ReplacePlaceHolders {
         Param(
             [string] $str,
-            [string] $version,
-            [string] $releaseNotes
+            [string] $version = '',
+            [string] $releaseNotes = '',
+            [string] $indexTemplateRelativePath = ''
         )
-        return $str.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version).Replace('{RELEASENOTES}',$releaseNotes)
+        return $str.Replace('{REPOSITORY}',$ENV:GITHUB_REPOSITORY).Replace('{VERSION}',$version).Replace('{RELEASENOTES}',$releaseNotes).Replace('{INDEXTEMPLATERELATIVEPATH}',$indexTemplateRelativePath)
     }
 
     $indexTemplateRelativePath = '.aldoc/index.md'
@@ -164,7 +165,7 @@ function GenerateDocsSite {
     else {
         $indexTemplate = $thisDefaultMD
     }
-    $indexContent = ReplacePlaceHolders -str $indexTemplate.Replace('{INDEXTEMPLATERELATIVEPATH}',$thisTemplateRelativePath) -version $version -releaseNotes $releaseNotes
+    $indexContent = ReplacePlaceHolders -str $indexTemplate -version $version -releaseNotes $releaseNotes -indexTemplateRelativePath $thisTemplateRelativePath
 
     $alDocPath = DownloadAlDoc
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -271,7 +272,8 @@ function CalculateProjectsAndApps {
     foreach($mask in 'Apps','Dependencies') {
         $allApps = @{}
         foreach($folder in (Get-ChildItem -Path $tempFolder -Filter '*' | Where-Object { $_.PSIsContainer })) {
-            if ($folder.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") {
+            if (($folder.Name -match "^(.*)-main-$mask-(\d*\.\d*\.\d*\.\d*)$") -or
+                ($folder.Name -match "^(.*)-release.*-$mask-(\d*\.\d*\.\d*\.\d*)$")) {
                 $project = $Matches[1]
                 $includeIt = $null -ne ($projectList | Where-Object { $project -like $_ })
                 if ($includeIt) {
