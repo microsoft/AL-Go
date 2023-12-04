@@ -19,7 +19,7 @@ function CheckBuildJobsInWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
-        [string] $WorkflowRunId
+        [string] $workflowRunId
     )
 
     $headers = GetHeader -token $token
@@ -30,7 +30,7 @@ function CheckBuildJobsInWorkflowRun {
     $anySuccessful = $false
 
     while($true) {
-        $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$WorkflowRunId/jobs?per_page=$per_page&page=$page"
+        $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
         $workflowJobs = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
 
@@ -101,7 +101,7 @@ function FindLatestSuccessfulCICDRun {
             }
 
             # CICD run is considered successful if all build jobs were successful
-            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -WorkflowRunId -$CICDRun.id -token $token -repository $repository
+            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -token $token -repository $repository
 
             if($areBuildJobsSuccessful) {
                 $lastSuccessfulCICDRun = $CICDRun.id
