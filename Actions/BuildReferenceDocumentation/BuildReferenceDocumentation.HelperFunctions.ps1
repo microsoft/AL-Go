@@ -169,7 +169,7 @@ function GenerateDocsSite {
 
     $alDocPath = DownloadAlDoc
     $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    New-Item -path $docfxPath -ItemType Directory | Out-Null
+    New-Item -Path $docfxPath -ItemType Directory | Out-Null
     try {
         # Generate new toc.yml with releases and apps
         $newTocYml = GenerateTocYml -version $version -allVersions $allVersions -allApps $allApps -repoName $repoName -groupByProject $groupByProject
