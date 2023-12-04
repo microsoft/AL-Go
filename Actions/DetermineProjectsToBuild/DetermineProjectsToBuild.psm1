@@ -48,7 +48,7 @@ function Get-ModifiedFiles {
     - More than 250 files have been modified
     - The modified files contain a file that matches one of the fullBuildPatterns
 #>
-function Get-IsPatialBuild {
+function Get-IsPartialBuild {
     param(
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         [string] $baseFolder,
@@ -199,12 +199,12 @@ function Get-ProjectsToBuild {
     param (
         [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
         $baseFolder,
-        [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $true)]
-        [bool] $isPartialBuild,
+        [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $false)]
+        [bool] $isPartialBuild = $false,
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-        $modifiedFiles = @(),
+        [array] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
-        $maxBuildDepth = 0
+        [int] $maxBuildDepth = 0
     )
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -224,11 +224,11 @@ function Get-ProjectsToBuild {
         if ($projects) {
             if($isPartialBuild) {
                 Write-Host "Full build not required, filtering projects to build based on the modified files"
-                $projectsToBuild = $projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFiles }
+                $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFiles })
             }
             else {
                 Write-Host "Full build required, building all projects"
-                $projectsToBuild = $projects
+                $projectsToBuild = @($projects)
             }
 
             if($settings.useProjectDependencies) {

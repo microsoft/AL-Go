@@ -5,8 +5,7 @@ Describe "Get-ProjectsToBuild" {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
-        $scriptPath = Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.ps1" -Resolve
-        . $scriptPath
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
     }
 
     BeforeEach {
@@ -157,12 +156,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
-        # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
-
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -isPartialBuild $true
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1")
@@ -202,12 +197,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
-        # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
-
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -isPartialBuild $true
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -254,12 +245,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
-        # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
-
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project1/app/app.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -isPartialBuild $true
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1")
@@ -300,12 +287,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
-        # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @() }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
-
         $modifiedFiles = @()
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -isPartialBuild $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -352,12 +335,8 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
-        #Add settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $true; projects = @(); useProjectDependencies = $false }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
-
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -isPartialBuild $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -410,7 +389,7 @@ Describe "Get-ProjectsToBuild" {
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -isPartialBuild $true
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1")
@@ -697,6 +676,78 @@ Describe "Get-ProjectsToBuild" {
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         { Get-ProjectsToBuild -baseFolder $baseFolder -maxBuildDepth 1 } | Should -Throw "The build depth is too deep, the maximum build depth is 1. You need to run 'Update AL-Go System Files' to update the workflows"
+    }
+
+    AfterEach {
+        Remove-Item $baseFolder -Force -Recurse
+    }
+}
+
+Describe "Get-IsPartialBuild" {
+    BeforeAll {
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+    }
+
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'baseFolder', Justification = 'False positive.')]
+        $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+    }
+
+    It ('returns false if the alwaysBuildAllProjects setting is set to true') {
+        # Add AL-Go settings
+        $alGoSettings = @{ alwaysBuildAllProjects = $true }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $isPartialBuild = Get-IsPartialBuild -baseFolder $baseFolder
+        $isPartialBuild | Should -Be $false
+
+        # Adding a file to the modified files should not change the result
+        $modifiedFiles = @('Project1/.AL-Go/settings.json')
+        $isPartialBuild = Get-IsPartialBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $isPartialBuild | Should -Be $false
+    }
+
+    It ('returns false if there are no modified filed') {
+        # Add AL-Go settings
+        $alGoSettings = @{ alwaysBuildAllProjects = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $isPartialBuild = Get-IsPartialBuild -baseFolder $baseFolder
+        $isPartialBuild | Should -Be $false
+    }
+
+    It ('returns false if the modified files are more than 250') {
+        # Add AL-Go settings
+        $alGoSettings = @{ alwaysBuildAllProjects = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $modifiedFiles = @()
+        for ($i = 0; $i -lt 251; $i++) {
+            $modifiedFiles += "Project$i/.AL-Go/settings.json"
+        }
+
+        $isPartialBuild = Get-IsPartialBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $isPartialBuild | Should -Be $false
+    }
+
+    It ('returns false if any of the modified files matches any of the patterns in fullBuildPatterns setting') {
+        # Add AL-Go settings
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; fullBuildPatterns = @('Project1/*') }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
+        $isPartialBuild = Get-IsPartialBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $isPartialBuild | Should -Be $false
+    }
+
+    It ('returns true if the modified files are less than 250 and none of them matches any of the patterns in fullBuildPatterns setting') {
+        # Add AL-Go settings
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; fullBuildPatterns = @('Project1/*') }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $modifiedFiles = @('Project2/.AL-Go/settings.json', 'Project3/.AL-Go/settings.json')
+        $isPartialBuild = Get-IsPartialBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $isPartialBuild | Should -Be $true
     }
 
     AfterEach {

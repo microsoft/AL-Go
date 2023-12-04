@@ -30,7 +30,7 @@ try {
     Write-Host "::endgroup::"
 
     Write-Host "::group::Determine Partial Build"
-    $isPartialBuild = Get-IsPatialBuild -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    $isPartialBuild = Get-IsPartialBuild -modifiedFiles $modifiedFiles -baseFolder $baseFolder
     Write-Host "::endgroup::"
 
     Write-Host "::group::Get Projects To Build"
