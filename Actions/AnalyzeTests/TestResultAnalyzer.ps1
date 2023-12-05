@@ -1,7 +1,7 @@
-﻿$statusOK = ":heavy_check_mark:"
-$statusWarning = ":warning:"
-$statusError = ":x:"
-$statusSkipped = ":question:"
+﻿$statusOK = " :heavy_check_mark:"
+$statusWarning = " :warning:"
+$statusError = " :x:"
+$statusSkipped = " :question:"
 
 # Build MarkDown of TestResults file
 # This function will not fail if the file does not exist or if any test errors are found
