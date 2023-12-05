@@ -19,6 +19,27 @@ If false, the templateSha repository setting is used to download specific AL-Go 
 - Issue 824 Utilize `useCompilerFolder` setting when creating an development environment for an AL-Go project.
 - Issue 828 and 825 display warnings for secrets, which might cause AL-Go for GitHub to malfunction
 
+### New Settings
+
+- `alDoc` : JSON object with properties for the ALDoc reference document generation
+  - **continuousDeployment** = Determines if reference documentation will be deployed continuously as part of CI/CD. You can run the **Deploy Reference Documentation** workflow to deploy manually or on a schedule. (Default false)
+  - **deployToGitHubPages** = Determines whether or not the reference documentation site should be deployed to GitHub Pages for the repository. In order to deploy to GitHub Pages, GitHub Pages must be enabled and set to GitHub Actions. (Default true)
+  - **maxReleases** = Maximum number of releases to include in the reference documentation. (Default 3)
+  - **groupByProject** = Determines whether projects in multi-project repositories are used as folders in reference documentation
+  - **includeProjects** = An array of projects to include in the reference documentation. (Default all)
+  - **excludeProjects** = An array of projects to exclude in the reference documentation. (Default none)-
+  - **header** = Header for the documentation site. (Default: Documentation for...)
+  - **footer** = Footer for the documentation site. (Default: Made with...)
+  - **defaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)
+  - **defaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)
+  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* 
+
+### New Workflows
+- **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.
+
+### Support for ALDoc reference documentation tool
+ALDoc reference documentation tool is now supported for generating and deploying reference documentation for your projects either continuously or manually/scheduled.
+
 ## v4.0
 
 ### Removal of the InsiderSasToken

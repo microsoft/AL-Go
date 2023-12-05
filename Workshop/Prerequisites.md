@@ -6,17 +6,19 @@ You will need:
    - Free should be enough to follow the workshop
 1. A GitHub organizational account
    - Free should be enough to follow the workshop
-1. An organizational secret called GHTOKENWORKFLOW
-   - Containing a personal access token with permissions to modify workflows.
+1. An organizational **secret** called GHTOKENWORKFLOW containing a personal access token (classic or fine-grained)
+   - Using classic tokens, the token should have **workflow** permissions (automatically includes repo permissions)
+   - Using Fine-grained tokens, the token should have **Read and Write** access to **Contents**, **Pull Requests** and **Workflows** (automatically includes Read-only access to Metadata)
    - The secret should be available to all public repositories (you cannot have organizational secret accessible for private repos in Free GitHub)
-1. An organizational variable called ALGOORGSETTINGS
+1. An organizational **variable** called ALGOORGSETTINGS
    - Containing the following JSON structure (for performance reasons)
-```
-    {
-        "useCompilerFolder": true,
-        "doNotPublishApps": true,
-        "artifact": "https://bcartifacts.azureedge.net/sandbox/22.0.54157.55210/us"
-    }
+
+```json
+  {
+    "useCompilerFolder": true,
+    "doNotPublishApps": true,
+    "artifact": "https://bcartifacts.azureedge.net/sandbox/23.0.12034.13450/us"
+  }
 ```
 
 The combination of useCompilerFolder and doNotPublishApps, means that AL-Go will never actually create a container, which saves a great amount of time.
