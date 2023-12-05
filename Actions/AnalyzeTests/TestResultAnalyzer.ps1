@@ -100,6 +100,7 @@ function GetTestResultSummaryMD {
     }
     else {
         $summarySb.Append("<i>No test results found</i>") | Out-Null
+        $failuresSummaryMD = ''
     }
     $summarySb.ToString()
     $failuresSb.ToString()
