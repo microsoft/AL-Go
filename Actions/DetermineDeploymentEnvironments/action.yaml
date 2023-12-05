@@ -24,6 +24,12 @@ outputs:
   UnknownEnvironment:
     description: Flag determining whether the environment is unknown
     value: ${{ steps.determineDeploymentEnvironments.outputs.UnknownEnvironment }}
+  GenerateALDocArtifact:
+    description: Flag determining whether to generate the ALDoc artifact
+    value: ${{ steps.determineDeploymentEnvironments.outputs.GenerateALDocArtifact }}
+  DeployALDocArtifact:
+    description: Flag determining whether to deploy the ALDoc artifact to GitHub Pages
+    value: ${{ steps.determineDeploymentEnvironments.outputs.DeployALDocArtifact }}
 runs:
   using: composite
   steps:

@@ -1,4 +1,4 @@
-name: PowerShell script
+name: Verify PR Changes
 author: Microsoft Corporation
 inputs:
   shell:

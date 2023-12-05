@@ -18,7 +18,7 @@ Deploy Apps to online environment
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | projects | | Comma-separated list of projects to deploy. | |
 | environmentName | Yes | Name of environment to deploy to |
-| artifacts | Yes | Artifacts to deploy |
+| artifacts | Yes | The artifacts to deploy or a folder in which the artifacts have been downloaded | |
 | type | | Type of delivery (CD or Release) | CD |
 
 ## OUTPUT
