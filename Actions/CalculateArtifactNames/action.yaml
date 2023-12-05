@@ -1,4 +1,4 @@
-name: PowerShell script
+name: Calculate Artifact Names
 author: Microsoft Corporation
 inputs:
   shell:

@@ -1,4 +1,4 @@
-name: Determine ArtifactUrl to use
+name: Determine ArtifactUrl
 author: Microsoft Corporation
 inputs:
   shell:

@@ -21,5 +21,7 @@ Determines the environments to be used for a build or a publish
 | DeploymentEnvironmentsJson | Deployment Environments with settings in compressed JSON format |
 | EnvironmentCount | Number of Deployment Environments |
 | UnknownEnvironment | Flag determining whether we try to publish to an unknown environment (invoke device code flow) |
+| GenerateALDocArtifact | Flag determining whether to generate the ALDoc artifact |
+| DeployALDocArtifact | Flag determining whether to deploy the ALDoc artifact to GitHub Pages |
 
 ### ENV variables

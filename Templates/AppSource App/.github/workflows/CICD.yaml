@@ -31,6 +31,8 @@ jobs:
       environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
       environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
       deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
+      generateALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.GenerateALDocArtifact }}
+      deployALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.DeployALDocArtifact }}
       deliveryTargetsJson: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
@@ -155,6 +157,53 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
 
+  DeployALDoc:
+    needs: [ Initialization, Build ]
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
+    runs-on: windows-latest
+    name: Deploy Reference Documentation
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: '.artifacts'
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
+      - name: Setup Pages
+        if: needs.Initialization.outputs.deployALDocArtifact == 1
+        uses: actions/configure-pages@v3
+
+      - name: Build Reference Documentation
+        uses: microsoft/AL-Go-Actions/BuildReferenceDocumentation@main
+        with:
+          shell: powershell
+          artifacts: '.artifacts'
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ".aldoc/_site/"
+
+      - name: Deploy to GitHub Pages
+        if: needs.Initialization.outputs.deployALDocArtifact == 1
+        id: deployment
+        uses: actions/deploy-pages@v2
+
   Deploy:
     needs: [ Initialization, Build ]
     if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
@@ -248,7 +297,7 @@ jobs:
           artifacts: '.artifacts'
 
   PostProcess:
-    needs: [ Initialization, Build, Deploy, Deliver ]
+    needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     steps:
