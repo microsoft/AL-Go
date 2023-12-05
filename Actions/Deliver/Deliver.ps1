@@ -78,69 +78,70 @@ try {
         # projectName is the project name stripped for special characters
         $projectName = $project -replace "[^a-z0-9]", "-"
         Write-Host "Project '$project'"
-        $artifactsFolder = Join-Path $baseFolder ".artifacts"
-        $artifactsFolderCreated = $false
 
-        if ($artifacts -eq '.artifacts') {
-            # Base folder is set
-        }
-        elseif ($artifacts -like "$($baseFolder)*") {
+        if ($artifacts -like "$($baseFolder)*") {
             $artifactsFolder = $artifacts
         }
-        elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
-            # latest released version
-            $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-            if ($artifacts -eq "current") {
-                $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
-            }
-            elseif ($artifacts -eq "prerelease") {
-                $release = $releases | Where-Object { -not ($_.draft) } | Select-Object -First 1
-            }
-            elseif ($artifacts -eq "draft") {
-                $release = $releases | Select-Object -First 1
-            }
-            if (!($release)) {
-                throw "Unable to locate $artifacts release"
-            }
-            New-Item $artifactsFolder -ItemType Directory | Out-Null
-            $artifactsFolderCreated = $true
-            $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
-            Write-Host "'$artifactFile'"
-            if (!$artifactFile -or !(Test-Path $artifactFile)) {
-                throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
-            }
-            if ($artifactFile -notlike '*.zip') {
-                throw "Downloaded artifact is not a .zip file"
-            }
-            Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
-            Remove-Item $artifactFile -Force
-        }
         else {
-            New-Item $artifactsFolder -ItemType Directory | Out-Null
-            $artifactsFolderCreated = $true
-            $atypes.Split(',') | ForEach-Object {
-                $atype = $_
-                $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $refname
-                if ($allArtifacts) {
-                    $allArtifacts | ForEach-Object {
-                        $artifactFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
-                        Write-Host $artifactFile
-                        if (!(Test-Path $artifactFile)) {
-                            throw "Unable to download artifact $($_.name)"
-                        }
-                        if ($artifactFile -notlike '*.zip') {
-                            throw "Downloaded artifact is not a .zip file"
-                        }
-                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
-                        Remove-Item $artifactFile -Force
-                    }
+            $artifactsFolder = Join-Path $baseFolder ".artifacts"
+            $artifactsFolderExists = Test-Path $artifactsFolder
+            if (-not $artifactsFolderExists) {
+                New-Item $artifactsFolder -ItemType Directory | Out-Null
+            }
+            if ($artifacts -eq '.artifacts') {
+                # Artifacts from this build have been downloaded
+            }
+            elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
+                # latest released version
+                $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
+                if ($artifacts -eq "current") {
+                    $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
                 }
-                else {
-                    if ($atype -eq "Apps") {
-                        throw "ERROR: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                elseif ($artifacts -eq "prerelease") {
+                    $release = $releases | Where-Object { -not ($_.draft) } | Select-Object -First 1
+                }
+                elseif ($artifacts -eq "draft") {
+                    $release = $releases | Select-Object -First 1
+                }
+                if (!($release)) {
+                    throw "Unable to locate $artifacts release"
+                }
+                $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
+                Write-Host "'$artifactFile'"
+                if (!$artifactFile -or !(Test-Path $artifactFile)) {
+                    throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+                }
+                if ($artifactFile -notlike '*.zip') {
+                    throw "Downloaded artifact is not a .zip file"
+                }
+                Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                Remove-Item $artifactFile -Force
+            }
+            else {
+                $atypes.Split(',') | ForEach-Object {
+                    $atype = $_
+                    $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $refname
+                    if ($allArtifacts) {
+                        $allArtifacts | ForEach-Object {
+                            $artifactFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
+                            Write-Host $artifactFile
+                            if (!(Test-Path $artifactFile)) {
+                                throw "Unable to download artifact $($_.name)"
+                            }
+                            if ($artifactFile -notlike '*.zip') {
+                                throw "Downloaded artifact is not a .zip file"
+                            }
+                            Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                            Remove-Item $artifactFile -Force
+                        }
                     }
                     else {
-                        Write-Host "WARNING: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                        if ($atype -eq "Apps") {
+                            throw "ERROR: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                        }
+                        else {
+                            Write-Host "WARNING: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                        }
                     }
                 }
             }
@@ -452,7 +453,7 @@ try {
             throw "Internal error, no handler for $deliveryTarget"
         }
 
-        if ($artifactsFolderCreated) {
+        if (-not $artifactsFolderExists) {
             Remove-Item $artifactsFolder -Recurse -Force
         }
     }
