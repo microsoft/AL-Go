@@ -78,9 +78,9 @@ function ModifyPullRequestHandlerWorkflow {
         [Yaml] $yaml,
         [hashtable] $repoSettings
     )
-    # The PullRequestHandler workflow can have a RepoSetting called PullRequestTrigger which specifies the trigger to use for Pull Requests
+    # The PullRequestHandler workflow can have a RepoSetting called pullRequestTrigger which specifies the trigger to use for Pull Requests
     $triggerSection = $yaml.Get('on:/pull')
-    $triggerSection.content = "$($repoSettings.PullRequestTrigger):"
+    $triggerSection.content = "$($repoSettings.pullRequestTrigger):"
     $yaml.Replace('on:/pull', $triggerSection.Content)
 
     # The PullRequestHandler workflow can have a RepoSetting called CICDPullRequestBranches, which will be used to set the branches for the workflow
@@ -92,7 +92,7 @@ function ModifyPullRequestHandlerWorkflow {
     }
 
     # update the branches: line with the new branches
-    $yaml.Replace("on:/$($repoSettings.PullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+    $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
 }
 
 function ModifyRunsOnAndShell {

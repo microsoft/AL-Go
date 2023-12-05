@@ -6,6 +6,19 @@
     [string] $type
 )
 
+function IsGitHubPagesAvailable() {
+    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
+    try {
+        Write-Host "Requesting GitHub Pages settings from GitHub"
+        $ghPages = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json
+        return ($ghPages.build_type -eq 'workflow')
+    }
+    catch {
+        return $false
+    }
+}
+
 function GetGitHubEnvironments() {
     $headers = GetHeader -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
@@ -46,6 +59,27 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+
+$includeGitHubPages = $getEnvironments.Split(',') | Where-Object { 'github-pages' -like $_ }
+$generateALDocArtifact = ($includeGitHubPages) -and (($type -eq 'Publish') -or $settings.alDoc.continuousDeployment)
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
+Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
+
+$deployToGitHubPages = $settings.alDoc.DeployToGitHubPages
+if ($generateALDocArtifact -and $deployToGitHubPages) {
+    $deployToGitHubPages = IsGitHubPagesAvailable
+    if (!$deployToGitHubPages) {
+        Write-Host "::Warning::GitHub Pages is not available in this repository (or GitHub Pages is not set to use GitHub Actions). Go to Settings -> Pages and set Source to GitHub Actions"
+    }
+}
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$deployToGitHubPages)"
+Write-Host "DeployALDocArtifact=$([int]$deployToGitHubPages)"
+
+if ($getEnvironments -eq 'github-pages') {
+    # if github-pages is specified as environment - only include if GitHub Pages is available
+    exit 0
+}
+
 Write-Host "Environment pattern to use: $getEnvironments"
 $ghEnvironments = @(GetGitHubEnvironments)
 
@@ -71,7 +105,7 @@ if (!($environments)) {
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
                 "SyncMode" = $null
-                "ContinuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
+                "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
             }
         }
@@ -103,7 +137,7 @@ else {
             "BranchesFromPolicy" = @()
             "Projects" = '*'
             "SyncMode" = $null
-            "ContinuousDeployment" = $null
+            "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
         }
 

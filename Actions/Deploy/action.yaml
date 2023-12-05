@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Deploy
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -17,7 +17,7 @@ inputs:
     description: Name of environment to deploy to
     required: true
   artifacts:
-    description: Artifacts to deploy
+    description: The artifacts to deploy or a folder in which the artifacts have been downloaded
     required: true
   type:
     description: Type of deployment (CD or Publish)

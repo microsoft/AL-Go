@@ -123,7 +123,8 @@ function GetDependencies {
     Param(
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies")
+        [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies"),
+        [string[]] $masks = @('Apps','Dependencies','TestApps')
     )
 
     if (!(Test-Path $saveToPath)) {
@@ -131,7 +132,7 @@ function GetDependencies {
     }
 
     $downloadedList = @()
-    foreach($mask in 'Apps','Dependencies','TestApps') {
+    foreach($mask in $masks) {
         foreach($dependency in $probingPathsJson) {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
@@ -574,7 +575,7 @@ function GetReleaseNotes {
     Write-Host "Generating release note $api_url/repos/$repository/releases/generate-notes"
 
     $postParams = @{
-        tag_name = $tag_name;
+        tag_name = $tag_name
     }
 
     if ($previous_tag_name) {
@@ -595,6 +596,7 @@ function DownloadRelease {
         [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $path,
         [string] $mask = "Apps",
+        [switch] $unpack,
         $release
     )
 
@@ -616,6 +618,15 @@ function DownloadRelease {
             Write-Host $uri
             $filename = Join-Path $path $asset.name
             InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
+            if ($unpack) {
+                $unzipPath = Join-Path $path $asset.name.Replace('.zip','')
+                if (Test-Path $unzipPath) {
+                    Remove-Item $unzipPath -Recurse -Force
+                }
+                Expand-Archive -Path $filename -DestinationPath $unzipPath
+                Remove-Item $filename -Force
+                $filename = $unzipPath
+            }
             $filename
         }
     }

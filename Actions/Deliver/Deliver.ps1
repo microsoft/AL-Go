@@ -9,7 +9,7 @@
     [string] $projects = "*",
     [Parameter(HelpMessage = "Delivery target (AppSource or Storage)", Mandatory = $true)]
     [string] $deliveryTarget,
-    [Parameter(HelpMessage = "Artifacts to deliver", Mandatory = $true)]
+    [Parameter(HelpMessage = "The artifacts to deliver or a folder in which the artifacts have been downloaded", Mandatory = $true)]
     [string] $artifacts,
     [Parameter(HelpMessage = "Type of delivery (CD or Release)", Mandatory = $false)]
     [ValidateSet('CD','Release')]

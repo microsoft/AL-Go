@@ -620,9 +620,21 @@ function ReadSettings {
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
-        "PullRequestTrigger"                            = "pull_request_target"
+        "pullRequestTrigger"                            = "pull_request_target"
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
+        "alDoc"                                         = [ordered]@{
+            "continuousDeployment"                      = $false
+            "deployToGitHubPages"                       = $true
+            "maxReleases"                               = 3
+            "groupByProject"                      = $true
+            "includeProjects"                           = @()
+            "excludeProjects"                           = @()
+            "header"                                    = "Documentation for {REPOSITORY} {VERSION}"
+            "footer"                                    = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
+            "defaultIndexMD"                            = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+        }
     }
 
     # Read settings from files and merge them into the settings object
@@ -1075,6 +1087,7 @@ function CheckAppDependencyProbingPaths {
         [hashTable] $settings,
         $token,
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $project = '.',
         [string[]] $includeOnlyAppIds
     )
@@ -1095,10 +1108,10 @@ function CheckAppDependencyProbingPaths {
                 throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
             }
             if ($dependency.Repo -eq ".") {
-                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                $dependency.Repo = "https://github.com/$repository"
             }
             elseif ($dependency.Repo -notlike "https://*") {
-                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$($dependency.Repo)"
+                $dependency.Repo = "https://github.com/$($dependency.Repo)"
             }
             if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
                 $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
@@ -1145,7 +1158,7 @@ function CheckAppDependencyProbingPaths {
             }
 
             if ($dependency.release_status -eq "include") {
-                if ($dependency.Repo -ne "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY") {
+                if ($dependency.Repo -ne "https://github.com/$repository") {
                     OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
                 }
                 else {
@@ -1160,7 +1173,7 @@ function CheckAppDependencyProbingPaths {
                             $thisIncludeOnlyAppIds = @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps)
                             $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
                             $depSettings = AnalyzeRepo -settings $depSettings -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
-                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
+                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -repository $repository -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
 
                             $projectPath = Join-Path $baseFolder $project -Resolve
                             Push-Location $projectPath
@@ -1503,6 +1516,7 @@ function CreateDevEnv {
         [string] $caller = 'local',
         [Parameter(Mandatory = $true)]
         [string] $baseFolder,
+        [string] $repository = "$ENV:GITHUB_REPOSITORY",
         [string] $project,
         [string] $userName = $env:Username,
 
@@ -1530,6 +1544,16 @@ function CreateDevEnv {
         throw "Specified parameters doesn't match kind=$kind"
     }
 
+    if ("$repository" -eq "") {
+        Push-Location $baseFolder
+        try {
+            $repoInfo = invoke-gh -silent -returnValue repo view --json "owner,name" | ConvertFrom-Json
+            $repository = "$($repoInfo.owner.login)/$($repoInfo.name)"
+        }
+        finally {
+            Pop-Location
+        }
+    }
     $projectFolder = Join-Path $baseFolder $project -Resolve
     $dependenciesFolder = Join-Path $projectFolder ".dependencies"
     $runAlPipelineParams = @{}
@@ -1660,7 +1684,7 @@ function CreateDevEnv {
             }
         }
         $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @params
-        $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -project $project
+        $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -repository $repository -project $project
 
         if (!$accept_insiderEula -and ($settings.artifact -like 'https://bcinsider.blob.core.windows.net/*' -or $settings.artifact -like 'https://bcinsider.azureedge.net/*')) {
             Read-Host 'Press ENTER to accept the Business Central insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) or break the script to cancel'
