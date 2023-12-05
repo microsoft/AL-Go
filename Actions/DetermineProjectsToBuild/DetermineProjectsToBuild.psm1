@@ -110,7 +110,6 @@ function ShouldBuildProject {
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         $baseFolder,
         [Parameter(HelpMessage = "A list of modified files", Mandatory = $true)]
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Used in a Where-Object filter')]
         $modifiedFiles
     )
     Write-Host "Determining whether to build project $project based on modified files"
@@ -196,13 +195,13 @@ function CreateBuildDimensions {
             - buildMode: The build mode to use
 #>
 function Get-ProjectsToBuild {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'modifiedFiles', Justification = 'False-positive. Used in a Where-Object filter')]
     param (
         [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
         $baseFolder,
         [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $false)]
         [bool] $isPartialBuild = $false,
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Used in a Where-Object filter')]
         [array] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
         [int] $maxBuildDepth = 0
