@@ -4,9 +4,7 @@
     [Parameter(HelpMessage = "Comma-separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
-    [string] $useGhTokenWorkflowForPush = 'false',
-    [Parameter(HelpMessage = "Determines whether you want to check all GitHub secrets for Common mistakes (including newlines), which can lead to problems down the road", Mandatory = $false)]
-    [bool] $checkSecretsForCommonMistakes
+    [string] $useGhTokenWorkflowForPush = 'false'
 )
 
 $buildMutexName = "AL-Go-ReadSecrets"
@@ -25,10 +23,6 @@ try {
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot ".\ReadSecretsHelper.psm1") -ArgumentList $gitHubSecrets
-
-    if ($checkSecretsForCommonMistakes) {
-        CheckSecretsForCommonMistakes
-    }
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable

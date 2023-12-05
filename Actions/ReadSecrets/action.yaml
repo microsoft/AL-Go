@@ -15,10 +15,6 @@ inputs:
     description: Determines whether you want to use the GhTokenWorkflow secret for TokenForPush
     required: false
     default: 'false'
-  CheckSecretsForCommonMistakes:
-    description: Determines whether you want to check all GitHub secrets for Common mistakes (including newlines), which can lead to problems down the road
-    required: false
-    default: 'false'
 outputs:
   Secrets:
     description: All requested secrets in compressed JSON format
@@ -35,11 +31,10 @@ runs:
       env:
         _getSecrets: ${{ inputs.getSecrets }}
         _useGhTokenWorkflowForPush: ${{ inputs.useGhTokenWorkflowForPush }}
-        _checkSecretsForCommonMistakes: ${{ inputs.CheckSecretsForCommonMistakes }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -useGhTokenWorkflowForPush $ENV:_useGhTokenWorkflowForPush -CheckSecretsForCommonMistakes ($ENV:_checkSecretsForCommonMistakes -eq 'true')
+          ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -useGhTokenWorkflowForPush $ENV:_useGhTokenWorkflowForPush
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
