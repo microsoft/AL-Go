@@ -84,8 +84,8 @@ try {
         }
         else {
             $artifactsFolder = Join-Path $baseFolder ".artifacts"
-            $artifactsFolderExists = Test-Path $artifactsFolder
-            if (-not $artifactsFolderExists) {
+            $artifactsFolderCreated = !(Test-Path $artifactsFolder)
+            if ($artifactsFolderCreated) {
                 New-Item $artifactsFolder -ItemType Directory | Out-Null
             }
             if ($artifacts -eq '.artifacts') {
@@ -453,7 +453,7 @@ try {
             throw "Internal error, no handler for $deliveryTarget"
         }
 
-        if (-not $artifactsFolderExists) {
+        if ($artifactsFolderCreated) {
             Remove-Item $artifactsFolder -Recurse -Force
         }
     }
