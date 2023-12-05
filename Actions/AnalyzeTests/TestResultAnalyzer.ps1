@@ -165,6 +165,9 @@ function GetBcptSummaryMD {
     )
 
     $bcpt = ReadBcptFile -path $path
+    if (-not $bcpt) {
+        return ''
+    }
     $baseLine = ReadBcptFile -path $baseLinePath
     # Override thresholds if thresholds file exists
     if ($thresholdsPath -and (Test-Path -path $thresholdsPath)) {
