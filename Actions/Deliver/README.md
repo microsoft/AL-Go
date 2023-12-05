@@ -18,7 +18,7 @@ Deliver App to deliveryTarget (AppSource, Storage, or...)
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | projects | | Comma-separated list of projects to deliver | * |
 | deliveryTarget | Yes | Delivery target (AppSource, Storage, GitHubPackages,...) | |
-| artifacts | Yes | The artifacts to deliver | |
+| artifacts | Yes | The artifacts to deliver or a folder in which the artifacts have been downloaded | |
 | type | | Type of delivery (CD or Release) | CD |
 | atypes | | Artifact types to deliver | Apps,Dependencies,TestApps |
 | goLive | | Only relevant for AppSource delivery type. Promote AppSource App to Go Live? | false |

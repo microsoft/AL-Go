@@ -1,4 +1,4 @@
-# Keeping your AL-Go repository up-to-date
+# FUTURE TOPIC: Keeping your AL-Go repository up-to-date
 
 This topic will be finalized later
 

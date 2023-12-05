@@ -1,30 +1,29 @@
-name: Analyze Tests
+name: Build Reference Documentation
 author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
+  token:
+    description: The GitHub token running the action
     required: false
-    default: '7b7d'
-  project:
-    description: Project to analyze
-    required: false
-    default: '.'
+    default: ${{ github.token }}
+  artifacts:
+    description: The artifacts to build documentation for or a folder in which the artifacts have been downloaded
+    required: true
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
       env:
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-        _project: ${{ inputs.project }}
+        _token: ${{ inputs.token }}
+        _artifacts: ${{ inputs.artifacts }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/AnalyzeTests.ps1 -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project
+          ${{ github.action_path }}/BuildReferenceDocumentation.ps1 -token $ENV:_token -artifacts $ENV:_artifacts
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
