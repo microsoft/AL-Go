@@ -15,7 +15,7 @@
             OutputError "Property '$key' may not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
         elseif ($shouldnot) {
-            OutPutWarning -Message "Property '$key' should not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
+            OutputWarning -Message "Property '$key' should not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
     else {
