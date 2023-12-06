@@ -191,17 +191,21 @@ function TestActionsReferences {
 
     $actionReferences = [regex]::matches($yaml, $actionReferencePattern)
 
-    $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
+    $alGoAction1Pattern = "^microsoft/AL-Go-Actions/*"
+    $alGoAction2Pattern = "^microsoft/AL-Go/Actions/*"
     $gitHubActionPattern = "^actions/*"
 
     $actionReferences | ForEach-Object {
         $origin = $_.Groups[1].Value
         $version = $_.Groups[2].Value
 
-        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern)"
+        $origin | Should -Match "($alGoAction1Pattern|$alGoAction2Pattern|$gitHubActionPattern)"
 
-        if($origin -match $alGoActionPattern) {
-            $version | Should -Match "main|preview"
+        if($origin -match $alGoAction1Pattern) {
+            $version | Should -Match "main"
+        }
+        if($origin -match $alGoAction2Pattern) {
+            $version | Should -Match "main"
         }
     }
 }
