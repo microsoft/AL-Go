@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       useLatestTroubleshooting:
-        description: Use the latest troubleshooting action from https://aka.ms/al-go
+        description: Use the latest troubleshooting action from https://github.com/microsoft/AL-Go
         type: boolean
         default: false
 
