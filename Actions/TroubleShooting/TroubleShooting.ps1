@@ -54,7 +54,12 @@ function OutputError {
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-TestALGoRepository
+try {
+    TestALGoRepository
+}
+catch {
+    OutputError -Message $_.Exception.Message
+}
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json)
 
