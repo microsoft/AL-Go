@@ -15,7 +15,7 @@
             throw "Property '$key' may not exist in $settingsDescription"
         }
         elseif ($shouldnot) {
-            OutPutWarning -Message "Property '$key' should not exist in $settingsDescription"
+            OutPutWarning -Message "Property '$key' should not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
     else {
@@ -23,7 +23,7 @@
             throw "Property '$key' must exist in $settingsDescription"
         }
         elseif ($should) {
-            OutPutWarning -Message "Property '$key' should exist in $settingsDescription"
+            OutPutWarning -Message "Property '$key' should exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
 }

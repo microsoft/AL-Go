@@ -57,7 +57,6 @@ function OutputError {
 TestALGoRepository
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json)
-. (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Settings.ps1" -Resolve)
 
 if ($global:errors.Count -eq 0) { $global:errors = @("No errors found") }
 if ($global:warnings.Count -eq 0) { $global:warnings = @("No warnings found") }
