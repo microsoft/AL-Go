@@ -18,11 +18,12 @@ function CheckSecretForCommonMistakes {
 
     try {
         $json = $secretValue | ConvertFrom-Json
+        $isJson = $true
     }
     catch {
-        $json = [PSCustomObject]@{}
+        $isJson = $false
     }
-    if ($json.PSObject.Properties.Name.Count -gt 0) {
+    if ($isJson) {
         # JSON Secrets should not contain line breaks
         if ($secretValue.contains("`n")) {
             $warnings += "- Secret $secretName contains line breaks. JSON Secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
