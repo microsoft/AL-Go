@@ -41,5 +41,13 @@ if ($global:errors.Count -eq 0) { $global:errors = @("No errors found") }
 if ($global:warnings.Count -eq 0) { $global:warnings = @("No warnings found") }
 if ($global:suggestions.Count -eq 0) { $global:suggestions = @("No suggestions found") }
 
-$summaryMD = (@("# Errors") + $global:errors + @("# Warnings") + $global:warnings + @("# Suggestions") + $global:suggestions) -join "`n"
+$summaryMD = @"
+# Troubleshooting
+This workflow runs a number of tests to check if the repository is configured correctly. This workflow is work-in-progress and will be updated with more tests over time.
+
+> [!NOTE]
+> Please follow recommendations given here before [creating an issue](https://github.com/microsoft/AL-Go/issues)
+"@
+
+$summaryMD += (@("## Errors") + $global:errors + @("## Warnings") + $global:warnings + @("## Suggestions") + $global:suggestions) -join "`n"
 Set-Content $ENV:GITHUB_STEP_SUMMARY -Value $summaryMD
