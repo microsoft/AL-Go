@@ -48,5 +48,6 @@ function CheckSecretForCommonMistakes {
 
 foreach($secretName in $gitHubSecrets.PSObject.Properties.Name) {
     $secretValue = $gitHubSecrets."$secretName"
+    Write-Host "Checking secret $secretName"
     CheckSecretForCommonMistakes -secretName $secretName -secretValue $secretValue
 }
