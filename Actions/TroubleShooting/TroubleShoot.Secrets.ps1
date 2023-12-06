@@ -17,7 +17,8 @@ $minSecretSize = 8
 
 function GetDisplaySecretName {
     Param(
-        [string] $secretName
+        [string] $secretName,
+        [bool] $displayNameOfSecrets
     )
 
     if ($displayNameOfSecrets) {
@@ -30,9 +31,8 @@ function GetDisplaySecretName {
 
 function CheckSecretForCommonMistakes {
     Param (
-        [string] $secretName,
-        [string] $secretValue,
-        [string] $displaySecretName
+        [string] $displaySecretName,
+        [string] $secretValue
     )
 
     try {
@@ -68,7 +68,7 @@ function CheckSecretForCommonMistakes {
 
 foreach($secretName in $gitHubSecrets.PSObject.Properties.Name) {
     $secretValue = $gitHubSecrets."$secretName"
-    $displaySecretName = GetDisplaySecretName -secretName $secretName
+    $displaySecretName = GetDisplaySecretName -secretName $secretName -displayNameOfSecrets $displayNameOfSecrets
     Write-Host "Checking secret $displaySecretName"
-    CheckSecretForCommonMistakes -secretName $secretName -secretValue $secretValue -displaySecretName $displaySecretName
+    CheckSecretForCommonMistakes -displaySecretName $displaySecretName -secretValue $secretValue
 }
