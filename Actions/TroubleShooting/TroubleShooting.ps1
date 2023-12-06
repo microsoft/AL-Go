@@ -40,5 +40,5 @@ if ($global:errors.Count -eq 0) { $global:errors = @("No errors found") }
 if ($global:warnings.Count -eq 0) { $global:warnings = @("No warnings found") }
 if ($global:suggestions.Count -eq 0) { $global:suggestions = @("No suggestions found") }
 
-$summaryMD = (@("# Errors") + $global:errors + @("# Warnings") + $global:warnings + @("# Suggestions") + $global:suggestions) -join "`n`n"
+$summaryMD = (@("# Errors") + $global:errors + @("# Warnings") + $global:warnings + @("# Suggestions") + $global:suggestions) -join "`n"
 Set-Content $ENV:GITHUB_STEP_SUMMARY -Value $summaryMD
