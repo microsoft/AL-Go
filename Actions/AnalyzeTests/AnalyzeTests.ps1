@@ -51,8 +51,10 @@ try {
     Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "## Test results`n`n"
     Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultsSummaryMD.Replace("\n","`n"))`n`n"
     Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultsfailuresMD.Replace("\n","`n"))`n`n"
-    Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "## Performance test results`n`n"
-    Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($bcptSummaryMD.Replace("\n","`n"))`n`n"
+    if ($bcptSummaryMD) {
+        Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "## Performance test results`n`n"
+        Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($bcptSummaryMD.Replace("\n","`n"))`n`n"
+    }
 
     TrackTrace -telemetryScope $telemetryScope
 }
