@@ -3,7 +3,7 @@ name: 'Troubleshooting'
 on:
   workflow_dispatch:
     inputs:
-      displayNamesOfSecrets:
+      displayNameOfSecrets:
         description: Display the name (not the value) of secrets available to the repository
         type: boolean
         default: true
@@ -40,7 +40,7 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          displayNamesOfSecrets: ${{ github.event.inputs.displayNamesOfSecrets }}
+          displayNameOfSecrets: ${{ github.event.inputs.displayNameOfSecrets }}
 
   LatestTroubleshooting: 
     name: microsoft/AL-Go/Actions/TroubleShooting@main
@@ -57,4 +57,4 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          displayNamesOfSecrets: ${{ github.event.inputs.displayNamesOfSecrets }}
+          displayNameOfSecrets: ${{ github.event.inputs.displayNameOfSecrets }}
