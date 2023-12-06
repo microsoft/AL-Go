@@ -5,9 +5,9 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$global:errors = @()
-$global:warnings = @()
-$global:suggestions = @()
+$script:errors = @()
+$script:warnings = @()
+$script:suggestions = @()
 
 function OutputWarning {
     Param (
@@ -15,7 +15,7 @@ function OutputWarning {
         [string] $Message
     )
 
-    $global:warnings += "- $Message"
+    $script:warnings += "- $Message"
     Write-Host "- Error: $Message"
 }
 
@@ -25,7 +25,7 @@ function OutputError {
         [string] $Message
     )
 
-    $global:errors += "- $Message"
+    $script:errors += "- $Message"
     Write-Host "- Warning: $Message"
 }
 
@@ -35,7 +35,7 @@ function OutputSuggestion {
         [string] $Message
     )
 
-    $global:suggestions += "- $Message"
+    $script:suggestions += "- $Message"
     Write-Host "- Suggestion: $Message"
 }
 
@@ -50,9 +50,9 @@ catch {
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json)
 
-if ($global:errors.Count -eq 0) { $global:errors = @("No errors found") }
-if ($global:warnings.Count -eq 0) { $global:warnings = @("No warnings found") }
-if ($global:suggestions.Count -eq 0) { $global:suggestions = @("No suggestions found") }
+if ($script:errors.Count -eq 0) { $script:errors = @("No errors found") }
+if ($script:warnings.Count -eq 0) { $script:warnings = @("No warnings found") }
+if ($script:suggestions.Count -eq 0) { $script:suggestions = @("No suggestions found") }
 
 $summaryMD = @"
 # Troubleshooting
@@ -61,5 +61,5 @@ This workflow runs a number of tests to check if the repository is configured co
 Please follow and/or include any recommendations here before [creating an issue on GitHub](https://github.com/microsoft/AL-Go/issues)`n`n
 "@
 
-$summaryMD += (@("## Errors") + $global:errors + @("## Warnings") + $global:warnings + @("## Suggestions") + $global:suggestions) -join "`n"
+$summaryMD += (@("## Errors") + $script:errors + @("## Warnings") + $script:warnings + @("## Suggestions") + $script:suggestions) -join "`n"
 Set-Content $ENV:GITHUB_STEP_SUMMARY -Value $summaryMD
