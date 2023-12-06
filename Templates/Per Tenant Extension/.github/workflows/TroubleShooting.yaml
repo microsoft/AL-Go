@@ -22,30 +22,21 @@ env:
 
 jobs:
   Troubleshooting:
-    if: github.event.inputs.useLatestTroubleshooting == 'false'
     needs: [ ]
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Troubleshooting
-        id: init
+      - name: Troubleshooting using microsoft/AL-Go-Actions/TroubleShooting@main
+        if: github.event.inputs.useLatestTroubleshooting == 'false'
         uses: microsoft/AL-Go-Actions/TroubleShooting@main
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
 
-  LatestTroubleshooting:
-    if: github.event.inputs.useLatestTroubleshooting == 'true'
-    needs: [ ]
-    runs-on: [ windows-latest ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Troubleshooting
-        id: init
+      - name: Troubleshooting using microsoft/AL-Go/Actions/TroubleShooting@main
+        if: github.event.inputs.useLatestTroubleshooting == 'true'
         uses: microsoft/AL-Go/Actions/TroubleShooting@main
         with:
           shell: powershell
