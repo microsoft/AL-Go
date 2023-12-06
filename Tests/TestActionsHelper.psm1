@@ -201,10 +201,7 @@ function TestActionsReferences {
 
         $origin | Should -Match "($alGoAction1Pattern|$alGoAction2Pattern|$gitHubActionPattern)"
 
-        if($origin -match $alGoAction1Pattern) {
-            $version | Should -Match "main"
-        }
-        if($origin -match $alGoAction2Pattern) {
+        if($origin -match "($alGoAction1Pattern|$alGoAction2Pattern)" {
             $version | Should -Match "main"
         }
     }
