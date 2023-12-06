@@ -3,6 +3,10 @@ name: 'Troubleshooting'
 on:
   workflow_dispatch:
     inputs:
+      displayNamesOfSecrets:
+        description: Display the name (not the value) of secrets available to the repository
+        type: boolean
+        default: true
       useLatestTroubleshooting:
         description: Use the latest troubleshooting action from https://github.com/microsoft/AL-Go
         type: boolean
@@ -36,6 +40,7 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
+          displayNamesOfSecrets: ${{ github.event.inputs.displayNamesOfSecrets }}
 
   LatestTroubleshooting: 
     name: microsoft/AL-Go/Actions/TroubleShooting@main
@@ -52,3 +57,4 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
+          displayNamesOfSecrets: ${{ github.event.inputs.displayNamesOfSecrets }}

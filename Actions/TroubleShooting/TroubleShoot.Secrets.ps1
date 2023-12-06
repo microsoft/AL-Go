@@ -1,6 +1,8 @@
 ﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
-    [PSCustomObject] $gitHubSecrets
+    [PSCustomObject] $gitHubSecrets,
+    [Parameter(HelpMessage = "Display the name (not the value) of secrets available to the repository", Mandatory = $true)]
+    [bool] $displayNameOfSecrets
 )
 
 #
@@ -10,10 +12,27 @@
 # This function checks for multi-line secrets displays warnings if multi-line secrets with lines containing short strings
 #
 
+# minSecretSize determines the minimum length of a secret value before a warning is displayed
+$minSecretSize = 8
+
+function GetDisplaySecretName {
+    Param(
+        [string] $secretName
+    )
+
+    if ($displayNameOfSecrets) {
+        return $secretName
+    }
+    else {
+        return "***"
+    }
+}
+
 function CheckSecretForCommonMistakes {
     Param (
         [string] $secretName,
-        [string] $secretValue
+        [string] $secretValue,
+        [string] $displaySecretName
     )
 
     try {
@@ -26,29 +45,30 @@ function CheckSecretForCommonMistakes {
     if ($isJson) {
         # JSON Secrets should not contain line breaks
         if ($secretValue.contains("`n")) {
-            OutputWarning -Message "Secret $secretName contains line breaks. JSON Secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
+            OutputWarning -Message "Secret $displaySecretName contains line breaks. JSON Secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
         }
-        # JSON Secrets properties should not contain values 3 characters or less
+        # JSON Secrets properties should not contain values shorter then $minSecretSize characters
         foreach($keyName in $json.PSObject.Properties.Name) {
             if (IsPropertySecret -propertyName $keyName) {
-                if ($json."$keyName".Length -le 4) {
-                    OutputWarning -Message "JSON Secret $secretName contains properties with very short values. These values will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+                if ($json."$keyName".Length -lt $minSecretSize) {
+                    OutputWarning -Message "JSON Secret $displaySecretName contains properties with very short values. These values will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
                 }
             }
         }
     }
     else {
         if ($secretValue.contains("`n")) {
-            OutputWarning -Message "Secret $secretName contains line breaks. GitHub Secrets available to AL-Go for GitHub should not contain line breaks."
+            OutputWarning -Message "Secret $displaySecretName contains line breaks. GitHub Secrets available to AL-Go for GitHub should not contain line breaks."
         }
-        elseif ($secretValue.Length -le 4) {
-            OutputWarning -Message "Secret $secretName has a very short value. This value will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+        elseif ($secretValue.Length -lt $minSecretSize) {
+            OutputWarning -Message "Secret $displaySecretName has a very short value. This value will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
         }
     }
 }
 
 foreach($secretName in $gitHubSecrets.PSObject.Properties.Name) {
     $secretValue = $gitHubSecrets."$secretName"
-    Write-Host "Checking secret $secretName"
-    CheckSecretForCommonMistakes -secretName $secretName -secretValue $secretValue
+    $displaySecretName = GetDisplaySecretName -secretName $secretName
+    Write-Host "Checking secret $displaySecretName"
+    CheckSecretForCommonMistakes -secretName $secretName -secretValue $secretValue -displaySecretName $displaySecretName
 }

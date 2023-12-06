@@ -8,15 +8,20 @@ inputs:
   gitHubSecrets:
     description: All GitHub Secrets in compressed JSON format
     required: true
+  displayNameOfSecrets:
+    description: Display the name (not the value) of secrets available to the repository
+    required: true
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      env:
+        _displayNameOfSecrets: ${{ inputs.displayNameOfSecrets }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/TroubleShooting.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}'
+          ${{ github.action_path }}/TroubleShooting.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -displayNameOfSecrets ($ENV:_displayNameOfSecrets -eq 'true')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

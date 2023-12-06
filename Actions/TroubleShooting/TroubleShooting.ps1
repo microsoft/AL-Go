@@ -1,6 +1,8 @@
 ﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
-    [string] $gitHubSecrets = ""
+    [string] $gitHubSecrets,
+    [Parameter(HelpMessage = "Display the name (not the value) of secrets available to the repository", Mandatory = $true)]
+    [bool] $displayNameOfSecrets
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -40,15 +42,9 @@ function OutputSuggestion {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
+TestALGoRepository
 
-try {
-    TestALGoRepository
-}
-catch {
-    OutputError -Message $_.Exception.Message
-}
-
-. (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json)
+. (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json) -displayNameOfSecrets $displayNameOfSecrets
 
 if ($script:errors.Count -eq 0) { $script:errors = @("No errors found") }
 if ($script:warnings.Count -eq 0) { $script:warnings = @("No warnings found") }
