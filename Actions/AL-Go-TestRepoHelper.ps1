@@ -97,7 +97,7 @@ function Test-JsonStr {
         Test-SettingsJson -json $json -settingsDescription $settingsDescription -type:$type
     }
     catch {
-        OutputError "$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"
+        OutputError "$($_.Exception.Message.Replace("`r",'').Replace("`n",' ')) in $settingsDescription"
     }
 
 }
