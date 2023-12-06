@@ -22,6 +22,7 @@ env:
 
 jobs:
   Troubleshooting:
+    name: Troubleshoot using microsoft/AL-Go-Actions/TroubleShooting@main
     if: github.event.inputs.useLatestTroubleshooting == 'false'
     runs-on: [ ubuntu-latest ]
     steps:
@@ -37,6 +38,7 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
 
   LatestTroubleshooting: 
+    name: Troubleshoot using microsoft/AL-Go/Actions/TroubleShooting@main
     if: github.event.inputs.useLatestTroubleshooting == 'true'
     runs-on: [ ubuntu-latest ]
     steps:
