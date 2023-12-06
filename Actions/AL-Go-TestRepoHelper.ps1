@@ -15,7 +15,7 @@
             throw "Property '$key' may not exist in $settingsDescription"
         }
         elseif ($shouldnot) {
-            Write-Host "::Warning::Property '$key' should not exist in $settingsDescription"
+            OutPutWarning -Message "Property '$key' should not exist in $settingsDescription"
         }
     }
     else {
@@ -23,7 +23,7 @@
             throw "Property '$key' must exist in $settingsDescription"
         }
         elseif ($should) {
-            Write-Host "::Warning::Property '$key' should exist in $settingsDescription"
+            OutPutWarning -Message "Property '$key' should exist in $settingsDescription"
         }
     }
 }
@@ -121,13 +121,13 @@ function TestRunnerPrerequisites {
         invoke-gh version
     }
     catch {
-        Write-Host "::Warning::GitHub CLI is not installed"
+        OutPutWarning -Message "GitHub CLI is not installed"
     }
     try {
         invoke-git version
     }
     catch {
-        Write-Host "::Warning::Git is not installed"
+        OutPutWarning -Message "Git is not installed"
     }
 }
 

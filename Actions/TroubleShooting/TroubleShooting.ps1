@@ -34,6 +34,28 @@ function AddToSummary {
     }
 }
 
+function OutputWarning {
+    Param (
+        [Parameter(Mandatory = $true)]
+        [string] $Message
+    )
+
+    AddToSummary -type Warning -Message $Message
+}
+
+function OutputError {
+    Param (
+        [Parameter(Mandatory = $true)]
+        [string] $Message
+    )
+
+    AddToSummary -type Error -Message $Message
+}
+
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
+
+TestALGoRepository
+
 . (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json)
 . (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Settings.ps1" -Resolve)
 
