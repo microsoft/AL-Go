@@ -21,20 +21,21 @@ function AddToSummary {
     switch($type) {
         'Error' {
             $global:errors += "- $Message"
-            Write-Host "Error: $Message"
+            Write-Host "- $Message"
         }
         'Warning' {
             $global:warnings += "- $Message"
-            Write-Host "Warning: $Message"
+            Write-Host "- $Message"
         }
         'Suggestion' {
             $global:suggestions += "- $Message"
-            Write-Host "Suggestion: $Message"
+            Write-Host "- $Message"
         }
     }
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json)
+. (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Settings.ps1" -Resolve)
 
 if ($global:errors.Count -eq 0) { $global:errors = @("No errors found") }
 if ($global:warnings.Count -eq 0) { $global:warnings = @("No warnings found") }
