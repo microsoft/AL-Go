@@ -14,7 +14,7 @@ permissions:
 
 defaults:
   run:
-    shell: powershell
+    shell: pwsh
 
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
@@ -22,22 +22,31 @@ env:
 
 jobs:
   Troubleshooting:
-    needs: [ ]
-    runs-on: [ windows-latest ]
+    if: github.event.inputs.useLatestTroubleshooting == 'false'
+    runs-on: [ ubuntu-latest ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          lfs: true
 
-      - name: Troubleshooting using microsoft/AL-Go-Actions/TroubleShooting@main
-        if: github.event.inputs.useLatestTroubleshooting == 'false'
+      - name: Troubleshooting
         uses: microsoft/AL-Go-Actions/TroubleShooting@main
         with:
-          shell: powershell
+          shell: pwsh
           gitHubSecrets: ${{ toJson(secrets) }}
 
-      - name: Troubleshooting using microsoft/AL-Go/Actions/TroubleShooting@main
-        if: github.event.inputs.useLatestTroubleshooting == 'true'
+  LatestTroubleshooting: 
+    if: github.event.inputs.useLatestTroubleshooting == 'true'
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Troubleshooting
         uses: microsoft/AL-Go/Actions/TroubleShooting@main
         with:
-          shell: powershell
+          shell: pwsh
           gitHubSecrets: ${{ toJson(secrets) }}
