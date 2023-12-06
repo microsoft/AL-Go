@@ -9,38 +9,14 @@ $global:errors = @()
 $global:warnings = @()
 $global:suggestions = @()
 
-function AddToSummary {
-    Param (
-        [Parameter(Mandatory = $true)]
-        [string] $Message,
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Error', 'Warning', 'Suggestion')]
-        [string] $type
-    )
-
-    switch($type) {
-        'Error' {
-            $global:errors += "- $Message"
-            Write-Host "- $Message"
-        }
-        'Warning' {
-            $global:warnings += "- $Message"
-            Write-Host "- $Message"
-        }
-        'Suggestion' {
-            $global:suggestions += "- $Message"
-            Write-Host "- $Message"
-        }
-    }
-}
-
 function OutputWarning {
     Param (
         [Parameter(Mandatory = $true)]
         [string] $Message
     )
 
-    AddToSummary -type Warning -Message $Message
+    $global:warnings += "- $Message"
+    Write-Host "- Error: $Message"
 }
 
 function OutputError {
@@ -49,7 +25,18 @@ function OutputError {
         [string] $Message
     )
 
-    AddToSummary -type Error -Message $Message
+    $global:errors += "- $Message"
+    Write-Host "- Warning: $Message"
+}
+
+function OutputSuggestion {
+    Param (
+        [Parameter(Mandatory = $true)]
+        [string] $Message
+    )
+
+    $global:suggestions += "- $Message"
+    Write-Host "- Suggestion: $Message"
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)

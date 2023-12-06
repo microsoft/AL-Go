@@ -26,23 +26,23 @@ function CheckSecretForCommonMistakes {
     if ($isJson) {
         # JSON Secrets should not contain line breaks
         if ($secretValue.contains("`n")) {
-            AddToSummary -type Warning -Message "Secret $secretName contains line breaks. JSON Secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
+            OutputWarning -Message "Secret $secretName contains line breaks. JSON Secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
         }
         # JSON Secrets properties should not contain values 3 characters or less
         foreach($keyName in $json.PSObject.Properties.Name) {
             if (IsPropertySecret -propertyName $keyName) {
                 if ($json."$keyName".Length -le 4) {
-                    AddToSummary -type Warning -Message "JSON Secret $secretName contains properties with very short values. These values will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+                    OutputWarning -Message "JSON Secret $secretName contains properties with very short values. These values will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
                 }
             }
         }
     }
     else {
         if ($secretValue.contains("`n")) {
-            AddToSummary -type Warning -Message "Secret $secretName contains line breaks. GitHub Secrets available to AL-Go for GitHub should not contain line breaks."
+            OutputWarning -Message "Secret $secretName contains line breaks. GitHub Secrets available to AL-Go for GitHub should not contain line breaks."
         }
         elseif ($secretValue.Length -le 4) {
-            AddToSummary -type Warning -Message "Secret $secretName has a very short value. This value will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+            OutputWarning -Message "Secret $secretName has a very short value. This value will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
         }
     }
 }
