@@ -84,9 +84,10 @@ try {
         }
         else {
             $artifactsFolder = Join-Path $baseFolder ".artifacts"
-            $artifactsFolderCreated = !(Test-Path $artifactsFolder)
-            if ($artifactsFolderCreated) {
+            $artifactsFolderCreated = $false
+            if (!(Test-Path $artifactsFolder)) {
                 New-Item $artifactsFolder -ItemType Directory | Out-Null
+                $artifactsFolderCreated = $true
             }
             if ($artifacts -eq '.artifacts') {
                 # Artifacts from this build have been downloaded
