@@ -36,9 +36,9 @@ function CheckSecretForCommonMistakes {
     )
 
     $warning = $false
+    $hasLineBreaks = $secretValue.contains("`n")
     try {
         $json = $secretValue | ConvertFrom-Json
-        $hasLineBreaks = $secretValue.contains("`n")
         $isJson = $true
     }
     catch {
