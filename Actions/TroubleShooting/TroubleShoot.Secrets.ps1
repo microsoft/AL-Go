@@ -25,18 +25,20 @@ function GetDisplaySecretName {
         return $secretName
     }
     else {
-        return "***"
+        return "<redacted>"
     }
 }
 
 function CheckSecretForCommonMistakes {
     Param (
-        [string] $displaySecretName,
+        [string] $displayName,
         [string] $secretValue
     )
 
+    $warning = $false
     try {
         $json = $secretValue | ConvertFrom-Json
+        $hasLineBreaks = $secretValue.contains("`n")
         $isJson = $true
     }
     catch {
@@ -44,33 +46,45 @@ function CheckSecretForCommonMistakes {
     }
     if ($isJson) {
         # JSON Secrets should not contain line breaks
-        if ($secretValue.contains("`n")) {
-            OutputWarning -Message "Secret $displaySecretName contains line breaks. JSON Secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
+        if ($hasLineBreaks) {
+            OutputWarning -Message "Secret $displayName contains line breaks. JSON formatted secrets available to AL-Go for GitHub should be compressed JSON (i.e. NOT contain any line breaks)."
+            $warning = $true
         }
         # JSON Secrets properties should not contain values shorter then $minSecretSize characters
         foreach($keyName in $json.PSObject.Properties.Name) {
             if (IsPropertySecret -propertyName $keyName) {
                 if ($json."$keyName".Length -lt $minSecretSize) {
-                    OutputWarning -Message "JSON Secret $displaySecretName contains properties with very short values. These values will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+                    OutputWarning -Message "JSON Secret $displayName contains properties with very short values. These values will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+                    $warning = $true
                 }
             }
         }
     }
     else {
-        if ($secretValue.contains("`n")) {
-            OutputWarning -Message "Secret $displaySecretName contains line breaks. GitHub Secrets available to AL-Go for GitHub should not contain line breaks."
+        if ($hasLineBreaks) {
+            OutputWarning -Message "Secret $displayName contains line breaks. GitHub Secrets available to AL-Go for GitHub should not contain line breaks."
+            $warning = $true
         }
         elseif ($secretValue.Length -lt $minSecretSize) {
-            OutputWarning -Message "Secret $displaySecretName has a very short value. This value will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+            OutputWarning -Message "Secret $displayName has a very short value. This value will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
+            $warning = $true
         }
     }
+    return $warning
 }
 
+$anyWarning = $false
 foreach($secretName in $gitHubSecrets.PSObject.Properties.Name) {
     $secretValue = $gitHubSecrets."$secretName"
-    $displaySecretName = GetDisplaySecretName -secretName $secretName -displayNameOfSecrets $displayNameOfSecrets
+    $displayName = GetDisplaySecretName -secretName $secretName -displayNameOfSecrets $displayNameOfSecrets
     if ($displayNameOfSecrets) {
         Write-Host "Checking secret $secretName"
     }
-    CheckSecretForCommonMistakes -displaySecretName $displaySecretName -secretValue $secretValue
+    if (CheckSecretForCommonMistakes -displayName $displayName -secretValue $secretValue) {
+        $anyWarning = $true
+    }
+}
+
+if ($anyWarning) {
+    OutputSuggestion -Message "Consider restricting access to secrets not needed by AL-Go for GitHub. See [this](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#reviewing-access-to-organization-level-secrets)."
 }

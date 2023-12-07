@@ -23,7 +23,7 @@
             OutputError "Property '$key' must exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
         elseif ($should) {
-            OutPutWarning -Message "Property '$key' should exist in $settingsDescription. See https://aka.ms/algosettings#$key"
+            OutputWarning -Message "Property '$key' should exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
 }
@@ -121,13 +121,13 @@ function TestRunnerPrerequisites {
         invoke-gh version
     }
     catch {
-        OutPutWarning -Message "GitHub CLI is not installed"
+        OutputWarning -Message "GitHub CLI is not installed"
     }
     try {
         invoke-git version
     }
     catch {
-        OutPutWarning -Message "Git is not installed"
+        OutputWarning -Message "Git is not installed"
     }
 }
 
