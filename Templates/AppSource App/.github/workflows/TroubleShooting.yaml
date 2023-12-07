@@ -6,7 +6,7 @@ on:
       displayNameOfSecrets:
         description: Display the name (not the value) of secrets available to the repository
         type: boolean
-        default: true
+        default: false
       useLatestTroubleshooting:
         description: Use the latest troubleshooting action from https://github.com/microsoft/AL-Go
         type: boolean
