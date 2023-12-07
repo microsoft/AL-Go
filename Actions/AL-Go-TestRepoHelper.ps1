@@ -38,7 +38,7 @@ function Test-Shell {
     if ($json.Keys -contains $property) {
         $shell = $json.$property
         if ($shell -ne 'powershell' -and $shell -ne 'pwsh') {
-            OutputError "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription. . See https://aka.ms/algosettings#$property"
+            OutputError "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription. See https://aka.ms/algosettings#$property"
         }
     }
 }
