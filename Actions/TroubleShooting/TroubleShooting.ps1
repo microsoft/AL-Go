@@ -28,7 +28,7 @@ function OutputError {
     )
 
     $script:errors += "- $Message"
-    Write-Host "- Warning: $Message"
+    Write-Host "- Error: $Message"
 }
 
 function OutputSuggestion {
