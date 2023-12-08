@@ -119,7 +119,9 @@ function FindLatestSuccessfulCICDRun {
         $page += 1
     }
 
-    if($lastSuccessfulCICDRun -eq 0) {
+    if($lastSuccessfulCICDRun -ne 0) {
+        Write-Host "Last successful CICD run for branch $branch in repository $repository is $lastSuccessfulCICDRun"
+    } else {
         Write-Host "No successful CICD run found for branch $branch in repository $repository"
     }
 
