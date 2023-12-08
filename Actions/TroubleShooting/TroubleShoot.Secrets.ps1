@@ -52,7 +52,7 @@ function CheckSecretForCommonMistakes {
         }
         # JSON Secrets properties should not contain values shorter then $minSecretSize characters
         foreach($keyName in $json.PSObject.Properties.Name) {
-            if (IsPropertySecret -propertyName $keyName) {
+            if ((IsPropertySecret -propertyName $keyName) -and ($json."$keyName" -isnot [boolean])) {
                 if ("$($json."$keyName")".Length -lt $minSecretSize) {
                     OutputWarning -Message "JSON Secret $displayName contains properties with very short values. These values will be masked, but the secret might be indirectly exposed and might also cause issues in AL-Go for GitHub."
                     $warning = $true

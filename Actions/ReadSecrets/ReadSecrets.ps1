@@ -95,9 +95,9 @@ try {
                 }
                 if ($json.Keys.Count) {
                     foreach($keyName in $json.Keys) {
-                        if (IsPropertySecret -propertyName $keyName) {
+                        if ((IsPropertySecret -propertyName $keyName) -and ($json."$keyName" -isnot [boolean])) {
                             # Mask individual values if property is secret
-                            MaskValue -key "$($secretName).$($keyName)" -value $json."$keyName"
+                            MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
                 }
