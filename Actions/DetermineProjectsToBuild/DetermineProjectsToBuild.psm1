@@ -8,7 +8,7 @@ function Get-ModifiedFiles {
         [string] $token
     )
 
-    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\GitHub-Helper.psm1" -Resolve) -DisableNameChecking
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
     if(!$env:GITHUB_EVENT_PATH) {
         Write-Host "GITHUB_EVENT_PATH not set, returning empty list of changed files"
