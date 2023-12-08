@@ -37,7 +37,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
 
 ### New Workflows
 - **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.
-- **TroubleShooting** is a workflow, which you can invoke manually to run troubleshooting on the repository and check for settings or secrets, containing illegal values. When creating issues on https://github.com/microsoft/AL-Go/issues, we might ask you to run the troubleshooter to help identify common problems.
+- **Troubleshooting** is a workflow, which you can invoke manually to run troubleshooting on the repository and check for settings or secrets, containing illegal values. When creating issues on https://github.com/microsoft/AL-Go/issues, we might ask you to run the troubleshooter to help identify common problems.
 
 ### Support for ALDoc reference documentation tool
 ALDoc reference documentation tool is now supported for generating and deploying reference documentation for your projects either continuously or manually/scheduled.
