@@ -202,7 +202,7 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $false)]
         [bool] $isPartialBuild = $false,
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-        [array] $modifiedFiles = @(),
+        [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
         [int] $maxBuildDepth = 0
     )
