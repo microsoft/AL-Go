@@ -4,7 +4,7 @@
 #>
 function Get-ModifiedFiles {
     param(
-        [Parameter(HelpMessage = "The GitHub token to use to fetch the changed files", Mandatory = $false)]
+        [Parameter(HelpMessage = "The GitHub token to use to fetch the changed files", Mandatory = $true)]
         [string] $token
     )
 
