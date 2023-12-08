@@ -209,7 +209,7 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler") {
+    if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler" -and $baseName -ne 'Troubleshooting') {
         ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings
     }
 

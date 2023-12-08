@@ -94,13 +94,10 @@ try {
                     $json = @{}
                 }
                 if ($json.Keys.Count) {
-                    if ($secretValue.contains("`n")) {
-                        throw "JSON Secret $secretName contains line breaks. JSON Secrets should be compressed JSON (i.e. NOT contain any line breaks)."
-                    }
                     foreach($keyName in $json.Keys) {
-                        if (@("Scopes","TenantId","BlobName","ContainerName","StorageAccountName") -notcontains $keyName) {
-                            # Mask individual values (but not Scopes, TenantId, BlobName, ContainerName and StorageAccountName)
-                            MaskValue -key "$($secretName).$($keyName)" -value $json."$keyName"
+                        if ((IsPropertySecret -propertyName $keyName) -and ($json."$keyName" -isnot [boolean])) {
+                            # Mask individual values if property is secret
+                            MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
                 }
