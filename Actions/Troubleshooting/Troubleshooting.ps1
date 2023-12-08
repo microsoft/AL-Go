@@ -44,7 +44,7 @@ function OutputSuggestion {
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 TestALGoRepository
 
-. (Join-Path -Path $PSScriptRoot -ChildPath "TroubleShoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json) -displayNameOfSecrets $displayNameOfSecrets
+. (Join-Path -Path $PSScriptRoot -ChildPath "Troubleshoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json) -displayNameOfSecrets $displayNameOfSecrets
 
 if ($script:errors.Count -eq 0) { $script:errors = @("No errors found") }
 if ($script:warnings.Count -eq 0) { $script:warnings = @("No warnings found") }
