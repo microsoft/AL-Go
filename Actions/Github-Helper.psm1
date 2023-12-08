@@ -821,7 +821,7 @@ function GetArtifacts {
 
     # For latest version, use the artifacts from the last successful CICD run
     if($version -eq '*') {
-        if($baselineWorkflowID -eq '0') {
+        if($baselineWorkflowID -eq '0' -or $baselineWorkflowID -eq '') {
             return @()
         }
 
