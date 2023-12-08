@@ -18,6 +18,7 @@ inputs:
   baselineWorkflowRunId:
     description: The ID of the workflow run that was used as baseline for the current build
     required: false
+    default: '0'
 outputs:
   DownloadedApps:
     description: A JSON-formatted array of paths to .app files of the apps that were downloaded
