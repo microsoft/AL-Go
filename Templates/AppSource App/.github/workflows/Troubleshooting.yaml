@@ -22,7 +22,6 @@ env:
 
 jobs:
   Troubleshooting:
-    name: microsoft/AL-Go-Actions/Troubleshooting@main
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
