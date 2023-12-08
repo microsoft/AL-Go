@@ -12,18 +12,18 @@
     $exists = $json.Keys -contains $key
     if ($exists) {
         if ($maynot) {
-            throw "Property '$key' may not exist in $settingsDescription"
+            OutputError "Property '$key' may not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
         elseif ($shouldnot) {
-            Write-Host "::Warning::Property '$key' should not exist in $settingsDescription"
+            OutputWarning -Message "Property '$key' should not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
     else {
         if ($must) {
-            throw "Property '$key' must exist in $settingsDescription"
+            OutputError "Property '$key' must exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
         elseif ($should) {
-            Write-Host "::Warning::Property '$key' should exist in $settingsDescription"
+            OutputWarning -Message "Property '$key' should exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
 }
@@ -38,7 +38,7 @@ function Test-Shell {
     if ($json.Keys -contains $property) {
         $shell = $json.$property
         if ($shell -ne 'powershell' -and $shell -ne 'pwsh') {
-            throw "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription"
+            OutputError "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription. See https://aka.ms/algosettings#$property"
         }
     }
 }
@@ -89,7 +89,7 @@ function Test-JsonStr {
     )
 
     if ($jsonStr -notlike '{*') {
-        throw "Settings in $settingsDescription is not recognized as JSON (does not start with '{'))"
+        OutputError "Settings in $settingsDescription is not recognized as JSON (does not start with '{'))"
     }
 
     try {
@@ -97,7 +97,7 @@ function Test-JsonStr {
         Test-SettingsJson -json $json -settingsDescription $settingsDescription -type:$type
     }
     catch {
-        throw "$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"
+        OutputError "$($_.Exception.Message.Replace("`r",'').Replace("`n",' ')) in $settingsDescription"
     }
 
 }
@@ -121,13 +121,13 @@ function TestRunnerPrerequisites {
         invoke-gh version
     }
     catch {
-        Write-Host "::Warning::GitHub CLI is not installed"
+        OutputWarning -Message "GitHub CLI is not installed"
     }
     try {
         invoke-git version
     }
     catch {
-        Write-Host "::Warning::Git is not installed"
+        OutputWarning -Message "Git is not installed"
     }
 }
 

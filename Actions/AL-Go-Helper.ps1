@@ -20,6 +20,7 @@ $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -95,6 +96,13 @@ function Copy-HashTable() {
         }
         $ht
     }
+}
+
+function IsPropertySecret {
+    param (
+        [string] $propertyName
+    )
+    return $notSecretProperties -notcontains $propertyName
 }
 
 function ConvertTo-HashTable() {
