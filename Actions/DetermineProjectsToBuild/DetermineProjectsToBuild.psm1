@@ -53,7 +53,7 @@ function Get-IsPartialBuild {
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         [string] $baseFolder,
         [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
-        [array] $modifiedFiles = @()
+        [string[]] $modifiedFiles = @()
     )
 
     $settings = $env:Settings | ConvertFrom-Json
