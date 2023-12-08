@@ -15,10 +15,12 @@ $excludeProjects = $settings.alDoc.excludeProjects
 $maxReleases = $settings.alDoc.maxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 $artifactsFolderCreated = $false
+if (!(Test-Path $artifactsFolder)) {
+    New-Item $artifactsFolder -ItemType Directory | Out-Null
+    $artifactsFolderCreated = $true
+}
 if ($artifacts -ne ".artifacts") {
     Write-Host "::group::Downloading artifacts"
-    $artifactsFolderCreated = $true
-    New-Item $artifactsFolder -ItemType Directory | Out-Null
     $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
     if ($allArtifacts) {
         $allArtifacts | ForEach-Object {
