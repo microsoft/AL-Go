@@ -7,7 +7,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 
 ### New Actions
 - `DumpWorkflowInfo`: Dump information about running workflow
-- `TroubleShooting` : Run troubleshooting for repository
+- `Troubleshooting` : Run troubleshooting for repository
 
 ### Update AL-Go System Files
 Add another parameter when running Update AL-Go System Files, called downloadLatest, used to indicate whether to download latest version from template repository. Default value is true.

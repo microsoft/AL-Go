@@ -1,4 +1,4 @@
-# TroubleShooting
+# Troubleshooting
 Run troubleshooting on repository
 
 ## INPUT

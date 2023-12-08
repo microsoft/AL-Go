@@ -1,9 +1,9 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
-Describe "TroubleShooting Action Tests" {
+Describe "Troubleshooting Action Tests" {
     BeforeAll {
-        $actionName = "TroubleShooting"
+        $actionName = "Troubleshooting"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]

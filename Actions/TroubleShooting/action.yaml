@@ -1,4 +1,4 @@
-name: TroubleShooting
+name: Troubleshooting
 author: Microsoft Corporation
 inputs:
   shell:
@@ -21,7 +21,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/TroubleShooting.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -displayNameOfSecrets ($ENV:_displayNameOfSecrets -eq 'true')
+          ${{ github.action_path }}/Troubleshooting.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -displayNameOfSecrets ($ENV:_displayNameOfSecrets -eq 'true')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
