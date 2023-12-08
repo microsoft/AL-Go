@@ -7,10 +7,6 @@ on:
         description: Display the name (not the value) of secrets available to the repository
         type: boolean
         default: false
-      useLatestTroubleshooting:
-        description: Use the latest troubleshooting action from https://github.com/microsoft/AL-Go
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -27,7 +23,6 @@ env:
 jobs:
   Troubleshooting:
     name: microsoft/AL-Go-Actions/TroubleShooting@main
-    if: github.event.inputs.useLatestTroubleshooting == 'false'
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
@@ -37,23 +32,6 @@ jobs:
 
       - name: Troubleshooting
         uses: microsoft/AL-Go-Actions/TroubleShooting@main
-        with:
-          shell: powershell
-          gitHubSecrets: ${{ toJson(secrets) }}
-          displayNameOfSecrets: ${{ github.event.inputs.displayNameOfSecrets }}
-
-  LatestTroubleshooting: 
-    name: microsoft/AL-Go/Actions/TroubleShooting@main
-    if: github.event.inputs.useLatestTroubleshooting == 'true'
-    runs-on: [ windows-latest ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          lfs: true
-
-      - name: Troubleshooting
-        uses: microsoft/AL-Go/Actions/TroubleShooting@main
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
