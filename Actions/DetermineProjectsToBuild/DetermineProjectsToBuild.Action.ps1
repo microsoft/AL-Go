@@ -43,18 +43,17 @@ try {
     $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
     $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
     $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
-    $IsPartialBuildJson = ConvertTo-Json $IsPartialBuild -Depth 99 -Compress
 
     # Set output variables
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "IsPartialBuild=$IsPartialBuildJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "IsPartialBuild=$isPartialBuild"
 
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
-    Write-Host "IsPartialBuildJson=$isPartialBuildJson"
+    Write-Host "IsPartialBuild=$isPartialBuild"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

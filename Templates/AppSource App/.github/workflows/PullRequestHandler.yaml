@@ -81,7 +81,7 @@ jobs:
 
       - name: Determine Baseline Workflow Run
         id: DetermineBaselineWorkflowRun
-        if: ${{ fromJson(steps.determineProjectsToBuild.outputs.IsPartialBuild) }}
+        if: ${{ steps.determineProjectsToBuild.outputs.IsPartialBuild - eq 'True' }}
         uses: microsoft/AL-Go-Actions/DetermineBaselineWorkflowRun@main
         with:
           shell: powershell
