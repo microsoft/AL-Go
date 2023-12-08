@@ -86,5 +86,5 @@ foreach($secretName in $gitHubSecrets.PSObject.Properties.Name) {
 }
 
 if ($anyWarning) {
-    OutputSuggestion -Message "Consider restricting access to secrets not needed by AL-Go for GitHub. See [this](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#reviewing-access-to-organization-level-secrets)."
+    OutputSuggestion -Message "Consider restricting access to secrets not needed by AL-Go for GitHub. See [documentation](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#reviewing-access-to-organization-level-secrets)."
 }
