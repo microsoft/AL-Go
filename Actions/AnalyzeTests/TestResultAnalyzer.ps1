@@ -3,51 +3,6 @@ $statusWarning = " :warning:"
 $statusError = " :x:"
 $statusSkipped = " :question:"
 
-function ReadBcptFile {
-    Param(
-        [string] $path
-    )
-
-    if ((-not $path) -or (-not (Test-Path -Path $path -PathType Leaf))) {
-        return $null
-    }
-
-    # Read BCPT file
-    $bcptResult = Get-Content -Path $path -Encoding UTF8 | ConvertFrom-Json
-    $suites = [ordered]@{}
-    # Sort by bcptCode, codeunitID, operation
-    foreach($measure in $bcptResult) {
-        $bcptCode = $measure.bcptCode
-        $codeunitID = $measure.codeunitID
-        $codeunitName = $measure.codeunitName
-        $operation = $measure.operation
-
-        # Create Suite if it doesn't exist
-        if(-not $suites.Contains($bcptCode)) {
-            $suites."$bcptCode" = [ordered]@{}
-        }
-        # Create Codeunit under Suite if it doesn't exist
-        if (-not $suites."$bcptCode".Contains("$codeunitID")) {
-            $suites."$bcptCode"."$codeunitID" = @{
-                "codeunitName" = $codeunitName
-                "operations" = [ordered]@{}
-            }
-        }
-        # Create Operation under Codeunit if it doesn't exist
-        if (-not $suites."$bcptCode"."$codeunitID"."operations".Contains($operation)) {
-            $suites."$bcptCode"."$codeunitID"."operations"."$operation" = @{
-                "measurements" = @()
-            }
-        }
-        # Add measurement to measurements under operation
-        $suites."$bcptCode"."$codeunitID"."operations"."$operation".measurements += @(@{
-            "durationMin" = $measure.durationMin
-            "numberOfSQLStmts" = $measure.numberOfSQLStmts
-        })
-    }
-    $suites
-}
-
 # Build MarkDown of TestResults file
 # This function will not fail if the file does not exist or if any test errors are found
 # TestResults is in JUnit format
@@ -150,6 +105,51 @@ function GetTestResultSummaryMD {
     $summarySb.ToString()
     $failuresSb.ToString()
     $failuresSummaryMD
+}
+
+function ReadBcptFile {
+    Param(
+        [string] $path
+    )
+
+    if ((-not $path) -or (-not (Test-Path -Path $path -PathType Leaf))) {
+        return $null
+    }
+
+    # Read BCPT file
+    $bcptResult = Get-Content -Path $path -Encoding UTF8 | ConvertFrom-Json
+    $suites = [ordered]@{}
+    # Sort by bcptCode, codeunitID, operation
+    foreach($measure in $bcptResult) {
+        $bcptCode = $measure.bcptCode
+        $codeunitID = $measure.codeunitID
+        $codeunitName = $measure.codeunitName
+        $operation = $measure.operation
+
+        # Create Suite if it doesn't exist
+        if(-not $suites.Contains($bcptCode)) {
+            $suites."$bcptCode" = [ordered]@{}
+        }
+        # Create Codeunit under Suite if it doesn't exist
+        if (-not $suites."$bcptCode".Contains("$codeunitID")) {
+            $suites."$bcptCode"."$codeunitID" = @{
+                "codeunitName" = $codeunitName
+                "operations" = [ordered]@{}
+            }
+        }
+        # Create Operation under Codeunit if it doesn't exist
+        if (-not $suites."$bcptCode"."$codeunitID"."operations".Contains($operation)) {
+            $suites."$bcptCode"."$codeunitID"."operations"."$operation" = @{
+                "measurements" = @()
+            }
+        }
+        # Add measurement to measurements under operation
+        $suites."$bcptCode"."$codeunitID"."operations"."$operation".measurements += @(@{
+            "durationMin" = $measure.durationMin
+            "numberOfSQLStmts" = $measure.numberOfSQLStmts
+        })
+    }
+    $suites
 }
 
 function GetBcptSummaryMD {
