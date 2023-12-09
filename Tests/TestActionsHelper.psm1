@@ -201,7 +201,7 @@ function TestActionsReferences {
         $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern)"
 
         if($origin -match $alGoActionPattern) {
-            $version | Should -Match "main|preview"
+            $version | Should -Match "main"
         }
     }
 }

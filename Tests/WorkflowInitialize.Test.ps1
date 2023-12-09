@@ -62,6 +62,7 @@ Describe "WorkflowInitialize Action Tests" {
         . (Join-Path $PSScriptRoot "..\Actions\AL-Go-TestRepoHelper.ps1" -Resolve)
 
         Mock Write-Host { }
+        Mock OutputError { throw $message }
 
         TestSettingsFiles `
             -ALGoOrgSettings '{}' `
