@@ -17,13 +17,12 @@ try {
 
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
     #endregion
 
     $telemetryScope = CreateScope -eventId 'DO0085' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     #region Action: Determine projects to build
-    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
-
     Write-Host "::group::Get Modified Files"
     $modifiedFiles = @(Get-ModifiedFiles -token $token)
     Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
