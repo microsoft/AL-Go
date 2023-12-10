@@ -116,9 +116,6 @@ function ShouldBuildProject {
 
     $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
-    #Include the base folder in the modified files
-    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
-
     $modifiedProjectFolders = @($projectFolders | Where-Object {
         $projectFolder = Join-Path $baseFolder "$_/*"
 
@@ -195,7 +192,6 @@ function CreateBuildDimensions {
             - buildMode: The build mode to use
 #>
 function Get-ProjectsToBuild {
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'modifiedFiles', Justification = 'False-positive. Used in a Where-Object filter')]
     param (
         [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
         $baseFolder,
@@ -224,7 +220,10 @@ function Get-ProjectsToBuild {
         if ($projects) {
             if($isPartialBuild) {
                 Write-Host "Full build not required, filtering projects to build based on the modified files"
-                $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFiles })
+
+                #Include the base folder in the modified files
+                $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+                $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths })
             }
             else {
                 Write-Host "Full build required, building all projects"
