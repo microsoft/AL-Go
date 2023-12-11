@@ -119,7 +119,7 @@ function ShouldBuildProject {
 
     $modifiedProjectFolders = @()
     foreach($projectFolder in $projectFolders) {
-        $projectFolder = Join-Path Join-Path $baseFolder "$projectFolder/*"
+        $projectFolder = Join-Path $baseFolder "$projectFolder/*"
 
         if ($modifiedFiles -like $projectFolder) {
             $modifiedProjectFolders += $projectFolder
