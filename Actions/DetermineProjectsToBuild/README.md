@@ -26,4 +26,4 @@ none
 | ProjectsJson | An array of AL-Go projects in compressed JSON format |
 | ProjectDependenciesJson | An object that holds the project dependencies in compressed JSON format |
 | BuildOrderJson | An array of objects that determine that build order, including build dimensions |
-| IsPartialBuild | A boolean value that indicates whether the build is partial or full build. Partial build is when some project artifacts are fetched from a baseline workflow.  |
+| BuildAllProjects | A flag that indicates whether to build all projects or only the modified ones |

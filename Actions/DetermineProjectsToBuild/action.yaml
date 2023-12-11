@@ -1,5 +1,6 @@
 name: Determine Projects to Build
 author: Microsoft Corporation
+description: Determines the projects to build based on the changes
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -23,9 +24,9 @@ outputs:
   BuildOrderJson:
     description: An array of objects that determine that build order, including build dimensions
     value: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
-  IsPartialBuild:
-    description: A boolean value that indicates whether the build is a incremental or full build.
-    value: ${{ steps.determineProjectsToBuild.outputs.IsPartialBuild }}
+  BuildAllProjects:
+    description: A flag that indicates whether to build all projects or only the modified ones
+    value: ${{ steps.determineProjectsToBuild.outputs.BuildAllProjects }}
 runs:
   using: composite
   steps:

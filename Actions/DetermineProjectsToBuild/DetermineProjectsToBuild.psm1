@@ -39,17 +39,17 @@ function Get-ModifiedFiles {
 
 <#
 .Synopsis
-    Determines whether a partial build is required.
+    Determines whether a full build is required.
 .Outputs
-    A boolean indicating whether a partial build is required.
+    A boolean indicating whether a full build is required.
 .Description
-    Determines whether a partial build is required.
-    A partial build is not required if:
+    Determines whether a full build is required.
+    A full build is required if:
     - The alwaysBuildAllProjects setting is set to true
     - More than 250 files have been modified
     - The modified files contain a file that matches one of the fullBuildPatterns
 #>
-function Get-IsPartialBuild {
+function Get-BuildAllProjects {
     param(
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         [string] $baseFolder,
@@ -61,17 +61,17 @@ function Get-IsPartialBuild {
 
     if ($settings.alwaysBuildAllProjects) {
         Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
-        return $false
+        return $true
     }
 
     if (!$modifiedFiles) {
         Write-Host "No files modified, building all projects"
-        return $false
+        return $true
     }
 
     if ($modifiedFiles.Count -ge 250) {
         Write-Host "More than 250 files modified, building all projects"
-        return $false
+        return $true
     }
 
     $fullBuildPatterns = @(Join-Path '.github' '*.json')
@@ -88,13 +88,13 @@ function Get-IsPartialBuild {
 
         if ($modifiedFiles -like $fullBuildFolder) {
             Write-Host "Changes to $fullBuildFolder, building all projects"
-            return $false
+            return $true
         }
     }
 
     Write-Host "No changes to fullBuildPatterns, building only modified projects"
 
-    return $true
+    return $false
 }
 
 <#
@@ -200,7 +200,7 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
         $baseFolder,
         [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $false)]
-        [bool] $isPartialBuild = $false,
+        [bool] $buildAllProjects = $true,
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
         [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
@@ -222,16 +222,16 @@ function Get-ProjectsToBuild {
         $projectsOrderToBuild = @()
 
         if ($projects) {
-            if($isPartialBuild) {
+            if($buildAllProjects) {
+                Write-Host "Full build required, building all projects"
+                $projectsToBuild = @($projects)
+            }
+            else {
                 Write-Host "Full build not required, filtering projects to build based on the modified files"
 
                 #Include the base folder in the modified files
                 $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
                 $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths })
-            }
-            else {
-                Write-Host "Full build required, building all projects"
-                $projectsToBuild = @($projects)
             }
 
             if($settings.useProjectDependencies) {

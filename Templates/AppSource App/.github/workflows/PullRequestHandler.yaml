@@ -81,7 +81,7 @@ jobs:
 
       - name: Determine Baseline Workflow Run
         id: DetermineBaselineWorkflowRun
-        if: steps.determineProjectsToBuild.outputs.IsPartialBuild == 'True'
+        if: steps.determineProjectsToBuild.outputs.BuildAllProjects == '0'
         uses: microsoft/AL-Go-Actions/DetermineBaselineWorkflowRun@main
         with:
           shell: powershell

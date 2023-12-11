@@ -29,11 +29,11 @@ try {
     Write-Host "::endgroup::"
 
     Write-Host "::group::Determine Partial Build"
-    $isPartialBuild = Get-IsPartialBuild -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
     Write-Host "::endgroup::"
 
     Write-Host "::group::Get Projects To Build"
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -isPartialBuild $isPartialBuild -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
     Write-Host "::endgroup::"
     #endregion
@@ -47,12 +47,12 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "IsPartialBuild=$isPartialBuild"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildAllProjects=$([int] $buildAllProjects)"
 
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
-    Write-Host "IsPartialBuild=$isPartialBuild"
+    Write-Host "BuildAllProjects=$buildAllProjects"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope
