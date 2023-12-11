@@ -1,0 +1,33 @@
+name: Determine Baseline Workflow Run
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+outputs:
+  BaselineWorkflowRunId:
+    description: The ID of the baseline workflow run
+    value: ${{ steps.determineBaselineWorkflowRun.outputs.WorkflowRunID }}
+runs:
+  using: composite
+  steps:
+    - name: Determine Projects to Build
+      shell: ${{ inputs.shell }}
+      id: determineBaselineWorkflowRun
+      env:
+        _gitHubToken: ${{ github.token }}
+        _branch: ${{ github.base_ref }}
+        _repository: ${{ github.repository }}
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/DetermineBaselineWorkflowRun.ps1 -branch $env:_branch -repository $env:_repository -token $env:_gitHubToken
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
+branding:
+  icon: terminal
+  color: blue

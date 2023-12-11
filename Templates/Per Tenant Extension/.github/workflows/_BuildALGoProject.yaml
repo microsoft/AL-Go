@@ -36,6 +36,11 @@ on:
         description: Build mode used when building the artifacts
         required: true
         type: string
+      baselineWorkflowRunId:
+        description: ID of the baseline workflow run, from where to download the current project dependencies, in case they are not built in the current workflow run
+        required: false
+        default: '0'
+        type: string
       secrets:
         description: A comma-separated string with the names of the secrets, required for the workflow.
         required: false
@@ -127,6 +132,7 @@ jobs:
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
           projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
+          baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
