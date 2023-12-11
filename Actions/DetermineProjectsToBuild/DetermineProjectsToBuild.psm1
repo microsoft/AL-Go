@@ -117,11 +117,14 @@ function ShouldBuildProject {
 
     $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
-    $modifiedProjectFolders = @($projectFolders | Where-Object {
-        $projectFolder = Join-Path $baseFolder "$_/*"
+    $modifiedProjectFolders = @()
+    foreach($projectFolder in $projectFolders) {
+        $projectFolder = Join-Path Join-Path $baseFolder "$projectFolder/*"
 
-        return $($modifiedFiles -like $projectFolder)
-    })
+        if ($modifiedFiles -like $projectFolder) {
+            $modifiedProjectFolders += $projectFolder
+        }
+    }
 
     if ($modifiedProjectFolders.Count -gt 0) {
         Write-Host "Modified files found for project $project : $($modifiedProjectFolders -join ', ')"
