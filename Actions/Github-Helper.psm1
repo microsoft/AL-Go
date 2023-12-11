@@ -933,7 +933,7 @@ function GetArtifacts {
         [Parameter(Mandatory = $true)]
         [string] $version,
         [Parameter(Mandatory = $false)]
-        [string] $baselineWorkflowID = 'none'
+        [string] $baselineWorkflowID
     )
 
     $headers = GetHeader -token $token
@@ -941,14 +941,14 @@ function GetArtifacts {
 
     # For latest version, use the artifacts from the last successful CICD run
     if($version -eq '*') {
-        if($baselineWorkflowID -eq '0' -or $baselineWorkflowID -eq '') {
-            # If the baseline workflow ID is 0 or empty, it means that there is no baseline workflow ID
-            return @()
+        if($baselineWorkflowID -eq '') {
+            # If the baseline workflow ID is empty, it means that we need to find the latest successful CICD run
+            $baselineWorkflowID = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
         }
 
-        if($baselineWorkflowID -eq 'none') {
-            # If the baseline workflow ID is 'none', it means that we need to find the latest successful CICD run
-            $baselineWorkflowID = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
+        if($baselineWorkflowID -eq '0') {
+            # If the baseline workflow ID is 0, it means that there is no baseline workflow ID
+            return @()
         }
 
         $result = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowID -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects
