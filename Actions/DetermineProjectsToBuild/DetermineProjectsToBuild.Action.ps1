@@ -32,6 +32,13 @@ try {
     $buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
     Write-Host "::endgroup::"
 
+    Write-Host "::group::Determine Baseline Workflow ID"
+    $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
+    if(-not $buildAllProjects) {
+        $baselineWorkflowRunId = FindLatestSuccessfulCICDRun -repository "$env:GITHUB_REPOSITORY" -branch "$env:GITHUB_BASE_REF" -token $token
+    }
+    Write-Host "::endgroup::"
+
     Write-Host "::group::Get Projects To Build"
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
@@ -48,11 +55,14 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildAllProjects=$([int] $buildAllProjects)"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BaselineWorkflowRunId=$baselineWorkflowRunId"
+
 
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
     Write-Host "BuildAllProjects=$buildAllProjects"
+    Write-Host "BaselineWorkflowRunId=$baselineWorkflowRunId"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

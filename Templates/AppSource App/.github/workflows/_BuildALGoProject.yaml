@@ -39,7 +39,7 @@ on:
       baselineWorkflowRunId:
         description: ID of the baseline workflow run, from where to download the current project dependencies, in case they are not built in the current workflow run
         required: false
-        default: 'none'
+        default: '0'
         type: string
       secrets:
         description: A comma-separated string with the names of the secrets, required for the workflow.
