@@ -27,6 +27,9 @@ outputs:
   BuildAllProjects:
     description: A flag that indicates whether to build all projects or only the modified ones
     value: ${{ steps.determineProjectsToBuild.outputs.BuildAllProjects }}
+  BaselineWorkflowRunId:
+    description: The ID of the workflow run from where to fetch artifacts in case when not all projects are built
+    value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
 runs:
   using: composite
   steps:
