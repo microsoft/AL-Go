@@ -113,7 +113,9 @@ if (-not $isDirectALGo) {
             $templateOwner = $realTemplateUrl.Split('/')[3]
 
             $indirectTemplateRepoSettings = $templateRepoSettings
+            Write-Host $ALGoSettingsFile
             $projectSettingsFile = Join-Path $realTemplateFolder "*/$ALGoSettingsFile"
+            Write-Host $projectSettingsFile
             if (Test-Path $projectSettingsFile -PathType Leaf) {
                 Write-Host "Read project settings from indirect template repository"
                 $indirectTemplateProjectSettings = Get-Content $projectSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
