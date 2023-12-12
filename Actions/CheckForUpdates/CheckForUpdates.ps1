@@ -88,9 +88,9 @@ $indirectTemplateProjectSettings = @{}
 
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
-    $ALGoSettingsFile = Join-Path $templateFolder "*/$repoSettingsFile"
-    if (Test-Path -Path $ALGoSettingsFile -PathType Leaf) {
-        $templateRepoSettings = Get-Content $ALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+    $myRepoSettingsFile = Join-Path $templateFolder "*/$RepoSettingsFile"
+    if (Test-Path -Path $myRepoSettingsFile -PathType Leaf) {
+        $templateRepoSettings = Get-Content $myRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
             # The template repository is a url to another AL-Go repository (an indirect template repository)
             # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the indirect template reposotiry points to the "real" template repository
@@ -113,12 +113,10 @@ if (-not $isDirectALGo) {
             $templateOwner = $realTemplateUrl.Split('/')[3]
 
             $indirectTemplateRepoSettings = $templateRepoSettings
-            Write-Host $ALGoSettingsFile
-            $projectSettingsFile = Join-Path $realTemplateFolder "*/$ALGoSettingsFile"
-            Write-Host $projectSettingsFile
-            if (Test-Path $projectSettingsFile -PathType Leaf) {
+            $myALGoSettingsFile = Join-Path $realTemplateFolder "*/$ALGoSettingsFile"
+            if (Test-Path $myALGoSettingsFile -PathType Leaf) {
                 Write-Host "Read project settings from indirect template repository"
-                $indirectTemplateProjectSettings = Get-Content $projectSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
+                $indirectTemplateProjectSettings = Get-Content $myALGoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
             }
         }
     }
