@@ -941,8 +941,8 @@ function GetArtifacts {
 
     # For latest version, use the artifacts from the last successful CICD run
     if($version -eq '*') {
-        if($baselineWorkflowID -eq '') {
-            # If the baseline workflow ID is empty, it means that we need to find the latest successful CICD run
+        if(-not $baselineWorkflowID) {
+            # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run
             $baselineWorkflowID = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
         }
 
