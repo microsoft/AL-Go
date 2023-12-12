@@ -113,7 +113,7 @@ if (-not $isDirectALGo) {
             $templateOwner = $realTemplateUrl.Split('/')[3]
 
             $indirectTemplateRepoSettings = $templateRepoSettings
-            $projectSettingsFile = Join-Path $templateFolder "*/.AL-Go/settings.json"
+            $projectSettingsFile = Join-Path $templateFolder "*/$ALGoSettingsFile"
             if (Test-Path $projectSettingsFile -PathType Leaf) {
                 Write-Host "Read project settings from indirect template repository"
                 $indirectTemplateProjectSettings = Get-Content $projectSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
@@ -181,7 +181,7 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "Update Project Settings"
                 # Copy individual settings from the indirect template repository .AL-Go/settings.json (if the setting doesn't exist in the project folder)
                 $projectSettingsFile = Join-Path $dstFolder "settings.json"
-                UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -otherSettings $indirectTemplateProjectSettings
+                UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -additionalSettings $indirectTemplateProjectSettings
                 $updateFiles += @{ "DstFile" = Join-Path $dstPath "settings.json"; "content" = (Get-Content -Path $projectSettingsFile -Encoding UTF8 -Raw) }
             }
             # Loop through all files in the template repository matching the pattern
