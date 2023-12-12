@@ -169,10 +169,10 @@ foreach($checkfile in $checkfiles) {
     $srcPath = $checkfile.srcPath
     $dstPath = $checkfile.dstPath
     $dstFolder = Join-Path $baseFolder $dstPath
-    $srcFolder = GetSrcFolder -repoSettings $repoSettings -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
+    $srcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
     $realSrcFolder = $null
     if ($realTemplateFolder) {
-        $realSrcFolder = GetSrcFolder -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
+        $realSrcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
     }
     if ($srcFolder) {
         Push-Location -Path $srcFolder
