@@ -21,6 +21,7 @@ When running a workflow or a local script, the settings are applied by reading s
 
 1.  `.AL-Go/<username>.settings.json` is the **user-specific settings file**. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
 
+<a id="basic"></a>
 ## Basic settings
 
 | Name | Description | Default value |
@@ -68,6 +69,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="UpdateGitHubGoSystemFilesSchedule"></a>UpdateGitHubGoSystemFilesSchedule | CRON schedule for when Update AL-Go System Files should run. When Update AL-Go System Files runs on a schedule, it uses direct Commit instead of creating a PR. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
 | <a id="buildModes"></a>buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go projects will be built using each built mode. Available build modes are:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: _PreprocessorSymbols_ are enabled when compiling the apps. The values for the symbols correspond to the `cleanModePreprocessorSymbols` setting of the AL-Go project.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps. |
 
+<a id="advanced"></a>
 ## Advanced settings
 
 | Name | Description | Default value |
@@ -115,6 +117,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id=""></a>appSourceContextSecretName | This setting specifies the name (**NOT the secret**) of a secret containing a json string with ClientID, TenantID and ClientSecret or RefreshToken. If this secret exists, AL-Go will can upload builds to AppSource validation. | AppSourceContext |
 | <a id=""></a>keyVaultCertificateUrlSecretName<br />keyVaultCertificatePasswordSecretName<br />keyVaultClientIdSecretName | If you want to enable KeyVault access for your AppSource App, you need to provide 3 secrets as GitHub Secrets or in the Azure KeyVault. The names of those secrets (**NOT the secrets**) should be specified in the settings file with these 3 settings. Default is to not have KeyVault access from your AppSource App. Read [this](EnableKeyVaultForAppSourceApp.md) for more information. | |
 
+<a id="conditional"></a>
 ## Conditional Settings
 In any of the settings files, you can add conditional settings by using the ConditionalSettings setting.
 
@@ -161,6 +164,11 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 
 **Note:** that you can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
 
+<a id="expert"></a>
+# Expert level
+
+The following settings and functionality requires knowledge in GitHub Workflows/Actions and PowerShell. Please only change these settings and use this functionality after careful consideration as these things might change in the future and will require you to modify the functionality you added based on this.
+
 ## Expert settings (rarely used)
 
 | Name | Description | Default value |
@@ -181,8 +189,7 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 | <a id="BcContainerHelperVersion"></a>BcContainerHelperVersion | This setting can be set to a specific version (ex. 3.0.8) of BcContainerHelper to force AL-Go to use this version. **latest** means that AL-Go will use the latest released version. **preview** means that AL-Go will use the latest preview version. **dev** means that AL-Go will use the dev branch of containerhelper. | latest (or preview for AL-Go preview) |
 | <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | [ ] |
 
-# Expert level
-
+<a id="customdelivery"></a>
 ## Custom Delivery
 
 You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named DeliverTo*.ps1 in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release.
@@ -222,6 +229,7 @@ Here are the parameters to use in your custom script:
 | `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0 |
 | `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0 |
 
+<a id="customdeployment"></a>
 ## Custom Deployment
 
 You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named `DeployTo<EnvironmentType>.ps1` in the .github folder. Default Environment Type is SaaS, but you can define your own type by specifying EnvironmentType in the `DeployTo<EnvironmentName>` setting. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
@@ -254,6 +262,16 @@ Here are the parameters to use in your custom script:
 | `$parameters.Projects` | Projects to deploy to this environment | |
 | `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
+
+
+<a id="customjobs"></a>
+## Custom jobs in AL-Go for GitHub workflows
+
+<a id="customsteps"></a>
+## Custom steps in the _BuildALGoProject workflow
+
+<a id="indirect"></a>
+## Indirect template repositories
 
 ## Run-AlPipeline script override
 
@@ -293,142 +311,6 @@ Settings, which might be relevant to set in the settings file includes
 | ObjectIdForInternalUse | BcContainerHelper will use this Object ID for internal purposes. Change if the default Object ID is in use. | 88123 |
 | TreatWarningsAsErrors | A list of AL warning codes, which should be treated as errors | [ ] |
 | DefaultNewContainerParameters | A list of parameters to be added to all container creations in this repo | { } |
-
-<a id="customjobs"></a>
-## Custom jobs in AL-Go for GitHub workflows
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-<a id="customsteps"></a>
-## Custom steps in the _BuildALGoProject workflow
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-
-<a id="indirect"></a>
-## Indirect template repositories
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-test1
-
-test2
-
-
 
 ## Your own version of AL-Go for GitHub
 
