@@ -294,6 +294,12 @@ Settings, which might be relevant to set in the settings file includes
 | TreatWarningsAsErrors | A list of AL warning codes, which should be treated as errors | [ ] |
 | DefaultNewContainerParameters | A list of parameters to be added to all container creations in this repo | { } |
 
+<a id="customjobs"></a>## Custom jobs in AL-Go for GitHub workflows
+
+<a id="customsteps"></a>## Custom steps in the _BuildALGoProject workflow
+
+<a id="indirect"></a>## Indirect template repositories
+
 ## Your own version of AL-Go for GitHub
 
 For experts only, following the description [here](Contribute.md) you can setup a local fork of **AL-Go for GitHub** and use that as your templates. You can fetch upstream changes from Microsoft regularly to incorporate these changes into your version and this way have your modified version of AL-Go for GitHub.
