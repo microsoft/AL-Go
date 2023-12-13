@@ -167,7 +167,9 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 <a id="expert"></a>
 # Expert level
 
-The following settings and functionality requires knowledge in GitHub Workflows/Actions and PowerShell. Please only change these settings and use this functionality after careful consideration as these things might change in the future and will require you to modify the functionality you added based on this.
+The settings and functionality in the expert section might requires knowledge about GitHub Workflows/Actions, yaml, docker and PowerShell. Please only change these settings and use this functionality after careful consideration as these things might change in the future and will require you to modify the functionality you added based on this.
+
+Please read the release notes carefully when installing new versions of AL-Go for GitHub.
 
 ## Expert settings (rarely used)
 
@@ -263,21 +265,13 @@ Here are the parameters to use in your custom script:
 | `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 
-
-<a id="customjobs"></a>
-## Custom jobs in AL-Go for GitHub workflows
-
-<a id="customsteps"></a>
-## Custom steps in the _BuildALGoProject workflow
-
-<a id="indirect"></a>
-## Indirect template repositories
-
 ## Run-AlPipeline script override
 
 AL-Go for GitHub utilizes the Run-AlPipeline function from BcContainerHelper to perform the actual build (compile, publish, test etc). The Run-AlPipeline function supports overriding functions for creating containers, compiling apps and a lot of other things.
 
 This functionality is also available in AL-Go for GitHub, by adding a file to the .AL-Go folder, you automatically override the function.
+
+Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the future might break the usage of these overrides.
 
 | Override | Description |
 | :-- | :-- |
@@ -302,6 +296,8 @@ The repo settings file (.github\\AL-Go-Settings.json) can contain BcContainerHel
 
 Settings, which might be relevant to set in the settings file includes
 
+Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the future might break the usage of these overrides.
+
 | Setting | Description | Default |
 | :-- | :-- | :-- |
 | baseUrl | The Base Url for the online Business Central Web Client. This should be changed when targetting embed apps. | [https://businesscentral.dynamics.com](https://businesscentral.dynamics.com) |
@@ -312,11 +308,88 @@ Settings, which might be relevant to set in the settings file includes
 | TreatWarningsAsErrors | A list of AL warning codes, which should be treated as errors | [ ] |
 | DefaultNewContainerParameters | A list of parameters to be added to all container creations in this repo | { } |
 
+<a id="customjobs"></a>
+## Custom jobs in AL-Go for GitHub workflows
+
+Adding a custom job to any AL-Go for GitHub workflow is done by adding a job with the name `CustomJob<something>` to the end of an AL-Go for GitHub workflow, like this:
+
+```
+  CustomJob-PrepareDeploy:
+    name: My Job
+    needs: [ Build ]
+    runs-on: [ ubuntu-latest ]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: This is my job
+        run: |
+          Write-Host "This is my job"
+```
+
+In the `needs` property, you specify which jobs should be complete before this job is run. If you require this job to run before other AL-Go for GitHub jobs are complete, you can add the name of this job in the `needs` property of that job, like:
+
+```
+  Deploy:
+    needs: [ Initialization, Build, **CustomJob-PrepareDeploy** ]
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
+    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
+```
+
+Custom jobs will be preserved when running Update AL-Go System Files.
+
+**Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
+
+<a id="customsteps"></a>
+## Custom steps in the _BuildALGoProject workflow
+
+Adding a custom step is done by adding a step with the name `CustomStep<something>` to the _BuildALGoProject.yaml workflow at one of these anchor points:
+- Before Read Settings
+- Before Read Secrets
+- Before or After Build
+- Before Cleanup
+
+Example, insert the following step before the Build step:
+
+```
+      - name: CustomStep that will run before the Build step
+        run: |
+          Write-Host "before build"
+
+      - name: Build
+        uses: ...
+```
+
+Custom steps will be preserved when running Update AL-Go System Files.
+
+**Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
+
+<a id="indirect"></a>
+## Indirect template repositories
+
+If you are utilizing script overrides, custom jobs, custom steps, custom delivery or like in many repositories, you might want to take advantage of the indirect template repository feature.
+
+An indirect template repository is an AL-Go for GitHub repository (without any apps), which is used as a template for the remaining AL-Go for GitHub repositories. As an example, if you are using a custom delivery script, which you want to have in all your repositories, you can create an empty AL-Go for GitHub repository, place the delivery script in the .github folder and use that repository as a template when running Update AL-Go system files in your other repositories.
+
+This would make sure that all repositories would have this script (and updated versions of the script) in the future.
+
+The items, which are currently supported from indirect template repositories are:
+- Repository script overrides in the .github folder
+- Project script overrides in the .AL-Go folder
+- Custom workflows in the .github/workflows folder
+- Custom jobs in any AL-Go for GitHub workflow
+- Custom steps in the _BuildALGoProject workflow
+- New repository settings
+- New project settings
+
+**Note** that an AL-Go for GitHub indirect template repository can be private or public.
+
 ## Your own version of AL-Go for GitHub
 
 For experts only, following the description [here](Contribute.md) you can setup a local fork of **AL-Go for GitHub** and use that as your templates. You can fetch upstream changes from Microsoft regularly to incorporate these changes into your version and this way have your modified version of AL-Go for GitHub.
 
-**Note:** Our goal is to never break repositories, which are using AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.
+> [!NOTE]
+> Our goal is to never break repositories, which are using standard AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.
 
 ---
 [back](../README.md)

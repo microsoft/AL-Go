@@ -226,7 +226,7 @@ foreach($checkfile in $checkfiles) {
                     Write-Host "Apply customizations from indirect template repository: $srcFile"
                     [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $anchors)
                 }
-                
+
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 if ($unusedALGoSystemFiles -contains $fileName) {
                     # file is not used by ALGo, remove it if it exists
