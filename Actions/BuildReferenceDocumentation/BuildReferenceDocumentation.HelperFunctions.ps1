@@ -80,7 +80,7 @@ function GenerateTocYml {
         }
     }
     $allApps | ConvertTo-Json -Depth 99 | Out-Host
-    if ($allApps.Keys.Count -eq 1 -and $allApps.Keys[0] -eq $repoName) {
+    if ($allApps.Keys.Count -eq 1 -and ($allApps.Keys[0] -eq $repoName -or $allApps.Keys[0] -eq 'dummy')) {
         # Single project repo - do not use project names as folders
         $groupByProject = $false
     }
