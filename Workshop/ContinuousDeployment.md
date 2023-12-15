@@ -38,7 +38,7 @@ New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext | set-Clipboard
 
 This command will display the well-known device login text: **To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code XXXXXXX to authenticate.**
 
-Complete the login with a Business Central user, which has access to deploy applications in the environment setup for continuous deployment. This will generate an Aothorization context for the environment and Copy it automatically to your clipboard.
+Complete the login with a Business Central user, which has access to deploy applications in the environment setup for continuous deployment. This will generate an Authorization context for the environment and Copy it automatically to your clipboard.
 
 Return to the "Add Secret" dialog from the environment configuration screen, paste the secret into the "Value" field, and click **Add secret**.
 
