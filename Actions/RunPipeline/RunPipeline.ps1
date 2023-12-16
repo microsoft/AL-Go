@@ -302,7 +302,7 @@ try {
                     $publishParams = @{
                         "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
                         "nuGetToken" = $gitHubPackagesCredential.token
-                        "packageName" = "AL-Go-$appId"
+                        "packageName" = $appId
                         "version" = $version
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
@@ -311,10 +311,10 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams -Verbose
                     }
                     else {
-                        Copy-BcNuGetPackageToFolder -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams -Verbose
                     }
 
                 }
