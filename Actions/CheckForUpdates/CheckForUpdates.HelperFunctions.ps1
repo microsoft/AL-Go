@@ -28,6 +28,8 @@ function DownloadTemplateRepository {
 
     if ($downloadLatest) {
         # Get Branches from template repository
+        Write-Host $apiUrl
+        $headers | out-host
         $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
         $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
         if (!$branchInfo) {
