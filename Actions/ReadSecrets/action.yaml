@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Read Secrets
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -9,7 +9,7 @@ inputs:
     description: All GitHub Secrets in compressed JSON format
     required: true
   getSecrets:
-    description: Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted
+    description: Comma-separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted
     required: true
   useGhTokenWorkflowForPush:
     description: Determines whether you want to use the GhTokenWorkflow secret for TokenForPush

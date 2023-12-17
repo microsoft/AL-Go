@@ -1,11 +1,10 @@
 ﻿Param(
     [Parameter(HelpMessage = "The folder to scan for projects to build", Mandatory = $true)]
     [string] $baseFolder,
-    [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-    [string[]] $modifiedFiles = @(),
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     [int] $maxBuildDepth = 0,
-
+    [Parameter(HelpMessage = "The GitHub token to use to fetch the modified files", Mandatory = $true)]
+    [string] $token,
     [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
     [string] $parentTelemetryScopeJson = '7b7d'
 )
@@ -15,16 +14,35 @@ $telemetryScope = $null
 try {
     #region Action: Setup
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
     #endregion
 
     $telemetryScope = CreateScope -eventId 'DO0085' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     #region Action: Determine projects to build
-    . (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.ps1" -Resolve)
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+    Write-Host "::group::Get Modified Files"
+    $modifiedFiles = @(Get-ModifiedFiles -token $token)
+    Write-Host "$($modifiedFiles.Count) modified file(s): $($modifiedFiles -join ', ')"
+    Write-Host "::endgroup::"
+
+    Write-Host "::group::Determine Partial Build"
+    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    Write-Host "::endgroup::"
+
+    Write-Host "::group::Determine Baseline Workflow ID"
+    $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
+    if(-not $buildAllProjects) {
+        $baselineWorkflowRunId = FindLatestSuccessfulCICDRun -repository "$env:GITHUB_REPOSITORY" -branch "$env:GITHUB_BASE_REF" -token $token
+    }
+    Write-Host "::endgroup::"
+
+    Write-Host "::group::Get Projects To Build"
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
+    Write-Host "::endgroup::"
     #endregion
 
     #region Action: Output
@@ -36,10 +54,15 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildAllProjects=$([int] $buildAllProjects)"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BaselineWorkflowRunId=$baselineWorkflowRunId"
+
 
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
+    Write-Host "BuildAllProjects=$buildAllProjects"
+    Write-Host "BaselineWorkflowRunId=$baselineWorkflowRunId"
     #endregion
 
     TrackTrace -telemetryScope $telemetryScope

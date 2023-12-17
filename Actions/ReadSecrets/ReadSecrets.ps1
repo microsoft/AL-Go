@@ -1,7 +1,7 @@
 ﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
-    [Parameter(HelpMessage = "Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
+    [Parameter(HelpMessage = "Comma-separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
     [string] $getSecrets = "",
     [Parameter(HelpMessage = "Determines whether you want to use the GhTokenWorkflow secret for TokenForPush", Mandatory = $false)]
     [string] $useGhTokenWorkflowForPush = 'false'
@@ -94,13 +94,10 @@ try {
                     $json = @{}
                 }
                 if ($json.Keys.Count) {
-                    if ($secretValue.contains("`n")) {
-                        throw "JSON Secret $secretName contains line breaks. JSON Secrets should be compressed JSON (i.e. NOT contain any line breaks)."
-                    }
                     foreach($keyName in $json.Keys) {
-                        if (@("Scopes","TenantId","BlobName","ContainerName","StorageAccountName") -notcontains $keyName) {
-                            # Mask individual values (but not Scopes, TenantId, BlobName, ContainerName and StorageAccountName)
-                            MaskValue -key "$($secretName).$($keyName)" -value $json."$keyName"
+                        if ((IsPropertySecret -propertyName $keyName) -and ($json."$keyName" -isnot [boolean])) {
+                            # Mask individual values if property is secret
+                            MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
                 }

@@ -3,8 +3,6 @@
     [string] $project,
     [Parameter(HelpMessage = "Build mode used when building the artifacts", Mandatory = $true)]
     [string] $buildMode,
-    [Parameter(HelpMessage = "Name of the branch the workflow is running on", Mandatory = $true)]
-    [string] $branchName,
     [Parameter(HelpMessage = "Suffix to add to the artifacts names", Mandatory = $false)]
     [string] $suffix
 )
@@ -18,6 +16,12 @@ $settings = $env:Settings | ConvertFrom-Json
 
 if ($project -eq ".") {
     $project = $settings.repoName
+}
+
+$branchName = $ENV:GITHUB_HEAD_REF
+# $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+if (!$branchName) {
+    $branchName = $ENV:GITHUB_REF_NAME
 }
 
 $branchName = $branchName.Replace('\', '_').Replace('/', '_')
@@ -45,7 +49,7 @@ else {
 }
 
 # Set this build artifacts name
-'Apps', 'TestApps' | ForEach-Object {
+'Apps', 'Dependencies', 'TestApps' | ForEach-Object {
     $name = "ThisBuild$($_)ArtifactsName"
     $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
     Set-OutputVariable -name $name -value $value

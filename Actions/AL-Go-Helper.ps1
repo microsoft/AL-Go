@@ -20,6 +20,7 @@ $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -95,6 +96,13 @@ function Copy-HashTable() {
         }
         $ht
     }
+}
+
+function IsPropertySecret {
+    param (
+        [string] $propertyName
+    )
+    return $notSecretProperties -notcontains $propertyName
 }
 
 function ConvertTo-HashTable() {
@@ -339,7 +347,7 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
         Remove-Item -Path "$tempName.zip" -ErrorAction SilentlyContinue
         if ($bcContainerHelperVersion -notlike "https://*") {
             # Check whether the version is already available in the cache
-            $version = Get-Content -Encoding UTF8 -Path (Join-Path $tempName 'BcContainerHelper/Version.txt')
+            $version = ([System.IO.File]::ReadAllText((Join-Path $tempName 'BcContainerHelper/Version.txt'), [System.Text.Encoding]::UTF8)).Trim()
             $cacheFolder = Join-Path $bcContainerHelperRootFolder $version
             # To avoid two agents on the same machine downloading the same version at the same time, use a mutex
             $buildMutexName = "DownloadAndImportBcContainerHelper"
@@ -530,6 +538,9 @@ function ReadSettings {
                 throw "Error reading $path. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
             }
         }
+        else {
+            Write-Host "No settings found in $path"
+        }
         return $null
     }
 
@@ -600,6 +611,7 @@ function ReadSettings {
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
         "templateUrl"                                   = ""
+        "templateSha"                                   = ""
         "templateBranch"                                = ""
         "appDependencyProbingPaths"                     = @()
         "useProjectDependencies"                        = $false
@@ -616,9 +628,21 @@ function ReadSettings {
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
-        "PullRequestTrigger"                            = "pull_request_target"
+        "pullRequestTrigger"                            = "pull_request_target"
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
+        "alDoc"                                         = [ordered]@{
+            "continuousDeployment"                      = $false
+            "deployToGitHubPages"                       = $true
+            "maxReleases"                               = 3
+            "groupByProject"                      = $true
+            "includeProjects"                           = @()
+            "excludeProjects"                           = @()
+            "header"                                    = "Documentation for {REPOSITORY} {VERSION}"
+            "footer"                                    = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
+            "defaultIndexMD"                            = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+        }
     }
 
     # Read settings from files and merge them into the settings object
@@ -1071,6 +1095,7 @@ function CheckAppDependencyProbingPaths {
         [hashTable] $settings,
         $token,
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
         [string] $project = '.',
         [string[]] $includeOnlyAppIds
     )
@@ -1091,10 +1116,10 @@ function CheckAppDependencyProbingPaths {
                 throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
             }
             if ($dependency.Repo -eq ".") {
-                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                $dependency.Repo = "https://github.com/$repository"
             }
             elseif ($dependency.Repo -notlike "https://*") {
-                $dependency.Repo = "$ENV:GITHUB_SERVER_URL/$($dependency.Repo)"
+                $dependency.Repo = "https://github.com/$($dependency.Repo)"
             }
             if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
                 $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
@@ -1141,7 +1166,7 @@ function CheckAppDependencyProbingPaths {
             }
 
             if ($dependency.release_status -eq "include") {
-                if ($dependency.Repo -ne "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY") {
+                if ($dependency.Repo -ne "https://github.com/$repository") {
                     OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
                 }
                 else {
@@ -1156,7 +1181,7 @@ function CheckAppDependencyProbingPaths {
                             $thisIncludeOnlyAppIds = @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps)
                             $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
                             $depSettings = AnalyzeRepo -settings $depSettings -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
-                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
+                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -repository $repository -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
 
                             $projectPath = Join-Path $baseFolder $project -Resolve
                             Push-Location $projectPath
@@ -1250,7 +1275,9 @@ function CloneIntoNewFolder {
     Param(
         [string] $actor,
         [string] $token,
-        [string] $branch
+        [string] $updateBranch = $ENV:GITHUB_REF_NAME,
+        [string] $newBranchPrefix = '',
+        [bool] $directCommit
     )
 
     $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -1272,13 +1299,16 @@ function CloneIntoNewFolder {
     invoke-git clone $serverUrl
 
     Set-Location *
-    invoke-git checkout $ENV:GITHUB_REF_NAME
+    invoke-git checkout $updateBranch
 
-    if ($branch) {
+    $branch = ''
+    if (!$directCommit) {
+        $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
         invoke-git checkout -b $branch
     }
 
     $serverUrl
+    $branch
 }
 
 function CommitFromNewFolder {
@@ -1289,21 +1319,29 @@ function CommitFromNewFolder {
     )
 
     invoke-git add *
-    if ($commitMessage.Length -gt 250) {
-        $commitMessage = "$($commitMessage.Substring(0,250))...)"
-    }
-    invoke-git commit --allow-empty -m "'$commitMessage'"
-    if ($branch) {
-        invoke-git push -u $serverUrl $branch
-        try {
-            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+    $status = invoke-git -returnValue status --porcelain=v1
+    if ($status) {
+        if ($commitMessage.Length -gt 250) {
+            $commitMessage = "$($commitMessage.Substring(0,250))...)"
         }
-        catch {
-            OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+        invoke-git commit --allow-empty -m "$commitMessage"
+        if ($branch) {
+            invoke-git push -u $serverUrl $branch
+            try {
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+            }
+            catch {
+                OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+            }
         }
+        else {
+            invoke-git push $serverUrl
+        }
+        return $true
     }
     else {
-        invoke-git push $serverUrl
+        Write-Host "No changes detected in files"
+        return $false
     }
 }
 
@@ -1486,6 +1524,7 @@ function CreateDevEnv {
         [string] $caller = 'local',
         [Parameter(Mandatory = $true)]
         [string] $baseFolder,
+        [string] $repository = "$ENV:GITHUB_REPOSITORY",
         [string] $project,
         [string] $userName = $env:Username,
 
@@ -1513,6 +1552,16 @@ function CreateDevEnv {
         throw "Specified parameters doesn't match kind=$kind"
     }
 
+    if ("$repository" -eq "") {
+        Push-Location $baseFolder
+        try {
+            $repoInfo = invoke-gh -silent -returnValue repo view --json "owner,name" | ConvertFrom-Json
+            $repository = "$($repoInfo.owner.login)/$($repoInfo.name)"
+        }
+        finally {
+            Pop-Location
+        }
+    }
     $projectFolder = Join-Path $baseFolder $project -Resolve
     $dependenciesFolder = Join-Path $projectFolder ".dependencies"
     $runAlPipelineParams = @{}
@@ -1643,7 +1692,7 @@ function CreateDevEnv {
             }
         }
         $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @params
-        $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -project $project
+        $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -repository $repository -project $project
 
         if (!$accept_insiderEula -and ($settings.artifact -like 'https://bcinsider.blob.core.windows.net/*' -or $settings.artifact -like 'https://bcinsider.azureedge.net/*')) {
             Read-Host 'Press ENTER to accept the Business Central insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) or break the script to cancel'
@@ -1733,141 +1782,147 @@ function CreateDevEnv {
             Remove-Item $testResultsFiles -Force
         }
 
-        Set-Location $projectFolder
-        $runAlPipelineOverrides | ForEach-Object {
-            $scriptName = $_
-            $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-            if (Test-Path -Path $scriptPath -Type Leaf) {
-                Write-Host "Add override for $scriptName"
-                $runAlPipelineParams += @{
-                    "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+        Push-Location $projectFolder
+        try {
+            $runAlPipelineOverrides | ForEach-Object {
+                $scriptName = $_
+                $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
+                if (Test-Path -Path $scriptPath -Type Leaf) {
+                    Write-Host "Add override for $scriptName"
+                    $runAlPipelineParams += @{
+                        "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+                    }
                 }
-            }
-        }
-
-        if ($kind -eq "local") {
-            $runAlPipelineParams += @{
-                "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
-                "auth"       = $auth
-                "credential" = $credential
-            }
-            if ($containerName) {
-                $runAlPipelineParams += @{
-                    "updateLaunchJson" = "Local Sandbox ($containerName)"
-                    "containerName"    = $containerName
-                }
-            }
-            else {
-                $runAlPipelineParams += @{
-                    "updateLaunchJson" = "Local Sandbox"
-                }
-            }
-        }
-        elseif ($kind -eq "cloud") {
-            if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
-                throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
             }
 
-            if ($bcAuthContext) {
-                $authContext = Renew-BcAuthContext $bcAuthContext
+            if ($kind -eq "local") {
+                $runAlPipelineParams += @{
+                    "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
+                    "auth"       = $auth
+                    "credential" = $credential
+                }
+                if ($containerName) {
+                    $runAlPipelineParams += @{
+                        "updateLaunchJson" = "Local Sandbox ($containerName)"
+                        "containerName"    = $containerName
+                    }
+                }
+                else {
+                    $runAlPipelineParams += @{
+                        "updateLaunchJson" = "Local Sandbox"
+                    }
+                }
             }
-            else {
-                $authContext = New-BcAuthContext @adminCenterApiCredentials -includeDeviceLogin:($caller -eq "local")
-            }
+            elseif ($kind -eq "cloud") {
+                if ($runAlPipelineParams.Keys -contains 'NewBcContainer') {
+                    throw "Overriding NewBcContainer is not allowed when running cloud DevEnv"
+                }
 
-            $existingEnvironment = Get-BcEnvironments -bcAuthContext $authContext | Where-Object { $_.Name -eq $environmentName }
-            if ($existingEnvironment) {
-                if ($existingEnvironment.type -ne "Sandbox") {
-                    throw "Environment $environmentName already exists and it is not a sandbox environment"
+                if ($bcAuthContext) {
+                    $authContext = Renew-BcAuthContext $bcAuthContext
                 }
-                if (!$reuseExistingEnvironment) {
-                    Remove-BcEnvironment -bcAuthContext $authContext -environment $environmentName
-                    $existingEnvironment = $null
+                else {
+                    $authContext = New-BcAuthContext @adminCenterApiCredentials -includeDeviceLogin:($caller -eq "local")
                 }
-            }
-            if ($existingEnvironment) {
-                $countryCode = $existingEnvironment.CountryCode.ToLowerInvariant()
-                $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
-            }
-            else {
-                $countryCode = $settings.country
-                New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
-                do {
-                    Start-Sleep -Seconds 10
+
+                $existingEnvironment = Get-BcEnvironments -bcAuthContext $authContext | Where-Object { $_.Name -eq $environmentName }
+                if ($existingEnvironment) {
+                    if ($existingEnvironment.type -ne "Sandbox") {
+                        throw "Environment $environmentName already exists and it is not a sandbox environment"
+                    }
+                    if (!$reuseExistingEnvironment) {
+                        Remove-BcEnvironment -bcAuthContext $authContext -environment $environmentName
+                        $existingEnvironment = $null
+                    }
+                }
+                if ($existingEnvironment) {
+                    $countryCode = $existingEnvironment.CountryCode.ToLowerInvariant()
                     $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
-                } while (!($baseApp))
-                $baseapp | Out-Host
+                }
+                else {
+                    $countryCode = $settings.country
+                    New-BcEnvironment -bcAuthContext $authContext -environment $environmentName -countryCode $countryCode -environmentType "Sandbox" | Out-Null
+                    do {
+                        Start-Sleep -Seconds 10
+                        $baseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" }
+                    } while (!($baseApp))
+                    $baseapp | Out-Host
+                }
+
+                $artifact = Get-BCArtifactUrl `
+                    -country $countryCode `
+                    -version $baseApp.Version `
+                    -select Closest
+
+                if ($artifact) {
+                    Write-Host "Using Artifacts: $artifact"
+                }
+                else {
+                    throw "No artifacts available"
+                }
+
+                $runAlPipelineParams += @{
+                    "artifact"         = $artifact
+                    "bcAuthContext"    = $authContext
+                    "environment"      = $environmentName
+                    "containerName"    = "bcServerFilesOnly"
+                    "updateLaunchJson" = "Cloud Sandbox ($environmentName)"
+                }
             }
 
-            $artifact = Get-BCArtifactUrl `
-                -country $countryCode `
-                -version $baseApp.Version `
-                -select Closest
+            "enableTaskScheduler",
+            "assignPremiumPlan",
+            "installTestRunner",
+            "installTestFramework",
+            "installTestLibraries",
+            "installPerformanceToolkit",
+            "enableCodeCop",
+            "enableAppSourceCop",
+            "enablePerTenantExtensionCop",
+            "enableUICop",
+            "useCompilerFolder" | ForEach-Object {
+                if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+            }
 
-            if ($artifact) {
-                Write-Host "Using Artifacts: $artifact"
-            }
-            else {
-                throw "No artifacts available"
+            $sharedFolder = ""
+            if ($project) {
+                $sharedFolder = $baseFolder
             }
 
-            $runAlPipelineParams += @{
-                "artifact"         = $artifact
-                "bcAuthContext"    = $authContext
-                "environment"      = $environmentName
-                "containerName"    = "bcServerFilesOnly"
-                "updateLaunchJson" = "Cloud Sandbox ($environmentName)"
-            }
+            Run-AlPipeline @runAlPipelineParams `
+                -accept_insiderEula:$accept_insiderEula `
+                -vsixFile $settings.vsixFile `
+                -pipelinename $workflowName `
+                -imageName "" `
+                -memoryLimit $settings.memoryLimit `
+                -baseFolder $projectFolder `
+                -sharedFolder $sharedFolder `
+                -licenseFile $licenseFileUrl `
+                -installApps $installApps `
+                -installTestApps $installTestApps `
+                -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
+                -appFolders $settings.appFolders `
+                -testFolders $settings.testFolders `
+                -testResultsFile $testResultsFile `
+                -testResultsFormat 'JUnit' `
+                -customCodeCops $settings.customCodeCops `
+                -azureDevOps:($caller -eq 'AzureDevOps') `
+                -gitLab:($caller -eq 'GitLab') `
+                -gitHubActions:($caller -eq 'GitHubActions') `
+                -failOn $settings.failOn `
+                -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
+                -rulesetFile $settings.rulesetFile `
+                -enableExternalRulesets:$settings.enableExternalRulesets `
+                -AppSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
+                -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
+                -doNotRunTests `
+                -doNotRunBcptTests `
+                -useDevEndpoint `
+                -keepContainer
         }
-
-        "enableTaskScheduler",
-        "assignPremiumPlan",
-        "installTestRunner",
-        "installTestFramework",
-        "installTestLibraries",
-        "installPerformanceToolkit",
-        "enableCodeCop",
-        "enableAppSourceCop",
-        "enablePerTenantExtensionCop",
-        "enableUICop" | ForEach-Object {
-            if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
+        finally {
+            Pop-Location
         }
-
-        $sharedFolder = ""
-        if ($project) {
-            $sharedFolder = $baseFolder
-        }
-
-        Run-AlPipeline @runAlPipelineParams `
-            -accept_insiderEula:$accept_insiderEula `
-            -vsixFile $settings.vsixFile `
-            -pipelinename $workflowName `
-            -imageName "" `
-            -memoryLimit $settings.memoryLimit `
-            -baseFolder $projectFolder `
-            -sharedFolder $sharedFolder `
-            -licenseFile $licenseFileUrl `
-            -installApps $installApps `
-            -installTestApps $installTestApps `
-            -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-            -appFolders $settings.appFolders `
-            -testFolders $settings.testFolders `
-            -testResultsFile $testResultsFile `
-            -testResultsFormat 'JUnit' `
-            -customCodeCops $settings.customCodeCops `
-            -azureDevOps:($caller -eq 'AzureDevOps') `
-            -gitLab:($caller -eq 'GitLab') `
-            -gitHubActions:($caller -eq 'GitHubActions') `
-            -failOn $settings.failOn `
-            -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
-            -rulesetFile $settings.rulesetFile `
-            -enableExternalRulesets:$settings.enableExternalRulesets `
-            -AppSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
-            -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
-            -doNotRunTests `
-            -doNotRunBcptTests `
-            -useDevEndpoint `
-            -keepContainer
     }
     finally {
         if ($removeEnvSecrets -and $env:Secrets) {
@@ -2072,7 +2127,7 @@ function GetBaseFolder {
 
     Push-Location $folder
     try {
-        $baseFolder = invoke-git rev-parse --show-toplevel -returnValue
+        $baseFolder = invoke-git -silent rev-parse --show-toplevel -returnValue
     }
     finally {
         Pop-Location
@@ -2212,4 +2267,35 @@ function RetryCommand {
             }
         }
     }
+}
+
+function GetProjectsFromRepository {
+    Param(
+        [string] $baseFolder,
+        [string[]] $projectsFromSettings,
+        [string] $selectProjects = ''
+    )
+    if ($projectsFromSettings) {
+        $projects = $projectsFromSettings
+    }
+    else {
+        # For multiple projects, get all folders in two levels below the base folder containing an .AL-Go folder with a settings.json file
+        $projects = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 -Force | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
+        # To support single project repositories, we check for the .AL-Go folder in the root
+        if (Test-Path (Join-Path $baseFolder ".AL-Go/settings.json") -PathType Leaf) {
+            $projects += @(".")
+        }
+    }
+    if ($selectProjects) {
+        # Filter the project list based on the projects parameter
+        if ($selectProjects.StartsWith('[')) {
+            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
+        }
+        $projectArr = $selectProjects.Split(',').Trim()
+        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
+        if ($projects.Count -eq 0) {
+            throw "No projects matches '$selectProjects'"
+        }
+    }
+    return $projects
 }

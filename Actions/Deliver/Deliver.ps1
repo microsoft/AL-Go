@@ -9,14 +9,14 @@
     [string] $projects = "*",
     [Parameter(HelpMessage = "Delivery target (AppSource or Storage)", Mandatory = $true)]
     [string] $deliveryTarget,
-    [Parameter(HelpMessage = "Artifacts to deliver", Mandatory = $true)]
+    [Parameter(HelpMessage = "The artifacts to deliver or a folder in which the artifacts have been downloaded", Mandatory = $true)]
     [string] $artifacts,
     [Parameter(HelpMessage = "Type of delivery (CD or Release)", Mandatory = $false)]
     [ValidateSet('CD','Release')]
     [string] $type = "CD",
     [Parameter(HelpMessage = "Types of artifacts to deliver (Apps,Dependencies,TestApps)", Mandatory = $false)]
     [string] $atypes = "Apps,Dependencies,TestApps",
-    [Parameter(HelpMessage = "Promote AppSource App to Go Live? (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Promote AppSource App to Go Live?", Mandatory = $false)]
     [bool] $goLive
 )
 
@@ -34,6 +34,7 @@ function EnsureAzStorageModule() {
             Import-Module  'Azure.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
             Set-Alias -Name New-AzStorageContext -Value New-AzureStorageContext -Scope Script
             Set-Alias -Name Get-AzStorageContainer -Value Get-AzureStorageContainer -Scope Script
+            Set-Alias -Name New-AzStorageContainer -Value New-AzureStorageContainer -Scope Script
             Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
         }
         else {
@@ -53,30 +54,11 @@ try {
 
     $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
 
-    if ($projects -eq '') { $projects = "*" }
-    if ($projects.StartsWith('[')) {
-        $projects = ($projects | ConvertFrom-Json) -join ","
-    }
-
     $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
 
     $baseFolder = $ENV:GITHUB_WORKSPACE
     $settings = ReadSettings -baseFolder $baseFolder
-    if ($settings.projects) {
-        $projectList = $settings.projects | Where-Object { $_ -like $projects }
-    }
-    else {
-        $projectList = @(Get-ChildItem -Path $baseFolder -Recurse -Depth 2 | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName ".AL-Go/settings.json") -PathType Leaf) } | ForEach-Object { $_.FullName.Substring($baseFolder.length+1) })
-        if (Test-Path (Join-Path $baseFolder ".AL-Go") -PathType Container) {
-            $projectList += @(".")
-        }
-    }
-    $projectArr = $projects.Split(',')
-    $projectList = @($projectList | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
-
-    if ($projectList.Count -eq 0) {
-        throw "No projects matches the pattern '$projects'"
-    }
+    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
     if ($deliveryTarget -eq "AppSource") {
         $atypes = "Apps,Dependencies"
     }
@@ -96,69 +78,71 @@ try {
         # projectName is the project name stripped for special characters
         $projectName = $project -replace "[^a-z0-9]", "-"
         Write-Host "Project '$project'"
-        $artifactsFolder = Join-Path $baseFolder ".artifacts"
-        $artifactsFolderCreated = $false
 
-        if ($artifacts -eq '.artifacts') {
-            # Base folder is set
-        }
-        elseif ($artifacts -like "$($baseFolder)*") {
+        if ($artifacts -like "$($baseFolder)*") {
             $artifactsFolder = $artifacts
         }
-        elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
-            # latest released version
-            $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
-            if ($artifacts -eq "current") {
-                $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
-            }
-            elseif ($artifacts -eq "prerelease") {
-                $release = $releases | Where-Object { -not ($_.draft) } | Select-Object -First 1
-            }
-            elseif ($artifacts -eq "draft") {
-                $release = $releases | Select-Object -First 1
-            }
-            if (!($release)) {
-                throw "Unable to locate $artifacts release"
-            }
-            New-Item $artifactsFolder -ItemType Directory | Out-Null
-            $artifactsFolderCreated = $true
-            $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
-            Write-Host "'$artifactFile'"
-            if (!$artifactFile -or !(Test-Path $artifactFile)) {
-                throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
-            }
-            if ($artifactFile -notlike '*.zip') {
-                throw "Downloaded artifact is not a .zip file"
-            }
-            Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
-            Remove-Item $artifactFile -Force
-        }
         else {
-            New-Item $artifactsFolder -ItemType Directory | Out-Null
-            $artifactsFolderCreated = $true
-            $atypes.Split(',') | ForEach-Object {
-                $atype = $_
-                $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -Version $artifacts -branch $refname
-                if ($allArtifacts) {
-                    $allArtifacts | ForEach-Object {
-                        $artifactFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
-                        Write-Host $artifactFile
-                        if (!(Test-Path $artifactFile)) {
-                            throw "Unable to download artifact $($_.name)"
-                        }
-                        if ($artifactFile -notlike '*.zip') {
-                            throw "Downloaded artifact is not a .zip file"
-                        }
-                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
-                        Remove-Item $artifactFile -Force
-                    }
+            $artifactsFolder = Join-Path $baseFolder ".artifacts"
+            $artifactsFolderCreated = $false
+            if (!(Test-Path $artifactsFolder)) {
+                New-Item $artifactsFolder -ItemType Directory | Out-Null
+                $artifactsFolderCreated = $true
+            }
+            if ($artifacts -eq '.artifacts') {
+                # Artifacts from this build have been downloaded
+            }
+            elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
+                # latest released version
+                $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
+                if ($artifacts -eq "current") {
+                    $release = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
                 }
-                else {
-                    if ($atype -eq "Apps") {
-                        throw "ERROR: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                elseif ($artifacts -eq "prerelease") {
+                    $release = $releases | Where-Object { -not ($_.draft) } | Select-Object -First 1
+                }
+                elseif ($artifacts -eq "draft") {
+                    $release = $releases | Select-Object -First 1
+                }
+                if (!($release)) {
+                    throw "Unable to locate $artifacts release"
+                }
+                $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
+                Write-Host "'$artifactFile'"
+                if (!$artifactFile -or !(Test-Path $artifactFile)) {
+                    throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+                }
+                if ($artifactFile -notlike '*.zip') {
+                    throw "Downloaded artifact is not a .zip file"
+                }
+                Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                Remove-Item $artifactFile -Force
+            }
+            else {
+                $atypes.Split(',') | ForEach-Object {
+                    $atype = $_
+                    $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $refname
+                    if ($allArtifacts) {
+                        $allArtifacts | ForEach-Object {
+                            $artifactFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
+                            Write-Host $artifactFile
+                            if (!(Test-Path $artifactFile)) {
+                                throw "Unable to download artifact $($_.name)"
+                            }
+                            if ($artifactFile -notlike '*.zip') {
+                                throw "Downloaded artifact is not a .zip file"
+                            }
+                            Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                            Remove-Item $artifactFile -Force
+                        }
                     }
                     else {
-                        Write-Host "WARNING: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                        if ($atype -eq "Apps") {
+                            throw "ERROR: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                        }
+                        else {
+                            Write-Host "WARNING: Could not find any $atype artifacts for projects $projects, version $artifacts"
+                        }
                     }
                 }
             }
@@ -352,7 +336,20 @@ try {
             $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
             Write-Host "Storage Container Name is $storageContainerName"
             Write-Host "Storage Blob Name is $storageBlobName"
-            Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
+
+            $containerExists = $true
+            try {
+                Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
+            }
+            catch {
+                $containerExists = $false
+            }
+
+            if (-not $containerExists -and $settings.Contains('DeliverToStorage') -and $settings."DeliverToStorage".Contains('CreateContainerIfNotExist') -and $settings."DeliverToStorage"."CreateContainerIfNotExist" -eq $true) {
+                Write-Host "Container $storageContainerName does not exist. Creating..."
+                New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
+            }
+
             Write-Host "Delivering to $storageContainerName in $($storageAccount.StorageAccountName)"
             $atypes.Split(',') | ForEach-Object {
                 $atype = $_

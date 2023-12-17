@@ -14,7 +14,6 @@ Calculate Artifact Names for AL-Go workflows
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | project | Yes | Name of the built project or . if the repository is setup for single project | |
 | buildMode | Yes |Build mode used when building the artifacts | |
-| branchName | Yes | Name of the branch the workflow is running on | |
 | suffix | | A suffix to add to artifacts names. **Note:** if a suffix is specified, the current date will be added extra | Build version |
 
 ## OUTPUT
@@ -23,6 +22,7 @@ Calculate Artifact Names for AL-Go workflows
 | Name | Description |
 | :-- | :-- |
 | ThisBuildAppsArtifactsName | Artifact name for apps being built in the current workflow run |
+| ThisBuildDependenciesArtifactsName | Artifact name for dependencies of apps being built in the current workflow run |
 | ThisBuildTestAppsArtifactsName | Artifact name for test apps being built in the current workflow run |
 | AppsArtifactsName | Artifacts name for Apps |
 | DependenciesArtifactsName | Artifacts name for Dependencies |
@@ -37,6 +37,7 @@ Calculate Artifact Names for AL-Go workflows
 | Name | Description |
 | :-- | :-- |
 | ThisBuildAppsArtifactsName | Artifact name for apps being built in the current workflow run |
+| ThisBuildDependenciesArtifactsName | Artifact name for dependencies of apps being built in the current workflow run |
 | ThisBuildTestAppsArtifactsName | Artifact name for test apps being built in the current workflow run |
 | AppsArtifactsName | Artifacts name for Apps |
 | DependenciesArtifactsName | Artifacts name for Dependencies |

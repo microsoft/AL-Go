@@ -33,7 +33,7 @@ Describe "DetermineDeliveryTargets Action Test" {
         }
         $outputs = [ordered]@{
             "DeliveryTargetsJson" = "An array of Delivery Targets in compressed JSON format"
-            "ContextSecrets" = "A comma seperated list of Context Secret names used"
+            "ContextSecrets" = "A comma-separated list of Context Secret names used"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

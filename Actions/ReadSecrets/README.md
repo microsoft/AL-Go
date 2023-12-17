@@ -16,9 +16,9 @@ Secrets, which name is preceded by an asterisk (*) are encrypted and Base64 enco
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| getSecrets | Yes | Comma separated list of secrets to get (add appDependencyProbingPathsSecrets to request secrets needed for resolving dependencies in AppDependencyProbingPaths, add TokenForPush in order to request a token to use for pull requests and commits). Secrets preceded by an asterisk are returned encrypted | |
-| useGhTokenWorkflowForPush | false | Determines whether you want to use the GhTokenWorkflow secret for TokenForPush |
+| gitHubSecrets | Yes | GitHub secrets in a json structure | |
+| getSecrets | Yes | Comma-separated list of secrets to get (add appDependencyProbingPathsSecrets to request secrets needed for resolving dependencies in AppDependencyProbingPaths, add TokenForPush in order to request a token to use for pull requests and commits). Secrets preceded by an asterisk are returned encrypted | |
+| useGhTokenWorkflowForPush | false | Determines whether you want to use the GhTokenWorkflow secret for TokenForPush | false |
 
 ## OUTPUT
 

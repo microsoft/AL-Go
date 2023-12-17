@@ -51,7 +51,7 @@ Describe "WorkflowInitialize Action Tests" {
                 Set-Content -Path (Join-Path $githubFolder 'AL-Go-Settings.json') -Value $repoSettings -Encoding UTF8
                 Set-Content -Path (Join-Path $ALGoFolder 'settings.json') -Value $projectSettings -Encoding UTF8
                 Set-Content -Path (Join-Path $Project1ALGoFolder 'settings.json') -Value $project1Settings -Encoding UTF8
-                Test-ALGoRepository -baseFolder $tempDir
+                TestALGoRepository -baseFolder $tempDir
             }
             finally {
                 Remove-Item -Path $tempDir -Recurse -Force
@@ -62,6 +62,7 @@ Describe "WorkflowInitialize Action Tests" {
         . (Join-Path $PSScriptRoot "..\Actions\AL-Go-TestRepoHelper.ps1" -Resolve)
 
         Mock Write-Host { }
+        Mock OutputError { throw $message }
 
         TestSettingsFiles `
             -ALGoOrgSettings '{}' `

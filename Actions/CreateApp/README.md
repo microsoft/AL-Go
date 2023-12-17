@@ -18,10 +18,10 @@ none
 | name | Yes | App Name | |
 | publisher | Yes | Publisher | |
 | idrange | Yes | ID range | |
-| sampleCode | | Include Sample Code (Y/N) | N |
-| sampleSuite | | Include Sample BCPT Suite (Y/N) | N |
+| sampleCode | | Include Sample Code? | false |
+| sampleSuite | | Include Sample BCPT Suite? | false |
 | updateBranch | | Which branch should the app be added to | github.ref_name |
-| directCommit | | Y if the action should create a direct commit against the branch or N to create a Pull Request | N |
+| directCommit | | true if the action should create a direct commit against the branch or false to create a Pull Request | false |
 
 ## OUTPUT
 none

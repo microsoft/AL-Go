@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Add Existing App
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write
@@ -32,9 +32,9 @@ inputs:
     required: false
     default: ${{ github.ref_name }}
   directCommit:
-    description: Direct Commit (Y/N)
+    description: Direct Commit?
     required: false
-    default: 'N'
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -51,7 +51,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/AddExistingApp.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -url $ENV:_url -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
+          ${{ github.action_path }}/AddExistingApp.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -url $ENV:_url -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

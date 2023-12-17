@@ -25,4 +25,6 @@ none
 | :-- | :-- |
 | ProjectsJson | An array of AL-Go projects in compressed JSON format |
 | ProjectDependenciesJson | An object that holds the project dependencies in compressed JSON format |
-| BuildOrderJson |An array of objects that determine that build order, including build dimensions |
+| BuildOrderJson | An array of objects that determine that build order, including build dimensions |
+| BuildAllProjects | A flag that indicates whether to build all projects or only the modified ones |
+| BaselineWorkflowRunId | The ID of the workflow run from where to fetch artifacts in case when not all projects are built |

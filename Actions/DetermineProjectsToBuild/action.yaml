@@ -1,5 +1,6 @@
 name: Determine Projects to Build
 author: Microsoft Corporation
+description: Determines the projects to build based on the changes
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -23,6 +24,12 @@ outputs:
   BuildOrderJson:
     description: An array of objects that determine that build order, including build dimensions
     value: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+  BuildAllProjects:
+    description: A flag that indicates whether to build all projects or only the modified ones
+    value: ${{ steps.determineProjectsToBuild.outputs.BuildAllProjects }}
+  BaselineWorkflowRunId:
+    description: The ID of the workflow run from where to fetch artifacts in case when not all projects are built
+    value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
 runs:
   using: composite
   steps:
@@ -35,8 +42,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          $changedFiles = ${{ github.action_path }}/GetModifiedFiles.ps1 -token ${{ github.token }}
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -modifiedFiles $changedFiles -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson -token ${{ github.token }}
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

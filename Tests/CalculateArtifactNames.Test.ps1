@@ -28,11 +28,10 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should include buildmode name in artifact name if buildmode is not default' {
         $buildMode = "Clean"
-        $branchName = "main"
+        $env:GITHUB_HEAD_REF = "main"
         & $scriptPath `
                 -project $project `
-                -buildMode $buildMode `
-                -branchName $branchName
+                -buildMode $buildMode
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-CleanApps"
@@ -50,11 +49,10 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should not include buildmode name in artifact name if buildmode is default' {
         $buildMode = "Default"
-        $branchName = "main"
+        $env:GITHUB_HEAD_REF = "main"
         & $scriptPath `
                 -project $project `
-                -buildMode $buildMode `
-                -branchName $branchName
+                -buildMode $buildMode
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
@@ -70,11 +68,10 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should escape slashes and backslashes in artifact name' {
         $buildMode = "Default"
-        $branchName = "releases/1.0"
+        $env:GITHUB_HEAD_REF = "releases/1.0"
         & $scriptPath `
                 -project $project `
-                -buildMode $buildMode `
-                -branchName $branchName
+                -buildMode $buildMode
 
         $generatedOutPut = Get-Content $env:GITHUB_OUTPUT -Encoding UTF8
         $generatedOutPut | Should -Contain "ThisBuildAppsArtifactsName=thisbuild-ALGOProject-Apps"
@@ -90,12 +87,11 @@ Describe 'CalculateArtifactNames Action Tests' {
 
     It 'should use the specified suffix if provided' {
         $buildMode = "Default"
-        $branchName = "releases/1.0"
+        $env:GITHUB_HEAD_REF  = "releases/1.0"
         $suffix = "Current"
         & $scriptPath `
                 -project $project `
                 -buildMode $buildMode `
-                -branchName $branchName `
                 -suffix $suffix
 
         # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
@@ -117,12 +113,11 @@ Describe 'CalculateArtifactNames Action Tests' {
     It 'handles special characters in project name' {
         $project = "ALGOProject_øåæ"
         $buildMode = "Default"
-        $branchName = "releases/1.0"
+        $env:GITHUB_HEAD_REF = "releases/1.0"
         $suffix = "Current"
         & $scriptPath `
                 -project $project `
                 -buildMode $buildMode `
-                -branchName $branchName `
                 -suffix $suffix
 
         # In rare cases, when this test is run at the end of the day, the date will change between the time the script is run and the time the test is run.
@@ -150,6 +145,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         }
         $outputs = [ordered]@{
             "ThisBuildAppsArtifactsName" = "Artifact name for apps being built in the current workflow run"
+            "ThisBuildDependenciesArtifactsName" = "Artifact name for dependencies of apps being built in the current workflow run"
             "ThisBuildTestAppsArtifactsName" = "Artifact name for test apps being built in the current workflow run"
             "AppsArtifactsName" = "Artifacts name for Apps"
             "DependenciesArtifactsName" = "Artifacts name for Dependencies"

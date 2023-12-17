@@ -2,6 +2,48 @@
 
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
+### New Settings
+- `templateSha`: The SHA of the version of AL-Go currently used
+
+### New Actions
+- `DumpWorkflowInfo`: Dump information about running workflow
+- `Troubleshooting` : Run troubleshooting for repository
+
+### Update AL-Go System Files
+Add another parameter when running Update AL-Go System Files, called downloadLatest, used to indicate whether to download latest version from template repository. Default value is true.
+If false, the templateSha repository setting is used to download specific AL-Go System Files when calculating new files.
+
+### Issues
+- Issue 782 Exclude '.altestrunner/' from template .gitignore
+- Issue 823 Dependencies from prior build jobs are not included when using useProjectDependencies
+- App artifacts for version 'latest' are now fetched from the latest CICD run that completed and successfully built all the projects for the corresponding branch.
+- Issue 824 Utilize `useCompilerFolder` setting when creating an development environment for an AL-Go project.
+- Issue 828 and 825 display warnings for secrets, which might cause AL-Go for GitHub to malfunction
+
+### New Settings
+
+- `alDoc` : JSON object with properties for the ALDoc reference document generation
+  - **continuousDeployment** = Determines if reference documentation will be deployed continuously as part of CI/CD. You can run the **Deploy Reference Documentation** workflow to deploy manually or on a schedule. (Default false)
+  - **deployToGitHubPages** = Determines whether or not the reference documentation site should be deployed to GitHub Pages for the repository. In order to deploy to GitHub Pages, GitHub Pages must be enabled and set to GitHub Actions. (Default true)
+  - **maxReleases** = Maximum number of releases to include in the reference documentation. (Default 3)
+  - **groupByProject** = Determines whether projects in multi-project repositories are used as folders in reference documentation
+  - **includeProjects** = An array of projects to include in the reference documentation. (Default all)
+  - **excludeProjects** = An array of projects to exclude in the reference documentation. (Default none)-
+  - **header** = Header for the documentation site. (Default: Documentation for...)
+  - **footer** = Footer for the documentation site. (Default: Made with...)
+  - **defaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)
+  - **defaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)
+  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* 
+
+### New Workflows
+- **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.
+- **Troubleshooting** is a workflow, which you can invoke manually to run troubleshooting on the repository and check for settings or secrets, containing illegal values. When creating issues on https://github.com/microsoft/AL-Go/issues, we might ask you to run the troubleshooter to help identify common problems.
+
+### Support for ALDoc reference documentation tool
+ALDoc reference documentation tool is now supported for generating and deploying reference documentation for your projects either continuously or manually/scheduled.
+
+## v4.0
+
 ### Removal of the InsiderSasToken
 
 As of October 1st 2023, Business Central insider builds are now publicly available. When creating local containers with the insider builds, you will have to accept the insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) in order to continue.
@@ -10,11 +52,19 @@ AL-Go for GitHub allows you to build and test using insider builds without any e
 
 ### Issues
 - Issue 730 Support for external rulesets.
+- Issue 739 Workflow specific KeyVault settings doesn't work for localDevEnv
 - Using self-hosted runners while using Azure KeyVault for secrets or signing might fail with C:\Modules doesn't exist
+- PullRequestHandler wasn't triggered if only .md files where changes. This lead to PRs which couldn't be merged if a PR status check was mandatory.
+- Artifacts names for PR Builds were using the merge branch instead of the head branch.
 
 ### New Settings
 - `enableExternalRulesets`: set this setting to true if you want to allow AL-Go to automatically download external references in rulesets.
+- `deliverTo<deliveryTarget>`: is not really new, but has new properties and wasn't documented. The complete list of properties is here (note that some properties are deliveryTarget specific):
+  - **Branches** = an array of branch patterns, which are allowed to deliver to this deliveryTarget. (Default [ "main" ])
+  - **CreateContainerIfNotExist** = *[Only for DeliverToStorage]* Create Blob Storage Container if it doesn't already exist. (Default false)
 
+### Deployment
+Environment URL is now displayed underneath the environment being deployed to in the build summary. For Custom Deployment, the script can set the GitHub Output variable `environmentUrl` in order to show a custom URL.
 
 ## v3.3
 

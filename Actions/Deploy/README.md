@@ -16,10 +16,12 @@ Deploy Apps to online environment
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | token | | The GitHub token running the action | github.token |
 | parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| projects | | Comma separated list of projects to deploy. | |
+| projects | | Comma-separated list of projects to deploy. | |
 | environmentName | Yes | Name of environment to deploy to |
-| artifacts | Yes | Artifacts to deploy |
+| artifacts | Yes | The artifacts to deploy or a folder in which the artifacts have been downloaded | |
 | type | | Type of delivery (CD or Release) | CD |
 
 ## OUTPUT
-none
+| Name | Description |
+| :-- | :-- |
+| environmentUrl | The URL for the environment. This URL is presented in the Deploy Step in summary under the environment name |

@@ -5,7 +5,7 @@
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
     [string] $environmentName,
-    [Parameter(HelpMessage = "Artifacts to deploy", Mandatory = $true)]
+    [Parameter(HelpMessage = "The artifacts to deploy or a folder in which the artifacts have been downloaded", Mandatory = $true)]
     [string] $artifacts,
     [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
     [ValidateSet('CD','Publish')]
@@ -127,8 +127,8 @@ try {
     if ($searchArtifacts) {
         New-Item $artifactsFolder -ItemType Directory | Out-Null
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
-        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $deploymentSettings.Projects -Version $artifacts -branch $refname)
-        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $deploymentSettings.Projects -Version $artifacts -branch $refname)
+        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $deploymentSettings.Projects -version $artifacts -branch $refname)
+        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $deploymentSettings.Projects -version $artifacts -branch $refname)
         if ($allArtifacts) {
             $allArtifacts | ForEach-Object {
                 $appFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
@@ -169,8 +169,10 @@ try {
             throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
         }
 
-        Write-Host "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$($deploymentSettings.EnvironmentName)/deployment/url"
-        $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$($deploymentSettings.EnvironmentName)/deployment/url"
+        $environmentUrl = "$($bcContainerHelperConfig.baseUrl.TrimEnd('/'))/$($bcAuthContext.tenantId)/$($deploymentSettings.EnvironmentName)"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "environmentUrl=$environmentUrl"
+        Write-Host "EnvironmentUrl: $environmentUrl"
+        $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$environmentUrl/deployment/url"
         if ($response.Status -eq "DoesNotExist") {
             OutputError -message "Environment with name $($deploymentSettings.EnvironmentName) does not exist in the current authorization context."
             exit
@@ -199,7 +201,7 @@ try {
                 Write-Host "Publishing apps using development endpoint"
                 Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
             }
-            elseif (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.ContinuousDeployment)) {
+            elseif (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.continuousDeployment)) {
                 # Continuous deployment is undefined in settings - we will not deploy to production environments
                 Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
             }
