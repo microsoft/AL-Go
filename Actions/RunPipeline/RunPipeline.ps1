@@ -324,10 +324,10 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams -Verbose
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
                     }
                     else {
-                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams -Verbose
+                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams
                     }
 
                 }
