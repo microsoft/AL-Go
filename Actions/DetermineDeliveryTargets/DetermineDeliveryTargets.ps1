@@ -49,15 +49,11 @@ Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") |
     $deliveryTarget = [System.IO.Path]::GetFileNameWithoutExtension($_.Name.SubString($namePrefix.Length))
     $deliveryTargets += @($deliveryTarget)
 }
+$deliveryTargets = @($deliveryTargets | Select-Object -unique)
 if ($checkContextSecrets) {
     # Check all delivery targets and include only the ones needed
     $deliveryTargets = @($deliveryTargets | Where-Object { IncludeDeliveryTarget -deliveryTarget $_ })
 }
-if ($settings.useGitHubPackages) {
-    # If useGitHubPackages is set to true, we will always include GitHubPackages as a delivery target (even if no context secret exists)
-    $deliveryTargets += @('GitHubPackages')
-}
-$deliveryTargets = @($deliveryTargets | Select-Object -unique)
 $contextSecrets = @($deliveryTargets | ForEach-Object { "$($_)Context" })
 
 #region Action: Output

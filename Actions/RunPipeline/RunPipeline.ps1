@@ -302,10 +302,6 @@ try {
         }
     }
 
-    if ($settings.useGitHubPackages) {     # } -and !($gitHubPackagesContext)) {
-        $gitHubPackagesContext = @{ "serverUrl" = "https://nuget.pkg.github.com/$($ENV:GITHUB_REPOSITORY_OWNER)/index.json"; "token" = $token } | ConvertTo-Json -Compress
-    }
-
     if ($gitHubPackagesContext -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
         $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
         $runAlPipelineParams += @{

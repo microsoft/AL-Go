@@ -16,7 +16,6 @@ defaults:
 permissions:
   contents: read
   actions: read
-  packages: read
 
 env:
   workflowDepth: 1
@@ -267,7 +266,6 @@ jobs:
     permissions:
       contents: read
       actions: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
