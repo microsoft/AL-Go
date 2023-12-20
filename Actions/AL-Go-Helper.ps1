@@ -628,6 +628,7 @@ function ReadSettings {
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
+        "useGitHubPackages"                             = $false
         "pullRequestTrigger"                            = "pull_request_target"
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
