@@ -291,6 +291,8 @@ jobs:
           getSecrets: '${{ matrix.deliveryTarget }}Context'
 
       - name: dump
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           (Invoke-WebRequest -UseBasicParsing -uri 'https://api.github.com' -Headers @{ "Authorization" = "token $($env:GITHUB_TOKEN)" }).Headers | Out-Host
 
