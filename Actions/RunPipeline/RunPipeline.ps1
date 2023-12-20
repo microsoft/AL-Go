@@ -120,14 +120,14 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
-    if ($settings.ContainsKey('TrustedNuGetFeeds')) {
-        foreach($trustedNuGetFeed in $settings.TrustedNuGetFeeds) {
-            if ($trustedNuGetFeed.TokenSecretName) {
-                if ($secrets.Keys -notcontains $trustedNuGetFeed.TokenSecretName) {
-                    OutputWarning -message "Secret $($trustedNuGetFeed.TokenSecretName) needed for trusted NuGetFeeds cannot be found"
+    if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
+        foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
+            if ($trustedNuGetFeed.AuthTokenSecret) {
+                if ($secrets.Keys -notcontains $trustedNuGetFeed.AuthTokenSecret) {
+                    OutputWarning -message "Secret $($trustedNuGetFeed.AuthTokenSecret) needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
-                    $trustedNuGetFeed.Token = $secrets."$($trustedNuGetFeed.TokenSecretName)"
+                    $trustedNuGetFeed.Token = $secrets."$($trustedNuGetFeed.AuthTokenSecret)"
                 }
             }
         }
