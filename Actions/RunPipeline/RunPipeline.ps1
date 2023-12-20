@@ -307,7 +307,7 @@ try {
         }
     }
 
-    if ($gitHubPackagesContext -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
+    if ((($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds') -and ($bcContainerHelperConfig.TrustedNuGetFeeds.Count -gt 0)) -or ($gitHubPackagesContext)) -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
         $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
