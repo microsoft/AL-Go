@@ -207,27 +207,7 @@ try {
             . $customScript -parameters $parameters
         }
         elseif ($deliveryTarget -eq "GitHubPackages") {
-            if ($secrets.gitHubPackagesContext) {
-                $githubPackagesCredential = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.githubPackagesContext)) | ConvertFrom-Json
-            }
-            else {
-                $githubPackagesCredential = @{
-                    "serverUrl" = "https://nuget.pkg.github.com/$($ENV:GITHUB_REPOSITORY_OWNER)/index.json"
-                    "token" = $token
-                }
-            }
-            $githubPackagesCredential = @{
-                "serverUrl" = "https://nuget.pkg.github.com/$($ENV:GITHUB_REPOSITORY_OWNER)/index.json"
-                "token" = $token
-            }
-
-            Write-Host "------------------"
-            $mystream = [IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($token))
-            (Get-FileHash -InputStream $mystream -Algorithm SHA256).Hash | Out-Host
-            Write-Host "------------------"
-            $mystream = [IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($ENV:GITHUB_TOKEN))
-            (Get-FileHash -InputStream $mystream -Algorithm SHA256).Hash | Out-Host
-
+            $githubPackagesCredential = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.githubPackagesContext)) | ConvertFrom-Json
             'Apps' | ForEach-Object {
                 $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($folder.Count -gt 1) {

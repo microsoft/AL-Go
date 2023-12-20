@@ -263,9 +263,6 @@ jobs:
       fail-fast: false
     runs-on: [ windows-latest ]
     name: Deliver to ${{ matrix.deliveryTarget }}
-    permissions:
-      contents: read
-      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -294,7 +291,6 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
-          token: ${{ github.token }}
           type: 'CD'
           projects: ${{ needs.Initialization.outputs.projects }}
           deliveryTarget: ${{ matrix.deliveryTarget }}
