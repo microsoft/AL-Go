@@ -207,7 +207,20 @@ try {
             . $customScript -parameters $parameters
         }
         elseif ($deliveryTarget -eq "GitHubPackages") {
-            $githubPackagesCredential = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.githubPackagesContext)) | ConvertFrom-Json
+            if ($secrets.gitHubPackagesContext) {
+                $githubPackagesCredential = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.githubPackagesContext)) | ConvertFrom-Json
+            }
+            else {
+                $githubPackagesCredential = @{
+                    "serverUrl" = "https://nuget.pkg.github.com/$($ENV:GITHUB_REPOSITORY_OWNER)/index.json"
+                    "token" = $token
+                }
+            }
+            $githubPackagesCredential = @{
+                "serverUrl" = "https://nuget.pkg.github.com/$($ENV:GITHUB_REPOSITORY_OWNER)/index.json"
+                "token" = $token
+            }
+
             'Apps' | ForEach-Object {
                 $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($folder.Count -gt 1) {
