@@ -221,6 +221,11 @@ try {
                 "token" = $token
             }
 
+            Write-Host "------------------"
+            (Invoke-WebRequest -UseBasicParsing -uri 'https://api.github.com' -Headers @{ "Authorization" = "token $($token)" }).Headers | Out-Host
+            Write-Host "------------------"
+            (Invoke-WebRequest -UseBasicParsing -uri 'https://api.github.com' -Headers @{ "Authorization" = "token $($env:GITHUB_TOKEN)" }).Headers | Out-Host
+
             'Apps' | ForEach-Object {
                 $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($folder.Count -gt 1) {

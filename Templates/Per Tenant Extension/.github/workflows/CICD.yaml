@@ -290,6 +290,10 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ matrix.deliveryTarget }}Context'
 
+      - name: dump
+        run: |
+          (Invoke-WebRequest -UseBasicParsing -uri 'https://api.github.com' -Headers @{ "Authorization" = "token $($env:GITHUB_TOKEN)" }).Headers | Out-Host
+
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main
         env:
