@@ -127,7 +127,12 @@ try {
                     OutputWarning -message "Secret $($trustedNuGetFeed.AuthTokenSecret) needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
-                    $trustedNuGetFeed.Token = $secrets."$($trustedNuGetFeed.AuthTokenSecret)"
+                    if ($trustedNuGetFeed -is [HashTable] -or $trustedNuGetFeed.PSObject.Properties.Name -contains 'Token') {
+                        $trustedNuGetFeed.Token = $secrets."$($trustedNuGetFeed.AuthTokenSecret)"
+                    }
+                    else {
+                        $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name Token -Value $secrets."$($trustedNuGetFeed.AuthTokenSecret)"
+                    }
                 }
             }
         }
