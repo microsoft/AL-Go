@@ -294,7 +294,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          (Invoke-WebRequest -UseBasicParsing -uri 'https://api.github.com' -Headers @{ "Authorization" = "token $($env:GITHUB_TOKEN)" }).Headers | Out-Host
+          $mystream = [IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($ENV:GITHUB_TOKEN))
+          (Get-FileHash -InputStream $mystream -Algorithm SHA256).Hash | Out-Host
 
       - name: Deliver
         uses: microsoft/AL-Go-Actions/Deliver@main

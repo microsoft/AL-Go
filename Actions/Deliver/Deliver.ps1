@@ -222,9 +222,11 @@ try {
             }
 
             Write-Host "------------------"
-            (Invoke-WebRequest -UseBasicParsing -uri 'https://api.github.com' -Headers @{ "Authorization" = "token $($token)" }).Headers | Out-Host
+            $mystream = [IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($token))
+            (Get-FileHash -InputStream $mystream -Algorithm SHA256).Hash | Out-Host
             Write-Host "------------------"
-            (Invoke-WebRequest -UseBasicParsing -uri 'https://api.github.com' -Headers @{ "Authorization" = "token $($env:GITHUB_TOKEN)" }).Headers | Out-Host
+            $mystream = [IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($ENV:GITHUB_TOKEN))
+            (Get-FileHash -InputStream $mystream -Algorithm SHA256).Hash | Out-Host
 
             'Apps' | ForEach-Object {
                 $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
