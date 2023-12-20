@@ -308,7 +308,12 @@ try {
     }
 
     if ((($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds') -and ($bcContainerHelperConfig.TrustedNuGetFeeds.Count -gt 0)) -or ($gitHubPackagesContext)) -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
-        $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
+        if ($githubPackagesContext) {
+            $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
+        }
+        else {
+            $gitHubPackagesCredential = [PSCustomObject]@{ "serverUrl" = ''; "token" = '' }
+        }
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
