@@ -127,11 +127,12 @@ try {
                     OutputWarning -message "Secret $($trustedNuGetFeed.AuthTokenSecret) needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
+                    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($trustedNuGetFeed.AuthTokenSecret)"))
                     if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
-                        $trustedNuGetFeed.Token = $secrets."$($trustedNuGetFeed.AuthTokenSecret)"
+                        $trustedNuGetFeed.Token = $token
                     }
                     else {
-                        $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name Token -Value $secrets."$($trustedNuGetFeed.AuthTokenSecret)"
+                        $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name Token -Value $token
                     }
                 }
             }
