@@ -127,7 +127,7 @@ try {
                     OutputWarning -message "Secret $($trustedNuGetFeed.AuthTokenSecret) needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
-                    if ($trustedNuGetFeed -is [HashTable] -or $trustedNuGetFeed.PSObject.Properties.Name -contains 'Token') {
+                    if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
                         $trustedNuGetFeed.Token = $secrets."$($trustedNuGetFeed.AuthTokenSecret)"
                     }
                     else {
