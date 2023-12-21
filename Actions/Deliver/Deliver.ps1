@@ -233,7 +233,6 @@ try {
                             "preReleaseTag" = $preReleaseTag
                             "appFile" = $_.FullName
                         }
-                        $parameters | Out-Host
                         $package = New-BcNuGetPackage @parameters
                         Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
                     }
