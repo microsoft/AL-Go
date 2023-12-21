@@ -231,8 +231,9 @@ try {
                         $parameters = @{
                             "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
                             "preReleaseTag" = $preReleaseTag
-                            "appFile" = $_.FullName                            
+                            "appFile" = $_.FullName
                         }
+                        $parameters | Out-Host
                         $package = New-BcNuGetPackage @parameters
                         Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
                     }
