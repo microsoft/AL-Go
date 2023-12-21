@@ -211,7 +211,7 @@ try {
             try {
                 $nuGetAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context")) | ConvertFrom-Json | ConvertTo-HashTable
                 if ($deliveryTarget -eq 'NuGet' -and $type -eq 'CD') {
-                    $preReleaseTag = '-preview'
+                    $preReleaseTag = 'preview'
                 }
                 $nuGetServerUrl = $nuGetAccount.ServerUrl
                 $nuGetToken = $nuGetAccount.Token
