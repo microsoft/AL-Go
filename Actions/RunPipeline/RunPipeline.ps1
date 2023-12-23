@@ -336,7 +336,7 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
                         Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams
