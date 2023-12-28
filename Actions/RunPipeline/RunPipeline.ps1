@@ -339,7 +339,7 @@ try {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
-                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams
+                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
 
                 }
