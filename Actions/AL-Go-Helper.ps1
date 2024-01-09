@@ -615,6 +615,7 @@ function ReadSettings {
         "templateBranch"                                = ""
         "appDependencyProbingPaths"                     = @()
         "useProjectDependencies"                        = $false
+        "splitBuildAndTest"                             = $false
         "runs-on"                                       = "windows-latest"
         "shell"                                         = ""
         "githubRunner"                                  = ""

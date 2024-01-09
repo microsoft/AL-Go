@@ -39,6 +39,7 @@ jobs:
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+      testOrderJson: ${{ steps.determineProjectsToBuild.outputs.TestOrderJson }}
       workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
     steps:
       - name: Dump Workflow Information
@@ -157,9 +158,26 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
 
-  DeployALDoc:
+  Test:
     needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
+    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.testOrderJson)[0].projectsCount > 0
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.Initialization.outputs.testOrderJson)[0].testDimensions }}
+      fail-fast: false
+    name: Test ${{ matrix.projectName }}
+    uses: ./.github/workflows/_TestALGoProject.yaml
+    secrets: inherit
+    with:
+      shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+      runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+      parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+      project: ${{ matrix.project }}
+      projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
+
+  DeployALDoc:
+    needs: [ Initialization, Build, Test ]
+    if: always() && needs.Build.result == 'Success' && needs.Test.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
     runs-on: windows-latest
     name: Deploy Reference Documentation
     permissions:
@@ -205,8 +223,8 @@ jobs:
         uses: actions/deploy-pages@v2
 
   Deploy:
-    needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
+    needs: [ Initialization, Build, Test ]
+    if: always() && needs.Build.result == 'Success' && needs.Test.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
@@ -255,8 +273,8 @@ jobs:
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   Deliver:
-    needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.deliveryTargetsJson != '[]'
+    needs: [ Initialization, Build, Test ]
+    if: always() && needs.Build.result == 'Success' && needs.Test.result == 'Success' && needs.Initialization.outputs.deliveryTargetsJson != '[]'
     strategy:
       matrix:
         deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargetsJson) }}
@@ -297,7 +315,7 @@ jobs:
           artifacts: '.artifacts'
 
   PostProcess:
-    needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc ]
+    needs: [ Initialization, Build, Test, Deploy, Deliver, DeployALDoc ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     steps:

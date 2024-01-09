@@ -28,10 +28,6 @@ on:
         required: false
         default: '{}'
         type: string
-      buildMode:
-        description: Build mode used when building the artifacts
-        required: true
-        type: string
       secrets:
         description: A comma-separated string with the names of the secrets, required for the workflow.
         required: false
