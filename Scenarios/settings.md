@@ -90,6 +90,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="enableCodeCop"></a>enableCodeCop | If enableCodeCop is set to true, the CI/CD workflow will enable the CodeCop analyzer when building. | false |
 | <a id="enableUICop"></a>enableUICop | If enableUICop is set to true, the CI/CD workflow will enable the UICop analyzer when building. | false |
 | <a id="customCodeCops"></a>customCodeCops | CustomCodeCops is an array of paths or URLs to custom Code Cop DLLs you want to enable when building. | [ ] |
+| <a id="enableCodeAnalyzersOnTestApps"></a>enableCodeAnalyzersOnTestApps | If enableCodeAnalyzersOnTestApps is set to true, the code analyzers will be enabled when building test apps as well. | false |
 | <a id="failOn"></a>failOn | Specifies what the pipeline will fail on. Allowed values are none, warning and error | error |
 | <a id="rulesetFile"></a>rulesetFile | Filename of the custom ruleset file | |
 | <a id="enableExternalRulesets"></a>enableExternalRulesets | If enableExternalRulesets is set to true, then you can have external rule references in the ruleset | false |

@@ -336,6 +336,7 @@ try {
     "enableAppSourceCop",
     "enablePerTenantExtensionCop",
     "enableUICop",
+    "enableCodeAnalyzersOnTestApps",
     "useCompilerFolder" | ForEach-Object {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
