@@ -176,6 +176,7 @@ function CreateBuildDimensions {
         }
 
         if($projectSettings.splitBuildAndTest) {
+            Write-Host "Splitting build and test for project $project"
             $testDimensions += @{
                 project = $project
                 projectName = $projectSettings.projectName
@@ -260,6 +261,7 @@ function Get-ProjectsToBuild {
             }
 
             # Create a project order based on the projects to build
+            $idx = 1
             foreach($depth in $fullProjectsOrder) {
                 $projectsOnDepth = @($depth.projects | Where-Object { $projectsToBuild -contains $_ })
 
@@ -275,9 +277,12 @@ function Get-ProjectsToBuild {
                     if($testDimensions) {
                         $projectsOrderToTest += @{
                             testDimensions = $testDimensions
+                            projectsCount =  $testDimensions.Count
+                            depth = $idx
                         }
                     }
                 }
+                $idx++
             }
         }
 
@@ -287,13 +292,6 @@ function Get-ProjectsToBuild {
                 projects = @()
                 projectsCount = 0
                 buildDimensions = @()
-            }
-        }
-
-        if ($projectsOrderToTest.Count -eq 0) {
-            Write-Host "Did not find any projects to add to the test order, adding default values"
-            $projectsOrderToTest += @{
-                testDimensions = @()
             }
         }
 

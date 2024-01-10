@@ -122,7 +122,8 @@ function ModifyRunsOnAndShell {
 function ModifyBuildWorkflows {
     Param(
         [Yaml] $yaml,
-        [int] $depth
+        [int] $depth,
+        $testOrder
     )
 
     $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
@@ -144,7 +145,7 @@ function ModifyBuildWorkflows {
             $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
         }
         else {
-            # Subsequent build jobs needs to have a dependency on all previous build jobs
+            # Subsequent build jobs need to have a dependency on all previous build jobs
             # Example (depth 2):
             #    needs: [ Initialization, Build1 ]
             #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
@@ -179,13 +180,55 @@ function ModifyBuildWorkflows {
 
     # Replace the entire build: job with the new build job list
     $yaml.Replace('jobs:/Build:', $newBuild)
+
+    # Add the test jobs to the workflow
+    $testJob = $yaml.Get('jobs:/Test:/')
+    if (!$testJob) {
+        throw "No test job found in the workflow"
+    }
+
+    $newTestJob = @()
+    for($index = 0; $index -lt $testOrder.Count; $index++) {
+        $testJobInfo = $testOrder[$index]
+
+        $testJobDepth = $testJobInfo.depth
+        if($testJobDepth + 1 -eq $depth) {
+            $dependendantBuildJob = 'Build'
+        }
+        else {
+            $dependendantBuildJob = "Build$($testJobDepth)"
+        }
+
+        $needsPart = @('Initialization', $dependendantBuildJob)
+        $testJob.Replace('needs:', "needs: [ $($needsPart -join ', ') ]")
+
+        $ifParts = @("(!failure())", "(!cancelled())", "(needs.$dependendantBuildJob.result == 'success')", "fromJson(needs.Initialization.outputs.testOrderJson)[$index].projectsCount > 0")
+        $testJob.Replace('if:', "if: $($ifParts -join ' && ')")
+
+        $testJob.Replace('strategy:/matrix:/include:',"include: `${{ fromJson(needs.Initialization.outputs.testOrderJson)[$index].testDimensions }}")
+
+        if ($testJobDepth + 1 -eq $depth) {
+            $newTestJob += @("Test:")
+        }
+        else {
+            $newTestJob += @("Test$($testJobDepth):")
+        }
+
+        $testJob.content | ForEach-Object { $newTestJob += @("  $_") }
+        if ($testJobDepth + 1 -lt $depth) {
+            $newTestJob += @('')
+        }
+    }
+
+    $yaml.Replace('jobs:/Test:', $newTestJob)
 }
 
 function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth
+        [int] $depth,
+        $testOrder
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -216,7 +259,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
-        ModifyBuildWorkflows -yaml $yaml -depth $depth
+        ModifyBuildWorkflows -yaml $yaml -depth $depth -testOrder $testOrder
     }
 
     # combine all the yaml file lines into a single string with LF line endings
