@@ -117,6 +117,7 @@ $buildDepth = 1
 if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder, $testOrder = Get-ProjectsToBuild -baseFolder $baseFolder
     $buildDepth = $buildOrder.Count
+    $testJobIds = @($testOrder | ForEach-Object { if($_.Depth -eq $buildDepth) { 'Test' } else { "Test$($_.Depth)" } })
     Write-Host "Calculated dependency depth to be $buildDepth"
 }
 
@@ -142,7 +143,7 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "SrcFolder: $srcFolder"
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
-                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $buildDepth -testOrder $testOrder
+                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $buildDepth -testJobIds $testJobIds
                 }
                 else {
                     # For non-workflow files, just read the file content

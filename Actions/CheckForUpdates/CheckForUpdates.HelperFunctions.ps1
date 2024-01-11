@@ -50,7 +50,8 @@ function DownloadTemplateRepository {
 function ModifyCICDWorkflow {
     Param(
         [Yaml] $yaml,
-        [hashtable] $repoSettings
+        [hashtable] $repoSettings,
+        [string[]] $testJobIds
     )
 
     # The CICD workflow can have a RepoSetting called CICDPushBranches, which will be used to set the branches for the workflow
@@ -71,12 +72,48 @@ function ModifyCICDWorkflow {
     else {
         $yaml.Replace('on:/push:',@())
     }
+
+    # Some jobs need to have dependencies on all test jobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'DeployALDoc' -testJobIds $testJobIds -requireSuccessfulTestJobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'Deploy' -testJobIds $testJobIds -requireSuccessfulTestJobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'Deliver' -testJobIds $testJobIds -requireSuccessfulTestJobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'PostProcess' -testJobIds $testJobIds
+}
+
+function AddDependencyToTestJobs([Yaml] $yaml, [string] $jobName, [string[]] $testJobIds, [switch] $requireSuccessfulTestJobs)
+{
+    $job = $yaml.Get("jobs:/$jobName`:/")
+
+    if(!$job)
+    {
+        return
+    }
+
+    $needsParts = @($job.Get("needs:").content | ForEach-Object { $_ -replace "needs:","" } | ForEach-Object { $_.Trim("[] ") } | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim() })
+    $ifParts = @($($job.Get("if:").content -replace "if:","") -split '&&' | ForEach-Object { $_.Trim() })
+
+    # Add all test jobs as dependencies to the job
+    $testJobIds | ForEach-Object {
+        $needsParts += @($_)
+        if ($requireSuccessfulTestJobs) {
+            $ifParts += "needs.$($_).result == 'Success'"
+        }
+    }
+
+    $job.Replace('if:', "if: $($ifParts -join ' && ')")
+    $job.Replace('needs:', "needs: [ $($needsParts -join ', ') ]")
+
+    $newJobContent = @("$jobName`:")
+    $job.content | ForEach-Object { $newJobContent += @("  $_") }
+
+    $yaml.Replace("jobs:/$jobName`:", $newJobContent)
 }
 
 function ModifyPullRequestHandlerWorkflow {
     Param(
         [Yaml] $yaml,
-        [hashtable] $repoSettings
+        [hashtable] $repoSettings,
+        [string[]] $testJobIds
     )
     # The PullRequestHandler workflow can have a RepoSetting called pullRequestTrigger which specifies the trigger to use for Pull Requests
     $triggerSection = $yaml.Get('on:/pull')
@@ -93,6 +130,9 @@ function ModifyPullRequestHandlerWorkflow {
 
     # update the branches: line with the new branches
     $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+
+    # StatusCheck job needs to have dependencies on all test jobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'StatusCheck' -testJobIds $testJobIds
 }
 
 function ModifyRunsOnAndShell {
@@ -123,7 +163,7 @@ function ModifyBuildWorkflows {
     Param(
         [Yaml] $yaml,
         [int] $depth,
-        $testOrder
+        [string[]] $testJobIds
     )
 
     $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
@@ -188,16 +228,9 @@ function ModifyBuildWorkflows {
     }
 
     $newTestJob = @()
-    for($index = 0; $index -lt $testOrder.Count; $index++) {
-        $testJobInfo = $testOrder[$index]
-
-        $testJobDepth = $testJobInfo.depth
-        if($testJobDepth + 1 -eq $depth) {
-            $dependendantBuildJob = 'Build'
-        }
-        else {
-            $dependendantBuildJob = "Build$($testJobDepth)"
-        }
+    for($index = 0; $index -lt $testJobIds.Count; $index++) {
+        $testJobId =  $testJobIds[$index]
+        $dependendantBuildJob = $testJobId -replace 'Test', 'Build'
 
         $needsPart = @('Initialization', $dependendantBuildJob)
         $testJob.Replace('needs:', "needs: [ $($needsPart -join ', ') ]")
@@ -207,16 +240,11 @@ function ModifyBuildWorkflows {
 
         $testJob.Replace('strategy:/matrix:/include:',"include: `${{ fromJson(needs.Initialization.outputs.testOrderJson)[$index].testDimensions }}")
 
-        if ($testJobDepth + 1 -eq $depth) {
-            $newTestJob += @("Test:")
-        }
-        else {
-            $newTestJob += @("Test$($testJobDepth):")
-        }
-
+        $newTestJob += @("$testJobId`:")
         $testJob.content | ForEach-Object { $newTestJob += @("  $_") }
-        if ($testJobDepth + 1 -lt $depth) {
-            $newTestJob += @('')
+
+        if ($testJobId -ne 'Test') {
+            $newTestJob += @('') # this is needed to add a blank line between the test jobs
         }
     }
 
@@ -228,7 +256,7 @@ function GetWorkflowContentWithChangesFromSettings {
         [string] $srcFile,
         [hashtable] $repoSettings,
         [int] $depth,
-        $testOrder
+        [string[]] $testJobIds
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -245,11 +273,11 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     if ($baseName -eq "CICD") {
-        ModifyCICDWorkflow -yaml $yaml -repoSettings $repoSettings
+        ModifyCICDWorkflow -yaml $yaml -repoSettings $repoSettings -testJobIds $testJobIds
     }
 
     if ($baseName -eq "PullRequestHandler") {
-        ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
+        ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings -testJobIds $testJobIds
     }
 
     if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler" -and $baseName -ne 'Troubleshooting') {
@@ -259,7 +287,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
-        ModifyBuildWorkflows -yaml $yaml -depth $depth -testOrder $testOrder
+        ModifyBuildWorkflows -yaml $yaml -depth $depth -testJobIds $testJobIds
     }
 
     # combine all the yaml file lines into a single string with LF line endings
