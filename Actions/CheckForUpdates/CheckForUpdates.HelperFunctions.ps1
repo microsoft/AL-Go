@@ -222,13 +222,13 @@ function ModifyBuildWorkflows {
     $yaml.Replace('jobs:/Build:', $newBuild)
 
     # Add the test jobs to the workflow
-    $testJob = $yaml.Get('jobs:/Test:/')
+    $templateJobTemplate = Join-Path $PSScriptRoot "testJob.template.yaml"
+    $testJob = [Yaml]::Load($templateJobTemplate).Get('Test:/')
     if (!$testJob) {
-        Write-Host "No test job found in the workflow" #TODO this should be an error
+        Write-Host "No test job found" #TODO this should be an error
         return
     }
 
-    $newTestJob = @()
     for($index = 0; $index -lt $testJobIds.Count; $index++) {
         $testJobId =  $testJobIds[$index]
         $dependendantBuildJob = $testJobId -replace 'Test', 'Build'
@@ -241,15 +241,18 @@ function ModifyBuildWorkflows {
 
         $testJob.Replace('strategy:/matrix:/include:',"include: `${{ fromJson(needs.Initialization.outputs.testOrderJson)[$index].testDimensions }}")
 
-        $newTestJob += @("$testJobId`:")
-        $testJob.content | ForEach-Object { $newTestJob += @("  $_") }
+        $newTestJob = @("  $testJobId`:")
+        $testJob.content | ForEach-Object { $newTestJob += @("    $_") }
+        $newTestJob += @('') # Add an empty line after the test job
 
-        if ($testJobId -ne 'Test') {
-            $newTestJob += @('') # this is needed to add a blank line between the test jobs
-        }
+        $buildJobStartIndex = 0;
+        $buildJobCount = 0;
+        $dependendantBuildJob = $yaml.Get("jobs:/$dependendantBuildJob`:/", [ref] $buildJobStartIndex, [ref] $buildJobCount)
+
+        # Add the test job after the corresponding build job
+        Write-Host "Adding test job $testJobId after $dependendantBuildJob at index $buildJobStartIndex with count $buildJobCount"
+        $yaml.Insert($buildJobStartIndex + $buildJobCount + 1, $newTestJob)
     }
-
-    $yaml.Replace('jobs:/Test:', $newTestJob)
 }
 
 function GetWorkflowContentWithChangesFromSettings {

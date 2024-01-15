@@ -1,0 +1,16 @@
+Test:
+  needs: [ Initialization, Build ]
+  if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.testOrderJson)[0].projectsCount > 0
+  strategy:
+    matrix:
+      include: ${{ fromJson(needs.Initialization.outputs.testOrderJson)[0].testDimensions }}
+    fail-fast: false
+  name: Test ${{ matrix.projectName }}
+  uses: ./.github/workflows/_TestALGoProject.yaml
+  secrets: inherit
+  with:
+    shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+    runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+    parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+    project: ${{ matrix.project }}
+    projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
