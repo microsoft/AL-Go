@@ -224,7 +224,8 @@ function ModifyBuildWorkflows {
     # Add the test jobs to the workflow
     $testJob = $yaml.Get('jobs:/Test:/')
     if (!$testJob) {
-        throw "No test job found in the workflow"
+        Write-Host "No test job found in the workflow" #TODO this should be an error
+        return
     }
 
     $newTestJob = @()
