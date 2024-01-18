@@ -129,7 +129,7 @@ jobs:
           $deliveryTargets = ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }} | ConvertFrom-Json
           $environmentCount = ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
 
-          $publishArtifacts = $publishArtifacts || $deliveryTargets.Count -gt 0 || $environmentCount -gt 0
+          $publishArtifacts = $publishArtifacts -or ($deliveryTargets.Count -gt 0) -or ($environmentCount -gt 0)
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "PublishArtifacts=$publishArtifacts"
           Write-Host "PublishArtifacts=$publishArtifacts"
 
