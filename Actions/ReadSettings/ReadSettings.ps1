@@ -66,6 +66,8 @@ $settings.Keys | ForEach-Object {
     }
 }
 
+# Add default values for settings that are not set
+# CICDPushBranches is not present in the settings object, although it can be set there.
 if('CICDPushBranches' -in $getSettings -and 'CICDPushBranches' -notin $settings.Keys) {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "CICDPushBranches=$(Convert-ToJson $defaultCICDPushBranches -Depth 99 -Compress))"
 }
