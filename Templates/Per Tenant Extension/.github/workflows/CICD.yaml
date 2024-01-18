@@ -126,7 +126,7 @@ jobs:
               break
             }
           }
-          $deliveryTargets = ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }} | ConvertFrom-Json
+          $deliveryTargets = "${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}" | ConvertFrom-Json
           $environmentCount = ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
 
           $publishArtifacts = $publishArtifacts -or ($deliveryTargets.Count -gt 0) -or ($environmentCount -gt 0)
