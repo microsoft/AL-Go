@@ -173,7 +173,7 @@ jobs:
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
-      publishArtifacts: ${{ needs.Initialization.outputs.PublishArtifacts -eq 'true' }}
+      publishArtifacts: ${{ needs.Initialization.outputs.PublishArtifacts == 'True' }}
       signArtifacts: true
       useArtifactCache: true
 
