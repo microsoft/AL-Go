@@ -66,6 +66,10 @@ $settings.Keys | ForEach-Object {
     }
 }
 
+if('CICDPushBranches' -in $getSettings -and 'CICDPushBranches' -notin $settings.Keys) {
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "CICDPushBranches=$(Convert-ToJson $defaultCICDPushBranches -Depth 99 -Compress))"
+}
+
 Write-Host "SETTINGS:"
 $outSettings | ConvertTo-Json -Depth 99 | Out-Host
 Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($outSettings | ConvertTo-Json -Depth 99 -Compress)"
