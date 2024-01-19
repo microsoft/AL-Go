@@ -28,7 +28,7 @@ on:
         type: boolean
         default: false
       releaseBranchPrefix:
-        description: The preffix for the release branch. Used only if 'Create Release Branch?' is checked.
+        description: The prefix for the release branch. Used only if 'Create Release Branch?' is checked.
         type: string
         default: release/
       updateVersionNumber:
