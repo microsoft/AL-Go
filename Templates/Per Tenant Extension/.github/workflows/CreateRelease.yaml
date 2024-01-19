@@ -306,9 +306,11 @@ jobs:
           ref: '${{ needs.createRelease.outputs.commitish }}'
 
       - name: Create Release Branch
+        env:
+          releaseBranchPrefix: ${{ github.event.inputs.releaseBranchPrefix }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $releaseBranch = '${{ github.event.inputs.releaseBranchPrefix }}${{ needs.CreateRelease.outputs.releaseVersion }}'
+          $releaseBranch = "$($env:releaseBranchPrefix)" + "${{ needs.CreateRelease.outputs.releaseVersion }}"
           Write-Host "Creating release branch $releaseBranch"
           git checkout -b $releaseBranch
           git config user.name ${{ github.actor}}
