@@ -57,19 +57,13 @@ $settings.Keys | ForEach-Object {
     }
     $outSettings += @{ "$setting" = $settingValue }
     if ($getSettings -contains $setting) {
-        if ($settingValue -is [System.Collections.Specialized.OrderedDictionary] -or $settingValue -is [hashtable] -or $settingValue -is [array]) {
+        if ($settingValue -is [System.Collections.Specialized.OrderedDictionary] -or $settingValue -is [hashtable]) {
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$(ConvertTo-Json $settingValue -Depth 99 -Compress)"
         }
         else {
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
         }
     }
-}
-
-# Add default values for settings that are not set
-# CICDPushBranches is not present in the settings object, although it can be set there.
-if('CICDPushBranches' -in $getSettings -and 'CICDPushBranches' -notin $settings.Keys) {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "CICDPushBranches=$(Convert-ToJson $defaultCICDPushBranches -Depth 99 -Compress))"
 }
 
 Write-Host "SETTINGS:"
