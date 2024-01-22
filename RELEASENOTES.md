@@ -21,6 +21,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
 - App artifacts for version 'latest' are now fetched from the latest CICD run that completed and successfully built all the projects for the corresponding branch.
 - Issue 824 Utilize `useCompilerFolder` setting when creating an development environment for an AL-Go project.
 - Issue 828 and 825 display warnings for secrets, which might cause AL-Go for GitHub to malfunction
+- Support release branches that start with releases/
 
 ### New Settings
 
@@ -35,7 +36,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
   - **footer** = Footer for the documentation site. (Default: Made with...)
   - **defaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)
   - **defaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)
-  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* 
+  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}*
 
 ### New Workflows
 - **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.

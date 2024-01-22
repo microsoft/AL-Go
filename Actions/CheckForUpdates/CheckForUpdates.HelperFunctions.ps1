@@ -66,7 +66,7 @@ function ModifyCICDWorkflow {
     }
     # update the branches: line with the new branches
     if ($CICDPushBranches) {
-        $yaml.Replace('on:/push:/branches:', "branches: [ '$($cicdPushBranches -join "', '")' ]")
+        $yaml.Replace('on:/push:/branches:', "branches: [ '$($CICDPushBranches -join "', '")' ]")
     }
     else {
         $yaml.Replace('on:/push:',@())
