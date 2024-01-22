@@ -212,6 +212,8 @@ function ModifyUpdateALGoSystemFiles{
         # If the environment: section does not exist, add it
         $updateALGoSystemFilesJob.Insert(1, "environment: $updateALGoSystemFilesEnvironment")
     }
+
+    $yaml.Replace('jobs:/UpdateALGoSystemFiles:/', $updateALGoSystemFilesJob.content)
 }
 
 function GetWorkflowContentWithChangesFromSettings {
