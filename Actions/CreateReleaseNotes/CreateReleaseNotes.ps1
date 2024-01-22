@@ -23,21 +23,21 @@ try {
     # Check that tag is SemVer
     $SemVerObj = SemVerStrToSemVerObj -semVerStr $tag_name
 
-    # Calculate release branch
-    $releaseBranch = "release/$($SemVerObj.Prefix)$($SemVerObj.Major).$($SemVerObj.Minor)"
+    # Calculate release version
+    $releaseVersion = "$($SemVerObj.Prefix)$($SemVerObj.Major).$($SemVerObj.Minor)"
     if ($SemVerObj.Patch -or $SemVerObj.addt0 -ne 'zzz') {
-        $releaseBranch += ".$($SemVerObj.Patch)"
+        $releaseVersion += ".$($SemVerObj.Patch)"
         if ($SemVerObj.addt0 -ne 'zzz') {
-            $releaseBranch += "-$($SemVerObj.addt0)"
+            $releaseVersion += "-$($SemVerObj.addt0)"
             1..4 | ForEach-Object {
                 if ($SemVerObj."addt$($_)" -ne 'zzz') {
-                    $releaseBranch += ".$($SemVerObj."addt$($_)")"
+                    $releaseVersion += ".$($SemVerObj."addt$($_)")"
                 }
             }
         }
     }
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releaseBranch=$releaseBranch"
-    Write-Host "releaseBranch=$releaseBranch"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releaseVersion=$releaseVersion"
+    Write-Host "releaseVersion=$releaseVersion"
 
     $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
     if ($latestRelease -and $latestRelease.PSobject.Properties.name -eq "target_commitish") {

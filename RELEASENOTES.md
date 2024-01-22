@@ -2,6 +2,8 @@
 
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
+## v4.1
+
 ### New Settings
 - `templateSha`: The SHA of the version of AL-Go currently used
 - `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
@@ -20,6 +22,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
 - App artifacts for version 'latest' are now fetched from the latest CICD run that completed and successfully built all the projects for the corresponding branch.
 - Issue 824 Utilize `useCompilerFolder` setting when creating an development environment for an AL-Go project.
 - Issue 828 and 825 display warnings for secrets, which might cause AL-Go for GitHub to malfunction
+- Support release branches that start with releases/
 
 ### New Settings
 

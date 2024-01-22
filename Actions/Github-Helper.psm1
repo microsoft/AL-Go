@@ -532,8 +532,10 @@ function GetLatestRelease {
 
     # Get Latest release
     $latestRelease = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
-    $releaseBranchPrefix = 'release/'
-    if ($ref -like "$releaseBranchPrefix*") {
+    $releaseBranchesFormats = 'release/*', 'releases/*'
+    $isReleaseBranch = [boolean] $($releaseBranchesFormats | Where-Object { $ref -like $_ })
+
+    if ($isReleaseBranch) {
         # If release branch, get the latest release from that the release branch
         # This is given by the latest release with the same major.minor as the release branch
         $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString($releaseBranchPrefix.Length) -allowMajorMinorOnly

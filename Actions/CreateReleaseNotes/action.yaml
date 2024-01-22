@@ -24,9 +24,9 @@ inputs:
     required: false
     default: ''
 outputs:
-  ReleaseBranch:
-    description: Name of the release branch
-    value: ${{ steps.createreleasenotes.outputs.ReleaseBranch }}
+  ReleaseVersion:
+    description: The release version
+    value: ${{ steps.createreleasenotes.outputs.releaseVersion }}
   ReleaseNotes:
     description: Release note generated based on the changes
     value: ${{ steps.createreleasenotes.outputs.ReleaseNotes }}
