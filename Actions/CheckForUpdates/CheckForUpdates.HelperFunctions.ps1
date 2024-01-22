@@ -181,7 +181,7 @@ function ModifyBuildWorkflows {
     $yaml.Replace('jobs:/Build:', $newBuild)
 }
 
-function ModifyUpdateALGoSystemFiles{
+function ModifyUpdateALGoSystemFiles {
     Param(
         [Yaml] $yaml,
         [hashtable] $repoSettings

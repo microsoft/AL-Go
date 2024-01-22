@@ -4,6 +4,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 
 ### New Settings
 - `templateSha`: The SHA of the version of AL-Go currently used
+- `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
 
 ### New Actions
 - `DumpWorkflowInfo`: Dump information about running workflow
@@ -33,7 +34,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
   - **footer** = Footer for the documentation site. (Default: Made with...)
   - **defaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)
   - **defaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)
-  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* 
+  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}*
 
 ### New Workflows
 - **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.
