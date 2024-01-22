@@ -193,6 +193,7 @@ function ModifyUpdateALGoSystemFiles{
     }
 
     $updateALGoSystemFilesEnvironment = $repoSettings.UpdateALGoSystemFilesEnvironment
+    Write-Host "Setting 'Update AL-Go System Files' environment to $updateALGoSystemFilesEnvironment"
 
     # Add or replace the environment: section in the UpdateALGoSystemFiles job
     $updateALGoSystemFilesJob = $yaml.Get('jobs:/UpdateALGoSystemFiles:/')
