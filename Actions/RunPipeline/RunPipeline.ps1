@@ -8,7 +8,6 @@
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
-    [ValidateSet('Default', 'Translated', 'Clean')]
     [string] $buildMode = 'Default',
     [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
     [string] $installAppsJson = '[]',
