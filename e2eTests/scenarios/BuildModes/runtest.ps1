@@ -52,7 +52,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated" ); "cleanModePreprocessorSymbols" = @( "CLEAN" )} `
+    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated", "CustomBuildMode" ); "cleanModePreprocessorSymbols" = @( "CLEAN" )} `
     -contentScript {
         Param([string] $path)
         CreateNewAppInFolder -folder $path -name "App" | Out-Null
@@ -64,7 +64,7 @@ Start-Process $repoPath
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Test number of artifacts
-Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1} -repoVersion '1.0' -appVersion '1.0'
+Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1;"CustomBuildModeApps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation
 
