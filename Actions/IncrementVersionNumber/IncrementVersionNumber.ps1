@@ -26,6 +26,11 @@ try {
     import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
+    # Validate version number. It should match <Major>.<Minor> or +<Major>.<Minor>
+    if(-not ($versionNumber -match '^\+?\d+\.\d+$') {
+        throw "Version number ($versionNumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
+    }
+
     $addToVersionNumber = "$versionNumber".StartsWith('+')
     if ($addToVersionNumber) {
         $versionNumber = $versionNumber.Substring(1)
