@@ -66,7 +66,8 @@ The repository settings are only read from the repository settings file (.github
 | <a id="pullRequestTrigger"></a>pullRequestTrigger | Setting for specifying the trigger AL-Go should use to trigger Pull Request Builds. By default it is set to [pull_request_target](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) |
 | <a id="CICDSchedule"></a>CICDSchedule | CRON schedule for when CI/CD workflow should run. Default is no scheduled run, only manually triggered or triggered by Push or Pull Request. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
 | <a id="UpdateGitHubGoSystemFilesSchedule"></a>UpdateGitHubGoSystemFilesSchedule | CRON schedule for when Update AL-Go System Files should run. When Update AL-Go System Files runs on a schedule, it uses direct Commit instead of creating a PR. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
-| <a id="buildModes"></a>buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go projects will be built using each built mode. Available build modes are:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: _PreprocessorSymbols_ are enabled when compiling the apps. The values for the symbols correspond to the `cleanModePreprocessorSymbols` setting of the AL-Go project.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps. |
+| <a id="buildModes"></a>buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go project will be built using each build mode. AL-Go ships with the following build modes out of the box:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: _PreprocessorSymbols_ are enabled when compiling the apps. The values for the symbols correspond to the `cleanModePreprocessorSymbols` setting of the AL-Go project.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps.<br /><br />It is also possible to specify custom build modes by adding a build mode that is different than 'Default', 'Clean' or 'Translated'. 
+|
 
 ## Advanced settings
 
@@ -90,6 +91,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="enableCodeCop"></a>enableCodeCop | If enableCodeCop is set to true, the CI/CD workflow will enable the CodeCop analyzer when building. | false |
 | <a id="enableUICop"></a>enableUICop | If enableUICop is set to true, the CI/CD workflow will enable the UICop analyzer when building. | false |
 | <a id="customCodeCops"></a>customCodeCops | CustomCodeCops is an array of paths or URLs to custom Code Cop DLLs you want to enable when building. | [ ] |
+| <a id="enableCodeAnalyzersOnTestApps"></a>enableCodeAnalyzersOnTestApps | If enableCodeAnalyzersOnTestApps is set to true, the code analyzers will be enabled when building test apps as well. | false |
 | <a id="failOn"></a>failOn | Specifies what the pipeline will fail on. Allowed values are none, warning and error | error |
 | <a id="rulesetFile"></a>rulesetFile | Filename of the custom ruleset file | |
 | <a id="enableExternalRulesets"></a>enableExternalRulesets | If enableExternalRulesets is set to true, then you can have external rule references in the ruleset | false |

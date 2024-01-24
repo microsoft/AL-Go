@@ -162,6 +162,9 @@ class Yaml {
         if ($start -eq 0) {
             $this.content = $this.content[$count..($this.content.Count-1)]
         }
+        elseif($start + $count -ge $this.content.Count) {
+            $this.content = $this.content[0..($start-1)]
+        }
         else {
             $this.content = $this.content[0..($start-1)] + $this.content[($start+$count)..($this.content.Count-1)]
         }

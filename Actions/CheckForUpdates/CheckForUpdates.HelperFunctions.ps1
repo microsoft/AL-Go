@@ -66,7 +66,7 @@ function ModifyCICDWorkflow {
     }
     # update the branches: line with the new branches
     if ($CICDPushBranches) {
-        $yaml.Replace('on:/push:/branches:', "branches: [ '$($cicdPushBranches -join "', '")' ]")
+        $yaml.Replace('on:/push:/branches:', "branches: [ '$($CICDPushBranches -join "', '")' ]")
     }
     else {
         $yaml.Replace('on:/push:',@())
@@ -181,6 +181,41 @@ function ModifyBuildWorkflows {
     $yaml.Replace('jobs:/Build:', $newBuild)
 }
 
+function ModifyUpdateALGoSystemFiles {
+    Param(
+        [Yaml] $yaml,
+        [hashtable] $repoSettings
+    )
+
+    if($repoSettings.Keys -notcontains 'UpdateALGoSystemFilesEnvironment') {
+        # If UpdateALGoSystemFilesEnvironment is not set, we don't need to do anything
+        return
+    }
+
+    $updateALGoSystemFilesEnvironment = $repoSettings.UpdateALGoSystemFilesEnvironment
+    Write-Host "Setting 'Update AL-Go System Files' environment to $updateALGoSystemFilesEnvironment"
+
+    # Add or replace the environment: section in the UpdateALGoSystemFiles job
+    $updateALGoSystemFilesJob = $yaml.Get('jobs:/UpdateALGoSystemFiles:/')
+
+    if(-not $updateALGoSystemFilesJob) {
+        # Defensively check that the UpdateALGoSystemFiles job exists
+        throw "No UpdateALGoSystemFiles job found in the workflow"
+    }
+
+    $environmentSection = $updateALGoSystemFilesJob.Get('environment:')
+    if($environmentSection) {
+        # If the environment: section already exists, replace it with the new environment
+        $updateALGoSystemFilesJob.Replace($environmentSection, "environment: $updateALGoSystemFilesEnvironment")
+    }
+    else {
+        # If the environment: section does not exist, add it
+        $updateALGoSystemFilesJob.Insert(1, "environment: $updateALGoSystemFilesEnvironment")
+    }
+
+    $yaml.Replace('jobs:/UpdateALGoSystemFiles:/', $updateALGoSystemFilesJob.content)
+}
+
 function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
@@ -217,6 +252,10 @@ function GetWorkflowContentWithChangesFromSettings {
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
         ModifyBuildWorkflows -yaml $yaml -depth $depth
+    }
+
+    if($baseName -eq 'UpdateGitHubGoSystemFiles') {
+        ModifyUpdateALGoSystemFiles -yaml $yaml -repoSettings $repoSettings
     }
 
     # combine all the yaml file lines into a single string with LF line endings

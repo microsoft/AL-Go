@@ -593,6 +593,7 @@ function ReadSettings {
         "installPerformanceToolkit"                     = $false
         "enableCodeCop"                                 = $false
         "enableUICop"                                   = $false
+        "enableCodeAnalyzersOnTestApps"                 = $false
         "customCodeCops"                                = @()
         "failOn"                                        = "error"
         "treatTestFailuresAsWarnings"                   = $false
@@ -1884,6 +1885,7 @@ function CreateDevEnv {
             "enableAppSourceCop",
             "enablePerTenantExtensionCop",
             "enableUICop",
+            "enableCodeAnalyzersOnTestApps",
             "useCompilerFolder" | ForEach-Object {
                 if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
             }
