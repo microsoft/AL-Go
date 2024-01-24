@@ -538,7 +538,8 @@ function GetLatestRelease {
     if ($isReleaseBranch) {
         # If release branch, get the latest release from that the release branch
         # This is given by the latest release with the same major.minor as the release branch
-        $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString($releaseBranchPrefix.Length) -allowMajorMinorOnly
+        $releaseVersion = $ref -split '/' | Select-Object -Last 1 # Get the version from the release branch
+        $semVerObj = SemVerStrToSemVerObj -semVerStr $releaseVersion -allowMajorMinorOnly
         $latestRelease = $releases | Where-Object {
             $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
             $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
