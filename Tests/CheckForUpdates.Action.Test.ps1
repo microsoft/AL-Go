@@ -49,7 +49,7 @@ Describe "CheckForUpdates Action Tests" {
         $yaml.Find('permissionos:', [ref] $start, [ref] $count)  | Should -Not -be $true
 
         # Check checkout step
-        ($yaml.Get('jobs:/Initialization:/steps:/- name: Checkout').content -join '') | Should -be "- name: Checkout  uses: actions/checkout@v3  with:    lfs: true"
+        ($yaml.Get('jobs:/Initialization:/steps:/- name: Checkout').content -join '') | Should -be "- name: Checkout  uses: actions/checkout@v4  with:    lfs: true"
 
         # Get Shell line in read Settings step
         ($yaml.Get('jobs:/Initialization:/steps:/- name: Read settings/with:/shell:').content -join '')  | Should -be "shell: powershell"

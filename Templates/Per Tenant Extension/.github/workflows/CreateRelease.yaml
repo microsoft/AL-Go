@@ -76,7 +76,7 @@ jobs:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Initialize the workflow
         id: init
@@ -192,7 +192,7 @@ jobs:
           target_commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
 
       - name: Create release
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         id: createrelease
         env:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
@@ -224,7 +224,7 @@ jobs:
       fail-fast: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -251,7 +251,7 @@ jobs:
           Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri '${{ matrix.url }}' -OutFile '${{ matrix.name }}.zip'
 
       - name: Upload release artifacts
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         env:
           releaseId: ${{ needs.createrelease.outputs.releaseId }}
         with:
@@ -301,7 +301,7 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: '${{ needs.createRelease.outputs.commitish }}'
 
@@ -352,7 +352,7 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Finalize the workflow
         id: PostProcess

@@ -2,6 +2,12 @@
 
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
+### New Settings
+- `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
+
+### Issues
+- Support release branches that start with releases/
+
 ### Build modes 
 AL-Go ships with Default, Translated and Clean mode out of the box. Now you can also define custom build modes in addition to the ones shipped with AL-Go. This allows you to define your own build modes, which can be used to build your apps in different ways. By default, a custom build mode will build the apps similarly to the Default mode but this behavior can be overridden in e.g. script overrides in your repository.  
 
@@ -9,7 +15,6 @@ AL-Go ships with Default, Translated and Clean mode out of the box. Now you can 
 
 ### New Settings
 - `templateSha`: The SHA of the version of AL-Go currently used
-- `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
 
 ### New Actions
 - `DumpWorkflowInfo`: Dump information about running workflow
@@ -25,7 +30,6 @@ If false, the templateSha repository setting is used to download specific AL-Go 
 - App artifacts for version 'latest' are now fetched from the latest CICD run that completed and successfully built all the projects for the corresponding branch.
 - Issue 824 Utilize `useCompilerFolder` setting when creating an development environment for an AL-Go project.
 - Issue 828 and 825 display warnings for secrets, which might cause AL-Go for GitHub to malfunction
-- Support release branches that start with releases/
 
 ### New Settings
 
@@ -40,7 +44,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
   - **footer** = Footer for the documentation site. (Default: Made with...)
   - **defaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)
   - **defaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)
-  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}*
+  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* 
 
 ### New Workflows
 - **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.
