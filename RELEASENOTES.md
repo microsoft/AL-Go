@@ -7,6 +7,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 
 ### Issues
 - Support release branches that start with releases/
+- Issue 870 Improve Error Handling when CLI is missing
 
 ### Build modes 
 AL-Go ships with Default, Translated and Clean mode out of the box. Now you can also define custom build modes in addition to the ones shipped with AL-Go. This allows you to define your own build modes, which can be used to build your apps in different ways. By default, a custom build mode will build the apps similarly to the Default mode but this behavior can be overridden in e.g. script overrides in your repository.  
