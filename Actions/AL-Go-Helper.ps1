@@ -2265,7 +2265,7 @@ function RetryCommand {
         catch {
             $retryCount++
             if ($retryCount -eq $MaxRetries) {
-                throw $_
+                throw
             }
             else {
                 Write-Host "Retrying after $RetryDelaySeconds seconds..."
