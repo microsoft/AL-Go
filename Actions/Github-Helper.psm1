@@ -237,7 +237,8 @@ function CmdDo {
         [string] $arguments = "",
         [switch] $silent,
         [switch] $returnValue,
-        [string] $inputStr = ""
+        [string] $inputStr = "",
+        [string] $messageIfCmdNotFound = ""
     )
 
     $oldNoColor = "$env:NO_COLOR"
@@ -282,12 +283,25 @@ function CmdDo {
                 Write-Host $message
             }
             if ($returnValue) {
-                $message.Replace("`r","").Split("`n")
+                $message.Replace("`r", "").Split("`n")
             }
         }
         else {
-            $message += "`n`nExitCode: "+$p.ExitCode + "`nCommandline: $command $arguments"
+            $message += "`n`nExitCode: " + $p.ExitCode + "`nCommandline: $command $arguments"
             throw $message
+        }
+    }
+    catch [System.ComponentModel.Win32Exception] {
+        if ($_.Exception.NativeErrorCode -eq 2) {
+            if ($messageIfCmdNotFound) {
+                throw $messageIfCmdNotFound
+            }
+            else {
+                throw "Command $command not found, you might need to install that command."
+            }
+        }
+        else {
+            throw
         }
     }
     finally {
@@ -319,7 +333,7 @@ function invoke-gh {
                 $arguments += "$parameter "
             }
         }
-        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr -messageIfCmdNotFound "Github CLI not found. Please install it from https://cli.github.com/"
     }
 }
 
@@ -343,7 +357,7 @@ function invoke-git {
                 $arguments += "$parameter "
             }
         }
-        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr -messageIfCmdNotFound "Git not found. Please install it from https://git-scm.com/downloads"
     }
 }
 
