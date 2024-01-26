@@ -301,7 +301,7 @@ function CmdDo {
             }
         }
         else {
-            throw $_
+            throw
         }
     }
     finally {
