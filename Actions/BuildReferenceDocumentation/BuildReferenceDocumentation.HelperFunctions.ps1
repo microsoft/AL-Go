@@ -24,7 +24,7 @@
             & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
         }
         Write-Host "Installing/Updating docfx"
-        CmdDo -command dotnet -arguments @("tool","update","-g docfx")
+        CmdDo -command dotnet -arguments @("tool","update","-g docfx") -messageIfCmdNotFound "dotnet not found. Please install it from https://dotnet.microsoft.com/download"
     }
     return $ENV:aldocPath
 }

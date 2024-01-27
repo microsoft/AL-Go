@@ -31,7 +31,7 @@ Describe 'CreateReleaseNotes Tests' {
             "pull-requests" = "write"
         }
         $outputs = [ordered]@{
-            "ReleaseBranch" = "Name of the release branch"
+            "ReleaseVersion" = "The release version"
             "ReleaseNotes" = "Release note generated based on the changes"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs

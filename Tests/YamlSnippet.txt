@@ -36,7 +36,7 @@ jobs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           lfs: true
 
@@ -60,7 +60,7 @@ jobs:
     if: github.event_name != 'workflow_run'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main

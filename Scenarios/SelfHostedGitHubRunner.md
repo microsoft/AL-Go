@@ -37,7 +37,7 @@ GitHub runners can be registered for an organization (accessible for all reposit
 ## Allow your repository access to your runners
 1. On the list of Runners on GitHub, choose the runner group **Default** and allow public repositories if your repository is public.
 ![public](https://github.com/microsoft/AL-Go/assets/10775043/9bdd01ab-ac67-44bf-bfd1-af5c5ec91364)
-1. Now navigate to your project settings file (.AL-Go/settings.json) and set **gitHubRunner** to **self-hosted**.
+1. Now navigate to your repo settings file (.github/AL-Go-Settings.json) and set **gitHubRunner** to **self-hosted**.
    - Note that you can use other tags than **self-hosted** to identify special runners for GitHub jobs, or you can set gitHubRunner to "self-hosted, Windows" to ensure that a Windows version is selected if you have self-hosted linux runners as well.
 1. Save and inspect your workflows performance increase on the second run.
 1. Inspect that one of the runners pick up the workflow.
