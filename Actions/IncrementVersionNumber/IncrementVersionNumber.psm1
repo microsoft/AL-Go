@@ -32,9 +32,9 @@ function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] 
         $newValue = "$($newValue.Major + $oldValue.Major).$($newValue.Minor + $oldValue.Minor)"
     }
 
-    Write-Host "Changing $settingName from $oldValue to $newValue in $settingFilePath"
+    Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
     $settingFileContent.$settingName = $newValue
-    $settingFileContent | Set-JsonContentLF -path $settingFilePath
+    $settingFileContent | Set-JsonContentLF -path $settingsFilePath
 }
 
 <#
