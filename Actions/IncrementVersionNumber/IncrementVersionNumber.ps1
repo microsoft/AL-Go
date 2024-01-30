@@ -41,7 +41,7 @@ try {
     $newVersion = [System.Version]"$($versionNumber).0.0"
 
     # Change repoVersion in repository settings
-    Set-RepoSetting -baseFolder $baseFolder -settingName 'repoVersion' -newValue $newVersion -incremental:$addToVersionNumber
+    Set-SettingInFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $newVersion -incremental:$addToVersionNumber
 
     $settings = $env:Settings | ConvertFrom-Json
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
