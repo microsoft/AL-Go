@@ -11,15 +11,15 @@
         If set, the new value will be added to the old value. The old value must be a version number.
 #>
 function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] $incremental) {
-    if (-not (Test-Path $settingFilePath)) {
-        throw "Settings file ($settingFilePath) not found."
+    if (-not (Test-Path $settingsFilePath)) {
+        throw "Settings file ($settingsFilePath) not found."
     }
 
-    Write-Host "Reading settings from $settingFilePath"
-    $settingFileContent = Get-Content $settingFilePath -Encoding UTF8 | ConvertFrom-Json
+    Write-Host "Reading settings from $settingsFilePath"
+    $settingFileContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
 
     if (-not ($settingFileContent.PSObject.Properties.Name -eq $settingName)) {
-        Write-Host "Setting $settingName not found in $settingFilePath"
+        Write-Host "Setting $settingName not found in $settingsFilePath"
         return
     }
 
