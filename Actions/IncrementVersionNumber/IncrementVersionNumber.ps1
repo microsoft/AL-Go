@@ -53,7 +53,7 @@ try {
 
         $projectPath = Join-Path $baseFolder $project
 
-        Set-ProjectVersion -project $projectPath -projectSettings $projectSettings -newVersion $newVersion -incremental:$addToVersionNumber
+        Set-ProjectVersion -projectPath $projectPath -projectSettings $projectSettings -newVersion $newVersion -incremental:$addToVersionNumber
     }
 
     $commitMessage = "New Version number $($newVersion.Major).$($newVersion.Minor)"
