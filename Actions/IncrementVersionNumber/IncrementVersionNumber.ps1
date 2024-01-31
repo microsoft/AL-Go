@@ -47,7 +47,13 @@ try {
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
 
     foreach($project in $projectList) {
-        Set-ProjectVersion -baseFolder $baseFolder -project $project -newVersion $newVersion -addToVersionNumber $addToVersionNumber
+        # Resolve project folders to get all app folders that contain an app.json file
+        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
+        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+
+        $projectPath = Join-Path $baseFolder $project
+
+        Set-ProjectVersion -project $projectPath -projectSettings $projectSettings -newVersion $newVersion -incremental:$addToVersionNumber
     }
 
     $commitMessage = "New Version number $($newVersion.Major).$($newVersion.Minor)"

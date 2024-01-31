@@ -51,13 +51,9 @@ function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] 
     .Parameter incremental
         If set, the new version number will be added to the old version number.
 #>
-function Set-ProjectVersion($baseFolder, $project, $newVersion, [switch] $incremental) {
-    $projectSettingsPath = Join-Path $project $ALGoSettingsFile
-    Set-SettingInFile -settingsFilePath (Join-Path $baseFolder $projectSettingsPath) -settingName 'repoVersion' -newValue $newVersion -incremental:$incremental | Out-Null
-
-    # Resolve project folders to get all app folders that contain an app.json file
-    $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
-    ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, [switch] $incremental) {
+    $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile
+    Set-SettingInFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion -incremental:$incremental | Out-Null
 
     # Check if the project uses repoVersion versioning strategy
     $useRepoVersion = (($projectSettings.PSObject.Properties.Name -eq "versioningStrategy") -and (($projectSettings.versioningStrategy -band 16) -eq 16))
@@ -68,8 +64,7 @@ function Set-ProjectVersion($baseFolder, $project, $newVersion, [switch] $increm
 
     $folders | ForEach-Object {
         $folder = $_
-        $folder = Join-Path $project $folder
-        $folder = Join-Path $baseFolder $folder
+        $folder = Join-Path $projectPath $folder
         Write-Host "Modifying app.json in folder $folder"
 
         $appJsonFile = Join-Path $folder "app.json"
@@ -91,7 +86,7 @@ function Set-ProjectVersion($baseFolder, $project, $newVersion, [switch] $increm
             $appJson | Set-JsonContentLF -path $appJsonFile
         }
         catch {
-            throw $_ # "Application manifest file($appJsonFile) is malformed."
+            throw "Application manifest file($appJsonFile) is malformed: $_"
         }
     }
 }
