@@ -67,11 +67,11 @@ function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, [switch
         $appJsonFile = Join-Path $folder "app.json"
         try {
             if ($useRepoVersion) {
-                $appVersion = $projectSettings.repoVersion
+                $newVersion = $projectSettings.repoVersion
                 $incremental = $false # Don't increment the version number if the project uses repoVersion versioning strategy
             }
 
-            Set-SettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $appVersion -incremental:$incremental | Out-Null
+            Set-SettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $newVersion -incremental:$incremental | Out-Null
         }
         catch {
             throw "Application manifest file($appJsonFile) is malformed: $_"
