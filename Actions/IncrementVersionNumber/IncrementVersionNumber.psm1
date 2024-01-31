@@ -8,7 +8,7 @@
     .Parameter newValue
         New value of the setting.
     .Parameter incremental
-        If set, the new value will be added to the old value. The old value must be a version number.
+        If set, the new value will be added to the old value. The old value must be a version number. The new value must be a version number.
 #>
 function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] $incremental) {
     if (-not (Test-Path $settingsFilePath)) {
@@ -16,7 +16,12 @@ function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] 
     }
 
     Write-Host "Reading settings from $settingsFilePath"
-    $settingFileContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+    try {
+        $settingFileContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        throw "Settings file ($settingsFilePath) is malformed: $_"
+    }
 
     if (-not ($settingFileContent.PSObject.Properties.Name -eq $settingName)) {
         Write-Host "Setting $settingName not found in $settingsFilePath"
@@ -49,33 +54,27 @@ function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] 
     .Parameter newVersion
         New version number.
     .Parameter incremental
-        If set, the new version number will be added to the old version number.
+        If set, the new version number will be added to the old version number. The old version number must be a version number.
 #>
 function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, [switch] $incremental) {
-    $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile
+    # Set repoVersion in project settings (if it exists)
+    $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
     Set-SettingInFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion -incremental:$incremental | Out-Null
 
     # Check if the project uses repoVersion versioning strategy
     $useRepoVersion = (($projectSettings.PSObject.Properties.Name -eq "versioningStrategy") -and (($projectSettings.versioningStrategy -band 16) -eq 16))
+    if ($useRepoVersion) {
+        $newVersion = $projectSettings.repoVersion
+        $incremental = $false # Don't increment the version number if the project uses repoVersion versioning strategy
+    }
 
-    $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders)
-    $folders | ForEach-Object {
-        $folder = $_
-        $folder = Join-Path $projectPath $folder
-        Write-Host "Modifying app.json in folder $folder"
-
+    # Set version in app.json files
+    $allAppFolders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
+    $allAppFolders | ForEach-Object {
+        $folder = Join-Path $projectPath $_
         $appJsonFile = Join-Path $folder "app.json"
-        try {
-            if ($useRepoVersion) {
-                $newVersion = $projectSettings.repoVersion
-                $incremental = $false # Don't increment the version number if the project uses repoVersion versioning strategy
-            }
 
-            Set-SettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $newVersion -incremental:$incremental | Out-Null
-        }
-        catch {
-            throw "Application manifest file($appJsonFile) is malformed: $_"
-        }
+        Set-SettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $newVersion -incremental:$incremental | Out-Null
     }
 }
 
