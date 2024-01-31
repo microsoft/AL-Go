@@ -49,7 +49,7 @@ jobs:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           lfs: true
           ref: refs/pull/${{ github.event.number }}/merge
