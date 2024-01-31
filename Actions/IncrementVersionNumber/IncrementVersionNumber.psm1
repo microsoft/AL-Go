@@ -59,9 +59,6 @@ function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, [switch
     $useRepoVersion = (($projectSettings.PSObject.Properties.Name -eq "versioningStrategy") -and (($projectSettings.versioningStrategy -band 16) -eq 16))
 
     $folders = @($projectSettings.appFolders) + @($projectSettings.testFolders)
-
-    Write-Host "Folders: $folders"
-
     $folders | ForEach-Object {
         $folder = $_
         $folder = Join-Path $projectPath $folder
@@ -69,21 +66,12 @@ function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, [switch
 
         $appJsonFile = Join-Path $folder "app.json"
         try {
-            $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
             if ($useRepoVersion) {
                 $appVersion = $projectSettings.repoVersion
+                $incremental = $false # Don't increment the version number if the project uses repoVersion versioning strategy
             }
-            elseif ($incremental) {
-                $oldVersion = [System.Version] $appJson.Version
-                $newVersion = [System.Version] $newVersion
 
-                $appVersion = [System.Version]"$($newVersion.Major+$oldVersion.Major).$($newVersion.Minor+$oldVersion.Minor).0.0"
-            }
-            else {
-                $appVersion = $newVersion
-            }
-            $appJson.Version = "$appVersion"
-            $appJson | Set-JsonContentLF -path $appJsonFile
+            Set-SettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $appVersion -incremental:$incremental | Out-Null
         }
         catch {
             throw "Application manifest file($appJsonFile) is malformed: $_"
