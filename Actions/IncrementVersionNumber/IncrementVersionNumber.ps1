@@ -38,7 +38,7 @@ try {
         $versionNumber = $versionNumber.Substring(1) # Remove the + sign
     }
 
-    $newVersion = [System.Version]"$($versionNumber).0.0"
+    $newVersion = [System.Version]"$($versionNumber)"
 
     # Change repoVersion in repository settings
     Set-SettingInFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $newVersion -incremental:$addToVersionNumber # $RepoSettingsFile is defined in AL-Go-Helper.ps1

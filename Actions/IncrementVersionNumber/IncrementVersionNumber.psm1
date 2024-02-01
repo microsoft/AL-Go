@@ -10,7 +10,7 @@
     .Parameter incremental
         If set, the new value will be added to the old value. The old value must be a version number. The new value must be a version number.
 #>
-function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] $incremental) {
+function Set-SettingInFile($settingsFilePath, $settingName, [System.Version] $newValue, [switch] $incremental) {
     if (-not (Test-Path $settingsFilePath)) {
         throw "Settings file ($settingsFilePath) not found."
     }
@@ -28,17 +28,42 @@ function Set-SettingInFile($settingsFilePath, $settingName, $newValue, [switch] 
         return
     }
 
-    $oldValue = $settingFileContent.$settingName
+    $oldValue = [System.Version] $settingFileContent.$settingName
 
-    if ($incremental) {
-        $oldValue = [System.Version]$oldValue
-        $newValue = [System.Version]$newValue
-
-        $newValue = "$($newValue.Major + $oldValue.Major).$($newValue.Minor + $oldValue.Minor)"
+    # If Build or Revision is -1 (not set), use the old value
+    $newBuildValue = $newValue.Build
+    if($newBuildValue -eq -1) {
+        $newBuildValue = $oldValue.Build
     }
 
+    $newRevisionValue = $newValue.Revision
+    if($newRevisionValue -eq -1) {
+        $newRevisionValue = $oldValue.Revision
+    }
+
+    $newMajorValue = $newValue.Major
+    if($incremental) {
+        $newMajorValue = $oldValue.Major + $newValue.Major
+    }
+
+    $newMinorValue = $newValue.Minor
+    if($incremental) {
+        $newMinorValue = $oldValue.Minor + $newValue.Minor
+    }
+
+    $versions = @($newMajorValue, $newMinorValue)
+    if($newBuildValue -ne -1) {
+        $versions += $newBuildValue
+    }
+
+    if($newRevisionValue -ne -1) {
+        $versions += $newRevisionValue
+    }
+
+    $newValue = [System.Version] $($versions -join '.')
+
     Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
-    $settingFileContent.$settingName = $newValue
+    $settingFileContent.$settingName = $newValue.ToString()
     $settingFileContent | Set-JsonContentLF -path $settingsFilePath
 }
 
