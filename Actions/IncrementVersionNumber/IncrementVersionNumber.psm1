@@ -28,6 +28,7 @@ function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
         return
     }
 
+    # Check if the new value is incremental.
     $incremental = "$newValue".StartsWith('+')
     if ($incremental) {
         $newValue = $newValue.TrimStart('+')
@@ -57,6 +58,7 @@ function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
         $newMinorValue = $oldValue.Minor + $newValue.Minor
     }
 
+    # Convert to array to make sure the version properties (Build, Revision) are set
     $versions = @($newMajorValue, $newMinorValue)
     if($newBuildValue -ne -1) {
         $versions += $newBuildValue
@@ -66,7 +68,8 @@ function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
         $versions += $newRevisionValue
     }
 
-    $newValue = [System.Version] $($versions -join '.')
+    # Construct the new version number. Cast to System.Version to validate if the version number is valid.
+    $newValue = [System.Version] "$($versions -join '.')"
 
     Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
     $settingFileContent.$settingName = $newValue.ToString()
