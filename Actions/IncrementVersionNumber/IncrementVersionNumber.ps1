@@ -46,7 +46,7 @@ try {
 
         $projectPath = Join-Path $baseFolder $project
 
-        Set-ProjectVersion -projectPath $projectPath -projectSettings $projectSettings -newVersion $versionNumber
+        Set-ProjectVersion -projectPath $projectPath -projectSettings $projectSettings -newVersion $versionNumber -ALGOsettingsFile $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
     }
 
     $commitMessage = "New Version number $versionNumber"

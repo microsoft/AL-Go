@@ -86,9 +86,9 @@ function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
     .Parameter newVersion
         New version number. If the version number starts with a +, the new version number will be added to the old version number. Else the new version number will replace the old version number.
 #>
-function Set-ProjectVersion($projectPath, $projectSettings, $newVersion) {
+function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, $ALGOsettingsFile) {
     # Set repoVersion in project settings (if it exists)
-    $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+    $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile
     Set-VersionSettingInFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion | Out-Null
 
     # Check if the project uses repoVersion versioning strategy
