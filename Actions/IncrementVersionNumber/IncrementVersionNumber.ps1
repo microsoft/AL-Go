@@ -33,15 +33,8 @@ try {
         throw "Version number ($versionNumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
     }
 
-    $addToVersionNumber = "$versionNumber".StartsWith('+')
-    if ($addToVersionNumber) {
-        $versionNumber = $versionNumber.Substring(1) # Remove the + sign
-    }
-
-    $newVersion = [System.Version]"$($versionNumber)"
-
     # Change repoVersion in repository settings
-    Set-SettingInFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $newVersion -incremental:$addToVersionNumber # $RepoSettingsFile is defined in AL-Go-Helper.ps1
+    Set-VersionSettingInFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber # $RepoSettingsFile is defined in AL-Go-Helper.ps1
 
     $settings = $env:Settings | ConvertFrom-Json
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
@@ -53,11 +46,11 @@ try {
 
         $projectPath = Join-Path $baseFolder $project
 
-        Set-ProjectVersion -projectPath $projectPath -projectSettings $projectSettings -newVersion $newVersion -incremental:$addToVersionNumber
+        Set-ProjectVersion -projectPath $projectPath -projectSettings $projectSettings -newVersion $versionNumber
     }
 
-    $commitMessage = "New Version number $($newVersion.Major).$($newVersion.Minor)"
-    if ($addToVersionNumber) {
+    $commitMessage = "New Version number $versionNumber"
+    if ($versionNumber.StartsWith('+')) {
         $commitMessage = "Incremented Version number by $versionNumber"
     }
 

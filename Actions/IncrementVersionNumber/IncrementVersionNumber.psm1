@@ -1,16 +1,16 @@
 ﻿<#
     .Synopsis
-        Changes a setting value in a settings file.
+        Changes a version setting value in a settings file. The setting value must be a version number in one of the following formats: 1.0 or 1.2.3.4
     .Parameter settingsFilePath
-        Path to the settings file.
+        Path to the settings file. The settings file must be a JSON file.
     .Parameter settingName
         Name of the setting to change.
     .Parameter newValue
-        New value of the setting.
+        New value of the setting. If the value starts with a +, the new value will be added to the old value. Else the new value will replace the old value.
     .Parameter incremental
         If set, the new value will be added to the old value. The old value must be a version number. The new value must be a version number.
 #>
-function Set-SettingInFile($settingsFilePath, $settingName, [System.Version] $newValue, [switch] $incremental) {
+function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
     if (-not (Test-Path $settingsFilePath)) {
         throw "Settings file ($settingsFilePath) not found."
     }
@@ -28,7 +28,13 @@ function Set-SettingInFile($settingsFilePath, $settingName, [System.Version] $ne
         return
     }
 
+    $incremental = "$newValue".StartsWith('+')
+    if ($incremental) {
+        $newValue = $newValue.TrimStart('+')
+    }
+
     $oldValue = [System.Version] $settingFileContent.$settingName
+    $newValue = [System.Version] $newValue # Convert to System.Version to make sure the system properties (Build, Revision) are set
 
     # If Build or Revision is -1 (not set), use the old value
     $newBuildValue = $newValue.Build
@@ -81,16 +87,15 @@ function Set-SettingInFile($settingsFilePath, $settingName, [System.Version] $ne
     .Parameter incremental
         If set, the new version number will be added to the old version number. The old version number must be a version number.
 #>
-function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, [switch] $incremental) {
+function Set-ProjectVersion($projectPath, $projectSettings, $newVersion) {
     # Set repoVersion in project settings (if it exists)
     $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
-    Set-SettingInFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion -incremental:$incremental | Out-Null
+    Set-VersionSettingInFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion | Out-Null
 
     # Check if the project uses repoVersion versioning strategy
     $useRepoVersion = (($projectSettings.PSObject.Properties.Name -eq "versioningStrategy") -and (($projectSettings.versioningStrategy -band 16) -eq 16))
     if ($useRepoVersion) {
         $newVersion = $projectSettings.repoVersion
-        $incremental = $false # Don't increment the version number if the project uses repoVersion versioning strategy
     }
 
     # Set version in app.json files
@@ -99,8 +104,8 @@ function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, [switch
         $folder = Join-Path $projectPath $_
         $appJsonFile = Join-Path $folder "app.json"
 
-        Set-SettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $newVersion -incremental:$incremental | Out-Null
+        Set-VersionSettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $newVersion | Out-Null
     }
 }
 
-Export-ModuleMember -Function Set-SettingInFile, Set-ProjectVersion
+Export-ModuleMember -Function Set-VersionSettingInFile, Set-ProjectVersion
