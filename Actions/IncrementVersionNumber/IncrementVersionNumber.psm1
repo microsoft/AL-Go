@@ -7,8 +7,6 @@
         Name of the setting to change.
     .Parameter newValue
         New value of the setting. If the value starts with a +, the new value will be added to the old value. Else the new value will replace the old value.
-    .Parameter incremental
-        If set, the new value will be added to the old value. The old value must be a version number. The new value must be a version number.
 #>
 function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
     if (-not (Test-Path $settingsFilePath)) {
@@ -86,9 +84,7 @@ function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
     .Parameter project
         Name of the project (relative to the base folder).
     .Parameter newVersion
-        New version number.
-    .Parameter incremental
-        If set, the new version number will be added to the old version number. The old version number must be a version number.
+        New version number. If the version number starts with a +, the new version number will be added to the old version number. Else the new version number will replace the old version number.
 #>
 function Set-ProjectVersion($projectPath, $projectSettings, $newVersion) {
     # Set repoVersion in project settings (if it exists)
