@@ -19,16 +19,13 @@ inputs:
     default: '7b7d'
   solutionFolder:
     description: The Power Platform solution path
-    required: false
-    default: ''
+    required: true
   outputFolder:
     description: Output folder where the zip file will be placed
-    required: false
-    default: ''
+    required: true
   outputFileName:
     description: The name of the output zip file
-    required: false
-    default: '.'
+    required: true
   companyId:
     description: The Business Central company ID
     required: false
@@ -43,9 +40,8 @@ inputs:
     required: false
   appRevision: 
     description: The app revision number
-    default: '0'
+    default: ''
     required: false
-
 
 runs:
   using: composite

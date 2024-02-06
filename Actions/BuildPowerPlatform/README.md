@@ -1,27 +1,25 @@
 # Build Power Platform
 Build the Power Platform solution
-## Parameters
-### shell (default powershell)
-Shell in which you want to run the action (powershell or pwsh)
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-### solutionFolder (default '')
-The Power Platform solution path
-### outputFolder (default '')
-Output folder where the Power platform solution zip file will be placed
-### outputFileName (default '.')
-The name of the Power Platform solution zip file
-### companyId (default '')
-The Business Central company ID
-### environmentName (default '')
-The Business Central environment name
-### appVersion (required)
-Major and Minor part of app Version number
-### appBuild (required)
-Build part of app Version number
-### appRevision (required)
-Revision part of app Version number
+
+## INPUT
+
+### ENV variables
+none
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| actor | | The GitHub actor running the action | github.actor |
+| token | | The GitHub token running the action | github.token |
+| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
+| solutionFolder | Yes | The Power Platform solution path | |
+| outputFolder | Yes | Output folder where the zip file will be placed | |
+| outputFileName | Yes | The name of the output zip file | |
+| companyId | | The Business Central company ID | |
+| environmentName | | The Business Central environment name | |
+| appBuild | | The app build number | |
+| appRevision | | The app revision number | |
+
+## OUTPUT
+none
