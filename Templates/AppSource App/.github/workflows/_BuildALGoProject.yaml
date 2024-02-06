@@ -96,7 +96,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
-          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact
+          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,type,powerPlatformSolutionFolder,appRevision,appBuild
 
       - name: Read secrets
         id: ReadSecrets
@@ -134,7 +134,8 @@ jobs:
           projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
-      - name: Build
+      - name: Build AL
+        if: inputs.project != env.powerPlatformSolutionFolder
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -147,6 +148,18 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+
+      - name: Build PP
+        if: env.type == 'PTE' && inputs.project == env.powerPlatformSolutionFolder && inputs.buildMode == 'default'
+        uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
+        with:
+          shell: ${{ inputs.shell }}
+          parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
+          solutionFolder: ${{ inputs.project }}
+          outputFolder: ${{ inputs.project }}/.buildartifacts/_PowerPlatformSolution/
+          outputFileName: ${{ inputs.project }}
+          appRevision: ${{ env.appRevision }}
+          appBuild: ${{ env.appBuild }}
 
       - name: Sign
         if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
@@ -201,6 +214,14 @@ jobs:
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Apps/'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - Power Platform Solution
+        uses: actions/upload-artifact@v4
+        if: inputs.publishArtifacts && env.type == 'PTE' && inputs.project == env.powerPlatformSolutionFolder
+        with:
+          name: ${{ env.PowerPlatformSolutionArtifactsName }}
+          path: '${{ inputs.project }}/.buildartifacts/_PowerPlatformSolution/'
           if-no-files-found: ignore
 
       - name: Publish artifacts - dependencies

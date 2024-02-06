@@ -561,20 +561,29 @@ function RemoveRepository {
         $repository = $defaultRepository
     }
     if ($repository) {
-        Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         try {
+            $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
+            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository (user $($user.login))"
             $owner = $repository.Split("/")[0]
-            @((invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
+            if ($owner -eq $user.login) {
+                # Package belongs to a user
+                $ownerStr = "users/$owner"
+            }
+            else {
+                # Package belongs to an organization
+                $ownerStr = "orgs/$owner"
+            }
+            @((invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /$ownerStr/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
                 Write-Host "+ package $($_.name)"
                 # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
-                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages/nuget/$($_.name) --input
+                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /$ownerStr/packages/nuget/$($_.name) --input
             }
         }
         catch {
             Write-Host -ForegroundColor Red "Error removing packages"
             Write-Host -ForegroundColor Red $_.Exception.Message
         }
-        invoke-gh repo delete $repository --confirm | Out-Host
+        invoke-gh repo delete $repository --yes | Out-Host
     }
 
     if ($path) {
