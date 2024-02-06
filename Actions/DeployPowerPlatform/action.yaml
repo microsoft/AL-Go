@@ -1,5 +1,5 @@
-name: DeployPowerPlatformSolution
-author: Andersg
+name: Deploy PowerPlatform Solution
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -29,7 +29,6 @@ inputs:
     description: The auth settings
     required: false
     default: '{}'
-
 runs:
   using: composite
   steps:
@@ -37,7 +36,7 @@ runs:
       uses: microsoft/powerplatform-actions/actions-install@v1
 
     - name: Parse DeployToSettings and AuthContext
-      uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@PPPreview
+      uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@main
       with:
         shell: ${{ inputs.shell }}
         parentTelemetryScopeJson: ${{inputs.parentTelemetryScopeJson}}

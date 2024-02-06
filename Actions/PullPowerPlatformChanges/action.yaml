@@ -1,5 +1,5 @@
-name: Pull Power Platform Changes
-author: Andersg
+name: Pull PowerPlatform Changes
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -28,12 +28,10 @@ inputs:
     description: The auth settings
     required: false
     default: '{}'
-  directCommit: 
-    type: boolean
-    description: If true, the changes will be committed directly to the branch. If not, the changes will be committed to a branch named after the solution.
+  directCommit:
+    description: Direct Commit?
     required: false
-    default: false
-
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -41,7 +39,7 @@ runs:
         uses: microsoft/powerplatform-actions/actions-install@v1
 
       - name: Parse DeployToSettings and AuthContext
-        uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@PPPreview
+        uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@main
         with:
           shell: ${{ inputs.shell }}
           parentTelemetryScopeJson: ${{inputs.parentTelemetryScopeJson}}
