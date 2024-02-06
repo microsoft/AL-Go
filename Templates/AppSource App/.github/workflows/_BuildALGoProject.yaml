@@ -220,7 +220,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: inputs.publishArtifacts && env.type == 'PTE' && inputs.project == env.powerPlatformSolutionFolder
         with:
-          name: ${{ env.PowerPlatformSolutionArtifactsName }}
+          name: ${{ steps.calculateArtifactsNames.outputs.PowerPlatformSolutionArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/_PowerPlatformSolution/'
           if-no-files-found: ignore
 
