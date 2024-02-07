@@ -128,7 +128,7 @@ jobs:
           project: ${{ inputs.project }}
 
       - name: Cache Business Central Artifacts
-        if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey && $env.sourceType == 'AL'
+        if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey && env.sourceType == 'AL'
         uses: actions/cache@v4
         with:
           path: .artifactcache
