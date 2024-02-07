@@ -231,7 +231,7 @@ jobs:
 
       - name: Publish artifacts - Power Platform Solution
         uses: actions/upload-artifact@v4
-        if: inputs.publishArtifacts && env.type == 'PTE' && env.sourceType = 'PP'
+        if: inputs.publishArtifacts && env.type == 'PTE' && env.sourceType == 'PP'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.PowerPlatformSolutionArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/_PowerPlatformSolution/'
