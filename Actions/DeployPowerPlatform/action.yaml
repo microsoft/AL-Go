@@ -20,6 +20,11 @@ runs:
     - name: Install Power Platform Tools
       uses: microsoft/powerplatform-actions/actions-install@v1
 
+    - name: dump
+      run: |
+        Write-Host $ENV:GITHUB_WORKSPACE
+        Write-Host $PSScriptRoot
+
     - name: Parse DeployToSettings and AuthContext
       uses: ./Actions/ReadPowerPlatformSettings
       with:
