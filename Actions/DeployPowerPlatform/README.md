@@ -1,17 +1,23 @@
 # Deploy Power Platform
 Deploy the Power Platform solution from the artifacts folder
-## Parameters
-### shell (default powershell)
-Shell in which you want to run the action (powershell or pwsh)
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-### artifactPath (default '.')
-Patch to the artifacts folder containing power platform solution
-### deploySettings (default {})
-The deploy settings for the power platform solution
-### authSettings (default {})
-The auth settings for the power platform solution
+
+## INPUT
+
+### ENV variables
+| Name | Description |
+| :-- | :-- |
+| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
+| Secrets | env.Secrets with delivery target context secrets must be read by a prior call to the ReadSecrets Action |
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| environmentName | Yes | Name of environment to deploy to |
+| artifacts | Yes | The artifacts to deploy or a folder in which the artifacts have been downloaded | |
+| deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
+
+## OUTPUT
+| Name | Description |
+| :-- | :-- |
+| environmentUrl | The URL for the environment. This URL is presented in the Deploy Step in summary under the environment name |

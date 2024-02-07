@@ -107,22 +107,35 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ inputs.secrets }},appDependencyProbingPathsSecrets'
 
+      - name: Determine Source Type
+        env:
+          project: ${{ inputs.project }}
+        run: |
+          if ($env:powerPlatformSolutionFolder -eq $env:project) {
+            $sourceType = 'PP'
+          } else {
+            $sourceType = 'AL'
+          }
+          Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -value "sourceType=$sourceType"
+
       - name: Determine ArtifactUrl
-        uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
+        if: env.sourceType == 'AL'
         id: determineArtifactUrl
+        uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
         with:
           shell: ${{ inputs.shell }}
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
           project: ${{ inputs.project }}
 
       - name: Cache Business Central Artifacts
-        if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey
+        if: env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey && $env.sourceType == 'AL'
         uses: actions/cache@v4
         with:
           path: .artifactcache
           key: ${{ env.artifactCacheKey }}
 
       - name: Download Project Dependencies
+        if: env.sourceType == 'AL'
         id: DownloadProjectDependencies
         uses: microsoft/AL-Go-Actions/DownloadProjectDependencies@main
         env:
@@ -135,7 +148,7 @@ jobs:
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
       - name: Build AL
-        if: inputs.project != env.powerPlatformSolutionFolder
+        if: env.sourceType == 'AL'
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -150,7 +163,7 @@ jobs:
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
       - name: Build PP
-        if: env.type == 'PTE' && inputs.project == env.powerPlatformSolutionFolder && inputs.buildMode == 'default'
+        if: env.type == 'PTE' && env.sourceType == 'PP' && inputs.buildMode == 'default'
         uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
         with:
           shell: ${{ inputs.shell }}
@@ -162,7 +175,7 @@ jobs:
           appBuild: ${{ env.appBuild }}
 
       - name: Sign
-        if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
+        if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != '' && env.sourceType == 'AL'
         id: sign
         uses: microsoft/AL-Go-Actions/Sign@main
         with:
@@ -182,7 +195,7 @@ jobs:
           suffix: ${{ inputs.artifactsNameSuffix }}
 
       - name: Upload thisbuild artifacts - apps
-        if: inputs.publishThisBuildArtifacts
+        if: inputs.publishThisBuildArtifacts && env.sourceType == 'AL'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildAppsArtifactsName }}
@@ -191,7 +204,7 @@ jobs:
           retention-days: 1
 
       - name: Upload thisbuild artifacts - dependencies
-        if: inputs.publishThisBuildArtifacts
+        if: inputs.publishThisBuildArtifacts && env.sourceType == 'AL'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildDependenciesArtifactsName }}
@@ -200,7 +213,7 @@ jobs:
           retention-days: 1
 
       - name: Upload thisbuild artifacts - test apps
-        if: inputs.publishThisBuildArtifacts
+        if: inputs.publishThisBuildArtifacts && env.sourceType == 'AL'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildTestAppsArtifactsName }}
@@ -210,7 +223,7 @@ jobs:
 
       - name: Publish artifacts - apps
         uses: actions/upload-artifact@v4
-        if: inputs.publishArtifacts
+        if: inputs.publishArtifacts && env.sourceType == 'AL'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Apps/'
@@ -218,7 +231,7 @@ jobs:
 
       - name: Publish artifacts - Power Platform Solution
         uses: actions/upload-artifact@v4
-        if: inputs.publishArtifacts && env.type == 'PTE' && inputs.project == env.powerPlatformSolutionFolder
+        if: inputs.publishArtifacts && env.type == 'PTE' && env.sourceType = 'PP'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.PowerPlatformSolutionArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/_PowerPlatformSolution/'
@@ -226,7 +239,7 @@ jobs:
 
       - name: Publish artifacts - dependencies
         uses: actions/upload-artifact@v4
-        if: inputs.publishArtifacts && env.generateDependencyArtifact == 'True'
+        if: inputs.publishArtifacts && env.generateDependencyArtifact == 'True' && env.sourceType == 'AL'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.DependenciesArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Dependencies/'
@@ -234,7 +247,7 @@ jobs:
 
       - name: Publish artifacts - test apps
         uses: actions/upload-artifact@v4
-        if: inputs.publishArtifacts
+        if: inputs.publishArtifacts && env.sourceType == 'AL'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestAppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/TestApps/'
@@ -250,7 +263,7 @@ jobs:
 
       - name: Publish artifacts - container event log
         uses: actions/upload-artifact@v4
-        if: (failure()) && (hashFiles(format('{0}/ContainerEventLog.evtx',inputs.project)) != '')
+        if: (failure()) && (hashFiles(format('{0}/ContainerEventLog.evtx',inputs.project)) != '') && env.sourceType == 'AL'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ContainerEventLogArtifactsName }}
           path: '${{ inputs.project }}/ContainerEventLog.evtx'
@@ -258,7 +271,7 @@ jobs:
 
       - name: Publish artifacts - test results
         uses: actions/upload-artifact@v4
-        if: (success() || failure()) && (hashFiles(format('{0}/TestResults.xml',inputs.project)) != '')
+        if: (success() || failure()) && (hashFiles(format('{0}/TestResults.xml',inputs.project)) != '') && env.sourceType == 'AL'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestResultsArtifactsName }}
           path: '${{ inputs.project }}/TestResults.xml'
@@ -266,7 +279,7 @@ jobs:
 
       - name: Publish artifacts - bcpt test results
         uses: actions/upload-artifact@v4
-        if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',inputs.project)) != '')
+        if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',inputs.project)) != '') && env.sourceType == 'AL'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.BcptTestResultsArtifactsName }}
           path: '${{ inputs.project }}/bcptTestResults.json'
@@ -274,7 +287,7 @@ jobs:
 
       - name: Analyze Test Results
         id: analyzeTestResults
-        if: (success() || failure()) && env.doNotRunTests == 'False'
+        if: (success() || failure()) && env.doNotRunTests == 'False' && env.sourceType == 'AL'
         uses: microsoft/AL-Go-Actions/AnalyzeTests@main
         with:
           shell: ${{ inputs.shell }}

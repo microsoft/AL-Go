@@ -5,6 +5,9 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  environmentName:
+    description: Name of environment to deploy to
+    required: true
   artifacts:
     description: Patch to the artifacts folder
     required: true
