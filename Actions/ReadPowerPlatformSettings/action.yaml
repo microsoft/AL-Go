@@ -1,0 +1,21 @@
+name: Read Power Platform Settings
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  deploymentEnvironmentsJson:
+    description: The settings for all Deployment Environments
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
+      run: ${{ github.action_path }}/ReadDeploymentAndAuthSettings.ps1 -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
+branding:
+  icon: terminal
+  color: blue

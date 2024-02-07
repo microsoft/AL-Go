@@ -13,22 +13,13 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   artifactPath:
     description: Patch to the artifacts folder
     required: false
     default: '.'
-  deploySettings: 
-    description: The deploy settings
-    required: false
-    default: '{}'
-  authSettings: 
-    description: The auth settings
-    required: false
-    default: '{}'
+  deploymentEnvironmentsJson:
+    description: The settings for all Deployment Environments
+    required: true
 runs:
   using: composite
   steps:
@@ -39,9 +30,7 @@ runs:
       uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@main
       with:
         shell: ${{ inputs.shell }}
-        parentTelemetryScopeJson: ${{inputs.parentTelemetryScopeJson}}
-        deploySettings: ${{ inputs.deploySettings }} 
-        authSettings: ${{ inputs.authSettings }}
+        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
 
     - name: Who am I (username)
       if: env.ppUserName != ''
@@ -65,17 +54,17 @@ runs:
         _artifactPath: ${{inputs.artifactPath}}
       shell: ${{ inputs.shell }}
       run: |
-            $artifactFiles = Get-ChildItem -Path $ENV:_artifactPath -Recurse -File | Select-Object -ExpandProperty FullName
-            foreach($filePath in $artifactFiles){
-                ## Find file containing Power Platform keyword
-                if($filePath.contains("-PowerPlatformSolution-")){
-                    Write-Host "Power Platform solution file:"$filePath
-                    Add-Content -path $env:GITHUB_ENV -value "powerPlatformSolutionPath=$filePath" 
-                    return
-                }
-            }            
-            Write-Warning "Not able to find Power Platform solution file in $ENV:_artifactPath"
-            throw "Not able to find Power Platform solution file in $ENV:_artifactPath that contains the artifact keyword '-PowerPlatformSolution-'"
+        $artifactFiles = Get-ChildItem -Path $ENV:_artifactPath -Recurse -File | Select-Object -ExpandProperty FullName
+        foreach($filePath in $artifactFiles){
+            ## Find file containing Power Platform keyword
+            if($filePath.contains("-PowerPlatformSolution-")){
+                Write-Host "Power Platform solution file:"$filePath
+                Add-Content -path $env:GITHUB_ENV -value "powerPlatformSolutionPath=$filePath" 
+                return
+            }
+        }            
+        Write-Warning "Not able to find Power Platform solution file in $ENV:_artifactPath"
+        throw "Not able to find Power Platform solution file in $ENV:_artifactPath that contains the artifact keyword '-PowerPlatformSolution-'"
   
     - name: Unpack solution artifact
       uses: microsoft/powerplatform-actions/unpack-solution@v1
@@ -89,7 +78,6 @@ runs:
       uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
       with:
         shell: ${{ inputs.shell }}
-        parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         solutionFolder: .artifacts/tempPPSolution/source
         outputFolder: .artifacts/tempPPSolution
         outputFileName: ppsolution
