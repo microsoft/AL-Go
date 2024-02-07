@@ -21,6 +21,7 @@ runs:
       uses: microsoft/powerplatform-actions/actions-install@v1
 
     - name: dump
+      shell: pwsh
       run: |
         Write-Host $ENV:GITHUB_WORKSPACE
         Write-Host $PSScriptRoot
