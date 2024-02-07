@@ -76,10 +76,6 @@ env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
-defaults:
-  run:
-    shell: ${{ inputs.shell }}
-
 jobs:
   BuildALGoProject:
     needs: [ ]
@@ -114,6 +110,7 @@ jobs:
       - name: Determine Source Type
         env:
           project: ${{ inputs.project }}
+        shell: ${{ inputs.shell }}
         run: |
           if ($env:powerPlatformSolutionFolder -eq $env:project) {
             $sourceType = 'PP'
