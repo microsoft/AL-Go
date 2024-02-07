@@ -261,7 +261,7 @@ jobs:
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
-          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+          shell: pwsh
           environmentName: ${{ matrix.environment }}
           artifacts: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
