@@ -5,18 +5,9 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  actor:
-    description: The GitHub actor running the action
-    required: false
-    default: ${{ github.actor }}
-  token:
-    description: The GitHub token running the action
-    required: false
-    default: ${{ github.token }}
-  artifactPath:
+  artifacts:
     description: Patch to the artifacts folder
-    required: false
-    default: '.'
+    required: true
   deploymentEnvironmentsJson:
     description: The settings for all Deployment Environments
     required: true
@@ -27,7 +18,7 @@ runs:
       uses: microsoft/powerplatform-actions/actions-install@v1
 
     - name: Parse DeployToSettings and AuthContext
-      uses: microsoft/AL-Go-Actions/ReadPowerPlatformSettings@main
+      uses: ./Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
         deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
@@ -75,7 +66,7 @@ runs:
         process-canvas-apps: true
 
     - name: Rebuild solution
-      uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
+      uses: ./Actions/BuildPowerPlatform
       with:
         shell: ${{ inputs.shell }}
         solutionFolder: .artifacts/tempPPSolution/source
