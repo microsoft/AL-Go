@@ -203,7 +203,7 @@ try {
                     $parameters += @{ "SyncMode" = $deploymentSettings.SyncMode }
                 }
                 Write-Host "Publishing apps using development endpoint"
-                Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages
+                Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages -replacePackageId
             }
             elseif (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.continuousDeployment)) {
                 # Continuous deployment is undefined in settings - we will not deploy to production environments
