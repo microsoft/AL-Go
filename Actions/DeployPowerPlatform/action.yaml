@@ -26,8 +26,15 @@ runs:
         Write-Host $ENV:GITHUB_WORKSPACE
         Write-Host $PSScriptRoot
 
+    - name: Check out AL-Go
+      uses: actions/checkout@v4
+      with:
+        repository: freddydk/AL-Go
+        ref: PPP
+        path: ./_AL-Go
+
     - name: Parse DeployToSettings and AuthContext
-      uses: ./Actions/ReadPowerPlatformSettings
+      uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
         deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
