@@ -56,7 +56,7 @@ try {
     }
 
     # Set dependencies in app manifests
-    Set-DependenciesVersionInAppManifests -allAppFolders $allAppFolders
+    Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
 
     $commitMessage = "New Version number $versionNumber"
     if ($versionNumber.StartsWith('+')) {
