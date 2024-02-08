@@ -33,7 +33,7 @@ runs:
         $actionsPath = './_AL-Go/Actions'
         if ($actionsRepo -like '*/Actions') {
           $actionsRepo = $actionsRepo.SubString(0,$actionsRepo.Length-8)
-          $actionPath = './_AL-Go'
+          $actionsPath = './_AL-Go'
         }
         Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsRepo=$actionsRepo"
         Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsRef=$actionsRef"
