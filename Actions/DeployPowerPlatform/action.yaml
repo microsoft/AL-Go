@@ -5,6 +5,12 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  actionsRepo:
+    description: The AL-Go for GitHub Actions repository
+    required: true
+  actionsRef:
+    description: The AL-Go for GitHub Actions ref
+    required: true
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -20,30 +26,11 @@ runs:
     - name: Install Power Platform Tools
       uses: microsoft/powerplatform-actions/actions-install@v1
 
-    - name: dump
-      shell: pwsh
-      run: |
-        Write-Host "github = '${{ toJson(github) }}'"
-        Write-Host "env = '${{ toJson(env) }}'"
-        Write-Host "inputs = '${{ toJson(inputs) }}'"
-
-    - name: dump
-      shell: pwsh
-      run: |
-        Write-Host "ModulePath: '$ENV:PSModulePath'"
-        Write-Host "GITHUB_EVENT_PATH: '$ENV:GITHUB_EVENT_PATH'"
-        Get-Content $ENV:GITHUB_EVENT_PATH | Out-Host
-
-    - name: dump
-      shell: pwsh
-      run: |
-          dir env:
-
     - name: Check out AL-Go
       uses: actions/checkout@v4
       with:
-        repository: freddydk/AL-Go
-        ref: PPP
+        repository: ${{ inputs.actionsRepo }}
+        ref: ${{ inputs.actionsRef }}
         path: ./_AL-Go
 
     - name: Parse DeployToSettings and AuthContext
