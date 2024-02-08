@@ -32,7 +32,7 @@ runs:
         $repo = $env:_actionsRepo.Split('@')[0]
         $path = './_AL-Go/Actions'
         if ($repo -like '*/Actions') {
-          $repo = $repo -replace '/Actions', ''
+          $repo = $repo.SubString(0,$repo.Length-8)
           $path = './_AL-Go'
         }
         Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "repo=$repo"
