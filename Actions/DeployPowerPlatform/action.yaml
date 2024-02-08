@@ -49,7 +49,7 @@ runs:
         path: ./_AL-Go
 
     - name: Parse DeployToSettings and AuthContext
-      uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
+      uses: ${{ github.action_path}}/../ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
         deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
@@ -97,7 +97,7 @@ runs:
         process-canvas-apps: true
 
     - name: Rebuild solution
-      uses: ./Actions/BuildPowerPlatform
+      uses: ${{ github.action_path}}/../BuildPowerPlatform
       with:
         shell: ${{ inputs.shell }}
         solutionFolder: .artifacts/tempPPSolution/source
