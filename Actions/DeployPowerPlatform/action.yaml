@@ -24,7 +24,7 @@ runs:
       uses: microsoft/powerplatform-actions/actions-install@v1
 
     - name: Get Actions Repo and Ref
-      shell: ${{ inputs.shell }}
+      shell: pwsh
       env:
         _actionsRepo: ${{ inputs.actionsRepo }}
       run: |
