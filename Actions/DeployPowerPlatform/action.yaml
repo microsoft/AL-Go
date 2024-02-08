@@ -23,8 +23,19 @@ runs:
     - name: dump
       shell: pwsh
       run: |
-        Write-Host $ENV:GITHUB_WORKSPACE
-        Write-Host $PSScriptRoot
+        Get-ComputerInfo | Out-Host
+
+    - name: dump
+      shell: pwsh
+      run: |
+        Write-Host "ModulePath: '$ENV:PSModulePath'"
+        Write-Host "GITHUB_EVENT_PATH: '$ENV:GITHUB_EVENT_PATH'"
+        Get-Content $ENV:GITHUB_EVENT_PATH | Out-Host
+
+    - name: dump
+      shell: pwsh
+      run: |
+          dir env:
 
     - name: Check out AL-Go
       uses: actions/checkout@v4

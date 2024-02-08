@@ -249,7 +249,7 @@ jobs:
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
-          shell: pwsh
+          shell: powershell
           environmentName: ${{ matrix.environment }}
           artifacts: '.artifacts'
           type: 'CD'
