@@ -28,6 +28,9 @@ runs:
       env:
         _actionsRepo: ${{ inputs.actionsRepo }}
       run: |
+        # Using hardcoded reference to microsoft/AL-Go-Actions inside composote actions doesn't work with preview nor direct development branches
+        # For this reason, we get the actionsRepo from the calling workflow (which might be freddydk/AL-Go@PPP or microsoft/AL-Go@sha or microsoft/AL-Go-Actions@v4.1 )
+        # Download actions to ./_AL-Go/Actions
         $actionsRef = $env:_actionsRepo.Split('@')[1]
         $actionsRepo = $env:_actionsRepo.Split('@')[0]
         $actionsPath = './_AL-Go/Actions'
@@ -47,27 +50,28 @@ runs:
         path: ${{ env.actionsPath }}
 
     - name: Parse DeployToSettings and AuthContext
+      id: ReadPowerPlatformSettings
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
         deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
 
     - name: Who am I (username)
-      if: env.ppUserName != ''
+      if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
       uses: microsoft/powerplatform-actions/who-am-i@v1
       with:
-        environment-url: ${{env.ppEnvironmentUrl}}
-        user-name: ${{env.ppUserName}}
-        password-secret: ${{env.ppPassword}}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl}}
+        user-name: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
+        password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
 
     - name: Who am I (application ID)
-      if: env.ppApplicationId != ''
+      if: steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
       uses: microsoft/powerplatform-actions/who-am-i@v1
       with:
-        environment-url: ${{env.ppEnvironmentUrl}}
-        tenant-id: ${{env.ppTenantId}}
-        app-id: ${{env.ppApplicationId}}
-        client-secret: ${{env.ppClientSecret}}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
+        tenant-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
+        app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
+        client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
  
     - name: Find Power Platform solution file
       env:
@@ -79,7 +83,7 @@ runs:
             ## Find file containing Power Platform keyword
             if($filePath.contains("-PowerPlatformSolution-")){
                 Write-Host "Power Platform solution file:"$filePath
-                Add-Content -path $env:GITHUB_ENV -value "powerPlatformSolutionPath=$filePath" 
+                Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionPath=$filePath" 
                 return
             }
         }            
@@ -101,28 +105,28 @@ runs:
         solutionFolder: .artifacts/tempPPSolution/source
         outputFolder: .artifacts/tempPPSolution
         outputFileName: ppsolution
-        companyId: ${{ env.companyId }}
-        environmentName: ${{ env.environmentName }}
+        companyId: ${{ steps.ReadPowerPlatformSettings.outputs.companyId }}
+        environmentName: ${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}
 
     - name: Publish solution to Power Platform (userName)
-      if: env.ppUserName != ''
+      if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
       uses: microsoft/powerplatform-actions/import-solution@v1
       with:
-        user-name: ${{env.ppUserName}}
-        password-secret: ${{env.ppPassword}}
-        environment-url: ${{env.ppEnvironmentUrl}}
+        user-name: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
+        password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
         solution-file: .artifacts/tempPPSolution/ppsolution.zip
         force-overwrite: true
         publish-changes: true
 
     - name: Publish solution to Power Platform (ApplicationId)
-      if: env.ppApplicationId != ''
+      if: steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
       uses: microsoft/powerplatform-actions/import-solution@v1
       with:
-        environment-url: ${{env.ppEnvironmentUrl}}
-        tenant-id: ${{env.ppTenantId}}
-        app-id: ${{env.ppApplicationId}}
-        client-secret: ${{env.ppClientSecret}}
+        tenant-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
+        app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
+        client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
         solution-file: .artifacts/tempPPSolution/ppsolution.zip
         force-overwrite: true
         publish-changes: true

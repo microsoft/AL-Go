@@ -3,69 +3,46 @@ param(
     [string] $deploymentEnvironmentsJson
 )
 
-function Read-DeployToSettings {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$deployToSettingString
-    )
-    # Convert the JSON string to a PowerShell object
-    $deployToSettings = ConvertFrom-Json $deployToSettingString
+$deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+$deploymentSettings = $deploymentEnvironments."$environmentName"
+$envName = $environmentName.Split(' ')[0]
+$secrets = $env:Secrets | ConvertFrom-Json
 
-    foreach ($property in $deployToSettings.PSObject.Properties) {
-        $propertyName = $property.Name
-        $propertyValue = $property.Value
-
-        if ($propertyValue) {
-            Write-Host "$propertyName : $propertyValue"
-            Add-Content -Path $env:GITHUB_ENV -Value "$propertyName=$propertyValue"
-        } else {
-            Write-Host "$propertyName property not found"
-        }
+foreach($property in 'ppEnvironmentUrl','companyId','environmentName') {
+    if ($deploymentSettings."$property") {
+        Write-Host "Setting $property"
+        Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$property=$($deploymentSettings."$property")"
+    }
+    else {
+        throw "DeployTo$envName setting must contain '$property' property"
     }
 }
 
-function Read-AuthContext {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$authContextData
-    )
-    
-    $authContextString = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($authContextData))
-    $authContextObject = ConvertFrom-Json $authContextString
-
-    # Check which set of properties is present and assign to local variables accordingly
-    if ($authContextObject.ppUserName -and $authContextObject.ppPassword) {
-        Write-Host "Authenticating with user name and password";
-        
-        $ppUserName = $authContextObject.ppUserName
-        Add-Content -Path $env:GITHUB_ENV -Value "ppUserName=$ppUserName"        
-        $ppPassword = $authContextObject.ppPassword
-        Add-Content -Path $env:GITHUB_ENV -Value "ppPassword=$ppPassword"
-        $ppTenantId = $authContextObject.ppTenantId
-        Add-Content -Path $env:GITHUB_ENV -Value "ppTenantId=$ppTenantId"
-
-    } elseif ($authContextObject.ppApplicationId -and $authContextObject.ppClientSecret) {
-        write-host "Authenticating with application ID and client secret";
-
-        $ppApplicationId = $authContextObject.ppApplicationId
-        Add-Content -Path $env:GITHUB_ENV -Value "ppApplicationId=$ppApplicationId"        
-        $ppClientSecret = $authContextObject.ppClientSecret
-        Add-Content -Path $env:GITHUB_ENV -Value "ppClientSecret=$ppClientSecret"
-        $ppTenantId = $authContextObject.ppTenantId
-        Add-Content -Path $env:GITHUB_ENV -Value "ppTenantId=$ppTenantId"
-
-    } else {
-        Write-Warning "Invalid input: JSON object must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId' and 'ppClientSecret' properties"
-        throw "Invalid input: JSON object must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId' and 'ppClientSecret' properties"
+$authContext = $null
+foreach($secretName in "AuthContext","$($envName)-AuthContext","$($envName)_AuthContext") {
+    if ($secrets."$secretName") {
+        $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")) | ConvertFrom-Json
     }
 }
 
-Write-Host "*******************************************************************************************"
-Write-Host "Read deployment settings"
-Write-Host "*******************************************************************************************"
-#Read-DeployToSettings -deployToSettingString $deployToSettings
+'ppTenantId','ppApplicationId','ppClientSecret','ppUserName','ppPassword' | ForEach-Object {
+    if ($authContext.PSObject.Properties.Name -eq $_) {
+        Write-Host "Setting $_"
+        Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$_=$($authContext."$_")"
+        Set-Variable -Name $_ -Value $authContext."$_"
+    }
+    else {
+        Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$_="
+        Set-Variable -Name $_ -Value ""
+    }
+}
 
-Write-Host "*******************************************************************************************"
-Write-Host "Read authentication context"
-Write-Host "*******************************************************************************************"
-#Read-AuthContext -authContextData $authContext
+if ($ppApplicationId -and $ppClientSecret -and $ppTenantId) {
+    Write-Host "Authenticating with application ID and client secret"
+}
+elseif ($ppUserName -and $ppPassword -and $ppTenantId) {
+    Write-Host "Authenticating with user name"
+}
+else {
+    throw "Auth context must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
+}

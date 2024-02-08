@@ -107,6 +107,8 @@ if (!($environments)) {
                 "SyncMode" = $null
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
+                "companyId" = ''
+                "ppEnvironmentUrl" = ''
             }
         }
         $unknownEnvironment = 1
@@ -130,6 +132,8 @@ else {
         # - projects: all
         # - continuous deployment: only for environments not tagged with PROD or FAT
         # - runs-on: same as settings."runs-on"
+        # - no companyId
+        # - no ppEnvironmentUrl
         $deploymentSettings = @{
             "EnvironmentType" = "SaaS"
             "EnvironmentName" = $envName
@@ -139,6 +143,8 @@ else {
             "SyncMode" = $null
             "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
+            "companyId" = ''
+            "ppEnvironmentUrl" = ''
         }
 
         # Check DeployTo<environmentName> setting
