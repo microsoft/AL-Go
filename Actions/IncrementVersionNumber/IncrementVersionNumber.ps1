@@ -40,14 +40,14 @@ try {
 
         # Set repoVersion in project settings (if it exists)
         $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
-        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion
+        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
 
         # Resolve project folders to get all app folders that contain an app.json file
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
         # Set version in app manifests (app.json files)
-        Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $newVersion
+        Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $versionNumber
 
         # Collect all project's app folders
         $allAppFolders += $projectSettings.appFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
