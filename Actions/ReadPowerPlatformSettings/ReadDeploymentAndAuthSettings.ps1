@@ -3,7 +3,7 @@ param(
     [string] $deploymentEnvironmentsJson
 )
 
-$deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+$deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json
 $deploymentSettings = $deploymentEnvironments."$environmentName"
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
