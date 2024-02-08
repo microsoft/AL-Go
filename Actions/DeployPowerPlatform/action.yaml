@@ -23,11 +23,9 @@ runs:
     - name: dump
       shell: pwsh
       run: |
-        Write-Host "github.action = '${{ github.action }}'"
-        Write-Host "github.action_path = '${{ github.action_path }}'"
-        Write-Host "github.action_ref = '${{ github.action_ref }}'"
-        Write-Host "github.action_repository = '${{ github.action_repository }}'"
-        Write-Host "github.action_status = '${{ github.action_status }}'"
+        Write-Host "github = '${{ toJson(github) }}'"
+        Write-Host "env = '${{ toJson(env) }}'"
+        Write-Host "inputs = '${{ toJson(inputs) }}'"
 
     - name: dump
       shell: pwsh
