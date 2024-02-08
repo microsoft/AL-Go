@@ -123,6 +123,15 @@ function Set-VersionInAppManifests($projectPath, $projectSettings, $newValue) {
     }
 }
 
+<#
+    .Synopsis
+        Changes the version number of dependencies in app.json files.
+    .Description
+        Changes the version number of dependencies in app.json files.
+        The version number of the dependencies is changed to the version number of the app that the dependency refers to. If the app is not found, the version number of the dependency is not changed.
+    .Parameter appFolders
+        Array of paths to the app folders. Each app folder must contain an app.json file. The apps are used to get the version number of the dependencies.
+#>
 function Set-DependenciesVersionInAppManifests {
     param(
         [Parameter(Mandatory = $true)]
