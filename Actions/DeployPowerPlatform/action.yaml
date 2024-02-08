@@ -8,9 +8,6 @@ inputs:
   actionsRepo:
     description: The AL-Go for GitHub Actions repository
     required: true
-  actionsRef:
-    description: The AL-Go for GitHub Actions ref
-    required: true
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -26,12 +23,29 @@ runs:
     - name: Install Power Platform Tools
       uses: microsoft/powerplatform-actions/actions-install@v1
 
+    - name: Get Actions Repo and Ref
+      shell: ${{ inputs.shell }}
+      env:
+        _actionsRepo: ${{ inputs.actionsRepo }}
+      run: |
+        $ref = $env:_actionsRepo.Split('@')[1]
+        $repo = $env:_actionsRepo.Split('@')[0]
+        $path = './_AL-Go/Actions'
+        if ($repo -like '*/Actions') {
+          $repo = $repo -replace '/Actions', ''
+          $path = './_AL-Go'
+        }
+        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "ref=$ref"
+        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "repo=$repo"
+        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "path=$path"
+
+
     - name: Check out AL-Go
       uses: actions/checkout@v4
       with:
-        repository: ${{ inputs.actionsRepo }}
-        ref: ${{ inputs.actionsRef }}
-        path: ./_AL-Go
+        repository: ${{ env.repo }}
+        ref: ${{ env.ref }}
+        path: ${{ env.path }}
 
     - name: Parse DeployToSettings and AuthContext
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
