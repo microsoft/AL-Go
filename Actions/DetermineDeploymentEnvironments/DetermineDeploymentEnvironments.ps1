@@ -153,7 +153,8 @@ else {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             Write-Host "Setting $settingsName"
             $deployTo = $settings."$settingsName"
-            foreach($key in $deploymentSettings.Keys) {
+            $keys = @($deploymentSettings.Keys)
+            foreach($key in $keys) {
                 if ($deployTo.ContainsKey($key)) {
                     Write-Host "Property $key = $($deployTo."$key")"
                     $deploymentSettings."$key" = $deployTo."$key"
