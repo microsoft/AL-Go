@@ -2,13 +2,13 @@
     .Synopsis
         Changes a version setting value in a settings file.
     .Parameter settingsFilePath
-        Path to the settings file. The settings file must be a JSON file.
+        Path to a JSON file containing the settings.
     .Parameter settingName
         Name of the setting to change. The setting must be a version number.
     .Parameter newValue
         New value of the setting. Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a version number in the format Major.Minor (e.g. 1.0 or 1.2
 #>
-function Set-VersionSettingInFile {
+function Set-VersionInSettingsFile {
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string] $settingsFilePath,
@@ -90,12 +90,6 @@ function Set-VersionSettingInFile {
     Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
     $settingFileContent.$settingName = $newValue.ToString()
     $settingFileContent | Set-JsonContentLF -Path $settingsFilePath
-
-    return @{
-        name = $settingFileContent.name
-        version = $settingFileContent.version
-        publisher = $settingFileContent.publisher
-    }
 }
 
 <#
@@ -108,50 +102,61 @@ function Set-VersionSettingInFile {
         Base folder of the repository.
     .Parameter project
         Name of the project (relative to the base folder).
-    .Parameter newVersion
+    .Parameter newValue
         New version number. If the version number starts with a +, the new version number will be added to the old version number. Else the new version number will replace the old version number.
 #>
-function Set-ProjectVersion($projectPath, $projectSettings, $newVersion, $ALGOsettingsFile) {
-    # Set repoVersion in project settings (if it exists)
-    $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile
-    Set-VersionSettingInFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion | Out-Null
+function Set-VersionInAppManifests($projectPath, $projectSettings, $newValue) {
 
     # Check if the project uses repoVersion versioning strategy
     $useRepoVersion = (($projectSettings.PSObject.Properties.Name -eq "versioningStrategy") -and (($projectSettings.versioningStrategy -band 16) -eq 16))
     if ($useRepoVersion) {
-        $newVersion = $projectSettings.repoVersion
+        $newValue = $projectSettings.repoVersion
     }
 
     $allAppFolders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
     # Set version in app.json files
-    $appInfos = $allAppFolders | ForEach-Object {
-        $folder = Join-Path $projectPath $_
-        $appJsonFile = Join-Path $folder "app.json"
-
-        $appInfo = Set-VersionSettingInFile -settingsFilePath $appJsonFile -settingName 'version' -newValue $newVersion
-        return $appInfo
-    }
-
-    # Set the version in the dependencies in app.json files
     $allAppFolders | ForEach-Object {
-        $folder = Join-Path $projectPath $_
-        $appJsonFile = Join-Path $folder "app.json"
+        $appFolder = Join-Path $projectPath $_
+        $appJson = Join-Path $appFolder "app.json"
 
-        $appJsonContent = Get-Content $appJsonFile -Raw -Encoding UTF8 | ConvertFrom-Json
-        $dependencies = $appJsonContent.dependencies
-        if ($null -ne $dependencies) {
-            $dependencies | ForEach-Object {
-                $dependency = $_
-                # Find the version of the dependency in the appInfos. If it's found, it means the dependency is part of the project and the version should be set.
-                $dependencyAppInfo = $appInfos | Where-Object { $_.name -eq $dependency.name -and $_.publisher -eq $dependency.publisher }
-                if ($null -ne $dependencyAppInfo) {
-                    $dependency.version = $dependencyAppInfo.version
-                }
-            }
-            $appJsonContent.dependencies = $dependencies
-            $appJsonContent | Set-JsonContentLF -Path $appJsonFile
-        }
+        Set-VersionInSettingsFile -settingsFilePath $appJson -settingName 'version' -newValue $newValue
     }
 }
 
-Export-ModuleMember -Function Set-VersionSettingInFile, Set-ProjectVersion
+function Set-DependenciesVersionInAppManifests {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]] $appFolders
+    )
+
+    # Get all apps info: app ID and app version
+    $appsInfos = @($appFolders | ForEach-Object {
+        $appJson = Join-Path $_ "app.json"
+        $app = Get-Content -Path $appJson -Raw | ConvertFrom-Json
+        return [PSCustomObject]@{
+            Id = $app.id
+            Version = $app.version
+        }
+    })
+
+    # Update dependencies in app.json files
+    $appFolders | ForEach-Object {
+        $appJsonPath = Join-Path $_ "app.json"
+
+        $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
+
+        $dependencies = $appJson.dependencies
+
+        $dependencies | ForEach-Object {
+            $dependency = $_
+            $appInfo = $appsInfos | Where-Object { $_.Id -eq $dependency.id }
+            if ($appInfo) {
+                $dependency.version = $appInfo.Version
+            }
+        }
+
+        $appJson | ConvertTo-Json -Depth 99 | Set-Content -Path $appJsonPath
+    }
+}
+
+Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests

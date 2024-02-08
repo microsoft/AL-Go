@@ -34,20 +34,34 @@ try {
     }
 
     # Change repoVersion in repository settings
-    Set-VersionSettingInFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber # $RepoSettingsFile is defined in AL-Go-Helper.ps1
+    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber | Out-Null # $RepoSettingsFile is defined in AL-Go-Helper.ps1
 
     $settings = $env:Settings | ConvertFrom-Json
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
 
+    $allAppFolders = @()
     foreach($project in $projectList) {
+        $projectPath = Join-Path $baseFolder $project
+
+        # Set repoVersion in project settings (if it exists)
+        $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $newVersion
+
         # Resolve project folders to get all app folders that contain an app.json file
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
-        $projectPath = Join-Path $baseFolder $project
+        # Set version in app manifests (app.json files)
+        Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $newVersion
 
-        Set-ProjectVersion -projectPath $projectPath -projectSettings $projectSettings -newVersion $versionNumber -ALGOsettingsFile $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+        # Collect all project's app folders
+        $allAppFolders += $projectSettings.appFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+        $allAppFolders += $projectSettings.testFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+        $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
     }
+
+    # Set dependencies in app manifests
+    Set-DependenciesVersionInAppManifests -allAppFolders $allAppFolders
 
     $commitMessage = "New Version number $versionNumber"
     if ($versionNumber.StartsWith('+')) {
