@@ -55,6 +55,7 @@ runs:
       with:
         shell: ${{ inputs.shell }}
         deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
+        environmentName: ${{ inputs.environmentName }}
 
     - name: Who am I (username)
       if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''

@@ -8,6 +8,9 @@ inputs:
   deploymentEnvironmentsJson:
     description: The settings for all Deployment Environments
     required: true
+  environmentName:
+    description: Name of environment to deploy to
+    required: true
 runs:
   using: composite
   steps:
@@ -15,7 +18,8 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
-      run: ${{ github.action_path }}/ReadDeploymentAndAuthSettings.ps1 -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
+        _environmentName: ${{ inputs.environmentName }}
+      run: ${{ github.action_path }}/ReadDeploymentAndAuthSettings.ps1 -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -environmentName $ENV:_environmentName
 branding:
   icon: terminal
   color: blue

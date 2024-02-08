@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string] $deploymentEnvironmentsJson
+    [string] $deploymentEnvironmentsJson,
+    [Parameter(Mandatory = $true)]
+    [string] $environmentName
 )
 
 $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json
