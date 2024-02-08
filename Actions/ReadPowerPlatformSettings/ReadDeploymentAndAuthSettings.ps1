@@ -16,7 +16,8 @@ foreach($property in 'ppEnvironmentUrl','companyId','environmentName') {
         Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$property=$($deploymentSettings."$property")"
     }
     else {
-        throw "DeployTo$envName setting must contain '$property' property"
+        Write-Host "::ERROR::DeployTo$envName setting must contain '$property' property"
+        exit 1
     }
 }
 
@@ -46,5 +47,6 @@ elseif ($ppUserName -and $ppPassword -and $ppTenantId) {
     Write-Host "Authenticating with user name"
 }
 else {
-    throw "Auth context must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
+    Write-Host "::ERROR::Auth context must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
+    exit 1
 }
