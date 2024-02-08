@@ -10,7 +10,7 @@
 #>
 function Set-VersionInSettingsFile {
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true)]
         [string] $settingsFilePath,
         [Parameter(Mandatory = $true)]
         [string] $settingName,
