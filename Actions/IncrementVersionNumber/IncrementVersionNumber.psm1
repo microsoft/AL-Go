@@ -1,14 +1,24 @@
 ﻿<#
     .Synopsis
-        Changes a version setting value in a settings file. The setting value must be a version number in one of the following formats: 1.0 or 1.2.3.4
+        Changes a version setting value in a settings file.
     .Parameter settingsFilePath
         Path to the settings file. The settings file must be a JSON file.
     .Parameter settingName
-        Name of the setting to change.
+        Name of the setting to change. The setting must be a version number.
     .Parameter newValue
-        New value of the setting. If the value starts with a +, the new value will be added to the old value. Else the new value will replace the old value.
+        New value of the setting. Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a version number in the format Major.Minor (e.g. 1.0 or 1.2
 #>
-function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
+function Set-VersionSettingInFile {
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string] $settingsFilePath,
+        [Parameter(Mandatory = $true)]
+        [string] $settingName,
+        [Parameter(Mandatory = $true)]
+        [string] $newValue
+    )
+
+    #region Validate parameters
     if (-not (Test-Path $settingsFilePath)) {
         throw "Settings file ($settingsFilePath) not found."
     }
@@ -26,44 +36,52 @@ function Set-VersionSettingInFile($settingsFilePath, $settingName, $newValue) {
         return
     }
 
-    # Check if the new value is incremental.
-    $incremental = "$newValue".StartsWith('+')
-    if ($incremental) {
-        $newValue = $newValue.TrimStart('+')
+    # Validate new version value
+    if ($newValue.StartsWith('+')) {
+        # Handle incremental version number
+
+        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+        if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
+            throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+        }
     }
+    else {
+        # Handle absolute version number
+
+        $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+        if (-not ($newValue -match $versionNumberFormat)) {
+            throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+        }
+    }
+    #endregion
 
     $oldValue = [System.Version] $settingFileContent.$settingName
-    $newValue = [System.Version] $newValue # Convert to System.Version to make sure the system properties (Build, Revision) are set
+    $versions = @() # an array to hold the version numbers: major, minor, build, revision
 
-    # If Build or Revision is -1 (not set), use the old value
-    $newBuildValue = $newValue.Build
-    if($newBuildValue -eq -1) {
-        $newBuildValue = $oldValue.Build
+    switch($newValue) {
+        '+1' {
+            # Increment major version number
+            $versions += $oldValue.Major + 1
+            $versions += 0
+        }
+        '+0.1' {
+            # Increment minor version number
+            $versions += $oldValue.Major
+            $versions += $oldValue.Minor + 1
+
+        }
+        default {
+            # Absolute version number
+            $versions += $newValue.Split('.')
+        }
     }
 
-    $newRevisionValue = $newValue.Revision
-    if($newRevisionValue -eq -1) {
-        $newRevisionValue = $oldValue.Revision
-    }
-
-    $newMajorValue = $newValue.Major
-    if($incremental) {
-        $newMajorValue = $oldValue.Major + $newValue.Major
-    }
-
-    $newMinorValue = $newValue.Minor
-    if($incremental) {
-        $newMinorValue = $oldValue.Minor + $newValue.Minor
-    }
-
-    # Convert to array to make sure the version properties (Build, Revision) are set
-    $versions = @($newMajorValue, $newMinorValue)
-    if($newBuildValue -ne -1) {
-        $versions += $newBuildValue
-    }
-
-    if($newRevisionValue -ne -1) {
-        $versions += $newRevisionValue
+    # Include build and revision numbers if they exist in the old version number
+    if ($oldValue.Build -ne -1) {
+        $versions += $oldValue.Build
+        if ($oldValue.Revision -ne -1) {
+            $versions += $oldValue.Revision
+        }
     }
 
     # Construct the new version number. Cast to System.Version to validate if the version number is valid.

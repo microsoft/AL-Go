@@ -75,7 +75,98 @@ Describe "Set-VersionSettingInFile tests" {
         $newSettingsContent.repoVersion | Should -Be "0.1"
     }
 
-    It 'Set-VersionSettingInFile -newValue is set' {
+    It 'Set-VersionSettingInFile -newValue +0.2 is not allowed' {
+        $settingsFilePath = New-TestSettingsFile
+        $settingName = 'repoVersion'
+        $newValue = '+0.2'
+
+        { Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue } | Should -Throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: +1, +0.1"
+
+        # Check that the settings are not changed
+        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "0.1"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionSettingInFile -newValue +3 is not allowed' {
+        $settingsFilePath = New-TestSettingsFile
+        $settingName = 'repoVersion'
+        $newValue = '+3'
+
+        { Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue } | Should -Throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: +1, +0.1"
+
+        # Check that the settings are not changed
+        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "0.1"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionSettingInFile -newValue 1.2.3 is not allowed' {
+        $settingsFilePath = New-TestSettingsFile
+        $settingName = 'repoVersion'
+        $newValue = '1.2.3'
+
+        { Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue } | Should -Throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+
+        # Check that the settings are not changed
+        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "0.1"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionSettingInFile -newValue -1 is not allowed' {
+        $settingsFilePath = New-TestSettingsFile
+        $settingName = 'repoVersion'
+        $newValue = '-1'
+
+        { Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue } | Should -Throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+
+        # Check that the settings are not changed
+        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "0.1"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionSettingInFile -newValue -1 is not allowed' {
+        $settingsFilePath = New-TestSettingsFile
+        $settingName = 'repoVersion'
+        $newValue = '-1'
+
+        { Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue } | Should -Throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+
+        # Check that the settings are not changed
+        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "0.1"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionSettingInFile -newValue abcd is not allowed' {
+        $settingsFilePath = New-TestSettingsFile
+        $settingName = 'repoVersion'
+        $newValue = 'abcd'
+
+        { Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue } | Should -Throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+
+        # Check that the settings are not changed
+        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "0.1"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionSettingInFile -newValue a.b is not allowed' {
+        $settingsFilePath = New-TestSettingsFile
+        $settingName = 'repoVersion'
+        $newValue = 'a.b'
+
+        { Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue } | Should -Throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+
+        # Check that the settings are not changed
+        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "0.1"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionSettingInFile -newValue 1.0 is set' {
         $settingsFilePath = New-TestSettingsFile
         $settingName = 'repoVersion'
         $newValue = '1.0'
@@ -89,43 +180,29 @@ Describe "Set-VersionSettingInFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionSettingInFile -newValue is added to the old value (minor version)' {
+    It 'Set-VersionSettingInFile -newValue +1 increments the major version number and sets the minor version number to 0' {
         $settingsFilePath = New-TestSettingsFile
         $settingName = 'repoVersion'
-        $newValue = '+0.2'
+        $newValue = '+1'
 
         Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue
 
         $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
-        $newSettingsContent.$settingName | Should -Be "0.3"
+        $newSettingsContent.$settingName | Should -Be "1.0"
 
         # Check that the other setting are not changed
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionSettingInFile -newValue is added to the old value (major value)' {
-        $settingsFilePath = New-TestSettingsFile
-        $settingName = 'repoVersion'
-        $newValue = '+1.0'
-
-        Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue
-
-        $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
-        $newSettingsContent.$settingName | Should -Be "1.1"
-
-        # Check that the other setting are not changed
-        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
-    }
-
-    It 'Set-VersionSettingInFile -newValue is added to the old value (major and minor value)' {
+    It 'Set-VersionSettingInFile -newValue +0.1 increments the minor version number' {
         $settingsFilePath = New-TestSettingsFile -repoVersion '1.2'
         $settingName = 'repoVersion'
-        $newValue = '+3.4'
+        $newValue = '+0.1'
 
         Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue
 
         $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
-        $newSettingsContent.$settingName | Should -Be "4.6"
+        $newSettingsContent.$settingName | Should -Be "1.3"
 
         # Check that the other setting are not changed
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
@@ -145,15 +222,15 @@ Describe "Set-VersionSettingInFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionSettingInFile -newValue is added and build and revision are kept from the old value' {
-        $settingsFilePath = New-TestSettingsFile -repoVersion '1.2.3.4'
+    It 'Set-VersionSettingInFile -newValue +0.1 increments the minor version number and build and revision are kept from the old value' {
+        $settingsFilePath = New-TestSettingsFile -repoVersion '1.2.0.0'
         $settingName = 'repoVersion'
         $newValue = '+0.1'
 
         Set-VersionSettingInFile -settingsFilePath $settingsFilePath -settingName $settingName -newValue $newValue
 
         $newSettingsContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
-        $newSettingsContent.$settingName | Should -Be "1.3.3.4"
+        $newSettingsContent.$settingName | Should -Be "1.3.0.0"
 
         # Check that the other setting are not changed
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
