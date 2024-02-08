@@ -39,9 +39,10 @@ try {
     }
 
     $authContext = $null
-    foreach($secretName in "AuthContext","$($envName)-AuthContext","$($envName)_AuthContext") {
+    foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
         if ($secrets."$secretName") {
             $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName"))
+            break
         }
     }
     if (-not $authContext) {

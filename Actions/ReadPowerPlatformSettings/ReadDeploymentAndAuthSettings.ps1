@@ -22,31 +22,33 @@ foreach($property in 'ppEnvironmentUrl','companyId','environmentName') {
 }
 
 $authContext = $null
-foreach($secretName in "AuthContext","$($envName)-AuthContext","$($envName)_AuthContext") {
+foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
     if ($secrets."$secretName") {
+        Write-Host "Setting authentication context from secret $secretName"
         $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")) | ConvertFrom-Json
+        'ppTenantId','ppApplicationId','ppClientSecret','ppUserName','ppPassword' | ForEach-Object {
+            if ($authContext.PSObject.Properties.Name -eq $_) {
+                Write-Host "Setting $_"
+                Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$_=$($authContext."$_")"
+                Set-Variable -Name $_ -Value $authContext."$_"
+            }
+            else {
+                Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$_="
+                Set-Variable -Name $_ -Value ""
+            }
+        }
+        
+        if ($ppApplicationId -and $ppClientSecret -and $ppTenantId) {
+            Write-Host "Authenticating with application ID and client secret"
+        }
+        elseif ($ppUserName -and $ppPassword -and $ppTenantId) {
+            Write-Host "Authenticating with user name"
+        }
+        else {
+            Write-Host "::ERROR::Secret $secretName must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
+            exit 1
+        }
+        break
     }
 }
 
-'ppTenantId','ppApplicationId','ppClientSecret','ppUserName','ppPassword' | ForEach-Object {
-    if ($authContext.PSObject.Properties.Name -eq $_) {
-        Write-Host "Setting $_"
-        Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$_=$($authContext."$_")"
-        Set-Variable -Name $_ -Value $authContext."$_"
-    }
-    else {
-        Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$_="
-        Set-Variable -Name $_ -Value ""
-    }
-}
-
-if ($ppApplicationId -and $ppClientSecret -and $ppTenantId) {
-    Write-Host "Authenticating with application ID and client secret"
-}
-elseif ($ppUserName -and $ppPassword -and $ppTenantId) {
-    Write-Host "Authenticating with user name"
-}
-else {
-    Write-Host "::ERROR::Auth context must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
-    exit 1
-}
