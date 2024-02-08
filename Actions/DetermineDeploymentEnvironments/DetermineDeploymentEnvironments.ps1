@@ -152,7 +152,7 @@ else {
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             $deployTo = $settings."$settingsName"
-            foreach($key in 'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on') {
+            foreach($key in $deploymentSettings.Keys) {
                 if ($deployTo.ContainsKey($key)) {
                     $deploymentSettings."$key" = $deployTo."$key"
                 }
