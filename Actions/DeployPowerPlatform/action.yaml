@@ -35,12 +35,11 @@ runs:
           $repo = $repo -replace '/Actions', ''
           $path = './_AL-Go'
         }
-        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "ref=$ref"
         Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "repo=$repo"
+        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "ref=$ref"
         Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "path=$path"
 
-
-    - name: Check out AL-Go
+    - name: Check out AL-Go Actions
       uses: actions/checkout@v4
       with:
         repository: ${{ env.repo }}
