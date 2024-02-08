@@ -28,23 +28,23 @@ runs:
       env:
         _actionsRepo: ${{ inputs.actionsRepo }}
       run: |
-        $ref = $env:_actionsRepo.Split('@')[1]
-        $repo = $env:_actionsRepo.Split('@')[0]
-        $path = './_AL-Go/Actions'
-        if ($repo -like '*/Actions') {
-          $repo = $repo.SubString(0,$repo.Length-8)
-          $path = './_AL-Go'
+        $actionsRef = $env:_actionsRepo.Split('@')[1]
+        $actionsRepo = $env:_actionsRepo.Split('@')[0]
+        $actionsPath = './_AL-Go/Actions'
+        if ($actionsRepo -like '*/Actions') {
+          $actionsRepo = $actionsRepo.SubString(0,$actionsRepo.Length-8)
+          $actionPath = './_AL-Go'
         }
-        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "repo=$repo"
-        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "ref=$ref"
-        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "path=$path"
+        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsRepo=$actionsRepo"
+        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsRef=$actionsRef"
+        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsPath=$actionsPath"
 
     - name: Check out AL-Go Actions
       uses: actions/checkout@v4
       with:
-        repository: ${{ env.repo }}
-        ref: ${{ env.ref }}
-        path: ${{ env.path }}
+        repository: ${{ env.actionsRepo }}
+        ref: ${{ env.actionsRef }}
+        path: ${{ env.actionsPath }}
 
     - name: Parse DeployToSettings and AuthContext
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
