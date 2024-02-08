@@ -28,11 +28,6 @@ try {
     Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    # Validate version number. It should match <Major>.<Minor> or +<Major>.<Minor>
-    if(-not ($versionNumber -match '^\+?\d+\.\d+$')) {
-        throw "Version number ($versionNumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
-    }
-
     # Change repoVersion in repository settings
     Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber | Out-Null # $RepoSettingsFile is defined in AL-Go-Helper.ps1
 
