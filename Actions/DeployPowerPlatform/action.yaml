@@ -62,18 +62,6 @@ runs:
         deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
         environmentName: ${{ inputs.environmentName }}
 
-    - name: dumps
-      shell: pwsh
-      run: |
-        Write-Host "ppEnvironmentUrl=${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}"
-        Write-Host "ppUserName=${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}"
-        Write-Host "ppPassword=${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}"
-        Write-Host "ppApplicationId=${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}"
-        Write-Host "ppTenantId=${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}"
-        Write-Host "ppClientSecret=${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}"
-        Write-Host "companyId=${{ steps.ReadPowerPlatformSettings.outputs.companyId }}"
-        Write-Host "environmentName=${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}"
-
     - name: Who am I (username)
       if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
       uses: microsoft/powerplatform-actions/who-am-i@v1
@@ -91,7 +79,7 @@ runs:
         app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
         client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
  
-    - name: Find Power Platform solution file
+    - name: Determine Power Platform solution location
       env:
         _artifactsFolder: ${{ inputs.artifactsFolder }}
         _solutionFolder: ${{ inputs.solutionFolder }}
