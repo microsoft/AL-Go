@@ -93,7 +93,8 @@ jobs:
           shell: powershell
           actionsRepo: 'microsoft/AL-Go-Actions@main'
           token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
-          directCommit: ${{ github.event.inputs.directCommit }}
+          directCommit: ${{ inputs.directCommit }}
+          environmentName: ${{ inputs.environment }}
           solutionFolder: ${{ env.solutionFolder }}
           deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.deploymentEnvironmentsJson }}
 
