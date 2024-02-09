@@ -17,7 +17,7 @@ Write-Host "Starting GitCloneRepository.ps1 with parameters: $([environment]::Ne
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 Write-Host "Cloning the repository into a new folder"
-$serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix "PowerPlatform-$($type.replace(' ','-').ToLowerInvariant())"
+$serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix "pull-powerplatform-changes"
 $baseFolder = (Get-Location).Path
 
 Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "clonedRepoPath=$baseFolder"
