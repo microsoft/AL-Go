@@ -164,7 +164,7 @@ function Set-DependenciesVersionInAppManifests {
             }
         }
 
-        $appJson | ConvertTo-Json -Depth 99 | Set-Content -Path $appJsonPath
+        $appJson | Set-JsonContentLF -Path $appJsonPath
     }
 }
 
