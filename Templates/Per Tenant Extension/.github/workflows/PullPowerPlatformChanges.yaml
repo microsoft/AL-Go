@@ -89,7 +89,9 @@ jobs:
 
       - name: Pull changes from Power Platform environment
         uses: microsoft/AL-Go-Actions/PullPowerPlatformChanges@main
-        with: 
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
           shell: powershell
           actionsRepo: 'microsoft/AL-Go-Actions@main'
           token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
