@@ -40,6 +40,7 @@ runs:
   using: composite
   steps:
     - name: run
+      id: ReadPowerPlatformSettings
       shell: ${{ inputs.shell }}
       env:
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
