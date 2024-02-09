@@ -262,6 +262,7 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
+          actionsRepo: 'microsoft/AL-Go-Actions@main'
           environmentName: ${{ matrix.environment }}
           artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
