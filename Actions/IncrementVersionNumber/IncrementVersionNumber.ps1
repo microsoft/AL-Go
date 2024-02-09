@@ -29,7 +29,7 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     # Change repoVersion in repository settings
-    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber | Out-Null # $RepoSettingsFile is defined in AL-Go-Helper.ps1
+    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber # $RepoSettingsFile is defined in AL-Go-Helper.ps1
 
     $settings = $env:Settings | ConvertFrom-Json
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)

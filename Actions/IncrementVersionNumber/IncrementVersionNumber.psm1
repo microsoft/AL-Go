@@ -1,6 +1,9 @@
 ﻿<#
     .Synopsis
         Changes a version setting value in a settings file.
+    .Description
+        Changes a version setting value in a settings file.
+        If the setting does not exist in the settings file, the function does nothing.
     .Parameter settingsFilePath
         Path to a JSON file containing the settings.
     .Parameter settingName
