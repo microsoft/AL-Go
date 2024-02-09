@@ -1,13 +1,24 @@
 # Get artifacts for deployment
-Deploy App to online environment
-## Parameters
-### actor (default github.actor)
-The GitHub actor running the action
-### token (default github.token)
-The GitHub token running the action
-### parentTelemetryScopeJson (default {})
-Specifies the parent telemetry scope for the telemetry signal
-### workflow (required)
-Name of workflow initiating the deployment (CI | Create Release)
-### artifactsUrl (required)
-Url of artifacts to deploy
+Download artifacts for deployment
+
+## INPUT
+
+### ENV variables
+none
+
+### Parameters
+| Name | Required | Description | Default value |
+| :-- | :-: | :-- | :-- |
+| shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| token | | The GitHub token running the action | github.token |
+| artifactsVersion | Yes | Artifacts version to download (current, prerelease, draft, latest or version number) | |
+| artifactsFolder | Yes | Folder in which the artifacts will be downloaded | |
+
+## OUTPUT
+Artifacts downloaded into artifactsFolder
+
+### ENV variables
+none
+
+### OUTPUT variables
+none
