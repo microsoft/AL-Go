@@ -12,8 +12,13 @@ inputs:
     description: Name of environment to deploy to
     required: true
   artifactsFolder:
-    description: Path to the downloaded artifacts to deploy
-    required: true
+    description: Path to the downloaded artifacts to deploy (when deploying from a build)
+    required: false
+    default: ''
+  solutionFolder:
+    description: Path to the unpacked solution to deploy (when deploying from branch)
+    required: false
+    default: ''
   deploymentEnvironmentsJson:
     description: The settings for all Deployment Environments
     required: true
@@ -89,25 +94,36 @@ runs:
     - name: Find Power Platform solution file
       env:
         _artifactsFolder: ${{ inputs.artifactsFolder }}
+        _solutionFolder: ${{ inputs.solutionFolder }}
       shell: ${{ inputs.shell }}
       run: |
-        $artifactsFiles = Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE $ENV:_artifactsFolder) -Recurse -File | Select-Object -ExpandProperty FullName
-        foreach($filePath in $artifactsFiles){
-            ## Find file containing Power Platform keyword
-            if($filePath.contains("-PowerPlatformSolution-")){
-                Write-Host "Power Platform solution file:"$filePath
-                Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionPath=$filePath" 
-                return
-            }
-        }            
-        Write-Warning "Not able to find Power Platform solution file in $ENV:_artifactsFolder"
-        throw "Not able to find Power Platform solution file in $ENV:_artifactPath that contains the artifact keyword '-PowerPlatformSolution-'"
+        if ($env:_artifactsFolder -ne '') {
+          $artifactsFiles = Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE $ENV:_artifactsFolder) -Recurse -File | Select-Object -ExpandProperty FullName
+          foreach($filePath in $artifactsFiles){
+              ## Find file containing Power Platform keyword
+              if($filePath.contains("-PowerPlatformSolution-")){
+                  Write-Host "Power Platform solution file:"$filePath
+                  Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionFilePath=$filePath" 
+                  Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionFolder=.artifacts/_tempPPSolution/source"
+                  return
+              }
+          }            
+          Write-Warning "Not able to find Power Platform solution file in $ENV:_artifactsFolder"
+          throw "Not able to find Power Platform solution file in $ENV:_artifactPath that contains the artifact keyword '-PowerPlatformSolution-'"
+        }
+        elseif ($env:_solutionFolder -ne '') {
+          Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionFolder=$env:_solutionFolder"
+        }
+        else {
+          throw "No artifactsFolder or solutionFolder specified"
+        }
   
     - name: Unpack solution artifact
+      if: env.powerPlatformSolutionFilePath != ''
       uses: microsoft/powerplatform-actions/unpack-solution@v1
       with:
-        solution-file: ${{ env.powerPlatformSolutionPath }}
-        solution-folder: .artifacts/_tempPPSolution/source
+        solution-file: ${{ env.powerPlatformSolutionFilePath }}
+        solution-folder: ${{ env.powerPlatformSolutionFolder }}
         solution-type: "Unmanaged"
         process-canvas-apps: true
 
@@ -115,7 +131,7 @@ runs:
       uses: ./_AL-Go/Actions/BuildPowerPlatform
       with:
         shell: ${{ inputs.shell }}
-        solutionFolder: .artifacts/_tempPPSolution/source
+        solution-folder: ${{ env.powerPlatformSolutionFolder }}
         outputFolder: .artifacts/_tempPPSolution
         outputFileName: ppsolution
         companyId: ${{ steps.ReadPowerPlatformSettings.outputs.companyId }}

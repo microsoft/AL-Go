@@ -15,8 +15,11 @@ Deploy the Power Platform solution from the artifacts folder
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | actionsRepo | Yes | Owner/Repository@ref of AL-Go Actions repository used | |
 | environmentName | Yes | Name of environment to deploy to |
-| artifactsFolder | Yes | Path to the downloaded artifacts to deploy | |
+| artifactsFolder | | Path to the downloaded artifacts to deploy (when deploying from a build) | |
+| solutionFolder | | Path to the unpacked solutions to deploy (when deploying from branch) | |
 | deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
+
+Either artifactsFolder or solutionFolder needs to be specified
 
 ## OUTPUT
 | Name | Description |
