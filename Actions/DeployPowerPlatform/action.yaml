@@ -58,15 +58,16 @@ runs:
         environmentName: ${{ inputs.environmentName }}
 
     - name: dumps
+      shell: pwsh
       run: |
-        echo "ppEnvironmentUrl=${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}"
-        echo "ppUserName=${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}"
-        echo "ppPassword=${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}"
-        echo "ppApplicationId=${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}"
-        echo "ppTenantId=${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}"
-        echo "ppClientSecret=${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}"
-        echo "companyId=${{ steps.ReadPowerPlatformSettings.outputs.companyId }}"
-        echo "environmentName=${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}"
+        Write-Host "ppEnvironmentUrl=${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}"
+        Write-Host "ppUserName=${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}"
+        Write-Host "ppPassword=${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}"
+        Write-Host "ppApplicationId=${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}"
+        Write-Host "ppTenantId=${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}"
+        Write-Host "ppClientSecret=${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}"
+        Write-Host "companyId=${{ steps.ReadPowerPlatformSettings.outputs.companyId }}"
+        Write-Host "environmentName=${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}"
 
     - name: Who am I (username)
       if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
