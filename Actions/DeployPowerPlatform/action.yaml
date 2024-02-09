@@ -76,7 +76,7 @@ runs:
  
     - name: Find Power Platform solution file
       env:
-        _artifactFolder: ${{ inputs.artifactFolder }}
+        _artifactsFolder: ${{ inputs.artifactsFolder }}
       shell: ${{ inputs.shell }}
       run: |
         $artifactsFiles = Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE $ENV:_artifactsFolder) -Recurse -File | Select-Object -ExpandProperty FullName

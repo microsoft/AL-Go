@@ -57,7 +57,7 @@ try {
 
     $apps = @()
     $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
-    if (Test-Path $artifactFolder -PathType Container) {
+    if (Test-Path $artifactsFolder -PathType Container) {
         $deploymentSettings.Projects.Split(',') | ForEach-Object {
             $project = $_.Replace('\','_').Replace('/','_')
             $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
@@ -74,7 +74,7 @@ try {
         }
     }
     else {
-        throw "Artifact $artifactFolder was not found. Make sure that the artifact files exist and files are not corrupted."
+        throw "Artifact $artifactsFolder was not found. Make sure that the artifact files exist and files are not corrupted."
     }
 
     Write-Host "Apps to deploy"
