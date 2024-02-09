@@ -160,6 +160,7 @@ function Set-DependenciesVersionInAppManifests {
             $dependency = $_
             $appInfo = $appsInfos | Where-Object { $_.Id -eq $dependency.id }
             if ($appInfo) {
+                Write-Host "Updating dependency app $($dependency.id) in $appJsonPath from $($dependency.version) to $($appInfo.Version)"
                 $dependency.version = $appInfo.Version
             }
         }
