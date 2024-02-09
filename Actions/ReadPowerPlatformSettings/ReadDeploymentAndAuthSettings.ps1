@@ -37,7 +37,7 @@ foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","Auth
                 Set-Variable -Name $_ -Value ""
             }
         }
-        
+
         if ($ppApplicationId -and $ppClientSecret -and $ppTenantId) {
             Write-Host "Authenticating with application ID and client secret"
         }

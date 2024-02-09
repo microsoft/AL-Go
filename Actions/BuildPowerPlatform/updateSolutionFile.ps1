@@ -23,7 +23,7 @@ function Update-VersionNode {
     if ($appBuild -and $appRevision) {
         $versionNode = $xmlFile.SelectSingleNode("//Version")
         $versionNodeText = $versionNode.'#text'
-        
+
         $versionParts = $versionNodeText.Split('.')
         # Only update the last two parts of the version number - major and minor version should be set manually
         $newVersionNumber = $versionParts[0] + '.' + $versionParts[1] + '.' + $appBuild + '.' + $appRevision
@@ -43,7 +43,7 @@ function Update-ManagedNode {
         [Parameter(Position = 1, mandatory = $true)]
         [xml] $xmlFile
     )
-    
+
     $managedValue = "0"
     if ($managed -eq "true") {
         $managedValue = "1"
@@ -51,7 +51,7 @@ function Update-ManagedNode {
 
     $nodeWithName = $xmlFile.SelectSingleNode("//Managed")
     Write-Host "Updating managed flag: "$managedValue
-    $nodeWithName.'#text' = $managedValue    
+    $nodeWithName.'#text' = $managedValue
 }
 
 Write-Host "Updating Power Platform solution ($solutionFolder)"
@@ -60,5 +60,5 @@ $xmlFile = [xml](Get-Content $solutionDefinitionFile)
 
 Update-VersionNode -appBuild $appBuild -appRevision $appRevision -xmlFile $xmlFile
 Update-ManagedNode -managed $managed -xmlFile $xmlFile
-        
+
 $xmlFile.Save($solutionDefinitionFile)

@@ -61,7 +61,7 @@ if ($searchArtifacts) {
     'Apps','Dependencies','PowerPlatformSolution' | ForEach-Object {
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -version $artifactsVersion -branch $refname)
     }
-    
+
     if ($allArtifacts) {
         $allArtifacts | ForEach-Object {
             $folder = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack

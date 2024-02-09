@@ -9,33 +9,31 @@ function Update-PowerAppSettings {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$SolutionFolder,
-        
+        [string] $SolutionFolder,
         [Parameter(Mandatory = $true)]
-        [string]$EnvironmentName,
-        
+        [string] $EnvironmentName,
         [Parameter(Mandatory = $true)]
-        [string]$CompanyId
+        [string] $CompanyId
     )
 
     # There are multiple files that contain the BC connection info for PowerApps with different structures
     # So instead of parsing all of them, we simple find the current connection strings and run a replace operation.
-    # Note: The connection string has a format of: "EnvironmentName,CompanyId" where companyId is a guid. So the 
+    # Note: The connection string has a format of: "EnvironmentName,CompanyId" where companyId is a guid. So the
     #       replace operation should be safe to run a all json and XML files.
-    Write-Host "Updating PowerApp settings"        
+    Write-Host "Updating PowerApp settings"
     $currentPowerAppSettings = Get-CurrentPowerAppSettings -solutionFolder $SolutionFolder
     if ($currentPowerAppSettings.Count -eq 0) {
         Write-Warning "Could not find PowerApps connections file"
     }
 
     Write-Host "Number of Business Central Power App connections found: "$currentPowerAppSettings.Count
-    $newSettings = "$EnvironmentName,$CompanyId"    
+    $newSettings = "$EnvironmentName,$CompanyId"
     foreach ($currentSetting in $currentPowerAppSettings) {
         if ($currentSetting -eq $newSettings) {
             Write-Host "No changes needed for: "$currentSetting
             continue
         }
-        write-host "Updating PowerApp settings from: $currentSetting to: $newSettings"        
+        write-host "Updating PowerApp settings from: $currentSetting to: $newSettings"
         Update-PowerAppFiles -oldSetting $currentSetting -newSetting $newSettings -solutionFolder $SolutionFolder
     }
 }
@@ -51,11 +49,10 @@ function Update-PowerAppFiles {
     foreach ($file in $powerAppFiles) {
         # only check json and xml files
         if (($file.Extension -eq ".json") -or ($file.Extension -eq ".xml")) {
-            
             $fileContent = Get-Content  $file.FullName
             if (Select-String -Pattern $oldSetting -InputObject $fileContent) {
-                $fileContent = $fileContent -creplace $oldSetting, $newSetting                
-                Set-Content -Path $file.FullName -Value $fileContent 
+                $fileContent = $fileContent -creplace $oldSetting, $newSetting
+                Set-Content -Path $file.FullName -Value $fileContent
                 Write-Host "Updated: $file.FullName"
             }
         }
@@ -66,30 +63,30 @@ function Get-CurrentPowerAppSettings {
     param (
         [Parameter(Position = 0, mandatory = $true)] [string] $solutionFolder
     )
-    
+
     if (-not (Test-Path -Path "$solutionFolder/CanvasApps")) {
         # No Canvas apps present in the solution
         return @()
     }
-    
+
     $currentSettingsList = @()
     $connectionsFilePaths = Get-ChildItem -Path "$solutionFolder/CanvasApps" -Recurse -File -Include "Connections.json" | Select-Object -ExpandProperty FullName
     foreach ($connectionsFilePath in $connectionsFilePaths) {
         $jsonFile = Get-Content  $connectionsFilePath | ConvertFrom-Json
-    
+
         # We don't know the name of the connector node, so we need to loop through all of them
         $ConnectorNodeNames = ($jsonFile | Get-Member -MemberType NoteProperty).Name
 
         foreach ($connectorNodeName in $ConnectorNodeNames) {
             $connectorNode = $jsonFile.$connectorNodeName
-            # Find the Business Central connection node 
+            # Find the Business Central connection node
             if ($connectorNode.connectionRef.displayName -eq "Dynamics 365 Business Central") {
                 $currentEnvironmentAndCompany = ($connectorNode.datasets | Get-Member -MemberType NoteProperty).Name
 
                 if ($null -eq $currentEnvironmentAndCompany) {
                     # Connections sections for Power Automate flow does not have a dataset node
                     # Note: Flows are handled in a different function
-                    continue;
+                    continue
                 }
 
                 if (!$currentsettingsList.Contains($currentEnvironmentAndCompany)) {
@@ -99,10 +96,10 @@ function Get-CurrentPowerAppSettings {
                     # Add both variants to ensure we find all connections
                     $currentSettingsParts = @($currentEnvironmentAndCompany.Split(","))
                     $currentSettingsList += "$($currentSettingsParts[0].ToUpperInvariant()),$($currentSettingsParts[1])"
-                } 
+                }
             }
         }
-    }    
+    }
     return $currentSettingsList
 }
 
@@ -110,19 +107,19 @@ function Update-FlowSettings {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$SolutionFolder,        
+        [string] $SolutionFolder,
         [Parameter(Mandatory = $true)]
-        [string]$EnvironmentName,        
+        [string] $EnvironmentName,
         [Parameter(Mandatory = $true)]
-        [string]$CompanyId
+        [string] $CompanyId
     )
 
     Write-Host "Updating Flow settings"
     $flowFilePaths = Get-ChildItem -Path "$SolutionFolder/workflows" -Recurse -Filter *.json | Select-Object -ExpandProperty FullName
-        
+
     foreach ($flowFilePath in $flowFilePaths) {
         Update-FlowFile -FilePath $flowFilePath -CompanyId $CompanyId -EnvironmentName $EnvironmentName
-    }        
+    }
 }
 
 function Update-FlowFile {
@@ -139,15 +136,15 @@ function Update-FlowFile {
     $jsonObject = Get-Content $FilePath  | ConvertFrom-Json
 
     write-host "Checking flow: $FilePath"
-    
+
     $shouldUpdate = $false
 
     # Update all flow triggers
     $triggersObject = $jsonObject.properties.definition.triggers
     $triggers = $triggersObject | Get-Member -MemberType Properties
     foreach ($trigger in $triggers) {
-        $parametersObject = $triggersObject.($trigger.Name).inputs.parameters        
-        
+        $parametersObject = $triggersObject.($trigger.Name).inputs.parameters
+
         if (-not $parametersObject) {
             continue
         }
@@ -155,16 +152,16 @@ function Update-FlowFile {
             $shouldUpdate = $true
         }
     }
-    
+
     # Update all flow actions
     $actionsObject = $jsonObject.properties.definition.actions
     $actions = $actionsObject | Get-Member -MemberType Properties
     foreach ($action in $actions) {
         $parametersObject = $actionsObject.($action.Name).inputs.parameters
-        
+
         if (-not $parametersObject) {
             continue
-        }      
+        }
         if(Update-ParameterObject -parametersObject $parametersObject -CompanyId $CompanyId -EnvironmentName $EnvironmentName){
             $shouldUpdate = $true
         }
@@ -192,11 +189,11 @@ function Update-ParameterObject {
     # Check if paramers are for Business Central
     if ((-not $parametersObject.company) -or (-not $parametersObject.bcEnvironment)) {
         return $false
-    } 
+    }
 
     $oldCompany = $parametersObject.company
     $oldBcEnvironment = $parametersObject.bcenvironment
-    
+
     write-host "Checking parameters object: "$parametersObject
     write-host "BcEnvironment: $oldBcEnvironment"
     write-host "Company: $oldCompany"
@@ -215,7 +212,7 @@ function Update-ParameterObject {
 
     $parametersObject.company = $CompanyId
     $parametersObject.bcEnvironment = $EnvironmentName
-    
+
     write-host "New parameters object: "$parametersObject
 
     return $true

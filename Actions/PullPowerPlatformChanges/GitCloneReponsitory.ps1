@@ -23,4 +23,3 @@ $baseFolder = (Get-Location).Path
 Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "clonedRepoPath=$baseFolder"
 Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "serverUrl=$serverUrl"
 Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "gitHubBranch=$branch"
-        
