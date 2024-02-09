@@ -36,13 +36,13 @@ runs:
         _token: ${{ inputs.token }}
         _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _environmentName: ${{ inputs.environmentName }}
-        _artifacts: ${{ inputs.artifacts }}
+        _artifactsFolder: ${{ inputs.artifactsFolder }}
         _type: ${{ inputs.type }}
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -environmentName $ENV:_environmentName -artifacts $ENV:_artifacts -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
+          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
