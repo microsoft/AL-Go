@@ -25,7 +25,7 @@ function Set-VersionInSettingsFile {
 
     Write-Host "Reading settings from $settingsFilePath"
     try {
-        $settingFileContent = Get-Content $settingsFilePath -Encoding UTF8 | ConvertFrom-Json
+        $settingFileContent = Get-Content $settingsFilePath -Encoding UTF8 -Raw | ConvertFrom-Json
     }
     catch {
         throw "Settings file ($settingsFilePath) is malformed: $_"
@@ -141,7 +141,7 @@ function Set-DependenciesVersionInAppManifests {
     # Get all apps info: app ID and app version
     $appsInfos = @($appFolders | ForEach-Object {
         $appJson = Join-Path $_ "app.json"
-        $app = Get-Content -Path $appJson -Raw | ConvertFrom-Json
+        $app = Get-Content -Path $appJson -Encoding UTF8 -Raw | ConvertFrom-Json
         return [PSCustomObject]@{
             Id = $app.id
             Version = $app.version
@@ -152,7 +152,7 @@ function Set-DependenciesVersionInAppManifests {
     $appFolders | ForEach-Object {
         $appJsonPath = Join-Path $_ "app.json"
 
-        $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
+        $appJson = Get-Content -Path $appJsonPath -Encoding UTF8 -Raw | ConvertFrom-Json
 
         $dependencies = $appJson.dependencies
 
