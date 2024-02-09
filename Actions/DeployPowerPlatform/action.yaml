@@ -131,7 +131,7 @@ runs:
       uses: ./_AL-Go/Actions/BuildPowerPlatform
       with:
         shell: ${{ inputs.shell }}
-        solution-folder: ${{ env.powerPlatformSolutionFolder }}
+        solutionFolder: ${{ env.powerPlatformSolutionFolder }}
         outputFolder: .artifacts/_tempPPSolution
         outputFileName: ppsolution
         companyId: ${{ steps.ReadPowerPlatformSettings.outputs.companyId }}

@@ -53,9 +53,9 @@ runs:
       if: inputs.appBuild != ''
       shell: ${{ inputs.shell }}
       env: 
-        _solutionFolder: ${{inputs.solutionFolder}}
-        _appBuild: ${{inputs.appBuild}}
-        _appRevision: ${{inputs.appRevision}}
+        _solutionFolder: ${{ inputs.solutionFolder }}
+        _appBuild: ${{ inputs.appBuild }}
+        _appRevision: ${{ inputs.appRevision }}
       run: |
         ${{ github.action_path }}\updateSolutionFile.ps1 -appBuild $ENV:_appBuild -appRevision $ENV:_appRevision -solutionFolder $ENV:_solutionFolder
     
@@ -63,9 +63,9 @@ runs:
       if: inputs.companyId != ''
       shell: ${{ inputs.shell }}
       env: 
-        _solutionFolder: ${{inputs.solutionFolder}}
-        _companyId: ${{inputs.companyId}}
-        _environmentName: ${{inputs.environmentName}}        
+        _solutionFolder: ${{ inputs.solutionFolder }}
+        _companyId: ${{ inputs.companyId }}
+        _environmentName: ${{ inputs.environmentName }}        
       run: |
         ${{ github.action_path }}\updateEnvironmentAndCompany.ps1 -companyId $ENV:_companyId -environmentName $ENV:_environmentName -solutionFolder $ENV:_solutionFolder
     
@@ -73,7 +73,7 @@ runs:
       uses: microsoft/powerplatform-actions/pack-solution@v1
       with:
         solution-file: forgetMe.zip
-        solution-folder: ${{inputs.solutionFolder}}
+        solution-folder: ${{ inputs.solutionFolder }}
         process-canvas-apps: true
 
     - name: Remove test pack
@@ -84,8 +84,8 @@ runs:
     - name: Pack Solution
       uses: microsoft/powerplatform-actions/pack-solution@v1
       with:
-        solution-file: ${{inputs.outputFolder}}/${{inputs.outputFileName}}.zip
-        solution-folder: ${{inputs.solutionFolder}}
+        solution-file: ${{ inputs.outputFolder }}/${{ inputs.outputFileName }}.zip
+        solution-folder: ${{ inputs.solutionFolder }}
         solution-type: "Unmanaged"
         process-canvas-apps: true
      
