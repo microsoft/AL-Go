@@ -11,6 +11,31 @@ inputs:
   environmentName:
     description: Name of environment to deploy to
     required: true
+outputs:
+  ppEnvironmentUrl:
+    description: Power Platform Environment URL
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
+  ppUserName:
+    description: Power Platform Username
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
+  ppPassword:
+    description: Power Platform Password
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
+  ppApplicationId:
+    description: Power Platform Application Id
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
+  ppTenantId:
+    description: Power Platform Tenant Id
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
+  ppClientSecret:
+    description: Power Platform Client Secret
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
+  companyId:
+    description: Business Central Company Id
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.companyId }}
+  environmentName:
+    description: Business Central Environment Name
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}
 runs:
   using: composite
   steps:
