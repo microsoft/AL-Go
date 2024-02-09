@@ -3,13 +3,12 @@ name: " Pull Power Platform changes"
 on:
   workflow_dispatch:
     inputs:
-      solutionName:
-        description: "Name of the Power Platform solution. (* takes the name from AL-Go settings)"
-        required: true
-        default: "*"
       environment:
-        description: "Environment"
+        description: Environment to pull changes from
         required: true
+      solutionFolder:
+        description: Folder name of the Power Platform solution (leave empty to use AL-Go setting)
+        required: false
       directCommit:
         description: Direct Commit?
         type: boolean
@@ -33,7 +32,7 @@ jobs:
     name: Pull changes from ${{ inputs.environment }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Initialize the workflow
         id: init
@@ -43,60 +42,60 @@ jobs:
           eventId: "DO0103"
 
       - name: EnvName
-        id: envName
-        shell: powershell
+        env:
+          _environment: ${{ inputs.environment }}
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
-          $envName = '${{ inputs.environment }}'
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $envName = "$env:_environment".Split(' ')[0]
+          Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "envName=$envName"
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          get: powerPlatformSolutionFolder
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        with:
+          shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: '${{ env.envName }}-AuthContext,${{ env.envName }}_AuthContext,AuthContext,TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+
+      - name: Determine Deployment Environments
+        id: DetermineDeploymentEnvironments
+        uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
         env:
-          secrets: ${{ toJson(secrets) }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
-          settingsJson: ${{ env.Settings }}
-          secrets: "${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects"
-      
-      - name: read auth context
-        id: authContext
-        uses: microsoft/AL-Go-Actions/ReadAuthContext@main
-        with:
-          shell: powershell
-          envName: ${{ steps.envName.outputs.envName }}
-          environment: ${{ steps.envName.outputs.envName }}
+          getEnvironments: ${{ inputs.environment }}
+          type: 'Publish'
 
-      - name: Set Power Platform solution name
-        id: solutionName
-        shell: powershell
-        env: 
-          _inputSolutionName: ${{ inputs.solutionName }}
+      - name: Set Power Platform solution folder
+        env:
+          _solutionFolder: ${{ inputs.solutionFolder }}
         run: |
-          $ErrorActionPreference = "STOP"
-          Set-StrictMode -version 2.0
-          $solutionName = $env:_inputSolutionName
-          if ($solutionName -eq "*") {
-            write-host "Solution name is not provided. Taking the name from Al-go-settings.json"
-            $solutionName = $env:powerPlatformSolutionFolder
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $solutionFolder = $env:_solutionFolder
+          if ($solutionFolder -eq '') {
+            write-host "Solution folder is not provided. Taking the folder from AL-Go settings"
+            $solutionFolder = $env:powerPlatformSolutionFolder
           }
-          write-host "Solution name: $solutionName"
-          Add-Content -Path $env:GITHUB_ENV -Value "powerPlatformSolutionFolder=$solutionName"   
+          write-host "Solution folder: $solutionFolder"
+          Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "solutionFolder=$solutionFolder"
 
-      - name: Export changes from Power Platform 
+      - name: Pull changes from Power Platform environment
         uses: microsoft/AL-Go-Actions/PullPowerPlatformChanges@main
         with: 
           shell: powershell
-          solutionName: ${{ env.powerPlatformSolutionFolder }}
-          directCommit: ${{ inputs.directCommit == 'Y' }}
-          deploySettings: ${{ env.deployTo }} 
-          authSettings: ${{ env.authContext }}
+          actionsRepo: 'microsoft/AL-Go-Actions@main'
+          token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
+          directCommit: ${{ github.event.inputs.directCommit }}
+          solutionFolder: ${{ env.solutionFolder }}
+          deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.deploymentEnvironmentsJson }}
 
       - name: Finalize the workflow
         if: always()

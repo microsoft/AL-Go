@@ -3,13 +3,12 @@ name: " Push Power Platform changes"
 on:
   workflow_dispatch:
     inputs:
-      solutionFolder:
-        description: "Folder name of the Power Platform solution. (* takes the folder from AL-Go settings)"
-        required: true
-        default: "*"
       environment:
-        description: "Environment"
+        description: Environment to push changes to
         required: true
+      solutionFolder:
+        description: Folder name of the Power Platform solution (leave empty to use AL-Go setting)
+        required: false
 
 permissions:
   contents: write
@@ -72,7 +71,7 @@ jobs:
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $solutionFolder = $env:_solutionFolder
-          if ($solutionFolder -eq "*") {
+          if ($solutionFolder -eq '') {
             write-host "Solution folder is not provided. Taking the folder from AL-Go settings"
             $solutionFolder = $env:powerPlatformSolutionFolder
           }
