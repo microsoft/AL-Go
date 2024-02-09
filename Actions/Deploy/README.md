@@ -16,7 +16,7 @@ Deploy Apps to online environment
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | token | | The GitHub token running the action | github.token |
 | environmentName | Yes | Name of environment to deploy to |
-| artifacts | Yes | The artifacts to deploy or a folder in which the artifacts have been downloaded | |
+| artifactsFolder | Yes | Path to the downloaded artifacts to deploy | |
 | type | | Type of delivery (CD or Release) | CD |
 | deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
 

@@ -12,8 +12,8 @@ inputs:
   environmentName:
     description: Name of environment to deploy to
     required: true
-  artifacts:
-    description: The artifacts to deploy or a folder in which the artifacts have been downloaded
+  artifactsFolder:
+    description: Path to the downloaded artifacts to deploy
     required: true
   type:
     description: Type of deployment (CD or Publish)

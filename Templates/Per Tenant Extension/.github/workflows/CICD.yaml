@@ -251,7 +251,7 @@ jobs:
         with:
           shell: powershell
           environmentName: ${{ matrix.environment }}
-          artifacts: '.artifacts'
+          artifactsFolder: '.artifacts'
           type: 'CD'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
@@ -264,7 +264,7 @@ jobs:
           shell: powershell
           actionsRepo: 'microsoft/AL-Go-Actions@main'
           environmentName: ${{ matrix.environment }}
-          artifacts: '.artifacts'
+          artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   Deliver:

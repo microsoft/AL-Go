@@ -1051,7 +1051,8 @@ function DownloadArtifact {
     Param(
         [string] $token,
         [string] $path,
-        $artifact
+        $artifact,
+        [switch] $unpack
     )
 
     Write-Host "Downloading artifact $($artifact.Name)"
@@ -1060,7 +1061,16 @@ function DownloadArtifact {
         $token = invoke-gh -silent -returnValue auth token
     }
     $headers = GetHeader -token $token
-    $outFile = Join-Path $path "$($artifact.Name).zip"
-    InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
-    $outFile
+    $filename = Join-Path $path "$($artifact.Name).zip"
+    InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $filename
+    if ($unpack) {
+        $unzipPath = Join-Path $path $asset.name.Replace('.zip','')
+        if (Test-Path $unzipPath) {
+            Remove-Item $unzipPath -Recurse -Force
+        }
+        Expand-Archive -Path $filename -DestinationPath $unzipPath
+        Remove-Item $filename -Force
+        $filename = $unzipPath
+    }
+    $filename
 }

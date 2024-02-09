@@ -11,8 +11,8 @@ inputs:
   environmentName:
     description: Name of environment to deploy to
     required: true
-  artifacts:
-    description: Patch to the artifacts folder
+  artifactsFolder:
+    description: Path to the downloaded artifacts to deploy
     required: true
   deploymentEnvironmentsJson:
     description: The settings for all Deployment Environments
@@ -76,11 +76,11 @@ runs:
  
     - name: Find Power Platform solution file
       env:
-        _artifactPath: ${{inputs.artifactPath}}
+        _artifactFolder: ${{ inputs.artifactFolder }}
       shell: ${{ inputs.shell }}
       run: |
-        $artifactFiles = Get-ChildItem -Path $ENV:_artifactPath -Recurse -File | Select-Object -ExpandProperty FullName
-        foreach($filePath in $artifactFiles){
+        $artifactsFiles = Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE $ENV:_artifactsFolder) -Recurse -File | Select-Object -ExpandProperty FullName
+        foreach($filePath in $artifactsFiles){
             ## Find file containing Power Platform keyword
             if($filePath.contains("-PowerPlatformSolution-")){
                 Write-Host "Power Platform solution file:"$filePath
@@ -88,14 +88,14 @@ runs:
                 return
             }
         }            
-        Write-Warning "Not able to find Power Platform solution file in $ENV:_artifactPath"
+        Write-Warning "Not able to find Power Platform solution file in $ENV:_artifactsFolder"
         throw "Not able to find Power Platform solution file in $ENV:_artifactPath that contains the artifact keyword '-PowerPlatformSolution-'"
   
     - name: Unpack solution artifact
       uses: microsoft/powerplatform-actions/unpack-solution@v1
       with:
         solution-file: ${{ env.powerPlatformSolutionPath }}
-        solution-folder: .artifacts/tempPPSolution/source
+        solution-folder: .artifacts/_tempPPSolution/source
         solution-type: "Unmanaged"
         process-canvas-apps: true
 
@@ -103,8 +103,8 @@ runs:
       uses: ./_AL-Go/Actions/BuildPowerPlatform
       with:
         shell: ${{ inputs.shell }}
-        solutionFolder: .artifacts/tempPPSolution/source
-        outputFolder: .artifacts/tempPPSolution
+        solutionFolder: .artifacts/_tempPPSolution/source
+        outputFolder: .artifacts/_tempPPSolution
         outputFileName: ppsolution
         companyId: ${{ steps.ReadPowerPlatformSettings.outputs.companyId }}
         environmentName: ${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}
@@ -116,7 +116,7 @@ runs:
         user-name: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
         password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
         environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
-        solution-file: .artifacts/tempPPSolution/ppsolution.zip
+        solution-file: .artifacts/_tempPPSolution/ppsolution.zip
         force-overwrite: true
         publish-changes: true
 
@@ -128,7 +128,7 @@ runs:
         app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
         client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
         environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
-        solution-file: .artifacts/tempPPSolution/ppsolution.zip
+        solution-file: .artifacts/_tempPPSolution/ppsolution.zip
         force-overwrite: true
         publish-changes: true
 

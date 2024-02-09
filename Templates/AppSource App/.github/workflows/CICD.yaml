@@ -251,7 +251,7 @@ jobs:
         with:
           shell: powershell
           environmentName: ${{ matrix.environment }}
-          artifacts: '.artifacts'
+          artifactsFolder: '.artifacts'
           type: 'CD'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
@@ -261,9 +261,9 @@ jobs:
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
-          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+          shell: powershell
           environmentName: ${{ matrix.environment }}
-          artifacts: '.artifacts'
+          artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   Deliver:
