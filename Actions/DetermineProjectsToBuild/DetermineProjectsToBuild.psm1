@@ -216,7 +216,7 @@ function Get-ProjectsToBuild {
         $settings = $env:Settings | ConvertFrom-Json
         $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
         # If the repo has a Power Platform solution folder, add it to the list of projects to build
-        if ($settings.powerPlatformSolutionFolder) {
+        if ($settings.PSObject.Properties.Name -eq 'powerPlatformSolutionFolder' -and $settings.powerPlatformSolutionFolder) {
             $projects += @($settings.powerPlatformSolutionFolder)
         }
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
