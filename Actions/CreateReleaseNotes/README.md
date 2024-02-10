@@ -23,5 +23,5 @@ none
 ### OUTPUT variables
 | Name | Description |
 | :-- | :-- |
-| ReleaseBranch | Name of the release branch |
+| ReleaseVersion | The release version |
 | ReleaseNotes | Release notes generated based on the changes |
