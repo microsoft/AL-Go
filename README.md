@@ -14,7 +14,7 @@ The template repositories to use as starting point are:
 Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth workshop on AL-Go for GitHub functionality or examine the below usage scenarios, which explains how to get started and how to perform the most common tasks.
 
 ## Usage scenarios
-1. [Create a new per-tenant extension (like AL Go) and start developing in VS Code](Scenarios/GetStarted.md)
+1. [Create a new per-tenant extension (like AL:Go in VS Code) and start developing in VS Code](Scenarios/GetStarted.md)
 2. [Add a test app to an existing project](Scenarios/AddATestApp.md)
 3. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/RegisterSandboxEnvironment.md)
 4. [Create a release of your application](Scenarios/CreateRelease.md)
