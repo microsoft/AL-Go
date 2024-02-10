@@ -3,13 +3,15 @@
         Changes a version setting value in a settings file.
     .Description
         Changes a version setting value in a settings file.
-        If the setting does not exist in the settings file, the function does nothing.
+        If the setting does not exist in the settings file, the function does nothing, unless the Force parameter is specified.
     .Parameter settingsFilePath
         Path to a JSON file containing the settings.
     .Parameter settingName
         Name of the setting to change. The setting must be a version number.
     .Parameter newValue
         New value of the setting. Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a version number in the format Major.Minor (e.g. 1.0 or 1.2
+    .Parameter Force
+        If specified, the function will create the setting if it does not exist in the settings file.
 #>
 function Set-VersionInSettingsFile {
     param(
@@ -18,7 +20,8 @@ function Set-VersionInSettingsFile {
         [Parameter(Mandatory = $true)]
         [string] $settingName,
         [Parameter(Mandatory = $true)]
-        [string] $newValue
+        [string] $newValue,
+        [switch] $Force
     )
 
     #region Validate parameters
@@ -28,17 +31,24 @@ function Set-VersionInSettingsFile {
 
     Write-Host "Reading settings from $settingsFilePath"
     try {
-        $settingFileContent = Get-Content $settingsFilePath -Encoding UTF8 -Raw | ConvertFrom-Json
+        $settingsJson = Get-Content $settingsFilePath -Encoding UTF8 -Raw | ConvertFrom-Json
     }
     catch {
         throw "Settings file ($settingsFilePath) is malformed: $_"
     }
 
-    if (-not ($settingFileContent.PSObject.Properties.Name -eq $settingName)) {
+    $settingExists = [bool] ($settingsJson.PSObject.Properties.Name -eq $settingName)
+    if ((-not $settingExists) -and (-not $Force)) {
         Write-Host "Setting $settingName not found in $settingsFilePath"
         return
     }
 
+    # Add the setting if it does not exist
+    if (-not $settingExists) {
+        $settingsJson | Add-Member -MemberType NoteProperty -Name $settingName -Value $null
+    }
+
+    $oldValue = [System.Version] $settingsJson.$settingName
     # Validate new version value
     if ($newValue.StartsWith('+')) {
         # Handle incremental version number
@@ -46,6 +56,11 @@ function Set-VersionInSettingsFile {
         $allowedIncrementalVersionNumbers = @('+1', '+0.1')
         if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
             throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+        }
+
+        # Defensive check. Should never happen.
+        if($null -eq $oldValue) {
+            throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
         }
     }
     else {
@@ -58,41 +73,51 @@ function Set-VersionInSettingsFile {
     }
     #endregion
 
-    $oldValue = [System.Version] $settingFileContent.$settingName
-    $versions = @() # an array to hold the version numbers: major, minor, build, revision
+    $versionNumbers = @() # an array to hold the version numbers: major, minor, build, revision
 
     switch($newValue) {
         '+1' {
             # Increment major version number
-            $versions += $oldValue.Major + 1
-            $versions += 0
+            $versionNumbers += $oldValue.Major + 1
+            $versionNumbers += 0
         }
         '+0.1' {
             # Increment minor version number
-            $versions += $oldValue.Major
-            $versions += $oldValue.Minor + 1
+            $versionNumbers += $oldValue.Major
+            $versionNumbers += $oldValue.Minor + 1
 
         }
         default {
             # Absolute version number
-            $versions += $newValue.Split('.')
+            $versionNumbers += $newValue.Split('.')
         }
     }
 
     # Include build and revision numbers if they exist in the old version number
-    if ($oldValue.Build -ne -1) {
-        $versions += $oldValue.Build
+    if ($oldValue -and ($oldValue.Build -ne -1)) {
+        $versionNumbers += $oldValue.Build
         if ($oldValue.Revision -ne -1) {
-            $versions += $oldValue.Revision
+            $versionNumbers += $oldValue.Revision
         }
     }
 
     # Construct the new version number. Cast to System.Version to validate if the version number is valid.
-    $newValue = [System.Version] "$($versions -join '.')"
+    $newValue = [System.Version] "$($versionNumbers -join '.')"
 
-    Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
-    $settingFileContent.$settingName = $newValue.ToString()
-    $settingFileContent | Set-JsonContentLF -Path $settingsFilePath
+    if($newValue -eq $oldValue) {
+        Write-Host "The setting $settingName is already set to $newValue in $settingsFilePath"
+        return
+    }
+
+    if($null -eq $oldValue) {
+        Write-Host "Setting setting $settingName to $newValue in $settingsFilePath"
+    }
+    else {
+        Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
+    }
+
+    $settingsJson.$settingName = $newValue.ToString()
+    $settingsJson | Set-JsonContentLF -Path $settingsFilePath
 }
 
 <#

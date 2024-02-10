@@ -75,6 +75,36 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.repoVersion | Should -Be "0.1"
     }
 
+    It 'Set-VersionInSettingsFile version setting not found and Force is set' {
+        $settingsFile = New-TestSettingsFilePath
+        $settingName = 'repoVersion2'
+        $newValue = '1.0'
+
+        { Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue -Force } | Should -Not -Throw
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        # Check the new setting is created
+        $newSettingsContent.$settingName | Should -Be "1.0"
+
+        # Check that the other setting are not changed
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+        $newSettingsContent.repoVersion | Should -Be "0.1"
+    }
+
+    It 'Set-VersionInSettingsFile setting same value' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.0'
+        $settingName = 'repoVersion'
+        $newValue = '1.0'
+
+        { Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue -Force } | Should -Not -Throw
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+
+        # Check that the other setting are not changed
+        $newSettingsContent.$settingName | Should -Be "1.0"
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
     It 'Set-VersionInSettingsFile -newValue +0.2 is not allowed' {
         $settingsFile = New-TestSettingsFilePath
         $settingName = 'repoVersion'

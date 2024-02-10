@@ -28,10 +28,14 @@ try {
     Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    # Change repoVersion in repository settings
-    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber # $RepoSettingsFile is defined in AL-Go-Helper.ps1
-
     $settings = $env:Settings | ConvertFrom-Json
+
+    # Ensure the repoVersion setting exists in the repository settings. Defaults to 1.0 if it doesn't exist.
+    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $settings.repoVersion -Force # $RepoSettingsFile is defined in AL-Go-Helper.ps1
+
+    # Change repoVersion in repository settings
+    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber
+
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
 
     $allAppFolders = @()
