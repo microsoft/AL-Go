@@ -1,4 +1,4 @@
-# [PREVIEW] Try one of the Business Central and Power Platform samples
+# Try one of the Business Central and Power Platform samples
 
 The easiest way to get started with Business Central and Power Apps is to find one of our sample apps:
 

@@ -21,7 +21,7 @@ jobs:
         run: |
           . (Join-Path "." "Tests/runtests.ps1")
 
-      - name: Test AL-GO Workflows
+      - name: Test AL-Go Workflows
         if: github.repository_owner == 'microsoft'
         run: |
           try {

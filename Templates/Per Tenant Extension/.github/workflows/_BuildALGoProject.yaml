@@ -1,4 +1,4 @@
-name: '_Build AL-GO project'
+name: '_Build AL-Go project'
 
 run-name: 'Build project ${{ inputs.project }}'
 

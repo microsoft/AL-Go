@@ -1,4 +1,4 @@
-# [PREVIEW] How to set up Service Principal for Power Platform
+# How to set up Service Principal for Power Platform
 
 Setting up a service principal can be done in 2 steps: setting up the principal and adding appropriate roles to the Power Platform environment.
 

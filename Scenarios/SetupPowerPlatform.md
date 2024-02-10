@@ -1,4 +1,4 @@
-# [PREVIEW] Connect your GitHub repository to Power Platform
+# Connect your GitHub repository to Power Platform
 
 There are 2 steps to connect your GitHub repository to your Power Platform tenant and environments:
 
@@ -39,12 +39,12 @@ The AL-Go repository settings are used to define what resources you have in your
 
 The settings are located at:  `.github/AL-Go-Settings.json`
 
-**Example of the Al-go settings format:**
+**Example of the AL-Go settings format:**
 
 ```json
 {
   "type": "PTE",
-  "templateUrl": "https://github.com/microsoft/AL-Go-PTE@PPPreview",
+  "templateUrl": "https://github.com/microsoft/AL-Go-PTE@main",
   "powerPlatformSolutionFolder": "<PowerPlatformSolutionName>",
   "environments": [
     "<GitHubEnvironmentName>"
