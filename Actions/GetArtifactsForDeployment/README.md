@@ -15,7 +15,7 @@ none
 | artifactsFolder | Yes | Folder in which the artifacts will be downloaded | |
 
 ## OUTPUT
-Artifacts downloaded into artifactsFolder
+none
 
 ### ENV variables
 none
