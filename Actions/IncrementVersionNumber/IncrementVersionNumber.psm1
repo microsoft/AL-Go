@@ -95,9 +95,9 @@ function Set-VersionInSettingsFile {
 
     # Include build and revision numbers if they exist in the old version number
     if ($oldValue -and ($oldValue.Build -ne -1)) {
-        $versionNumbers += $oldValue.Build
+        $versionNumbers += 0 # Always set the build number to 0
         if ($oldValue.Revision -ne -1) {
-            $versionNumbers += $oldValue.Revision
+            $versionNumbers += 0 # Always set the revision number to 0
         }
     }
 

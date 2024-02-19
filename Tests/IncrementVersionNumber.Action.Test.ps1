@@ -266,6 +266,28 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
+    It 'Set-VersionInSettingsFile -newValue +0.1 makes build and revision 0 if they are initially set' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.3.4'
+        $settingName = 'repoVersion'
+        $newValue = '+0.1'
+
+        Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "1.3.0.0"
+    }
+
+    It 'Set-VersionInSettingsFile -newValue +1 makes build and revision 0 if they are initially set' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.3.4'
+        $settingName = 'repoVersion'
+        $newValue = '+1'
+
+        Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "2.0.0.0"
+    }
+
     AfterEach {
         Remove-Item $settingsFile -Force -ErrorAction Ignore
     }
