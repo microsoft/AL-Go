@@ -210,6 +210,20 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
+    It 'Set-VersionInSettingsFile -newValue 2.0 throws an error because it''s not incremented' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '2.0'
+        $settingName = 'repoVersion'
+        $newValue = '1.0'
+
+        { Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue } | Should -Throw "The new version number ($newValue) is less than the old version number (2.0). The version number must be incremented."
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "2.0"
+
+        # Check that the other setting are not changed
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
     It 'Set-VersionInSettingsFile -newValue +1 increments the major version number and sets the minor version number to 0' {
         $settingsFile = New-TestSettingsFilePath
         $settingName = 'repoVersion'
@@ -238,7 +252,7 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionInSettingsFile -newValue is set and bnFileuild and revision are kept from the old value'{
+    It 'Set-VersionInSettingsFile -newValue is set and build and revision are kept from the old value'{
         $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.0.0'
         $settingName = 'repoVersion'
         $newValue = '2.1'
