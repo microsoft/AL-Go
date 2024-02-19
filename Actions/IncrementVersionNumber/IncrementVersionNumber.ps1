@@ -30,20 +30,18 @@ try {
 
     $settings = $env:Settings | ConvertFrom-Json
 
-    # Ensure the repoVersion setting exists in the repository settings. Defaults to 1.0 if it doesn't exist.
-    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $settings.repoVersion -Force # $RepoSettingsFile is defined in AL-Go-Helper.ps1
-
-    # Change repoVersion in repository settings
-    Set-VersionInSettingsFile -settingsFilePath (Join-Path $baseFolder $RepoSettingsFile) -settingName 'repoVersion' -newValue $versionNumber
-
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
 
     $allAppFolders = @()
     foreach($project in $projectList) {
         $projectPath = Join-Path $baseFolder $project
 
-        # Set repoVersion in project settings (if it exists)
         $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+
+        # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
+        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
+
+        # Set repoVersion in project settings according to the versionNumber parameter
         Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
 
         # Resolve project folders to get all app folders that contain an app.json file
