@@ -8,9 +8,10 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 ### Issues
 - Support release branches that start with releases/
 - Issue 870 Improve Error Handling when CLI is missing
+- Issue 889 CreateRelease and IncrementVersionNumber workflow did not handle wild characters in `appFolders`, `testFolders` or `bcptTestFolders` settings.
 
-### Build modes 
-AL-Go ships with Default, Translated and Clean mode out of the box. Now you can also define custom build modes in addition to the ones shipped with AL-Go. This allows you to define your own build modes, which can be used to build your apps in different ways. By default, a custom build mode will build the apps similarly to the Default mode but this behavior can be overridden in e.g. script overrides in your repository.  
+### Build modes
+AL-Go ships with Default, Translated and Clean mode out of the box. Now you can also define custom build modes in addition to the ones shipped with AL-Go. This allows you to define your own build modes, which can be used to build your apps in different ways. By default, a custom build mode will build the apps similarly to the Default mode but this behavior can be overridden in e.g. script overrides in your repository.
 
 ## v4.1
 
@@ -45,7 +46,7 @@ If false, the templateSha repository setting is used to download specific AL-Go 
   - **footer** = Footer for the documentation site. (Default: Made with...)
   - **defaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)
   - **defaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)
-  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* 
+  - *Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}*
 
 ### New Workflows
 - **Deploy Reference Documentation** is a workflow, which you can invoke manually or on a schedule to generate and deploy reference documentation using the aldoc tool, using the ALDoc setting properties described above.
