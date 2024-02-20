@@ -63,6 +63,15 @@ Opening the Business Central environment and navigating to **Extension Managemen
 ## Creating an AUTHCONTEXT that uses S2S
 For using **S2S**, you need to do some preparation first. Follow [this](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication) description to setup a **Microsoft Entra application** and register it inside the **Business Central environment** you want to deploy to.
 
+> [!TIP]
+> The term "application" in the context of Microsoft Entra can cause some confusion. You create an application registration, and allow access to X resources through that application registration.
+>
+> The application registration is allowed to forward the access token obtained with these permissions to a set of URLs. Now the owner of the ClientID and the ClientSecret or certificate can now authenticate and obtain the permissions assigned to that app registration.
+>
+> The Microsoft Entra application registration is not tied to a specific Business Central app, customer, partner, vendor, person or purpose - it is up to the creator of the app registration to determine this. You can have one application registration, which you can use for various test purposes (many different apps), while having more purposefull application registrations for production.
+>
+> Secrets and certificates can be revoked (if compromised) and permissions can be changed - this indirect way of authentication does provide more security than a simple username/password, which everybody understands.
+
 Once this is done, you can then create an Authentication context secret by using this PowerShell line from a machine with the latest BcContainerHelper module installed:
 
 ```powershell
