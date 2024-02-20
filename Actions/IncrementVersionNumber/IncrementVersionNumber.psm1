@@ -104,6 +104,10 @@ function Set-VersionInSettingsFile {
     # Construct the new version number. Cast to System.Version to validate if the version number is valid.
     $newValue = [System.Version] "$($versionNumbers -join '.')"
 
+    if($newValue -lt $oldValue) {
+        throw "The new version number ($newValue) is less than the old version number ($oldValue). The version number must be incremented."
+    }
+
     if($newValue -eq $oldValue) {
         Write-Host "The setting $settingName is already set to $newValue in $settingsFilePath"
         return
