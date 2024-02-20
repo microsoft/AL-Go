@@ -37,6 +37,7 @@ try {
         $projectPath = Join-Path $baseFolder $project
 
         $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+        $settings = ReadSettings -baseFolder $baseFolder -project $project
 
         # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
         Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
