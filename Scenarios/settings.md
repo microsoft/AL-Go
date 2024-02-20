@@ -247,7 +247,7 @@ Here are the parameters to use in your custom script:
 | Parameter | Description | Example |
 | --------- | :--- | :--- |
 | `$parameters.type` | Type of delivery (CD or Release) | CD |
-| `$parameters.apps` | Apps to deploy. This can either be an array of .zip files or an array of folders, containing apps or .zip files. You can use the `Copy-AppFilesToFolder` from `BcContainerHelper` to extract and copy all apps to one folder | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
+| `$parameters.apps` | Apps to deploy. This can either be an array of .zip files or .app files, or it can be an array of folders, containing apps or .zip files. You can use the `Copy-AppFilesToFolder` function to extract and copy all apps to one folder | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
 | `$parameters.EnvironmentType` | Environment type | SaaS |
 | `$parameters.EnvironmentName` | Environment name | Production |
 | `$parameters.Branches` | Branches which should deploy to this environment (from settings) | main,dev |
