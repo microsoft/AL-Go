@@ -37,8 +37,11 @@ Open the **Pull request** and click **Files changed** to see what the Pull reque
 |-|
 
 > [!NOTE]
-> The changes made by the workflow includes adding the new app path to the **al.code-workspace**, and adding an app folder with **app.json**, **HelloWorld.al** (sample code) and **.vscode/launch.json**.
+> The changes made by the workflow includes adding the new app path to the `al.code-workspace`, and adding an app folder with **app.json**, **HelloWorld.al** (sample code) and **.vscode/launch.json**.
 The **Create a new app** workflow doesn't do anything else than just adding these changes, no magic behind the scenes.
+
+> [!NOTE]
+> If you have renamed the `al.code-workspace` file to `<anothername>.code-workspace` to be able to better distinguish the workspaces, it will still be updated.
 
 Select **Conversation** and merge the pull request by clicking **Merge the pull request**, **Confirm merge** and then delete the temporary branch created for the pull request, by clicking **Delete branch**. Select **Actions** and see that a merge commit workflow was kicked off:
 

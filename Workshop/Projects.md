@@ -56,6 +56,9 @@ When the **Create a new app in [main]** workflow has completed, select **Pull re
 > 2. A new US.code-workspace was created as a workspace for this project
 > 3. An app was added under the US folder called mysolution.us
 
+> [!NOTE]
+> You can rename the `US.code-workspace` file to `<anothername>.code-workspace` to be able to better distinguish the workspaces.
+
 Go ahead click **Conversation**, **merge the pull request** and **delete** the temporary branch.
 
 You don't have to wait for the **CI/CD workflow** to complete, just go ahead and run the **Create a new app** again. This time with the following parameters:
