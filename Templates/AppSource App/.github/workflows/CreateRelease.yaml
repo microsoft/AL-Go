@@ -327,6 +327,9 @@ jobs:
     if: ${{ github.event.inputs.updateVersionNumber!='' }}
     runs-on: [ windows-latest ]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:

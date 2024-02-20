@@ -12,6 +12,10 @@
 ![Clone](https://github.com/microsoft/AL-Go/assets/10775043/84b92edb-72b8-4444-908c-0c6f6bc2b7f7)
 1. Start **VS Code**, press **Ctrl+Shift+P** and select **Git Clone**, paste the clone URL and select a folder in which you want to clone the directory.
 1. **Open the cloned repository** and **open the workspace** when VS Code asks you (or do it manually)
+
+> [!NOTE]
+> You can rename the `al.code-workspace` file to `<anothername>.code-workspace` to be able to better distinguish the workspaces.
+
 1. In the **.AL-Go** folder, choose the **localDevEnv.ps1** script and Run the PowerShell script.
 ![LocalDevEnv](https://github.com/microsoft/AL-Go/assets/10775043/fded935a-b529-4ade-8daa-bbe7e37726b8)
 1. Answer the questions asked about container name, authentication mechanism, credentials and select none for license file. The script might show a dialog asking for permissions to run docker commands, select **Yes** in this dialog. Wait for completion of the script.
