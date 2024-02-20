@@ -2,6 +2,9 @@
 
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
+### Issues
+- Issue 940 Publish to Environment is broken when specifying projects to publish
+
 ### New Settings
 - `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
 
