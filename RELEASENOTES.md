@@ -3,15 +3,31 @@
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
 ### Issues
+- Support release branches that start with releases/
+- Issue 870 Improve Error Handling when CLI is missing
+- Issue 889 CreateRelease and IncrementVersionNumber workflow did not handle wild characters in `appFolders`, `testFolders` or `bcptTestFolders` settings.
 - Issue 940 Publish to Environment is broken when specifying projects to publish
 
 ### New Settings
 - `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
+- `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
+- `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
 
-### Issues
-- Support release branches that start with releases/
-- Issue 870 Improve Error Handling when CLI is missing
-- Issue 889 CreateRelease and IncrementVersionNumber workflow did not handle wild characters in `appFolders`, `testFolders` or `bcptTestFolders` settings.
+### New Actions
+- `BuildPowerPlatform`: to build a PowerPlatform Solution
+- `DeployPowerPlatform`: to deploy a PowerPlatform Solution
+- `PullPowerPlatformChanges`: to pull changes made in PowerPlatform studio into the repository
+- `ReadPowerPlatformSettings`: to read settings and secrets for PowerPlatform deployment
+- `GetArtifactsForDeployment`: originally code from deploy.ps1 to retrieve artifacts for releases or builds - now as an action to read apps into a folder.
+
+### New Workflows
+- **Pull PowerPlatform Changes** for pulling changes from your PowerPlatform development environment into your AL-Go for GitHub repository
+- **Push PowerPlatform Changes** for pushing changes from your AL-Go for GitHub repository to your PowerPlatform development environment
+
+### New Scenarios (Documentation)
+- [Connect your GitHub repository to Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupPowerPlatform.md)
+- [How to set up Service Principal for Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupServicePrincipalForPowerPlatform.md)
+- [Try one of the Business Central and Power Platform samples](https://github.com/microsoft/AL-Go/blob/main/Scenarios/TryPowerPlatformSamples.md)
 
 ### Build modes
 AL-Go ships with Default, Translated and Clean mode out of the box. Now you can also define custom build modes in addition to the ones shipped with AL-Go. This allows you to define your own build modes, which can be used to build your apps in different ways. By default, a custom build mode will build the apps similarly to the Default mode but this behavior can be overridden in e.g. script overrides in your repository.
