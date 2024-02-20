@@ -889,7 +889,7 @@ function GetArtifactsFromWorkflowRun {
     $page = 1
 
     # Get sanitized project names (the way they appear in the artifact names)
-    $projects = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    $projectArr = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
 
     # Get the artifacts from the the workflow run
     while($true) {
@@ -902,7 +902,7 @@ function GetArtifactsFromWorkflowRun {
             break
         }
 
-        foreach($project in $projects) {
+        foreach($project in $projectArr) {
             $artifactPattern = "$project-*-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
@@ -927,7 +927,7 @@ function GetArtifactsFromWorkflowRun {
         $page += 1
     }
 
-    Write-Host "Found $($foundArtifacts.Count) artifacts for mask $mask and projects $($projects -join ',') in workflow run $workflowRun"
+    Write-Host "Found $($foundArtifacts.Count) artifacts for mask $mask and projects $($projectArr -join ',') in workflow run $workflowRun"
 
     return $foundArtifacts
 }

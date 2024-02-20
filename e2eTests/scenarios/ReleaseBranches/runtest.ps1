@@ -90,7 +90,7 @@ Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)'
 $tag1 = '1.0.0'
 $ver1 = 'v1.0'
 $releaseBranch1 = "release/1.0"
-$release1 = RunCreateRelease -repository $repository -branch $branch -appVersion 'latest' -name $ver1 -tag $tag1 -createReleaseBranch -updateVersionNumber '+1.0' -directCommit -wait
+$release1 = RunCreateRelease -repository $repository -branch $branch -appVersion 'latest' -name $ver1 -tag $tag1 -createReleaseBranch -updateVersionNumber '+1' -directCommit -wait
 
 Test-LogContainsFromRun -runid $release1.id -jobName 'CreateRelease' -stepName 'Prepare release notes' -expectedText "releaseNotes=**Full Changelog**: https://github.com/$repository/commits/$tag1"
 
