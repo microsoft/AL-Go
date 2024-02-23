@@ -195,15 +195,15 @@ if ($adminCenterApiToken -and -not $multiProject) {
 }
 
 # Increment version number on one project
-RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.0 -wait -branch $branch | Out-Null
+RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.1 -wait -branch $branch | Out-Null
 $runs++
 $run = MergePRandPull -branch $branch -wait
 $runs++
 if ($multiProject) {
-    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.1' -appVersion ''
 }
 else {
-    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.1' -appVersion ''
 }
 TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 

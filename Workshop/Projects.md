@@ -56,6 +56,9 @@ When the **Create a new app in [main]** workflow has completed, select **Pull re
 > 2. A new US.code-workspace was created as a workspace for this project
 > 3. An app was added under the US folder called mysolution.us
 
+> [!NOTE]
+> You can rename the `US.code-workspace` file to `<anothername>.code-workspace` to be able to better distinguish the workspaces.
+
 Go ahead click **Conversation**, **merge the pull request** and **delete** the temporary branch.
 
 You don't have to wait for the **CI/CD workflow** to complete, just go ahead and run the **Create a new app** again. This time with the following parameters:
@@ -117,12 +120,12 @@ Before running **Update AL-Go System Files** however, let's make some changes to
 |-|
 
 Open the repository (do not open the workspace) and perform the following changes:
-- in **DK/.AL-Go/settings.json**, add **"artifact": "https://bcartifacts.azureedge.net/sandbox/23.0.12034.13450/dk"**
+- in **DK/.AL-Go/settings.json**, add **"artifact": "bcartifacts/sandbox/23.0.12034.13450/dk/closest"**
 - in **DK/.AL-Go/settings.json**, change **country** to **"dk"**
 - in **DK/mysolution.dk/HelloWorld.al**, add DK to the pageextension name (i.e. CustomerListExt to **CustomerListExtDK**)
-- in **US/.AL-Go/settings.json**, add **"artifact": "https://bcartifacts.azureedge.net/sandbox/22.0.54157.55210/us"**
+- in **US/.AL-Go/settings.json**, add **"artifact": "bcartifacts/sandbox/22.0.54157.55210/us/closest"**
 - in **US/mysolution.ud/HelloWorld.al**, add US to the pageextension name (i.e. CustomerListExt to **CustomerListExtUS**)
-- in **W1/.AL-Go/settings.json**, add **"artifact": "https://bcartifacts.azureedge.net/sandbox/22.0.54157.55210/w1"**
+- in **W1/.AL-Go/settings.json**, add **"artifact": "bcartifacts/sandbox/22.0.54157.55210/w1/closest"**
 - in **W1/.AL-Go/settings.json**, change **country** to **"w1"**
 - in **W1/mysolution.w1/HelloWorld.al**, add W1 to the pageextension name (i.e. CustomerListExt to **CustomerListExtW1**)
 
