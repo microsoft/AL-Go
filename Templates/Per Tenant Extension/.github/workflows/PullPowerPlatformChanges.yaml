@@ -72,7 +72,7 @@ jobs:
         with:
           shell: powershell
           getEnvironments: ${{ inputs.environment }}
-          type: 'Publish'
+          type: 'All'
 
       - name: Set Power Platform solution folder
         env:
