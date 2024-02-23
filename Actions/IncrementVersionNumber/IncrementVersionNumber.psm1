@@ -201,4 +201,74 @@ function Set-DependenciesVersionInAppManifests {
     }
 }
 
+<#
+    .Synopsis
+        Updates the version number of a Power Platform solution.
+    .Description
+        Updates the version number of a Power Platform solution.
+        The version number is changed in the solution.xml file of the Power Platform solution.
+    .Parameter powerPlatformSolutionPath
+        Path to the Power Platform solution.
+    .Parameter newValue
+        New version number. If the version number starts with a +, the new version number will be added to the old version number. Else the new version number will replace the old version number.
+        Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a full version number (e.g. major.minor.build.revision).
+#>
+function Update-PowerPlatformSolutionVersion {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string] $powerPlatformSolutionPath,
+        [Parameter(Mandatory = $true)]
+        [string] $newValue
+    )
+    
+    
+    write-host "Updating Power Platform solution version"
+    $files = Get-ChildItem -Path $powerPlatformSolutionPath -filter 'solution.xml' -Recurse -File | Where-Object { $_.Directory.Name -eq "other" }
+    if (-not $files) {
+        Write-Host "Power Platform solution file not found"
+    }
+    else {
+        foreach ($file in $files) {
+            $xml = [xml](Get-Content -Encoding UTF8 -Path $file.FullName)
+            if ($newValue.StartsWith('+')) {
+                $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+                if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
+                    throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+                }
+
+                # Increment version
+                $versionNumbers = $xml.SelectNodes("//Version")[0].InnerText.Split(".")
+                switch($newValue) {
+                    '+1' {
+                        # Increment major version number
+                        $versionNumbers[0] = "$(([int]$versionNumbers[0])+1)"
+                    }
+                    '+0.1' {
+                        # Increment minor version number
+                        $versionNumbers[1] = "$(([int]$versionNumbers[1])+1)"
+                    
+                    }
+                    default {
+                        throw "Unexpected version number $newValue"
+                    }
+                }
+                $newVersion = [string]::Join(".", $versionNumbers)
+            }
+            else {
+                $version = $null
+                if ([System.Version]::TryParse($newValue, [ref]$version) -and $version.build -ne -1 -and $version.revision -ne -1) {
+                    $newVersion = $version.ToString()
+                }
+                else {
+                    throw "Invalid version number $newValue"
+                }
+            }
+
+            Write-Host "Updating $($file.FullName) with new version $newVersion"
+            $xml.SelectNodes("//Version")[0].InnerText = $newVersion    
+            $xml.Save($file.FullName)
+        }
+    }
+}
+
 Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests

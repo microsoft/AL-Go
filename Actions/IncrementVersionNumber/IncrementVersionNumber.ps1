@@ -61,6 +61,11 @@ try {
     # Set dependencies in app manifests
     Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
 
+    if ($settings.powerPlatformSolutionFolder) {
+        $powerPlatformSolutionPath = Join-Path $baseFolder $settings.powerPlatformSolutionFolder
+        Update-PowerPlatformSolutionVersion powerPlatformSolutionPath $powerPlatformSolutionPath -newValue $versionNumber
+    }
+
     $commitMessage = "New Version number $versionNumber"
     if ($versionNumber.StartsWith('+')) {
         $commitMessage = "Incremented Version number by $versionNumber"
