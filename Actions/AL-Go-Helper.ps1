@@ -521,6 +521,11 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
     )
 
+    # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
+    if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
+        $branchName = $env:GITHUB_BASE_REF
+    }
+
     function GetSettingsObject {
         Param(
             [string] $path
@@ -679,11 +684,6 @@ function ReadSettings {
             $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
-    }
-
-    # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
-    if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
-        $branchName = $env:GITHUB_BASE_REF
     }
     
     foreach($settingsJson in $settingsObjects) {
