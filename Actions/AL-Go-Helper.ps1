@@ -685,7 +685,6 @@ function ReadSettings {
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
     }
-    
     foreach($settingsJson in $settingsObjects) {
         if ($settingsJson) {
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
