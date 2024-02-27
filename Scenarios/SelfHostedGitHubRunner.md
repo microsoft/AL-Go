@@ -21,6 +21,10 @@ GitHub runners can be registered for an organization (accessible for all reposit
 1. Go to [Allow your repository access to your runners](#allow-your-repository-access-to-your-runners) to continue the configuration.
 
 ## Create your self-hosted runner manually
+
+> [!NOTE]
+> If the runner is running under a service account, the following should be run using the account, as this will ensure that any of the per-user installation steps are completed.  Failure to do so will result in commands not being recognized when the runner performs steps.
+
 1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
 1. Make sure that the following software is installed on the computer (the suggestion in parentheses explains the mechanism used in https://aka.ms/getbuildagent)
    - Docker (getbuildagent use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM)
