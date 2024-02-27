@@ -21,16 +21,15 @@ try {
     DownloadAndImportBcContainerHelper
     $telemetryScope = CreateScope -eventId 'DO0083' -parentTelemetryScopeJson $ParentTelemetryScopeJson
 
-    Write-Host "::group::Install AzureSignTool"
-    dotnet tool install --global AzureSignTool --version 4.0.1
-    Write-Host "::endgroup::"
-
+    Write-Host "::group::Files to be signed"
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
     Write-Host "Signing files:"
     $Files | ForEach-Object {
         Write-Host "- $_"
     }
+    Write-Host "::endgroup::"
 
+    # Get parameters for signing
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
     $settings = $env:Settings | ConvertFrom-Json
     if ($settings.keyVaultName) {
@@ -42,23 +41,23 @@ try {
     else {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
+    $description = "Signed with AL-Go for GitHub"
+    $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
 
-    RetryCommand -Command { Param( $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Certificate, $Files)
-        Write-Host "::group::Register NavSip"
-        Register-NavSip
-        Write-Host "::endgroup::"
-
-        AzureSignTool sign --file-digest $digestAlgorithm `
-            --azure-key-vault-url "https://$AzureKeyVaultName.vault.azure.net/" `
-            --azure-key-vault-client-id $AzureCredentials.clientId `
-            --azure-key-vault-tenant-id $AzureCredentials.tenantId `
-            --azure-key-vault-client-secret $AzureCredentials.clientSecret `
-            --azure-key-vault-certificate $Certificate `
-            --timestamp-rfc3161 "$TimestampService" `
-            --timestamp-digest $digestAlgorithm `
-            $Files
-    } -MaxRetries 3 -ArgumentList $AzureKeyVaultName, $AzureCredentials, $digestAlgorithm, $TimestampService, $Settings.keyVaultCodesignCertificateName, $Files
-
+    # Sign files
+    Write-Host "::group::Signing files"
+    SignFilesInPath -KeyVaultName $AzureKeyVaultName `
+        -CertificateName $settings.keyVaultCodesignCertificateName `
+        -ClientId $AzureCredentials.clientId `
+        -ClientSecret $AzureCredentials.clientSecret `
+        -TenantId $AzureCredentials.tenantId `
+        -FilesToSign $PathToFiles `
+        -Description $description `
+        -DescriptionUrl $descriptionUrl `
+        -TimestampService $TimestampService `
+        -DigestAlgorithm $digestAlgorithm `
+        -Verbosity "Information"
+    Write-Host "::endgroup::"
     TrackTrace -telemetryScope $telemetryScope
 }
 catch {
