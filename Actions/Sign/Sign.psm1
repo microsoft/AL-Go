@@ -48,7 +48,7 @@ function Install-SignTool() {
     .PARAMETER Verbosity
     The verbosity level of the signing tool.
     .EXAMPLE
-    SignFilesInPath -KeyVaultName "my-key-vault" -CertificateName "my-certificatename" -ClientId "my-client-id" -ClientSecret "my-client-secret" -TenantId "my-tenant-id" 
+    SignFilesInPath -KeyVaultName "my-key-vault" -CertificateName "my-certificatename" -ClientId "my-client-id" -ClientSecret "my-client-secret" -TenantId "my-tenant-id"
                     -FilesToSign "C:\path\to\files\*.app" -Description "Signed with AL-Go for GitHub" -DescriptionUrl "github.com/myorg/myrepo"
 #>
 function SignFilesInPath() {
@@ -62,7 +62,7 @@ function SignFilesInPath() {
         [Parameter(Mandatory = $true)]
         [string] $ClientSecret,
         [Parameter(Mandatory = $true)]
-        [string] $TenantId, 
+        [string] $TenantId,
         [Parameter(Mandatory = $true)]
         [string] $FilesToSign,
         [Parameter(Mandatory = $true)]
@@ -78,7 +78,7 @@ function SignFilesInPath() {
     )
 
     Install-SignTool
-    
+
     # Sign files
     sign code azure-key-vault `
         --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
