@@ -29,7 +29,7 @@ try {
     }
     Write-Host "::endgroup::"
 
-    if ((-not $Files) -or ($Files.Count -eq 0)) {
+    if (-not $Files) {
         Write-Host "No files to sign. Exiting."
         return
     }
