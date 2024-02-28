@@ -29,6 +29,11 @@ try {
     }
     Write-Host "::endgroup::"
 
+    if ((-not $Files) -or ($Files.Count -eq 0)) {
+        Write-Host "No files to sign. Exiting."
+        return
+    }
+
     # Get parameters for signing
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
     $settings = $env:Settings | ConvertFrom-Json
