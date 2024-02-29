@@ -24,7 +24,7 @@ function Install-SignTool() {
     .SYNOPSIS
     Signs files in a given path using a certificate from Azure Key Vault.
     .DESCRIPTION
-    Signs files in a given path using a certificate from Azure Key Vault.
+    Signs files in a given path using a certificate from Azure Key Vault. The command also installs the Dotnet signing tool if is not already installed.
     .PARAMETER KeyVaultName
     The name of the Azure Key Vault where the certificate is stored.
     .PARAMETER CertificateName
@@ -48,10 +48,10 @@ function Install-SignTool() {
     .PARAMETER Verbosity
     The verbosity level of the signing tool.
     .EXAMPLE
-    SignFilesInPath -KeyVaultName "my-key-vault" -CertificateName "my-certificatename" -ClientId "my-client-id" -ClientSecret "my-client-secret" -TenantId "my-tenant-id"
+    Invoke-SigningTool -KeyVaultName "my-key-vault" -CertificateName "my-certificatename" -ClientId "my-client-id" -ClientSecret "my-client-secret" -TenantId "my-tenant-id"
                     -FilesToSign "C:\path\to\files\*.app" -Description "Signed with AL-Go for GitHub" -DescriptionUrl "github.com/myorg/myrepo"
 #>
-function SignFilesInPath() {
+function Invoke-SigningTool() {
     param(
         [Parameter(Mandatory = $true)]
         [string] $KeyVaultName,
@@ -95,4 +95,4 @@ function SignFilesInPath() {
         $FilesToSign
 }
 
-Export-ModuleMember -Function SignFilesInPath
+Export-ModuleMember -Function Invoke-SigningTool

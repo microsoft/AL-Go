@@ -21,18 +21,17 @@ try {
     DownloadAndImportBcContainerHelper
     $telemetryScope = CreateScope -eventId 'DO0083' -parentTelemetryScopeJson $ParentTelemetryScopeJson
 
-    Write-Host "::group::Files to be signed"
     $Files = Get-ChildItem -Path $PathToFiles -File | Select-Object -ExpandProperty FullName
-    Write-Host "Signing files:"
-    $Files | ForEach-Object {
-        Write-Host "- $_"
-    }
-    Write-Host "::endgroup::"
-
     if (-not $Files) {
         Write-Host "No files to sign. Exiting."
         return
     }
+
+    Write-Host "::group::Files to be signed"
+    $Files | ForEach-Object {
+        Write-Host "- $_"
+    }
+    Write-Host "::endgroup::"
 
     # Get parameters for signing
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
@@ -51,7 +50,7 @@ try {
 
     # Sign files
     Write-Host "::group::Signing files"
-    SignFilesInPath -KeyVaultName $AzureKeyVaultName `
+    Invoke-SigningTool -KeyVaultName $AzureKeyVaultName `
         -CertificateName $settings.keyVaultCodesignCertificateName `
         -ClientId $AzureCredentials.clientId `
         -ClientSecret $AzureCredentials.clientSecret `
