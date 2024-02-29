@@ -2,7 +2,8 @@
     .SYNOPSIS
     Installs the dotnet signing tool.
     .DESCRIPTION
-    Installs the dotnet signing tool.
+    Installs the dotnet signing tool if isn't already installed.
+    If you want to avoid installing it on-demand while signing you can run ´dotnet tool install sign --version $Version --global´ to install it on your machine
     .PARAMETER Version
     The version of the signing tool to install.
 #>
@@ -13,10 +14,11 @@ function Install-SignTool() {
         )
 
         if (Get-Command -Name "sign" -ErrorAction SilentlyContinue) {
-            Write-Host "Found signing tool at '$($signTool.Source)' and version $($signTool.Version) installed."
+            Write-Host "Signing tool is already installed"
         } else {
-            Write-Host "Signing tool not found. Installing version $Version."
-            dotnet tool install sign --version $Version --global
+            Write-Host "Signing tool not found. Installing version $Version locally."
+            dotnet tool install sign --version $Version --tool-path SigningTool
+            Set-Alias -Name sign -Value "SigningTool\sign.exe" -Scope Local
         }
 }
 
