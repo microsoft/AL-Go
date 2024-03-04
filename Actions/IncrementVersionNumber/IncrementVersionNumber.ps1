@@ -30,11 +30,15 @@ try {
 
     $settings = $env:Settings | ConvertFrom-Json
 
-    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -powerPlatformSolutionFolder $settings.powerPlatformSolutionFolder -selectProjects $projects)
 
     $allAppFolders = @()
     foreach($project in $projectList) {
         $projectPath = Join-Path $baseFolder $project
+        if ($settings.powerPlatformSolutionFolder -eq $project) {
+            Update-PowerPlatformSolutionVersion powerPlatformSolutionPath $projectPath -newValue $versionNumber
+            continue
+        }
 
         $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
         $settings = ReadSettings -baseFolder $baseFolder -project $project
@@ -60,11 +64,6 @@ try {
 
     # Set dependencies in app manifests
     Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
-
-    if ($settings.powerPlatformSolutionFolder) {
-        $powerPlatformSolutionPath = Join-Path $baseFolder $settings.powerPlatformSolutionFolder
-        Update-PowerPlatformSolutionVersion powerPlatformSolutionPath $powerPlatformSolutionPath -newValue $versionNumber
-    }
 
     $commitMessage = "New Version number $versionNumber"
     if ($versionNumber.StartsWith('+')) {

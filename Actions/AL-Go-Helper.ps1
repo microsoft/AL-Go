@@ -2272,6 +2272,7 @@ function GetProjectsFromRepository {
     Param(
         [string] $baseFolder,
         [string[]] $projectsFromSettings,
+        [string] $powerPlatformSolutionFolder,
         [string] $selectProjects = ''
     )
     if ($projectsFromSettings) {
@@ -2285,6 +2286,10 @@ function GetProjectsFromRepository {
             $projects += @(".")
         }
     }
+    if ($powerPlatformSolutionFolder) {
+        $projects += @($powerPlatformSolutionFolder)
+    }
+    
     if ($selectProjects) {
         # Filter the project list based on the projects parameter
         if ($selectProjects.StartsWith('[')) {
