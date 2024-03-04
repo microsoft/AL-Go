@@ -41,7 +41,7 @@ foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","Auth
         if ($ppApplicationId -and $ppClientSecret -and $ppTenantId) {
             Write-Host "Authenticating with application ID and client secret"
         }
-        elseif ($ppUserName -and $ppPassword -and $ppTenantId) {
+        elseif ($ppUserName -and $ppPassword) {
             Write-Host "Authenticating with user name"
         }
         else {

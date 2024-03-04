@@ -220,8 +220,7 @@ function Update-PowerPlatformSolutionVersion {
         [Parameter(Mandatory = $true)]
         [string] $newValue
     )
-    
-    
+
     write-host "Updating Power Platform solution version"
     $files = Get-ChildItem -Path $powerPlatformSolutionPath -filter 'solution.xml' -Recurse -File | Where-Object { $_.Directory.Name -eq "other" }
     if (-not $files) {
@@ -246,7 +245,6 @@ function Update-PowerPlatformSolutionVersion {
                     '+0.1' {
                         # Increment minor version number
                         $versionNumbers[1] = "$(([int]$versionNumbers[1])+1)"
-                    
                     }
                     default {
                         throw "Unexpected version number $newValue"
@@ -265,7 +263,7 @@ function Update-PowerPlatformSolutionVersion {
             }
 
             Write-Host "Updating $($file.FullName) with new version $newVersion"
-            $xml.SelectNodes("//Version")[0].InnerText = $newVersion    
+            $xml.SelectNodes("//Version")[0].InnerText = $newVersion
             $xml.Save($file.FullName)
         }
     }
