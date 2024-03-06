@@ -18,7 +18,7 @@ function Install-SignTool() {
         } else {
             Write-Host "Signing tool not found. Installing version $Version locally."
             dotnet tool install sign --version $Version --tool-path SigningTool
-            Set-Alias -Name sign -Value "SigningTool\sign.exe" -Scope Local
+            Set-Alias -Name sign -Value "SigningTool\sign.exe" -Scope Script
         }
 }
 
