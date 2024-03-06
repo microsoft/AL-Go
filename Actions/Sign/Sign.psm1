@@ -10,7 +10,7 @@
 function Install-SignTool() {
         param(
             [Parameter(Mandatory = $false)]
-            [string] $Version = (Get-PackageVersion -PackageName "sign")
+            [string] $Version
         )
 
         if (Get-Command -Name "sign" -ErrorAction SilentlyContinue) {
@@ -26,7 +26,7 @@ function Install-SignTool() {
     .SYNOPSIS
     Signs files in a given path using a certificate from Azure Key Vault.
     .DESCRIPTION
-    Signs files in a given path using a certificate from Azure Key Vault. The command also installs the Dotnet signing tool if is not already installed.
+    Signs files in a given path using a certificate from Azure Key Vault.
     .PARAMETER KeyVaultName
     The name of the Azure Key Vault where the certificate is stored.
     .PARAMETER CertificateName
@@ -79,8 +79,6 @@ function Invoke-SigningTool() {
         [string] $Verbosity = "Information"
     )
 
-    Install-SignTool
-
     # Sign files
     sign code azure-key-vault `
         --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
@@ -98,3 +96,4 @@ function Invoke-SigningTool() {
 }
 
 Export-ModuleMember -Function Invoke-SigningTool
+Export-ModuleMember -Function Install-SignTool
