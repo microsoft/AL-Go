@@ -10,7 +10,7 @@
 function Install-SignTool() {
         param(
             [Parameter(Mandatory = $false)]
-            [string] $Version = "0.9.1-beta.24123.2"
+            [string] $Version = (Get-PackageVersion -PackageName "sign")
         )
 
         if (Get-Command -Name "sign" -ErrorAction SilentlyContinue) {
