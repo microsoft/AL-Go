@@ -5,6 +5,8 @@
     Installs the dotnet signing tool.
 #>
 function Install-SigningTool() {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
         # Create folder in temp directory with a unique name
         $tempFolder = Join-Path -Path ([System.IO.Path]::GetTempPath()) "SigningTool-$(Get-Random)"
 
