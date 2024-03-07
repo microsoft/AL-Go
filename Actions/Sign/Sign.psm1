@@ -2,9 +2,7 @@
     .SYNOPSIS
     Installs the dotnet signing tool.
     .DESCRIPTION
-    Installs the dotnet signing tool if isn't already installed.
-    .PARAMETER Version
-    The version of the signing tool to install.
+    Installs the dotnet signing tool.
 #>
 function Install-SigningTool() {
         # Create folder in temp directory with a unique name
