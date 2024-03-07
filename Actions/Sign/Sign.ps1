@@ -48,9 +48,6 @@ try {
     $description = "Signed with AL-Go for GitHub"
     $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
 
-    # Sign files
-    Install-SignTool -Version (Get-PackageVersion -PackageName "sign")
-
     Write-Host "::group::Signing files"
     Invoke-SigningTool -KeyVaultName $AzureKeyVaultName `
         -CertificateName $settings.keyVaultCodesignCertificateName `

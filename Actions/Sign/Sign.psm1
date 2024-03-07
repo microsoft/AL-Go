@@ -3,23 +3,24 @@
     Installs the dotnet signing tool.
     .DESCRIPTION
     Installs the dotnet signing tool if isn't already installed.
-    If you want to avoid installing it on-demand while signing you can run ´dotnet tool install sign --version $Version --global´ to install it on your machine
     .PARAMETER Version
     The version of the signing tool to install.
 #>
-function Install-SignTool() {
-        param(
-            [Parameter(Mandatory = $false)]
-            [string] $Version
-        )
+function Install-SigningTool() {
+        # Create folder in temp directory with a unique name
+        $tempFolder = Join-Path -Path ([System.IO.Path]::GetTempPath()) "SigningTool-$(Get-Random)"
 
-        if (Get-Command -Name "sign" -ErrorAction SilentlyContinue) {
-            Write-Host "Signing tool is already installed"
-        } else {
-            Write-Host "Signing tool not found. Installing version $Version locally."
-            dotnet tool install sign --version $Version --tool-path SigningTool
-            Set-Alias -Name sign -Value "SigningTool\sign.exe" -Scope Script
-        }
+        # Get version of the signing tool
+        $version = "0.9.1-beta.24123.2" #Get-PackageVersion -PackageName "sign"
+
+        # Install the signing tool in the temp folder
+        Write-Host "Installing signing tool version $version in $tempFolder"
+        New-Item -ItemType Directory -Path $tempFolder | Out-Null
+        dotnet tool install sign --version $version --tool-path $tempFolder
+
+        # Return the path to the signing tool
+        $signingTool = Join-Path -Path $tempFolder "sign.exe" -Resolve
+        return $signingTool
 }
 
 <#
@@ -79,8 +80,10 @@ function Invoke-SigningTool() {
         [string] $Verbosity = "Information"
     )
 
+    $signingToolExe = Install-SigningTool
+
     # Sign files
-    sign code azure-key-vault `
+    . $signingToolExe code azure-key-vault `
         --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
         --azure-key-vault-certificate $CertificateName `
         --azure-key-vault-client-id $ClientId `
@@ -96,4 +99,3 @@ function Invoke-SigningTool() {
 }
 
 Export-ModuleMember -Function Invoke-SigningTool
-Export-ModuleMember -Function Install-SignTool
