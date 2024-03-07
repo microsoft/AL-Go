@@ -11,12 +11,12 @@ function Install-SigningTool() {
         $tempFolder = Join-Path -Path ([System.IO.Path]::GetTempPath()) "SigningTool-$(Get-Random)"
 
         # Get version of the signing tool
-        $version = "0.9.1-beta.24123.2" #Get-PackageVersion -PackageName "sign"
+        $version = Get-PackageVersion -PackageName "sign"
 
         # Install the signing tool in the temp folder
         Write-Host "Installing signing tool version $version in $tempFolder"
         New-Item -ItemType Directory -Path $tempFolder | Out-Null
-        dotnet tool install sign --version $version --tool-path $tempFolder
+        dotnet tool install sign --version $version --tool-path $tempFolder | Out-Null
 
         # Return the path to the signing tool
         $signingTool = Join-Path -Path $tempFolder "sign.exe" -Resolve
