@@ -126,6 +126,45 @@ class Yaml {
         return $this.Get($line, [ref] $start, [ref] $count)
     }
 
+    # Locate all lines in the next level of a yaml path
+    # if $line is empty, you get all first level lines
+    # Example:
+    # GetNextLevel("jobs:/") returns @("Initialization:","CheckForUpdates:","Build:","Deploy:",...)
+    [string[]] GetNextLevel([string] $line) {
+        [int]$start = 0
+        [int]$count = 0
+        [Yaml] $yaml = $this
+        if ($line) {
+            $yaml = $this.Get($line, [ref] $start, [ref] $count)
+        }
+        return $yaml.content | Where-Object { $_ -and -not $_.StartsWith(' ') }
+    }
+
+    # Get the value of a property as a string
+    # Example:
+    # GetProperty("jobs:/Build:/needs:") returns "[ Initialization, Build1 ]"
+    [string] GetProperty([string] $line) {
+        [int]$start = 0
+        [int]$count = 0
+        [Yaml] $yaml = $this.Get($line, [ref] $start, [ref] $count)
+        if ($yaml -and $yaml.content.Count -eq 1) {
+            return $yaml.content[0].SubString($yaml.content[0].IndexOf(':')+1).Trim()
+        }
+        return $null
+    }
+
+    # Get the value of a property as a string array
+    # Example:
+    # GetPropertyArray("jobs:/Build:/needs:") returns @("Initialization", "Build")
+    [string[]] GetPropertyArray([string] $line) {
+        $prop = $this.GetProperty($line)
+        if ($prop) {
+            # "needs: [ Initialization, Build ]" becomes @("Initialization", "Build")
+            return $prop.TrimStart('[').TrimEnd(']').Split(',').Trim()
+        }
+        return $null
+    }
+
     # Replace the lines for the specified Yaml path, given by $line with the lines in $content
     # If $line ends with '/', then the lines for the section are replaced only
     # If $line doesn't end with '/', then the line + the lines for the section are replaced
@@ -184,5 +223,194 @@ class Yaml {
         else {
             $this.content = $this.content[0..($index-1)] + $yamlContent + $this.content[$index..($this.content.Count-1)]
         }
+    }
+
+    # Locate jobs in YAML based on a name pattern
+    # Example:
+    # GetCustomJobsFromYaml() returns @("CustomJob1", "CustomJob2")
+    # GetCustomJobsFromYaml("Build*") returns @("Build1","Build2","Build")
+    [hashtable[]] GetCustomJobsFromYaml([string] $name) {
+        $result = @()
+        $allJobs = $this.GetNextLevel('jobs:/').Trim(':')
+        $customJobs = @($allJobs | Where-Object { $_ -like $name })
+        if ($customJobs) {
+            $nativeJobs = @($allJobs | Where-Object { $customJobs -notcontains $_ })
+            Write-Host "Native Jobs:"
+            foreach($nativeJob in $nativeJobs) {
+                Write-Host "- $nativeJob"
+            }
+            Write-Host "Custom Jobs:"
+            foreach($customJob in $customJobs) {
+                Write-Host "- $customJob"
+                $jobsWithDependency = $nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
+                # If any Build Job has a dependency on this CustomJob, add will be added to all build jobs later
+                if ($jobsWithDependency | Where-Object { $_ -like 'Build*' }) {
+                    $jobsWithDependency = @($jobsWithDependency | Where-Object { $_ -notlike 'Build*' }) + @('Build')
+                }
+                if ($jobsWithDependency) {
+                    Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
+                    $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = @($jobsWithDependency) })
+                }
+            }
+        }
+        return $result
+    }
+
+    # Add jobs to Yaml and update Needs section from native jobs which needs this custom Job
+    # $customJobs is an array of hashtables with Name, Content and NeedsThis
+    # Example:
+    # $customJobs = @(@{ "Name" = "CustomJob1"; "Content" = @("  - pwsh","  -File Build1"); "NeedsThis" = @("Initialization", "Build") })
+    # AddCustomJobsToYaml($customJobs)
+    # The function will add the job CustomJob1 to the Yaml file and update the Needs section of Initialization and Build
+    # The function will not add the job CustomJob1 if it already exists
+    [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
+        $existingJobs = $this.GetNextLevel('jobs:/').Trim(':')
+        Write-Host "Adding New Jobs"
+        foreach($customJob in $customJobs) {
+            if ($existingJobs -contains $customJob.Name) {
+                Write-Host "Job $($customJob.Name) already exists"
+                continue
+            }
+            Write-Host "$($customJob.Name) has dependencies from $($customJob.NeedsThis -join ',')"
+            foreach($needsthis in $customJob.NeedsThis) {
+                if ($needsthis -eq 'Build') {
+                    $existingJobs | Where-Object { $_ -like 'Build*'} | ForEach-Object {
+                        # Add dependency to all build jobs
+                        $this.Replace("jobs:/$($_):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob.Name) -join ', ') ]")
+                    }
+                }
+                elseif ($existingJobs -contains $needsthis) {
+                    # Add dependency to job
+                    $this.Replace("jobs:/$($needsthis):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) -join ', ') ]")
+                }
+            }
+            $this.content += @('') + @($customJob.content | ForEach-Object { "  $_" })
+        }
+    }
+
+    [string[]] GetStepsFromJob([string] $job) {
+        $steps = $this.GetNextLevel("Jobs:/$($job):/steps:/") | Where-Object { $_ -like '- name: *' } | ForEach-Object { $_.Substring(8).Trim() }
+        if ($steps | Group-Object | Where-Object { $_.Count -gt 1 }) {
+            Write-Host "Duplicate step names in job '$job'"
+            return @()
+        }
+        return $steps
+    }
+
+    [hashtable[]] GetCustomStepsFromAnchor([string] $job, [string] $anchorStep, [bool] $before) {
+        $steps = $this.GetStepsFromJob($job)
+        $anchorIdx = $steps.IndexOf($anchorStep)
+        if ($anchorIdx -lt 0) {
+            Write-Host "Cannot find anchor step '$anchorStep' in job '$job'"
+            return @()
+        }
+        $idx = $anchorIdx
+        $customSteps = @()
+        if ($before) {
+            while ($idx -gt 0 -and $steps[$idx-1] -like 'CustomStep*') {
+                $idx--
+            }
+            if ($idx -ne $anchorIdx) {
+                $customSteps = @($steps[$idx..($anchorIdx-1)])
+                # Reverse the order of the custom steps in order to apply in correct order from the anchor step
+                [array]::Reverse($customSteps)
+            }
+        }
+        else {
+            while ($idx -lt $steps.Count-1 -and $steps[$idx+1] -like 'CustomStep*') {
+                $idx++
+            }
+            if ($idx -ne $anchorIdx) {
+                $customSteps = @($steps[($anchorIdx+1)..$idx])
+            }
+        }
+        $result = @()
+        foreach($customStep in $customSteps) {
+            $stepContent = $this.Get("Jobs:/$($job):/steps:/- name: $($customStep)").content
+            $result += @(@{"Name" = $customStep; "Content" =  $stepContent; "AnchorStep" = $anchorStep; "Before" = $before })
+        }
+        return $result
+    }
+
+    [hashtable[]] GetCustomStepsFromYaml([string] $job, [hashtable[]] $anchors) {
+        $steps = $this.GetStepsFromJob($job)
+        $result = @()
+        foreach($anchor in $anchors) {
+            $result += $this.GetCustomStepsFromAnchor($job, $anchor.Step, $anchor.Before)
+        }
+        foreach($step in $steps) {
+            if ($step -like 'CustomStep*') {
+                if (-not ($result | Where-Object { $_.Name -eq $step })) {
+                    Write-Host "Custom step '$step' does not belong to a supported anchor"
+                }
+            }
+        }
+        return $result
+    }
+
+    [void] AddCustomStepsToAnchor([string] $job, [hashtable[]] $customSteps, [string] $anchorStep, [bool] $before) {
+        $steps = $this.GetStepsFromJob($job)
+        if (!$steps) {
+            Write-Host "::Warning::Cannot find job '$job'"
+            return
+        }
+        $anchorIdx = $steps.IndexOf($anchorStep)
+        if ($anchorIdx -lt 0) {
+            Write-Host "::Warning::Cannot find anchor step '$anchorStep' in job '$job'"
+            return
+        }
+        foreach($customStep in $customSteps | Where-Object { $_.AnchorStep -eq $anchorStep -and $_.Before -eq $before }) {
+            if ($steps -contains $customStep.Name) {
+                Write-Host "Custom step '$($customStep.Name)' already exists in job '$job'"
+            }
+            else {
+                $anchorStart = 0
+                $anchorCount = 0
+                if ($this.Find("Jobs:/$($job):/steps:/- name: $($anchorStep)", [ref] $anchorStart, [ref] $anchorCount)) {
+                    if ($before) {
+                        $this.Insert($anchorStart-1, @('') + @($customStep.Content | ForEach-Object { "      $_" }))
+                    }
+                    else {
+                        $this.Insert($anchorStart+$anchorCount, @('') + @($customStep.Content | ForEach-Object { "      $_" }))
+                    }
+                }
+            }
+            # Use added step as anchor for next step
+            $anchorStep = $customStep.Name
+        }
+    }
+
+    [void] AddCustomStepsToYaml([string] $job, [hashtable[]] $customSteps, [hashtable[]] $anchors) {
+        foreach($anchor in $anchors) {
+            $this.AddCustomStepsToAnchor($job, $customSteps, $anchor.Step, $anchor.Before)
+        }
+    }
+
+    static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [hashtable] $anchors) {
+        $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
+        try {
+            $yaml = [Yaml]::Load($yamlFile)
+        }
+        catch {
+            return
+        }
+        $filename = [System.IO.Path]::GetFileName($yamlFile)
+        if ($anchors.ContainsKey($filename)) {
+            $fileAnchors = $anchors."$filename"
+            foreach($job in $fileAnchors.Keys) {
+                # Locate custom steps in destination YAML
+                $customSteps = $yaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
+                if ($customSteps) {
+                    $srcYaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
+                }
+            }
+        }
+        # Locate custom jobs in destination YAML
+        $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
+        if ($customJobs) {
+            # Add custom jobs to template YAML
+            $srcYaml.AddCustomJobsToYaml($customJobs)
+        }
+        $srcContent.Value = $srcYaml.content -join "`n"
     }
 }
