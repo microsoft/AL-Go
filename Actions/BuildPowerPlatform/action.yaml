@@ -60,7 +60,7 @@ runs:
         ${{ github.action_path }}\updateSolutionFile.ps1 -appBuild $ENV:_appBuild -appRevision $ENV:_appRevision -solutionFolder $ENV:_solutionFolder
     
     - name: Update BC connection settings
-      if: inputs.companyId != ''
+      if: inputs.CompanyId != '' && inputs.SolutionFolder != '' && inputs.EnvironmentName != '' 
       shell: ${{ inputs.shell }}
       env: 
         _solutionFolder: ${{ inputs.solutionFolder }}
