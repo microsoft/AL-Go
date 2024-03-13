@@ -37,6 +37,7 @@ jobs:
           _environment: ${{ inputs.environment }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          # Environment names can contains spaces and tags (like (PROD) etc. We need to remove them to get the correct environment name)
           $envName = "$env:_environment".Split(' ')[0]
           Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "envName=$envName"
 
