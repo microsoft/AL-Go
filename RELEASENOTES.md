@@ -7,6 +7,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 870 Improve Error Handling when CLI is missing
 - Issue 889 CreateRelease and IncrementVersionNumber workflow did not handle wild characters in `appFolders`, `testFolders` or `bcptTestFolders` settings.
 - Issue 940 Publish to Environment is broken when specifying projects to publish
+- Issue 973 Prerelease is not used for deployment
 
 ### New Settings
 - `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
