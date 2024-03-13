@@ -11,7 +11,7 @@ Param(
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-Write-Host "Starting GitCloneRepository.ps1 with parameters: $([environment]::Newline)actor: $actor$([environment]::Newline)token: $token$([environment]::Newline)updateBranch: $updateBranch$([environment]::Newline)directCommit: $directCommit"
+Write-Host "Starting GitCloneRepository.ps1 with parameters: $([environment]::Newline)actor: $actor$([environment]::Newline)updateBranch: $updateBranch$([environment]::Newline)directCommit: $directCommit"
 
 # Import the helper script
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
