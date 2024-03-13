@@ -74,7 +74,7 @@ jobs:
             Write-Host "Solution folder is not provided. Taking the folder from AL-Go settings"
             $solutionFolder = $env:powerPlatformSolutionFolder
           }
-          write-host "Solution folder: $solutionFolder"
+          Write-Host "Solution folder: $solutionFolder"
           Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "solutionFolder=$solutionFolder"
 
       - name: Export and push changes to Power Platform
