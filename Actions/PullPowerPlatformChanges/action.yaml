@@ -45,6 +45,7 @@ runs:
       env:
         _actionsRepo: ${{ inputs.actionsRepo }}
       run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         # Using hardcoded reference to microsoft/AL-Go-Actions inside composote actions doesn't work with preview nor direct development branches
         # For this reason, we get the actionsRepo from the calling workflow (which might be freddydk/AL-Go@PPP or microsoft/AL-Go@sha or microsoft/AL-Go-Actions@v4.1 )
         # Download actions to ./_AL-Go/Actions
@@ -98,7 +99,14 @@ runs:
         _token: ${{ inputs.token }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
-      run: ${{ github.action_path }}\GitCloneReponsitory.ps1 -actor $ENV:_actor -token $ENV:_token -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+      run: |
+        try {
+          ${{ github.action_path }}\GitCloneReponsitory.ps1 -actor $ENV:_actor -token $ENV:_token -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 
     - name: export-solution action (username)
       if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
@@ -143,7 +151,15 @@ runs:
         _token: ${{ inputs.token }}
         _solutionFolder: ${{ inputs.solutionFolder }}
         _environmentName: ${{ inputs.environmentName }}
-      run: ${{ github.action_path }}\GitCommitChanges.ps1 -Actor $ENV:_actor -Token $ENV:_token -PowerPlatformSolutionName $ENV:_solutionFolder -EnvironmentName $ENV:_environmentName -Location $ENV:clonedRepoPath -ServerUrl $ENV:serverUrl -GitHubBranch $ENV:gitHubBranch
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}\GitCommitChanges.ps1 -Actor $ENV:_actor -Token $ENV:_token -PowerPlatformSolutionName $ENV:_solutionFolder -EnvironmentName $ENV:_environmentName -Location $ENV:clonedRepoPath -ServerUrl $ENV:serverUrl -GitHubBranch $ENV:gitHubBranch
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 
 branding:
   icon: terminal
