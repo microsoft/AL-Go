@@ -203,9 +203,9 @@ function Set-DependenciesVersionInAppManifests {
 
 <#
     .Synopsis
-        Updates the version number of a Power Platform solution.
+        Sets the version number of a Power Platform solution.
     .Description
-        Updates the version number of a Power Platform solution.
+        Sets the version number of a Power Platform solution.
         The version number is changed in the solution.xml file of the Power Platform solution.
     .Parameter powerPlatformSolutionPath
         Path to the Power Platform solution.
@@ -213,7 +213,7 @@ function Set-DependenciesVersionInAppManifests {
         New version number. If the version number starts with a +, the new version number will be added to the old version number. Else the new version number will replace the old version number.
         Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a full version number (e.g. major.minor.build.revision).
 #>
-function Update-PowerPlatformSolutionVersion {
+function Set-PowerPlatformSolutionVersion {
     param(
         [Parameter(Mandatory = $false)]
         [string] $powerPlatformSolutionPath,
@@ -254,7 +254,7 @@ function Update-PowerPlatformSolutionVersion {
             }
             else {
                 $version = $null
-                if ([System.Version]::TryParse($newValue, [ref]$version) -and $version.build -ne -1 -and $version.revision -ne -1) {
+                if ([System.Version]::TryParse($newValue, [ref]$version) -and $version.build -eq -1 -and $version.revision -eq -1) {
                     $newVersion = $version.ToString()
                 }
                 else {
@@ -269,4 +269,4 @@ function Update-PowerPlatformSolutionVersion {
     }
 }
 
-Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests
+Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests, Set-PowerPlatformSolutionVersion

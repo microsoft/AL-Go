@@ -36,7 +36,7 @@ try {
     foreach($project in $projectList) {
         $projectPath = Join-Path $baseFolder $project
         if ($settings.powerPlatformSolutionFolder -eq $project) {
-            Update-PowerPlatformSolutionVersion powerPlatformSolutionPath $projectPath -newValue $versionNumber
+            Set-PowerPlatformSolutionVersion -powerPlatformSolutionPath $projectPath -newValue $versionNumber
             continue
         }
 
@@ -63,7 +63,13 @@ try {
     }
 
     # Set dependencies in app manifests
-    Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+    If($allAppFolders.Count -eq 0) {
+        write-host "No App folders in repo"
+    }
+    else {
+        # Set dependencies in app manifests
+        Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+    }
 
     $commitMessage = "New Version number $versionNumber"
     if ($versionNumber.StartsWith('+')) {

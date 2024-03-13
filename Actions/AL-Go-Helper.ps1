@@ -2289,7 +2289,7 @@ function GetProjectsFromRepository {
     if ($powerPlatformSolutionFolder) {
         $projects += @($powerPlatformSolutionFolder)
     }
-    
+
     if ($selectProjects) {
         # Filter the project list based on the projects parameter
         if ($selectProjects.StartsWith('[')) {
