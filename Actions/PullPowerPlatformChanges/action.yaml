@@ -54,9 +54,9 @@ runs:
           # Set the path one level up as that where the Actions folder will be
           $actionsPath = './_AL-Go'
         }
-        Add-Content $env:GITHUB_ENV "ACTION_REPO=$actionsRepo" -Encoding UTF8
-        Add-Content $env:GITHUB_ENV "ACTION_REF=$actionsRef" -Encoding UTF8
-        Add-Content $env:GITHUB_ENV "ACTIONS_PATH=$actionsPath" -Encoding UTF8
+        Add-Content $env:GITHUB_ENV "actionsRepo=$actionsRepo" -Encoding UTF8
+        Add-Content $env:GITHUB_ENV "actionsRef=$actionsRef" -Encoding UTF8
+        Add-Content $env:GITHUB_ENV "actionsPath=$actionsPath" -Encoding UTF8
 
     - name: Check out AL-Go Actions
       uses: actions/checkout@v4
