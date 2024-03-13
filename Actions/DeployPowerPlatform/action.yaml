@@ -46,7 +46,6 @@ runs:
         Add-Content $env:GITHUB_ENV "actionsRef=$actionsRef" -Encoding UTF8
         Add-Content $env:GITHUB_ENV "actionsPath=$actionsPath" -Encoding UTF8
 
-
     - name: Check out AL-Go Actions
       uses: actions/checkout@v4
       with:
