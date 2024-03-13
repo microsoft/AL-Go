@@ -50,7 +50,7 @@ runs:
       uses: microsoft/powerplatform-actions/actions-install@v1
 
     - name: Update solution settings
-      if: inputs.appBuild != ''
+      if: inputs.appBuild != '' && inputs.solutionFolder != ''
       shell: ${{ inputs.shell }}
       env: 
         _solutionFolder: ${{ inputs.solutionFolder }}
