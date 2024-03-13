@@ -158,7 +158,7 @@ jobs:
           artifactsVersion: ${{ github.event.inputs.appVersion }}
           artifactsFolder: '.artifacts'
 
-      - name: Deploy AL
+      - name: Deploy to Business Central
         id: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
         env:
@@ -170,7 +170,7 @@ jobs:
           type: 'Publish'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
-      - name: Deploy PP
+      - name: Deploy to Power Platform
         if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
         uses: microsoft/AL-Go-Actions/DeployPowerPlatform@main
         env:
