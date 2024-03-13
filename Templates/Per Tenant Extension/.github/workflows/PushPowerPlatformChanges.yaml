@@ -71,7 +71,7 @@ jobs:
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $solutionFolder = $env:_solutionFolder
           if ($solutionFolder -eq '') {
-            write-host "Solution folder is not provided. Taking the folder from AL-Go settings"
+            Write-Host "Solution folder is not provided. Taking the folder from AL-Go settings"
             $solutionFolder = $env:powerPlatformSolutionFolder
           }
           write-host "Solution folder: $solutionFolder"
