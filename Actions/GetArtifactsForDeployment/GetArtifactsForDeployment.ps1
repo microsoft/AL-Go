@@ -71,6 +71,6 @@ if ($searchArtifacts) {
         }
     }
     else {
-        throw "Could not find any Apps artifacts for projects: '$projects', version: '$artifactsVersion'"
+        throw "Could not find any artifacts for projects: '$projects', version: '$artifactsVersion'"
     }
 }
