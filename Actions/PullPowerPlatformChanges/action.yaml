@@ -43,8 +43,8 @@ runs:
         actionRepo: ${{ github.action_repository }}
         actionRef: ${{ github.action_ref }}
       run: |
-        $actionsRepo = "$env.actionRepo"
-        $actionsRef = "$env.actionRef"
+        $actionsRepo = "$env:actionRepo"
+        $actionsRef = "$env:actionRef"
         Write-Host "Current action repository: $actionsRepo"
         Write-Host "Current action ref: $actionsRef"
         # Set the path where the actions will be checked out
