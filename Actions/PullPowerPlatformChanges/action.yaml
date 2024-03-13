@@ -37,25 +37,32 @@ runs:
     - name: Install Power Platform Tools
       uses: microsoft/powerplatform-actions/actions-install@v1
 
-    - name: Set Actions Path
+    - name: Set Actions Repo and Ref
       shell: ${{ inputs.shell }}
       env:
-        actionsRepo: ${{ github.action_repository }}
+        actionRepo: ${{ github.action_repository }}
+        actionRef: ${{ github.action_ref }}
       run: |
+        $actionsRepo = "$env:actionRepo"
+        $actionsRef = "$env:actionRef"
+        Write-Host "Current action repository: $actionsRepo"
+        Write-Host "Current action ref: $actionsRef"
         # Set the path where the actions will be checked out
         # Default path is ./_AL-Go/Actions
         $actionsPath = './_AL-Go/Actions'
-        if ($env:actionsRepo -like '*/AL-Go') { # direct development
+        if ($actionsRepo -like '*/AL-Go') { # direct development
           # Set the path one level up as that where the Actions folder will be
           $actionsPath = './_AL-Go'
         }
+        Add-Content $env:GITHUB_ENV "actionsRepo=$actionsRepo" -Encoding UTF8
+        Add-Content $env:GITHUB_ENV "actionsRef=$actionsRef" -Encoding UTF8
         Add-Content $env:GITHUB_ENV "actionsPath=$actionsPath" -Encoding UTF8
 
     - name: Check out AL-Go Actions
       uses: actions/checkout@v4
       with:
-        repository: ${{ github.action_repository }}
-        ref: ${{ github.action_ref }}
+        repository: ${{ env.actionsRepo }}
+        ref: ${{ env.actionsRef }}
         path: ${{ env.actionsPath }}
 
     - name: Parse DeployToSettings and AuthContext
