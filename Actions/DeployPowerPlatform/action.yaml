@@ -5,9 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  actionsRepo:
-    description: The AL-Go for GitHub Actions repository
-    required: true
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -28,24 +25,27 @@ runs:
     - name: Install Power Platform Tools
       uses: microsoft/powerplatform-actions/actions-install@v1
 
-    - name: Get Actions Repo and Ref
+    - name: Set Actions Repo and Ref
       shell: ${{ inputs.shell }}
       env:
-        _actionsRepo: ${{ inputs.actionsRepo }}
+        actionRepo: ${{ github.action_repository }}
+        actionRef: ${{ github.action_ref }}
       run: |
-        # Using hardcoded reference to microsoft/AL-Go-Actions inside composote actions doesn't work with preview nor direct development branches
-        # For this reason, we get the actionsRepo from the calling workflow (which might be freddydk/AL-Go@PPP or microsoft/AL-Go@sha or microsoft/AL-Go-Actions@v4.1 )
-        # Download actions to ./_AL-Go/Actions
-        $actionsRef = $env:_actionsRepo.Split('@')[1]
-        $actionsRepo = $env:_actionsRepo.Split('@')[0]
+        $actionsRepo = "$env.actionRepo"
+        $actionsRef = "$env.actionRef"
+        Write-Host "Current action repository: $actionsRepo"
+        Write-Host "Current action ref: $actionsRef"
+        # Set the path where the actions will be checked out
+        # Default path is ./_AL-Go/Actions
         $actionsPath = './_AL-Go/Actions'
-        if ($actionsRepo -like '*/Actions') {
-          $actionsRepo = $actionsRepo.SubString(0,$actionsRepo.Length-8)
+        if ($actionsRepo -like '*/AL-Go') { # direct development
+          # Set the path one level up as that where the Actions folder will be
           $actionsPath = './_AL-Go'
         }
-        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsRepo=$actionsRepo"
-        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsRef=$actionsRef"
-        Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "actionsPath=$actionsPath"
+        Add-Content $env:GITHUB_ENV "ACTION_REPO=$actionsRepo" -Encoding UTF8
+        Add-Content $env:GITHUB_ENV "ACTION_REF=$actionsRef" -Encoding UTF8
+        Add-Content $env:GITHUB_ENV "ACTIONS_PATH=$actionsPath" -Encoding UTF8
+
 
     - name: Check out AL-Go Actions
       uses: actions/checkout@v4

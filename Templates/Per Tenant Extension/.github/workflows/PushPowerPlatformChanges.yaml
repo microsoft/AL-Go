@@ -84,7 +84,6 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
-          actionsRepo: 'microsoft/AL-Go-Actions@main'
           environmentName: ${{ inputs.environment }}
           solutionFolder: ${{ env.solutionFolder }}
           deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.deploymentEnvironmentsJson }}
