@@ -1,4 +1,4 @@
-# Codesigning in AL-Go
+# Code signing in AL-Go
 On June 1, 2023 the industry standards for storing code signing certificates changed. Certificate Authorities now require code signing certificates to be stored on Hardware Security Modules (HSM) or Hardware Tokens that are certified with FIPS 140-2 Level 2 or equivalent. Code signing certificates issued after this date are therefore only issued via physical USB tokens, into on-premises HSM services, or cloud HSM services such as Azure Key Vault. In AL-Go we have decided to opt for using Azure Key Vaults to store code signing certificates and .NET Sign to sign files. 
 
 This guide will take you through how to set up your AL-Go project with an Azure Key Vault and how to use a certificate in the Key Vault to perform code signing. Before you get started, please make sure you've set up your AL-Go project with an Azure Key Vault by following [Scenario 7: Use Azure KeyVault for secrets with AL-Go](./UseAzureKeyVault.md). 
