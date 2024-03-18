@@ -6,7 +6,10 @@ This guide will take you through how to set up your AL-Go project with an Azure 
 **Note** If your code signing certificate was issued after June 1st 2023 you will most likely need to create a Premium SKU Key Vault. You can [learn more about the differences between Standard and Premium SKU here](https://azure.microsoft.com/en-us/pricing/details/key-vault/)
 
 ## Setting up your Azure Key Vault for code signing
-1. Import your certificate into the Key Vault.
+1. Import your certificate into the Key Vault. 
+
+How you do this might depend on which Certificate Authority you are getting your certificate from. DigiCert and GlobalSign have integrations with Azure Key Vault. You can follow [this guide](https://learn.microsoft.com/en-us/azure/key-vault/certificates/how-to-integrate-certificate-authority) on how to set up that integration if you are using one of those CAs. Once you have set up the integration, you can request a certificate from within your Azure Key Vault. If you are using another CA you can try following this guide to [Generate a CSR and Install a Certificate in Microsoft Azure Key Vault](https://www.ssl.com/how-to/generate-csr-install-certificate-microsoft-azure-key-vault/). If neither of those options work for you, please engage with your CA to get the certificate into the Key Vault.
+
 2. Configure an Azure Key Vault access policy for the service principal that will be used for signing. At minimum, the account needs the following permissions:
 
 * Cryptographic Operations: Sign
