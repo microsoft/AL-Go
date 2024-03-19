@@ -21,5 +21,5 @@ Once you have an Azure Key Vault with your certificate in it and a Service Princ
 
 1. Update your AL-Go settings with
 ```json
-"keyVaultCodesignCertificateName": "<Name of your Codesigning certificate>"
+"keyVaultCodesignCertificateName": "<Name of your code signing certificate>"
 ```
