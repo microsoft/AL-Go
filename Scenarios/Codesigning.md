@@ -17,7 +17,7 @@ How you do this might depend on which Certificate Authority you are getting your
 ![Key Vault Access Policies](https://github.com/microsoft/AL-Go/assets/117829001/c93375e0-ce5b-4aa0-a6b9-a845a87fddef)
 
 ## Setting up AL-Go for Code Signing
-Once you have an Azure Key Vault with your certificate in it and a Service Principal with access to the Key Vault you are ready to set up AL-Go for codesigning.
+Once you have an Azure Key Vault with your certificate in it and a Service Principal with access to the Key Vault you are ready to set up AL-Go for code signing.
 
 1. Update your AL-Go settings with
 ```json
