@@ -39,6 +39,7 @@ jobs:
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+      testOrderJson: ${{ steps.determineProjectsToBuild.outputs.TestOrderJson }}
       workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
     steps:
       - name: Dump Workflow Information

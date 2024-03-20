@@ -16,6 +16,7 @@
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot ..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1) -DisableNameChecking
 . (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
 
@@ -112,13 +113,12 @@ $removeFiles = @()
 # If useProjectDependencies is true, we need to calculate the dependency depth for all projects
 # Dependency depth determines how many build jobs we need to run sequentially
 # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
-$depth = 1
+$buildDepth = 1
 if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
-    $buildAlso = @{}
-    $projectDependencies = @{}
-    $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-    $depth = $projectsOrder.Count
-    Write-Host "Calculated dependency depth to be $depth"
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder, $testOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+    $buildDepth = $buildOrder.Count
+    $testJobIds = @($testOrder | ForEach-Object { if($_.Depth -eq $buildDepth) { 'Test' } else { "Test$($_.Depth)" } })
+    Write-Host "Calculated dependency depth to be $buildDepth"
 }
 
 # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
@@ -143,7 +143,7 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "SrcFolder: $srcFolder"
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
-                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
+                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $buildDepth -testJobIds $testJobIds
                 }
                 else {
                     # For non-workflow files, just read the file content

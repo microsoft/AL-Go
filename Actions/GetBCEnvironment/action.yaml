@@ -1,0 +1,32 @@
+name: Get Business Central Environment
+author: Microsoft
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  provider:
+    description: "How to create the environment (supported values are: docker)"
+    required: true
+    default: BCDockerContainer
+  project:
+    description: AL-Go project folder
+    required: true
+outputs:
+  credentials:
+    description: "Credentials for the created environment in JSON format"
+    value: ${{ steps.run.outputs.CredentialsJSON }}
+
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: readsettings
+      env:
+        _provider: ${{ inputs.provider }}
+        _project: ${{ inputs.project }}
+      run: try { ${{ github.action_path }}/GetBCEnvironment.ps1 -Provider $ENV:_provider -Project $ENV:_project -BaseFolder ${{ github.workspace }}} catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"; exit 1 }
+branding:
+  icon: terminal
+  color: blue

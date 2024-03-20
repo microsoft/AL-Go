@@ -137,13 +137,16 @@ function ShouldBuildProject {
 
 <#
 .Synopsis
-    Creates buils dimensions for a list of projects.
+    Creates build and test dimensions for a list of projects.
 
 .Outputs
     An array of build dimensions for the projects and their corresponding build modes.
     Each build dimension is a hashtable with the following keys:
     - project: The name of the AL-Go project
+    - projectName: The name of the AL-Go project
     - buildMode: The build mode to use for the project
+
+    An array of test dimensions for the projects for which the build and test should be split.
 #>
 function CreateBuildDimensions {
     param(
@@ -153,6 +156,7 @@ function CreateBuildDimensions {
     )
 
     $buildDimensions = @()
+    $testDimensions = @()
 
     foreach($project in $projects) {
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
@@ -170,9 +174,17 @@ function CreateBuildDimensions {
                 buildMode = $buildMode
             }
         }
+
+        if($projectSettings.splitBuildAndTest) {
+            Write-Host "Splitting build and test for project $project"
+            $testDimensions += @{
+                project = $project
+                projectName = $projectSettings.projectName
+            }
+        }
     }
 
-    return @(, $buildDimensions) # force array
+    return $buildDimensions, $testDimensions
 }
 
 <#
@@ -220,6 +232,7 @@ function Get-ProjectsToBuild {
         $projectsToBuild = @()
         $projectDependencies = @{}
         $projectsOrderToBuild = @()
+        $projectsOrderToTest = @()
 
         if ($projects) {
             if($buildAllProjects) {
@@ -248,18 +261,28 @@ function Get-ProjectsToBuild {
             }
 
             # Create a project order based on the projects to build
+            $idx = 1
             foreach($depth in $fullProjectsOrder) {
                 $projectsOnDepth = @($depth.projects | Where-Object { $projectsToBuild -contains $_ })
 
                 if ($projectsOnDepth) {
                     # Create build dimensions for the projects on the current depth
-                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
+                    $buildDimensions, $testDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
                     $projectsOrderToBuild += @{
                         projects = $projectsOnDepth
                         projectsCount = $projectsOnDepth.Count
                         buildDimensions = $buildDimensions
                     }
+
+                    if($testDimensions) {
+                        $projectsOrderToTest += @{
+                            testDimensions = $testDimensions
+                            projectsCount =  $testDimensions.Count
+                            depth = $idx
+                        }
+                    }
                 }
+                $idx++
             }
         }
 
@@ -271,13 +294,14 @@ function Get-ProjectsToBuild {
                 buildDimensions = @()
             }
         }
+
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"
 
         if($maxBuildDepth -and ($projectsOrderToBuild.Count -gt $maxBuildDepth)) {
             throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows"
         }
 
-        return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild
+        return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild, $projectsOrderToTest
     }
     finally {
         Pop-Location

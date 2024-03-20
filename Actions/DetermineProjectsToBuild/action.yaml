@@ -24,6 +24,9 @@ outputs:
   BuildOrderJson:
     description: An array of objects that determine that build order, including build dimensions
     value: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
+  TestOrderJson:
+    description: An array of objects that determine that test order, including test dimensions
+    value: ${{ steps.determineProjectsToBuild.outputs.TestOrderJson }}
   BuildAllProjects:
     description: A flag that indicates whether to build all projects or only the modified ones
     value: ${{ steps.determineProjectsToBuild.outputs.BuildAllProjects }}

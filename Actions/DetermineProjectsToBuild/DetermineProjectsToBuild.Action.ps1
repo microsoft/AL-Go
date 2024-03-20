@@ -40,7 +40,7 @@ try {
     Write-Host "::endgroup::"
 
     Write-Host "::group::Get Projects To Build"
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder, $testOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
     AddTelemetryProperty -telemetryScope $telemetryScope -key "projects" -value "$($allProjects -join ', ')"
     Write-Host "::endgroup::"
     #endregion
@@ -49,11 +49,13 @@ try {
     $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
     $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
     $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
+    $testOrderJson = ConvertTo-Json $testOrder -Depth 99 -Compress
 
     # Set output variables
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TestOrderJson=$testOrderJson"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildAllProjects=$([int] $buildAllProjects)"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BaselineWorkflowRunId=$baselineWorkflowRunId"
 
@@ -61,6 +63,7 @@ try {
     Write-Host "ProjectsJson=$projectsJson"
     Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
     Write-Host "BuildOrderJson=$buildOrderJson"
+    Write-Host "TestOrderJson=$testOrderJson"
     Write-Host "BuildAllProjects=$buildAllProjects"
     Write-Host "BaselineWorkflowRunId=$baselineWorkflowRunId"
     #endregion

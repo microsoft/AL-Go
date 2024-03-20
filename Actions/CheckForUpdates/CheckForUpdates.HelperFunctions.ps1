@@ -50,7 +50,8 @@ function DownloadTemplateRepository {
 function ModifyCICDWorkflow {
     Param(
         [Yaml] $yaml,
-        [hashtable] $repoSettings
+        [hashtable] $repoSettings,
+        [string[]] $testJobIds
     )
 
     # The CICD workflow can have a RepoSetting called CICDPushBranches, which will be used to set the branches for the workflow
@@ -71,12 +72,48 @@ function ModifyCICDWorkflow {
     else {
         $yaml.Replace('on:/push:',@())
     }
+
+    # Some jobs need to have dependencies on all test jobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'DeployALDoc' -testJobIds $testJobIds -requireSuccessfulTestJobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'Deploy' -testJobIds $testJobIds -requireSuccessfulTestJobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'Deliver' -testJobIds $testJobIds -requireSuccessfulTestJobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'PostProcess' -testJobIds $testJobIds
+}
+
+function AddDependencyToTestJobs([Yaml] $yaml, [string] $jobName, [string[]] $testJobIds, [switch] $requireSuccessfulTestJobs)
+{
+    $job = $yaml.Get("jobs:/$jobName`:/")
+
+    if(!$job)
+    {
+        return
+    }
+
+    $needsParts = @($job.Get("needs:").content | ForEach-Object { $_ -replace "needs:","" } | ForEach-Object { $_.Trim("[] ") } | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim() })
+    $ifParts = @($($job.Get("if:").content -replace "if:","") -split '&&' | ForEach-Object { $_.Trim() })
+
+    # Add all test jobs as dependencies to the job
+    $testJobIds | ForEach-Object {
+        $needsParts += @($_)
+        if ($requireSuccessfulTestJobs) {
+            $ifParts += "needs.$($_).result == 'Success'"
+        }
+    }
+
+    $job.Replace('if:', "if: $($ifParts -join ' && ')")
+    $job.Replace('needs:', "needs: [ $($needsParts -join ', ') ]")
+
+    $newJobContent = @("$jobName`:")
+    $job.content | ForEach-Object { $newJobContent += @("  $_") }
+
+    $yaml.Replace("jobs:/$jobName`:", $newJobContent)
 }
 
 function ModifyPullRequestHandlerWorkflow {
     Param(
         [Yaml] $yaml,
-        [hashtable] $repoSettings
+        [hashtable] $repoSettings,
+        [string[]] $testJobIds
     )
     # The PullRequestHandler workflow can have a RepoSetting called pullRequestTrigger which specifies the trigger to use for Pull Requests
     $triggerSection = $yaml.Get('on:/pull')
@@ -93,6 +130,9 @@ function ModifyPullRequestHandlerWorkflow {
 
     # update the branches: line with the new branches
     $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+
+    # StatusCheck job needs to have dependencies on all test jobs
+    AddDependencyToTestJobs -yaml $yaml -jobName 'StatusCheck' -testJobIds $testJobIds
 }
 
 function ModifyRunsOnAndShell {
@@ -122,7 +162,8 @@ function ModifyRunsOnAndShell {
 function ModifyBuildWorkflows {
     Param(
         [Yaml] $yaml,
-        [int] $depth
+        [int] $depth,
+        [string[]] $testJobIds
     )
 
     $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
@@ -144,7 +185,7 @@ function ModifyBuildWorkflows {
             $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
         }
         else {
-            # Subsequent build jobs needs to have a dependency on all previous build jobs
+            # Subsequent build jobs need to have a dependency on all previous build jobs
             # Example (depth 2):
             #    needs: [ Initialization, Build1 ]
             #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
@@ -179,6 +220,39 @@ function ModifyBuildWorkflows {
 
     # Replace the entire build: job with the new build job list
     $yaml.Replace('jobs:/Build:', $newBuild)
+
+    # Add the test jobs to the workflow
+    $templateJobTemplate = Join-Path $PSScriptRoot "testJob.template.yaml"
+    $testJob = [Yaml]::Load($templateJobTemplate).Get('Test:/')
+    if (!$testJob) {
+        Write-Host "No test job found" #TODO this should be an error
+        return
+    }
+
+    for($index = 0; $index -lt $testJobIds.Count; $index++) {
+        $testJobId =  $testJobIds[$index]
+        $dependendantBuildJob = $testJobId -replace 'Test', 'Build'
+
+        $needsPart = @('Initialization', $dependendantBuildJob)
+        $testJob.Replace('needs:', "needs: [ $($needsPart -join ', ') ]")
+
+        $ifParts = @("(!failure())", "(!cancelled())", "(needs.$dependendantBuildJob.result == 'success')", "fromJson(needs.Initialization.outputs.testOrderJson)[$index].projectsCount > 0")
+        $testJob.Replace('if:', "if: $($ifParts -join ' && ')")
+
+        $testJob.Replace('strategy:/matrix:/include:',"include: `${{ fromJson(needs.Initialization.outputs.testOrderJson)[$index].testDimensions }}")
+
+        $newTestJob = @("  $testJobId`:")
+        $testJob.content | ForEach-Object { $newTestJob += @("    $_") }
+        $newTestJob += @('') # Add an empty line after the test job
+
+        $buildJobStartIndex = 0;
+        $buildJobCount = 0;
+        $dependendantBuildJob = $yaml.Get("jobs:/$dependendantBuildJob`:/", [ref] $buildJobStartIndex, [ref] $buildJobCount)
+
+        # Add the test job after the corresponding build job
+        Write-Host "Adding test job $testJobId after $dependendantBuildJob at index $buildJobStartIndex with count $buildJobCount"
+        $yaml.Insert($buildJobStartIndex + $buildJobCount + 1, $newTestJob)
+    }
 }
 
 function ModifyUpdateALGoSystemFiles {
@@ -220,7 +294,8 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth
+        [int] $depth,
+        [string[]] $testJobIds
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -237,11 +312,11 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     if ($baseName -eq "CICD") {
-        ModifyCICDWorkflow -yaml $yaml -repoSettings $repoSettings
+        ModifyCICDWorkflow -yaml $yaml -repoSettings $repoSettings -testJobIds $testJobIds
     }
 
     if ($baseName -eq "PullRequestHandler") {
-        ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
+        ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings -testJobIds $testJobIds
     }
 
     if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne "PullRequestHandler" -and $baseName -ne 'Troubleshooting') {
@@ -251,7 +326,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
-        ModifyBuildWorkflows -yaml $yaml -depth $depth
+        ModifyBuildWorkflows -yaml $yaml -depth $depth -testJobIds $testJobIds
     }
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {

@@ -48,6 +48,15 @@ if ($settings.versioningstrategy -ne -1) {
     }
 }
 
+#TODO: Remove this when we have a better solution
+if ($settings.splitBuildAndTest -eq $true -and $ENV:GITHUB_JOB -eq 'BuildALGoProject') {
+    Write-Host "Setting doNotPublishApps, doNotRunTests and doNotRunBcptTests, to true"
+
+    $settings.doNotPublishApps = $true
+    $settings.doNotRunTests = $true
+    $settings.doNotRunBcptTests = $true
+}
+
 $outSettings = @{}
 $settings.Keys | ForEach-Object {
     $setting = $_
