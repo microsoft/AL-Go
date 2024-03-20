@@ -66,7 +66,8 @@ The repository settings are only read from the repository settings file (.github
 | <a id="pullRequestTrigger"></a>pullRequestTrigger | Setting for specifying the trigger AL-Go should use to trigger Pull Request Builds. By default it is set to [pull_request_target](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) |
 | <a id="CICDSchedule"></a>CICDSchedule | CRON schedule for when CI/CD workflow should run. Default is no scheduled run, only manually triggered or triggered by Push or Pull Request. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
 | <a id="UpdateGitHubGoSystemFilesSchedule"></a>UpdateGitHubGoSystemFilesSchedule | CRON schedule for when Update AL-Go System Files should run. When Update AL-Go System Files runs on a schedule, it uses direct Commit instead of creating a PR. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru) |
-| <a id="buildModes"></a>buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go projects will be built using each built mode. Available build modes are:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: _PreprocessorSymbols_ are enabled when compiling the apps. The values for the symbols correspond to the `cleanModePreprocessorSymbols` setting of the AL-Go project.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps. |
+| <a id="buildModes"></a>buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go project will be built using each build mode. AL-Go ships with the following build modes out of the box:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: _PreprocessorSymbols_ are enabled when compiling the apps. The values for the symbols correspond to the `cleanModePreprocessorSymbols` setting of the AL-Go project.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps.<br /><br />It is also possible to specify custom build modes by adding a build mode that is different than 'Default', 'Clean' or 'Translated'. 
+|
 
 ## Advanced settings
 
@@ -246,7 +247,7 @@ Here are the parameters to use in your custom script:
 | Parameter | Description | Example |
 | --------- | :--- | :--- |
 | `$parameters.type` | Type of delivery (CD or Release) | CD |
-| `$parameters.apps` | Apps to deploy | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
+| `$parameters.apps` | Apps to deploy. This can either be an array of .zip files or .app files, or it can be an array of folders, containing apps or .zip files. You can use the `Copy-AppFilesToFolder` function to extract and copy all apps to one folder | /home/runner/.../GHP-Common-main-Apps-2.0.33.0.zip |
 | `$parameters.EnvironmentType` | Environment type | SaaS |
 | `$parameters.EnvironmentName` | Environment name | Production |
 | `$parameters.Branches` | Branches which should deploy to this environment (from settings) | main,dev |

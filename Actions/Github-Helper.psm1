@@ -237,7 +237,8 @@ function CmdDo {
         [string] $arguments = "",
         [switch] $silent,
         [switch] $returnValue,
-        [string] $inputStr = ""
+        [string] $inputStr = "",
+        [string] $messageIfCmdNotFound = ""
     )
 
     $oldNoColor = "$env:NO_COLOR"
@@ -282,12 +283,25 @@ function CmdDo {
                 Write-Host $message
             }
             if ($returnValue) {
-                $message.Replace("`r","").Split("`n")
+                $message.Replace("`r", "").Split("`n")
             }
         }
         else {
-            $message += "`n`nExitCode: "+$p.ExitCode + "`nCommandline: $command $arguments"
+            $message += "`n`nExitCode: " + $p.ExitCode + "`nCommandline: $command $arguments"
             throw $message
+        }
+    }
+    catch [System.ComponentModel.Win32Exception] {
+        if ($_.Exception.NativeErrorCode -eq 2) {
+            if ($messageIfCmdNotFound) {
+                throw $messageIfCmdNotFound
+            }
+            else {
+                throw "Command $command not found, you might need to install that command."
+            }
+        }
+        else {
+            throw
         }
     }
     finally {
@@ -319,7 +333,7 @@ function invoke-gh {
                 $arguments += "$parameter "
             }
         }
-        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+        cmdDo -command gh -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr -messageIfCmdNotFound "Github CLI not found. Please install it from https://cli.github.com/"
     }
 }
 
@@ -343,7 +357,7 @@ function invoke-git {
                 $arguments += "$parameter "
             }
         }
-        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr
+        cmdDo -command git -arguments $arguments -silent:$silent -returnValue:$returnValue -inputStr $inputStr -messageIfCmdNotFound "Git not found. Please install it from https://git-scm.com/downloads"
     }
 }
 
@@ -493,7 +507,7 @@ function GetReleases {
     )
 
     Write-Host "Analyzing releases $api_url/repos/$repository/releases"
-    $releases = @(InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json)
+    $releases = InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json
     if ($releases.Count -gt 1) {
         # Sort by SemVer tag
         try {
@@ -532,11 +546,14 @@ function GetLatestRelease {
 
     # Get Latest release
     $latestRelease = $releases | Where-Object { -not ($_.prerelease -or $_.draft) } | Select-Object -First 1
-    $releaseBranchPrefix = 'release/'
-    if ($ref -like "$releaseBranchPrefix*") {
+    $releaseBranchesFormats = 'release/*', 'releases/*'
+    $isReleaseBranch = [boolean] $($releaseBranchesFormats | Where-Object { $ref -like $_ })
+
+    if ($isReleaseBranch) {
         # If release branch, get the latest release from that the release branch
         # This is given by the latest release with the same major.minor as the release branch
-        $semVerObj = SemVerStrToSemVerObj -semVerStr $ref.SubString($releaseBranchPrefix.Length) -allowMajorMinorOnly
+        $releaseVersion = $ref -split '/' | Select-Object -Last 1 # Get the version from the release branch
+        $semVerObj = SemVerStrToSemVerObj -semVerStr $releaseVersion -allowMajorMinorOnly
         $latestRelease = $releases | Where-Object {
             $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
             $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
@@ -710,7 +727,9 @@ function Set-JsonContentLF {
         if ($PSVersionTable.PSVersion.Major -lt 6) {
             try {
                 $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-                . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
+                # This command will reformat a JSON file with LF line endings as PowerShell 7 would do it (when run using pwsh)
+                $command = "`$cr=[char]13;`$lf=[char]10;`$path='$path';`$content=Get-Content `$path -Encoding UTF8|ConvertFrom-Json|ConvertTo-Json -Depth 99;`$content=`$content -replace `$cr,'';`$content|Out-Host;[System.IO.File]::WriteAllText(`$path,`$content+`$lf)"
+                . pwsh -command $command
             }
             catch {
                 Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted by PowerShell $($PSVersionTable.PSVersion)"
@@ -867,7 +886,7 @@ function GetArtifactsFromWorkflowRun {
     $page = 1
 
     # Get sanitized project names (the way they appear in the artifact names)
-    $projects = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    $projectArr = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
 
     # Get the artifacts from the the workflow run
     while($true) {
@@ -880,7 +899,7 @@ function GetArtifactsFromWorkflowRun {
             break
         }
 
-        foreach($project in $projects) {
+        foreach($project in $projectArr) {
             $artifactPattern = "$project-*-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
@@ -905,7 +924,7 @@ function GetArtifactsFromWorkflowRun {
         $page += 1
     }
 
-    Write-Host "Found $($foundArtifacts.Count) artifacts for mask $mask and projects $($projects -join ',') in workflow run $workflowRun"
+    Write-Host "Found $($foundArtifacts.Count) artifacts for mask $mask and projects $($projectArr -join ',') in workflow run $workflowRun"
 
     return $foundArtifacts
 }

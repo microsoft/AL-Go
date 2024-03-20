@@ -10,6 +10,7 @@
 1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHTOKENWORKFLOW containing a Personal Access Token with permissions to modify workflows
 1. In a browser, navigate to [New personal access token](https://github.com/settings/tokens/new) and create a new **personal access token**. Name it, set the expiration date and check the **workflow option** in the list of **scopes**.
 ![newPAT](https://github.com/microsoft/AL-Go/assets/10775043/1ab9978a-37e8-423a-8f8e-5c0203f7ae00)
+1. Note that the above applies to **classic** tokens only. If you are creating a **Fine-grained** token, you need to specify which repositories to include and assign **Read and Write** permissions to **Contents**, **Pull Requests** and **Workflows**.
 1. Generate the token and **copy it to the clipboard**. You won’t be able to see the token again.
 1. On github.com, open **Settings** in your project and select **Secrets**. Choose the New repository secret button and create a secret called GHTOKENWORKFLOW and paste the personal access token in the value field and choose **Add secret**.
 ![PAT](https://github.com/microsoft/AL-Go/assets/10775043/7dcccca3-ec43-47ba-bffb-795332c890ad)

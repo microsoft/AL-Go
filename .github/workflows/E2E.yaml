@@ -39,7 +39,7 @@ jobs:
       maxParallel: ${{ steps.check.outputs.maxParallel }}
       githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Check secrets
         id: check
@@ -87,7 +87,7 @@ jobs:
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
       appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -105,7 +105,7 @@ jobs:
       releases: ${{ steps.Analyze.outputs.releases }}
       scenarios: ${{ steps.Analyze.outputs.scenarios }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -173,7 +173,7 @@ jobs:
     if: github.event.inputs.runScenarios == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -204,7 +204,7 @@ jobs:
     if: github.event.inputs.runTestMatrix == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.testruns) }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -250,7 +250,7 @@ jobs:
     if: github.event.inputs.runUpgradeTests == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.releases) }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -293,7 +293,7 @@ jobs:
     needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
     if: always() && (!Cancelled()) && (needs.SetupRepositories.result == 'Success') && (needs.TestAlGo.result == 'Success' || needs.TestAlGo.result == 'Skipped') && (needs.TestAlGoUpgrade.result == 'Success' || needs.TestAlGoUpgrade.result == 'Skipped') && (needs.Scenario.result == 'Success' || needs.Scenario.result == 'Skipped')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
 

@@ -66,7 +66,7 @@ function Add-PropertiesToJsonFile {
         $headers = GetHeader -token $token
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
-        $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+        $previousrunids = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
         if ($previousrunids) {
             Write-Host "Previous runs: $($previousrunids -join ', ')"
         }
@@ -517,7 +517,7 @@ function MergePRandPull {
     Write-Host "Get Previous runs"
     $headers = GetHeader -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs"
-    $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+    $previousrunids = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
         Write-Host "Previous runs: $($previousrunids -join ', ')"
     }
@@ -574,7 +574,7 @@ function RemoveRepository {
             Write-Host -ForegroundColor Red "Error removing packages"
             Write-Host -ForegroundColor Red $_.Exception.Message
         }
-        invoke-gh repo delete $repository --confirm | Out-Host
+        invoke-gh repo delete $repository --yes | Out-Host
     }
 
     if ($path) {

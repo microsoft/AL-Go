@@ -28,16 +28,19 @@ GitHub runners can be registered for an organization (accessible for all reposit
    - GIT (getbuildagent use `choco install git --force --params "/NoAutoCrlf"` after installing choco using `https://chocolatey.org/install.ps1`))
    - 7zip (getbuildagent use `choco install 7zip`)
    - GitHub CLI (getbuildagent use `choco install gh`)
-   - PowerShell 7 (getbuildagent use `choco install pwsh -y`)
+   - PowerShell 7.4.1 (getbuildagent use `choco install pwsh -y`)
    - Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 14.36.32532 (getbuildagent use `choco install vcredist140 -y`)
    - Microsoft .NET (getbuildagent use `choco install dotnet -y`)
    - Microsoft .NET SDK (getbuildagent use `choco install dotnet-sdk -y`)
    - nuget.org added as dotnet nuget source (getbuildagent use `dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org`)
 
+> [!NOTE]
+> If the Deploy Reference Documentation job results in an error like [this](https://github.com/actions/upload-pages-artifact/issues/95), then you need to check your GIT installation as described in the issue.
+
 ## Allow your repository access to your runners
 1. On the list of Runners on GitHub, choose the runner group **Default** and allow public repositories if your repository is public.
 ![public](https://github.com/microsoft/AL-Go/assets/10775043/9bdd01ab-ac67-44bf-bfd1-af5c5ec91364)
-1. Now navigate to your project settings file (.AL-Go/settings.json) and set **gitHubRunner** to **self-hosted**.
+1. Now navigate to your repo settings file (.github/AL-Go-Settings.json) and set **gitHubRunner** to **self-hosted**.
    - Note that you can use other tags than **self-hosted** to identify special runners for GitHub jobs, or you can set gitHubRunner to "self-hosted, Windows" to ensure that a Windows version is selected if you have self-hosted linux runners as well.
 1. Save and inspect your workflows performance increase on the second run.
 1. Inspect that one of the runners pick up the workflow.

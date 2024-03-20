@@ -17,7 +17,7 @@ You will need:
   {
     "useCompilerFolder": true,
     "doNotPublishApps": true,
-    "artifact": "https://bcartifacts.azureedge.net/sandbox/23.0.12034.13450/us"
+    "artifact": "bcartifacts/sandbox/23.0.12034.13450/us/closest"
   }
 ```
 
