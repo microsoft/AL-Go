@@ -16,6 +16,7 @@ defaults:
 permissions:
   contents: read
   actions: read
+  pages: read
 
 env:
   workflowDepth: 1
