@@ -1,4 +1,5 @@
 name: ' Create release'
+run-name: "Create release - Version ${{ inputs.tag }}"
 
 on:
   workflow_dispatch:
