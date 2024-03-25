@@ -64,7 +64,7 @@ try {
 
     # Set dependencies in app manifests
     If($allAppFolders.Count -eq 0) {
-        write-host "No App folders in repo"
+        Write-Host "No App folders found for projects $projects"
     }
     else {
         # Set dependencies in app manifests
