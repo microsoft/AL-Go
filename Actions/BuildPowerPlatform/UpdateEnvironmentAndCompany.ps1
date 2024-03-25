@@ -72,7 +72,7 @@ function Get-CurrentPowerAppSettings {
     $currentSettingsList = @()
     $connectionsFilePaths = Get-ChildItem -Path "$solutionFolder/CanvasApps" -Recurse -File -Include "Connections.json" | Select-Object -ExpandProperty FullName
     foreach ($connectionsFilePath in $connectionsFilePaths) {
-        $jsonFile = Get-Content  $connectionsFilePath | ConvertFrom-Json
+        $jsonFile = Get-Content $connectionsFilePath | ConvertFrom-Json
 
         # We don't know the name of the connector node, so we need to loop through all of them
         $ConnectorNodeNames = ($jsonFile | Get-Member -MemberType NoteProperty).Name
