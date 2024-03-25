@@ -49,29 +49,10 @@ function Set-VersionInSettingsFile {
     }
 
     $oldValue = [System.Version] $settingsJson.$settingName
-    # Validate new version value
-    if ($newValue.StartsWith('+')) {
-        # Handle incremental version number
-
-        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
-        if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
-            throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
-        }
-
+    if ($newValue.StartsWith('+') -and ($null -eq $oldValue)) {
         # Defensive check. Should never happen.
-        if($null -eq $oldValue) {
-            throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
-        }
+        throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
     }
-    else {
-        # Handle absolute version number
-
-        $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
-        if (-not ($newValue -match $versionNumberFormat)) {
-            throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
-        }
-    }
-    #endregion
 
     $versionNumbers = @() # an array to hold the version numbers: major, minor, build, revision
 
@@ -230,11 +211,6 @@ function Set-PowerPlatformSolutionVersion {
         foreach ($file in $files) {
             $xml = [xml](Get-Content -Encoding UTF8 -Path $file.FullName)
             if ($newValue.StartsWith('+')) {
-                $allowedIncrementalVersionNumbers = @('+1', '+0.1')
-                if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
-                    throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
-                }
-
                 # Increment version
                 $versionNumbers = $xml.SelectNodes("//Version")[0].InnerText.Split(".")
                 switch($newValue) {
@@ -253,13 +229,7 @@ function Set-PowerPlatformSolutionVersion {
                 $newVersion = [string]::Join(".", $versionNumbers)
             }
             else {
-                $version = $null
-                if ([System.Version]::TryParse($newValue, [ref]$version) -and $version.build -eq -1 -and $version.revision -eq -1) {
-                    $newVersion = $version.ToString()
-                }
-                else {
-                    throw "Invalid version number $newValue"
-                }
+                $newVersion = $newValue
             }
 
             Write-Host "Updating $($file.FullName) with new version $newVersion"

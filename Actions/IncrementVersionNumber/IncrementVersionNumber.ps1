@@ -29,6 +29,20 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $settings = $env:Settings | ConvertFrom-Json
+    if ($versionNumber.StartsWith('+')) {
+        # Handle incremental version number
+        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+        if (-not $allowedIncrementalVersionNumbers.Contains($versionNumber)) {
+            throw "Incremental version number $versionNumber is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+        }
+    }
+    else {
+        # Handle absolute version number
+        $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+        if (-not ($versionNumber -match $versionNumberFormat)) {
+            throw "Version number $versionNumber is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+        }
+    }
 
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -powerPlatformSolutionFolder $settings.powerPlatformSolutionFolder -selectProjects $projects)
 
