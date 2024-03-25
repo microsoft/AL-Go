@@ -31,20 +31,14 @@ runs:
         actionRepo: ${{ github.action_repository }}
         actionRef: ${{ github.action_ref }}
       run: |
-        $actionsRepo = "$env:actionRepo"
-        $actionsRef = "$env:actionRef"
-        Write-Host "Current action repository: $actionsRepo"
-        Write-Host "Current action ref: $actionsRef"
-        # Set the path where the actions will be checked out
-        # Default path is ./_AL-Go/Actions
-        $actionsPath = './_AL-Go/Actions'
-        if ($actionsRepo -like '*/AL-Go') { # direct development
-          # Set the path one level up as that where the Actions folder will be
-          $actionsPath = './_AL-Go'
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
         }
-        Add-Content $env:GITHUB_ENV "actionsRepo=$actionsRepo" -Encoding UTF8
-        Add-Content $env:GITHUB_ENV "actionsRef=$actionsRef" -Encoding UTF8
-        Add-Content $env:GITHUB_ENV "actionsPath=$actionsPath" -Encoding UTF8
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
 
     - name: Check out AL-Go Actions
       uses: actions/checkout@v4
@@ -84,6 +78,7 @@ runs:
         _solutionFolder: ${{ inputs.solutionFolder }}
       shell: ${{ inputs.shell }}
       run: |
+        $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         if ($env:_artifactsFolder -ne '') {
           $artifactsFiles = Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE $ENV:_artifactsFolder) -Recurse -File | Select-Object -ExpandProperty FullName
           foreach($filePath in $artifactsFiles){
