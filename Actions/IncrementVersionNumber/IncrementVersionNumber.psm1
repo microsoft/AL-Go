@@ -49,10 +49,29 @@ function Set-VersionInSettingsFile {
     }
 
     $oldValue = [System.Version] $settingsJson.$settingName
-    if ($newValue.StartsWith('+') -and ($null -eq $oldValue)) {
+    # Validate new version value
+    if ($newValue.StartsWith('+')) {
+        # Handle incremental version number
+
+        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+        if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
+            throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+        }
+
         # Defensive check. Should never happen.
-        throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
+        if($null -eq $oldValue) {
+            throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
+        }
     }
+    else {
+        # Handle absolute version number
+
+        $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+        if (-not ($newValue -match $versionNumberFormat)) {
+            throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+        }
+    }
+    #endregion
 
     $versionNumbers = @() # an array to hold the version numbers: major, minor, build, revision
 
