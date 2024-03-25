@@ -1,12 +1,12 @@
 # 15. Enabling telemetry
 
-If you want to enable partner telemetry add your Application Insights connection string to the AL-GO settings file. the settings structure is:
+If you want to enable partner telemetry add your Application Insights connection string to the AL-Go settings file. the settings structure is:
 
 ```
 "PartnerTelemetryConnectionString":  "<connection string to your Application Insights>"
 ```
 
-You can also decide to send extended telelmetry to Microsoft. This would be helpful to investigate an issue. To enable the extended telemetry add the following property to the AL-GO settings file:
+You can also decide to send extended telelmetry to Microsoft. This would be helpful to investigate an issue. To enable the extended telemetry add the following property to the AL-Go settings file:
 
 ```
 "SendExtendedTelemetryToMicrosoft" : true

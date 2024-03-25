@@ -42,6 +42,7 @@ function OutputSuggestion {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
+
 TestALGoRepository
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "Troubleshoot.Secrets.ps1" -Resolve) -gitHubSecrets ($gitHubSecrets | ConvertFrom-Json) -displayNameOfSecrets $displayNameOfSecrets

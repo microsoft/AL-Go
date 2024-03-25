@@ -29,12 +29,30 @@ try {
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $settings = $env:Settings | ConvertFrom-Json
+    if ($versionNumber.StartsWith('+')) {
+        # Handle incremental version number
+        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+        if (-not $allowedIncrementalVersionNumbers.Contains($versionNumber)) {
+            throw "Incremental version number $versionNumber is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+        }
+    }
+    else {
+        # Handle absolute version number
+        $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+        if (-not ($versionNumber -match $versionNumberFormat)) {
+            throw "Version number $versionNumber is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+        }
+    }
 
-    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -powerPlatformSolutionFolder $settings.powerPlatformSolutionFolder -selectProjects $projects)
 
     $allAppFolders = @()
     foreach($project in $projectList) {
         $projectPath = Join-Path $baseFolder $project
+        if ($settings.powerPlatformSolutionFolder -eq $project) {
+            Set-PowerPlatformSolutionVersion -powerPlatformSolutionPath $projectPath -newValue $versionNumber
+            continue
+        }
 
         $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
         $settings = ReadSettings -baseFolder $baseFolder -project $project
@@ -59,7 +77,13 @@ try {
     }
 
     # Set dependencies in app manifests
-    Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+    If($allAppFolders.Count -eq 0) {
+        Write-Host "No App folders found for projects $projects"
+    }
+    else {
+        # Set dependencies in app manifests
+        Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+    }
 
     $commitMessage = "New Version number $versionNumber"
     if ($versionNumber.StartsWith('+')) {

@@ -20,7 +20,7 @@ $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -415,10 +415,6 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
         throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
     }
 
-    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
-        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
-    }
-
     $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
 
     Write-Host "Import from $bcContainerHelperPath"
@@ -558,6 +554,7 @@ function ReadSettings {
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
         "projects"                                      = @()
+        "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
         "artifact"                                      = ""
         "companyName"                                   = ""
@@ -2280,6 +2277,7 @@ function GetProjectsFromRepository {
     Param(
         [string] $baseFolder,
         [string[]] $projectsFromSettings,
+        [string] $powerPlatformSolutionFolder,
         [string] $selectProjects = ''
     )
     if ($projectsFromSettings) {
@@ -2293,6 +2291,10 @@ function GetProjectsFromRepository {
             $projects += @(".")
         }
     }
+    if ($powerPlatformSolutionFolder) {
+        $projects += @($powerPlatformSolutionFolder)
+    }
+
     if ($selectProjects) {
         # Filter the project list based on the projects parameter
         if ($selectProjects.StartsWith('[')) {

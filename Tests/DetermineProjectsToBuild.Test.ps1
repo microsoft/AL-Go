@@ -17,7 +17,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/.AL-Go/settings.json" -type File -Force
 
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
@@ -57,7 +57,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
@@ -385,7 +385,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @('.github') }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false; fullBuildPatterns = @('.github') }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
@@ -415,7 +415,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         # Add AL-Go settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false; fullBuildPatterns = @('Project1/*') }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false; fullBuildPatterns = @('Project1/*') }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
@@ -445,7 +445,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
@@ -495,7 +495,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
@@ -550,7 +550,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $false }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
@@ -605,7 +605,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
@@ -672,7 +672,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
         #Add settings file
-        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); useProjectDependencies = $true }
+        $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         { Get-ProjectsToBuild -baseFolder $baseFolder -maxBuildDepth 1 } | Should -Throw "The build depth is too deep, the maximum build depth is 1. You need to run 'Update AL-Go System Files' to update the workflows"

@@ -214,7 +214,7 @@ function Get-ProjectsToBuild {
     Push-Location $baseFolder
     try {
         $settings = $env:Settings | ConvertFrom-Json
-        $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
+        $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -powerPlatformSolutionFolder $settings.powerPlatformSolutionFolder)
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
         $projectsToBuild = @()

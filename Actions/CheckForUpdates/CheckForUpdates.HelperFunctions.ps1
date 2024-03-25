@@ -103,7 +103,7 @@ function ModifyRunsOnAndShell {
 
     # The default for runs-on is windows-latest and the default for shell is powershell
     # The default for GitHubRunner/GitHubRunnerShell is runs-on/shell (unless Ubuntu-latest are selected here, as build jobs cannot run on Ubuntu)
-    # We do not change runs-on in Update AL Go System Files and Pull Request Handler workflows
+    # We do not change runs-on in Update AL-Go System Files and Pull Request Handler workflows
     # These workflows will always run on windows-latest (or maybe Ubuntu-latest later) and not follow settings
     # Reasons:
     # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself

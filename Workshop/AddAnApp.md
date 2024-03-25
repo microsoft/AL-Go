@@ -3,7 +3,7 @@ There are several ways you can add an app to your repository:
 - You can use the **Create a new app** workflow in AL-Go for GitHub to create a new app and start coding.
 - You can use the **Add existing app or test app** workflow to upload an .app file (or multiple) and have AL-Go for GitHub extract the source.
 - You can **upload the source files** directly into GitHub
-- You can **clone** the repository and add your source files from **VS Code** (possibly using the AL:Go)
+- You can **clone** the repository and add your source files from **VS Code** (possibly using the AL:Go in VS Code)
 
 All in all - it is just a matter of adding the source files of your app to the repository.
 
