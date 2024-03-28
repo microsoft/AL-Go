@@ -105,7 +105,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: '${{ inputs.secrets }},appDependencyProbingPathsSecrets'
+          getSecrets: '${{ inputs.secrets }},appDependencySecrets'
 
       - name: Determine ArtifactUrl
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main

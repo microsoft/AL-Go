@@ -5,6 +5,16 @@
     [bool] $checkContextSecrets
 )
 
+function ContinuousDelivery([string] $deliveryTarget) {
+    $settingsName = "DeliverTo$deliveryTarget"
+    if ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('ContinuousDelivery')) {
+        return $settings."$settingsName".ContinuousDelivery
+    }
+    else {
+        return $true
+    }
+}
+
 function IncludeBranch([string] $deliveryTarget) {
     $settingsName = "DeliverTo$deliveryTarget"
     if ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('Branches')) {
@@ -26,7 +36,7 @@ function IncludeDeliveryTarget([string] $deliveryTarget) {
         Write-Host "- Secret '$contextName' not found"
         return $false
     }
-    return (IncludeBranch -deliveryTarget $deliveryTarget)
+    return (IncludeBranch -deliveryTarget $deliveryTarget) -and (ContinuousDelivery -deliveryTarget $deliveryTarget)
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
