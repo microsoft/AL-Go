@@ -1,5 +1,5 @@
 Param(
-    [Parameter(HelpMessage = "Actions Repository", Mandatory = $false)]
+    [Parameter(HelpMessage = "Actions Repository", Mandatory = $true)]
     [string] $actionsRepo,
     [Parameter(HelpMessage = "Actions Ref", Mandatory = $false)]
     [string] $actionsRef
