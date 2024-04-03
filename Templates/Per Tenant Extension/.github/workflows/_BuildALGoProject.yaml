@@ -83,7 +83,7 @@ jobs:
     defaults:
       run:
         shell: ${{ inputs.shell }}
-    name: '${{ inputs.projectName }} (${{ inputs.buildMode }})'
+    name: ${{ inputs.projectName }} (${{ inputs.buildMode }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,7 +96,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
-          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,type,appRevision,appBuild
+          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact
 
       - name: Read secrets
         id: ReadSecrets
@@ -108,8 +108,8 @@ jobs:
           getSecrets: '${{ inputs.secrets }},appDependencyProbingPathsSecrets'
 
       - name: Determine ArtifactUrl
-        id: determineArtifactUrl
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
+        id: determineArtifactUrl
         with:
           shell: ${{ inputs.shell }}
           parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
@@ -134,7 +134,7 @@ jobs:
           projectsDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
-      - name: Build AL
+      - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -188,7 +188,6 @@ jobs:
 
       - name: Upload thisbuild artifacts - test apps
         if: inputs.publishThisBuildArtifacts
-
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildTestAppsArtifactsName }}
