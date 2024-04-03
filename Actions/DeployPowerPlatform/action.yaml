@@ -28,8 +28,8 @@ runs:
     - name: Set Actions Repo and Ref
       shell: ${{ inputs.shell }}
       env:
-        actionRepo: ${{ github.action_repository }}
-        actionRef: ${{ github.action_ref }}
+        actionsRepo: ${{ github.action_repository }}
+        actionsRef: ${{ github.action_ref }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
