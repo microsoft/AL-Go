@@ -181,7 +181,7 @@ jobs:
 
   DeployALDoc:
     needs: [ Initialization, Build ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
+    if: (!cancelled()) && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
     runs-on: windows-latest
     name: Deploy Reference Documentation
     permissions:
@@ -228,7 +228,7 @@ jobs:
 
   Deploy:
     needs: [ Initialization, Build, BuildPP ]
-    if: always() && needs.Build.result != 'Failure' && needs.BuildPP.result != 'Failure' && needs.Initialization.outputs.environmentCount > 0
+    if: (!cancelled()) && needs.Build.result != 'Failure' && needs.BuildPP.result != 'Failure' && needs.Initialization.outputs.environmentCount > 0
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
@@ -290,7 +290,7 @@ jobs:
 
   Deliver:
     needs: [ Initialization, Build, BuildPP ]
-    if: always() && needs.Build.result != 'Failure' && needs.BuildPP.result != 'Failure' && needs.Initialization.outputs.deliveryTargetsJson != '[]'
+    if: (!cancelled()) && needs.Build.result != 'Failure' && needs.BuildPP.result != 'Failure' && needs.Initialization.outputs.deliveryTargetsJson != '[]'
     strategy:
       matrix:
         deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargetsJson) }}
