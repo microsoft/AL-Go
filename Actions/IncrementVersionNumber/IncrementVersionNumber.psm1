@@ -52,12 +52,6 @@ function Set-VersionInSettingsFile {
     # Validate new version value
     if ($newValue.StartsWith('+')) {
         # Handle incremental version number
-
-        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
-        if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
-            throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
-        }
-
         # Defensive check. Should never happen.
         if($null -eq $oldValue) {
             throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
