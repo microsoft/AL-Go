@@ -44,45 +44,54 @@ try {
         }
     }
 
-    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -powerPlatformSolutionFolder $settings.powerPlatformSolutionFolder -selectProjects $projects)
+    # Collect all projects (AL and PowerPlatform Solution)
+    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+    $PPprojects = @(GetMatchingProjects -projects @($settings.powerPlatformSolutionFolder) -selectProjects $projects)
+    if ($projectList.Count -eq 0 -and $PPproject.Count -eq 0) {
+        throw "No projects matches '$selectProjects'"
+    }
 
-    $allAppFolders = @()
-    foreach($project in $projectList) {
-        $projectPath = Join-Path $baseFolder $project
-        if ($settings.powerPlatformSolutionFolder -eq $project) {
-            Set-PowerPlatformSolutionVersion -powerPlatformSolutionPath $projectPath -newValue $versionNumber
-            continue
+    # Increment version number in AL Projects
+    if ($projectList.Count -gt 0) {
+        $allAppFolders = @()
+        foreach($project in $projectList) {
+            $projectPath = Join-Path $baseFolder $project
+            $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+            $settings = ReadSettings -baseFolder $baseFolder -project $project
+
+            # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
+            Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
+
+            # Set repoVersion in project settings according to the versionNumber parameter
+            Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
+
+            # Resolve project folders to get all app folders that contain an app.json file
+            $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
+            ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+
+            # Set version in app manifests (app.json files)
+            Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $versionNumber
+
+            # Collect all project's app folders
+            $allAppFolders += $projectSettings.appFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+            $allAppFolders += $projectSettings.testFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+            $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
         }
 
-        $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
-        $settings = ReadSettings -baseFolder $baseFolder -project $project
-
-        # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
-        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
-
-        # Set repoVersion in project settings according to the versionNumber parameter
-        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
-
-        # Resolve project folders to get all app folders that contain an app.json file
-        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
-        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
-
-        # Set version in app manifests (app.json files)
-        Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $versionNumber
-
-        # Collect all project's app folders
-        $allAppFolders += $projectSettings.appFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
-        $allAppFolders += $projectSettings.testFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
-        $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
-    }
-
-    # Set dependencies in app manifests
-    If($allAppFolders.Count -eq 0) {
-        Write-Host "No App folders found for projects $projects"
-    }
-    else {
         # Set dependencies in app manifests
-        Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+        If($allAppFolders.Count -eq 0) {
+            Write-Host "No App folders found for projects $projects"
+        }
+        else {
+            # Set dependencies in app manifests
+            Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+        }
+    }
+
+    # Increment version number in PowerPlatform Solution
+    foreach($PPproject in $PPprojects) {
+        $projectPath = Join-Path $baseFolder $PPproject
+        Set-PowerPlatformSolutionVersion -powerPlatformSolutionPath $projectPath -newValue $versionNumber
     }
 
     $commitMessage = "New Version number $versionNumber"
