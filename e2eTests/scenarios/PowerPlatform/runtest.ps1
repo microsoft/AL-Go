@@ -44,8 +44,7 @@ $repoPath = (Get-Location).Path
 
 foreach($sourceRepo in @('bcsamples-takeorder', 'bcsamples-CoffeeMR','bcsamples-WarehouseHelper')) {
     Push-Location
-    $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-    $repository = "$githubOwner/$repoName"
+    $repository = "$githubOwner/$repoName-$($sourceRepo.Split('-')[1])"
 
     # Login
     SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
