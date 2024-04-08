@@ -385,7 +385,7 @@ function CreateAlGoRepository {
     $templateRepo = $template.Split('@')[0]
 
     $tempPath = [System.IO.Path]::GetTempPath()
-    $path = Join-Path $tempPath ([GUID]::NewGuid().ToString())
+    $path = Join-Path $tempPath ( [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()))
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
     if ($waitMinutes) {

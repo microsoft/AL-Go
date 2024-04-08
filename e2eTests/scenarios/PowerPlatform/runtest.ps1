@@ -40,12 +40,12 @@ Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameC
 
 $branch = "main"
 $template = "https://github.com/$pteTemplate"
+$repoPath = (Get-Location).Path
 
 foreach($sourceRepo in @('bcsamples-takeorder', 'bcsamples-CoffeeMR','bcsamples-WarehouseHelper')) {
-    $repository = "$githubOwner/$repoName$sourceRepo"
-
     Push-Location
-    $repoPath = (Get-Location).Path
+    $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+    $repository = "$githubOwner/$repoName"
 
     # Login
     SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
@@ -61,7 +61,11 @@ foreach($sourceRepo in @('bcsamples-takeorder', 'bcsamples-CoffeeMR','bcsamples-
             Remove-PropertiesFromJsonFile -path (Join-Path $path '.github/AL-Go-Settings.json') -properties @('environments','DeployTo*')
         }
 
+    $repoPath = (Get-Location).Path
+    Write-Host "Repo Path: $repoPath"
+
     $settings = Get-Content -Path '.github/AL-Go-Settings.json' -Raw | ConvertFrom-Json
+    Write-Host "PowerPlatform Solution Folder: $($settings.powerPlatformSolutionFolder)"
 
     # Upgrade AL-Go System Files from PPPreview to main (still has Y/N prompt)
     SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
@@ -76,6 +80,7 @@ foreach($sourceRepo in @('bcsamples-takeorder', 'bcsamples-CoffeeMR','bcsamples-
 
     CancelAllWorkflows -repository $repository
 
+    # Pull and test workflows
     Pull
     Test-Path -Path '.github/workflows/PullPowerPlatformChanges.yaml' | Should -Be $true -Because "PullPowerPlatformChanges workflow exists"
     Test-Path -Path '.github/workflows/PushPowerPlatformChanges.yaml' | Should -Be $true -Because "PushPowerPlatformChanges workflow exists"
