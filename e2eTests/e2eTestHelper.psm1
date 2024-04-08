@@ -101,6 +101,26 @@ function Add-PropertiesToJsonFile {
     }
 }
 
+function Remove-PropertiesFromJsonFile {
+    Param(
+        [string] $path,
+        [string[]] $properties
+    )
+
+    Write-Host -ForegroundColor Yellow "`nRemove Properties from $([System.IO.Path]::GetFileName($path))"
+    Write-Host "Properties"
+    $properties | Out-Host
+
+    $json = Get-Content $path -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $keys = @($json.Keys)
+    $keys | ForEach-Object {
+        $key = $_
+        if ($properties | Where-Object { $key -like $_ }) {
+            $json.Remove($key)
+        }
+    }
+    $json | Set-JsonContentLF -path $path
+}
 
 function DisplayTokenAndRepository {
     Write-Host "Token: $token"

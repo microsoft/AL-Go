@@ -22,19 +22,13 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test tests the following scenario:
 #
-#  - Create a new repository based on the PTE template with 1 app
-#  - Enable GitHub pages (set to GitHub Actions)
+#  - For the three bcsamples repositories: microsoft/bcsamples-takeorder, microsoft/bcsamples-CoffeeMR and microsoft/bcsampels-WarehouseHelper do the following:
+#  - Create a new repository with the same content as the repository
+#  - Run the Update AL-Go System Files with the new version
+#  - Check that PP workflows exists
 #  - Run the "CI/CD" workflow
-#  - Run the Deploy Reference Documentation workflow
-#  - Check github pages website generated
-#  - Change settings to use continuous deployment of ALDoc and modify the header
-#  - Run the "CI/CD" workflow
-#  - Check that the new header is used
-#  - Set runs-on to ubuntu-latest (and use CompilerFolder)
-#  - Modify the header again
-#  - Run the "CI/CD" workflow again
-#  - Check that the new header is used
-#  - Cleanup repositories
+#  - Check that artifacts are created for the app and the PowerPlatform solution
+#  - 
 #
 '@
 
@@ -44,10 +38,26 @@ Push-Location
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
-$repository = "$githubOwner/$repoName"
 $branch = "main"
 
 $template = "https://github.com/$pteTemplate"
+
+foreach($sourceRepo in @('bcsamples-takeorder')) {      #},'bcsamples-CoffeeMR','bcsamples-WarehouseHelper')) {
+    $repository = "$githubOwner/$repoName$sourceRepo"
+
+    # Login
+    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+
+    # Create repository1
+    CreateAlGoRepository `
+        -github:$github `
+        -template "https://github.com/microsoft/$sourceRepo" `
+        -repository $repository `
+        -branch $branch
+
+    # Cancel all running workflows
+    CancelAllWorkflows -repository $repository
+}
 
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository

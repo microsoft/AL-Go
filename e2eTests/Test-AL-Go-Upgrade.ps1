@@ -103,7 +103,7 @@ $runs++
 
 # Update AL-Go System Files
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch
 $runs++
