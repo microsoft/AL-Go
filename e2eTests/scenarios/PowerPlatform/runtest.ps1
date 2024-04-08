@@ -66,13 +66,15 @@ foreach($sourceRepo in @('bcsamples-takeorder', 'bcsamples-CoffeeMR','bcsamples-
     $settings = Get-Content -Path '.github/AL-Go-Settings.json' -Raw | ConvertFrom-Json
     Write-Host "PowerPlatform Solution Folder: $($settings.powerPlatformSolutionFolder)"
 
-    # Upgrade AL-Go System Files from PPPreview to main (still has Y/N prompt)
-    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-    $parameters = @{
-        "templateUrl" = 'https://github.com/microsoft/AL-Go-PTE@main'
-        "directCommit" = 'Y'
+    if ($settings.templateUrl -eq 'https://github.com/Microsoft/AL-Go-PTE@PPPreview') {
+        # Upgrade AL-Go System Files from PPPreview to main (PPPreview branch still uses Y/N prompt and doesn't support direct AL-Go development - i.e. freddydk/AL-Go@branch)
+        SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+        $parameters = @{
+            "templateUrl" = 'https://github.com/microsoft/AL-Go-PTE@main'
+            "directCommit" = 'Y'
+        }
+        RunWorkflow -name 'Update AL-Go System Files' -parameters $parameters -wait -branch $branch -repository $repository
     }
-    RunWorkflow -name 'Update AL-Go System Files' -parameters $parameters -wait -branch $branch -repository $repository
 
     # Upgrade AL-Go System Files to test version
     RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository | Out-Null
