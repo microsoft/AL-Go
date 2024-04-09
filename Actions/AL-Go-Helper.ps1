@@ -2190,7 +2190,7 @@ function DetermineArtifactUrl {
 
     if ($artifact -like "https://*") {
         $artifactUrl = $artifact
-        $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
+        $storageAccount = ("$artifactUrl////".Split('/')[2])
         $artifactType = ("$artifactUrl////".Split('/')[3])
         $version = ("$artifactUrl////".Split('/')[4])
         $country = ("$artifactUrl////".Split('?')[0].Split('/')[5])
