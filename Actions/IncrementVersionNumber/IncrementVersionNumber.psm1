@@ -215,13 +215,13 @@ function Set-DependenciesVersionInAppManifests {
 #>
 function Set-PowerPlatformSolutionVersion {
     param(
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [string] $powerPlatformSolutionPath,
         [Parameter(Mandatory = $true)]
         [string] $newValue
     )
 
-    write-host "Updating Power Platform solution version"
+    Write-Host "Updating Power Platform solution version"
     $files = Get-ChildItem -Path $powerPlatformSolutionPath -filter 'solution.xml' -Recurse -File | Where-Object { $_.Directory.Name -eq "other" }
     if (-not $files) {
         Write-Host "Power Platform solution file not found"

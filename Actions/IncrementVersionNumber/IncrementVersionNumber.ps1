@@ -79,7 +79,7 @@ try {
         }
 
         # Set dependencies in app manifests
-        If($allAppFolders.Count -eq 0) {
+        if($allAppFolders.Count -eq 0) {
             Write-Host "No App folders found for projects $projects"
         }
         else {
