@@ -7,6 +7,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 1019 CI/CD Workflow still being scheduled after it was disabled
 - Issue 1021 Error during Create Online Development Environment action
 - Issue 1022 Error querying artifacts: No such host is known. (bcartifacts-exdbf9fwegejdqak.blob.core.windows.net:443)
+- Issue 922 Deploy Reference Documentation (ALDoc) failed with custom
 
 ## v5.0
 
