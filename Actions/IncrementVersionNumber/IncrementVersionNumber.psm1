@@ -215,7 +215,7 @@ function Set-DependenciesVersionInAppManifests {
 #>
 function Set-PowerPlatformSolutionVersion {
     param(
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [string] $powerPlatformSolutionPath,
         [Parameter(Mandatory = $true)]
         [string] $newValue
