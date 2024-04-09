@@ -18,7 +18,7 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
-$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
+$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
 
@@ -1800,9 +1800,10 @@ function CreateDevEnv {
 
             if ($kind -eq "local") {
                 $runAlPipelineParams += @{
-                    "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
-                    "auth"       = $auth
-                    "credential" = $credential
+                    "artifact"      = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
+                    "auth"          = $auth
+                    "credential"    = $credential
+                    "keepContainer" = $true
                 }
                 if ($containerName) {
                     $runAlPipelineParams += @{
@@ -1921,8 +1922,7 @@ function CreateDevEnv {
                 -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
                 -doNotRunTests `
                 -doNotRunBcptTests `
-                -useDevEndpoint `
-                -keepContainer
+                -useDevEndpoint
         }
         finally {
             Pop-Location
@@ -2190,7 +2190,7 @@ function DetermineArtifactUrl {
 
     if ($artifact -like "https://*") {
         $artifactUrl = $artifact
-        $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
+        $storageAccount = ("$artifactUrl////".Split('/')[2])
         $artifactType = ("$artifactUrl////".Split('/')[3])
         $version = ("$artifactUrl////".Split('/')[4])
         $country = ("$artifactUrl////".Split('?')[0].Split('/')[5])
