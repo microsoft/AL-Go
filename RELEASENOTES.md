@@ -2,6 +2,12 @@
 
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
+### Issues
+
+- Issue 1019 CI/CD Workflow still being scheduled after it was disabled
+- Issue 1021 Error during Create Online Development Environment action
+- Issue 1022 Error querying artifacts: No such host is known. (bcartifacts-exdbf9fwegejdqak.blob.core.windows.net:443)
+
 ## v5.0
 
 ### Issues

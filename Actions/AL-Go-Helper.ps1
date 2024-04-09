@@ -1800,9 +1800,10 @@ function CreateDevEnv {
 
             if ($kind -eq "local") {
                 $runAlPipelineParams += @{
-                    "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
-                    "auth"       = $auth
-                    "credential" = $credential
+                    "artifact"      = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
+                    "auth"          = $auth
+                    "credential"    = $credential
+                    "keepContainer" = $true
                 }
                 if ($containerName) {
                     $runAlPipelineParams += @{
@@ -1921,8 +1922,7 @@ function CreateDevEnv {
                 -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
                 -doNotRunTests `
                 -doNotRunBcptTests `
-                -useDevEndpoint `
-                -keepContainer
+                -useDevEndpoint
         }
         finally {
             Pop-Location
