@@ -56,7 +56,9 @@ runs:
         environmentName: ${{ inputs.environmentName }}
 
     - name: Who am I (username)
-      if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
+      env:
+        DebugStep: '${{ secrets.ACTIONS_STEP_DEBUG }}'
+      if: env.DebugStep == 'true' && steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
       uses: microsoft/powerplatform-actions/who-am-i@v1
       with:
         environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl}}
@@ -64,7 +66,9 @@ runs:
         password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
 
     - name: Who am I (application ID)
-      if: steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
+      env:
+        DebugStep: '${{ secrets.ACTIONS_STEP_DEBUG }}'
+      if: env.DebugStep == 'true' && steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
       uses: microsoft/powerplatform-actions/who-am-i@v1
       with:
         environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
