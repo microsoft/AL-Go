@@ -77,31 +77,18 @@ runs:
         client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
  
     - name: Determine Power Platform solution location
+      shell: ${{ inputs.shell }}
       env:
         _artifactsFolder: ${{ inputs.artifactsFolder }}
         _solutionFolder: ${{ inputs.solutionFolder }}
-      shell: ${{ inputs.shell }}
       run: |
-        $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        if ($env:_artifactsFolder -ne '') {
-          $artifactsFiles = Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE $ENV:_artifactsFolder) -Recurse -File | Select-Object -ExpandProperty FullName
-          foreach($filePath in $artifactsFiles){
-              ## Find file containing Power Platform keyword
-              if($filePath.contains("-PowerPlatformSolution-")){
-                  Write-Host "Power Platform solution file:"$filePath
-                  Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionFilePath=$filePath" 
-                  Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionFolder=.artifacts/_tempPPSolution/source"
-                  return
-              }
-          }            
-          Write-Warning "Not able to find Power Platform solution file in $ENV:_artifactsFolder"
-          throw "Not able to find Power Platform solution file in $ENV:_artifactPath that contains the artifact keyword '-PowerPlatformSolution-'"
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/DeterminePowerPlatformSolutionFolder.ps1 -artifactsFolder $ENV:_artifactsFolder -solutionFolder $ENV:_solutionFolder
         }
-        elseif ($env:_solutionFolder -ne '') {
-          Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "powerPlatformSolutionFolder=$env:_solutionFolder"
-        }
-        else {
-          throw "No artifactsFolder or solutionFolder specified"
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
         }
   
     - name: Unpack solution artifact
