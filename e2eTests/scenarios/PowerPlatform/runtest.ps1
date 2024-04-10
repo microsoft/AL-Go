@@ -42,7 +42,10 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 $repoPath = (Get-Location).Path
 
-foreach($sourceRepo in @('bcsamples-WarehouseHelper', 'bcsamples-takeorder', 'bcsamples-CoffeeMR')) {
+$repositories = @('bcsamples-WarehouseHelper', 'bcsamples-takeorder', 'bcsamples-CoffeeMR')
+$repoVars = @{}
+
+foreach($sourceRepo in $repositories) {
     $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
     Push-Location
     $repository = "$githubOwner/$repoName"
@@ -68,7 +71,7 @@ foreach($sourceRepo in @('bcsamples-WarehouseHelper', 'bcsamples-takeorder', 'bc
     Write-Host "PowerPlatform Solution Folder: $($settings.powerPlatformSolutionFolder)"
 
     SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-    
+
     if ($settings.templateUrl -eq 'https://github.com/Microsoft/AL-Go-PTE@PPPreview') {
         # Upgrade AL-Go System Files from PPPreview to main (PPPreview branch still uses Y/N prompt and doesn't support direct AL-Go development - i.e. freddydk/AL-Go@branch)
         $parameters = @{
@@ -90,6 +93,26 @@ foreach($sourceRepo in @('bcsamples-WarehouseHelper', 'bcsamples-takeorder', 'bc
     Test-Path -Path '.github/workflows/_BuildPowerPlatformSolution.yaml' | Should -Be $true -Because "_BuildPowerPlatformSolution workflow exists"
 
     $run = RunCICD -repository $repository -branch $branch
+    Pop-Location
+
+    $repoVars."$sourceRepo" = @{
+        "run" = $run
+        "repoPath" = $repoPath
+        "repoName" = $repoName
+        "settings" = $settings
+    }
+}
+
+foreach($sourceRepo in $repositories) {
+    $repoVar = $repoVars."$sourceRepo"
+    $run = $repoVar.run
+    $repoPath = $repoVar.repoPath
+    $repoName = $repoVar.repoName
+    $settings = $repoVar.settings
+
+    $repository = "$githubOwner/$repoName"
+
+    Push-Location $repoPath
     WaitWorkflow -repository $repository -runid $run.id
 
     # Test artifacts generated
