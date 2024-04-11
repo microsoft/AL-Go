@@ -421,10 +421,6 @@ try {
                 }
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
-                Get-ChildItem -Path $artifactsFolder -Recurse | ForEach-Object {
-                    Write-Host $_.FullName
-                }
-
                 $mainAppJson = Get-Content -Path (Join-Path $baseFolder "$thisProject/$AppSourceMainAppFolder/app.json") -Encoding UTF8 | ConvertFrom-Json
                 $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
                 $artfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
