@@ -611,10 +611,12 @@ function ReadSettings {
         "doNotSignApps"                                 = $false
         "configPackages"                                = @()
         "appSourceCopMandatoryAffixes"                  = @()
-        "appSourceMainAppFolder"                        = ""
-        "appSourceProductId"                            = ""
-        "appSourceIncludeDependencies"                  = @()
-        "appSourceContinuousDelivery"                   = $false
+        "deliverToAppSource"                            = [ordered]@{
+            "mainAppFolder"                             = ""
+            "productId"                                 = ""
+            "includeDependencies"                       = @()
+            "continuousDelivery"                        = $false
+        }
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
         "templateUrl"                                   = ""
@@ -642,7 +644,7 @@ function ReadSettings {
             "continuousDeployment"                      = $false
             "deployToGitHubPages"                       = $true
             "maxReleases"                               = 3
-            "groupByProject"                      = $true
+            "groupByProject"                            = $true
             "includeProjects"                           = @()
             "excludeProjects"                           = @()
             "header"                                    = "Documentation for {REPOSITORY} {VERSION}"

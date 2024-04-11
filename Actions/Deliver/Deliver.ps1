@@ -395,9 +395,16 @@ try {
         elseif ($deliveryTarget -eq "AppSource") {
             $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
             $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
+            # Use old settings and issue warnings
+            'continuousDelivery','mainAppFolder','productId' | ForEach-Object {
+                if ($projectSettings.Keys -contains "AppSource$_") {
+                    Write-Host "Using AppSource$_ in $thisProject/.AL-Go/settings.json is deprecated. Use deliverToAppSource.$_ instead."
+                    $projectSettings.deliverToAppSource."$_" = $projectSettings."AppSource$_"
+                }
+            }
             # if type is Release, we only get here with the projects that needs to be delivered to AppSource
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
-            if ($type -eq 'Release' -or $projectSettings.AppSourceContinuousDelivery) {
+            if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
                 EnsureAzStorageModule
                 $appSourceContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext)) | ConvertFrom-Json | ConvertTo-HashTable
                 if (!$appSourceContext) {
@@ -405,8 +412,8 @@ try {
                 }
                 $authContext = New-BcAuthContext @appSourceContext
 
-                if ($projectSettings.appSourceMainAppFolder) {
-                    $AppSourceMainAppFolder = $projectSettings.appSourceMainAppFolder
+                if ($projectSettings.deliverToAppSource.MainAppFolder) {
+                    $AppSourceMainAppFolder = $projectSettings.deliverToAppSource.MainAppFolder
                 }
                 else {
                     try {
@@ -416,8 +423,8 @@ try {
                         throw "Unable to determine main App folder"
                     }
                 }
-                if (!$projectSettings.appSourceProductId) {
-                    throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
+                if (!$projectSettings.deliverToAppSource.ProductId) {
+                    throw "deliverToAppSource.ProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
                 }
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
@@ -435,7 +442,7 @@ try {
                 $appFile = Get-ChildItem -path $artFolder | Where-Object { $_.name -like $mainAppFileName } | ForEach-Object { $_.FullName }
                 $libraryAppFiles = @(Get-ChildItem -path $artFolder | Where-Object { $_.name -notlike $mainAppFileName } | ForEach-Object { $_.FullName })
 
-                $appSourceIncludeDependencies = $projectSettings.appSourceIncludeDependencies
+                $appSourceIncludeDependencies = $projectSettings.deliverToAppSource.includeDependencies
                 if ($appSourceIncludeDependencies -and $appSourceIncludeDependencies.count -gt 0) {
                     $depfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
                     if ($depFolder.Count -eq 0) {
@@ -465,7 +472,7 @@ try {
                     throw "Unable to locate main app file ($mainAppFileName doesn't exist)"
                 }
                 Write-Host "Submitting to AppSource"
-                New-AppSourceSubmission -authContext $authContext -productId $projectSettings.AppSourceProductId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
+                New-AppSourceSubmission -authContext $authContext -productId $projectSettings.deliverToAppSource.productId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
             }
         }
         else {
