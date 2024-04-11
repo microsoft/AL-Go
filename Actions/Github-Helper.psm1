@@ -624,7 +624,7 @@ function DownloadRelease {
     }
     $headers = GetHeader -token $token -accept "application/octet-stream"
     foreach($project in $projects.Split(',')) {
-        $project = $project.Replace('\','_').Replace('/','_')
+        $project = ($project.Replace('\','_').Replace('/','_') -replace '[!#$%&()]',' ') -replace '( ){1,}','.'
         Write-Host "project '$project'"
         $assetPattern1 = "$project-*-$mask-*.zip"
         $assetPattern2 = "$project-$mask-*.zip"
