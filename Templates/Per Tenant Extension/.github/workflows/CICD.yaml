@@ -185,7 +185,7 @@ jobs:
     runs-on: windows-latest
     name: Deploy Reference Documentation
     permissions:
-      contents: write
+      contents: read
       actions: read
       pages: write
       id-token: write
