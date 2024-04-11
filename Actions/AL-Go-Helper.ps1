@@ -611,6 +611,10 @@ function ReadSettings {
         "doNotSignApps"                                 = $false
         "configPackages"                                = @()
         "appSourceCopMandatoryAffixes"                  = @()
+        "appSourceMainAppFolder"                        = ""
+        "appSourceProductId"                            = ""
+        "appSourceIncludeDependencies"                  = @()
+        "appSourceContinuousDelivery"                   = $false
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
         "templateUrl"                                   = ""

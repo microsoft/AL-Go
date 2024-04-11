@@ -397,7 +397,7 @@ try {
             $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
             # if type is Release, we only get here with the projects that needs to be delivered to AppSource
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
-            if ($type -eq 'Release' -or ($projectSettings.Keys -contains 'AppSourceContinuousDelivery' -and $projectSettings.AppSourceContinuousDelivery)) {
+            if ($type -eq 'Release' -or $projectSettings.AppSourceContinuousDelivery) {
                 EnsureAzStorageModule
                 $appSourceContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext)) | ConvertFrom-Json | ConvertTo-HashTable
                 if (!$appSourceContext) {
@@ -405,8 +405,8 @@ try {
                 }
                 $authContext = New-BcAuthContext @appSourceContext
 
-                if ($projectSettings.Keys -contains "AppSourceMainAppFolder") {
-                    $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder
+                if ($projectSettings.appSourceMainAppFolder) {
+                    $AppSourceMainAppFolder = $projectSettings.appSourceMainAppFolder
                 }
                 else {
                     try {
@@ -416,7 +416,7 @@ try {
                         throw "Unable to determine main App folder"
                     }
                 }
-                if ($projectSettings.Keys -notcontains 'AppSourceProductId') {
+                if (!$projectSettings.appSourceProductId) {
                     throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
                 }
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
@@ -429,15 +429,33 @@ try {
                 $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
                 $artfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($artFolder.Count -eq 0) {
-                    throw "Internal error - unable to locate apps"
+                    throw "Internal error - unable to locate apps folder"
                 }
                 if ($artFolder.Count -gt 1) {
                     $artFolder | Out-Host
-                    throw "Internal error - multiple apps located"
+                    throw "Internal error - multiple apps folders located"
                 }
                 $artfolder = $artfolder[0].FullName
                 $appFile = Get-ChildItem -path $artFolder | Where-Object { $_.name -like $mainAppFileName } | ForEach-Object { $_.FullName }
                 $libraryAppFiles = @(Get-ChildItem -path $artFolder | Where-Object { $_.name -notlike $mainAppFileName } | ForEach-Object { $_.FullName })
+
+                $appSourceIncludeDependencies = $projectSettings.appSourceIncludeDependencies
+                if ($appSourceIncludeDependencies -and $appSourceIncludeDependencies.count -gt 0) {
+                    $depfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
+                    if ($depFolder.Count -eq 0) {
+                        throw "Unable to locate dependencies. You need to set generateDependencyArtifact to true in $thisProject/.AL-Go/settings.json in order to deliver dependencies to AppSource"
+                    }
+                    if ($depFolder.Count -gt 1) {
+                        $depFolder | Out-Host
+                        throw "Internal error - multiple dependencies folders located"
+                    }
+                    $depfolder = $depfolder[0].FullName
+                    $libraryAppFiles += @(Get-ChildItem -path $depFolder | Where-Object {
+                        $name = $_.name
+                        $appSourceIncludeDependencies | Where-Object { $name -like $_ }
+                    } | ForEach-Object { $_.FullName })
+                }
+
                 Write-Host "Main App File:"
                 Write-Host "- $([System.IO.Path]::GetFileName($appFile))"
                 Write-Host "Library App Files:"
