@@ -624,6 +624,7 @@ function DownloadRelease {
     }
     $headers = GetHeader -token $token -accept "application/octet-stream"
     foreach($project in $projects.Split(',')) {
+        # GitHub replaces series of special characters with a single dot when uploading release assets
         $project = ($project.Replace('\','_').Replace('/','_') -replace '[!#$%&()]',' ') -replace '( ){1,}','.'
         Write-Host "project '$project'"
         $assetPattern1 = "$project-*-$mask-*.zip"
