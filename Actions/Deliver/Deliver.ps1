@@ -398,7 +398,7 @@ try {
             # Use old settings and issue warnings
             'continuousDelivery','mainAppFolder','productId' | ForEach-Object {
                 if ($projectSettings.Keys -contains "AppSource$_") {
-                    Write-Host "Using AppSource$_ in $thisProject/.AL-Go/settings.json is deprecated. Use deliverToAppSource.$_ instead."
+                    OutputWarning "Using AppSource$_ in $thisProject/.AL-Go/settings.json is deprecated. Use deliverToAppSource.$_ instead."
                     $projectSettings.deliverToAppSource."$_" = $projectSettings."AppSource$_"
                 }
             }
