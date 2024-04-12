@@ -1521,7 +1521,7 @@ function OptionallyConvertFromBase64 {
 }
 
 function GetContainerName([string] $project) {
-    "bc$($project -replace "[^a-z0-9\-")$env:GITHUB_RUN_ID"
+    "bc$($project -replace "[^a-z0-9\-]")$env:GITHUB_RUN_ID"
 }
 
 function CreateDevEnv {
