@@ -11,6 +11,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - ContainerName used during build was invalid if project names contained special characters
 - Issue 1009 by adding a includeDependencies property in DeliverToAppSource
 - Issue 997 'Deliver to AppSource' action fails for projects containing a space
+- Issue 987 Resource not accessible by integration when creating release from specific version
 
 ### New Settings
 - `deliverToAppSource`: a JSON object containing the following properties

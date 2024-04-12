@@ -1,7 +1,7 @@
 ﻿function DownloadAlDoc {
     if ("$ENV:aldocPath" -eq "") {
         Write-Host "Locating aldoc"
-        $artifactUrl = Get-BCArtifactUrl -storageAccount bcinsider -type sandbox -country core -select Latest -accept_insiderEula
+        $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
         Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve

@@ -30,6 +30,7 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 14. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
 15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 16. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
+17. [Publish your app to AppSource](Scenarios/PublishToAppSource.md)
 
 ## Migration scenarios
 A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](Scenarios/MigrateFromAzureDevOpsWithoutHistory.md)<br />
