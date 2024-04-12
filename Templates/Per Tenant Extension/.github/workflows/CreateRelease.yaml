@@ -93,6 +93,15 @@ jobs:
           shell: powershell
           get: templateUrl,repoName
 
+      - name: Read secrets
+        id: ReadSecrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        with:
+          shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+  
       - name: Determine Projects
         id: determineProjects
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
@@ -198,7 +207,7 @@ jobs:
         env:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
             var bodyMD = process.env.bodyMD
             const createReleaseResponse = await github.rest.repos.createRelease({
