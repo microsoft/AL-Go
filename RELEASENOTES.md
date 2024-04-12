@@ -8,6 +8,9 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 1021 Error during Create Online Development Environment action
 - Issue 1022 Error querying artifacts: No such host is known. (bcartifacts-exdbf9fwegejdqak.blob.core.windows.net:443)
 - Issue 922 Deploy Reference Documentation (ALDoc) failed with custom
+- ContainerName used during build was invalid if project names contained special characters
+- Issue 1009 by adding a includeDependencies property in DeliverToAppSource
+- Issue 997 'Deliver to AppSource' action fails for projects containing a space
 
 ### New Settings
 - `deliverToAppSource`: a JSON object containing the following properties
