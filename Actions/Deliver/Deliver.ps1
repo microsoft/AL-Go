@@ -77,10 +77,7 @@ try {
         }
         # projectName is the project name stripped for special characters
         $projectName = $project -replace "[^a-z0-9]", "-"
-        # project is the project name as used in release asset names
-        $project = [Uri]::EscapeDataString($project.Replace(' ','.')).Replace('%','')
         Write-Host "ProjectName '$projectName'"
-        Write-Host "Project '$project'"
 
         if ($artifacts -like "$($baseFolder)*") {
             $artifactsFolder = $artifacts
@@ -96,6 +93,9 @@ try {
                 # Artifacts from this build have been downloaded
             }
             elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
+                # project is the project name as used in release asset names
+                $project = [Uri]::EscapeDataString($project.Replace(' ','.')).Replace('%','')
+
                 # latest released version
                 $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
                 if ($artifacts -eq "current") {
@@ -157,6 +157,7 @@ try {
             }
         }
 
+        Write-Host "Project '$project'"
         Write-Host "Artifacts:"
         Get-ChildItem -Path $artifactsFolder | ForEach-Object {
             Write-Host "- $($_.Name)"
@@ -422,7 +423,7 @@ try {
                 $authContext = New-BcAuthContext @appSourceContext
 
                 if ($projectSettings.deliverToAppSource.MainAppFolder) {
-                    $AppSourceMainAppFolder = $projectSettings.deliverToAppSource.MainAppFolder
+                    $AppSourceMainAppFolder = "./$($projectSettings.deliverToAppSource.MainAppFolder)"
                 }
                 else {
                     try {
