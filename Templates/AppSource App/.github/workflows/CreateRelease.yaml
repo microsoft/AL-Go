@@ -120,7 +120,7 @@ jobs:
           $headers = @{
             "Authorization" = "token ${{ github.token }}"
             "X-GitHub-Api-Version" = "2022-11-28"
-            "Accept" = "application/vnd.github+json"
+            "Accept" = "application/vnd.github+json; charset=utf-8"
           }
           do {
             $repoArtifacts = Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page"
@@ -261,7 +261,7 @@ jobs:
           script: |
             const releaseId = process.env.releaseId
             const assetPath = '${{ matrix.name }}.zip'
-            const assetName = encodeURIComponent('${{ matrix.name }}.zip'.replaceAll(' ','.'))
+            const assetName = encodeURIComponent('${{ matrix.name }}.zip'.replaceAll(' ','.')).replaceAll('%','')
             const fs = require('fs');
             const uploadAssetResponse = await github.rest.repos.uploadReleaseAsset({
               owner: context.repo.owner,
