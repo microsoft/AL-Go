@@ -423,7 +423,7 @@ try {
                 $authContext = New-BcAuthContext @appSourceContext
 
                 if ($projectSettings.deliverToAppSource.MainAppFolder) {
-                    $AppSourceMainAppFolder = "./$($projectSettings.deliverToAppSource.MainAppFolder)"
+                    $AppSourceMainAppFolder = $projectSettings.deliverToAppSource.MainAppFolder
                 }
                 else {
                     try {
