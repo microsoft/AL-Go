@@ -160,7 +160,8 @@ You could imagine that you could have and organizational settings variable conta
 
 Which will ensure that for all repositories named `bcsamples-*` in this organization, the branches matching `features/*` will not sign apps.
 
-**Note:** that you can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
+> [!NOTE]
+> You can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
 
 ## Expert settings (rarely used)
 
@@ -207,7 +208,8 @@ Write-Host "Project settings:"
 $parameters.ProjectSettings | Out-Host
 ```
 
-**Note:** You can also override existing AL-Go for GitHub delivery functionality by creating a script called f.ex. DeliverToStorage.ps1 in the .github folder.
+> [!NOTE]
+> You can override existing AL-Go for GitHub delivery functionality by creating a script called f.ex. DeliverToStorage.ps1 in the .github folder.
 
 Here are the parameters to use in your custom script:
 
@@ -239,7 +241,8 @@ Write-Host "Environment Type: $($parameters.EnvironmentType)"
 Write-Host "Environment Name: $($parameters.EnvironmentName)"
 ```
 
-**Note:** You can also create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
+> [!NOTE]
+> You can create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
 
 Here are the parameters to use in your custom script:
 
@@ -299,7 +302,8 @@ Settings, which might be relevant to set in the settings file includes
 
 For experts only, following the description [here](Contribute.md) you can setup a local fork of **AL-Go for GitHub** and use that as your templates. You can fetch upstream changes from Microsoft regularly to incorporate these changes into your version and this way have your modified version of AL-Go for GitHub.
 
-**Note:** Our goal is to never break repositories, which are using AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.
+> [!NOTE]
+> Our goal is to never break repositories, which are using AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.
 
 ---
 [back](../README.md)
