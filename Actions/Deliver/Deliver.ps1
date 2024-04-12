@@ -77,6 +77,9 @@ try {
         }
         # projectName is the project name stripped for special characters
         $projectName = $project -replace "[^a-z0-9]", "-"
+        # project is the project name as used in release asset names
+        $project = [Uri]::EscapeDataString($project.Replace(' ','.')).Replace('%','')
+        Write-Host "ProjectName '$projectName'"
         Write-Host "Project '$project'"
 
         if ($artifacts -like "$($baseFolder)*") {
