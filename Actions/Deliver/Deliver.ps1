@@ -110,16 +110,22 @@ try {
                 if (!($release)) {
                     throw "Unable to locate $artifacts release"
                 }
-                $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
-                Write-Host "'$artifactFile'"
-                if (!$artifactFile -or !(Test-Path $artifactFile)) {
-                    throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+                foreach($mask in @('Apps','Dependencies')) {
+                    $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask $mask
+                    Write-Host "'$artifactFile'"
+                    if (!$artifactFile -or !(Test-Path $artifactFile)) {
+                        if ($mask -eq 'Apps') {
+                            throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+                        }
+                    }
+                    else {
+                        if ($artifactFile -notlike '*.zip') {
+                            throw "Downloaded artifact is not a .zip file"
+                        }
+                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                        Remove-Item $artifactFile -Force
+                    }
                 }
-                if ($artifactFile -notlike '*.zip') {
-                    throw "Downloaded artifact is not a .zip file"
-                }
-                Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
-                Remove-Item $artifactFile -Force
             }
             else {
                 $atypes.Split(',') | ForEach-Object {
