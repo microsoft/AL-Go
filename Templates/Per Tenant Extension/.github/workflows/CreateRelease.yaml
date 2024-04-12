@@ -123,7 +123,7 @@ jobs:
             "Accept" = "application/vnd.github+json; charset=utf-8"
           }
           do {
-            $repoArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page" | ConvertFrom-Json
+            $repoArtifacts = Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page"
             $allArtifacts += $repoArtifacts.Artifacts | Where-Object { !$_.expired }
             $page++
           }
@@ -238,7 +238,8 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'nuGetContext,storageContext'
+          getSecrets: 'nuGetContext,storageContext,TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Download artifact
         run: |
@@ -256,7 +257,7 @@ jobs:
         env:
           releaseId: ${{ needs.createrelease.outputs.releaseId }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
             const releaseId = process.env.releaseId
             const assetPath = '${{ matrix.name }}.zip'
