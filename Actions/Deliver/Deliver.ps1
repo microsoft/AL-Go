@@ -110,7 +110,7 @@ try {
                 if (!($release)) {
                     throw "Unable to locate $artifacts release"
                 }
-                foreach($mask in @('Apps','Dependencies')) {
+                foreach($mask in $atypes.Split(',')) {
                     $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask $mask
                     Write-Host "'$artifactFile'"
                     if (!$artifactFile -or !(Test-Path $artifactFile)) {
