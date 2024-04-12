@@ -1,4 +1,4 @@
-# #5 Publish To AppSource
+# #17 Publish To AppSource
 *Prerequisites: An app in AppSource and a GitHub Repository based on the [AL-Go-AppSource](https://aka.ms/AL-Go-AppSource) template with the source code for that app.*
 
 > [!NOTE]
