@@ -25,6 +25,7 @@ This workshop shows you how to take advantage of the functionality, which is pro
 ## Additional Future topics
 1. Dependencies to other apps
 1. AppSource validation
+1. Publish to AppSource
 1. Settings
 1. Versioning strategies
 1. Power Platform solution

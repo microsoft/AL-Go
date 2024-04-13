@@ -233,7 +233,7 @@ $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | Conve
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -repository $repository -branch $branch | Out-Null
 $runs++
-MergePRandPull -branch $branch | Out-Null
+MergePRandPull -branch $branch -wait | Out-Null
 $runs += 2
 if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scripts in the .AL-Go folder was not updated by Update AL-Go System Files" }
 if (!(Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml")) { throw "AddExistingAppOrTestApp.yaml was not updated by Update AL-Go System Files" }

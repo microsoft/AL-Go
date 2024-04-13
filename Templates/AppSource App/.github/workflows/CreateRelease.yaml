@@ -93,6 +93,15 @@ jobs:
           shell: powershell
           get: templateUrl,repoName
 
+      - name: Read secrets
+        id: ReadSecrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        with:
+          shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+  
       - name: Determine Projects
         id: determineProjects
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
@@ -122,10 +131,10 @@ jobs:
           $headers = @{
             "Authorization" = "token ${{ github.token }}"
             "X-GitHub-Api-Version" = "2022-11-28"
-            "Accept" = "application/vnd.github+json"
+            "Accept" = "application/vnd.github+json; charset=utf-8"
           }
           do {
-            $repoArtifacts = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page" | ConvertFrom-Json
+            $repoArtifacts = Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page"
             $allArtifacts += $repoArtifacts.Artifacts | Where-Object { !$_.expired }
             $page++
           }
@@ -202,7 +211,7 @@ jobs:
         env:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
             var bodyMD = process.env.bodyMD
             const createReleaseResponse = await github.rest.repos.createRelease({
@@ -242,7 +251,8 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'nuGetContext,storageContext'
+          getSecrets: 'nuGetContext,storageContext,TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Download artifact
         run: |
@@ -260,11 +270,11 @@ jobs:
         env:
           releaseId: ${{ needs.createrelease.outputs.releaseId }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
             const releaseId = process.env.releaseId
             const assetPath = '${{ matrix.name }}.zip'
-            const assetName = '${{ matrix.name }}.zip'
+            const assetName = encodeURIComponent('${{ matrix.name }}.zip'.replaceAll(' ','.')).replaceAll('%','')
             const fs = require('fs');
             const uploadAssetResponse = await github.rest.repos.uploadReleaseAsset({
               owner: context.repo.owner,
