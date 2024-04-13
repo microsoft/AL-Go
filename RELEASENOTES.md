@@ -13,6 +13,8 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 997 'Deliver to AppSource' action fails for projects containing a space
 - Issue 987 Resource not accessible by integration when creating release from specific version
 - Issue 979 Publish to AppSource Documentation
+- Issue 940 Publish to Environment is broken when specifying projects to publish
+- Issue 994 CI/CD ignores Deploy to GitHub Pages in private repositories
 
 ### New Settings
 - `deliverToAppSource`: a JSON object containing the following properties
@@ -20,7 +22,6 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
   - **mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.
   - **continuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.
   - **includeDependencies** can be set to an array of file names (incl. wildcards) which are the names of the dependencies to include in the AppSource submission. Note that you need to set `generateDependencyArtifact` in the project settings file to true in order to include dependencies.
-- `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
 - `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
 - `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
 
@@ -50,11 +51,17 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 
 ### Issues
 - Support release branches that start with releases/
+- Issue 940 Publish to Environment is broken when specifying projects to publish
+- Issue 994 CI/CD ignores Deploy to GitHub Pages in private repositories
+
+### New Settings
+- `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
+
+### Issues
+- Support release branches that start with releases/
 - Issue 870 Improve Error Handling when CLI is missing
 - Issue 889 CreateRelease and IncrementVersionNumber workflow did not handle wild characters in `appFolders`, `testFolders` or `bcptTestFolders` settings.
-- Issue 940 Publish to Environment is broken when specifying projects to publish
 - Issue 973 Prerelease is not used for deployment
-- Issue 994 CI/CD ignores Deploy to GitHub Pages in private repositories
 
 ### Build modes
 AL-Go ships with Default, Translated and Clean mode out of the box. Now you can also define custom build modes in addition to the ones shipped with AL-Go. This allows you to define your own build modes, which can be used to build your apps in different ways. By default, a custom build mode will build the apps similarly to the Default mode but this behavior can be overridden in e.g. script overrides in your repository.
