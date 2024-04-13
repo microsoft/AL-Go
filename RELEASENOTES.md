@@ -26,6 +26,9 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
 - `appSourceProductId` is moved to the `deliverToAppSource` structure
 
+### Business Central Performance Toolkit Test Result Viewer
+- In the summary after a Test Run, you now also have the result of performance tests.
+
 ## v5.0
 
 ### Issues
@@ -204,9 +207,6 @@ Now, you can set the checkbox called Use GhTokenWorkflow to allowing you to use 
 ### New Actions
 - `DownloadProjectDependencies`: Downloads the dependency apps for a given project and build mode.
 
-### Business Central Performance Toolkit Test Result Viewer
-- In the summary after a Test Run, you now also have the result of performance tests.
-
 ### Settings and Secrets in AL-Go for GitHub
 In earlier versions of AL-Go for GitHub, all settings were available as individual environment variables to scripts and overrides, this is no longer the case.
 Settings were also available as one compressed JSON structure in env:Settings, this is still the case.
@@ -218,7 +218,6 @@ As described in bug 647, all secrets available to the workflow were also availab
 All requested secrets were also available (base64 encoded) as one compressed JSON structure in env:Secrets, this is still the case.
 Use `$secrets = $ENV:Secrets | ConvertFrom-Json` to get all requested secrets in PowerShell.
 You cannot get to any secrets that weren't requested by AL-Go for GitHub.
-
 
 ## v3.1
 
