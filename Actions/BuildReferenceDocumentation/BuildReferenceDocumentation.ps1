@@ -47,7 +47,9 @@ if ($maxReleases -gt 0) {
 }
 
 $docsPath = Join-Path $ENV:GITHUB_WORKSPACE ".aldoc"
-New-Item $docsPath -ItemType Directory | Out-Null
+if (!(Test-Path -path $docsPath)) {
+    New-Item $docsPath -ItemType Directory | Out-Null
+}
 $loglevel = 'Info'
 
 $versions = @($releases | ForEach-Object { $_.Name })

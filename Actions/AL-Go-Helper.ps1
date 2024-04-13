@@ -18,7 +18,7 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
-$defaultBcContainerHelperVersion = "https://github.com/freddydk/navcontainerhelper/zipball/renamecache" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step
+$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
 
@@ -332,15 +332,12 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
         }
         else {
             $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
-            if ($bcContainerHelperVersion -eq "preview" -or $bcContainerHelperVersion -eq "dev") {
+            if ($bcContainerHelperVersion -eq "dev") {
                 # For backwards compatibility, use preview when dev is specified
-                Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/preview.zip", "$tempName.zip")
+                $bcContainerHelperVersion = 'preview'
             }
-            else {
-                Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from CDN"
-                $webclient.DownloadFile("https://bccontainerhelper.azureedge.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
-            }
+            Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
+            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $bcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
@@ -521,6 +518,11 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
     )
 
+    # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
+    if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
+        $branchName = $env:GITHUB_BASE_REF
+    }
+
     function GetSettingsObject {
         Param(
             [string] $path
@@ -609,6 +611,12 @@ function ReadSettings {
         "doNotSignApps"                                 = $false
         "configPackages"                                = @()
         "appSourceCopMandatoryAffixes"                  = @()
+        "deliverToAppSource"                            = [ordered]@{
+            "mainAppFolder"                             = ""
+            "productId"                                 = ""
+            "includeDependencies"                       = @()
+            "continuousDelivery"                        = $false
+        }
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
         "templateUrl"                                   = ""
@@ -640,7 +648,7 @@ function ReadSettings {
             "continuousDeployment"                      = $false
             "deployToGitHubPages"                       = $true
             "maxReleases"                               = 3
-            "groupByProject"                      = $true
+            "groupByProject"                            = $true
             "includeProjects"                           = @()
             "excludeProjects"                           = @()
             "header"                                    = "Documentation for {REPOSITORY} {VERSION}"
@@ -1517,7 +1525,7 @@ function OptionallyConvertFromBase64 {
 }
 
 function GetContainerName([string] $project) {
-    "bc$($project -replace "\W")$env:GITHUB_RUN_ID"
+    "bc$($project -replace "[^a-z0-9\-]")$env:GITHUB_RUN_ID"
 }
 
 function CreateDevEnv {
@@ -1699,7 +1707,7 @@ function CreateDevEnv {
         $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @params
         $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -repository $repository -project $project
 
-        if (!$accept_insiderEula -and ($settings.artifact -like 'https://bcinsider.blob.core.windows.net/*' -or $settings.artifact -like 'https://bcinsider.azureedge.net/*')) {
+        if (!$accept_insiderEula -and ($settings.artifact -like 'https://bcinsider*.net/*')) {
             Read-Host 'Press ENTER to accept the Business Central insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) or break the script to cancel'
             $accept_insiderEula = $true
         }
@@ -1802,9 +1810,10 @@ function CreateDevEnv {
 
             if ($kind -eq "local") {
                 $runAlPipelineParams += @{
-                    "artifact"   = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
-                    "auth"       = $auth
-                    "credential" = $credential
+                    "artifact"      = $settings.artifact.replace('{INSIDERSASTOKEN}', '')
+                    "auth"          = $auth
+                    "credential"    = $credential
+                    "keepContainer" = $true
                 }
                 if ($containerName) {
                     $runAlPipelineParams += @{
@@ -1923,8 +1932,7 @@ function CreateDevEnv {
                 -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
                 -doNotRunTests `
                 -doNotRunBcptTests `
-                -useDevEndpoint `
-                -keepContainer
+                -useDevEndpoint
         }
         finally {
             Pop-Location
@@ -2192,7 +2200,7 @@ function DetermineArtifactUrl {
 
     if ($artifact -like "https://*") {
         $artifactUrl = $artifact
-        $storageAccount = ("$artifactUrl////".Split('/')[2]).Split('.')[0]
+        $storageAccount = ("$artifactUrl////".Split('/')[2])
         $artifactType = ("$artifactUrl////".Split('/')[3])
         $version = ("$artifactUrl////".Split('/')[4])
         $country = ("$artifactUrl////".Split('?')[0].Split('/')[5])
@@ -2304,4 +2312,16 @@ function GetProjectsFromRepository {
         }
     }
     return $projects
+}
+
+function Get-PackageVersion($PackageName) {
+    $alGoPackages = Get-Content -Path "$PSScriptRoot\Packages.json" | ConvertFrom-Json
+
+    # Check if the package is in the list of packages
+    if ($alGoPackages.PSobject.Properties.name -match $PackageName) {
+        return $alGoPackages.$PackageName
+    }
+    else {
+        throw "Package $PackageName is not in the list of packages"
+    }
 }
