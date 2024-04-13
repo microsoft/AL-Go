@@ -11,7 +11,7 @@ function IsGitHubPagesAvailable() {
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
-        $ghPages = InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json
+        $ghPages = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
         return ($ghPages.build_type -eq 'workflow')
     }
     catch {
@@ -24,7 +24,7 @@ function GetGitHubEnvironments() {
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
     try {
         Write-Host "Requesting environments from GitHub"
-        $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments)
+        $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
     }
     catch {
         $ghEnvironments = @()
@@ -42,12 +42,12 @@ function Get-BranchesFromPolicy($ghEnvironment) {
             if ($ghEnvironment.deployment_branch_policy.protected_branches) {
                 Write-Host "GitHub Environment $($ghEnvironment.name) only allows protected branches, getting protected branches from GitHub API"
                 $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches"
-                return (InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name }
+                return ((InvokeWebRequest -Headers $headers -Uri $branchesUrl).Content | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name }
             }
             elseif ($ghEnvironment.deployment_branch_policy.custom_branch_policies) {
                 Write-Host "GitHub Environment $($ghEnvironment.name) has custom deployment branch policies, getting branches from GitHub API"
                 $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($ghEnvironment.name))/deployment-branch-policies"
-                return (InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name }
+                return ((InvokeWebRequest -Headers $headers -Uri $branchesUrl).Content | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name }
             }
         }
         else {

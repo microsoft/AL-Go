@@ -507,7 +507,7 @@ function GetReleases {
     )
 
     Write-Host "Analyzing releases $api_url/repos/$repository/releases"
-    $releases = @(InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases" | ConvertFrom-Json)
+    $releases = (InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases").Content | ConvertFrom-Json
     if ($releases.Count -gt 1) {
         # Sort by SemVer tag
         try {
@@ -624,7 +624,8 @@ function DownloadRelease {
     }
     $headers = GetHeader -token $token -accept "application/octet-stream"
     foreach($project in $projects.Split(',')) {
-        $project = $project.Replace('\','_').Replace('/','_')
+        # GitHub replaces series of special characters with a single dot when uploading release assets
+        $project = [Uri]::EscapeDataString($project.Replace('\','_').Replace('/','_').Replace(' ','.')).Replace('%','')
         Write-Host "project '$project'"
         $assetPattern1 = "$project-*-$mask-*.zip"
         $assetPattern2 = "$project-$mask-*.zip"
@@ -727,7 +728,9 @@ function Set-JsonContentLF {
         if ($PSVersionTable.PSVersion.Major -lt 6) {
             try {
                 $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-                . pwsh (Join-Path $PSScriptRoot 'prettyfyjson.ps1') $path
+                # This command will reformat a JSON file with LF line endings as PowerShell 7 would do it (when run using pwsh)
+                $command = "`$cr=[char]13;`$lf=[char]10;`$path='$path';`$content=Get-Content `$path -Encoding UTF8|ConvertFrom-Json|ConvertTo-Json -Depth 99;`$content=`$content -replace `$cr,'';`$content|Out-Host;[System.IO.File]::WriteAllText(`$path,`$content+`$lf)"
+                . pwsh -command $command
             }
             catch {
                 Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted by PowerShell $($PSVersionTable.PSVersion)"
@@ -759,7 +762,7 @@ function CheckBuildJobsInWorkflowRun {
     while($true) {
         $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
-        $workflowJobs = InvokeWebRequest -Headers $headers -Uri $jobsURI | ConvertFrom-Json
+        $workflowJobs = (InvokeWebRequest -Headers $headers -Uri $jobsURI).Content | ConvertFrom-Json
 
         if($workflowJobs.jobs.Count -eq 0) {
             # No more jobs, breaking out of the loop
@@ -811,7 +814,7 @@ function FindLatestSuccessfulCICDRun {
     while($true) {
         $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch"
         Write-Host "- $runsURI"
-        $workflowRuns = InvokeWebRequest -Headers $headers -Uri $runsURI | ConvertFrom-Json
+        $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
 
         if($workflowRuns.workflow_runs.Count -eq 0) {
             # No more workflow runs, breaking out of the loop
@@ -884,20 +887,19 @@ function GetArtifactsFromWorkflowRun {
     $page = 1
 
     # Get sanitized project names (the way they appear in the artifact names)
-    $projects = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
+    $projectArr = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
 
     # Get the artifacts from the the workflow run
     while($true) {
         $artifactsURI = "$api_url/repos/$repository/actions/runs/$workflowRun/artifacts?per_page=$per_page&page=$page"
-
-        $artifacts = InvokeWebRequest -Headers $headers -Uri $artifactsURI | ConvertFrom-Json
+        $artifacts = (InvokeWebRequest -Headers $headers -Uri $artifactsURI).Content | ConvertFrom-Json
 
         if($artifacts.artifacts.Count -eq 0) {
             Write-Host "No more artifacts found for workflow run $workflowRun"
             break
         }
 
-        foreach($project in $projects) {
+        foreach($project in $projectArr) {
             $artifactPattern = "$project-*-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
@@ -922,7 +924,7 @@ function GetArtifactsFromWorkflowRun {
         $page += 1
     }
 
-    Write-Host "Found $($foundArtifacts.Count) artifacts for mask $mask and projects $($projects -join ',') in workflow run $workflowRun"
+    Write-Host "Found $($foundArtifacts.Count) artifacts for mask $mask and projects $($projectArr -join ',') in workflow run $workflowRun"
 
     return $foundArtifacts
 }
@@ -996,7 +998,7 @@ function GetArtifacts {
         }
         $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page_no)"
         Write-Host $uri
-        $artifacts = InvokeWebRequest -Headers $headers -Uri $uri | ConvertFrom-Json
+        $artifacts = (InvokeWebRequest -Headers $headers -Uri $uri).Content | ConvertFrom-Json
         # If no artifacts are read, we are done
         if ($artifacts.artifacts.Count -eq 0) {
             break

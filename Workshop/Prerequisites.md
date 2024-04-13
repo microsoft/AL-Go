@@ -17,7 +17,7 @@ You will need:
   {
     "useCompilerFolder": true,
     "doNotPublishApps": true,
-    "artifact": "https://bcartifacts.azureedge.net/sandbox/23.0.12034.13450/us"
+    "artifact": "bcartifacts/sandbox/23.0.12034.13450/us/closest"
   }
 ```
 
@@ -25,7 +25,8 @@ The combination of useCompilerFolder and doNotPublishApps, means that AL-Go will
 
 Later in the workshop, when we want to run tests, we will need to create a container and we will change the settings for that purpose.
 
-**Note** that we are working on making this piece much faster and utilize different ways to run tests in containers, ACIs, VMs or other environments.
+> [!NOTE]
+> We are working on making this piece much faster and utilize different ways to run tests in containers, ACIs, VMs or other environments.
 
 With this... - let's get started!
 

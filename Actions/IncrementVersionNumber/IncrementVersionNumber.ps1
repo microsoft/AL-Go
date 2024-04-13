@@ -7,7 +7,7 @@
     [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "List of project names if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
     [string] $projects = '*',
-    [Parameter(HelpMessage = "Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.", Mandatory = $true)]
+    [Parameter(HelpMessage = "The version to update to. Use Major.Minor for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version", Mandatory = $true)]
     [string] $versionNumber,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
@@ -19,91 +19,54 @@ $telemetryScope = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path -path $PSScriptRoot -ChildPath "IncrementVersionNumber.psm1" -Resolve)
+
     $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'increment-version-number'
     $baseFolder = (Get-Location).path
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+    Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
     $telemetryScope = CreateScope -eventId 'DO0076' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
-    $addToVersionNumber = "$versionNumber".StartsWith('+')
-    if ($addToVersionNumber) {
-        $versionNumber = $versionNumber.Substring(1)
-    }
-    try {
-        $newVersion = [System.Version]"$($versionNumber).0.0"
-    }
-    catch {
-        throw "Version number ($versionNumber) is malformed. A version number must be structured as <Major>.<Minor> or +<Major>.<Minor>"
-    }
-
     $settings = $env:Settings | ConvertFrom-Json
-    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
-    foreach($project in $projectList) {
-        try {
-            Write-Host "Reading settings from $project\$ALGoSettingsFile"
-            $settingsJson = Get-Content "$project\$ALGoSettingsFile" -Encoding UTF8 | ConvertFrom-Json
-            if ($settingsJson.PSObject.Properties.Name -eq "repoVersion") {
-                $oldVersion = [System.Version]"$($settingsJson.repoVersion).0.0"
-                if ((!$addToVersionNumber) -and $newVersion -le $oldVersion) {
-                    throw "The new version number ($($newVersion.Major).$($newVersion.Minor)) must be larger than the old version number ($($oldVersion.Major).$($oldVersion.Minor))"
-                }
-                $repoVersion = $newVersion
-                if ($addToVersionNumber) {
-                    $repoVersion = [System.Version]"$($newVersion.Major+$oldVersion.Major).$($newVersion.Minor+$oldVersion.Minor).0.0"
-                }
-                $settingsJson.repoVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
-            }
-            else {
-                $repoVersion = $newVersion
-                if ($addToVersionNumber) {
-                    $repoVersion = [System.Version]"$($newVersion.Major+1).$($newVersion.Minor).0.0"
-                }
-                Add-Member -InputObject $settingsJson -NotePropertyName "repoVersion" -NotePropertyValue "$($repoVersion.Major).$($repoVersion.Minor)" | Out-Null
-            }
-            $useRepoVersion = (($settingsJson.PSObject.Properties.Name -eq "versioningStrategy") -and (($settingsJson.versioningStrategy -band 16) -eq 16))
-            $settingsJson
-            $settingsJson | Set-JsonContentLF -path "$project\$ALGoSettingsFile"
-        }
-        catch {
-            throw "Settings file $project\$ALGoSettingsFile is malformed.$([environment]::Newline) $($_.Exception.Message)."
-        }
 
-        $folders = @('appFolders', 'testFolders' | ForEach-Object { if ($SettingsJson.PSObject.Properties.Name -eq $_) { $settingsJson."$_" } })
-        if (-not ($folders)) {
-            $folders = Get-ChildItem -Path $project | Where-Object { $_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'app.json')) } | ForEach-Object { $_.Name }
-        }
-        $folders | ForEach-Object {
-            Write-Host "Modifying app.json in folder $project\$_"
-            $appJsonFile = Join-Path "$project\$_" "app.json"
-            if (Test-Path $appJsonFile) {
-                try {
-                    $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
-                    $oldVersion = [System.Version]$appJson.Version
-                    if ($useRepoVersion) {
-                        $appVersion = $repoVersion
-                    }
-                    elseif ($addToVersionNumber) {
-                        $appVersion = [System.Version]"$($newVersion.Major+$oldVersion.Major).$($newVersion.Minor+$oldVersion.Minor).0.0"
-                    }
-                    else {
-                        $appVersion = $newVersion
-                    }
-                    $appJson.Version = "$appVersion"
-                    $appJson | Set-JsonContentLF -path $appJsonFile
-                }
-                catch {
-                    throw "Application manifest file($appJsonFile) is malformed."
-                }
-            }
-        }
+    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+
+    $allAppFolders = @()
+    foreach($project in $projectList) {
+        $projectPath = Join-Path $baseFolder $project
+
+        $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+        $settings = ReadSettings -baseFolder $baseFolder -project $project
+
+        # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
+        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
+
+        # Set repoVersion in project settings according to the versionNumber parameter
+        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
+
+        # Resolve project folders to get all app folders that contain an app.json file
+        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
+        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+
+        # Set version in app manifests (app.json files)
+        Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $versionNumber
+
+        # Collect all project's app folders
+        $allAppFolders += $projectSettings.appFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+        $allAppFolders += $projectSettings.testFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+        $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
     }
-    if ($addToVersionNumber) {
-        CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Increment Version number by $($newVersion.Major).$($newVersion.Minor)" -branch $branch | Out-Null
+
+    # Set dependencies in app manifests
+    Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+
+    $commitMessage = "New Version number $versionNumber"
+    if ($versionNumber.StartsWith('+')) {
+        $commitMessage = "Incremented Version number by $versionNumber"
     }
-    else {
-        CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New Version number $($newVersion.Major).$($newVersion.Minor)" -branch $branch | Out-Null
-    }
+
+    CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch | Out-Null
 
     TrackTrace -telemetryScope $telemetryScope
 }
