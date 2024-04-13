@@ -20,8 +20,8 @@ none
 | :-- | :-- |
 | Settings | A compressed JSON structure with ALL AL-Go settings, independent of the get parameter. If project was not specified, this will only include repository settings. |
 
-> **NOTE:** This method creates individual environment variables for every setting specified in the get parameter.
-
+> [!NOTE]
+> This method creates individual environment variables for every setting specified in the get parameter.
 
 ### OUTPUT variables
 | Name | Description |

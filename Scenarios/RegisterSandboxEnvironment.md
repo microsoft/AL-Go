@@ -1,7 +1,9 @@
 # #3 Register a customer sandbox environment for Continuous Deployment using S2S
 *Prerequisites: A completed [scenario 2](AddATestApp.md), an Microsoft Entra application registration, and an online sandbox environment called QA with the setup for S2S as specified in task 1 and 2 [here](https://go.microsoft.com/fwlink/?linkid=2217415&clcid=0x409) completed.
 
-***Note**: For access to environments, environment secrets, and deployment branches in private or internal repositories, you must use GitHub Pro, GitHub Team, or GitHub Enterprise. (see [this](https://go.microsoft.com/fwlink/?linkid=2216857&clcid=0x409)). We are considering adding a secondary option for listing environments.*
+> [!NOTE]
+> For access to environments, environment secrets, and deployment branches in private or internal repositories, you must use GitHub Pro, GitHub Team, or GitHub Enterprise. (see [this](https://go.microsoft.com/fwlink/?linkid=2216857&clcid=0x409)). We are considering adding a secondary option for listing environments.
+
 1. On github.com, open **Settings** and **Environments** in your project. Click **New Environment** and specify the **name of the environment** you have created in your tenant.
 ![Add Environment](https://github.com/microsoft/AL-Go/assets/10775043/ec3d7bf3-84dd-4ca4-8c6c-b79d796afadf)
 1. Under **Environment secrets**, choose the **Add Secret** action. Create a secret called **AUTHCONTEXT**, and enter a **COMPRESSED JSON** construct with 3 values: TenantID (where the environment lives), ClientID, and ClientSecret (from the pre-requisites), like:

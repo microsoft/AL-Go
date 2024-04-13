@@ -77,7 +77,7 @@ try {
         }
         # projectName is the project name stripped for special characters
         $projectName = $project -replace "[^a-z0-9]", "-"
-        Write-Host "Project '$project'"
+        Write-Host "ProjectName '$projectName'"
 
         if ($artifacts -like "$($baseFolder)*") {
             $artifactsFolder = $artifacts
@@ -93,6 +93,9 @@ try {
                 # Artifacts from this build have been downloaded
             }
             elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
+                # project is the project name as used in release asset names
+                $project = [Uri]::EscapeDataString($project.Replace(' ','.')).Replace('%','')
+
                 # latest released version
                 $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
                 if ($artifacts -eq "current") {
@@ -107,16 +110,22 @@ try {
                 if (!($release)) {
                     throw "Unable to locate $artifacts release"
                 }
-                $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
-                Write-Host "'$artifactFile'"
-                if (!$artifactFile -or !(Test-Path $artifactFile)) {
-                    throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+                foreach($mask in $atypes.Split(',')) {
+                    $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask $mask
+                    Write-Host "'$artifactFile'"
+                    if (!$artifactFile -or !(Test-Path $artifactFile)) {
+                        if ($mask -eq 'Apps') {
+                            throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
+                        }
+                    }
+                    else {
+                        if ($artifactFile -notlike '*.zip') {
+                            throw "Downloaded artifact is not a .zip file"
+                        }
+                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                        Remove-Item $artifactFile -Force
+                    }
                 }
-                if ($artifactFile -notlike '*.zip') {
-                    throw "Downloaded artifact is not a .zip file"
-                }
-                Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
-                Remove-Item $artifactFile -Force
             }
             else {
                 $atypes.Split(',') | ForEach-Object {
@@ -148,6 +157,7 @@ try {
             }
         }
 
+        Write-Host "Project '$project'"
         Write-Host "Artifacts:"
         Get-ChildItem -Path $artifactsFolder | ForEach-Object {
             Write-Host "- $($_.Name)"
@@ -392,9 +402,16 @@ try {
         elseif ($deliveryTarget -eq "AppSource") {
             $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
             $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
+            # Use old settings and issue warnings
+            'continuousDelivery','mainAppFolder','productId' | ForEach-Object {
+                if ($projectSettings.Keys -contains "AppSource$_") {
+                    OutputWarning "Using AppSource$_ in $thisProject/.AL-Go/settings.json is deprecated. Use deliverToAppSource.$_ instead. If both values are defined, the value in AppSource$_ is used (even if it is deprecated)."
+                    $projectSettings.deliverToAppSource."$_" = $projectSettings."AppSource$_"
+                }
+            }
             # if type is Release, we only get here with the projects that needs to be delivered to AppSource
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
-            if ($type -eq 'Release' -or ($projectSettings.Keys -contains 'AppSourceContinuousDelivery' -and $projectSettings.AppSourceContinuousDelivery)) {
+            if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
                 EnsureAzStorageModule
                 $appSourceContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext)) | ConvertFrom-Json | ConvertTo-HashTable
                 if (!$appSourceContext) {
@@ -402,8 +419,8 @@ try {
                 }
                 $authContext = New-BcAuthContext @appSourceContext
 
-                if ($projectSettings.Keys -contains "AppSourceMainAppFolder") {
-                    $AppSourceMainAppFolder = $projectSettings.AppSourceMainAppFolder
+                if ($projectSettings.deliverToAppSource.MainAppFolder) {
+                    $AppSourceMainAppFolder = $projectSettings.deliverToAppSource.MainAppFolder
                 }
                 else {
                     try {
@@ -413,8 +430,8 @@ try {
                         throw "Unable to determine main App folder"
                     }
                 }
-                if ($projectSettings.Keys -notcontains 'AppSourceProductId') {
-                    throw "AppSourceProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
+                if (!$projectSettings.deliverToAppSource.ProductId) {
+                    throw "deliverToAppSource.ProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
                 }
                 Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
@@ -422,15 +439,33 @@ try {
                 $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
                 $artfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
                 if ($artFolder.Count -eq 0) {
-                    throw "Internal error - unable to locate apps"
+                    throw "Internal error - unable to locate apps folder"
                 }
                 if ($artFolder.Count -gt 1) {
                     $artFolder | Out-Host
-                    throw "Internal error - multiple apps located"
+                    throw "Internal error - multiple apps folders located"
                 }
                 $artfolder = $artfolder[0].FullName
                 $appFile = Get-ChildItem -path $artFolder | Where-Object { $_.name -like $mainAppFileName } | ForEach-Object { $_.FullName }
                 $libraryAppFiles = @(Get-ChildItem -path $artFolder | Where-Object { $_.name -notlike $mainAppFileName } | ForEach-Object { $_.FullName })
+
+                $appSourceIncludeDependencies = $projectSettings.deliverToAppSource.includeDependencies
+                if ($appSourceIncludeDependencies -and $appSourceIncludeDependencies.count -gt 0) {
+                    $depfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
+                    if ($depFolder.Count -eq 0) {
+                        throw "Unable to locate dependencies. You need to set generateDependencyArtifact to true in $thisProject/.AL-Go/settings.json in order to deliver dependencies to AppSource"
+                    }
+                    if ($depFolder.Count -gt 1) {
+                        $depFolder | Out-Host
+                        throw "Internal error - multiple dependencies folders located"
+                    }
+                    $depfolder = $depfolder[0].FullName
+                    $libraryAppFiles += @(Get-ChildItem -path $depFolder | Where-Object {
+                        $name = $_.name
+                        $appSourceIncludeDependencies | Where-Object { $name -like $_ }
+                    } | ForEach-Object { $_.FullName })
+                }
+
                 Write-Host "Main App File:"
                 Write-Host "- $([System.IO.Path]::GetFileName($appFile))"
                 Write-Host "Library App Files:"
@@ -444,7 +479,7 @@ try {
                     throw "Unable to locate main app file ($mainAppFileName doesn't exist)"
                 }
                 Write-Host "Submitting to AppSource"
-                New-AppSourceSubmission -authContext $authContext -productId $projectSettings.AppSourceProductId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
+                New-AppSourceSubmission -authContext $authContext -productId $projectSettings.deliverToAppSource.productId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
             }
         }
         else {

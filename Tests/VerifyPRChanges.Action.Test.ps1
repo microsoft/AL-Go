@@ -14,8 +14,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should fail if the PR is from a fork and changes a script' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename": "Scripts/BuildScript.ps1", "status": "modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename": "Scripts/BuildScript.ps1", "status": "modified"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
        {
         & $scriptPath `
@@ -26,8 +26,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should fail if the PR is from a fork and adds a script' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"Scripts/BuildScript.ps1", "status": "added"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":"Scripts/BuildScript.ps1", "status": "added"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
        {
         & $scriptPath `
@@ -38,8 +38,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should fail if the PR is from a fork and removes a script' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"Scripts/BuildScript.ps1","status":"removed"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":"Scripts/BuildScript.ps1","status":"removed"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
        {
         & $scriptPath `
@@ -50,8 +50,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should fail if the PR is from a fork and changes the CODEOWNERS file' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"CODEOWNERS","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":"CODEOWNERS","status":"modified"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
        {
         & $scriptPath `
@@ -62,8 +62,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should fail if the PR is from a fork and changes anything in the .github folder' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":".github/Settings.json","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":".github/Settings.json","status":"modified"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
        {
         & $scriptPath `
@@ -74,8 +74,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should fail if the PR is from a fork and changes a yml file' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":".github/workflows/test.yaml","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":".github/workflows/test.yaml","status":"modified"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
        {
         & $scriptPath `
@@ -86,8 +86,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should succeed if the PR is from a fork and changes an .al file' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"ALModule/Test.Codeunit.al","status":"modified"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":"ALModule/Test.Codeunit.al","status":"modified"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
         Mock Write-Host {}
         & $scriptPath `
@@ -98,8 +98,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should succeed if the PR is from a fork and adds an .al file' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"ALModule/Test.Codeunit.al","status":"added"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":"ALModule/Test.Codeunit.al","status":"added"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
         Mock Write-Host {}
         & $scriptPath `
@@ -110,8 +110,8 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should succeed if the PR is from a fork and removes an .al file' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 1 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
-        Mock -CommandName Invoke-WebRequest -MockWith {  '[{"filename":"ALModule/Test.Codeunit.al","status":"removed"}]' } -ParameterFilter { $Uri -and $Uri -match "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":"ALModule/Test.Codeunit.al","status":"removed"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
 
         Mock Write-Host {}
         & $scriptPath `
@@ -122,7 +122,7 @@ Describe 'VerifyPRChanges Action Tests' {
     }
 
     It 'should fail if the PR is from a fork and changes more than 3000 files' {
-        Mock -CommandName Invoke-WebRequest -MockWith {  '{ "changed_files": 5001 }' } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 5001 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
 
        {
         & $scriptPath `
