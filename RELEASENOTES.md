@@ -8,6 +8,23 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 1021 Error during Create Online Development Environment action
 - Issue 1022 Error querying artifacts: No such host is known. (bcartifacts-exdbf9fwegejdqak.blob.core.windows.net:443)
 - Issue 922 Deploy Reference Documentation (ALDoc) failed with custom
+- ContainerName used during build was invalid if project names contained special characters
+- Issue 1009 by adding a includeDependencies property in DeliverToAppSource
+- Issue 997 'Deliver to AppSource' action fails for projects containing a space
+- Issue 987 Resource not accessible by integration when creating release from specific version
+- Issue 979 Publish to AppSource Documentation
+
+### New Settings
+- `deliverToAppSource`: a JSON object containing the following properties
+  - **productId** must be the product Id from partner Center.
+  - **mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.
+  - **continuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.
+  - **includeDependencies** can be set to an array of file names (incl. wildcards) which are the names of the dependencies to include in the AppSource submission. Note that you need to set `generateDependencyArtifact` in the project settings file to true in order to include dependencies.
+
+### Deprecated Settings
+- `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
+- `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
+- `appSourceProductId` is moved to the `deliverToAppSource` structure
 
 ## v5.0
 

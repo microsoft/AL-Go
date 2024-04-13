@@ -1,7 +1,7 @@
 ﻿function DownloadAlDoc {
     if ("$ENV:aldocPath" -eq "") {
         Write-Host "Locating aldoc"
-        $artifactUrl = Get-BCArtifactUrl -storageAccount bcinsider -type sandbox -country core -select Latest -accept_insiderEula
+        $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
         Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
@@ -24,7 +24,7 @@
             & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
         }
         Write-Host "Installing/Updating docfx"
-        CmdDo -command dotnet -arguments @("tool","update","-g docfx") -messageIfCmdNotFound "dotnet not found. Please install it from https://dotnet.microsoft.com/download"
+        CmdDo -command dotnet -arguments @("tool","update","--global docfx --version 2.75.3") -messageIfCmdNotFound "dotnet not found. Please install it from https://dotnet.microsoft.com/download"
     }
     return $ENV:aldocPath
 }

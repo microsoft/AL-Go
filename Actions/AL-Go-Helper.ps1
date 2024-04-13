@@ -611,6 +611,12 @@ function ReadSettings {
         "doNotSignApps"                                 = $false
         "configPackages"                                = @()
         "appSourceCopMandatoryAffixes"                  = @()
+        "deliverToAppSource"                            = [ordered]@{
+            "mainAppFolder"                             = ""
+            "productId"                                 = ""
+            "includeDependencies"                       = @()
+            "continuousDelivery"                        = $false
+        }
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
         "templateUrl"                                   = ""
@@ -638,7 +644,7 @@ function ReadSettings {
             "continuousDeployment"                      = $false
             "deployToGitHubPages"                       = $true
             "maxReleases"                               = 3
-            "groupByProject"                      = $true
+            "groupByProject"                            = $true
             "includeProjects"                           = @()
             "excludeProjects"                           = @()
             "header"                                    = "Documentation for {REPOSITORY} {VERSION}"
@@ -1515,7 +1521,7 @@ function OptionallyConvertFromBase64 {
 }
 
 function GetContainerName([string] $project) {
-    "bc$($project -replace "\W")$env:GITHUB_RUN_ID"
+    "bc$($project -replace "[^a-z0-9\-]")$env:GITHUB_RUN_ID"
 }
 
 function CreateDevEnv {

@@ -38,7 +38,7 @@ When running a workflow or a local script, the settings are applied by reading s
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | <a id="appSourceCopMandatoryAffixes"></a>appSourceCopMandatoryAffixes | This setting is only used if the type is AppSource App. The value is an array of affixes, which is used for running AppSource Cop. | [ ] |
-| <a id="appSourceProductId"></a>appSourceProductId<br /><a id="appSourceMainAppFolder"></a>appSourceMainAppFolder<br /><a id="appSourceContinuousDelivery"></a>appSourceContinuousDelivery | Use these settings to enable publishing of apps to AppSource directly from AL-Go for GitHub.<br />**appSourceProductId** must be the product Id from partner Center.<br />**appSourceMainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.<br />**appSourceContinuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.<br />**Note:** You will need to define an AppSourceContext secret in order to publish to AppSource. | |
+| <a id="deliverToAppSource"></a>deliverToAppSource | Structure with properties for AppSource delivery from AL-Go for GitHub. The structure can contain the following properties:< br/>**productId** must be the product Id from partner Center.<br />**mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.<br />**continuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.<br />**includeDependencies** can be set to an array of file names (incl. wildcards) which are the names of the dependencies to include in the AppSource submission. You need to set `generateDependencyArtifact` in the project settings file to true in order to include dependencies.<br />**Note:** You will need to define an AppSourceContext secret in order to publish to AppSource. | |
 | <a id="obsoleteTagMinAllowedMajorMinor"></a>obsoleteTagMinAllowedMajorMinor | This setting will enable AppSource cop rule AS0105, which causes objects that are pending obsoletion with an obsolete tag version lower than the minimum set in this property are not allowed. | |
 
 ## Basic Repository settings
@@ -160,7 +160,8 @@ You could imagine that you could have and organizational settings variable conta
 
 Which will ensure that for all repositories named `bcsamples-*` in this organization, the branches matching `features/*` will not sign apps.
 
-**Note:** that you can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
+> [!NOTE]
+> You can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
 
 ## Expert settings (rarely used)
 
@@ -207,7 +208,8 @@ Write-Host "Project settings:"
 $parameters.ProjectSettings | Out-Host
 ```
 
-**Note:** You can also override existing AL-Go for GitHub delivery functionality by creating a script called f.ex. DeliverToStorage.ps1 in the .github folder.
+> [!NOTE]
+> You can override existing AL-Go for GitHub delivery functionality by creating a script called f.ex. DeliverToStorage.ps1 in the .github folder.
 
 Here are the parameters to use in your custom script:
 
@@ -239,7 +241,8 @@ Write-Host "Environment Type: $($parameters.EnvironmentType)"
 Write-Host "Environment Name: $($parameters.EnvironmentName)"
 ```
 
-**Note:** You can also create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
+> [!NOTE]
+> You can create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
 
 Here are the parameters to use in your custom script:
 
@@ -299,7 +302,8 @@ Settings, which might be relevant to set in the settings file includes
 
 For experts only, following the description [here](Contribute.md) you can setup a local fork of **AL-Go for GitHub** and use that as your templates. You can fetch upstream changes from Microsoft regularly to incorporate these changes into your version and this way have your modified version of AL-Go for GitHub.
 
-**Note:** Our goal is to never break repositories, which are using AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.
+> [!NOTE]
+> Our goal is to never break repositories, which are using AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.
 
 ---
 [back](../README.md)
