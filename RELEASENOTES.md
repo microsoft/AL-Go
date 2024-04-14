@@ -13,8 +13,10 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 997 'Deliver to AppSource' action fails for projects containing a space
 - Issue 987 Resource not accessible by integration when creating release from specific version
 - Issue 979 Publish to AppSource Documentation
+- Issue 1018 Artifact setting - possiblity to read version from app.json
 
 ### New Settings
+- `useEarliestArtifact`: set this to true in order for AL-Go for GitHub to build a project using the earliest compatible Business Central artifact, determined by the highest application dependency from app.json in all apps in the project and the `applicationDependency` in project settings.
 - `deliverToAppSource`: a JSON object containing the following properties
   - **productId** must be the product Id from partner Center.
   - **mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.
