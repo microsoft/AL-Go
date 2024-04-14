@@ -400,6 +400,9 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
             if ($bcContainerHelperVersion -like "https://*") {
                 throw "Setting BcContainerHelperVersion to a URL in settings is not allowed. Fork the AL-Go repository and use direct AL-Go development instead."
             }
+            if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+                Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
+            }
         }
         $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
     }
@@ -410,10 +413,6 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
 
     if ($bcContainerHelperVersion -eq 'private') {
         throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
-    }
-
-    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
-        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
     }
 
     $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
