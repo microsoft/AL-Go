@@ -59,7 +59,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]"};@{"environment"="test";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
+        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]";"shell"="pwsh"};@{"environment"="test";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
         $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"SyncMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh"};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"SyncMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh"}}
         $EnvironmentCount | Should -Be 2
 
@@ -210,7 +210,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in Settings - one PROD and one non-PROD (settings based)
     It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
 
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
             throw "Not supported"
