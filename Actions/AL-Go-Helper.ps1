@@ -1712,12 +1712,6 @@ function CreateDevEnv {
             Write-Host "Repository is empty"
         }
 
-        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
-            if ($licenseFileUrl -eq "") {
-                OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-            }
-        }
-
         $installApps = $settings.installApps
         $installTestApps = $settings.installTestApps
 
