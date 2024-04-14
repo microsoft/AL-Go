@@ -589,7 +589,7 @@ function ReadSettings {
         "skipUpgrade"                                   = $false
         "applicationDependency"                         = "18.0.0.0"
         "updateDependencies"                            = $false
-        "earliestArtifact"                              = $false
+        "useEarliestArtifact"                           = $false
         "installTestRunner"                             = $false
         "installTestFramework"                          = $false
         "installTestLibraries"                          = $false
@@ -2184,7 +2184,7 @@ function DetermineArtifactUrl {
     }
 
     Write-Host "Checking artifact setting for project"
-    if ($artifact -eq "" -and ($projectSettings.updateDependencies -or $projectSettings.earlistArtifact)) {
+    if ($artifact -eq "" -and ($projectSettings.updateDependencies -or $projectSettings.useEarliestArtifact)) {
         $artifact = Get-BCArtifactUrl -country $projectSettings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$projectSettings.applicationDependency } | Select-Object -First 1
         if (-not $artifact) {
             # Check Insider Artifacts
