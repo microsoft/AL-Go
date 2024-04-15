@@ -3,7 +3,8 @@
     [string] $includeBranches = '[]'
 )
 
-Import-Module '..\Github-Helper.psm1' -DisableNameChecking
+$gitHubHelperPath = Join-Path $PSScriptRoot '../Github-Helper.psm1' -Resolve
+Import-Module $gitHubHelperPath -DisableNameChecking
 
 invoke-git fetch
 $allBranches = @(invoke-git for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
