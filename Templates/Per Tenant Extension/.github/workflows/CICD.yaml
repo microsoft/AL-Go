@@ -68,6 +68,7 @@ jobs:
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
+        shell: powershell
         run: |
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
 
@@ -230,7 +231,6 @@ jobs:
 
       - name: EnvName
         id: envName
-        shell: ${{ matrix.shell }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ matrix.environment }}'.split(' ')[0]

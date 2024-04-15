@@ -230,7 +230,6 @@ jobs:
 
       - name: EnvName
         id: envName
-        shell: ${{ matrix.shell }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $envName = '${{ matrix.environment }}'.split(' ')[0]
