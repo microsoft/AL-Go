@@ -2204,7 +2204,6 @@ function DetermineArtifactUrl {
         if ($version -eq '*') {
             $version = "$(([Version]$projectSettings.applicationDependency).Major).$(([Version]$projectSettings.applicationDependency).Minor)"
             $allArtifactUrls = @(Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select all -accept_insiderEula | Where-Object { [Version]$_.Split('/')[4] -ge [Version]$projectSettings.applicationDependency })
-            Write-Host "Found $($allArtifactUrls.Count) artifacts with version $version for application dependency $($projectSettings.applicationDependency), selecting $select."
             if ($select -eq 'latest') {
                 $artifactUrl = $allArtifactUrls | Select-Object -Last 1
             }
@@ -2214,6 +2213,7 @@ function DetermineArtifactUrl {
             else {
                 throw "Invalid artifact setting ($artifact) in $ALGoSettingsFile. Version can only be '*' if select is first or latest."
             }
+            Write-Host "Found $($allArtifactUrls.Count) artifacts for version $version matching application dependency $($projectSettings.applicationDependency), selecting $select."
             if (-not $artifactUrl) {
                 throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile, when application dependency is $($projectSettings.applicationDependency)"
             }
