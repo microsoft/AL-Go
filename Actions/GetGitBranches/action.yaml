@@ -6,7 +6,7 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  includeBranches:
+  includeBranchesJson:
     description: JSON-formatted array of branches to include if they exist. If not specified, all branches are returned. Wildcards are supported.
     required: false
     default: '[]'
@@ -25,7 +25,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/GetGitBranches.ps1 -includeBranchesJson $env:_includeBranches
+          ${{ github.action_path }}/GetGitBranches.ps1 -includeBranchesJson $env:_includeBranchesJson
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
