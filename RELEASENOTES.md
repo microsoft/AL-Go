@@ -13,6 +13,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 997 'Deliver to AppSource' action fails for projects containing a space
 - Issue 987 Resource not accessible by integration when creating release from specific version
 - Issue 979 Publish to AppSource Documentation
+- Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
 
 ### New Settings
 - `deliverToAppSource`: a JSON object containing the following properties
