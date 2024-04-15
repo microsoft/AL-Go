@@ -29,7 +29,7 @@ env:
 
 jobs:
   GetBranches:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     outputs:
       SupportedBranches: ${{ steps.GetSupportedBranches.outputs.GitBranches }}
     steps:
