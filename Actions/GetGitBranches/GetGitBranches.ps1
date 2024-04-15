@@ -3,6 +3,8 @@
     [string] $includeBranches = '[]'
 )
 
+Import-Module '..\Github-Helper.psm1' -DisableNameChecking
+
 invoke-git fetch
 $allBranches = @(invoke-git for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 
