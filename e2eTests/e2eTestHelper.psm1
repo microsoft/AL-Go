@@ -66,7 +66,7 @@ function Add-PropertiesToJsonFile {
         $headers = GetHeader -token $token
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
-        $previousrunids = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+        $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
         if ($previousrunids) {
             Write-Host "Previous runs: $($previousrunids -join ', ')"
         }
@@ -89,7 +89,7 @@ function Add-PropertiesToJsonFile {
         if ($wait) {
             while ($true) {
                 Start-Sleep -Seconds 10
-                $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
+                $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
                 if ($run) {
                     break
                 }
@@ -138,12 +138,12 @@ function RunWorkflow {
 
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
-    $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
+    $workflows = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflows
     $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
     if (!$workflows) {
         Write-Host "No workflows found, waiting 60 seconds and retrying"
         Start-Sleep -seconds 60
-        $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
+        $workflows = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflows
         $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
         if (!$workflows) {
             throw "No workflows found"
@@ -156,7 +156,7 @@ function RunWorkflow {
 
     Write-Host "Get Previous runs"
     $url = "https://api.github.com/repos/$repository/actions/runs"
-    $previousrun = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
+    $previousrun = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
     if ($previousrun) {
         Write-Host "Previous run: $($previousrun.id)"
     }
@@ -177,7 +177,7 @@ function RunWorkflow {
     do {
         Start-Sleep -Seconds 10
         $url = "https://api.github.com/repos/$repository/actions/runs"
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
+        $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
         Write-Host "."
     } until (($run) -and ((!$previousrun) -or ($run.id -ne $previousrun.id)))
     $runid = $run.id
@@ -200,7 +200,7 @@ function DownloadWorkflowLog {
     }
     $headers = GetHeader -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
-    $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
+    $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
     $tempFileName = "$([System.IO.Path]::GetTempFileName()).zip"
     [System.IO.File]::WriteAllBytes($tempFileName, $log.Content)
@@ -259,7 +259,7 @@ function WaitWorkflow {
             Start-Sleep -Seconds 60
         }
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
+        $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
         if ($run.status -ne $status) {
             if ($status) { Write-Host }
             $status = $run.status
@@ -517,7 +517,7 @@ function MergePRandPull {
     Write-Host "Get Previous runs"
     $headers = GetHeader -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs"
-    $previousrunids = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+    $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
         Write-Host "Previous runs: $($previousrunids -join ', ')"
     }
@@ -537,7 +537,7 @@ function MergePRandPull {
     invoke-gh pr merge $prid --squash --delete-branch --repo $repository | Out-Host
     while ($true) {
         Start-Sleep -Seconds 10
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
+        $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
         if ($run) {
             break
         }

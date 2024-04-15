@@ -30,7 +30,7 @@ function Get-ModifiedFiles {
         "Accept" = "application/vnd.github.baptiste-preview+json"
     }
 
-    $response = InvokeWebRequest -Headers $headers -Uri $url | ConvertFrom-Json
+    $response = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
 
     $modifiedFiles = @($response.files | ForEach-Object { $_.filename })
 
