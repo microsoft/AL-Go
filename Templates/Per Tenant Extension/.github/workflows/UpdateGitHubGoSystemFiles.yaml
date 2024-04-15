@@ -49,7 +49,7 @@ jobs:
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
           Write-Host "No branches specified to update AL-Go on a schedule. Defaulting to main"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "UpdateALGoBranches=main"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "UpdateALGoBranches=[main]"
 
       - name: Get Supported Branches
         id: GetSupportedBranches
