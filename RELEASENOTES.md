@@ -14,6 +14,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 987 Resource not accessible by integration when creating release from specific version
 - Issue 979 Publish to AppSource Documentation
 - Issue 1018 Artifact setting - possiblity to read version from app.json
+- Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
 
 ### New Settings
 - `useEarliestArtifact`: set this to true in order for AL-Go for GitHub to build a project using the earliest compatible Business Central artifact, determined by the highest application dependency from app.json in all apps in the project and the `applicationDependency` in project settings.
