@@ -1,0 +1,36 @@
+name: Get Git Branches
+author: Microsoft Corporation
+description: Get the list of branches in the repository
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  includeBranches:
+    description: Filters to apply to the branche names. If not specified, all branches are returned. Wildcards are supported.
+    required: false
+    default: '[]'
+outputs:
+  GitBranches:
+    description: The list of branches in the repository
+    value: ${{ steps.GetGitBranches.outputs.branches }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: GetGitBranches
+      env:
+        _includeBranches: ${{ inputs.includeBranches }}
+      run: |
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/GetGitBranches.ps1 -includeBranches (ConvertFrom-Json $env:_includeBranches)
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }
+branding:
+  icon: terminal
+  color: blue
