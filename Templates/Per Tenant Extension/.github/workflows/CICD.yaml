@@ -68,7 +68,6 @@ jobs:
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
-        shell: powershell
         run: |
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
 
