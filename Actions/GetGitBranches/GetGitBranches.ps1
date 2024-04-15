@@ -12,6 +12,7 @@ $allBranches = @(invoke-git for-each-ref --format="%(refname:short)" refs/remote
 $includeBranches = ConvertFrom-Json $includeBranches
 
 if ($includeBranches) {
+    Write-Host "Filtering branches by: $($includeBranches -join ', ')"
     $branches = @()
     foreach ($branchFilter in $includeBranches) {
         $branches += $allBranches | Where-Object { $_ -like $branchFilter }
@@ -20,6 +21,8 @@ if ($includeBranches) {
 else {
     $branches = $allBranches
 }
+
+Write-Host "Found git branches: $($branches -join ', ')"
 
 # Add the branches to the output
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Branches=$(ConvertTo-Json $branches -Depth 99 -Compress)"
