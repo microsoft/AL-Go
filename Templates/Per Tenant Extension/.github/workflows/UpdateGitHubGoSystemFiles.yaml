@@ -41,24 +41,14 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: UpdateALGoBranches
-
-      - name: Default to main
-        shell: powershell
-        if: ${{ env.UpdateALGoBranches == '' }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
-          $UpdateALGoBranches = @("main")
-          Write-Host "No branches specified to update AL-Go on a schedule. Defaulting to main"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "UpdateALGoBranches=$(ConvertTo-Json $UpdateALGoBranches -Compress)"
+          get: updateALGoBranches
 
       - name: Get Supported Branches
         id: GetSupportedBranches
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ env.UpdateALGoBranches }}
+          includeBranches: ${{ env.updateALGoBranches }}
 
   UpdateALGoSystemFiles:
     needs: [ GetBranches ]

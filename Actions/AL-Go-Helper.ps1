@@ -554,6 +554,7 @@ function ReadSettings {
     $settings = [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
+        "updateALGoBranches"                            = @("main")
         "projects"                                      = @()
         "country"                                       = "us"
         "artifact"                                      = ""
