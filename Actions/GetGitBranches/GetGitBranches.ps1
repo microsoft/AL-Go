@@ -2,8 +2,8 @@
     $includeBranches = @()
 )
 
-git fetch
-$allBranches = @(git for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
+invoke-git fetch
+$allBranches = @(invoke-git for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 
 if ($includeBranches) {
     $branches = @()
