@@ -588,7 +588,6 @@ function ReadSettings {
         "skipUpgrade"                                   = $false
         "applicationDependency"                         = "18.0.0.0"
         "updateDependencies"                            = $false
-        "useEarliestArtifact"                           = $false
         "installTestRunner"                             = $false
         "installTestFramework"                          = $false
         "installTestLibraries"                          = $false
@@ -2177,7 +2176,7 @@ function DetermineArtifactUrl {
     }
 
     Write-Host "Checking artifact setting for project"
-    if ($artifact -eq "" -and ($projectSettings.updateDependencies -or $projectSettings.useEarliestArtifact)) {
+    if ($artifact -eq "" -and $projectSettings.updateDependencies) {
         $artifact = Get-BCArtifactUrl -country $projectSettings.country -select all | Where-Object { [Version]$_.Split("/")[4] -ge [Version]$projectSettings.applicationDependency } | Select-Object -First 1
         if (-not $artifact) {
             # Check Insider Artifacts
@@ -2202,9 +2201,27 @@ function DetermineArtifactUrl {
         $version = $segments[2]
         $country = $segments[3]; if ($country -eq "") { $country = $projectSettings.country }
         $select = $segments[4]; if ($select -eq "") { $select = "latest" }
-        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -accept_insiderEula | Select-Object -First 1
-        if (-not $artifactUrl) {
-            throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+        if ($version -eq '*') {
+            $version = "$(([Version]$projectSettings.applicationDependency).Major).$(([Version]$projectSettings.applicationDependency).Minor)"
+            $allArtifactUrls = @(Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select all -accept_insiderEula | Where-Object { [Version]$_.Split('/')[4] -ge [Version]$projectSettings.applicationDependency })
+            if ($select -eq 'latest') {
+                $artifactUrl = $allArtifactUrls | Select-Object -Last 1
+            }
+            elseif ($select -eq 'first') {
+                $artifactUrl = $allArtifactUrls | Select-Object -First 1
+            }
+            else {
+                throw "Invalid artifact setting ($artifact) in $ALGoSettingsFile. Version can only be '*' if select is first or latest."
+            }
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile, when application dependency is $($projectSettings.applicationDependency)"
+            }
+        }
+        else {
+            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -accept_insiderEula | Select-Object -First 1
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+            }
         }
         $version = $artifactUrl.Split('/')[4]
         $storageAccount = $artifactUrl.Split('/')[2]

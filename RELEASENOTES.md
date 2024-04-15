@@ -17,8 +17,14 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
 - Issue 962 Finer control of "shell"-property
 
+### Better artifact selection
+
+The artifact setting in your project settings file can now contain a `*` instead of the version number. This means that AL-Go for GitHub will determine the application dependency for your projects together with the `applicationDependency` setting and determine which Business Central version is needed for the project.
+- `"artifact": "//*//latest"` will give you the latest Business Central version, higher than your application dependency and with the same major.minor as your application dependency.
+- `"artifact": "//*//first"` will give you the first Business Central version, higher than your application dependency and with the same major.minor as your application dependency.
+
 ### New Settings
-- `useEarliestArtifact`: set this to true in order for AL-Go for GitHub to build a project using the earliest compatible Business Central artifact, determined by the highest application dependency from app.json in all apps in the project and the `applicationDependency` in project settings.
+
 - `deliverToAppSource`: a JSON object containing the following properties
   - **productId** must be the product Id from partner Center.
   - **mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.
@@ -27,6 +33,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Add `shell` as a property under `DeployTo` structure
 
 ### Deprecated Settings
+
 - `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
 - `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
 - `appSourceProductId` is moved to the `deliverToAppSource` structure
