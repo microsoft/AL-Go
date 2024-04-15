@@ -129,6 +129,7 @@ jobs:
           update: 'Y'
           templateUrl: ${{ env.templateUrl }}
           directCommit: ${{ env.directCommit }}
+          updateBranch: ${{ matrix.branch }}
 
       - name: Finalize the workflow
         if: always()
