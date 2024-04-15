@@ -1,5 +1,5 @@
-# Creates release notes
-Creates release notes for a release, based on a given tag and the tag from the latest release
+# Get Git Branches
+Gets current git branches defined on the remote repository
 
 ## INPUT
 
@@ -10,10 +10,7 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| token | | The GitHub token running the action | github.token |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| tag_name | Yes | This release tag name | |
-| target_commitish | | Last commit to include in release notes | Latest |
+| includeBranches | | JSON-formatted array of branches to include if they exist. If not specified, all branches are returned. Wildcards are supported. ||
 
 ## OUTPUT
 
@@ -23,5 +20,4 @@ none
 ### OUTPUT variables
 | Name | Description |
 | :-- | :-- |
-| ReleaseVersion | The release version |
-| ReleaseNotes | Release notes generated based on the changes |
+| Branches | The list of branches on the remote repository |
