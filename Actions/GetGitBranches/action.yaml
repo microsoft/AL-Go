@@ -7,13 +7,13 @@ inputs:
     required: false
     default: powershell
   includeBranches:
-    description: Filters to apply to the branche names. If not specified, all branches are returned. Wildcards are supported.
+    description: JSON-formatted array of branches to include if they exist. If not specified, all branches are returned. Wildcards are supported.
     required: false
     default: '[]'
 outputs:
   GitBranches:
     description: The list of branches in the repository
-    value: ${{ steps.GetGitBranches.outputs.branches }}
+    value: ${{ steps.GetGitBranches.outputs.Branches }}
 runs:
   using: composite
   steps:
@@ -25,7 +25,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/GetGitBranches.ps1 -includeBranches (ConvertFrom-Json $env:_includeBranches)
+          ${{ github.action_path }}/GetGitBranches.ps1 -includeBranches $env:_includeBranches
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";

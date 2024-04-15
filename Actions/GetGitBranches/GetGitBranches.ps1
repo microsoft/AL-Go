@@ -1,9 +1,12 @@
 ﻿param(
-    $includeBranches = @()
+    [Parameter(Mandatory = $false, HelpMessage = "JSON-formatted array of branches to include if they exist. If not specified, all branches are returned. Wildcards are supported.")]
+    [string] $includeBranches = '[]'
 )
 
 invoke-git fetch
 $allBranches = @(invoke-git for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
+
+$includeBranches = ConvertFrom-Json $includeBranches
 
 if ($includeBranches) {
     $branches = @()
@@ -16,4 +19,4 @@ else {
 }
 
 # Add the branches to the output
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "branches=$(ConvertTo-Json $branches -Depth 99 -Compress)"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Branches=$(ConvertTo-Json $branches -Depth 99 -Compress)"
