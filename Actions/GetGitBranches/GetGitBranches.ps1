@@ -9,7 +9,12 @@ Import-Module $gitHubHelperPath -DisableNameChecking
 invoke-git fetch
 $allBranches = @(invoke-git for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 
+Write-Host "Including branches: $includeBranches"
+
 $includeBranches = ConvertFrom-Json $includeBranches
+
+Write-Host "Including branches: $includeBranches"
+
 
 if ($includeBranches) {
     Write-Host "Filtering branches by: $($includeBranches -join ', ')"
