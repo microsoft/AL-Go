@@ -15,6 +15,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 979 Publish to AppSource Documentation
 - Issue 1018 Artifact setting - possiblity to read version from app.json
 - Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
+- Issue 962 Finer control of "shell"-property
 
 ### New Settings
 - `useEarliestArtifact`: set this to true in order for AL-Go for GitHub to build a project using the earliest compatible Business Central artifact, determined by the highest application dependency from app.json in all apps in the project and the `applicationDependency` in project settings.
@@ -23,6 +24,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
   - **mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.
   - **continuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.
   - **includeDependencies** can be set to an array of file names (incl. wildcards) which are the names of the dependencies to include in the AppSource submission. Note that you need to set `generateDependencyArtifact` in the project settings file to true in order to include dependencies.
+- Add `shell` as a property under `DeployTo` structure
 
 ### Deprecated Settings
 - `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
