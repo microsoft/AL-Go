@@ -2204,6 +2204,7 @@ function DetermineArtifactUrl {
         if ($version -eq '*') {
             $version = "$(([Version]$projectSettings.applicationDependency).Major).$(([Version]$projectSettings.applicationDependency).Minor)"
             $allArtifactUrls = @(Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select all -accept_insiderEula | Where-Object { [Version]$_.Split('/')[4] -ge [Version]$projectSettings.applicationDependency })
+            Write-Host "Found $($allArtifactUrls.Count) artifacts with version $version for application dependency $($projectSettings.applicationDependency), selecting $select."
             if ($select -eq 'latest') {
                 $artifactUrl = $allArtifactUrls | Select-Object -Last 1
             }
