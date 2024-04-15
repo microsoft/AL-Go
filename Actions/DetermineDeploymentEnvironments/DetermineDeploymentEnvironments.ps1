@@ -107,6 +107,7 @@ if (!($environments)) {
                 "SyncMode" = $null
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
+                "shell" = $settings."shell"
             }
         }
         $unknownEnvironment = 1
@@ -130,6 +131,7 @@ else {
         # - projects: all
         # - continuous deployment: only for environments not tagged with PROD or FAT
         # - runs-on: same as settings."runs-on"
+        # - shell: same as settings."shell"
         $deploymentSettings = @{
             "EnvironmentType" = "SaaS"
             "EnvironmentName" = $envName
@@ -139,6 +141,7 @@ else {
             "SyncMode" = $null
             "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
+            "shell" = $settings."shell"
         }
 
         # Check DeployTo<environmentName> setting
@@ -146,10 +149,13 @@ else {
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             $deployTo = $settings."$settingsName"
-            foreach($key in 'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on') {
+            foreach($key in 'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on','shell') {
                 if ($deployTo.ContainsKey($key)) {
                     $deploymentSettings."$key" = $deployTo."$key"
                 }
+            }
+            if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
+                throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
             }
         }
 
@@ -203,7 +209,7 @@ else {
 $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
 $deploymentEnvironments.Keys | Sort-Object | ForEach-Object {
     $deploymentEnvironment = $deploymentEnvironments."$_"
-    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)" }
+    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)"; "shell" = $deploymentEnvironment."shell" }
 }
 $environmentsMatrixJson = $json | ConvertTo-Json -Depth 99 -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsMatrixJson=$environmentsMatrixJson"
