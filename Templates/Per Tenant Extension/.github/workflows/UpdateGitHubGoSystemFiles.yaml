@@ -30,6 +30,7 @@ env:
 jobs:
   GetBranches:
     runs-on: windows-latest
+    name: Get Supported Branches
     outputs:
       SupportedBranches: ${{ steps.GetSupportedBranches.outputs.GitBranches }}
     steps:
