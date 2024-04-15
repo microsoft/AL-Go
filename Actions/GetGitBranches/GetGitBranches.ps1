@@ -1,6 +1,6 @@
 ﻿param(
     [Parameter(Mandatory = $false, HelpMessage = "JSON-formatted array of branches to include if they exist. If not specified, all branches are returned. Wildcards are supported.")]
-    [string] $includeBranches = '[]'
+    [string] $includeBranchesJson = '[]'
 )
 
 $gitHubHelperPath = Join-Path $PSScriptRoot '../Github-Helper.psm1' -Resolve
@@ -9,13 +9,7 @@ Import-Module $gitHubHelperPath -DisableNameChecking
 invoke-git fetch
 $allBranches = @(invoke-git for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 
-Write-Host "Including branches: $includeBranches"
-
-$includeBranches = ConvertFrom-Json $includeBranches
-
-Write-Host "Including branches: $includeBranches"
-
-
+$includeBranches = ConvertFrom-Json $includeBranchesJson
 if ($includeBranches) {
     Write-Host "Filtering branches by: $($includeBranches -join ', ')"
     $branches = @()

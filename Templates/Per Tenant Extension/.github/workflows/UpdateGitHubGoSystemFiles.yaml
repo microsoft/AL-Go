@@ -48,7 +48,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ env.updateALGoBranches }}
+          includeBranchesJson: ${{ env.updateALGoBranches }}
 
   UpdateALGoSystemFiles:
     needs: [ GetBranches ]
