@@ -400,6 +400,9 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
             if ($bcContainerHelperVersion -like "https://*") {
                 throw "Setting BcContainerHelperVersion to a URL in settings is not allowed. Fork the AL-Go repository and use direct AL-Go development instead."
             }
+            if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+                Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
+            }
         }
         $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
     }
@@ -410,10 +413,6 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
 
     if ($bcContainerHelperVersion -eq 'private') {
         throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
-    }
-
-    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
-        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
     }
 
     $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
@@ -1712,12 +1711,6 @@ function CreateDevEnv {
             Write-Host "Repository is empty"
         }
 
-        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
-            if ($licenseFileUrl -eq "") {
-                OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-            }
-        }
-
         $installApps = $settings.installApps
         $installTestApps = $settings.installTestApps
 
@@ -2208,9 +2201,28 @@ function DetermineArtifactUrl {
         $version = $segments[2]
         $country = $segments[3]; if ($country -eq "") { $country = $projectSettings.country }
         $select = $segments[4]; if ($select -eq "") { $select = "latest" }
-        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -accept_insiderEula | Select-Object -First 1
-        if (-not $artifactUrl) {
-            throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+        if ($version -eq '*') {
+            $version = "$(([Version]$projectSettings.applicationDependency).Major).$(([Version]$projectSettings.applicationDependency).Minor)"
+            $allArtifactUrls = @(Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select all -accept_insiderEula | Where-Object { [Version]$_.Split('/')[4] -ge [Version]$projectSettings.applicationDependency })
+            if ($select -eq 'latest') {
+                $artifactUrl = $allArtifactUrls | Select-Object -Last 1
+            }
+            elseif ($select -eq 'first') {
+                $artifactUrl = $allArtifactUrls | Select-Object -First 1
+            }
+            else {
+                throw "Invalid artifact setting ($artifact) in $ALGoSettingsFile. Version can only be '*' if select is first or latest."
+            }
+            Write-Host "Found $($allArtifactUrls.Count) artifacts for version $version matching application dependency $($projectSettings.applicationDependency), selecting $select."
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile, when application dependency is $($projectSettings.applicationDependency)"
+            }
+        }
+        else {
+            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -accept_insiderEula | Select-Object -First 1
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+            }
         }
         $version = $artifactUrl.Split('/')[4]
         $storageAccount = $artifactUrl.Split('/')[2]

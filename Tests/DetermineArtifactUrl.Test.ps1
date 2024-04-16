@@ -112,6 +112,18 @@ Describe "DetermineArtifactUrl" {
         $projectSettings.artifact = "///us/latest"
         DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
     }
+
+    It 'Artifact setting when using version = * and first' {
+        $projectSettings.applicationDependency = '22.1.0.0'
+        $projectSettings.artifact = "//*/us/first"
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
+    }
+
+    It 'Artifact setting when using version = * and latest' {
+        $projectSettings.applicationDependency = '22.1.0.0'
+        $projectSettings.artifact = "//*/us/latest"
+        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12346/us'
+    }
 }
 
 
