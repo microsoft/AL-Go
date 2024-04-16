@@ -67,27 +67,6 @@ runs:
         deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
         environmentName: ${{ inputs.environmentName }}
 
-    - name: Who am I (username)
-      env:
-        DebugStep: '${{ secrets.ACTIONS_STEP_DEBUG }}'
-      if: env.DebugStep == 'true' && steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
-      uses: microsoft/powerplatform-actions/who-am-i@v1
-      with:
-        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl}}
-        user-name: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
-        password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
-
-    - name: Who am I (application ID)
-      env:
-        DebugStep: '${{ secrets.ACTIONS_STEP_DEBUG }}'
-      if: env.DebugStep == 'true' && steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
-      uses: microsoft/powerplatform-actions/who-am-i@v1
-      with:
-        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
-        tenant-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
-        app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
-        client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
-
     - name: Set up new branch for changes
       shell: ${{ inputs.shell }}
       env:
