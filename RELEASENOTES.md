@@ -13,17 +13,29 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 997 'Deliver to AppSource' action fails for projects containing a space
 - Issue 987 Resource not accessible by integration when creating release from specific version
 - Issue 979 Publish to AppSource Documentation
+- Issue 1018 Artifact setting - possiblity to read version from app.json
+- Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
+- Issue 962 Finer control of "shell"-property
+
+### Better artifact selection
+
+The artifact setting in your project settings file can now contain a `*` instead of the version number. This means that AL-Go for GitHub will determine the application dependency for your projects together with the `applicationDependency` setting and determine which Business Central version is needed for the project.
+- `"artifact": "//*//latest"` will give you the latest Business Central version, higher than your application dependency and with the same major.minor as your application dependency.
+- `"artifact": "//*//first"` will give you the first Business Central version, higher than your application dependency and with the same major.minor as your application dependency.
 
 ### New Settings
+
 - `deliverToAppSource`: a JSON object containing the following properties
   - **productId** must be the product Id from partner Center.
   - **mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.
   - **continuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.
   - **includeDependencies** can be set to an array of file names (incl. wildcards) which are the names of the dependencies to include in the AppSource submission. Note that you need to set `generateDependencyArtifact` in the project settings file to true in order to include dependencies.
+- Add `shell` as a property under `DeployTo` structure
 - `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
 - `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
 
 ### Deprecated Settings
+
 - `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
 - `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
 - `appSourceProductId` is moved to the `deliverToAppSource` structure

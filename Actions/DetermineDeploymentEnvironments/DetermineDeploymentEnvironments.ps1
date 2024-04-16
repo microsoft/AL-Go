@@ -107,6 +107,7 @@ if (!($environments)) {
                 "SyncMode" = $null
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
+                "shell" = $settings."shell"
                 "companyId" = ''
                 "ppEnvironmentUrl" = ''
             }
@@ -132,6 +133,7 @@ else {
         # - projects: all
         # - continuous deployment: only for environments not tagged with PROD or FAT
         # - runs-on: same as settings."runs-on"
+        # - shell: same as settings."shell"
         # - no companyId
         # - no ppEnvironmentUrl
         $deploymentSettings = @{
@@ -143,6 +145,7 @@ else {
             "SyncMode" = $null
             "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
+            "shell" = $settings."shell"
             "companyId" = ''
             "ppEnvironmentUrl" = ''
         }
@@ -159,6 +162,9 @@ else {
                     Write-Host "Property $key = $($deployTo."$key")"
                     $deploymentSettings."$key" = $deployTo."$key"
                 }
+            }
+            if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
+                throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
             }
         }
 
@@ -233,7 +239,7 @@ else {
 $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
 $deploymentEnvironments.Keys | Sort-Object | ForEach-Object {
     $deploymentEnvironment = $deploymentEnvironments."$_"
-    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)" }
+    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)"; "shell" = $deploymentEnvironment."shell" }
 }
 $environmentsMatrixJson = $json | ConvertTo-Json -Depth 99 -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsMatrixJson=$environmentsMatrixJson"

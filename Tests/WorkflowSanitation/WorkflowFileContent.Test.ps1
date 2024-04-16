@@ -13,3 +13,15 @@ Describe "All AL-Go workflows should have similar content" {
         }
     }
 }
+
+Describe "PreGateCheck in PullRequestHandler should use runs-on: windows-latest" {
+    It 'Check PullRequestHandler.yaml for runs-on: windows-latest' {
+        # Check that PullRequestHandler.yaml in both templates uses runs-on: windows-latest, which doesn't get updated by the Update AL-Go System Files action
+        $ScriptRoot = $PSScriptRoot
+        . (Join-Path $ScriptRoot "../../Actions/CheckForUpdates/yamlclass.ps1")
+        foreach($template in @('Per Tenant Extension','AppSource App')) {
+            $yaml = [Yaml]::load((Join-Path $ScriptRoot "..\..\Templates\$template\.github\workflows\PullRequestHandler.yaml" -Resolve))
+            $yaml.Get('jobs:/PregateCheck:/runs-on').content | Should -Be 'runs-on: windows-latest' -Because "PreGateCheck in $template/PullRequestHandler.yaml should use runs-on: windows-latest"
+        }
+    }
+}
