@@ -48,7 +48,7 @@ function Set-VersionInSettingsFile {
         $settingsJson | Add-Member -MemberType NoteProperty -Name $settingName -Value $null
     }
 
-    $oldValue = [System.Version] $settingsJson.$settingName
+    $oldVersion = [System.Version] $settingsJson.$settingName
     # Validate new version value
     if ($newValue.StartsWith('+')) {
         # Handle incremental version number
@@ -59,7 +59,7 @@ function Set-VersionInSettingsFile {
         }
 
         # Defensive check. Should never happen.
-        if($null -eq $oldValue) {
+        if($null -eq $oldVersion) {
             throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
         }
     }
@@ -78,13 +78,13 @@ function Set-VersionInSettingsFile {
     switch($newValue) {
         '+1' {
             # Increment major version number
-            $versionNumbers += $oldValue.Major + 1
+            $versionNumbers += $oldVersion.Major + 1
             $versionNumbers += 0
         }
         '+0.1' {
             # Increment minor version number
-            $versionNumbers += $oldValue.Major
-            $versionNumbers += $oldValue.Minor + 1
+            $versionNumbers += $oldVersion.Major
+            $versionNumbers += $oldVersion.Minor + 1
 
         }
         default {
@@ -94,33 +94,33 @@ function Set-VersionInSettingsFile {
     }
 
     # Include build and revision numbers if they exist in the old version number
-    if ($oldValue -and ($oldValue.Build -ne -1)) {
+    if ($oldVersion -and ($oldVersion.Build -ne -1)) {
         $versionNumbers += 0 # Always set the build number to 0
-        if ($oldValue.Revision -ne -1) {
+        if ($oldVersion.Revision -ne -1) {
             $versionNumbers += 0 # Always set the revision number to 0
         }
     }
 
     # Construct the new version number. Cast to System.Version to validate if the version number is valid.
-    $newValue = [System.Version] "$($versionNumbers -join '.')"
+    $newVersion = [System.Version] "$($versionNumbers -join '.')"
 
-    if($newValue -lt $oldValue) {
-        throw "The new version number ($newValue) is less than the old version number ($oldValue). The version number must be incremented."
+    if($newVersion -lt $oldVersion) {
+        throw "The new version number ($newVersion) is less than the old version number ($oldVersion). The version number must be incremented."
     }
 
-    if($newValue -eq $oldValue) {
-        Write-Host "The setting $settingName is already set to $newValue in $settingsFilePath"
+    if($newVersion -eq $oldVersion) {
+        Write-Host "The setting $settingName is already set to $newVersion in $settingsFilePath"
         return
     }
 
-    if($null -eq $oldValue) {
-        Write-Host "Setting setting $settingName to $newValue in $settingsFilePath"
+    if($null -eq $oldVersion) {
+        Write-Host "Setting setting $settingName to $newVersion in $settingsFilePath"
     }
     else {
-        Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
+        Write-Host "Changing $settingName from $oldVersion to $newVersion in $settingsFilePath"
     }
 
-    $settingsJson.$settingName = $newValue.ToString()
+    $settingsJson.$settingName = $newVersion.ToString()
     $settingsJson | Set-JsonContentLF -Path $settingsFilePath
 }
 
