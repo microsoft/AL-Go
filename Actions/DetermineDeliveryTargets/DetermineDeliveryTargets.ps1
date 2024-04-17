@@ -37,7 +37,7 @@ if ($settings.type -eq "AppSource App") {
     # For multi-project repositories, we will add deliveryTarget AppSource if any project has AppSourceContinuousDelivery set to true
     ($projectsJson | ConvertFrom-Json) | ForEach-Object {
         $projectSettings = ReadSettings -project $_
-        if ($projectSettings.Contains('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery) {
+        if ($projectSettings.deliverToAppSource.ContinuousDelivery -or ($projectSettings.Contains('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery)) {
             Write-Host "Project $_ is setup for Continuous Delivery"
             $deliveryTargets += @("AppSource")
         }

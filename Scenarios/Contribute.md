@@ -27,7 +27,8 @@ Now you should have 3 new public repositories:
 - [https://github.com/yourGitHubUserName/AL-Go-AppSource](https://github.com/yourGitHubUserName/AL-Go-AppSource)
 - [https://github.com/yourGitHubUserName/AL-Go-PTE](https://github.com/yourGitHubUserName/AL-Go-PTE)
 
-> **Note:** Deploying to a branch called **preview** will only update the two template repositories (and use your AL-Go project with the current SHA as actions repository).
+> [!NOTE]
+> Deploying to a branch called **preview** will only update the two template repositories (and use your AL-Go project with the current SHA as actions repository).
 
 You can optionally also create a branch in the AL-Go fork for the feature you are working on and then select that branch when running Deploy (both as **Use workflow from** and as **Branch to deploy to**).
 
@@ -35,7 +36,8 @@ You can optionally also create a branch in the AL-Go fork for the feature you ar
 
 Please ensure that all unit tests run and create a Pull Request against [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go). You are very welcome to run the end to end tests as well, but we will also run the end to end tests as part of the code review process.
 
-> **Note**: You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your personal fork of the AL-Go repository** you publish to the 3 repositories.
+> [!NOTE]
+> You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your personal fork of the AL-Go repository** you publish to the 3 repositories.
 
 ## Unit tests
 The Tests folder, in the AL-Go repository, contains a number of unit-tests. Open Tests/runtests.ps1 in VS Code and select Run. Unit tests are quick and will run on every PR and every Push. We will be adding a lot of unit tests going forward.

@@ -3,7 +3,46 @@
 Note that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.
 
 ### Issues
+
+- Issue 1019 CI/CD Workflow still being scheduled after it was disabled
+- Issue 1021 Error during Create Online Development Environment action
+- Issue 1022 Error querying artifacts: No such host is known. (bcartifacts-exdbf9fwegejdqak.blob.core.windows.net:443)
+- Issue 922 Deploy Reference Documentation (ALDoc) failed with custom
+- ContainerName used during build was invalid if project names contained special characters
+- Issue 1009 by adding a includeDependencies property in DeliverToAppSource
+- Issue 997 'Deliver to AppSource' action fails for projects containing a space
+- Issue 987 Resource not accessible by integration when creating release from specific version
+- Issue 979 Publish to AppSource Documentation
+- Issue 1018 Artifact setting - possiblity to read version from app.json
+- Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
+- Issue 962 Finer control of "shell"-property
+
+### Better artifact selection
+
+The artifact setting in your project settings file can now contain a `*` instead of the version number. This means that AL-Go for GitHub will determine the application dependency for your projects together with the `applicationDependency` setting and determine which Business Central version is needed for the project.
+- `"artifact": "//*//latest"` will give you the latest Business Central version, higher than your application dependency and with the same major.minor as your application dependency.
+- `"artifact": "//*//first"` will give you the first Business Central version, higher than your application dependency and with the same major.minor as your application dependency.
+
+### New Settings
+
+- `deliverToAppSource`: a JSON object containing the following properties
+  - **productId** must be the product Id from partner Center.
+  - **mainAppFolder** specifies the appFolder of the main app if you have multiple apps in the same project.
+  - **continuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.
+  - **includeDependencies** can be set to an array of file names (incl. wildcards) which are the names of the dependencies to include in the AppSource submission. Note that you need to set `generateDependencyArtifact` in the project settings file to true in order to include dependencies.
+- Add `shell` as a property under `DeployTo` structure
+
+### Deprecated Settings
+
+- `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
+- `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
+- `appSourceProductId` is moved to the `deliverToAppSource` structure
+
+## v5.0
+
+### Issues
 - Issue 940 Publish to Environment is broken when specifying projects to publish
+- Issue 994 CI/CD ignores Deploy to GitHub Pages in private repositories
 
 ### New Settings
 - `UpdateALGoSystemFilesEnvironment`: The name of the environment that is referenced in job `UpdateALGoSystemFiles` in the _Update AL-Go System Files_ workflow. See [jobs.<job_id>.environment](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment) for more information. Currently, only setting the environment name is supported.
@@ -12,6 +51,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Support release branches that start with releases/
 - Issue 870 Improve Error Handling when CLI is missing
 - Issue 889 CreateRelease and IncrementVersionNumber workflow did not handle wild characters in `appFolders`, `testFolders` or `bcptTestFolders` settings.
+- Issue 973 Prerelease is not used for deployment
 
 ### Build modes
 AL-Go ships with Default, Translated and Clean mode out of the box. Now you can also define custom build modes in addition to the ones shipped with AL-Go. This allows you to define your own build modes, which can be used to build your apps in different ways. By default, a custom build mode will build the apps similarly to the Default mode but this behavior can be overridden in e.g. script overrides in your repository.

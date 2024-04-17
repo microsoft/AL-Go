@@ -5,6 +5,7 @@
 #
 Param(
     [string] $containerName = "",
+    [ValidateSet("UserPassword", "Windows")]
     [string] $auth = "",
     [pscredential] $credential = $null,
     [string] $licenseFileUrl = "",
