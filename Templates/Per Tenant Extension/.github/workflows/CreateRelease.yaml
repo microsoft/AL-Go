@@ -127,7 +127,7 @@ jobs:
           if ($env:type == "PTE" -and $env:powerPlatformSolutionFolder != "") {
             Write-Host "PowerPlatformSolution:"
             Write-Host "- $($env:powerPlatformSolutionFolder)"
-            $projects += @(env:powerPlatformSolutionFolder)
+            $projects += @($env:powerPlatformSolutionFolder)
           }
           $include = @()
           $sha = ''
