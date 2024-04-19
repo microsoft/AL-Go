@@ -62,7 +62,7 @@ jobs:
             }
             else {
               Write-Host "Running Update AL-Go System Files on a schedule."
-              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$(${{ steps.GetSupportedBranches.outputs.Branches }})"
+              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result='${{ steps.GetSupportedBranches.outputs.Branches }}'"
             }
 
   UpdateALGoSystemFiles:
