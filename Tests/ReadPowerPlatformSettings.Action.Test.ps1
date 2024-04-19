@@ -1,6 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "Read Power Platform Settings Action Tests" {
     BeforeAll {
@@ -82,9 +82,6 @@ Describe "Read Power Platform Settings Action Tests" {
         $gitHubEnvPlaceholder | Should -Contain ("ppTenantId=" + $secretProperties.ppTenantId)
         $gitHubEnvPlaceholder | Should -Contain ("ppApplicationId=" + $secretProperties.ppApplicationId)
         $gitHubEnvPlaceholder | Should -Contain ("ppClientSecret=" + $secretProperties.ppClientSecret)
-        $gitHubEnvPlaceholder | Should -Contain ("ppUserName=" + $secretProperties.ppUserName)
-        $gitHubEnvPlaceholder | Should -Contain ("ppPassword=" + $secretProperties.ppPassword)
-
     }
 
     It 'Sets the correct GitHub environment variables - user auth' {
@@ -111,9 +108,6 @@ Describe "Read Power Platform Settings Action Tests" {
         $gitHubEnvPlaceholder | Should -Contain ("ppEnvironmentUrl=" + $deployToDevProperties.ppEnvironmentUrl)
         $gitHubEnvPlaceholder | Should -Contain ("companyId=" + $deployToDevProperties.companyId)
         $gitHubEnvPlaceholder | Should -Contain ("environmentName=" + $deployToDevProperties.environmentName)
-        $gitHubEnvPlaceholder | Should -Contain ("ppTenantId=" + $secretProperties.ppTenantId)
-        $gitHubEnvPlaceholder | Should -Contain ("ppApplicationId=" + $secretProperties.ppApplicationId)
-        $gitHubEnvPlaceholder | Should -Contain ("ppClientSecret=" + $secretProperties.ppClientSecret)
         $gitHubEnvPlaceholder | Should -Contain ("ppUserName=" + $secretProperties.ppUserName)
         $gitHubEnvPlaceholder | Should -Contain ("ppPassword=" + $secretProperties.ppPassword)
 
@@ -199,7 +193,7 @@ Describe "Read Power Platform Settings Action Tests" {
             ppClientSecret  = "your-client-secret"
         }
         SetSecretsEnvVariable -secretProperties $secretProperties
-        $errorMessage = runMissingSecretsTest -deployToDevProperties $deployToDevProperties 
+        $errorMessage = runMissingSecretsTest 
         $errorMessage | Should -Be "Secret DeployToDev-AuthContext must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
 
 
@@ -208,7 +202,7 @@ Describe "Read Power Platform Settings Action Tests" {
             username        = "your-username"
         }
         SetSecretsEnvVariable -secretProperties $secretProperties
-        $errorMessage = runMissingSecretsTest -deployToDevProperties $deployToDevProperties 
+        $errorMessage = runMissingSecretsTest
         $errorMessage | Should -Be "Secret DeployToDev-AuthContext must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
 
     }
