@@ -252,6 +252,20 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
+    It 'Set-VersionInSettingsFile -newValue +0.1 succeeds even if the new version string is less than the old version string' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.9'
+        $settingName = 'repoVersion'
+        $newValue = '+0.1'
+
+        Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "1.10"
+
+        # Check that the other setting are not changed
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
     It 'Set-VersionInSettingsFile -newValue is set and build and revision are kept from the old value'{
         $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.0.0'
         $settingName = 'repoVersion'

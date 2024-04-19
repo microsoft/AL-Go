@@ -16,6 +16,7 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 1018 Artifact setting - possiblity to read version from app.json
 - Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
 - Issue 962 Finer control of "shell"-property
+- Issue 1041 Harden the version comparisson when incrementing version number
 
 ### Better artifact selection
 
