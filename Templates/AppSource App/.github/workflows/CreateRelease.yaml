@@ -124,7 +124,7 @@ jobs:
           $projects = '${{ steps.determineProjects.outputs.ProjectsJson }}' | ConvertFrom-Json
           Write-Host "projects:"
           $projects | ForEach-Object { Write-Host "- $_" }
-          if ($env:type == "PTE" -and $env:powerPlatformSolutionFolder != "") {
+          if ($env:type -eq "PTE" -and $env:powerPlatformSolutionFolder -ne "") {
             Write-Host "PowerPlatformSolution:"
             Write-Host "- $($env:powerPlatformSolutionFolder)"
             $projects += @($env:powerPlatformSolutionFolder)
