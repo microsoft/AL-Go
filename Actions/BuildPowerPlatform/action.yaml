@@ -5,18 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  actor:
-    description: The GitHub actor running the action
-    required: false
-    default: ${{ github.actor }}
-  token:
-    description: The GitHub token running the action
-    required: false
-    default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   solutionFolder:
     description: The Power Platform solution path
     required: true
@@ -36,12 +24,12 @@ inputs:
     default: ''
   appBuild:
     description: The app build number
-    default: ''
     required: false
-  appRevision: 
+    default: ''
+  appRevision:
     description: The app revision number
-    default: ''
     required: false
+    default: ''
 
 runs:
   using: composite
@@ -49,26 +37,24 @@ runs:
     - name: Install Power Platform Tools
       uses: microsoft/powerplatform-actions/actions-install@v1
 
-    - name: Update solution settings
-      if: inputs.appBuild != '' && inputs.solutionFolder != ''
+    - name: Update Power Platform Files 
       shell: ${{ inputs.shell }}
-      env: 
+      env:
         _solutionFolder: ${{ inputs.solutionFolder }}
+        _companyId: ${{ inputs.companyId }}
+        _environmentName: ${{ inputs.environmentName }}      
         _appBuild: ${{ inputs.appBuild }}
         _appRevision: ${{ inputs.appRevision }}
       run: |
-        ${{ github.action_path }}\updateSolutionFile.ps1 -appBuild $ENV:_appBuild -appRevision $ENV:_appRevision -solutionFolder $ENV:_solutionFolder
-    
-    - name: Update BC connection settings
-      if: inputs.CompanyId != '' && inputs.SolutionFolder != '' && inputs.EnvironmentName != '' 
-      shell: ${{ inputs.shell }}
-      env: 
-        _solutionFolder: ${{ inputs.solutionFolder }}
-        _companyId: ${{ inputs.companyId }}
-        _environmentName: ${{ inputs.environmentName }}        
-      run: |
-        ${{ github.action_path }}\updateEnvironmentAndCompany.ps1 -companyId $ENV:_companyId -environmentName $ENV:_environmentName -solutionFolder $ENV:_solutionFolder
-    
+        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+        try {
+          ${{ github.action_path }}/BuildPowerPlatform.ps1 -solutionFolder $ENV:_solutionFolder -companyId $ENV:_companyId -environmentName $ENV:_environmentName -appBuild $ENV:_appBuild -appRevision $ENV:_appRevision
+        }
+        catch {
+          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+          exit 1
+        }    
+
     - name: Test Pack (Not real - just workaround for https://github.com/microsoft/powerplatform-vscode/issues/412)
       uses: microsoft/powerplatform-actions/pack-solution@v1
       with:

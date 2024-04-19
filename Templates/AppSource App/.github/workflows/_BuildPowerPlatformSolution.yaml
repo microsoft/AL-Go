@@ -71,7 +71,6 @@ jobs:
         uses: microsoft/AL-Go-Actions/BuildPowerPlatform@main
         with:
           shell: ${{ inputs.shell }}
-          parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
           solutionFolder: ${{ inputs.project }}
           outputFolder: ${{ inputs.project }}/.buildartifacts/_PowerPlatformSolution/
           outputFileName: ${{ inputs.project }}

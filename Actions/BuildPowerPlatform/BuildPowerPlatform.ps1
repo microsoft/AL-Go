@@ -1,9 +1,13 @@
 [CmdletBinding()]
 param(
-    [Parameter(Position = 0, mandatory = $true)] [string] $CompanyId,
-    [Parameter(Position = 1, mandatory = $true)] [string] $EnvironmentName,
-    [Parameter(Position = 2, mandatory = $true)] [string] $SolutionFolder
+    [Parameter(Position = 0, mandatory = $true)] [string] $solutionFolder,
+    [Parameter(Position = 1, mandatory = $false)] [string] $CompanyId,
+    [Parameter(Position = 2, mandatory = $false)] [string] $EnvironmentName,
+    [Parameter(Position = 3, mandatory = $false)] [string] $appBuild,
+    [Parameter(Position = 4, mandatory = $false)] [string] $appRevision,
+    [Parameter(Position = 5, mandatory = $false)] [string] $managed
 )
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 function Update-PowerAppSettings {
     [CmdletBinding()]
@@ -22,8 +26,9 @@ function Update-PowerAppSettings {
     #       replace operation should be safe to run a all json and XML files.
     Write-Host "Updating PowerApp settings"
     $currentPowerAppSettings = Get-CurrentPowerAppSettings -solutionFolder $SolutionFolder
-    if ($currentPowerAppSettings.Count -eq 0) {
-        Write-Warning "Could not find PowerApps connections file"
+    if ($null -eq $currentPowerAppSettings) {
+        Write-Host "::Notice::No Power Apps found"
+        return
     }
 
     Write-Host "Number of Business Central Power App connections found: "$currentPowerAppSettings.Count
@@ -33,7 +38,6 @@ function Update-PowerAppSettings {
             Write-Host "No changes needed for: "$currentSetting
             continue
         }
-        write-host "Updating PowerApp settings from: $currentSetting to: $newSettings"
         Update-PowerAppFiles -oldSetting $currentSetting -newSetting $newSettings -solutionFolder $SolutionFolder
     }
 }
@@ -53,7 +57,7 @@ function Update-PowerAppFiles {
             if (Select-String -Pattern $oldSetting -InputObject $fileContent) {
                 $fileContent = $fileContent -creplace $oldSetting, $newSetting
                 Set-Content -Path $file.FullName -Value $fileContent
-                Write-Host "Updated: $file.FullName"
+                Write-Host "Updated: $($file.FullName)"
             }
         }
     }
@@ -117,6 +121,11 @@ function Update-FlowSettings {
     Write-Host "Updating Flow settings"
     $flowFilePaths = Get-ChildItem -Path "$SolutionFolder/workflows" -Recurse -Filter *.json | Select-Object -ExpandProperty FullName
 
+    if ($null -eq $flowFilePaths) {
+        Write-Host "::Notice::No Power Automate flows found"
+        return
+    }
+        
     foreach ($flowFilePath in $flowFilePaths) {
         Update-FlowFile -FilePath $flowFilePath -CompanyId $CompanyId -EnvironmentName $EnvironmentName
     }
@@ -134,22 +143,19 @@ function Update-FlowFile {
     )
     # Read the JSON file
     $jsonObject = Get-Content $FilePath  | ConvertFrom-Json
-
-    write-host "Checking flow: $FilePath"
-
     $shouldUpdate = $false
 
     # Update all flow triggers
     $triggersObject = $jsonObject.properties.definition.triggers
     $triggers = $triggersObject | Get-Member -MemberType Properties
     foreach ($trigger in $triggers) {
-        $parametersObject = $triggersObject.($trigger.Name).inputs.parameters
+        $triggerInputs = $triggersObject.($trigger.Name).inputs
 
-        if (-not $parametersObject) {
-            continue
-        }
-        if(Update-ParameterObject -parametersObject $parametersObject -CompanyId $CompanyId -EnvironmentName $EnvironmentName){
-            $shouldUpdate = $true
+        if ($triggerInputs | Get-Member -MemberType Properties -name 'parameters') {
+            # Business Central triggers have connection information in the input parameters
+            if (Update-ParameterObject -parametersObject $triggerInputs.parameters -CompanyId $CompanyId -EnvironmentName $EnvironmentName) {
+                $shouldUpdate = $true
+            }
         }
     }
 
@@ -157,19 +163,18 @@ function Update-FlowFile {
     $actionsObject = $jsonObject.properties.definition.actions
     $actions = $actionsObject | Get-Member -MemberType Properties
     foreach ($action in $actions) {
-        $parametersObject = $actionsObject.($action.Name).inputs.parameters
-
-        if (-not $parametersObject) {
-            continue
-        }
-        if(Update-ParameterObject -parametersObject $parametersObject -CompanyId $CompanyId -EnvironmentName $EnvironmentName){
-            $shouldUpdate = $true
+        $actionInput = $actionsObject.($action.Name).inputs
+        if ($actionInput | Get-Member -MemberType Properties -name 'parameters') {
+            # Business Central actions have connection information in the input parameters
+            if (Update-ParameterObject -parametersObject $actionInput.parameters -CompanyId $CompanyId -EnvironmentName $EnvironmentName) {
+                $shouldUpdate = $true
+            }
         }
     }
     if ($shouldUpdate) {
-        Write-Host "Updating: $FilePath"
         # Save the updated JSON back to the file
         $jsonObject | ConvertTo-Json -Depth 100 | Set-Content  $FilePath
+        Write-Host "Updated: $FilePath"
     }
     else {
         Write-Host "No update needed for: $FilePath"
@@ -194,10 +199,6 @@ function Update-ParameterObject {
     $oldCompany = $parametersObject.company
     $oldBcEnvironment = $parametersObject.bcenvironment
 
-    write-host "Checking parameters object: "$parametersObject
-    write-host "BcEnvironment: $oldBcEnvironment"
-    write-host "Company: $oldCompany"
-
     # Check if parameters are already set to the correct values
     if (($oldCompany -eq $CompanyId) -and ($oldBcEnvironment -eq $EnvironmentName)) {
         return $false
@@ -213,12 +214,68 @@ function Update-ParameterObject {
     $parametersObject.company = $CompanyId
     $parametersObject.bcEnvironment = $EnvironmentName
 
-    write-host "New parameters object: "$parametersObject
-
     return $true
 }
 
-Write-Host "Updating the Power Platform solution Business Central connection settings"
-Write-Host "New connections settings: $EnvironmentName, $CompanyId"
-Update-PowerAppSettings -SolutionFolder $SolutionFolder -EnvironmentName $EnvironmentName -CompanyId $CompanyId
-Update-FlowSettings -SolutionFolder $SolutionFolder -EnvironmentName $EnvironmentName -CompanyId $CompanyId
+function Update-SolutionVersionNode {
+    param(
+        [Parameter(Position = 0, mandatory = $true)]
+        [string] $appBuild,
+        [Parameter(Position = 1, mandatory = $true)]
+        [string] $appRevision,
+        [Parameter(Position = 2, mandatory = $true)]
+        [xml] $xmlFile
+    )
+
+    if ($appBuild -and $appRevision) {
+        $versionNode = $xmlFile.SelectSingleNode("//Version")
+        $versionNodeText = $versionNode.'#text'
+
+        $versionParts = $versionNodeText.Split('.')
+        # Only update the last two parts of the version number - major and minor version should be set manually
+        $newVersionNumber = $versionParts[0] + '.' + $versionParts[1] + '.' + $appBuild + '.' + $appRevision
+
+        Write-Host "New version: "$newVersionNumber
+        $versionNode.'#text' = $newVersionNumber
+    }
+
+}
+
+function Update-SolutionManagedNode {
+    param(
+        [Parameter(Position = 0, mandatory = $false)]
+        [string] $managed,
+        [Parameter(Position = 1, mandatory = $true)]
+        [xml] $xmlFile
+    )
+
+    $managedValue = "0"
+    if ($managed -eq "true") {
+        $managedValue = "1"
+    }
+
+    $nodeWithName = $xmlFile.SelectSingleNode("//Managed")
+    Write-Host "Updating managed flag: "$managedValue
+    $nodeWithName.'#text' = $managedValue
+}
+
+if ($appBuild -and $appRevision) {
+    Write-Host "Updating Power Platform solution file ($solutionFolder)"
+    $solutionDefinitionFile = $solutionFolder + "\other\solution.xml"
+    $xmlFile = [xml](Get-Content -Encoding UTF8 -Path $solutionDefinitionFile)
+    Update-SolutionVersionNode -appBuild $appBuild -appRevision $appRevision -xmlFile $xmlFile
+    $xmlFile.Save($solutionDefinitionFile)
+}
+else {
+    Write-Host "Skip solution version update since appBuild and appRevision are not set"  
+}
+
+if ($EnvironmentName -and $CompanyId) {   
+    Write-Host "Updating the Power Platform solution Business Central connection settings"
+    Write-Host "New connections settings: $EnvironmentName, $CompanyId"
+    Update-PowerAppSettings -SolutionFolder $SolutionFolder -EnvironmentName $EnvironmentName -CompanyId $CompanyId
+    Update-FlowSettings -SolutionFolder $SolutionFolder -EnvironmentName $EnvironmentName -CompanyId $CompanyId
+}
+else {
+    Write-Host "Skip Business Central connection settings update since EnvironmentName and CompanyId are not set"
+}

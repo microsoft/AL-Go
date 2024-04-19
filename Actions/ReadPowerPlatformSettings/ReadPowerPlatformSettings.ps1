@@ -4,23 +4,27 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $environmentName
 )
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+$envName = $environmentName.Split(' ')[0]
+
+# Read the deployment settings
 $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json
 $deploymentSettings = $deploymentEnvironments."$environmentName"
-$envName = $environmentName.Split(' ')[0]
-$secrets = $env:Secrets | ConvertFrom-Json
 
 foreach($property in 'ppEnvironmentUrl','companyId','environmentName') {
-    if ($deploymentSettings."$property") {
+    if ($deploymentSettings | Get-Member -MemberType Properties -name $property) {
         Write-Host "Setting $property"
         Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$property=$($deploymentSettings."$property")"
     }
     else {
-        Write-Host "::ERROR::DeployTo$envName setting must contain '$property' property"
-        exit 1
+        throw "$envName setting must contain '$property' property"
     }
 }
 
+$secrets = $env:Secrets | ConvertFrom-Json
+
+# Read the authentication context from secrets
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
     if ($secrets."$secretName") {
@@ -45,10 +49,13 @@ foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","Auth
             Write-Host "Authenticating with user name"
         }
         else {
-            Write-Host "::ERROR::Secret $secretName must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
-            exit 1
+            throw "Secret $secretName must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
         }
         break
     }
 }
 
+# Verify the authentication context has been set
+if ($null -eq $authContext) {
+    throw "Unable to find authentication context for GitHub environment $envName in secrets"
+}

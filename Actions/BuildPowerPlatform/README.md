@@ -10,9 +10,6 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| actor | | The GitHub actor running the action | github.actor |
-| token | | The GitHub token running the action | github.token |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | solutionFolder | Yes | The Power Platform solution path | |
 | outputFolder | Yes | Output folder where the zip file will be placed | |
 | outputFileName | Yes | The name of the output zip file | |
