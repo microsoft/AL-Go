@@ -32,23 +32,38 @@ jobs:
     runs-on: windows-latest
     name: Get Supported Branches
     outputs:
-      SupportedBranches: ${{ steps.GetSupportedBranches.outputs.GitBranches }}
+      SupportedBranches: ${{ steps.DetermineBranches.outputs.Result }}
     steps:
       - name: Checkout
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: actions/checkout@v4
 
       - name: Read settings
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
           get: updateALGoBranches
 
       - name: Get Supported Branches
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         id: GetSupportedBranches
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
           includeBranchesJson: ${{ env.updateALGoBranches }}
+
+      - name: Determine branches to update
+        id: DetermineBranches
+        run: |
+            if (${{ github.event_name }} -eq 'workflow_dispatch') {
+              Write-Host "Running Update AL-Go System Files on a manual trigger."
+              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=['${{ github.ref_name }}']"
+            }
+            else {
+              Write-Host "Running Update AL-Go System Files on a schedule."
+              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$(${{ steps.GetSupportedBranches.outputs.Branches }})"
+            }
 
   UpdateALGoSystemFiles:
     needs: [ GetBranches ]

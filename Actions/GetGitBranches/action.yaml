@@ -11,7 +11,7 @@ inputs:
     required: false
     default: '[]'
 outputs:
-  GitBranches:
+  Branches:
     description: The list of branches in the repository
     value: ${{ steps.GetGitBranches.outputs.Branches }}
 runs:
