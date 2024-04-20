@@ -46,7 +46,7 @@ Describe "Build Power Platform Settings Action Tests" {
         
         BuildPowerPlatform -solutionFolder $solutionPath -appBuild $newBuildString -appRevision $newRevisionString
 
-        $testSolutionFileAfterTest = [xml](Get-Content -Encoding UTF8 -Path "$solutionPath\other\solution.xml")
+        $testSolutionFileAfterTest = [xml](Get-Content -Encoding UTF8 -Path "$solutionPath\other\Solution.xml")
         $versionNode = $testSolutionFileAfterTest.SelectSingleNode("//Version")
         $versionNodeText = $versionNode.'#text'
         $versionNodeText | Should -Not -BeNullOrEmpty
