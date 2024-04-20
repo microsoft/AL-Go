@@ -102,7 +102,7 @@ Describe "Build Power Platform Settings Action Tests" {
 
     It 'Works with PowerApp Only' {
         write-host "Run PowerApp only test"
-        $solutionPath = "$testDataTempPat/\PowerAppOnlySolution";
+        $solutionPath = "$testDataTempPath\PowerAppOnlySolution";
         
         # Run the script
         BuildPowerPlatform -solutionFolder $solutionPath -CompanyId "NewCompanyName" -EnvironmentName "NewEnvironmentName"
