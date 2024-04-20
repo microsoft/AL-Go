@@ -19,8 +19,8 @@ Describe "Build Power Platform Settings Action Tests" {
     }
 
     BeforeEach {
-        mkdir $testDataTempPath -Force
-        copy-item -Path $testDataPath -Destination $testDataTempPath -Recurse -Force
+        New-Item -Path $testDataTempPath -ItemType Directory -Force | Out-Null
+        Copy-Item -Path $testDataPath -Destination $testDataTempPath -Recurse -Force
     }
 
     AfterEach {
