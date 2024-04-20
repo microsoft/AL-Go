@@ -119,7 +119,7 @@ function Update-FlowSettings {
     )
 
     Write-Host "Updating Flow settings"
-    $flowFilePaths = Get-ChildItem -Path "$SolutionFolder/workflows" -Recurse -Filter *.json | Select-Object -ExpandProperty FullName
+    $flowFilePaths = Get-ChildItem -Path (Join-Path $SolutionFolder 'Workflows') -Recurse -Filter '*.json' | Select-Object -ExpandProperty FullName
 
     if ($null -eq $flowFilePaths) {
         Write-Host "::Notice::No Power Automate flows found"
@@ -261,7 +261,7 @@ function Update-SolutionManagedNode {
 
 if ($appBuild -and $appRevision) {
     Write-Host "Updating Power Platform solution file ($solutionFolder)"
-    $solutionDefinitionFile = Join-Path $solutionFolder 'other\Solution.xml'
+    $solutionDefinitionFile = Join-Path $solutionFolder 'other/Solution.xml'
     $xmlFile = [xml](Get-Content -Encoding UTF8 -Path $solutionDefinitionFile)
     Update-SolutionVersionNode -appBuild $appBuild -appRevision $appRevision -xmlFile $xmlFile
     $xmlFile.Save($solutionDefinitionFile)
