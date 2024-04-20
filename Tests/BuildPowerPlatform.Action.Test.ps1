@@ -74,7 +74,7 @@ Describe "Build Power Platform Settings Action Tests" {
         $connectionFileContent | Should -Not -Match $newCompanyName
         $connectionFileContent | Should -Not -Match $newEnvironmentName
 
-        $workflowFileContent = [string](Get-Content -Encoding UTF8 -Path "$solutionPath\workflows\TestWorkflow-ABA81736-12D9-ED11-A7C7-000D3A991110.json")
+        $workflowFileContent = [string](Get-Content -Encoding UTF8 -Path "$solutionPath\Workflows\TestWorkflow-ABA81736-12D9-ED11-A7C7-000D3A991110.json")
         $workflowFileContent | Should -Not -BeNullOrEmpty
         $workflowFileContent | Should -Match $oldCompanyName
         $workflowFileContent | Should -Match $oldEnvironmentName
