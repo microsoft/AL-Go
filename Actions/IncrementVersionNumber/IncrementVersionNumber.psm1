@@ -206,7 +206,7 @@ function Set-DependenciesVersionInAppManifests {
         Sets the version number of a Power Platform solution.
     .Description
         Sets the version number of a Power Platform solution.
-        The version number is changed in the solution.xml file of the Power Platform solution.
+        The version number is changed in the Solution.xml file of the Power Platform solution.
     .Parameter powerPlatformSolutionPath
         Path to the Power Platform solution.
     .Parameter newValue
@@ -222,7 +222,7 @@ function Set-PowerPlatformSolutionVersion {
     )
 
     Write-Host "Updating Power Platform solution version"
-    $files = Get-ChildItem -Path $powerPlatformSolutionPath -filter 'solution.xml' -Recurse -File | Where-Object { $_.Directory.Name -eq "other" }
+    $files = Get-ChildItem -Path $powerPlatformSolutionPath -filter 'Solution.xml' -Recurse -File | Where-Object { $_.Directory.Name -eq "other" }
     if (-not $files) {
         Write-Host "Power Platform solution file not found"
     }
