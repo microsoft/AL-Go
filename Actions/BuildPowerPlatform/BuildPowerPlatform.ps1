@@ -261,7 +261,7 @@ function Update-SolutionManagedNode {
 
 if ($appBuild -and $appRevision) {
     Write-Host "Updating Power Platform solution file ($solutionFolder)"
-    $solutionDefinitionFile = $solutionFolder + "\other\Solution.xml"
+    $solutionDefinitionFile = Join-Path $solutionFolder 'other\Solution.xml'
     $xmlFile = [xml](Get-Content -Encoding UTF8 -Path $solutionDefinitionFile)
     Update-SolutionVersionNode -appBuild $appBuild -appRevision $appRevision -xmlFile $xmlFile
     $xmlFile.Save($solutionDefinitionFile)
