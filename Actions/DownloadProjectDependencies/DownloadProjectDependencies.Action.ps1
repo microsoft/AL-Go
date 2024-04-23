@@ -102,6 +102,7 @@ function DownloadDependenciesFromCurrentBuild {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+#TODO: Log telemetry in this action
 
 Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
 

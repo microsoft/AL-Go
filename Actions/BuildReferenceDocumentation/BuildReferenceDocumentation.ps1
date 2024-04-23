@@ -7,6 +7,7 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "BuildReferenceDocumentation.HelperFunctions.ps1" -Resolve)
+#TODO: Log telemetry in this action
 DownloadAndImportBcContainerHelper
 
 $settings = $env:Settings | ConvertFrom-Json

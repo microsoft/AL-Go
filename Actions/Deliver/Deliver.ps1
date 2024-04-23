@@ -3,8 +3,6 @@
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Projects to deliver (default is all)", Mandatory = $false)]
     [string] $projects = "*",
     [Parameter(HelpMessage = "Delivery target (AppSource or Storage)", Mandatory = $true)]
@@ -19,8 +17,6 @@
     [Parameter(HelpMessage = "Promote AppSource App to Go Live?", Mandatory = $false)]
     [bool] $goLive
 )
-
-$telemetryScope = $null
 
 function EnsureAzStorageModule() {
     if (get-command New-AzStorageContext -ErrorAction SilentlyContinue) {
@@ -45,12 +41,11 @@ function EnsureAzStorageModule() {
     }
 }
 
+import-module (Join-Path -path $PSScriptRoot -ChildPath "../TelemetryHelper.psm1" -Resolve)
+
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
     DownloadAndImportBcContainerHelper
-
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "../TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0081' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
 
@@ -494,11 +489,9 @@ try {
         }
     }
 
-    TrackTrace -telemetryScope $telemetryScope
+    Trace-Information
 }
 catch {
-    if (Get-Module BcContainerHelper) {
-        TrackException -telemetryScope $telemetryScope -errorRecord $_
-    }
+    Trace-Exception -ErrorRecord $_
     throw
 }

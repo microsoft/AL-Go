@@ -6,6 +6,7 @@
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+#TODO: Add telemetry to this action
 
 $settings = ReadSettings -project $project
 if ($get) {

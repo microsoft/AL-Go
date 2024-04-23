@@ -57,6 +57,7 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+#TODO: Log telemetry in this action
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 

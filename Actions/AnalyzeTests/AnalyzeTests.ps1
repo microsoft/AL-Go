@@ -1,19 +1,11 @@
 ﻿Param(
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project to analyze", Mandatory = $false)]
     [string] $project
 )
 
-$telemetryScope = $null
-
+import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    DownloadAndImportBcContainerHelper
-
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0082' -parentTelemetryScopeJson $parentTelemetryScopeJson
-
     . (Join-Path -Path $PSScriptRoot 'TestResultAnalyzer.ps1')
 
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
@@ -38,12 +30,9 @@ try {
         #Add-Content -path $ENV:GITHUB_STEP_SUMMARY -value "*BCPT test results not found*`n`n"
     }
 
-    TrackTrace -telemetryScope $telemetryScope
+    Trace-Information
 }
 catch {
-    if (Get-Module BcContainerHelper) {
-        TrackException -telemetryScope $telemetryScope -errorRecord $_
-    }
-
+    Trace-Exception -ErrorRecord $_
     throw
 }

@@ -33,7 +33,6 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with:
           shell: powershell
-          eventId: "DO0097"
         
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -69,3 +68,13 @@ jobs:
         if: steps.DetermineDeploymentEnvironments.outputs.deployALDocArtifact == 1
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Finalize the workflow
+        if: always()
+        uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          shell: powershell
+          telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          currentJobContext: ${{ toJson(job) }}
