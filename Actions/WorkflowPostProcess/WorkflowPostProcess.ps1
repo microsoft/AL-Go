@@ -35,13 +35,13 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext) {
 
     # Get the workflow conclusion
     $workflowConclusion = GetWorkflowConclusion -JobContext $JobContext
-    Add-TelemetryData -Hashtable $AdditionalData -Key 'WorkflowConclusion' -Value $workflowConclusion
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowConclusion' -Value $workflowConclusion
 
     # Calculate the workflow duration using the github api
     if ($telemetryScope -and ($null -ne $telemetryScope.workflowStartTime)) {
         Write-Host "Calculating workflow duration..."
         $workflowTiming= [DateTime]::UtcNow.Subtract([DateTime]::Parse($telemetryScope.workflowStartTime)).TotalSeconds
-        Add-TelemetryData -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowTiming
+        Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowTiming
     }
 
     $alGoSettingsPath = "$ENV:GITHUB_WORKSPACE/.github/AL-Go-Settings.json"
@@ -50,7 +50,7 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext) {
 
         # Log the repository type
         if ($repoSettings.PSObject.Properties.Name -contains 'type') {
-            Add-TelemetryData -Hashtable $AdditionalData -Key 'RepoType' -Value $repoSettings.type
+            Add-TelemetryProperty -Hashtable $AdditionalData -Key 'RepoType' -Value $repoSettings.type
         }
     }
 

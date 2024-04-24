@@ -83,21 +83,21 @@ function AddTelemetryEvent()
 
     try {
         # Add powershell version
-        Add-TelemetryData -Hashtable $Data -Key 'PowerShellVersion' -Value ($PSVersionTable.PSVersion.ToString())
+        Add-TelemetryProperty -Hashtable $Data -Key 'PowerShellVersion' -Value ($PSVersionTable.PSVersion.ToString())
 
         if ((Get-Module BcContainerHelper)) {
-            Add-TelemetryData -Hashtable $Data -Key 'BcContainerHelperVersion' -Value ((Get-Module BcContainerHelper).Version.ToString())
+            Add-TelemetryProperty -Hashtable $Data -Key 'BcContainerHelperVersion' -Value ((Get-Module BcContainerHelper).Version.ToString())
         }
 
-        Add-TelemetryData -Hashtable $Data -Key 'ALGoVersion' -Value (GetAlGoVersion)
-        Add-TelemetryData -Hashtable $Data -Key 'WorkflowName' -Value $ENV:GITHUB_WORKFLOW
-        Add-TelemetryData -Hashtable $Data -Key 'RunnerOs' -Value $ENV:RUNNER_OS
-        Add-TelemetryData -Hashtable $Data -Key 'RunId' -Value $ENV:GITHUB_RUN_ID
-        Add-TelemetryData -Hashtable $Data -Key 'RunNumber' -Value $ENV:GITHUB_RUN_NUMBER
-        Add-TelemetryData -Hashtable $Data -Key 'RunAttempt' -Value $ENV:GITHUB_RUN_ATTEMPT
+        Add-TelemetryProperty -Hashtable $Data -Key 'ALGoVersion' -Value (GetAlGoVersion)
+        Add-TelemetryProperty -Hashtable $Data -Key 'WorkflowName' -Value $ENV:GITHUB_WORKFLOW
+        Add-TelemetryProperty -Hashtable $Data -Key 'RunnerOs' -Value $ENV:RUNNER_OS
+        Add-TelemetryProperty -Hashtable $Data -Key 'RunId' -Value $ENV:GITHUB_RUN_ID
+        Add-TelemetryProperty -Hashtable $Data -Key 'RunNumber' -Value $ENV:GITHUB_RUN_NUMBER
+        Add-TelemetryProperty -Hashtable $Data -Key 'RunAttempt' -Value $ENV:GITHUB_RUN_ATTEMPT
 
         ### Add GitHub Repository information
-        Add-TelemetryData -Hashtable $Data -Key 'Repository' -Value $ENV:GITHUB_REPOSITORY_ID
+        Add-TelemetryProperty -Hashtable $Data -Key 'Repository' -Value $ENV:GITHUB_REPOSITORY_ID
 
         $repoSettings = ReadSettings
         if ($repoSettings.microsoftTelemetryConnectionString -ne '') {
@@ -167,7 +167,7 @@ function Trace-Exception() {
 
     [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     if ($ErrorRecord -ne $null) {
-        Add-TelemetryData -Hashtable $AdditionalData -Key 'ErrorMessage' -Value $ErrorRecord.Exception.Message
+        Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ErrorMessage' -Value $ErrorRecord.Exception.Message
     }
 
     $Message = "AL-Go action failed: $(GetActionName)"
@@ -191,9 +191,9 @@ function Trace-Exception() {
     The value to add to the hashtable
 
     .EXAMPLE
-    Add-TelemetryData -Hashtable $AdditionalData -Key 'RepoType' -Value 'PTE'
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'RepoType' -Value 'PTE'
 #>
-function Add-TelemetryData() {
+function Add-TelemetryProperty() {
     param(
         [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $Hashtable,
         [String] $Key,
@@ -204,4 +204,4 @@ function Add-TelemetryData() {
     }
 }
 
-Export-ModuleMember -Function Trace-Information, Trace-Exception, Add-TelemetryData
+Export-ModuleMember -Function Trace-Information, Trace-Exception, Add-TelemetryProperty
