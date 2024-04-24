@@ -95,10 +95,9 @@ function AddTelemetryEvent()
         Add-TelemetryData -Hashtable $Data -Key 'RunId' -Value $ENV:GITHUB_RUN_ID
         Add-TelemetryData -Hashtable $Data -Key 'RunNumber' -Value $ENV:GITHUB_RUN_NUMBER
         Add-TelemetryData -Hashtable $Data -Key 'RunAttempt' -Value $ENV:GITHUB_RUN_ATTEMPT
-        Add-TelemetryData -Hashtable $Data -Key 'JobId' -Value $ENV:GITHUB_JOB
 
         ### Add GitHub Repository information
-        Add-TelemetryData -Hashtable $Data -Key 'Repository' -Value $ENV:GITHUB_REPOSITORY
+        Add-TelemetryData -Hashtable $Data -Key 'Repository' -Value $ENV:GITHUB_REPOSITORY_ID
 
         $repoSettings = ReadSettings
         if ($repoSettings.microsoftTelemetryConnectionString -ne '') {
@@ -169,7 +168,6 @@ function Trace-Exception() {
     [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     if ($ErrorRecord -ne $null) {
         Add-TelemetryData -Hashtable $AdditionalData -Key 'ErrorMessage' -Value $ErrorRecord.Exception.Message
-        Add-TelemetryData -Hashtable $AdditionalData -Key 'ErrorStackTrace' -Value $ErrorRecord.ScriptStackTrace
     }
 
     $Message = "AL-Go action failed: $(GetActionName)"
