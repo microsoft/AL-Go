@@ -1,6 +1,6 @@
 name: '_Build AL-Go project'
 
-run-name: 'Build AL ${{ inputs.project }}'
+run-name: 'Build ${{ inputs.project }}'
 
 on:
   workflow_call:
