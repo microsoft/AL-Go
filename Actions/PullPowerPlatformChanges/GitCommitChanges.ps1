@@ -17,8 +17,6 @@ Param(
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-Write-Host "Starting GitHubCommitChanges.ps1 with parameters: $([environment]::Newline)actor: $Actor$([environment]::Newline)Token: $Token$([environment]::Newline)$([environment]::Newline)EnvironmentName: $EnvironmentName$([environment]::Newline)Location: $Location$([environment]::Newline)ServerUrl: $ServerUrl$([environment]::Newline)GitHubBranch: $GitHubBranch"
-
 # Import the helper script
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
@@ -30,4 +28,4 @@ $env:GITHUB_TOKEN = $token
 
 # Commit from the new folder
 write-host "Committing changes from the new folder $Location\$PowerPlatformSolutionName to branch $GitHubBranch"
-CommitFromNewFolder -ServerUrl $serverUrl -CommitMessage "Update solution: $PowerPlatformSolutionName with latest from environment: $EnvironmentName" -Branch $GitHubBranch
+CommitFromNewFolder -ServerUrl $serverUrl -CommitMessage "Update solution: $PowerPlatformSolutionName with latest from environment: $environmentName" -Branch $GitHubBranch
