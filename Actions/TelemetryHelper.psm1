@@ -49,7 +49,7 @@ function GetActionName() {
     if ($null -eq $ENV:GITHUB_ACTION_PATH) {
         return ""
     }
-    return $ENV:GITHUB_ACTION_PATH.Split("/")[-1]
+    return $ENV:GITHUB_ACTION_PATH.Split("/\")[-1]
 }
 
 function GetAlGoVersion() {
@@ -57,7 +57,7 @@ function GetAlGoVersion() {
         return ""
     }
 
-    $actionPath = "$ENV:GITHUB_ACTION_PATH".Split('\')
+    $actionPath = "$ENV:GITHUB_ACTION_PATH".Split('/\')
     $branch = $actionPath[$actionPath.Count-2]
     $owner = $actionPath[$actionPath.Count-4]
 
