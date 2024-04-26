@@ -17,12 +17,11 @@ Describe "Read Power Platform Settings Action Tests" {
                 [Parameter(Mandatory = $true)]
                 [hashtable] $deployToDevProperties
             )
-        
             return @{
                 type                        = "PTE"
                 powerPlatformSolutionFolder = "CoffeMR"
                 DeployToDev                 = $deployToDevProperties
-            } | ConvertTo-Json  
+            } | ConvertTo-Json
         }
 
         function SetSecretsEnvVariable {
@@ -120,19 +119,19 @@ Describe "Read Power Platform Settings Action Tests" {
             )
             # Convert hashtables to JSON strings
             $jsonInput = ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
- 
+
             $errorObject = $null
             $HasThrownException = $false
             # Run the action
             try {
-                ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev" 
+                ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev"
             }
             catch {
                 $errorObject = $_
                 $HasThrownException = $true
             }
-         
-            $HasThrownException | Should -Be $true         
+
+            $HasThrownException | Should -Be $true
             return $errorObject.TargetObject
         }
 
@@ -172,28 +171,28 @@ Describe "Read Power Platform Settings Action Tests" {
             }
             # Convert hashtables to JSON strings
             $jsonInput = ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
- 
+
             $errorObject = $null
             # Run the action
             try {
-                ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev" 
+                ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev"
             }
             catch {
                 $errorObject = $_
                 $HasThrownException = $true
             }
-         
-            $HasThrownException | Should -Be $true         
+
+            $HasThrownException | Should -Be $true
             return $errorObject.TargetObject
         }
-        
+
         # Test secret missing ppTenantId
         $secretProperties = @{
             ppApplicationId = "your-application-id"
             ppClientSecret  = "your-client-secret"
         }
         SetSecretsEnvVariable -secretProperties $secretProperties
-        $errorMessage = runMissingSecretsTest 
+        $errorMessage = runMissingSecretsTest
         $errorMessage | Should -Be "Secret DeployToDev-AuthContext must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
 
 
@@ -221,5 +220,5 @@ Describe "Read Power Platform Settings Action Tests" {
             "environmentName" = "Business Central Environment Name"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
-    } 
+    }
 }

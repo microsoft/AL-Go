@@ -12,7 +12,9 @@ Describe "Build Power Platform Settings Action Tests" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testDataPath', Justification = 'False positive.')]
         $testDataPath = Join-Path $PSScriptRoot "_TestData-PowerPlatform/*"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testDataTempPath', Justification = 'False positive.')]
         $testDataTempPath = Join-Path $PSScriptRoot "_TestData-PowerPlatform_temp"
 
         Invoke-Expression $actionScript
@@ -43,7 +45,7 @@ Describe "Build Power Platform Settings Action Tests" {
         $versionNodeText = $versionNode.'#text'
         $versionNodeText | Should -Not -BeNullOrEmpty
         $versionNodeText | Should -Contain $oldVersionString
-        
+
         BuildPowerPlatform -solutionFolder $solutionPath -appBuild $newBuildString -appRevision $newRevisionString
 
         $testSolutionFileAfterTest = [xml](Get-Content -Encoding UTF8 -Path (Join-Path $solutionPath 'other/Solution.xml'))
@@ -80,7 +82,7 @@ Describe "Build Power Platform Settings Action Tests" {
         $workflowFileContent | Should -Match $oldEnvironmentName
         $workflowFileContent | Should -Not -Match $newCompanyName
         $workflowFileContent | Should -Not -Match $newEnvironmentName
-        
+
         # Run the script
         BuildPowerPlatform -solutionFolder $solutionPath -CompanyId $newCompanyName -EnvironmentName $newEnvironmentName
 
@@ -103,7 +105,7 @@ Describe "Build Power Platform Settings Action Tests" {
     It 'Works with PowerApp Only' {
         write-host "Run PowerApp only test"
         $solutionPath = "$testDataTempPath\PowerAppOnlySolution";
-        
+
         # Run the script
         BuildPowerPlatform -solutionFolder $solutionPath -CompanyId "NewCompanyName" -EnvironmentName "NewEnvironmentName"
     }

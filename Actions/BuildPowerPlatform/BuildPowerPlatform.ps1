@@ -9,9 +9,7 @@ param(
     [Parameter(mandatory = $false)]
     [string] $appBuild,
     [Parameter(mandatory = $false)]
-    [string] $appRevision,
-    [Parameter(mandatory = $false)]
-    [string] $managed
+    [string] $appRevision
 )
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
@@ -135,7 +133,7 @@ function Update-FlowSettings {
         Write-Host "::Notice::No Power Automate flows found"
         return
     }
-        
+
     foreach ($flowFilePath in $flowFilePaths) {
         Update-FlowFile -FilePath $flowFilePath -CompanyId $companyId -EnvironmentName $environmentName
     }
@@ -262,10 +260,10 @@ if ($appBuild -and $appRevision) {
     $xmlFile.Save($solutionDefinitionFile)
 }
 else {
-    Write-Host "Skip solution version update since appBuild and appRevision are not set"  
+    Write-Host "Skip solution version update since appBuild and appRevision are not set"
 }
 
-if ($environmentName -and $companyId) {   
+if ($environmentName -and $companyId) {
     Write-Host "Updating the Power Platform solution Business Central connection settings"
     Write-Host "New connections settings: $environmentName, $companyId"
     Update-PowerAppSettings -SolutionFolder $SolutionFolder -EnvironmentName $environmentName -CompanyId $companyId
