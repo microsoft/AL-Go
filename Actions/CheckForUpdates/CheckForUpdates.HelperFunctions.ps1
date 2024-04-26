@@ -54,9 +54,12 @@ function ModifyCICDWorkflow {
     )
 
     # The CICD workflow can have a RepoSetting called CICDPushBranches, which will be used to set the branches for the workflow
-    # If the setting is not present, the default branches are used
+    # Setting the CICDSchedule will disable the push trigger for the CI/CD workflow (unless CICDPushBranches is set)
     if ($repoSettings.Keys -contains 'CICDPushBranches') {
         $CICDPushBranches = $repoSettings.CICDPushBranches
+    }
+    elseif ($repoSettings.Keys -contains $workflowScheduleKey) {
+        $CICDPushBranches = ''
     }
     else {
         $CICDPushBranches = $defaultCICDPushBranches
