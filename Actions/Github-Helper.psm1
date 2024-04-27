@@ -949,6 +949,7 @@ function GetArtifacts {
         [string] $baselineWorkflowID
     )
 
+    $refname = $branch.Replace('/','_')
     $headers = GetHeader -token $token
     if ($version -eq 'latest') { $version = '*' }
 
@@ -973,14 +974,14 @@ function GetArtifacts {
     # Download all artifacts matching branch and version
     # We might have results from multiple workflow runs, but we will have all artifacts from the workflow run that created the first matching artifact
     # Use the buildOutput artifact to determine the workflow run id (as that will always be there)
-    $artifactPattern = "*-$branch-*-$version"
+    $artifactPattern = "*-$refname-*-$version"
     # Use buildOutput artifact to determine the workflow run id to avoid excessive API calls
     # Reason: A project called xx-main will match the artifact pattern *-main-*-version, and there might not be any artifacts matching the mask
-    $buildOutputPattern = "*-$branch-BuildOutput-$version"
+    $buildOutputPattern = "*-$refname-BuildOutput-$version"
     # Old builds from PR runs are vresioned differently and should be ignored
-    $ignoreBuildOutputPattern1 = "*-$branch-BuildOutput-*.*.2147483647.0"
+    $ignoreBuildOutputPattern1 = "*-$refname-BuildOutput-*.*.2147483647.0"
     # Build Output from TestCurrent, TestNextMinor and TestNextMajor are named differently and should be ignored
-    $ignoreBuildOutputPattern2 = "*-$branch-BuildOutput-*-*"
+    $ignoreBuildOutputPattern2 = "*-$refname-BuildOutput-*-*"
     Write-Host "Analyzing artifacts matching $artifactPattern"
     while ($true) {
         if ($total_count -eq 0) {
@@ -1030,7 +1031,7 @@ function GetArtifacts {
     $result = $matchingArtifacts | Where-Object { $_.workflow_run.id -eq $buildOutputArtifacts[0].workflow_run.id } | ForEach-Object {
         foreach($project in $projects.Split(',')) {
             $project = $project.Replace('\','_').Replace('/','_')
-            $artifactPattern = "$project-$branch-$mask-$version"
+            $artifactPattern = "$project-$refname-$mask-$version"
             if ($_.name -like $artifactPattern) {
                 Write-Host "- $($_.name)"
                 return $_
