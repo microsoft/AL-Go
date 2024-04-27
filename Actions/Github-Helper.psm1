@@ -61,8 +61,7 @@ function InvokeWebRequest {
         [string] $body,
         [string] $outFile,
         [string] $uri,
-        [switch] $retry,
-        [switch] $ignoreErrors
+        [switch] $retry
     )
 
     try {
@@ -109,13 +108,8 @@ function InvokeWebRequest {
                 Write-Host "Retry failed as well"
             }
         }
-        if ($ignoreErrors.IsPresent) {
-            Write-Host $message
-        }
-        else {
-            Write-Host "::Error::$message"
-            throw $message
-        }
+        Write-Host $message
+        throw $message
     }
 }
 
