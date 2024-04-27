@@ -18,7 +18,7 @@ You will need:
   {
     "useCompilerFolder": true,
     "doNotPublishApps": true,
-    "artifact": "bcartifacts/sandbox/23.0.12034.13450/us/closest"
+    "artifact": "//*//first"
   }
 ```
 
