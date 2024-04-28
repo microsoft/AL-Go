@@ -573,6 +573,26 @@ function GetHeader {
     return $headers
 }
 
+function WaitForRateLimit {
+    Param(
+        [hashtable] $headers,
+        [int] $percentage = 10,
+        [switch] $displayStatus
+    )
+
+    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit" -retry).Content | ConvertFrom-Json).rate
+    $percent = [int]($rate.remaining*100/$rate.limit)
+    if ($displayStatus) {
+        Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percent%)"
+    }
+    if ($percent -lt $percentage) {
+        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
+        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
+        Write-Host "`nLess than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
+        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
+    }
+}
+
 function GetReleaseNotes {
     Param(
         [string] $token,
