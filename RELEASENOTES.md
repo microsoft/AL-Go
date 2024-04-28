@@ -40,6 +40,10 @@ The artifact setting in your project settings file can now contain a `*` instead
 - `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
 - `appSourceProductId` is moved to the `deliverToAppSource` structure
 
+### New parameter -clean on localdevenv and clouddevenv
+
+Adding -clean when running localdevenv or clouddevenv will create a clean development environment without compiling and publishing your apps.
+
 ## v5.0
 
 ### Issues
