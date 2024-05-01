@@ -104,7 +104,7 @@ function Get-CurrentPowerAppSettings {
                 if (!$currentsettingsList.Contains($currentEnvironmentAndCompany)) {
                     $currentSettingsList += $currentEnvironmentAndCompany
 
-                    # The Business Central environment can be be inconsistant - Either starting with a capital letter or all caps.
+                    # The Business Central environment can be inconsistent - Either starting with a capital letter or all caps.
                     # Add both variants to ensure we find all connections
                     $currentSettingsParts = @($currentEnvironmentAndCompany.Split(","))
                     $currentSettingsList += "$($currentSettingsParts[0].ToUpperInvariant()),$($currentSettingsParts[1])"
