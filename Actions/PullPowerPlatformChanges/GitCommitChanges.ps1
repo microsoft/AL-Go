@@ -28,4 +28,4 @@ $env:GITHUB_TOKEN = $token
 
 # Commit from the new folder
 Write-Host "Committing changes from the new folder $Location\$PowerPlatformSolutionName to branch $gitHubBranch"
-CommitFromNewFolder -ServerUrl $serverUrl -CommitMessage "Update solution: $PowerPlatformSolutionName with latest from environment: $environmentName" -Branch $GitHubBranch
+CommitFromNewFolder -ServerUrl $serverUrl -CommitMessage "Update solution: $PowerPlatformSolutionName with latest from environment: $environmentName" -Branch $gitHubBranch
