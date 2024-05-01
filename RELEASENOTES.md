@@ -13,10 +13,11 @@ Note that when using the preview version of AL-Go for GitHub, we recommend you U
 - Issue 997 'Deliver to AppSource' action fails for projects containing a space
 - Issue 987 Resource not accessible by integration when creating release from specific version
 - Issue 979 Publish to AppSource Documentation
-- Issue 1018 Artifact setting - possiblity to read version from app.json
+- Issue 1018 Artifact setting - possibility to read version from app.json
 - Issue 1008 Allow PullRequestHandler to use ubuntu or self hosted runners for all jobs except for pregateCheck
 - Issue 962 Finer control of "shell"-property
-- Issue 1041 Harden the version comparisson when incrementing version number
+- Issue 1041 Harden the version comparison when incrementing version number
+- Issue 1042 Downloading artifacts from GitHub doesn't work with branch names which include forward slashes
 
 ### Better artifact selection
 
@@ -38,6 +39,10 @@ The artifact setting in your project settings file can now contain a `*` instead
 - `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
 - `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
 - `appSourceProductId` is moved to the `deliverToAppSource` structure
+
+### New parameter -clean on localdevenv and clouddevenv
+
+Adding -clean when running localdevenv or clouddevenv will create a clean development environment without compiling and publishing your apps.
 
 ## v5.0
 
