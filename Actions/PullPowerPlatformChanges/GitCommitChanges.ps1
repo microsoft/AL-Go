@@ -3,7 +3,7 @@ Param(
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "The name of the environment as defined in GitHub", Mandatory = $false)]
+    [Parameter(HelpMessage = "Name of the Power Platform solution.", Mandatory = $false)]
     [string] $powerPlatformSolutionName,
     [Parameter(HelpMessage = "The name of the environment as defined in GitHub", Mandatory = $false)]
     [string] $environmentName,

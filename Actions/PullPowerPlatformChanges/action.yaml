@@ -84,7 +84,7 @@ runs:
           exit 1
         }
 
-    - name: export-solution action (username)
+    - name: Export Solution (username)
       if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
       uses: microsoft/powerplatform-actions/export-solution@v1
       with:
@@ -94,7 +94,7 @@ runs:
         solution-name: ${{ inputs.solutionFolder }}
         solution-output-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
 
-    - name: export-solution action (application ID)
+    - name: Export Solution (application ID)
       if: steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
       uses: microsoft/powerplatform-actions/export-solution@v1
       with:
