@@ -101,7 +101,7 @@ function Get-CurrentPowerAppSettings {
                     continue
                 }
 
-                if (!$currentsettingsList.Contains($currentEnvironmentAndCompany)) {
+                if (!$currentSettingsList.Contains($currentEnvironmentAndCompany)) {
                     $currentSettingsList += $currentEnvironmentAndCompany
 
                     # The Business Central environment can be inconsistent - Either starting with a capital letter or all caps.
