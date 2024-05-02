@@ -57,5 +57,5 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext) {
     Trace-Information -Message "AL-Go workflow ran: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
 }
 
-import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext
