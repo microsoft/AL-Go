@@ -30,7 +30,6 @@ Describe "Build Power Platform Settings Action Tests" {
     }
 
     It 'Updates the solution file' {
-        write-host "Run update solution file test"
         # The old version is hardcoded in the test data
         $oldVersionString = "1.0.0.0"
 
@@ -57,7 +56,6 @@ Describe "Build Power Platform Settings Action Tests" {
     }
 
     It 'Updates the Power App connections' {
-        write-host "Run update BC connections test"
         # note: The old company name and environment name are hardcoded in the test data
         $oldCompanyName = "TestCompanyId"
         $oldEnvironmentName = "TestEnvironmentName"
@@ -103,7 +101,6 @@ Describe "Build Power Platform Settings Action Tests" {
     }
 
     It 'Works with PowerApp Only' {
-        write-host "Run PowerApp only test"
         $solutionPath = "$testDataTempPath\PowerAppOnlySolution";
 
         # Run the script
@@ -111,7 +108,6 @@ Describe "Build Power Platform Settings Action Tests" {
     }
 
     It 'Works with Flow only solution' {
-        write-host "Run Flow only test"
         $solutionPath = "$testDataTempPath/FlowOnlySolution";
         BuildPowerPlatform -solutionFolder $solutionPath -CompanyId "NewCompanyName" -EnvironmentName "NewEnvironmentName"
     }
