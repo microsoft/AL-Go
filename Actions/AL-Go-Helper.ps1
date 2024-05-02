@@ -1554,7 +1554,8 @@ function CreateDevEnv {
         [Parameter(ParameterSetName = 'local')]
         [string] $containerName = "",
         [string] $licenseFileUrl = "",
-        [switch] $accept_insiderEula
+        [switch] $accept_insiderEula,
+        [switch] $clean
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1710,6 +1711,15 @@ function CreateDevEnv {
 
         if ((-not $settings.appFolders) -and (-not $settings.testFolders)) {
             Write-Host "Repository is empty"
+        }
+
+        if ($clean) {
+            $appFolders = @()
+            $testFolders = @()
+        }
+        else {
+            $appFolders = $settings.appFolders
+            $testFolders = $settings.testFolders
         }
 
         $installApps = $settings.installApps
@@ -1906,8 +1916,8 @@ function CreateDevEnv {
                 -installApps $installApps `
                 -installTestApps $installTestApps `
                 -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-                -appFolders $settings.appFolders `
-                -testFolders $settings.testFolders `
+                -appFolders $appFolders `
+                -testFolders $testFolders `
                 -testResultsFile $testResultsFile `
                 -testResultsFormat 'JUnit' `
                 -customCodeCops $settings.customCodeCops `
