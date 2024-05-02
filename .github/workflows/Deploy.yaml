@@ -128,7 +128,10 @@ jobs:
           $releaseNotes = (Get-Content -Encoding utf8 -Path $releaseNotesFile) -join "`n"
           $lastVersion = $releaseNotes.indexof("`n## ")
           $releaseNotes = $releaseNotes.Substring(0, $lastVersion)
-          Add-Content -encoding UTF8 -Path $ENV:GITHUB_ENV -Value "ReleaseNotes=([Uri]::EscapeDataString($releaseNotes))"
+          Write-Host $env:GITHUB_ENV
+          Write-Host "Release Notes: $releaseNotes"
+          Write-Host "Release Notes: ([Uri]::EscapeDataString($releaseNotes))"
+          Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -Value "ReleaseNotes=([Uri]::EscapeDataString($releaseNotes))"
 
       - name: Create release
         if: github.repository_owner == 'freddydk' && github.event.inputs.createRelease
