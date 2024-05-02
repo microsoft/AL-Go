@@ -131,7 +131,7 @@ jobs:
           Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -Value "ReleaseNotes=$([Uri]::EscapeDataString($releaseNotes))"
 
       - name: Create release
-        if: github.repository_owner == 'microsoft' && github.event.inputs.createRelease
+        if: github.repository_owner == 'microsoft' && github.event.inputs.createRelease == 'true'
         uses: actions/github-script@v7
         id: createrelease
         env:
