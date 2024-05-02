@@ -146,15 +146,7 @@ function RunWorkflow {
     }
 
     $headers = GetHeader -token $token
-    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit" -retry).Content | ConvertFrom-Json).rate
-    $percent = [int]($rate.remaining*100/$rate.limit)
-    Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percent%)"
-    if ($percent -lt 10) {
-        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
-        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
-        Write-Host "Less than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
-    }
+    WaitForRateLimit -headers $headers -displayStatus
 
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
@@ -276,8 +268,9 @@ function WaitWorkflow {
     $status = ""
     do {
         if ($delay) {
-            Start-Sleep -Seconds 60
+            Start-Sleep -Seconds 120
         }
+        WaitForRateLimit -headers $headers
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
         $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
         if ($run.status -ne $status) {
