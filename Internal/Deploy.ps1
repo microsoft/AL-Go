@@ -250,8 +250,7 @@ try {
             else {
                 $releaseNotes = "## $($config.branch)`n`n$releaseNotes"
             }
-            Set-Content -Path $releaseNotesFile -Value $releaseNotes -Encoding utf8
-            Copy-Item -Path $releaseNotesFile -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
+            Set-Content -Path (Join-Path "./.github" "RELEASENOTES.copy.md") -Value $releaseNotes -Encoding utf8
         }
         PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
 
