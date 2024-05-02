@@ -59,7 +59,7 @@ if ($searchArtifacts) {
     $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
     $allArtifacts = @()
     'Apps','Dependencies','PowerPlatformSolution' | ForEach-Object {
-        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -version $artifactsVersion -branch $refname)
+        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -version $artifactsVersion -branch $ENV:GITHUB_REF_NAME)
     }
 
     if ($allArtifacts) {
