@@ -18,6 +18,11 @@ on:
         description: Push directly to the target branch. If not set, a PR will be created.
         required: false
         default: false
+      requireEndToEndTests:
+        type: boolean
+        description: Require successful end 2 end tests before deploying
+        required: false
+        default: true
       createRelease:
         type: boolean
         description: Create a release in this repository
@@ -37,14 +42,13 @@ jobs:
     runs-on: [ ubuntu-latest ]
     steps:
       - name: Check successful end 2 end tests have run
-        if: github.repository_owner == 'microsoft'
+        if: github.repository_owner == 'microsoft' && github.event.inputs.requireEndToEndTests == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          repository: ${{ github.repository }}
         run: |
           $errorActionPreference = "Stop"
-          $end2endRuns = (gh api /repos/$($env:repository)/actions/runs?per_page=100 | ConvertFrom-Json).workflow_runs | Where-Object { $_.name -eq 'End 2 End Tests' }
-          $latestSha = (gh api /repos/$($env:repository)/commits/main | ConvertFrom-Json).sha
+          $end2endRuns = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs?per_page=100 | ConvertFrom-Json).workflow_runs | Where-Object { $_.name -eq 'End 2 End Tests' }
+          $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
           $latestRun = $end2endruns | Where-Object { $_.head_sha -eq $latestSha }
           if (!$latestRun) {
             throw "No End 2 End Tests run found for the latest commit on main"
@@ -66,15 +70,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           branch: ${{ github.event.inputs.branch }}
-          repository: ${{ github.repository }}
           runId: ${{ github.run_id }}
         run: |
           $errorActionPreference = "Stop"
           if ($env:branch -eq 'preview') {
             Write-Host "Deploying to preview branch. No validation required"
           } else {
-            $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
-            $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
+            $approval = gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
+            $run = gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:runId) | ConvertFrom-Json
 
             if ($approval.user.login -eq $run.actor.login) {
               throw "You cannot approve your own deployment"
@@ -96,7 +99,7 @@ jobs:
             if (!$token) {
               throw "In order to run the Deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token"
             }
-            $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
+            $githubOwner = "$env:GITHUB_REPOSITORY_OWNER"
             if ("$env:defaultBcContainerHelperVersion" -eq "") {
               if ($env:branch -eq 'preview') {
                 $env:defaultBcContainerHelperVersion = 'preview'
@@ -121,7 +124,7 @@ jobs:
           }
 
       - name: Calculate Release Notes
-        if: github.repository_owner == 'microsoft'
+        if: github.repository_owner == 'microsoft' && github.event.inputs.createRelease == 'true'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $releaseNotesFile = Join-Path $env:GITHUB_WORKSPACE "RELEASENOTES.md"
