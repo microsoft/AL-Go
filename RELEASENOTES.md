@@ -1,3 +1,28 @@
+### New Settings
+
+- `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
+- `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
+
+### New Actions
+
+- `BuildPowerPlatform`: to build a PowerPlatform Solution
+- `DeployPowerPlatform`: to deploy a PowerPlatform Solution
+- `PullPowerPlatformChanges`: to pull changes made in PowerPlatform studio into the repository
+- `ReadPowerPlatformSettings`: to read settings and secrets for PowerPlatform deployment
+- `GetArtifactsForDeployment`: originally code from deploy.ps1 to retrieve artifacts for releases or builds - now as an action to read apps into a folder.
+
+### New Workflows
+
+- **Pull PowerPlatform Changes** for pulling changes from your PowerPlatform development environment into your AL-Go for GitHub repository
+- **Push PowerPlatform Changes** for pushing changes from your AL-Go for GitHub repository to your PowerPlatform development environment
+
+### New Scenarios (Documentation)
+
+- [Connect your GitHub repository to Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupPowerPlatform.md)
+- [How to set up Service Principal for Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupServicePrincipalForPowerPlatform.md)
+- [Try one of the Business Central and Power Platform samples](https://github.com/microsoft/AL-Go/blob/main/Scenarios/TryPowerPlatformSamples.md)
+- [Publish To AppSource](https://github.com/microsoft/AL-Go/blob/main/Scenarios/PublishToAppSource.md)
+
 ## v5.1
 
 ### Issues
@@ -31,34 +56,12 @@ The artifact setting in your project settings file can now contain a `*` instead
   - **continuousDelivery** can be set to true to enable continuous delivery of every successful build to AppSource Validation. Note that the app will only be in preview in AppSource and you will need to manually press GO LIVE in order for the app to be promoted to production.
   - **includeDependencies** can be set to an array of file names (incl. wildcards) which are the names of the dependencies to include in the AppSource submission. Note that you need to set `generateDependencyArtifact` in the project settings file to true in order to include dependencies.
 - Add `shell` as a property under `DeployTo` structure
-- `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
-- `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
 
 ### Deprecated Settings
 
 - `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
 - `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
 - `appSourceProductId` is moved to the `deliverToAppSource` structure
-
-### New Actions
-
-- `BuildPowerPlatform`: to build a PowerPlatform Solution
-- `DeployPowerPlatform`: to deploy a PowerPlatform Solution
-- `PullPowerPlatformChanges`: to pull changes made in PowerPlatform studio into the repository
-- `ReadPowerPlatformSettings`: to read settings and secrets for PowerPlatform deployment
-- `GetArtifactsForDeployment`: originally code from deploy.ps1 to retrieve artifacts for releases or builds - now as an action to read apps into a folder.
-
-### New Workflows
-
-- **Pull PowerPlatform Changes** for pulling changes from your PowerPlatform development environment into your AL-Go for GitHub repository
-- **Push PowerPlatform Changes** for pushing changes from your AL-Go for GitHub repository to your PowerPlatform development environment
-
-### New Scenarios (Documentation)
-
-- [Connect your GitHub repository to Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupPowerPlatform.md)
-- [How to set up Service Principal for Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupServicePrincipalForPowerPlatform.md)
-- [Try one of the Business Central and Power Platform samples](https://github.com/microsoft/AL-Go/blob/main/Scenarios/TryPowerPlatformSamples.md)
-- [Publish To AppSource](https://github.com/microsoft/AL-Go/blob/main/Scenarios/PublishToAppSource.md)
 
 ### New parameter -clean on localdevenv and clouddevenv
 
