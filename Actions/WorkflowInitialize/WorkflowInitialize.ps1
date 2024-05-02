@@ -9,7 +9,6 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    Write-Host "---> $ENV:GITHUB_ACTION_PATH"
     $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
     $branch = $ap[$ap.Count-2]
     $owner = $ap[$ap.Count-4]
@@ -31,8 +30,9 @@ try {
         else {
             $verstr = $branch
         }
-        Write-Big -str "a$verstr"
     }
+
+    Write-Big -str "a$verstr"
 
     TestALGoRepository
 
