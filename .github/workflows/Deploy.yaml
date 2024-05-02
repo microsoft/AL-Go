@@ -58,7 +58,7 @@ jobs:
 
   Deploy:
     runs-on: [ ubuntu-latest ]
-    needs: [ Checks ]
+    needs: [ CheckEndToEnd ]
     environment: Production
     steps:
       - name: Validate Deployment
