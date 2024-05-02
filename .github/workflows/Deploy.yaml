@@ -121,20 +121,17 @@ jobs:
           }
 
       - name: Calculate Release Notes
-        if: github.repository_owner == 'freddydk'
+        if: github.repository_owner == 'microsoft'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $releaseNotesFile = Join-Path $env:GITHUB_WORKSPACE "RELEASENOTES.md"
           $releaseNotes = (Get-Content -Encoding utf8 -Path $releaseNotesFile) -join "`n"
           $lastVersion = $releaseNotes.indexof("`n## ")
           $releaseNotes = $releaseNotes.Substring(0, $lastVersion)
-          Write-Host $env:GITHUB_ENV
-          Write-Host "Release Notes: $releaseNotes"
-          Write-Host "Release Notes: $([Uri]::EscapeDataString($releaseNotes))"
           Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -Value "ReleaseNotes=$([Uri]::EscapeDataString($releaseNotes))"
 
       - name: Create release
-        if: github.repository_owner == 'freddydk' && github.event.inputs.createRelease
+        if: github.repository_owner == 'microsoft' && github.event.inputs.createRelease
         uses: actions/github-script@v7
         id: createrelease
         env:
