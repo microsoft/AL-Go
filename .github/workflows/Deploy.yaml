@@ -53,6 +53,7 @@ jobs:
 
   Deploy:
     runs-on: [ ubuntu-latest ]
+    needs: [ Checks ]
     environment: Production
     steps:
       - name: Validate Deployment
@@ -113,3 +114,13 @@ jobs:
             Write-Host "::Error::Error deploying repositories. The error was $($_.Exception.Message)"
             exit 1
           }
+
+      - name: Calculate Release Notes
+        if: github.repository_owner == 'freddydk'
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $releaseNotesFile = Join-Path $env:GITHUB_WORKSPACE "RELEASENOTES.md"
+          $releaseNotes = (Get-Content -Encoding utf8 -Path $releaseNotesFile) -join "`n"
+          $lastVersion = $releaseNotes.indexof("`n## ")
+          $releaseNotes = $releaseNotes.Substring(0, $lastVersion)
+          Write-Host $releaseNotes
