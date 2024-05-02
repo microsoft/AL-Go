@@ -28,6 +28,29 @@ defaults:
     shell: pwsh
 
 jobs:
+  Checks:
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Check successful end 2 end tests have run
+        if: github.repository_owner == 'microsoft'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          repository: ${{ github.repository }}
+        run: |
+          $errorActionPreference = "Stop"
+          $end2endRuns = (gh api /repos/$($env:repository)/actions/runs?per_page=100 | ConvertFrom-Json).workflow_runs | Where-Object { $_.name -eq 'End 2 End Tests' }
+          $latestSha = (gh api /repos/$($env:repository)/commits/main | ConvertFrom-Json).sha
+          $latestRun = $end2endruns | Where-Object { $_.head_sha -eq $latestSha }
+          if (!$latestRun) {
+            throw "No End 2 End Tests run found for the latest commit on main"
+          }
+          if ($latestRun.status -ne 'completed') {
+            throw "End 2 End Tests run for the latest commit on main is not completed"
+          }
+          if ($latestRun.conclusion -ne 'success') {
+            throw "End 2 End Tests run for the latest commit on main did not succeed"
+          }
+
   Deploy:
     runs-on: [ ubuntu-latest ]
     environment: Production
