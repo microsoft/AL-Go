@@ -130,6 +130,7 @@ function ModifyBuildWorkflows {
     $build = $yaml.Get('jobs:/Build:/')
     $deliver = $yaml.Get('jobs:/Deliver:/')
     $deploy = $yaml.Get('jobs:/Deploy:/')
+    $deployALDoc = $yaml.Get('jobs:/DeployALDoc:/')
     $postProcess = $yaml.Get('jobs:/PostProcess:/')
     if (!$build) {
         throw "No build job found in the workflow"
@@ -199,19 +200,24 @@ function ModifyBuildWorkflows {
         $ifpart += " && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
     }
 
+    $postProcessNeeds = $needs
     # Modify Deliver and Deploy steps depending on build jobs
     if ($deploy) {
         $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
         $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
         $yaml.Replace('jobs:/Deploy:/', $deploy.content)
+        $postProcessNeeds += @('Deploy')
     }
     if ($deliver) {
         $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
         $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
         $yaml.Replace('jobs:/Deliver:/', $deliver.content)
+        $postProcessNeeds += @('Deliver')
+    }
+    if ($deployALDoc) {
+        $postProcessNeeds += @('DeployALDoc')
     }
     if ($postProcess) {
-        $needs += @('Deploy','Deliver','DeployALDoc')
         $postProcess.Replace('needs:', "needs: [ $($needs -join ', ') ]")
         $yaml.Replace('jobs:/PostProcess:/', $postProcess.content)
     }
@@ -287,7 +293,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
-        ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP ($repoSettings.type -eq 'AppSource App')
+        ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP ($repoSettings.type -eq 'PTE')
     }
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {
