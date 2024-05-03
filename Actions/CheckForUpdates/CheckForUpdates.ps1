@@ -19,8 +19,6 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
 
-#TODO: Log telemetry in this action
-
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 

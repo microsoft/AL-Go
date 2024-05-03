@@ -25,7 +25,6 @@
 )
 
 $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -125,11 +124,8 @@ try {
 
     Set-Location $baseFolder
     CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch | Out-Null
-
-    Trace-Information
 }
 catch {
-    Trace-Exception -ErrorRecord $_
     throw
 }
 finally {

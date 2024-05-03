@@ -1,7 +1,7 @@
 ﻿function LogAlGoVersion() {
     $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
-    $branch = $ap[$ap.Count-2]
-    $owner = $ap[$ap.Count-4]
+    $branch = $ap[$ap.Count - 2]
+    $owner = $ap[$ap.Count - 4]
 
     if ($owner -ne "microsoft") {
         $verstr = "d"
@@ -15,30 +15,21 @@
     Write-Big -str "a$verstr"
 }
 
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-try {
+# Log the version of AL-Go that is being used in the workflow
+LogAlGoVersion
 
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
+# Test the AL-Go repository is set up correctly
+TestALGoRepository
 
-    # Log the version of AL-Go that is being used in the workflow
-    LogAlGoVersion
+# Test the prerequisites for the test runner
+TestRunnerPrerequisites
 
-    # Test the AL-Go repository is set up correctly
-    TestALGoRepository
+# Create a json object that contains an entry for the workflowstarttime
+$scopeJson = @{
+    "workflowStartTime" = [DateTime]::UtcNow
+} | ConvertTo-Json -Compress
 
-    # Test the prerequisites for the test runner
-    TestRunnerPrerequisites
-
-    # Create a json object that contains an entry for the workflowstarttime
-    $scopeJson = @{
-        "workflowStartTime" = [DateTime]::UtcNow
-    } | ConvertTo-Json -Compress
-
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "telemetryScopeJson=$scopeJson"
-}
-catch {
-    Trace-Exception -ErrorRecord $_
-    throw
-}
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "telemetryScopeJson=$scopeJson"

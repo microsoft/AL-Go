@@ -30,7 +30,6 @@ function IncludeDeliveryTarget([string] $deliveryTarget) {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-#TODO: Log telemetry in this task
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deliveryTargets = @('GitHubPackages','NuGet','Storage')

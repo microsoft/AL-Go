@@ -18,29 +18,19 @@ Param(
     [bool] $directCommit
 )
 
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+$serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'create-development-environment'
+$baseFolder = (Get-Location).Path
+DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
-try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'create-development-environment'
-    $baseFolder = (Get-Location).Path
-    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+$adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($adminCenterApiCredentials))
+CreateDevEnv `
+    -kind cloud `
+    -caller GitHubActions `
+    -environmentName $environmentName `
+    -reUseExistingEnvironment:$reUseExistingEnvironment `
+    -baseFolder $baseFolder `
+    -project $project `
+    -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
 
-    $adminCenterApiCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($adminCenterApiCredentials))
-    CreateDevEnv `
-        -kind cloud `
-        -caller GitHubActions `
-        -environmentName $environmentName `
-        -reUseExistingEnvironment:$reUseExistingEnvironment `
-        -baseFolder $baseFolder `
-        -project $project `
-        -adminCenterApiCredentials ($adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable)
-
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Create a development environment $environmentName" -branch $branch | Out-Null
-
-    Trace-Information
-}
-catch {
-    Trace-Exception -ErrorRecord $_
-    throw
-}
+CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Create a development environment $environmentName" -branch $branch | Out-Null

@@ -13,59 +13,49 @@
     [bool] $directCommit
 )
 
-Import-Module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path -path $PSScriptRoot -ChildPath "IncrementVersionNumber.psm1" -Resolve)
 
-try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    Import-Module (Join-Path -path $PSScriptRoot -ChildPath "IncrementVersionNumber.psm1" -Resolve)
+$serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'increment-version-number'
+$baseFolder = (Get-Location).path
+DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 
-    $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'increment-version-number'
-    $baseFolder = (Get-Location).path
-    DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+$settings = $env:Settings | ConvertFrom-Json
 
-    $settings = $env:Settings | ConvertFrom-Json
+$projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
 
-    $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+$allAppFolders = @()
+foreach ($project in $projectList) {
+    $projectPath = Join-Path $baseFolder $project
 
-    $allAppFolders = @()
-    foreach($project in $projectList) {
-        $projectPath = Join-Path $baseFolder $project
+    $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
+    $settings = ReadSettings -baseFolder $baseFolder -project $project
 
-        $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
-        $settings = ReadSettings -baseFolder $baseFolder -project $project
+    # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
+    Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
 
-        # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
-        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
+    # Set repoVersion in project settings according to the versionNumber parameter
+    Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
 
-        # Set repoVersion in project settings according to the versionNumber parameter
-        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
+    # Resolve project folders to get all app folders that contain an app.json file
+    $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
+    ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
-        # Resolve project folders to get all app folders that contain an app.json file
-        $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
-        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+    # Set version in app manifests (app.json files)
+    Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $versionNumber
 
-        # Set version in app manifests (app.json files)
-        Set-VersionInAppManifests -projectPath $projectPath -projectSettings $projectSettings -newValue $versionNumber
-
-        # Collect all project's app folders
-        $allAppFolders += $projectSettings.appFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
-        $allAppFolders += $projectSettings.testFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
-        $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
-    }
-
-    # Set dependencies in app manifests
-    Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
-
-    $commitMessage = "New Version number $versionNumber"
-    if ($versionNumber.StartsWith('+')) {
-        $commitMessage = "Incremented Version number by $versionNumber"
-    }
-
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch | Out-Null
-
-    Trace-Information
+    # Collect all project's app folders
+    $allAppFolders += $projectSettings.appFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+    $allAppFolders += $projectSettings.testFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
+    $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
 }
-catch {
-    Trace-Exception -ErrorRecord $_
-    throw
+
+# Set dependencies in app manifests
+Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+
+$commitMessage = "New Version number $versionNumber"
+if ($versionNumber.StartsWith('+')) {
+    $commitMessage = "Incremented Version number by $versionNumber"
 }
+
+CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch | Out-Null

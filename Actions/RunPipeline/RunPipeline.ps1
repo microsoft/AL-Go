@@ -16,8 +16,6 @@
 $containerBaseFolder = $null
 $projectPath = $null
 
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     DownloadAndImportBcContainerHelper
@@ -405,11 +403,8 @@ try {
         Copy-Item -Path $buildOutputFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
-
-    Trace-Information
 }
 catch {
-    Trace-Exception -ErrorRecord $_
     throw
 }
 finally {
