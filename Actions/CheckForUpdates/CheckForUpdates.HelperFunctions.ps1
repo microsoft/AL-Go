@@ -129,8 +129,8 @@ function ModifyBuildWorkflows {
     $build = $yaml.Get('jobs:/Build:/')
     $deliver = $yaml.Get('jobs:/Deliver:/')
     $deploy = $yaml.Get('jobs:/Deploy:/')
-    if (!$build -or !$deliver -or !$deploy) {
-        throw "Internal error - cannot find jobs in the workflow"
+    if (!$build) {
+        throw "No build job found in the workflow"
     }
 
     # Duplicate the build job for each dependency depth
@@ -182,17 +182,23 @@ function ModifyBuildWorkflows {
     # Replace the entire build: job with the new build job list
     $yaml.Replace('jobs:/Build:', $newBuild)
 
-    # Modify Deliver and Deploy steps depending on build jobs
-    $needs += @("Build","BuildPP")
-    $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
+    if ($deliver -or $deploy) {
+        # Modify Deliver and Deploy steps depending on build jobs
+        $needs += @("Build","BuildPP")
+        $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
+    }
 
-    $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-    $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
-    $yaml.Replace('jobs:/Deliver:', $deliver)
+    if ($deliver) {
+        $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
+        $yaml.Replace('jobs:/Deliver:', $deliver)
+    }
 
-    $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-    $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
-    $yaml.Replace('jobs:/Deploy:', $deploy)
+    if ($deploy) {
+        $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
+        $yaml.Replace('jobs:/Deploy:', $deploy)
+    }
 }
 
 function ModifyUpdateALGoSystemFiles {
