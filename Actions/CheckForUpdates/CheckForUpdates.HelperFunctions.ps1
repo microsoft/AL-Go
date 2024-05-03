@@ -128,6 +128,7 @@ function ModifyBuildWorkflows {
 
     $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
     $build = $yaml.Get('jobs:/Build:/')
+    $buildPP = $yaml.Get('jobs:/BuildPP:/')
     $deliver = $yaml.Get('jobs:/Deliver:/')
     $deploy = $yaml.Get('jobs:/Deploy:/')
     $deployALDoc = $yaml.Get('jobs:/DeployALDoc:/')
@@ -185,7 +186,8 @@ function ModifyBuildWorkflows {
     # Replace the entire build: job with the new build job list
     $yaml.Replace('jobs:/Build:', $newBuild)
 
-    if (!$includeBuildPP) {
+    if (!$includeBuildPP -and $buildPP) {
+        # Remove the BuildPP job from the workflow
         [int]$start = 0
         [int]$count = 0
         if ($yaml.Find('jobs:/BuildPP:', [ref] $start, [ref] $count)) {
@@ -195,7 +197,7 @@ function ModifyBuildWorkflows {
 
     $needs += @("Build")
     $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped')"
-    if ($includeBuildPP) {
+    if ($includeBuildPP -and $buildPP) {
         $needs += @("BuildPP")
         $ifpart += " && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
     }
@@ -218,7 +220,7 @@ function ModifyBuildWorkflows {
         $postProcessNeeds += @('DeployALDoc')
     }
     if ($postProcess) {
-        $postProcess.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $postProcess.Replace('needs:', "needs: [ $($postProcessNeeds -join ', ') ]")
         $yaml.Replace('jobs:/PostProcess:/', $postProcess.content)
     }
 }
