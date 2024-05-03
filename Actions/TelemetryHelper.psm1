@@ -1,4 +1,5 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath ".\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1' -Resolve)
 
 #region Loading telemetry helper
 function DownloadNugetPackage($PackageName, $PackageVersion) {
@@ -53,18 +54,10 @@ function GetActionName() {
 }
 
 function GetAlGoVersion() {
-    if ($null -eq $ENV:GITHUB_ACTION_PATH) {
-        return ""
-    }
-
-    $actionPath = "$ENV:GITHUB_ACTION_PATH".Split('/\')
-    $branch = $actionPath[$actionPath.Count-2]
-    $owner = $actionPath[$actionPath.Count-4]
-
-    if ($owner -ne "microsoft") {
+    if ((Get-ActionOwner) -ne "microsoft") {
         return "Developer/Private"
     } else {
-        return $branch
+        return Get-ActionBranch
     }
 }
 #endregion

@@ -1,13 +1,16 @@
 ﻿function LogAlGoVersion() {
-    $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
-    $branch = $ap[$ap.Count - 2]
-    $owner = $ap[$ap.Count - 4]
+    Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
 
-    if ($owner -ne "microsoft") {
+    $branch = Get-ActionBranch
+    if ((Get-ActionOwner) -ne "microsoft") {
         $verstr = "d"
     }
     elseif ($branch -eq "preview") {
         $verstr = "p"
+    }
+    elseif ($branch -match "^[0-9a-f]{40}$") {
+        # If the branch is a commit hash, use the first 7 characters of the hash
+        $verstr = $branch.Substring(0, 7)
     }
     else {
         $verstr = $branch
