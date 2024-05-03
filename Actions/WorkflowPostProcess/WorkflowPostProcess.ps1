@@ -15,7 +15,7 @@ function GetWorkflowConclusion($JobContext) {
     }
 
     # Check the conclusion for the past jobs in the workflow
-    $workflowJobs = gh api /repos/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID/jobs -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json
+    $workflowJobs = gh api /repos/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID/jobs --paginate -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json
     if ($null -ne $workflowJobs) {
         $failedJobs = $workflowJobs.jobs | Where-Object { $_.conclusion -eq "failure" }
         if ($null -ne $failedJobs) {
