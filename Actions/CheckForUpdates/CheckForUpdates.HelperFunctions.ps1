@@ -182,22 +182,22 @@ function ModifyBuildWorkflows {
     # Replace the entire build: job with the new build job list
     $yaml.Replace('jobs:/Build:', $newBuild)
 
-    if ($deliver -or $deploy) {
+    if ($deploy -or $deliver) {
         # Modify Deliver and Deploy steps depending on build jobs
         $needs += @("Build","BuildPP")
         $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
-    }
-
-    if ($deliver) {
-        $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-        $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
-        $yaml.Replace('jobs:/Deliver:', $deliver.content)
     }
 
     if ($deploy) {
         $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
         $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
         $yaml.Replace('jobs:/Deploy:/', $deploy.content)
+    }
+
+    if ($deliver) {
+        $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
+        $yaml.Replace('jobs:/Deliver:/', $deliver.content)
     }
 }
 
