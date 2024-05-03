@@ -191,13 +191,13 @@ function ModifyBuildWorkflows {
     if ($deliver) {
         $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
         $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
-        $yaml.Replace('jobs:/Deliver:', $deliver)
+        $yaml.Replace('jobs:/Deliver:', $deliver.content)
     }
 
     if ($deploy) {
         $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
         $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
-        $yaml.Replace('jobs:/Deploy:', $deploy)
+        $yaml.Replace('jobs:/Deploy:/', $deploy.content)
     }
 }
 
