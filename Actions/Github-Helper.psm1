@@ -1098,4 +1098,4 @@ function Get-ActionBranch() {
 
     $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
     return $ap[$ap.Count - 2]
-} 
+}
