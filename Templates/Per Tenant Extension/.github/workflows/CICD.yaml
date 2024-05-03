@@ -228,7 +228,7 @@ jobs:
 
   Deploy:
     needs: [ Initialization, Build, BuildPP ]
-    if: (!cancelled()) && needs.Build.result != 'Failure' && needs.BuildPP.result != 'Failure' && needs.Initialization.outputs.environmentCount > 0
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped') && needs.Initialization.outputs.environmentCount > 0
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
@@ -293,7 +293,7 @@ jobs:
 
   Deliver:
     needs: [ Initialization, Build, BuildPP ]
-    if: (!cancelled()) && needs.Build.result != 'Failure' && needs.BuildPP.result != 'Failure' && needs.Initialization.outputs.deliveryTargetsJson != '[]'
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped') && needs.Initialization.outputs.deliveryTargetsJson != '[]'
     strategy:
       matrix:
         deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargetsJson) }}

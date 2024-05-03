@@ -123,15 +123,14 @@ function ModifyBuildWorkflows {
     Param(
         [Yaml] $yaml,
         [int] $depth,
-        [hashtable] $repoSettings
+        [bool] $includeBuildPP
     )
-
-    $includeBuildPP = ($repoSettings.type -eq "AppSource App")
 
     $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
     $build = $yaml.Get('jobs:/Build:/')
     $deliver = $yaml.Get('jobs:/Deliver:/')
     $deploy = $yaml.Get('jobs:/Deploy:/')
+    $postProcess = $yaml.Get('jobs:/PostProcess:/')
     if (!$build) {
         throw "No build job found in the workflow"
     }
@@ -182,32 +181,39 @@ function ModifyBuildWorkflows {
         $build.content | ForEach-Object { $newBuild += @("  $_") }
     }
 
-    if (!$includeBuildPP) {
-        # Remove the BuildPP job from the workflow
-        $yaml.Replace('jobs:/BuildPP:', @())
-    }
-
     # Replace the entire build: job with the new build job list
     $yaml.Replace('jobs:/Build:', $newBuild)
 
-    if ($deploy -or $deliver) {
-        # Modify Deliver and Deploy steps depending on build jobs
-        $needs += @("Build")
-        $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped')"
-        if ($includeBuildPP) {
-            $needs += @("BuildPP")
-            $ifpart += " && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
+    if (!$includeBuildPP) {
+        [int]$start = 0
+        [int]$count = 0
+        if ($yaml.Find('jobs:/BuildPP:', [ref] $start, [ref] $count)) {
+            $yaml.Remove($start, $count+1)
         }
-        if ($deploy) {
-            $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-            $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
-            $yaml.Replace('jobs:/Deploy:/', $deploy.content)
-        }
-        if ($deliver) {
-            $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-            $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
-            $yaml.Replace('jobs:/Deliver:/', $deliver.content)
-        }
+    }
+
+    $needs += @("Build")
+    $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped')"
+    if ($includeBuildPP) {
+        $needs += @("BuildPP")
+        $ifpart += " && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
+    }
+
+    # Modify Deliver and Deploy steps depending on build jobs
+    if ($deploy) {
+        $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
+        $yaml.Replace('jobs:/Deploy:/', $deploy.content)
+    }
+    if ($deliver) {
+        $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
+        $yaml.Replace('jobs:/Deliver:/', $deliver.content)
+    }
+    if ($postProcess) {
+        $needs += @('Deploy','Deliver','DeployALDoc')
+        $postProcess.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $yaml.Replace('jobs:/PostProcess:/', $postProcess.content)
     }
 }
 
@@ -281,7 +287,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
-        ModifyBuildWorkflows -yaml $yaml -depth $depth -repoSettings $repoSettings
+        ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP ($repoSettings.type -eq 'AppSource App')
     }
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {
