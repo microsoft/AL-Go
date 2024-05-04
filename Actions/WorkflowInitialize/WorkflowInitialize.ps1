@@ -9,18 +9,27 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
+    $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
     $branch = $ap[$ap.Count-2]
     $owner = $ap[$ap.Count-4]
-
-    if ($owner -ne "microsoft") {
+    if ($branch -eq 'Actions' -and $owner -eq 'AL-Go') {
+        # Using Direct AL-Go development branch
+        $branch = $ap[$ap.Count-3]
+        $owner = $ap[$ap.Count-5]
+        Write-Host "Using direct AL-Go development to $owner/AL-Go@$branch"
         $verstr = "d"
     }
-    elseif ($branch -eq "preview") {
-        $verstr = "p"
-    }
     else {
-        $verstr = $branch
+        Write-Host "Using AL-Go for GitHub $branch"
+        if ($owner -ne "microsoft") {
+            $verstr = "d"
+        }
+        elseif ($branch -eq "preview") {
+            $verstr = "p"
+        }
+        else {
+            $verstr = $branch
+        }
     }
 
     Write-Big -str "a$verstr"
