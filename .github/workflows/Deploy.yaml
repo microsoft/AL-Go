@@ -4,10 +4,9 @@ run-name: "Deploy from [${{ github.ref_name }}] to [${{ inputs.branch }}]"
 
 on:
   workflow_run:
-    workflows: ['End to end tests']
-    types: [completed]
-    branches:
-      - 'Release'
+    workflows: [ "End to end tests" ]
+    types: [ completed ]
+    branches: [ Release ]
   workflow_dispatch:
     inputs:
       branch:
