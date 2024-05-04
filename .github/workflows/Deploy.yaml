@@ -6,7 +6,7 @@ on:
   workflow_run:
     workflows: [ "End to end tests" ]
     types: [ completed ]
-    branches: [ Release ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       branch:
