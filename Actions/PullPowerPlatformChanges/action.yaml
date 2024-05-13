@@ -105,7 +105,7 @@ runs:
         solution-name: ${{ inputs.solutionFolder }}
         solution-output-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
 
-    - name: unpack-solution action
+    - name: Unpack Solution
       uses: microsoft/powerplatform-actions/unpack-solution@v1
       with:
         solution-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
