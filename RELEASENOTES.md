@@ -16,12 +16,18 @@
 - **Pull PowerPlatform Changes** for pulling changes from your PowerPlatform development environment into your AL-Go for GitHub repository
 - **Push PowerPlatform Changes** for pushing changes from your AL-Go for GitHub repository to your PowerPlatform development environment
 
+> [!NOTE]
+> PowerPlatform workflows are only available in the PTE template and will be removed if no PowerPlatformSolutionFolder is defined in settings.
+
 ### New Scenarios (Documentation)
 
 - [Connect your GitHub repository to Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupPowerPlatform.md)
 - [How to set up Service Principal for Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupServicePrincipalForPowerPlatform.md)
 - [Try one of the Business Central and Power Platform samples](https://github.com/microsoft/AL-Go/blob/main/Scenarios/TryPowerPlatformSamples.md)
 - [Publish To AppSource](https://github.com/microsoft/AL-Go/blob/main/Scenarios/PublishToAppSource.md)
+
+> [!NOTE]
+> PowerPlatform functionality are only available in the PTE template.
 
 ## v5.1
 
