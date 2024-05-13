@@ -122,7 +122,7 @@ foreach($thisProject in $projectList) {
         else {
             $atypes.Split(',') | ForEach-Object {
                 $atype = $_
-                $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $refname
+                $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $ENV:GITHUB_REF_NAME
                 if ($allArtifacts) {
                     $allArtifacts | ForEach-Object {
                         $artifactFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
@@ -137,24 +137,9 @@ foreach($thisProject in $projectList) {
                         Remove-Item $artifactFile -Force
                     }
                 }
-            }
-            else {
-                $atypes.Split(',') | ForEach-Object {
-                    $atype = $_
-                    $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $ENV:GITHUB_REF_NAME
-                    if ($allArtifacts) {
-                        $allArtifacts | ForEach-Object {
-                            $artifactFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
-                            Write-Host $artifactFile
-                            if (!(Test-Path $artifactFile)) {
-                                throw "Unable to download artifact $($_.name)"
-                            }
-                            if ($artifactFile -notlike '*.zip') {
-                                throw "Downloaded artifact is not a .zip file"
-                            }
-                            Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
-                            Remove-Item $artifactFile -Force
-                        }
+                else {
+                    if ($atype -eq "Apps") {
+                        throw "ERROR: Could not find any $atype artifacts for projects $projects, version $artifacts"
                     }
                     else {
                         Write-Host "WARNING: Could not find any $atype artifacts for projects $projects, version $artifacts"

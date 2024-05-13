@@ -93,17 +93,12 @@ elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts 
             throw "Unable to locate $artifacts release"
         }
         New-Item $artifactsFolder -ItemType Directory | Out-Null
-        $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
-        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $deploymentSettings.Projects -version $artifacts -branch $ENV:GITHUB_REF_NAME)
-        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $deploymentSettings.Projects -version $artifacts -branch $ENV:GITHUB_REF_NAME)
-        if ($allArtifacts) {
-            $allArtifacts | ForEach-Object {
-                $appFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
-                if (!(Test-Path $appFile)) {
-                    throw "Unable to download artifact $($_.name)"
-                }
-                $apps += @($appFile)
-            }
+        $artifactsFolderCreated = $true
+        DownloadRelease -token $token -projects $deploymentSettings.Projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Apps"
+        DownloadRelease -token $token -projects $deploymentSettings.Projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask "Dependencies"
+        $apps = @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { $_.FullName })
+        if (!$apps) {
+            throw "Artifact $artifacts was not found on any release. Make sure that the artifact files exist and files are not corrupted."
         }
     }
     else {
@@ -124,8 +119,8 @@ else {
 if ($searchArtifacts) {
     New-Item $artifactsFolder -ItemType Directory | Out-Null
     $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
-    $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $deploymentSettings.Projects -version $artifacts -branch $refname)
-    $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $deploymentSettings.Projects -version $artifacts -branch $refname)
+    $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects $deploymentSettings.Projects -version $artifacts -branch $ENV:GITHUB_REF_NAME)
+    $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects $deploymentSettings.Projects -version $artifacts -branch $ENV:GITHUB_REF_NAME)
     if ($allArtifacts) {
         $allArtifacts | ForEach-Object {
             $appFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
