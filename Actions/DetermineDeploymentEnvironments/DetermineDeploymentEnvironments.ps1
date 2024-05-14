@@ -1,8 +1,8 @@
 ﻿Param(
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (* for all)", Mandatory = $true)]
     [string] $getEnvironments,
-    [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $true)]
-    [ValidateSet('CD','Publish')]
+    [Parameter(HelpMessage = "Type of deployment (CD, Publish or All)", Mandatory = $true)]
+    [ValidateSet('CD','Publish','All')]
     [string] $type
 )
 
@@ -108,6 +108,8 @@ if (!($environments)) {
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
                 "shell" = $settings."shell"
+                "companyId" = ''
+                "ppEnvironmentUrl" = ''
             }
         }
         $unknownEnvironment = 1
@@ -132,6 +134,8 @@ else {
         # - continuous deployment: only for environments not tagged with PROD or FAT
         # - runs-on: same as settings."runs-on"
         # - shell: same as settings."shell"
+        # - no companyId
+        # - no ppEnvironmentUrl
         $deploymentSettings = @{
             "EnvironmentType" = "SaaS"
             "EnvironmentName" = $envName
@@ -142,15 +146,20 @@ else {
             "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
             "shell" = $settings."shell"
+            "companyId" = ''
+            "ppEnvironmentUrl" = ''
         }
 
         # Check DeployTo<environmentName> setting
         $settingsName = "DeployTo$envName"
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+            Write-Host "Setting $settingsName"
             $deployTo = $settings."$settingsName"
-            foreach($key in 'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on','shell') {
+            $keys = @($deploymentSettings.Keys)
+            foreach($key in $keys) {
                 if ($deployTo.ContainsKey($key)) {
+                    Write-Host "Property $key = $($deployTo."$key")"
                     $deploymentSettings."$key" = $deployTo."$key"
                 }
             }
@@ -167,13 +176,34 @@ else {
         # - Type is not Continous Deployment
         # - Environment is setup for Continuous Deployment (in settings)
         # - Continuous Deployment is unset in settings and environment name doesn't contain PROD or FAT tags
-        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($null -eq $deploymentSettings.ContinuousDeployment -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
+        switch ($type) {
+            'CD' {
+                if ($null -eq $deploymentSettings.continuousDeployment) {
+                    # Continuous Deployment is unset in settings - only include environments not tagged with PROD or FAT
+                    $includeEnvironment = !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')
+                }
+                else {
+                    # Continuous Deployment is set in settings, use this value
+                    $includeEnvironment = $deploymentSettings.continuousDeployment
+                }
+            }
+            'Publish' {
+                # Publish can publish to all environments
+                $includeEnvironment = $true
+            }
+            'All' {
+                $includeEnvironment = $true
+            }
+            default {
+                throw "Unknown type: $type"
+            }
+        }
 
         # Check branch policies and settings
         if (-not $includeEnvironment) {
             Write-Host "Environment $environmentName is not setup for continuous deployment"
         }
-        else {
+        elseif ($type -ne 'All') {
             # Check whether any GitHub policy disallows this branch to deploy to this environment
             if ($deploymentSettings.BranchesFromPolicy) {
                 # Check whether GITHUB_REF_NAME is allowed to deploy to this environment

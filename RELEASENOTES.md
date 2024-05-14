@@ -1,3 +1,34 @@
+### New Settings
+
+- `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
+- `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
+
+### New Actions
+
+- `BuildPowerPlatform`: to build a PowerPlatform Solution
+- `DeployPowerPlatform`: to deploy a PowerPlatform Solution
+- `PullPowerPlatformChanges`: to pull changes made in PowerPlatform studio into the repository
+- `ReadPowerPlatformSettings`: to read settings and secrets for PowerPlatform deployment
+- `GetArtifactsForDeployment`: originally code from deploy.ps1 to retrieve artifacts for releases or builds - now as an action to read apps into a folder.
+
+### New Workflows
+
+- **Pull PowerPlatform Changes** for pulling changes from your PowerPlatform development environment into your AL-Go for GitHub repository
+- **Push PowerPlatform Changes** for pushing changes from your AL-Go for GitHub repository to your PowerPlatform development environment
+
+> [!NOTE]
+> PowerPlatform workflows are only available in the PTE template and will be removed if no PowerPlatformSolutionFolder is defined in settings.
+
+### New Scenarios (Documentation)
+
+- [Connect your GitHub repository to Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupPowerPlatform.md)
+- [How to set up Service Principal for Power Platform](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SetupServicePrincipalForPowerPlatform.md)
+- [Try one of the Business Central and Power Platform samples](https://github.com/microsoft/AL-Go/blob/main/Scenarios/TryPowerPlatformSamples.md)
+- [Publish To AppSource](https://github.com/microsoft/AL-Go/blob/main/Scenarios/PublishToAppSource.md)
+
+> [!NOTE]
+> PowerPlatform functionality are only available in the PTE template.
+
 ## v5.1
 
 ### Issues

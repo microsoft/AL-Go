@@ -58,6 +58,11 @@ $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 $repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
+$includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
+if (!$includeBuildPP) {
+    # Remove PowerPlatform workflows if no PowerPlatformSolution exists
+    $unusedALGoSystemFiles += @('_BuildPowerPlatformSolution.yaml','PushPowerPlatformChanges.yaml','PullPowerPlatformChanges.yaml')
+}
 
 # If templateUrl has changed, download latest version of the template repository (ignore templateSha)
 if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
@@ -143,7 +148,7 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "SrcFolder: $srcFolder"
                 if ($type -eq "workflow") {
                     # for workflow files, we might need to modify the file based on the settings
-                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth
+                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
                 }
                 else {
                     # For non-workflow files, just read the file content
