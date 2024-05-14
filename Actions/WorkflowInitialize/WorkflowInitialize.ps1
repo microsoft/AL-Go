@@ -18,23 +18,30 @@ try {
     #                                      -5    -4     -3     -2       -1
     # linux:            /home/runner/work/owner/AL-Go/branch/Actions/WorkflowInitialize
     # windows:  C:\Users\runneradmin\work\owner\AL-Go\branch\Actions\WorkflowInitialize
-    $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
+    # or:       C:\Users\runneradmin\work\owner\AL-Go\branch\Actions/WorkflowInitialize
+    $ap = "$ENV:GITHUB_ACTION_PATH".Split('/\')
     $branch = $ap[$ap.Count-2]
     $owner = $ap[$ap.Count-4]
+    # When using direct AL-Go development, the $ap[$ap.count-2] is the Actions subfolder in the AL-Go repository (see above)
+    # meaning that the actual owner and branch are in the $ap[$ap.count-5] and $ap[$ap.count-3] respectively
+    # We cannot index from the beginning of the array as the path can be different depending on the agent installation
     if ($branch -eq 'Actions' -and $owner -eq 'AL-Go') {
         # Using Direct AL-Go development branch
         $branch = $ap[$ap.Count-3]
         $owner = $ap[$ap.Count-5]
-        Write-Host "Using direct AL-Go development to $owner/AL-Go@$branch"
-        $verstr = "d"
+        if ($owner -eq "microsoft") {
+            Write-Host "Using AL-Go for GitHub Preview ($branch)"
+            $verstr = "p"
+        }
+        else {
+            Write-Host "Using direct AL-Go development to $owner/AL-Go@$branch"
+            $verstr = "d"
+        }
     }
     else {
         Write-Host "Using AL-Go for GitHub $branch"
         if ($owner -ne "microsoft") {
             $verstr = "d"
-        }
-        elseif ($branch -eq "preview") {
-            $verstr = "p"
         }
         else {
             $verstr = $branch
