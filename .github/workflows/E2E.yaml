@@ -1,6 +1,6 @@
 name: End to end tests
 
-run-name: End to end tests - ${{ github.event.inputs.ref == '' && github.sha || github.event.inputs.ref }}
+run-name: End to end tests - ${{ github.event.inputs.ref != '' && github.event.inputs.ref || github.sha }}
 
 on:
   workflow_dispatch:
