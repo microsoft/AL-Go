@@ -10,12 +10,12 @@ inputs:
     required: true
   actionsRepo:
     description: The repository of the action
-    default: ${{ github.action_repository }}
     required: false
+    default: ${{ github.action_repository }}
   actionsRef:
     description: The ref of the action
-    default: ${{ github.action_ref }}
     required: false
+    default: ${{ github.action_ref }}
 outputs:
   correlationId:
     description: A correlation Id for the workflow
