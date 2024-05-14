@@ -1,5 +1,7 @@
 name: End to end tests
 
+run-name: End to end tests - ${{ github.event.inputs.ref == '' && github.sha || github.event.inputs.ref }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -78,17 +80,6 @@ jobs:
           Write-Host "maxParallel=$maxParallel"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
-
-  CheckRef:
-    runs-on: [ ubuntu-latest ]
-    needs: [ Check ]
-    if: github.event.inputs.ref == ''
-    steps:
-      - name: OK
-        run: |
-          # If the ref is empty, we are running on the main branch and this job is successful
-          # If the ref is not empty, this job is skipped and deploy will not see the end to end tests as useful for determining success
-          Write-Host "Running on main_sha"
 
   SetupRepositories:
     runs-on: [ ubuntu-latest ]
@@ -301,7 +292,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
-    needs: [ Check, CheckRef, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
+    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
     if: always() && (!Cancelled()) && (needs.SetupRepositories.result == 'Success') && (needs.TestAlGo.result == 'Success' || needs.TestAlGo.result == 'Skipped') && (needs.TestAlGoUpgrade.result == 'Success' || needs.TestAlGoUpgrade.result == 'Skipped') && (needs.Scenario.result == 'Success' || needs.Scenario.result == 'Skipped')
     steps:
       - uses: actions/checkout@v4
