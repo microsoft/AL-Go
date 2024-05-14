@@ -31,11 +31,11 @@ on:
         type: boolean
         description: Create a release in this repository
         required: false
-        default: true
+        default: false
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip). Leave empty to use latest (or preview for preview branches)'
         required: false
-        default: ''
+        default: 'latest'
         
 permissions:
   contents: write
@@ -90,7 +90,7 @@ jobs:
     needs: [ Inputs ]
     steps:
       - name: Check successful end 2 end tests have run
-        if: github.repository_owner == 'freddydk' && needs.Inputs.outputs.requireEndToEndTests == 'true'
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.requireEndToEndTests == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -99,13 +99,13 @@ jobs:
           $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
           $latestRun = $end2endruns | Where-Object { $_.head_sha -eq $latestSha }
           if (!$latestRun) {
-            throw "No End 2 End Tests run found for the latest commit on main"
+            throw "No End to end tests run found for the latest commit on main"
           }
           if ($latestRun.status -ne 'completed') {
-            throw "End 2 End Tests run for the latest commit on main is not completed"
+            throw "End to end tests run for the latest commit on main is not completed"
           }
           if ($latestRun.conclusion -ne 'success') {
-            throw "End 2 End Tests run for the latest commit on main did not succeed"
+            throw "End to end tests run for the latest commit on main did not succeed"
           }
 
   Deploy:
@@ -114,7 +114,7 @@ jobs:
     environment: Production
     steps:
       - name: Validate Deployment
-        if: github.repository_owner == 'freddydk'
+        if: github.repository_owner == 'microsoft'
         env:
           GH_TOKEN: ${{ github.token }}
           branch: ${{ needs.Inputs.outputs.branch }}
@@ -172,7 +172,7 @@ jobs:
           }
 
       - name: Calculate Release Notes
-        if: github.repository_owner == 'freddydk' && needs.Inputs.outputs.createRelease == 'true'
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $releaseNotesFile = Join-Path $env:GITHUB_WORKSPACE "RELEASENOTES.md"
@@ -182,7 +182,7 @@ jobs:
           Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -Value "ReleaseNotes=$([Uri]::EscapeDataString($releaseNotes))"
 
       - name: Create release
-        if: github.repository_owner == 'freddydk' && needs.Inputs.outputs.createRelease == 'true'
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
         uses: actions/github-script@v7
         id: createrelease
         env:
