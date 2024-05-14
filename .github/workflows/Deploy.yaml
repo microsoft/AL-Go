@@ -97,7 +97,7 @@ jobs:
           $errorActionPreference = "Stop"
           $end2endRuns = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/workflows/E2E.yaml/runs?per_page=100 | ConvertFrom-Json).workflow_runs
           $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
-          $latestRun = $end2endruns | Where-Object { $_.head_sha -eq $latestSha } | select-object -first 1
+          $latestRun = $end2endruns | Where-Object { $_.Name -eq "End to end tests - $latestSha" } | select-object -first 1
           if (!$latestRun) {
             throw "No End to end tests run found for the latest commit on main"
           }
@@ -108,9 +108,6 @@ jobs:
             throw "End to end tests run for the latest commit on main did not succeed - see $($latestRun.html_url)"
           }
           $allJobs = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
-          if (!($allJobs | Where-Object { $_.Name -eq 'CheckRef' })) {
-            throw "CheckRef job doesn't exist in the end to end test run - see $($latestRun.html_url)"
-          }
           foreach($job in $allJobs) {
             if ($job.conclusion -ne 'success') {
               throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
