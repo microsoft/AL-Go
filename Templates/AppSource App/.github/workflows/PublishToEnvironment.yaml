@@ -121,6 +121,9 @@ jobs:
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     environment:
       name: ${{ matrix.environment }}
       url: ${{ steps.Deploy.outputs.environmentUrl }}
@@ -140,26 +143,45 @@ jobs:
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          shell: powershell
+          shell: ${{ matrix.shell }}
+          get: type,powerPlatformSolutionFolder
 
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
-          shell: powershell
+          shell: ${{ matrix.shell }}
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
 
-      - name: Deploy
+      - name: Get Artifacts for deployment
+        uses: microsoft/AL-Go-Actions/GetArtifactsForDeployment@main
+        with:
+          shell: powershell
+          artifactsVersion: ${{ github.event.inputs.appVersion }}
+          artifactsFolder: '.artifacts'
+
+      - name: Deploy to Business Central
         id: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
+          shell: ${{ matrix.shell }}
+          environmentName: ${{ matrix.environment }}
+          artifactsFolder: '.artifacts'
+          type: 'Publish'
+          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+
+      - name: Deploy to Power Platform
+        if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
+        uses: microsoft/AL-Go-Actions/DeployPowerPlatform@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
           shell: powershell
           environmentName: ${{ matrix.environment }}
-          artifacts: ${{ github.event.inputs.appVersion }}
-          type: 'Publish'
+          artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   PostProcess:

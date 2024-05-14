@@ -61,8 +61,7 @@ function InvokeWebRequest {
         [string] $body,
         [string] $outFile,
         [string] $uri,
-        [switch] $retry,
-        [switch] $ignoreErrors
+        [switch] $retry
     )
 
     try {
@@ -109,13 +108,8 @@ function InvokeWebRequest {
                 Write-Host "Retry failed as well"
             }
         }
-        if ($ignoreErrors.IsPresent) {
-            Write-Host $message
-        }
-        else {
-            Write-Host "::Error::$message"
-            throw $message
-        }
+        Write-Host $message
+        throw $message
     }
 }
 
@@ -579,6 +573,26 @@ function GetHeader {
     return $headers
 }
 
+function WaitForRateLimit {
+    Param(
+        [hashtable] $headers,
+        [int] $percentage = 10,
+        [switch] $displayStatus
+    )
+
+    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit" -retry).Content | ConvertFrom-Json).rate
+    $percentRemaining = [int]($rate.remaining*100/$rate.limit)
+    if ($displayStatus) {
+        Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percentRemaining%)"
+    }
+    if ($percentRemaining-lt $percentage) {
+        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
+        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
+        Write-Host "`nLess than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
+        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
+    }
+}
+
 function GetReleaseNotes {
     Param(
         [string] $token,
@@ -635,17 +649,22 @@ function DownloadRelease {
             $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
             Write-Host $uri
             $filename = Join-Path $path $asset.name
+            if ($filename -notlike '*.zip') {
+                throw "Expecting a zip file, but got '$filename'"
+            }
             InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
             if ($unpack) {
-                $unzipPath = Join-Path $path $asset.name.Replace('.zip','')
-                if (Test-Path $unzipPath) {
-                    Remove-Item $unzipPath -Recurse -Force
+                $foldername = Join-Path $path ([System.IO.Path]::GetFileNameWithoutExtension($asset.name))
+                if (Test-Path $foldername) {
+                    Remove-Item $foldername -Recurse -Force
                 }
-                Expand-Archive -Path $filename -DestinationPath $unzipPath
+                Expand-Archive -Path $filename -DestinationPath $foldername
                 Remove-Item $filename -Force
-                $filename = $unzipPath
+                $foldername
             }
-            $filename
+            else {
+                $filename
+            }
         }
     }
 }
@@ -955,6 +974,7 @@ function GetArtifacts {
         [string] $baselineWorkflowID
     )
 
+    $refname = $branch.Replace('/','_')
     $headers = GetHeader -token $token
     if ($version -eq 'latest') { $version = '*' }
 
@@ -979,14 +999,14 @@ function GetArtifacts {
     # Download all artifacts matching branch and version
     # We might have results from multiple workflow runs, but we will have all artifacts from the workflow run that created the first matching artifact
     # Use the buildOutput artifact to determine the workflow run id (as that will always be there)
-    $artifactPattern = "*-$branch-*-$version"
+    $artifactPattern = "*-$refname-*-$version"
     # Use buildOutput artifact to determine the workflow run id to avoid excessive API calls
     # Reason: A project called xx-main will match the artifact pattern *-main-*-version, and there might not be any artifacts matching the mask
-    $buildOutputPattern = "*-$branch-BuildOutput-$version"
+    $buildOutputPattern = "*-$refname-BuildOutput-$version"
     # Old builds from PR runs are vresioned differently and should be ignored
-    $ignoreBuildOutputPattern1 = "*-$branch-BuildOutput-*.*.2147483647.0"
+    $ignoreBuildOutputPattern1 = "*-$refname-BuildOutput-*.*.2147483647.0"
     # Build Output from TestCurrent, TestNextMinor and TestNextMajor are named differently and should be ignored
-    $ignoreBuildOutputPattern2 = "*-$branch-BuildOutput-*-*"
+    $ignoreBuildOutputPattern2 = "*-$refname-BuildOutput-*-*"
     Write-Host "Analyzing artifacts matching $artifactPattern"
     while ($true) {
         if ($total_count -eq 0) {
@@ -1036,7 +1056,7 @@ function GetArtifacts {
     $result = $matchingArtifacts | Where-Object { $_.workflow_run.id -eq $buildOutputArtifacts[0].workflow_run.id } | ForEach-Object {
         foreach($project in $projects.Split(',')) {
             $project = $project.Replace('\','_').Replace('/','_')
-            $artifactPattern = "$project-$branch-$mask-$version"
+            $artifactPattern = "$project-$refname-$mask-$version"
             if ($_.name -like $artifactPattern) {
                 Write-Host "- $($_.name)"
                 return $_
@@ -1053,7 +1073,8 @@ function DownloadArtifact {
     Param(
         [string] $token,
         [string] $path,
-        $artifact
+        $artifact,
+        [switch] $unpack
     )
 
     Write-Host "Downloading artifact $($artifact.Name)"
@@ -1062,7 +1083,18 @@ function DownloadArtifact {
         $token = invoke-gh -silent -returnValue auth token
     }
     $headers = GetHeader -token $token
-    $outFile = Join-Path $path "$($artifact.Name).zip"
-    InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
-    $outFile
+    $foldername = Join-Path $path $artifact.Name
+    $filename = "$foldername.zip"
+    InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $filename
+    if ($unpack) {
+        if (Test-Path $foldername) {
+            Remove-Item $foldername -Recurse -Force
+        }
+        Expand-Archive -Path $filename -DestinationPath $foldername
+        Remove-Item $filename -Force
+        return $foldername
+    }
+    else {
+        return $filename
+    }
 }
