@@ -38,7 +38,7 @@ on:
         default: 'latest'
         
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 concurrency:
@@ -95,22 +95,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $errorActionPreference = "Stop"
-          $end2endRuns = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs?per_page=100 | ConvertFrom-Json).workflow_runs | Where-Object { $_.name -eq 'End to end tests' }
+          $end2endRuns = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/workflows/E2E.yaml/runs?per_page=100 | ConvertFrom-Json).workflow_runs
           $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
           $latestRun = $end2endruns | Where-Object { $_.head_sha -eq $latestSha } | select-object -first 1
           if (!$latestRun) {
             throw "No End to end tests run found for the latest commit on main"
           }
           if ($latestRun.status -ne 'completed') {
-            throw "End to end tests run for the latest commit on main is not completed"
+            throw "End to end tests run for the latest commit on main is not completed - see $($latestRun.html_url)"
           }
           if ($latestRun.conclusion -ne 'success') {
-            throw "End to end tests run for the latest commit on main did not succeed"
+            throw "End to end tests run for the latest commit on main did not succeed - see $($latestRun.html_url)"
           }
           $allJobs = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
           foreach($job in $allJobs) {
             if ($job.conclusion -ne 'success') {
-              throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled"
+              throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
             }
           }
 
@@ -118,6 +118,8 @@ jobs:
     runs-on: [ ubuntu-latest ]
     needs: [ CheckEndToEnd, Inputs ]
     environment: Production
+    permissions:
+      contents: write
     steps:
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
