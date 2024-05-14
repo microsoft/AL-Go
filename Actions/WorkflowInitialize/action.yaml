@@ -8,6 +8,14 @@ inputs:
   eventId:
     description: The event id of the initiating workflow
     required: true
+  actionsRepo:
+    description: The repository of the action
+    default: ${{ github.action_repository }}
+    required: false
+  actionsRef:
+    description: The ref of the action
+    default: ${{ github.action_ref }}
+    required: false
 outputs:
   correlationId:
     description: A correlation Id for the workflow
@@ -23,8 +31,8 @@ runs:
       id: workflowinitialize
       env:
         _eventId: ${{ inputs.eventId }}
-        _actionsRepo: ${{ github.action_repository }}
-        _actionsRef: ${{ github.action_ref }}
+        _actionsRepo: ${{ inputs.actionsRepo }}
+        _actionsRef: ${{ inputs.actionRef }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {

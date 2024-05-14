@@ -1,9 +1,9 @@
 ﻿Param(
     [Parameter(HelpMessage = "The event id of the initiating workflow", Mandatory = $true)]
     [string] $eventId,
-    [Parameter(HelpMessage = "Actions Repository", Mandatory = $true)]
+    [Parameter(HelpMessage = "The repository of the action", Mandatory = $false)]
     [string] $actionsRepo,
-    [Parameter(HelpMessage = "Actions Ref", Mandatory = $true)]
+    [Parameter(HelpMessage = "The ref of the action", Mandatory = $false)]
     [string] $actionsRef
 )
 
@@ -13,8 +13,8 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    Write-Host $actionsRef
     Write-Host $actionsRepo
+    Write-Host $actionsRef
     if ($actionsRepo -like 'microsoft/AL-Go-Actions') {
         Write-Host "Using AL-Go for GitHub $actionsRef"
         $verstr = $actionsRef
