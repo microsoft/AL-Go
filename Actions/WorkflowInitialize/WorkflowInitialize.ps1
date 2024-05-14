@@ -11,6 +11,8 @@ try {
 
     $actionsRef = $ENV:GITHUB_ACTION_REF
     $actionsRepo = $ENV:GITHUB_ACTION_REPOSITORY
+    Write-Host $actionsRef
+    Write-Host $actionsRepo    
     if ($actionsRepo -like 'microsoft/AL-Go-Actions') {
         Write-Host "Using AL-Go for GitHub $actionsRef"
         $verstr = $actionsRef
