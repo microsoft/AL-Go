@@ -108,6 +108,9 @@ jobs:
             throw "End to end tests run for the latest commit on main did not succeed - see $($latestRun.html_url)"
           }
           $allJobs = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
+          if (!($allJobs | Where-Object { $_.Name -eq 'CheckRef' })) {
+            throw "CheckRef job doesn't exist in the end to end test run - see $($latestRun.html_url)"
+          }
           foreach($job in $allJobs) {
             if ($job.conclusion -ne 'success') {
               throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
