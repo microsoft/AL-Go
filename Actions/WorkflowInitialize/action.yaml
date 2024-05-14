@@ -23,10 +23,12 @@ runs:
       id: workflowinitialize
       env:
         _eventId: ${{ inputs.eventId }}
+        _actionsRepo: ${{ github.action_repository }}
+        _actionsRef: ${{ github.action_ref }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId $ENV:_eventId
+          ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId $ENV:_eventId -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
