@@ -79,10 +79,9 @@ jobs:
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
           Write-Host "githubOwner=$githubOwner"
 
-  Ref:
+  CheckRef:
     runs-on: [ ubuntu-latest ]
     needs: [ Check ]
-    name: 'Ref=${{ github.event.inputs.ref }}'
     if: github.event.inputs.ref == ''
     steps:
       - name: OK
@@ -93,7 +92,7 @@ jobs:
 
   SetupRepositories:
     runs-on: [ ubuntu-latest ]
-    needs: [ Check, Ref ]
+    needs: [ Check ]
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
@@ -302,7 +301,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
-    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
+    needs: [ Check, CheckRef, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
     if: always() && (!Cancelled()) && (needs.SetupRepositories.result == 'Success') && (needs.TestAlGo.result == 'Success' || needs.TestAlGo.result == 'Skipped') && (needs.TestAlGoUpgrade.result == 'Success' || needs.TestAlGoUpgrade.result == 'Skipped') && (needs.Scenario.result == 'Success' || needs.Scenario.result == 'Skipped')
     steps:
       - uses: actions/checkout@v4
