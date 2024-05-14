@@ -27,10 +27,10 @@ try {
         -path $bcptTestResultsFile `
         -baseLinePath $bcptBaseLineFile `
         -thresholdsPath $bcptThresholdsFile `
-        -DurationThresholdWarning $settings.DurationThresholdWarning `
-        -DurationThresholdError $settings.DurationThresholdError `
-        -NumberOfSqlStmtsThresholdWarning $settings.NumberOfSqlStmtsThresholdWarning `
-        -NumberOfSqlStmtsThresholdError $settings.NumberOfSqlStmtsThresholdError
+        -DurationThresholdWarning $settings.bcptThresholds.DurationdWarning `
+        -DurationThresholdError $settings.bcptThresholds.DurationError `
+        -NumberOfSqlStmtsThresholdWarning $settings.bcptThresholds.NumberOfSqlStmtsWarning `
+        -NumberOfSqlStmtsThresholdError $settings.bcptThresholds.NumberOfSqlStmtsError
 
     # If summary fits, we will display it in the GitHub summary
     if ($testResultsSummaryMD.Length -gt 65000) {
