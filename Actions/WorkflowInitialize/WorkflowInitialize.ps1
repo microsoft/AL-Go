@@ -13,8 +13,6 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    Write-Host $actionsRepo
-    Write-Host $actionsRef
     if ($actionsRepo -like 'microsoft/AL-Go-Actions') {
         Write-Host "Using AL-Go for GitHub $actionsRef"
         $verstr = $actionsRef
