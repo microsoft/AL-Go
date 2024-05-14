@@ -95,7 +95,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $errorActionPreference = "Stop"
-          $end2endRuns = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs?per_page=100 | ConvertFrom-Json).workflow_runs | Where-Object { $_.name -eq 'End 2 End Tests' }
+          $end2endRuns = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs?per_page=100 | ConvertFrom-Json).workflow_runs | Where-Object { $_.name -eq 'End to end tests' }
           $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
           $latestRun = $end2endruns | Where-Object { $_.head_sha -eq $latestSha }
           if (!$latestRun) {
