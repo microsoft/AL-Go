@@ -19,19 +19,7 @@ Calculate Artifact Names for AL-Go workflows
 ## OUTPUT
 
 ### ENV variables
-| Name | Description |
-| :-- | :-- |
-| ThisBuildAppsArtifactsName | Artifact name for apps being built in the current workflow run |
-| ThisBuildDependenciesArtifactsName | Artifact name for dependencies of apps being built in the current workflow run |
-| ThisBuildTestAppsArtifactsName | Artifact name for test apps being built in the current workflow run |
-| AppsArtifactsName | Artifacts name for Apps |
-| DependenciesArtifactsName | Artifacts name for Dependencies |
-| TestAppsArtifactsName | Artifacts name for TestApps |
-| TestResultsArtifactsName | Artifacts name for TestResults |
-| BcptTestResultsArtifactsName | Artifacts name for BcptTestResults |
-| BuildOutputArtifactsName | Artifacts name for BuildOutput |
-| ContainerEventLogArtifactsName | Artifacts name for ContainerEventLog |
-| BuildMode | Build mode used when building the artifacts |
+none
 
 ### OUTPUT variables
 | Name | Description |
@@ -40,6 +28,7 @@ Calculate Artifact Names for AL-Go workflows
 | ThisBuildDependenciesArtifactsName | Artifact name for dependencies of apps being built in the current workflow run |
 | ThisBuildTestAppsArtifactsName | Artifact name for test apps being built in the current workflow run |
 | AppsArtifactsName | Artifacts name for Apps |
+| PowerPlatformSolutionArtifactsName | Artifacts name for PowerPlatform Solution |
 | DependenciesArtifactsName | Artifacts name for Dependencies |
 | TestAppsArtifactsName | Artifacts name for TestApps |
 | TestResultsArtifactsName | Artifacts name for TestResults |
