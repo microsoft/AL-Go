@@ -31,6 +31,9 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 15. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 16. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
 17. [Publish your app to AppSource](Scenarios/PublishToAppSource.md)
+18. [Connect your GitHub repository to Power Platform](Scenarios/SetupPowerPlatform.md)
+19. [How to set up Service Principal for Power Platform](Scenarios/SetupServicePrincipalForPowerPlatform.md)
+20. [Try one of the Business Central and Power Platform samples](Scenarios/TryPowerPlatformSamples.md)
 
 ## Migration scenarios
 A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](Scenarios/MigrateFromAzureDevOpsWithoutHistory.md)<br />
