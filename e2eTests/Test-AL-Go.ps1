@@ -231,7 +231,7 @@ Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2}
 # Update AL-Go System Files
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -repository $repository -branch $branch | Out-Null
 $runs++
 MergePRandPull -branch $branch -wait | Out-Null
 $runs += 2

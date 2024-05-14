@@ -649,17 +649,22 @@ function DownloadRelease {
             $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
             Write-Host $uri
             $filename = Join-Path $path $asset.name
+            if ($filename -notlike '*.zip') {
+                throw "Expecting a zip file, but got '$filename'"
+            }
             InvokeWebRequest -Headers $headers -Uri $uri -OutFile $filename
             if ($unpack) {
-                $unzipPath = Join-Path $path $asset.name.Replace('.zip','')
-                if (Test-Path $unzipPath) {
-                    Remove-Item $unzipPath -Recurse -Force
+                $foldername = Join-Path $path ([System.IO.Path]::GetFileNameWithoutExtension($asset.name))
+                if (Test-Path $foldername) {
+                    Remove-Item $foldername -Recurse -Force
                 }
-                Expand-Archive -Path $filename -DestinationPath $unzipPath
+                Expand-Archive -Path $filename -DestinationPath $foldername
                 Remove-Item $filename -Force
-                $filename = $unzipPath
+                $foldername
             }
-            $filename
+            else {
+                $filename
+            }
         }
     }
 }
@@ -1068,7 +1073,8 @@ function DownloadArtifact {
     Param(
         [string] $token,
         [string] $path,
-        $artifact
+        $artifact,
+        [switch] $unpack
     )
 
     Write-Host "Downloading artifact $($artifact.Name)"
@@ -1077,7 +1083,18 @@ function DownloadArtifact {
         $token = invoke-gh -silent -returnValue auth token
     }
     $headers = GetHeader -token $token
-    $outFile = Join-Path $path "$($artifact.Name).zip"
-    InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $outFile
-    $outFile
+    $foldername = Join-Path $path $artifact.Name
+    $filename = "$foldername.zip"
+    InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $filename
+    if ($unpack) {
+        if (Test-Path $foldername) {
+            Remove-Item $foldername -Recurse -Force
+        }
+        Expand-Archive -Path $filename -DestinationPath $foldername
+        Remove-Item $filename -Force
+        return $foldername
+    }
+    else {
+        return $filename
+    }
 }
