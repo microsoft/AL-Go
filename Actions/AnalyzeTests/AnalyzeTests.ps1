@@ -20,6 +20,7 @@ try {
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -path $testResultsFile
 
     $settings = $env:Settings | ConvertFrom-Json
+    Write-Host "thresholds type: $($settings.bcptThresholds.GetType().FullName)"
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
     $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
     $bcptThresholdsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptThresholds.json"
@@ -27,10 +28,7 @@ try {
         -path $bcptTestResultsFile `
         -baseLinePath $bcptBaseLineFile `
         -thresholdsPath $bcptThresholdsFile `
-        -DurationThresholdWarning $settings.bcptThresholds.DurationdWarning `
-        -DurationThresholdError $settings.bcptThresholds.DurationError `
-        -NumberOfSqlStmtsThresholdWarning $settings.bcptThresholds.NumberOfSqlStmtsWarning `
-        -NumberOfSqlStmtsThresholdError $settings.bcptThresholds.NumberOfSqlStmtsError
+        -bcptThresholds ($settings.bcptThresholds | ConvertTo-HashTable)
 
     # If summary fits, we will display it in the GitHub summary
     if ($testResultsSummaryMD.Length -gt 65000) {

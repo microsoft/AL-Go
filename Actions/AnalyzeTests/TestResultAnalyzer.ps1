@@ -158,10 +158,12 @@ function GetBcptSummaryMD {
         [string] $baseLinePath = '',
         [string] $thresholdsPath = '',
         [int] $skipMeasurements = 0,
-        [int] $DurationThresholdWarning = 10,
-        [int] $DurationThresholdError = 25,
-        [int] $NumberOfSqlStmtsThresholdWarning = 5,
-        [int] $NumberOfSqlStmtsThresholdError = 10
+        [hashtable] $bcptThresholds = @{
+            [int] $durationWarning = 10
+            [int] $durationError = 25
+            [int] $numberOfSqlStmtsWarning = 5
+            [int] $numberOfSqlStmtsError = 10
+        }
     )
 
     $bcpt = ReadBcptFile -path $path
@@ -173,17 +175,17 @@ function GetBcptSummaryMD {
     if ($thresholdsPath -and (Test-Path -path $thresholdsPath)) {
         Write-Host "Reading thresholds from $thresholdsPath"
         $thresholds = Get-Content -Path $thresholdsPath -Encoding UTF8 | ConvertFrom-Json
-        foreach($threshold in 'DurationThresholdWarning', 'DurationThresholdError', 'NumberOfSqlStmtsThresholdWarning', 'NumberOfSqlStmtsThresholdError') {
+        foreach($threshold in 'durationWarning', 'durationError', 'numberOfSqlStmtsWarning', 'numberOfSqlStmtsError') {
             if ($thresholds.PSObject.Properties.Name -eq $threshold) {
-                Set-Variable -Name $threshold -Value $thresholds."$threshold" -Scope local
+                $bcptThresholds."$threshold" = $thresholds."$threshold"
             }
         }
     }
     Write-Host "Using thresholds:"
-    Write-Host "- DurationThresholdWarning: $DurationThresholdWarning"
-    Write-Host "- DurationThresholdError: $DurationThresholdError"
-    Write-Host "- NumberOfSqlStmtsThresholdWarning: $NumberOfSqlStmtsThresholdWarning"
-    Write-Host "- NumberOfSqlStmtsThresholdError: $NumberOfSqlStmtsThresholdError"
+    Write-Host "- DurationWarning: $($bcptThresholds.durationWarning)"
+    Write-Host "- DurationError: $($bcptThresholds.durationError)"
+    Write-Host "- NumberOfSqlStmtsWarning: $($bcptThresholds.numberOfSqlStmtsWarning)"
+    Write-Host "- NumberOfSqlStmtsError: $($bcptThresholds.numberOfSqlStmtsError)"
 
     $summarySb = [System.Text.StringBuilder]::new()
     if ($baseLine) {
@@ -267,33 +269,33 @@ function GetBcptSummaryMD {
                     }
                     else {
                         $statusStr = $statusOK
-                        if ($pctDurationMin -ge $DurationThresholdError) {
+                        if ($pctDurationMin -ge $bcptThresholds.durationError) {
                             $statusStr = $statusError
                             if ($thisCodeunitName) {
                                 # Only give errors and warnings on top level operation
-                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($DurationThresholdError)% for duration"
+                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($bcptThresholds.durationError)% for duration"
                             }
                         }
-                        if ($pctNumberOfSQLStmts -ge $NumberOfSqlStmtsThresholdError) {
+                        if ($pctNumberOfSQLStmts -ge $bcptThresholds.numberOfSqlStmtsError) {
                             $statusStr = $statusError
                             if ($thisCodeunitName) {
                                 # Only give errors and warnings on top level operation
-                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($NumberOfSqlStmtsThresholdError)% for number of SQL statements"
+                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($bcptThresholds.numberOfSqlStmtsError)% for number of SQL statements"
                             }
                         }
                         if ($statusStr -eq $statusOK) {
-                            if ($pctDurationMin -ge $DurationThresholdWarning) {
+                            if ($pctDurationMin -ge $bcptThresholds.durationWarning) {
                                 $statusStr = $statusWarning
                                 if ($thisCodeunitName) {
                                     # Only give errors and warnings on top level operation
-                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the warning threshold of $($DurationThresholdWarning)% for duration"
+                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the warning threshold of $($bcptThresholds.durationWarning)% for duration"
                                 }
                             }
-                            if ($pctNumberOfSQLStmts -ge $NumberOfSqlStmtsThresholdWarning) {
+                            if ($pctNumberOfSQLStmts -ge $bcptThresholds.numberOfSqlStmtsWarning) {
                                 $statusStr = $statusWarning
                                 if ($thisCodeunitName) {
                                     # Only give errors and warnings on top level operation
-                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the warning threshold of $($NumberOfSqlStmtsThresholdWarning)% for number of SQL statements"
+                                    OutputWarning -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the warning threshold of $($bcptThresholds.numberOfSqlStmtsWarning)% for number of SQL statements"
                                 }
                             }
                         }
