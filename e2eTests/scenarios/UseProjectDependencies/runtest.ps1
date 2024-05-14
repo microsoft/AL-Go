@@ -82,7 +82,7 @@ CreateAlGoRepository `
 $repoPath = (Get-Location).Path
 
 # Update AL-Go System Files to uptake UseProjectDependencies setting
-RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
 
 # Run CI/CD workflow
 $run = RunCICD -branch $branch
