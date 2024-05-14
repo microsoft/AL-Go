@@ -13,11 +13,11 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    if ($actionsRepo -like 'microsoft/AL-Go-Actions') {
+    if ($actionsRepo -eq 'microsoft/AL-Go-Actions') {
         Write-Host "Using AL-Go for GitHub $actionsRef"
         $verstr = $actionsRef
     }
-    elseif ($actionsRepo -like 'microsoft/AL-Go') {
+    elseif ($actionsRepo -eq 'microsoft/AL-Go') {
         Write-Host "Using AL-Go for GitHub Preview ($actionsRef)"
         $verstr = "p"
     }
