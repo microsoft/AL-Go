@@ -9,15 +9,15 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    # $ENV:GITHUB_ACTION_PATH is (for Direct AL-Go or preview)
-    #                                        -5     -4    -3     -2       -1
-    # linux:            /home/runner/work/freddydk/AL-Go/AL-Go/Actions/WorkflowInitialize
-    # windows:  C:\Users\runneradmin\work\freddydk\AL-Go\AL-Go\Actions\WorkflowInitialize
-    # and (for normal)
-    #                                        -3         -2          -1
-    # linux:           /home/runner/work/microsoft/AL-Go-Actions/WorkflowInitialize
-    # windows: C:\Users\runneradmin\work\microsoft\AL-Go-Actions\WorkflowInitialize
-    Write-Host $ENV:GITHUB_ACTION_PATH
+    # $ENV:GITHUB_ACTION_PATH is
+    #                                      -4       -3         -2       -1
+    # linux:            /home/runner/work/owner/AL-Go-Actions/branch/WorkflowInitialize
+    # windows:  C:\Users\runneradmin\work\owner\AL-Go-Actions\branch\WorkflowInitialize
+    #
+    # For Preview (or Direct AL-Go development branch)
+    #                                      -5    -4     -3     -2       -1
+    # linux:            /home/runner/work/owner/AL-Go/branch/Actions/WorkflowInitialize
+    # windows:  C:\Users\runneradmin\work\owner\AL-Go\branch\Actions\WorkflowInitialize
     $ap = "$ENV:GITHUB_ACTION_PATH".Split([System.IO.Path]::DirectorySeparatorChar)
     $branch = $ap[$ap.Count-2]
     $owner = $ap[$ap.Count-4]
