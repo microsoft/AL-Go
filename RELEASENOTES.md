@@ -29,10 +29,6 @@
 > [!NOTE]
 > PowerPlatform functionality are only available in the PTE template.
 
-### New parameter -clean on localdevenv and clouddevenv
-
-Adding -clean when running localdevenv or clouddevenv will create a clean development environment without compiling and publishing your apps.
-
 ### Business Central Performance Toolkit Test Result Viewer
 
 In the summary after a Test Run, you now also have the result of performance tests.
@@ -76,6 +72,10 @@ The artifact setting in your project settings file can now contain a `*` instead
 - `appSourceContinuousDelivery` is moved to the `deliverToAppSource` structure
 - `appSourceMainAppFolder` is moved to the `deliverToAppSource` structure
 - `appSourceProductId` is moved to the `deliverToAppSource` structure
+
+### New parameter -clean on localdevenv and clouddevenv
+
+Adding -clean when running localdevenv or clouddevenv will create a clean development environment without compiling and publishing your apps.
 
 ## v5.0
 
