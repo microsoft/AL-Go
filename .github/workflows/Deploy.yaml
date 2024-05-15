@@ -55,21 +55,12 @@ jobs:
       - name: Create inputs
         id: CreateInputs
         run: |
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
-            $branch = 'preview'
-            $copyToMain = 'false'
-            $directCommit = 'false'
-            $requireEndToEndTests = 'true'
-            $createRelease = 'false'
-            $defaultBcContainerHelperVersion = 'preview'
-          } else {
-            $branch = '${{ github.event.inputs.branch }}'
-            $copyToMain = '${{ github.event.inputs.copyToMain }}'
-            $directCommit = '${{ github.event.inputs.directCommit }}'
-            $requireEndToEndTests = '${{ github.event.inputs.requireEndToEndTests }}'
-            $createRelease = '${{ github.event.inputs.createRelease }}'
-            $defaultBcContainerHelperVersion = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
-          }
+          $branch = '${{ github.event.inputs.branch }}'
+          $copyToMain = '${{ github.event.inputs.copyToMain }}'
+          $directCommit = '${{ github.event.inputs.directCommit }}'
+          $requireEndToEndTests = '${{ github.event.inputs.requireEndToEndTests }}'
+          $createRelease = '${{ github.event.inputs.createRelease }}'
+          $defaultBcContainerHelperVersion = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "branch=$branch"
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "copyToMain=$copyToMain"
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "directCommit=$directCommit"
