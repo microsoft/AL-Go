@@ -107,7 +107,7 @@ jobs:
           if ($latestRun.conclusion -ne 'success') {
             throw "End to end tests run for the latest commit on main did not succeed - see $($latestRun.html_url)"
           }
-          $allJobs = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
+          $allJobs = (gh api --paginate /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
           foreach($job in $allJobs) {
             if ($job.conclusion -ne 'success') {
               throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
