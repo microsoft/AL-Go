@@ -24,11 +24,17 @@
 
 1. Opening the **BCPT Test Results** and inspecting the results looks like this
 
-   ![Test failure](https://github.com/microsoft/AL-Go/assets/10775043/0869601d-55e6-4e1d-9d1e-fb1a2c0c6b05)
+   ![BCPT Test Results.json](https://github.com/microsoft/AL-Go/assets/10775043/27acb70c-1ead-4832-b22a-b022c578250d)
 
-1. Scrolling down further reveals the Performance Test Results
+1. Scrolling down further reveals the Performance Test Results in a table, which also indicates that if we want to set a baseline for comparing future BCPT Test Results, we need to add a `bcptBaseLine.json` file in the project folder.
 
-1. Currently there isn't a visual viewer of these results. The goal is to have a PowerBI dashboard, which can gather BCPT test results from multiple builds and compare.
+   ![BCPT Test Results viewer](https://github.com/microsoft/AL-Go/assets/10775043/4b263e9e-7ec9-4101-92a7-046e7807e797)
+
+1. After uploading the `bcptBaseLin.json`, to the project root (which is the repo root in single project repositories), another CI/CD workflow will complete and now compare the results with the baseline:
+
+   ![With BaseLine](https://github.com/microsoft/AL-Go/assets/10775043/c00840d5-4c67-4a72-a4d9-cdebe62e54c0)
+
+   Where negative numbers in the diff fields indicates faster execution or lower number of SQL statements than the baseline.
 
 ---
 [back](../README.md)
