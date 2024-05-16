@@ -46,19 +46,16 @@ function Get-ApplicationInsightsTelemetryClient($TelemetryConnectionString)
 #endregion
 
 #region Helper functions
+<#
+    .DESCRIPTION
+    Get the action name from the GITHUB_ACTION_PATH environment variable
+    The assumption is that the action name is the last part of the path after the last slash
+#>
 function GetActionName() {
     if ($null -eq $ENV:GITHUB_ACTION_PATH) {
         return ""
     }
     return $ENV:GITHUB_ACTION_PATH.Split("/\")[-1]
-}
-
-function GetAlGoVersion() {
-    if ((Get-ActionOwner) -ne "microsoft") {
-        return "Developer/Private"
-    } else {
-        return Get-ActionBranch
-    }
 }
 #endregion
 
@@ -82,7 +79,6 @@ function AddTelemetryEvent()
             Add-TelemetryProperty -Hashtable $Data -Key 'BcContainerHelperVersion' -Value ((Get-Module BcContainerHelper).Version.ToString())
         }
 
-        Add-TelemetryProperty -Hashtable $Data -Key 'ALGoVersion' -Value (GetAlGoVersion)
         Add-TelemetryProperty -Hashtable $Data -Key 'WorkflowName' -Value $ENV:GITHUB_WORKFLOW
         Add-TelemetryProperty -Hashtable $Data -Key 'RunnerOs' -Value $ENV:RUNNER_OS
         Add-TelemetryProperty -Hashtable $Data -Key 'RunId' -Value $ENV:GITHUB_RUN_ID

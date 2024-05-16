@@ -2,7 +2,9 @@
     [Parameter(HelpMessage = "Telemetry scope generated during the workflow initialization", Mandatory = $false)]
     [string] $telemetryScopeJson = '',
     [Parameter(HelpMessage = "The current job context", Mandatory = $false)]
-    [string] $currentJobContext = ''
+    [string] $currentJobContext = '',
+    [Parameter(HelpMessage = "The ref of the action", Mandatory = $false)]
+    [string] $actionsRef
 )
 
 function GetWorkflowConclusion($JobContext) {
@@ -26,7 +28,17 @@ function GetWorkflowConclusion($JobContext) {
     return "Success"
 }
 
-function LogWorkflowEnd($TelemetryScopeJson, $JobContext) {
+function GetAlGoVersion($ActionRef) {
+    if ($ENV:GITHUB_REPOSITORY -eq "microsoft/AL-Go") {
+        return "Preview"
+    } elseif($ENV:GITHUB_REPOSITORY -notlike "microsoft/*") {
+        return "Developer/Private"
+    } else {
+        return $ActionRef
+    }
+}
+
+function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
     [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     $telemetryScope = $null
     if ($TelemetryScopeJson -ne '') {
@@ -54,8 +66,12 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext) {
         }
     }
 
+    if ($AlGoVersion -ne '') {
+        Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ALGoVersion' -Value $AlGoVersion
+    }
+
     Trace-Information -Message "AL-Go workflow ran: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
 }
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext
+LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext -AlGoVersion (GetAlGoVersion -ActionRef $actionsRef)

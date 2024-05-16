@@ -13,6 +13,10 @@ inputs:
     description: The current job context
     required: false
     default: ''
+  actionsRef:
+    description: The ref of the action
+    required: false
+    default: ${{ github.action_ref }}
 runs:
   using: composite
   steps:
@@ -21,9 +25,10 @@ runs:
       env:
         _telemetryScopeJson: ${{ inputs.telemetryScopeJson }}
         _currentJobContext: ${{ inputs.currentJobContext }}
+        _actionsRef: ${{ inputs.actionsRef }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
-          ${{ github.action_path }}/WorkflowPostProcess.ps1 -telemetryScopeJson $ENV:_telemetryScopeJson -currentJobContext $ENV:_currentJobContext
+          ${{ github.action_path }}/WorkflowPostProcess.ps1 -telemetryScopeJson $ENV:_telemetryScopeJson -currentJobContext $ENV:_currentJobContext -actionsRef $ENV:_actionsRef
         }
 branding:
   icon: terminal
