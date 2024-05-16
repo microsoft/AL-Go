@@ -23,6 +23,9 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       id: workflowinitialize
+      env:
+        _actionsRepo: ${{ inputs.actionsRepo }}
+        _actionsRef: ${{ inputs.actionsRef }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
           ${{ github.action_path }}/WorkflowInitialize.ps1 -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
