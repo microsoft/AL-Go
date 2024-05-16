@@ -5,11 +5,9 @@
 
    ![Run workflow](https://github.com/microsoft/AL-Go/assets/10775043/d499294e-8c88-4f2d-9bb4-b34bad276a6b)
 
-> [!NOTE]
->
-> If workflows are not allowed to create pull requests due to GitHub Settings, you can create the PR manually by following the link in the annotation
->
-> ![Annotation](https://github.com/microsoft/AL-Go/assets/10775043/d346f0fc-5db4-4ff1-9c76-e93cb03ae504)
+   Note that if workflows are not allowed to create pull requests due to GitHub Settings, you can create the PR manually by following the link in the annotation
+
+   ![Annotation](https://github.com/microsoft/AL-Go/assets/10775043/d346f0fc-5db4-4ff1-9c76-e93cb03ae504)
 
 1. When the workflow is done, navigate to **Pull Requests**, **inspect the PR** and **Merge the pull request**
 
