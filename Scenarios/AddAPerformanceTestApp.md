@@ -29,7 +29,7 @@
 
    ![BCPT Test Results viewer](https://github.com/microsoft/AL-Go/assets/10775043/4b263e9e-7ec9-4101-92a7-046e7807e797)
 
-7. After uploading a `bcptBaseLin.json`, to the project root (which is the repo root in single project repositories), another CI/CD workflow will be kicked off, which now compares the results with the baseline:
+7. After uploading a `bcptBaseLine.json`, to the project root (which is the repo root in single project repositories), another CI/CD workflow will be kicked off, which now compares the results with the baseline:
 
    ![With BaseLine](https://github.com/microsoft/AL-Go/assets/10775043/c00840d5-4c67-4a72-a4d9-cdebe62e54c0)
 
