@@ -159,10 +159,10 @@ function GetBcptSummaryMD {
         [string] $thresholdsPath = '',
         [int] $skipMeasurements = 0,
         [hashtable] $bcptThresholds = @{
-            [int] $durationWarning = 10
-            [int] $durationError = 25
-            [int] $numberOfSqlStmtsWarning = 5
-            [int] $numberOfSqlStmtsError = 10
+            "durationWarning" = 10
+            "durationError" = 25
+            "numberOfSqlStmtsWarning" = 5
+            "numberOfSqlStmtsError" = 10
         }
     )
 
