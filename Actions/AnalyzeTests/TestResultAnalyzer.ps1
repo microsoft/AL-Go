@@ -165,7 +165,7 @@ function GetBcptSummaryMD {
     if (-not $bcpt) {
         return ''
     }
-    $baseLine = ReadBcptFile -path $baseLinePath
+    $baseLine = ReadBcptFile -bcptTestResultsFile $baseLinePath
     if ($baseLine) {
         if ($null -eq $bcptThresholds) {
             throw "Thresholds must be provided when comparing to a baseline"
