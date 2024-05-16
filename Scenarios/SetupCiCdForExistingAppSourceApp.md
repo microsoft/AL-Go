@@ -7,7 +7,7 @@
 ![Create Zip Url](https://github.com/microsoft/AL-Go/assets/10775043/fa287e2e-d2e9-4e62-a5e8-641a8e2d4ab3)
 1. Back on github.com, under **Actions**, select the **Add existing app or test app** workflow and choose **Run workflow**. Paste in the **Secure Download URL** and choose **Run Workflow**. When the workflow finishes, complete the pull request created.
 1. A CI workflow is kicked off by the pull request, this will fail with this error: *For AppSource Apps with AppSourceCop enabled, you need to specify AppSourceCopMandatoryAffixes in .AL-Go\settings.json.*
-1. If you fix this and re-run, you will get a warning: *When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app*. If you are building your AppSource app for Business Central versions prior to 22, the license file is a requirement. In 22, the CRONUS license has sufficient rights to be used as a DevOps license.
+1. Note that if you are building your AppSource app for Business Central versions prior to 22, you also need to create a secret called LicenseFileUrl, with permissions to your objects. for version 22 and later, the CRONUS license has sufficient rights to be used as a DevOps license.
 1. I will use my **KeyVault from [Scenario 7](UseAzureKeyVault.md)**, by adding a secret called **AZURE_CREDENTIALS** to my GitHub repo. And then add or modify the following 3 properties in the **.AL-Go\settings.json** file:
 ```json
 "LicenseFileUrlSecretName": "LicenseFile",

@@ -130,7 +130,7 @@ try {
             else {
                 $atypes.Split(',') | ForEach-Object {
                     $atype = $_
-                    $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $refname
+                    $allArtifacts = GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $atype -projects $project -version $artifacts -branch $ENV:GITHUB_REF_NAME
                     if ($allArtifacts) {
                         $allArtifacts | ForEach-Object {
                             $artifactFile = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder

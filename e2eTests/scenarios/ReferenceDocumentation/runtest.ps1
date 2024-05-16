@@ -104,7 +104,7 @@ Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "run
 CommitAndPush -commitMessage 'Shift to Linux'
 
 # Upgrade AL-Go System Files
-RunUpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template -ghTokenWorkflow $token | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository | Out-Null
 
 # Cancel all running workflows
 CancelAllWorkflows -repository $repository
