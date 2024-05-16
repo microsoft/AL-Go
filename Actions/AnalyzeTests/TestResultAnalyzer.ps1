@@ -9,13 +9,13 @@ $statusSkipped = " :question:"
 # Returns both a summary part and a failures part
 function GetTestResultSummaryMD {
     Param(
-        [string] $path
+        [string] $testResultsFile
     )
 
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()
-    if (Test-Path -Path $path -PathType Leaf) {
-        $testResults = [xml](Get-Content -path "$project\TestResults.xml" -Encoding UTF8)
+    if (Test-Path -Path $testResultsFile -PathType Leaf) {
+        $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)
         $totalTests = 0
         $totalTime = 0.0
         $totalFailed = 0
@@ -109,15 +109,15 @@ function GetTestResultSummaryMD {
 
 function ReadBcptFile {
     Param(
-        [string] $path
+        [string] $bcptTestResultsFile
     )
 
-    if ((-not $path) -or (-not (Test-Path -Path $path -PathType Leaf))) {
+    if ((-not $bcptTestResultsFile) -or (-not (Test-Path -Path $bcptTestResultsFile -PathType Leaf))) {
         return $null
     }
 
     # Read BCPT file
-    $bcptResult = Get-Content -Path $path -Encoding UTF8 | ConvertFrom-Json
+    $bcptResult = Get-Content -Path $bcptTestResultsFile -Encoding UTF8 | ConvertFrom-Json
     $suites = [ordered]@{}
     # Sort by bcptCode, codeunitID, operation
     foreach($measure in $bcptResult) {
@@ -154,38 +154,38 @@ function ReadBcptFile {
 
 function GetBcptSummaryMD {
     Param(
-        [string] $path,
+        [string] $bcptTestResultsFile,
         [string] $baseLinePath = '',
         [string] $thresholdsPath = '',
         [int] $skipMeasurements = 0,
-        [hashtable] $bcptThresholds = @{
-            "durationWarning" = 10
-            "durationError" = 25
-            "numberOfSqlStmtsWarning" = 5
-            "numberOfSqlStmtsError" = 10
-        }
+        [hashtable] $bcptThresholds = $null
     )
 
-    $bcpt = ReadBcptFile -path $path
+    $bcpt = ReadBcptFile -bcptTestResultsFile $bcptTestResultsFile
     if (-not $bcpt) {
         return ''
     }
     $baseLine = ReadBcptFile -path $baseLinePath
-    # Override thresholds if thresholds file exists
-    if ($thresholdsPath -and (Test-Path -path $thresholdsPath)) {
-        Write-Host "Reading thresholds from $thresholdsPath"
-        $thresholds = Get-Content -Path $thresholdsPath -Encoding UTF8 | ConvertFrom-Json
-        foreach($threshold in 'durationWarning', 'durationError', 'numberOfSqlStmtsWarning', 'numberOfSqlStmtsError') {
-            if ($thresholds.PSObject.Properties.Name -eq $threshold) {
-                $bcptThresholds."$threshold" = $thresholds."$threshold"
+    if ($baseLine) {
+        if ($null -eq $bcptThresholds) {
+            throw "Thresholds must be provided when comparing to a baseline"
+        }
+        # Override thresholds if thresholds file exists
+        if ($thresholdsPath -and (Test-Path -path $thresholdsPath)) {
+            Write-Host "Reading thresholds from $thresholdsPath"
+            $thresholds = Get-Content -Path $thresholdsPath -Encoding UTF8 | ConvertFrom-Json
+            foreach($threshold in 'durationWarning', 'durationError', 'numberOfSqlStmtsWarning', 'numberOfSqlStmtsError') {
+                if ($thresholds.PSObject.Properties.Name -eq $threshold) {
+                    $bcptThresholds."$threshold" = $thresholds."$threshold"
+                }
             }
         }
+        Write-Host "Using thresholds:"
+        Write-Host "- DurationWarning: $($bcptThresholds.durationWarning)"
+        Write-Host "- DurationError: $($bcptThresholds.durationError)"
+        Write-Host "- NumberOfSqlStmtsWarning: $($bcptThresholds.numberOfSqlStmtsWarning)"
+        Write-Host "- NumberOfSqlStmtsError: $($bcptThresholds.numberOfSqlStmtsError)"
     }
-    Write-Host "Using thresholds:"
-    Write-Host "- DurationWarning: $($bcptThresholds.durationWarning)"
-    Write-Host "- DurationError: $($bcptThresholds.durationError)"
-    Write-Host "- NumberOfSqlStmtsWarning: $($bcptThresholds.numberOfSqlStmtsWarning)"
-    Write-Host "- NumberOfSqlStmtsError: $($bcptThresholds.numberOfSqlStmtsError)"
 
     $summarySb = [System.Text.StringBuilder]::new()
     if ($baseLine) {

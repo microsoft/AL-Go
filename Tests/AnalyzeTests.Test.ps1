@@ -74,7 +74,7 @@ Describe "AnalyzeTests Action Tests" {
     It 'Test ReadBcptFile' {
         . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
-        $bcpt = ReadBcptFile -path $bcptFilename
+        $bcpt = ReadBcptFile -bcptTestResultsFile $bcptFilename
         $bcpt.Count | should -Be 1
         $bcpt."SUITE1".Count | should -Be 2
         $bcpt."SUITE1"."1".operations.Count | should -Be 5
@@ -84,7 +84,7 @@ Describe "AnalyzeTests Action Tests" {
     It 'Test GetBcptSummaryMD (no baseline)' {
         . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
-        $md = GetBcptSummaryMD -path $bcptFilename
+        $md = GetBcptSummaryMD -bcptTestResultsFile $bcptFilename
         Write-Host $md.Replace('\n',"`n")
         $md | should -Match 'No baseline provided'
         $columns = 6
@@ -98,7 +98,7 @@ Describe "AnalyzeTests Action Tests" {
     It 'Test GetBcptSummaryMD (with worse baseline)' {
         . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
-        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine1
+        $md = GetBcptSummaryMD -bcptTestResultsFile $bcptFilename -baselinePath $bcptBaseLine1 -bcptThresholds @{"durationWarning"=10;"durationError"=25;"numberOfSqlStmtsWarning"=5;"numberOfSqlStmtsError"=10}
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 13
@@ -121,7 +121,7 @@ Describe "AnalyzeTests Action Tests" {
         $script:warningCount = 0
         Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
 
-        $md = GetBcptSummaryMD -path $bcptFilename -baselinePath $bcptBaseLine2 -thresholdsPath $thresholdsFile -bcptThresholds @{"durationWarning"=5;"durationError"=10;"numberOfSqlStmtsWarning"=5;"numberOfSqlStmtsError"=10}
+        $md = GetBcptSummaryMD -bcptTestResultsFile $bcptFilename -baselinePath $bcptBaseLine2 -thresholdsPath $thresholdsFile -bcptThresholds @{"durationWarning"=5;"durationError"=10;"numberOfSqlStmtsWarning"=5;"numberOfSqlStmtsError"=10}
         Write-Host $md.Replace('\n',"`n")
         $md | should -Not -Match 'No baseline provided'
         $columns = 13

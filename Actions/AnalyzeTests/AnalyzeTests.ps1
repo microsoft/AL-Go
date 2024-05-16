@@ -17,15 +17,14 @@ try {
     . (Join-Path -Path $PSScriptRoot 'TestResultAnalyzer.ps1')
 
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
-    $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -path $testResultsFile
+    $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -testResultsFile $testResultsFile
 
     $settings = $env:Settings | ConvertFrom-Json
-    Write-Host "thresholds type: $($settings.bcptThresholds.GetType().FullName)"
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
     $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
     $bcptThresholdsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptThresholds.json"
     $bcptSummaryMD = GetBcptSummaryMD `
-        -path $bcptTestResultsFile `
+        -bcptTestResultsFile $bcptTestResultsFile `
         -baseLinePath $bcptBaseLineFile `
         -thresholdsPath $bcptThresholdsFile `
         -bcptThresholds ($settings.bcptThresholds | ConvertTo-HashTable)
