@@ -5,6 +5,14 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  actionsRepo:
+    description: The repository of the action
+    required: false
+    default: ${{ github.action_repository }}
+  actionsRef:
+    description: The ref of the action
+    required: false
+    default: ${{ github.action_ref }}
 outputs:
   telemetryScopeJson:
     description: A telemetryScope that covers the workflow
@@ -17,7 +25,7 @@ runs:
       id: workflowinitialize
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
-          ${{ github.action_path }}/WorkflowInitialize.ps1
+          ${{ github.action_path }}/WorkflowInitialize.ps1 -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
         }
 branding:
   icon: terminal

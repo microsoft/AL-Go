@@ -1,28 +1,27 @@
-﻿function LogAlGoVersion() {
-    Import-Module (Join-Path $PSScriptRoot '..\Github-Helper.psm1' -Resolve)
-
-    $branch = Get-ActionBranch
-    if ((Get-ActionOwner) -ne "microsoft") {
-        $verstr = "d"
-    }
-    elseif ($branch -eq "preview") {
-        $verstr = "p"
-    }
-    elseif ($branch -match "^[0-9a-f]{40}$") {
-        # If the branch is a commit hash, use the first 7 characters of the hash
-        $verstr = $branch.Substring(0, 7)
-    }
-    else {
-        $verstr = $branch
-    }
-    Write-Big -str "a$verstr"
-}
+Param(
+    [Parameter(HelpMessage = "The repository of the action", Mandatory = $false)]
+    [string] $actionsRepo,
+    [Parameter(HelpMessage = "The ref of the action", Mandatory = $false)]
+    [string] $actionsRef
+)
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-# Log the version of AL-Go that is being used in the workflow
-LogAlGoVersion
+if ($actionsRepo -eq 'microsoft/AL-Go-Actions') {
+    Write-Host "Using AL-Go for GitHub $actionsRef"
+    $verstr = $actionsRef
+}
+elseif ($actionsRepo -eq 'microsoft/AL-Go') {
+    Write-Host "Using AL-Go for GitHub Preview ($actionsRef)"
+    $verstr = "p"
+}
+else {
+    Write-Host "Using direct AL-Go development ($($actionsRepo)@$actionsRef)"
+    $verstr = "d"
+}
+
+Write-Big -str "a$verstr"
 
 # Test the AL-Go repository is set up correctly
 TestALGoRepository

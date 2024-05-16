@@ -28,6 +28,9 @@ outputs:
   AppsArtifactsName:
     description: Artifacts name for Apps
     value: ${{ steps.calculateartifactnames.outputs.AppsArtifactsName }}
+  PowerPlatformSolutionArtifactsName:
+    description: Artifacts name for PowerPlatform Solution
+    value: ${{ steps.calculateartifactnames.outputs.PowerPlatformSolutionArtifactsName }}
   DependenciesArtifactsName:
     description: Artifacts name for Dependencies
     value: ${{ steps.calculateartifactnames.outputs.DependenciesArtifactsName }}

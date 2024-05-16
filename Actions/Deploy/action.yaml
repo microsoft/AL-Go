@@ -12,8 +12,8 @@ inputs:
   environmentName:
     description: Name of environment to deploy to
     required: true
-  artifacts:
-    description: The artifacts to deploy or a folder in which the artifacts have been downloaded
+  artifactsFolder:
+    description: Path to the downloaded artifacts to deploy
     required: true
   type:
     description: Type of deployment (CD or Publish)
@@ -35,12 +35,12 @@ runs:
       env:
         _token: ${{ inputs.token }}
         _environmentName: ${{ inputs.environmentName }}
-        _artifacts: ${{ inputs.artifacts }}
+        _artifactsFolder: ${{ inputs.artifactsFolder }}
         _type: ${{ inputs.type }}
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
-          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifacts $ENV:_artifacts -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
+          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
         }
 branding:
   icon: terminal
