@@ -206,7 +206,7 @@ else {
     try {
         if (!$directCommit) {
             $env:GH_TOKEN = $token
-            $existingPullRequest = gh api --paginate /repos/$env:GITHUB_REPOSITORY/pulls -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json | Where-Object { $_.title -eq "Update AL-Go System Files - $templateSha" -and $_.base.ref -eq $branch }
+            $existingPullRequest = gh api --paginate /repos/$env:GITHUB_REPOSITORY/pulls -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json | Where-Object { $_.title -eq "Update AL-Go System Files - $templateSha" -and $_.base.ref -eq $updateBranch }
             if ($existingPullRequest) {
                 OutputWarning "Pull request already exists for updated AL-Go System Files."
                 exit
