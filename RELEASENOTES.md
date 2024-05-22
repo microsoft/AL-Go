@@ -1,3 +1,6 @@
+### Issues
+- Issue 1084 Automatic updates for AL-Go are failing when main branch requires Pull Request
+
 ### New Settings
 
 - `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
