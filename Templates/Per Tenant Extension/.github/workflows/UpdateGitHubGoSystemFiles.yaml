@@ -83,9 +83,17 @@ jobs:
           $downloadLatest = $ENV:downloadLatest
           Write-Host $ENV:eventName
           if ($ENV:eventName -eq 'schedule') {
-            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit and DownloadLatest to true"
-            $directCommit = 'true'
+            Write-Host "Running Update AL-Go System Files on a schedule."
+            $rules = gh api /repos/$env:GITHUB_REPOSITORY/rules/branches/main | ConvertFrom-Json
             $downloadLatest = 'true'
+            if ($rules | Where-Object { $_.type -eq 'pull_request' }) {
+              Write-Host "main branch requires a Pull Request"
+              $directCommit = 'false'
+            }
+            else {
+              Write-Host "No pull request required, using direct commit"
+              $directCommit = 'true'
+            }
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
