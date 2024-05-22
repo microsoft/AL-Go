@@ -86,7 +86,7 @@ jobs:
           Write-Host $ENV:eventName
           if ($ENV:eventName -eq 'schedule') {
             Write-Host "Running Update AL-Go System Files on a schedule."
-            $rules = gh api /repos/$env:GITHUB_REPOSITORY/rules/branches/main | ConvertFrom-Json
+            $rules = gh api /repos/$env:GITHUB_REPOSITORY/rules/branches/$env:GITHUB_REF | ConvertFrom-Json
             $downloadLatest = 'true'
             if ($rules | Where-Object { $_.type -eq 'pull_request' }) {
               Write-Host "main branch requires a Pull Request"
