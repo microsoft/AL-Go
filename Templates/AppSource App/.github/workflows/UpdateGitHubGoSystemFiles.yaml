@@ -89,7 +89,7 @@ jobs:
             $rules = gh api /repos/$env:GITHUB_REPOSITORY/rules/branches/$env:GITHUB_REF | ConvertFrom-Json
             $downloadLatest = 'true'
             if ($rules | Where-Object { $_.type -eq 'pull_request' }) {
-              Write-Host "main branch requires a Pull Request"
+              Write-Host "$($env:GITHUB_REF) branch requires a Pull Request"
               $directCommit = 'false'
             }
             else {
