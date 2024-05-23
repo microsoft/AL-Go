@@ -110,7 +110,7 @@ jobs:
               }
             }
             catch {
-              Write-Host "Error occurred while checking branch protection for branch $($env:GITHUB_REF_NAME): $_"
+              Write-Host "Error occurred while checking branch protection for branch $($env:GITHUB_REF_NAME): $_" #test
             }
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
