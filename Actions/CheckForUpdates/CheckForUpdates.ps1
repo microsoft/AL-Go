@@ -31,6 +31,8 @@ if ($update -eq 'Y') {
     }
 }
 
+Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Success"
+
 # Use Authenticated API request to avoid the 60 API calls per hour limit
 $headers = @{
     "Accept" = "application/vnd.github.baptiste-preview+json"
@@ -265,17 +267,15 @@ else {
         if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch)) {
             OutputWarning "No updates available for AL-Go for GitHub."
         }
-
-        Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Success"
     }
     catch {
         if ($directCommit) {
             Write-Host "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-            Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
         }
         else {
             Write-Host "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-            Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
         }
     }
 }
