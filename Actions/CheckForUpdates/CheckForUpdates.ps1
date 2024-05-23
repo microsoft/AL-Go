@@ -204,11 +204,12 @@ if ($update -ne 'Y') {
 else {
     # $update set, update the files
     try {
+        $commitMessage = "[$updateBranch] Update AL-Go System Files - $templateSha"
         if (!$directCommit) {
             $env:GH_TOKEN = $token
-            $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq "[$updateBranch] Update AL-Go System Files - $templateSha" } | Select-Object -First 1
+            $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
             if ($existingPullRequest) {
-                OutputWarning "Pull request already exists for [$updateBranch] Update AL-Go System Files - $($templateSha): $($existingPullRequest.html_url)."
+                OutputWarning "Pull request already exists for $($commitMessage): $($existingPullRequest.html_url)."
                 exit
             }
         }
@@ -261,7 +262,7 @@ else {
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
 
-        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage "[$updateBranch] Update AL-Go System Files - $templateSha" -branch $branch)) {
+        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch)) {
             OutputWarning "No updates available for AL-Go for GitHub."
         }
     }
