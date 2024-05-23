@@ -97,7 +97,7 @@ jobs:
                 $directCommit = 'false'
               }
               else {
-                Write-Host "No pull request required for branch $($env:GITHUB_REF_NAME)"
+                Write-Host "Pull request not required for branch $($env:GITHUB_REF_NAME)"
               }
             }
             catch {
