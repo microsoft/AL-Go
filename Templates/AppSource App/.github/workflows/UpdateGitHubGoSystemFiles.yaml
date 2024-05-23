@@ -84,7 +84,7 @@ jobs:
           templateUrl: ${{ env.templateUrl }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
-      - name: Update AL-Go system files (scheduled trigger - try direct commit)
+      - name: Update AL-Go system files (scheduled trigger - try direct commitx)
         if: github.event_name == 'schedule'
         continue-on-error: true
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
