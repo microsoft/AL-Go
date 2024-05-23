@@ -94,7 +94,7 @@ jobs:
               $branchProtection = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$env:GITHUB_REPOSITORY/branches/$env:GITHUB_REF/protection | ConvertFrom-Json
               if (($rules | Where-Object { $_.type -eq 'pull_request' }) -or ($branchProtection.PSObject.Properties.Name -eq "required_pull_request_reviews")) {
                 Write-Host "Pull request is required for branch $($env:GITHUB_REF)"
-                $directCommit = 'false' #test
+                $directCommit = 'false'
               }
               else {
                 Write-Host "No pull request required for branch $($env:GITHUB_REF)"
