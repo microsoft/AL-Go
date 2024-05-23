@@ -90,18 +90,18 @@ jobs:
             try {
               Write-Host "Running Update AL-Go System Files on a schedule."
               $ENV:GH_TOKEN = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GhTokenWorkflow))
-              $rules = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$env:GITHUB_REPOSITORY/rules/branches/$env:GITHUB_REF | ConvertFrom-Json
-              $branchProtection = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$env:GITHUB_REPOSITORY/branches/$env:GITHUB_REF/protection | ConvertFrom-Json
+              $rules = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$env:GITHUB_REPOSITORY/rules/branches/$env:GITHUB_REF_NAME | ConvertFrom-Json
+              $branchProtection = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$env:GITHUB_REPOSITORY/branches/$env:GITHUB_REF_NAME/protection | ConvertFrom-Json
               if (($rules | Where-Object { $_.type -eq 'pull_request' }) -or (($branchProtection.PSObject.Properties.Name -eq "required_pull_request_reviews") -and $branchProtection.enforce_admins.enabled)) {
-                Write-Host "Pull request is required for branch $($env:GITHUB_REF)"
+                Write-Host "Pull request is required for branch $($env:GITHUB_REF_NAME)"
                 $directCommit = 'false'
               }
               else {
-                Write-Host "No pull request required for branch $($env:GITHUB_REF)"
+                Write-Host "No pull request required for branch $($env:GITHUB_REF_NAME)"
               }
             }
             catch {
-              Write-Host "Error occurred while checking branch protection for branch $($env:GITHUB_REF): $_"
+              Write-Host "Error occurred while checking branch protection for branch $($env:GITHUB_REF_NAME): $_"
             }
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
