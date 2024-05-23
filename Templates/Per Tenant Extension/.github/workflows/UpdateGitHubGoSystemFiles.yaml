@@ -29,6 +29,7 @@ env:
 
 jobs:
   UpdateALGoSystemFiles:
+    name: 'Update AL-Go System Files'
     needs: [ ]
     runs-on: [ windows-latest ]
     steps:
@@ -85,6 +86,7 @@ jobs:
 
       - name: Update AL-Go system files (scheduled trigger - try direct commit first)
         if: github.event_name == 'schedule'
+        continue-on-error: true
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           shell: powershell
