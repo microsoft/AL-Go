@@ -97,7 +97,7 @@ jobs:
           directCommit: true
 
       - name: Update AL-Go system files (scheduled trigger - try pull request)
-        if: env.UpdateError != '' && github.event_name == 'schedule'
+        if: env.UpdateStatus != 'Success' && github.event_name == 'schedule'
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           shell: powershell
@@ -108,9 +108,10 @@ jobs:
           directCommit: false
 
       - name: Report error
+        if: env.UpdateStatus != 'Success'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          Write-Host "::ERROR::$env:UpdateError"
+          Write-Host "::ERROR::$env:UpdateStatus"
           exit 1
   
       - name: Finalize the workflow
