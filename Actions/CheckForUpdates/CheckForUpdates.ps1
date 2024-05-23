@@ -270,9 +270,11 @@ else {
     }
     catch {
         if ($directCommit) {
+            Write-Host "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
             Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "UpdateError=Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
         }
         else {
+            Write-Host "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
             Add-Content -encoding utf8 -path $env:GITHUB_ENV -value "UpdateError=Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
         }
     }
