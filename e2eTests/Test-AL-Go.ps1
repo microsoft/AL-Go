@@ -6,7 +6,6 @@ Param(
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $template = $global:pteTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private,
@@ -26,7 +25,6 @@ Write-Host -ForegroundColor Yellow @'
 #
 # - Login to GitHub
 # - Create a new repository based on the selected template
-# - If (AppSource App) Create a licensefileurl secret
 # - Run the "Add an existing app" workflow and add an app as a Pull Request
 # -  Test that a Pull Request was created and merge the Pull Request
 # - Run the "CI/CD" workflow
@@ -116,9 +114,6 @@ Start-Sleep -Seconds 60
 $runs = GetNumberOfRuns -repository $repository
 
 # Add Existing App
-if ($appSourceApp) {
-    SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
-}
 RunAddExistingAppOrTestApp @project1Param -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
 $runs++
 if ($appSourceApp) {
