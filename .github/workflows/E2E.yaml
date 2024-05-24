@@ -30,6 +30,9 @@ on:
         required: false
         default: 'preview'
 
+env:
+  TestUpgradesFromVersion: '3.1'
+
 defaults:
   run:
     shell: pwsh
@@ -144,7 +147,7 @@ jobs:
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "testruns=$testrunsJson"
           Write-Host "testruns=$testrunsJson"
 
-          $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] })
+          $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] }) | Where-Object { [Version]($_.trimStart('v') -ge [Version]($env:TestUpgradesFromVersion) }
           $releasesJson = @{
             "matrix" = @{
               "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
