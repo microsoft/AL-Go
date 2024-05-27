@@ -1340,7 +1340,7 @@ function CommitFromNewFolder {
         if ($activeBranch -ne $branch) {
             try {
                 invoke-git push $serverUrl
-                return true
+                return $true
             }
             catch {
                 OutputWarning("Direct Commit wasn't allowed, trying to create a Pull Request instead")
