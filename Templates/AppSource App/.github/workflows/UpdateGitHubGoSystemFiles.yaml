@@ -73,47 +73,34 @@ jobs:
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
           }
 
-      - name: Update AL-Go system files (manual trigger)
-        if: github.event_name == 'workflow_dispatch'
-        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
-        with:
-          shell: powershell
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+      - name: Calculate Input
+        env:
+          directCommit: '${{ github.event.inputs.directCommit }}'
           downloadLatest: ${{ github.event.inputs.downloadLatest }}
-          update: 'Y'
-          templateUrl: ${{ env.templateUrl }}
-          directCommit: ${{ github.event.inputs.directCommit }}
-
-      - name: Update AL-Go system files (scheduled trigger - try direct commit)
-        if: github.event_name == 'schedule'
-        continue-on-error: true
-        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
-        with:
-          shell: powershell
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
-          downloadLatest: true
-          update: 'Y'
-          templateUrl: ${{ env.templateUrl }}
-          directCommit: true
-
-      - name: Update AL-Go system files (scheduled trigger - try pull request)
-        if: env.UpdateStatus != 'Success' && github.event_name == 'schedule'
-        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
-        with:
-          shell: powershell
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
-          downloadLatest: true
-          update: 'Y'
-          templateUrl: ${{ env.templateUrl }}
-          directCommit: false
-
-      - name: Report error
-        if: env.UpdateStatus != 'Success'
+          eventName: ${{ github.event_name }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          Write-Host "::ERROR::$env:UpdateStatus"
-          exit 1
-  
+          $directCommit = $ENV:directCommit
+          $downloadLatest = $ENV:downloadLatest
+          Write-Host $ENV:eventName
+          if ($ENV:eventName -eq 'schedule') {
+            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit and DownloadLatest to true"
+            $directCommit = 'true'
+            $downloadLatest = 'true'
+          }
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
+
+      - name: Update AL-Go system files
+        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
+        with:
+          shell: powershell
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+          downloadLatest: ${{ env.downloadLatest }}
+          update: 'Y'
+          templateUrl: ${{ env.templateUrl }}
+          directCommit: ${{ env.directCommit }}
+
       - name: Finalize the workflow
         if: always()
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
