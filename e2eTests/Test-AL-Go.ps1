@@ -6,7 +6,6 @@ Param(
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $template = $global:pteTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private,
@@ -26,7 +25,6 @@ Write-Host -ForegroundColor Yellow @'
 #
 # - Login to GitHub
 # - Create a new repository based on the selected template
-# - If (AppSource App) Create a licensefileurl secret
 # - Run the "Add an existing app" workflow and add an app as a Pull Request
 # -  Test that a Pull Request was created and merge the Pull Request
 # - Run the "CI/CD" workflow
@@ -70,13 +68,13 @@ $repository = "$githubOwner/$repoName"
 $branch = "main"
 
 if ($appSourceApp) {
-    $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/apps.zip"
-    $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/testapps.zip"
+    $sampleApp1 = "https://github.com/BusinessCentralApps/helloworld.appsource/releases/download/2.0.0/helloworld.appsource-main-Apps-2.0.6.0.zip"
+    $sampleTestApp1 = "https://github.com/BusinessCentralApps/helloworld.appsource/releases/download/2.0.0/helloworld.appsource-main-TestApps-2.0.6.0.zip"
     $idRange = @{ "from" = 75055000; "to" = 75056000 }
 }
 else {
-    $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
-    $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/testapps.zip"
+    $sampleApp1 = "https://github.com/BusinessCentralApps/helloworld.pte/releases/download/2.0.0/helloworld.pte-main-Apps-2.0.5.0.zip"
+    $sampleTestApp1 = "https://github.com/BusinessCentralApps/helloworld.pte/releases/download/2.0.0/helloworld.pte-main-TestApps-2.0.5.0.zip"
     $idRange = @{ "from" = 55000; "to" = 56000 }
 }
 if ($multiProject) {
@@ -116,9 +114,6 @@ Start-Sleep -Seconds 60
 $runs = GetNumberOfRuns -repository $repository
 
 # Add Existing App
-if ($appSourceApp) {
-    SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
-}
 RunAddExistingAppOrTestApp @project1Param -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
 $runs++
 if ($appSourceApp) {
@@ -168,11 +163,11 @@ if ($appSourceApp) {
         "brief" = "Hello World for AppSource"
         "description" = "Hello World sample app for AppSource"
         "logo" = "helloworld256x240.png"
-        "url" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "EULA" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "privacyStatement" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "help" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "contextSensitiveHelpUrl" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
+        "url" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "EULA" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "privacyStatement" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "help" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "contextSensitiveHelpUrl" = "https://github.com/BusinessCentralApps/helloworld.appsource"
         "features" = @( "TranslationFile" )
     }
     $runs++
