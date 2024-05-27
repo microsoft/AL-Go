@@ -1346,6 +1346,7 @@ function CommitFromNewFolder {
                 OutputWarning("Direct Commit wasn't allowed, trying to create a Pull Request instead")
                 invoke-git reset --soft HEAD~
                 invoke-git checkout -b $branch
+                invoke-git commit --allow-empty -m "$commitMessage"
             }
         }
         invoke-git push -u $serverUrl $branch
