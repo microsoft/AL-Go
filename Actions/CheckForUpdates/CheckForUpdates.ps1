@@ -270,12 +270,14 @@ else {
     }
     catch {
         if ($directCommit) {
-            Write-Host "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-            Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
+            $updateStatus = "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
         }
         else {
-            Write-Host "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-            Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
+            $updateStatus = "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')))"
+
         }
+        Write-Host $updateStatus
+        Add-Content -encoding utf8 -Path $env:GITHUB_ENV -Value "UpdateStatus=$updateStatus"
+
     }
 }
