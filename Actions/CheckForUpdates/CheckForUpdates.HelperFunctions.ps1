@@ -30,7 +30,8 @@ function DownloadTemplateRepository {
     if ($downloadLatest) {
         # Get Branches from template repository
         # Use Authenticated API request to avoid the 60 API calls per hour limit
-        $branches = gh api -paginate -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$templateRepo/branches | ConvertFrom-Json
+        $env:GH_TOKEN = $token
+        $branches = gh api --paginate -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$templateRepo/branches | ConvertFrom-Json
         $branchInfo = $branches | Where-Object { $_.Name -eq $branch }
         if (!$branchInfo) {
             throw "$templateUrl doesn't exist"
