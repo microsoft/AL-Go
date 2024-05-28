@@ -12,14 +12,15 @@ If true, the latest SHA of the template repository will be downloaded
 #>
 function DownloadTemplateRepository {
     Param(
-        [hashtable] $headers,
+        [string] $token,
         [string] $templateUrl,
         [ref] $templateSha,
         [bool] $downloadLatest
     )
 
     # Construct API URL
-    $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
+    $templateRepo = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "`$2"
+    $apiUrl = "$ENV:GITHUB_API_URL/repos/$templateRepo"
     $branch = $templateUrl.Split('@')[1]
 
     Write-Host "TemplateUrl: $templateUrl"
@@ -28,8 +29,9 @@ function DownloadTemplateRepository {
 
     if ($downloadLatest) {
         # Get Branches from template repository
-        $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
-        $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
+        # Use Authenticated API request to avoid the 60 API calls per hour limit
+        $branches = gh api -paginate -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$templateRepo/branches | ConvertFrom-Json
+        $branchInfo = $branches | Where-Object { $_.Name -eq $branch }
         if (!$branchInfo) {
             throw "$templateUrl doesn't exist"
         }
