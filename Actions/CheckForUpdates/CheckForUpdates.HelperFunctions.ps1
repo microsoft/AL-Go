@@ -44,6 +44,12 @@ function DownloadTemplateRepository {
 
     # Download template repository
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+
+    # Use Authenticated API request to avoid the 60 API calls per hour limit
+    $headers = @{
+        "Accept" = "application/vnd.github.baptiste-preview+json"
+        "Authorization" = "Bearer $token"
+    }
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
