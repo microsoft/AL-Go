@@ -7,7 +7,6 @@ Param(
     [string] $contentPath = "pte",
     [string] $release = "v2.2",
     [string] $template = $global:pteTemplate,
-    [string] $licenseFileUrl = "",
     [switch] $appSourceApp,
     [switch] $private
 )
@@ -27,7 +26,6 @@ Write-Host -ForegroundColor Yellow @'
 #
 # - Login
 # - Create a new repository based on the selected template and the selected version
-# - If (AppSource App) Create a licensefileurl secret
 # - Run CI/CD workflow
 # -  Test that the number of workflows ran is correct and the artifacts created from CI/CD are correct and of the right version
 # - Create the GHTOKENWORKFLOW secret
@@ -52,15 +50,9 @@ $releaseVersion = [System.Version]$release.Substring(1)
 
 if ($appSourceApp) {
     $orgTemplate = 'https://github.com/microsoft/al-go-appSource'
-    if (!$licenseFileUrl) {
-        throw "License file secret must be set"
-    }
 }
 else {
     $orgTemplate = 'https://github.com/microsoft/al-go-pte'
-    if ($licenseFileUrl) {
-        throw "License file secret should not be set"
-    }
 }
 $template = "https://github.com/$template"
 
@@ -88,11 +80,6 @@ CommitAndPush -commitMessage "Update settings.json"
 
 # Expected Run: CI/CD triggered on push
 $runs++
-
-# Add Existing App
-if ($appSourceApp) {
-    SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
-}
 
 # Run CI/CD and wait
 $run = RunCICD -wait -branch $branch
