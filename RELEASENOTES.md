@@ -2,6 +2,7 @@
 
 - `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
 - `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
+- `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
 
 ### New Actions
 
