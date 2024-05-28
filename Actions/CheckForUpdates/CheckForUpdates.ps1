@@ -204,6 +204,15 @@ if ($update -ne 'Y') {
 else {
     # $update set, update the files
     try {
+        # If a pull request already exists with the same REF, then exit
+        $commitMessage = "[$updateBranch] Update AL-Go System Files - $templateSha"
+        $env:GH_TOKEN = $token
+        $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
+        if ($existingPullRequest) {
+            OutputWarning "Pull request already exists for $($commitMessage): $($existingPullRequest.html_url)."
+            exit
+        }
+
         # If $directCommit, then changes are made directly to the default branch
         $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
 
@@ -253,7 +262,7 @@ else {
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
 
-        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage "Update AL-Go System Files" -branch $branch)) {
+        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch)) {
             OutputWarning "No updates available for AL-Go for GitHub."
         }
     }

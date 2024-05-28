@@ -1,3 +1,6 @@
+### Issues
+- Issue 1084 Automatic updates for AL-Go are failing when main branch requires Pull Request
+
 ### Business Central Performance Toolkit Test Result Viewer
 
 In the summary after a Test Run, you now also have the result of performance tests.
