@@ -224,6 +224,7 @@ try {
                     $preReleaseTag = 'preview'
                 }
                 $nuGetServerUrl = $nuGetAccount.ServerUrl
+                Write-Host $nuGetAccount.ServerUrl
                 $nuGetToken = $nuGetAccount.Token
                 Write-Host "$($deliveryTarget)Context secret OK"
             }
