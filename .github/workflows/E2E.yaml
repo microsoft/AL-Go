@@ -156,7 +156,7 @@ jobs:
           $publicTestrunsJson = $publicTestruns | ConvertTo-Json -depth 99 -compress
           $privateTestrunsJson = $privateTestruns | ConvertTo-Json -depth 99 -compress
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "publictestruns=$publicTestrunsJson"
-          Wrie-Host "publictestruns=$publicTestrunsJson"
+          Write-Host "publictestruns=$publicTestrunsJson"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "privatetestruns=$privateTestrunsJson"
           Write-Host "privatetestruns=$privateTestrunsJson"
 
