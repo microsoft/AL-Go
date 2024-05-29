@@ -343,7 +343,7 @@ jobs:
 
   RemoveRepositories:
     runs-on: [ ubuntu-latest ]
-    needs: [ Check, SetupRepositories, TestAlGo, TestAlGoUpgrade, Scenario ]
+    needs: [ Check, SetupRepositories, TestAlGoPublic, TestAlGoPrivate, TestAlGoUpgrade, Scenario ]
     if: always() && (!Cancelled()) && (needs.SetupRepositories.result == 'Success') && (needs.TestAlGo.result == 'Success' || needs.TestAlGo.result == 'Skipped') && (needs.TestAlGoUpgrade.result == 'Success' || needs.TestAlGoUpgrade.result == 'Skipped') && (needs.Scenario.result == 'Success' || needs.Scenario.result == 'Skipped')
     steps:
       - uses: actions/checkout@v4
