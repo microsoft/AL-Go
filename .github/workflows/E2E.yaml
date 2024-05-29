@@ -106,7 +106,8 @@ jobs:
     runs-on: [ ubuntu-latest ]
     needs: [ Check ]
     outputs:
-      testruns: ${{ steps.Analyze.outputs.testruns }}
+      publictestruns: ${{ steps.Analyze.outputs.publictestruns }}
+      privatetestruns: ${{ steps.Analyze.outputs.privatetestruns }}
       releases: ${{ steps.Analyze.outputs.releases }}
       scenarios: ${{ steps.Analyze.outputs.scenarios }}
     steps:
@@ -123,33 +124,42 @@ jobs:
           SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -repository "microsoft/AL-Go"
           $maxParallel = [int]'${{ needs.Check.outputs.maxParallel }}'
 
-          $testrunsJson = @{
+          $publicTestruns = @{
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
             "matrix" = @{
-              "include" = @(
-                @('private','public') | ForEach-Object {
-                  $visibility = $_
-                  @('appSourceApp','PTE') | ForEach-Object {
-                    $type = $_
-                    @('linux','windows') | ForEach-Object {
-                      $os = $_
-                      @('multiProject','singleProject') | ForEach-Object {
-                        $style = $_
-                        @{ "visibility" = $visibility; "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
-                        if ($visibility -eq "public" -and $type -eq "PTE") {
-                          # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
-                          @{ "visibility" = $visibility; "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
-                        }
-                      }
-                    }
+              "include" = @()
+            }
+          }
+          $privateTestruns = @{
+            "max-parallel" = $maxParallel
+            "fail-fast" = $false
+            "matrix" = @{
+              "include" = @()
+            }
+          }
+          @('appSourceApp','PTE') | ForEach-Object {
+            $type = $_
+              @('linux','windows') | ForEach-Object {
+                $os = $_
+                @('multiProject','singleProject') | ForEach-Object {
+                  $style = $_
+                  $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
+                  $privateTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
+                  if ($type -eq "PTE") {
+                    # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
+                    $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
                   }
                 }
               )
             }
-            "max-parallel" = $maxParallel
-            "fail-fast" = $false
-          } | ConvertTo-Json -depth 99 -compress
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "testruns=$testrunsJson"
-          Write-Host "testruns=$testrunsJson"
+          }
+          $publicTestrunsJson = $publicTestruns | ConvertTo-Json -depth 99 -compress
+          $privateTestrunsJson = $privateTestruns | ConvertTo-Json -depth 99 -compress
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "publictestruns=$publicTestrunsJson"
+          Wrie-Host "publictestruns=$publicTestrunsJson"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "privatetestruns=$privateTestrunsJson"
+          Write-Host "privatetestruns=$privateTestrunsJson"
 
           $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] }) | Where-Object { [Version]($_.trimStart('v')) -ge [Version]("$env:TestUpgradesFromVersion".TrimStart('v')) }
           $releasesJson = @{
@@ -203,11 +213,11 @@ jobs:
             $host.SetShouldExit(1)
           }
 
-  TestAlGo:
+  TestAlGoPublic:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
     if: github.event.inputs.runTestMatrix == 'true'
-    strategy: ${{ fromJson(needs.Analyze.outputs.testruns) }}
+    strategy: ${{ fromJson(needs.Analyze.outputs.publictestruns) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -235,10 +245,9 @@ jobs:
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run tests
-        if: github.event.inputs.includePrivateRepos == true || matrix.visibility == 'public'
         run: |
           try {
-            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -private:('${{ matrix.visibility }}' -eq 'private') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
+            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
           }
           catch {
             Write-Host $_.Exception.Message
@@ -246,6 +255,50 @@ jobs:
             Write-Host "::Error::$($_.Exception.Message)"
             $host.SetShouldExit(1)
           }
+
+  TestAlGoPrivate:
+    runs-on: [ ubuntu-latest ]
+    needs: [ Check, SetupRepositories, Analyze ]
+    if: github.event.inputs.runTestMatrix == 'true' && github.event.inputs.includePrivateRepos == 'true'
+    strategy: ${{ fromJson(needs.Analyze.outputs.publictestruns) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Calculate parameters
+        id: calculateParams
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $adminCenterApiCredentials = ''
+          if ('${{ matrix.type }}' -eq 'PTE' -and '${{ matrix.style }}' -eq 'singleProject' -and '${{ matrix.os }}' -eq 'windows') {
+            $adminCenterApiCredentials = '${{ Secrets.adminCenterApiCredentials }}'
+          }
+          if ('${{ matrix.type }}' -eq 'appSourceApp') {
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+          }
+          else {
+            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
+          }
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
+          Write-Host "repoName='$repoName'"
+          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+
+      - name: Run tests
+        run: |
+          try {
+            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -private -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
+          }
+          catch {
+            Write-Host $_.Exception.Message
+            Write-Host $_.ScriptStackTrace
+            Write-Host "::Error::$($_.Exception.Message)"
+            $host.SetShouldExit(1)
+          }
+
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
