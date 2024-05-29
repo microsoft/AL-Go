@@ -151,7 +151,7 @@ jobs:
                     $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
                   }
                 }
-              )
+              }
             }
           }
           $publicTestrunsJson = $publicTestruns | ConvertTo-Json -depth 99 -compress
