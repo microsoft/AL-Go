@@ -121,12 +121,16 @@ try {
 
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
         foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
+            Write-Host $trustedNuGetFeed.Url
             if ($trustedNuGetFeed.AuthTokenSecret) {
+                Write-Host $trustedNuGetFeed.AuthTokenSecret
                 $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret
                 if ($secrets.Keys -notcontains $authTokenSecret) {
                     OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
+                    Wite-Host "Set token"
+                    $trustedNuGetFeed | Out-Host
                     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
                     if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
                         $trustedNuGetFeed.Token = $token
