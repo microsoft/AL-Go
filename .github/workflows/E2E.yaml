@@ -140,16 +140,15 @@ jobs:
           }
           @('appSourceApp','PTE') | ForEach-Object {
             $type = $_
-              @('linux','windows') | ForEach-Object {
-                $os = $_
-                @('multiProject','singleProject') | ForEach-Object {
-                  $style = $_
-                  $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
-                  $privateTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
-                  if ($type -eq "PTE") {
-                    # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
-                    $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
-                  }
+            @('linux','windows') | ForEach-Object {
+              $os = $_
+              @('multiProject','singleProject') | ForEach-Object {
+                $style = $_
+                $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
+                $privateTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
+                if ($type -eq "PTE") {
+                  # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
+                  $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
                 }
               }
             }
