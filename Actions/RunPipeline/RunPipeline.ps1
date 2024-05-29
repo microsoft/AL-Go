@@ -119,13 +119,8 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
-    Write-Host "Test TrustedNugetFeeds"
-    $bcContainerHelperConfig.GetType().FullName | Out-Host
-    $bcContainerHelperConfig.TrustedNuGetFeeds | ForEach-Object {
-        Write-Host $_.Url
-    }
-
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
+        Write-Host "Reading TrustedNuGetFeeds"
         foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
             Write-Host $trustedNuGetFeed.Url
             if ($trustedNuGetFeed.AuthTokenSecret) {
@@ -135,13 +130,13 @@ try {
                     OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
-                    Write-Host "Set token"
-                    $trustedNuGetFeed | Out-Host
                     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
                     if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
+                        Write-Host "Set token"
                         $trustedNuGetFeed.Token = $token
                     }
                     else {
+                        Write-Host "Add token"
                         $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name Token -Value $token
                     }
                 }
