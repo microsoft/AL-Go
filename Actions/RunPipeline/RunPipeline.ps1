@@ -119,6 +119,12 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
+    Write-Host "Test TrustedNugetFeeds"
+    $bcContainerHelperConfig.GetType().FullName | Out-Host
+    $bcContainerHelperConfig.TrustedNuGetFeeds | ForEach-Object {
+        Write-Host $_.Url
+    }
+
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
         foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
             Write-Host $trustedNuGetFeed.Url
