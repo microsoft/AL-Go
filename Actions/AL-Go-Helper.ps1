@@ -20,7 +20,7 @@ $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -554,6 +554,7 @@ function ReadSettings {
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
         "projects"                                      = @()
+        "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
         "artifact"                                      = ""
         "companyName"                                   = ""
@@ -1309,9 +1310,8 @@ function CloneIntoNewFolder {
     Set-Location *
     invoke-git checkout $updateBranch
 
-    $branch = ''
+    $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
     if (!$directCommit) {
-        $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
         invoke-git checkout -b $branch
     }
 
@@ -1333,17 +1333,28 @@ function CommitFromNewFolder {
             $commitMessage = "$($commitMessage.Substring(0,250))...)"
         }
         invoke-git commit --allow-empty -m "$commitMessage"
-        if ($branch) {
-            invoke-git push -u $serverUrl $branch
+        $activeBranch = invoke-git -returnValue -silent name-rev --name-only HEAD
+        # $branch is the name of the branch to be used when creating a Pull Request
+        # $activeBranch is the name of the branch that is currently checked out
+        # If activeBranch and branch are the same - we are creating a PR
+        if ($activeBranch -ne $branch) {
             try {
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+                invoke-git push $serverUrl
+                return $true
             }
             catch {
-                OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+                OutputWarning("Direct Commit wasn't allowed, trying to create a Pull Request instead")
+                invoke-git reset --soft HEAD~
+                invoke-git checkout -b $branch
+                invoke-git commit --allow-empty -m "$commitMessage"
             }
         }
-        else {
-            invoke-git push $serverUrl
+        invoke-git push -u $serverUrl $branch
+        try {
+            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+        }
+        catch {
+            OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
         }
         return $true
     }
@@ -1553,7 +1564,8 @@ function CreateDevEnv {
         [Parameter(ParameterSetName = 'local')]
         [string] $containerName = "",
         [string] $licenseFileUrl = "",
-        [switch] $accept_insiderEula
+        [switch] $accept_insiderEula,
+        [switch] $clean
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1709,6 +1721,15 @@ function CreateDevEnv {
 
         if ((-not $settings.appFolders) -and (-not $settings.testFolders)) {
             Write-Host "Repository is empty"
+        }
+
+        if ($clean) {
+            $appFolders = @()
+            $testFolders = @()
+        }
+        else {
+            $appFolders = $settings.appFolders
+            $testFolders = $settings.testFolders
         }
 
         $installApps = $settings.installApps
@@ -1905,8 +1926,8 @@ function CreateDevEnv {
                 -installApps $installApps `
                 -installTestApps $installTestApps `
                 -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-                -appFolders $settings.appFolders `
-                -testFolders $settings.testFolders `
+                -appFolders $appFolders `
+                -testFolders $testFolders `
                 -testResultsFile $testResultsFile `
                 -testResultsFormat 'JUnit' `
                 -customCodeCops $settings.customCodeCops `
@@ -2291,12 +2312,30 @@ function RetryCommand {
     }
 }
 
+function GetMatchingProjects {
+    Param(
+        [string[]] $projects,
+        [string] $selectProjects = ''
+    )
+
+    if ($selectProjects) {
+        # Filter the project list based on the projects parameter
+        if ($selectProjects.StartsWith('[')) {
+            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
+        }
+        $projectArr = $selectProjects.Split(',').Trim()
+        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
+    }
+    return $projects
+}
+
 function GetProjectsFromRepository {
     Param(
         [string] $baseFolder,
         [string[]] $projectsFromSettings,
         [string] $selectProjects = ''
     )
+
     if ($projectsFromSettings) {
         $projects = $projectsFromSettings
     }
@@ -2308,18 +2347,7 @@ function GetProjectsFromRepository {
             $projects += @(".")
         }
     }
-    if ($selectProjects) {
-        # Filter the project list based on the projects parameter
-        if ($selectProjects.StartsWith('[')) {
-            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
-        }
-        $projectArr = $selectProjects.Split(',').Trim()
-        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
-        if ($projects.Count -eq 0) {
-            throw "No projects matches '$selectProjects'"
-        }
-    }
-    return $projects
+    return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
 }
 
 function Get-PackageVersion($PackageName) {

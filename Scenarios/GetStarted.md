@@ -1,4 +1,4 @@
-# #1 Create a new per-tenant extension (like AL Go) and start developing in VS Code
+# #1 Create a new per-tenant extension (like AL:Go in VS Code) and start developing in VS Code
 *Prerequisites: A GitHub account, VS-Code (with AL and PowerShell extensions installed), and Docker installed locally*
 
 1. Navigate to [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) and choose **Use this template**

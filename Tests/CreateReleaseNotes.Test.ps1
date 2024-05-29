@@ -4,6 +4,7 @@ Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 Get-Module TelemetryHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '..\Actions\TelemetryHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe 'CreateReleaseNotes Tests' {
     BeforeAll {

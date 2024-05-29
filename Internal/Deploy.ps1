@@ -242,7 +242,15 @@ try {
             [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
         }
         if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
-            Copy-Item -Path (Join-Path $baseRepoPath "RELEASENOTES.md") -Destination (Join-Path "./.github" "RELEASENOTES.copy.md") -Force
+            $releaseNotesFile = Join-Path $baseRepoPath "RELEASENOTES.md"
+            $releaseNotes = (Get-Content -Encoding utf8 -Path $releaseNotesFile) -join "`n"
+            if ($config.branch -eq 'preview') {
+                $releaseNotes = "## $($config.branch)`n`nNote that when using the preview version of AL-Go for GitHub, we recommend you Update your AL-Go system files, as soon as possible when informed that an update is available.`n`n$releaseNotes"
+            }
+            else {
+                $releaseNotes = "## $($config.branch)`n`n$releaseNotes"
+            }
+            Set-Content -Path (Join-Path "./.github" "RELEASENOTES.copy.md") -Value $releaseNotes -Encoding utf8
         }
         PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
 
