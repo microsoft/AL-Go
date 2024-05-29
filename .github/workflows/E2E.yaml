@@ -259,7 +259,7 @@ jobs:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
     if: github.event.inputs.runTestMatrix == 'true' && github.event.inputs.includePrivateRepos == 'true'
-    strategy: ${{ fromJson(needs.Analyze.outputs.publictestruns) }}
+    strategy: ${{ fromJson(needs.Analyze.outputs.privatetestruns) }}
     steps:
       - uses: actions/checkout@v4
         with:
