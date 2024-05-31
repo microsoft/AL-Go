@@ -423,7 +423,7 @@ try {
                 if (!$appSourceContext.ContainsKey('clientSecret')) {
                     Write-Host "Actions_id_token_request_url: $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
                     Write-Host "Actions_id_token_request_token: $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-                    $token = Invoke-RestMethod -Method GET -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | ConvertFrom-Json
+                    $token = (Invoke-WebRequest -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange").Content | ConvertFrom-Json
                     $token.GetType() | Out-Host
                     $token.Count | Out-Host
                     $token.value | Out-Host
