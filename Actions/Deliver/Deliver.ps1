@@ -426,7 +426,6 @@ try {
                     $appSourceContext += @{
                         "clientAssertion" = $result.value
                     }
-
                 }
                 $authContext = New-BcAuthContext @appSourceContext
 
