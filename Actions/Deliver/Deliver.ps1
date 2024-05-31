@@ -421,7 +421,10 @@ try {
                     throw "appSourceContext secret is missing"
                 }
                 if ($appSourceContext.ContainsKey('clientSecret')) {
+                    Write-Host "Actions_id_token_request_url: $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
+                    Write-Host "Actions_id_token_request_token: $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
                     $token = Invoke-RestMethod -Method GET -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+                    $token | Out-Host
                     $appSourceContext += @{
                         "clientAssertion" = $token.value
                     }
