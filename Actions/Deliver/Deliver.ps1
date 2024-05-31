@@ -420,6 +420,13 @@ try {
                 if (!$appSourceContext) {
                     throw "appSourceContext secret is missing"
                 }
+                if ($appSourceContext.ContainsKey('clientSecret')) {
+                    $token = Invoke-RestMethod -Method GET -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+                    $appSourceContext += @{
+                        "clientAssertion" = $token.value
+                    }
+
+                }
                 $authContext = New-BcAuthContext @appSourceContext
 
                 if ($projectSettings.deliverToAppSource.MainAppFolder) {

@@ -17,6 +17,7 @@ permissions:
   contents: read
   actions: read
   pages: read
+  id-token: write
 
 env:
   workflowDepth: 1
@@ -185,10 +186,7 @@ jobs:
     runs-on: windows-latest
     name: Deploy Reference Documentation
     permissions:
-      contents: read
-      actions: read
       pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
