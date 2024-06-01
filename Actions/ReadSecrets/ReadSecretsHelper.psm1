@@ -134,6 +134,9 @@ function InstallKeyVaultModuleIfNeeded {
             }
         }
     }
+    else {
+        $ENV:PSModulePath | Out-Host
+    }
     $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
     if ($azKeyVaultModule) {
         Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
