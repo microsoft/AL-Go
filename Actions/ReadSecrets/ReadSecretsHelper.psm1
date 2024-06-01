@@ -9,6 +9,10 @@ $script:azureRm210 = $false
 $script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
 $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
+if ($PSVersionTable.PSVersion -lt [Version]"6.0.0") {
+    $isWindows = $true
+}
+
 function IsKeyVaultSet {
     return $script:isKeyvaultSet
 }
@@ -121,10 +125,6 @@ function InstallKeyVaultModuleIfNeeded {
     Write-Host "------------------------------------------"
     $ENV:PSModulePath | Out-Host
     Write-Host "------------------------------------------"
-    Get-Module -ListAvailable | Out-Host
-    Write-Host "------------------------------------------"
-    Get-ChildItem -Path C:\Modules -Recurse -Directory | ForEach-Object { Write-Host $_.FullName }
-    Write-Host "------------------------------------------"
 
     Write-Host "IsWindows: $isWindows"
 
@@ -139,6 +139,8 @@ function InstallKeyVaultModuleIfNeeded {
         $ENV:PSModulePath | Out-Host
         Write-Host "------------------------------------------"
     }
+    Get-Module -ListAvailable | Out-Host
+    Write-Host "------------------------------------------"
 
     $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
     if ($azKeyVaultModule) {
