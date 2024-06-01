@@ -141,23 +141,23 @@ function InstallKeyVaultModuleIfNeeded {
         }
     }
     else {
-        $ENV:PSModulePath | Out-Host
+        # Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
     }
-#    $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
-#    if ($azKeyVaultModule) {
-#        Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
-#        Write-Host "Using Az.KeyVault version $($azKeyVaultModule.Version)"
-#    }
-#    else {
-#        $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -ErrorAction SilentlyContinue
-#        if ($AzKeyVaultModule) {
-#            Write-Host "Az.KeyVault version $($AzKeyVaultModule.Version) is installed"
-#        }
-#        else {
+    $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
+    if ($azKeyVaultModule) {
+        Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
+        Write-Host "Using Az.KeyVault version $($azKeyVaultModule.Version)"
+    }
+    else {
+        $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -ErrorAction SilentlyContinue
+        if ($AzKeyVaultModule) {
+            Write-Host "Az.KeyVault version $($AzKeyVaultModule.Version) is installed"
+        }
+        else {
             Write-Host "Installing and importing Az.KeyVault"
             Install-Module 'Az.KeyVault' -Force
-#        }
-#    }
+        }
+    }
     Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
