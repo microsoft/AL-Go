@@ -126,12 +126,18 @@ function InstallKeyVaultModuleIfNeeded {
     Get-ChildItem -Path C:\Modules -Recurse -Directory | ForEach-Object { Write-Host $_.FullName }
     Write-Host "------------------------------------------"
 
+    Write-Host "IsWindows: $isWindows"
+
     if ($isWindows -and (Test-Path 'C:\Modules\az_*')) {
+        Write-Host "module az exists"
         $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
         if ($azModulesPath) {
           Write-Host $azModulesPath.FullName
           $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
         }
+        Write-Host "------------------------------------------"
+        $ENV:PSModulePath | Out-Host
+        Write-Host "------------------------------------------"
     }
 
     $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
