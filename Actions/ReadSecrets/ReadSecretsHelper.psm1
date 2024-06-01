@@ -78,9 +78,16 @@ function GetKeyVaultCredentials {
         }
         try {
             $creds = $jsonStr | ConvertFrom-Json
-            # Mask ClientSecret
-            MaskValue -key 'clientSecret' -value $creds.ClientSecret
-            $creds.ClientSecret = ConvertTo-SecureString $creds.ClientSecret -AsPlainText -Force
+            if ($creds.clientSecret) {
+                # Mask ClientSecret
+                MaskValue -key 'clientSecret' -value $creds.ClientSecret
+                $creds.ClientSecret = ConvertTo-SecureString $creds.ClientSecret -AsPlainText -Force
+            }
+            else {
+                Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
+                $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+                $creds | Add-Member -MemberType NoteProperty -Name 'clientAssertion' -Value $result.value
+            }
             # Check thet $creds contains the needed properties
             $creds.ClientId | Out-Null
             $creds.subscriptionId | Out-Null
@@ -109,6 +116,10 @@ function GetKeyVaultCredentials {
 }
 
 function InstallKeyVaultModuleIfNeeded {
+    
+    Get-InstalledModule | Out-Host
+    Get-ChildItem -Path c:\modules -Recurse -Directory | ForEach-Object { $_.FullName }
+
     if ($isWindows -and (Test-Path 'C:\Modules\az_*')) {
         $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
         if ($azModulesPath) {
