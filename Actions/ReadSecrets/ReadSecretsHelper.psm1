@@ -116,9 +116,15 @@ function GetKeyVaultCredentials {
 }
 
 function InstallKeyVaultModuleIfNeeded {
-    
+    Write-Host "------------------------------------------"
     Get-InstalledModule | Out-Host
-    Get-ChildItem -Path c:\modules -Recurse -Directory | ForEach-Object { $_.FullName }
+    Write-Host "------------------------------------------"
+    $ENV:PSModulePath | Out-Host
+    Write-Host "------------------------------------------"
+    Get-Module -ListAvailable | Out-Host
+    Write-Host "------------------------------------------"
+    Get-ChildItem -Path C:\Modules -Recurse -Directory | ForEach-Object { Write-Host $_.FullName }
+    Write-Host "------------------------------------------"
 
     if ($isWindows -and (Test-Path 'C:\Modules\az_*')) {
         $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
