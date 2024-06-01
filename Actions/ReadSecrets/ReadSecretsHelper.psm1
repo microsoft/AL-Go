@@ -129,19 +129,20 @@ function InstallKeyVaultModuleIfNeeded {
         # Already installed
         return
     }
-#    if ($isWindows) {
-#        # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
-#        if (Test-Path 'C:\Modules\az_*') {
-#            $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
-#            if ($azModulesPath) {
-#              Write-Host "Adding AZ module path: $($azModulesPath.FullName)"
-#              $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
-#            }
-#        }
-#    }
-#    else {
-#        $ENV:PSModulePath | Out-Host
-#    }
+    if ($isWindows) {
+        # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
+        # Remove AzureRm modules from PSModulePath and add AZ modules
+        if (Test-Path 'C:\Modules\az_*') {
+            $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
+            if ($azModulesPath) {
+              Write-Host "Adding AZ module path: $($azModulesPath.FullName)"
+              $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
+            }
+        }
+    }
+    else {
+        $ENV:PSModulePath | Out-Host
+    }
 #    $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
 #    if ($azKeyVaultModule) {
 #        Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
