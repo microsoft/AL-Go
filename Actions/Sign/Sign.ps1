@@ -46,6 +46,9 @@ try {
         Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
         $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
         Connect-AzAccount -ApplicationId $AzureCredentials.ClientId -Tenant $AzureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
+        if ($AzureCredentials.PSObject.Properties.Name -eq 'SubScriptionId') {
+            Set-AzContext -SubscriptionId $AzureCredentials.SubscriptionId -Tenant $AzureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        }
     }
     $settings = $env:Settings | ConvertFrom-Json
     if ($settings.keyVaultName) {
