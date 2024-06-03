@@ -102,7 +102,7 @@ try {
     $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
 
     Write-Host "::group::Signing files"
-    Invoke-SigningTool @$AzureCredentialParams -KeyVaultName $AzureKeyVaultName `
+    Invoke-SigningTool @AzureCredentialParams -KeyVaultName $AzureKeyVaultName `
         -CertificateName $settings.keyVaultCodesignCertificateName `
         -FilesToSign $PathToFiles `
         -Description $description `
