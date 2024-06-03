@@ -62,7 +62,7 @@ function Invoke-SigningTool() {
         [string] $CertificateName,
         [Parameter(Mandatory = $true)]
         [string] $ClientId,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string] $ClientSecret,
         [Parameter(Mandatory = $true)]
         [string] $TenantId,
@@ -83,19 +83,34 @@ function Invoke-SigningTool() {
     $signingToolExe = Install-SigningTool
 
     # Sign files
-    . $signingToolExe code azure-key-vault `
-        --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
-        --azure-key-vault-certificate $CertificateName `
-        --azure-key-vault-client-id $ClientId `
-        --azure-key-vault-client-secret $ClientSecret `
-        --azure-key-vault-tenant-id $TenantId `
-        --description $Description `
-        --description-url $DescriptionUrl `
-        --file-digest $DigestAlgorithm `
-        --timestamp-digest $DigestAlgorithm `
-        --timestamp-url $TimestampService `
-        --verbosity $Verbosity `
-        $FilesToSign
+    if ($ClientSecret) {
+        . $signingToolExe code azure-key-vault `
+            --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
+            --azure-key-vault-certificate $CertificateName `
+            --azure-key-vault-client-id $ClientId `
+            --azure-key-vault-client-secret $ClientSecret `
+            --azure-key-vault-tenant-id $TenantId `
+            --description $Description `
+            --description-url $DescriptionUrl `
+            --file-digest $DigestAlgorithm `
+            --timestamp-digest $DigestAlgorithm `
+            --timestamp-url $TimestampService `
+            --verbosity $Verbosity `
+            $FilesToSign
+    }
+    else {
+        . $signingToolExe code azure-key-vault `
+            --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
+            --azure-key-vault-certificate $CertificateName `
+            --azure-key-vault-managed-identity $true `
+            --description $Description `
+            --description-url $DescriptionUrl `
+            --file-digest $DigestAlgorithm `
+            --timestamp-digest $DigestAlgorithm `
+            --timestamp-url $TimestampService `
+            --verbosity $Verbosity `
+            $FilesToSign
+    }
 }
 
 Export-ModuleMember -Function Invoke-SigningTool

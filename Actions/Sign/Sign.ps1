@@ -35,6 +35,18 @@ try {
 
     # Get parameters for signing
     $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
+    $AzureCredentialParams = @{
+        "ClientId" = $AzureCredentials.clientId
+        "TenantId" = $AzureCredentials.tenantId
+    }
+    if ($AzureCredentials.PSobject.Properties.name -eq "clientSecret") {
+        $AzureCredentialParams += @{ "ClientSecret" = $AzureCredentials.clientSecret }
+    }
+    else {
+        Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
+        $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+        Connect-AzAccount -ApplicationId $AzureCredentials.ClientId -Tenant $AzureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
+    }
     $settings = $env:Settings | ConvertFrom-Json
     if ($settings.keyVaultName) {
         $AzureKeyVaultName = $settings.keyVaultName
@@ -49,11 +61,8 @@ try {
     $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
 
     Write-Host "::group::Signing files"
-    Invoke-SigningTool -KeyVaultName $AzureKeyVaultName `
+    Invoke-SigningTool @$AzureCredentialParams -KeyVaultName $AzureKeyVaultName `
         -CertificateName $settings.keyVaultCodesignCertificateName `
-        -ClientId $AzureCredentials.clientId `
-        -ClientSecret $AzureCredentials.clientSecret `
-        -TenantId $AzureCredentials.tenantId `
         -FilesToSign $PathToFiles `
         -Description $description `
         -DescriptionUrl $descriptionUrl `
