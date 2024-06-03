@@ -13,7 +13,7 @@
 
    ![Pull Request](https://github.com/microsoft/AL-Go/assets/10775043/d2831620-3bc9-4808-aa7a-997944aaaa33)
 
-3. Under **Actions**, you will see that a Merge pull request **CI workflow** has been kicked off
+3. Under **Actions**, you will see that a Merge pull request **CI/CD workflow** has been kicked off
 
    ![Workflows](https://github.com/microsoft/AL-Go/assets/10775043/37f6c5b9-aaac-4cdc-b1d0-ef661cd2bfbe)
 
