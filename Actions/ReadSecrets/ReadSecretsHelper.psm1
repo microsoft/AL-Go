@@ -81,16 +81,16 @@ function GetKeyVaultCredentials {
         }
         try {
             $creds = $jsonStr | ConvertFrom-Json
-            if ($creds.clientSecret) {
+            if ($creds.ClientSecret) {
                 # Mask ClientSecret
-                MaskValue -key 'clientSecret' -value $creds.ClientSecret
+                MaskValue -key 'ClientSecret' -value $creds.ClientSecret
                 $creds.ClientSecret = ConvertTo-SecureString $creds.ClientSecret -AsPlainText -Force
             }
             else {
                 try {
                     Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
                     $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
-                    $creds | Add-Member -MemberType NoteProperty -Name 'clientAssertion' -Value $result.value
+                    $creds | Add-Member -MemberType NoteProperty -Name 'ClientAssertion' -Value $result.value
                 }
                 catch {
                     Write-Host "::WARNING::Unable to get ID_TOKEN, maybe id_token: write permissions are missing"
@@ -98,7 +98,7 @@ function GetKeyVaultCredentials {
             }
             # Check thet $creds contains the needed properties
             $creds.ClientId | Out-Null
-            $creds.subscriptionId | Out-Null
+            $creds.SubscriptionId | Out-Null
             $creds.TenantId | Out-Null
         }
         catch {
@@ -161,19 +161,30 @@ function InstallKeyVaultModuleIfNeeded {
     Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
+
+
+#[string] $subscriptionId,
+#[string] $tenantId,
+#[string] $clientId,
+#[SecureString] $clientSecret
+
+
 function ConnectAzureKeyVault {
     param(
-        [string] $subscriptionId,
-        [string] $tenantId,
-        [string] $clientId,
-        [SecureString] $clientSecret
+        [PsCustomObject] $keyVaultCredentials,
     )
     try {
-        $credential = New-Object PSCredential -argumentList $clientId, $clientSecret
         Clear-AzContext -Scope Process
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
-        Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
-        Set-AzContext -SubscriptionId $subscriptionId -Tenant $tenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
+            Connect-AzAccount -ApplicationId -keyVaultCredentials.ClientId -Tenant $keyVaultCredentials.TenantId -FederatedToken $keyVaultCredentials.ClientAssertion #-WarningAction SilentlyContinue | Out-Null
+            Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId #-ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        }
+        else {
+            $credential = New-Object PSCredential -argumentList $keyVaultCredentials.ClientId, $keyVaultCredentials.ClientSecret
+            Connect-AzAccount -ServicePrincipal -Tenant $keyVaultCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
+            Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        }
         $script:keyvaultConnectionExists = $true
         Write-Host "Successfully connected to Azure Key Vault."
     }
@@ -195,7 +206,7 @@ function GetKeyVaultSecret {
 
     if (-not $script:keyvaultConnectionExists) {
         InstallKeyVaultModuleIfNeeded
-        ConnectAzureKeyVault -subscriptionId $keyVaultCredentials.subscriptionId -tenantId $keyVaultCredentials.tenantId -clientId $keyVaultCredentials.clientId -clientSecret $keyVaultCredentials.clientSecret
+        ConnectAzureKeyVault -keyVaultCredentials $keyVaultCredentials
     }
 
     $secretSplit = $secretName.Split('=')
