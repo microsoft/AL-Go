@@ -208,6 +208,7 @@ function GetKeyVaultSecret {
             }
             else {
                 throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+            }
         }
     }
 
