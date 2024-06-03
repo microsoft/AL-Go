@@ -223,6 +223,11 @@ function GetKeyVaultSecret {
             # Return encrypted string
             Write-Host "return encrypted"
             $value = $keyVaultSecret.SecretValue | ConvertFrom-SecureString
+            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($keyVaultSecret.SecretValue)
+            $value2 = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            [Runtime.InteropServices.Marshal]::FreeBSTR($bstr)
+            #MaskValue -key $envVar -value $value
+            Write-Host $value2
         }
         else {
             # Return decrypted string
