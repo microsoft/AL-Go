@@ -173,7 +173,7 @@ function ConnectAzureKeyVault {
     param(
         [PsCustomObject] $keyVaultCredentials
     )
-    try {
+    #try {
         Clear-AzContext -Scope Process
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
@@ -192,10 +192,10 @@ function ConnectAzureKeyVault {
         }
         $script:keyvaultConnectionExists = $true
         Write-Host "Successfully connected to Azure Key Vault."
-    }
-    catch {
-        throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
-    }
+    #}
+    #catch {
+    #    throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
+    #}
 }
 
 function GetKeyVaultSecret {
