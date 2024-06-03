@@ -74,6 +74,13 @@
                 "0 1 * * *"
             ],
             "description": "Specifies the schedule for the next major test builds. Note that you need to run Update AL-Go System Files in order for this setting to take effect. See https://aka.ms/ALGoSettings#nextMajorSchedule"
+        },
+        "templateFiles": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Specifies a list of paths to files and folders that should be synced with the template repository. See https://aka.ms/ALGoSettings#templateFiles"
         }
     },
     "required": [ "type", "templateUrl" ]
