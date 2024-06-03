@@ -171,7 +171,7 @@ function InstallKeyVaultModuleIfNeeded {
 
 function ConnectAzureKeyVault {
     param(
-        [PsCustomObject] $keyVaultCredentials,
+        [PsCustomObject] $keyVaultCredentials
     )
     try {
         Clear-AzContext -Scope Process
