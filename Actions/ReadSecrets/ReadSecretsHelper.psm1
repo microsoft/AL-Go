@@ -177,13 +177,18 @@ function ConnectAzureKeyVault {
         Clear-AzContext -Scope Process
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
-            Connect-AzAccount -ApplicationId $keyVaultCredentials.ClientId -Tenant $keyVaultCredentials.TenantId -FederatedToken $keyVaultCredentials.ClientAssertion -WarningAction SilentlyContinue | Out-Null
-            Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+            Connect-AzAccount -ApplicationId $keyVaultCredentials.ClientId -Tenant $keyVaultCredentials.TenantId -FederatedToken $keyVaultCredentials.ClientAssertion -WarningAction SilentlyContinue | Out-Host
+            Get-AzADUser | out-host
+            Get-AzSubscription | Out-Host
+            Write-Host $keyVaultCredentials.SubscriptionId
+            Write-Host $keyVaultCredentials.TenantId
+            Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Host
+            Get-AzSubscription | Out-Host
         }
         else {
             $credential = New-Object PSCredential -argumentList $keyVaultCredentials.ClientId, $keyVaultCredentials.ClientSecret
-            Connect-AzAccount -ServicePrincipal -Tenant $keyVaultCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
-            Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+            Connect-AzAccount -ServicePrincipal -Tenant $keyVaultCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Host
+            Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Host
         }
         $script:keyvaultConnectionExists = $true
         Write-Host "Successfully connected to Azure Key Vault."
