@@ -240,7 +240,7 @@ function GetKeyVaultSecret {
         }
     }
     else {
-        Write-Host "KeyVault secret $secret not found"
+        Write-Host "KeyVault secret $secret not found in $($keyVaultCredentials.keyVaultName)"
     }
     return $value
 }
