@@ -124,7 +124,6 @@ function GetKeyVaultCredentials {
 }
 
 function InstallKeyVaultModuleIfNeeded {
-    $PSVersionTable.PSVersion | Out-Host
     if (Get-Module -Name 'Az.KeyVault') {
         # Already installed
         return
