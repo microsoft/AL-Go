@@ -161,29 +161,16 @@ function InstallKeyVaultModuleIfNeeded {
     Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
-
-
-#[string] $subscriptionId,
-#[string] $tenantId,
-#[string] $clientId,
-#[SecureString] $clientSecret
-
-
 function ConnectAzureKeyVault {
     param(
         [PsCustomObject] $keyVaultCredentials
     )
-    #try {
+    try {
         Clear-AzContext -Scope Process
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
             Connect-AzAccount -ApplicationId $keyVaultCredentials.ClientId -Tenant $keyVaultCredentials.TenantId -FederatedToken $keyVaultCredentials.ClientAssertion -WarningAction SilentlyContinue | Out-Host
-#            Get-AzADUser | out-host
-            Get-AzSubscription | Out-Host
-            Write-Host $keyVaultCredentials.SubscriptionId
-            Write-Host $keyVaultCredentials.TenantId
             Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Host
-            Get-AzSubscription | Out-Host
         }
         else {
             $credential = New-Object PSCredential -argumentList $keyVaultCredentials.ClientId, $keyVaultCredentials.ClientSecret
@@ -192,10 +179,10 @@ function ConnectAzureKeyVault {
         }
         $script:keyvaultConnectionExists = $true
         Write-Host "Successfully connected to Azure Key Vault."
-    #}
-    #catch {
-    #    throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
-    #}
+    }
+    catch {
+        throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
+    }
 }
 
 function GetKeyVaultSecret {
@@ -212,8 +199,16 @@ function GetKeyVaultSecret {
     if (-not $script:keyvaultConnectionExists) {
         InstallKeyVaultModuleIfNeeded
         ConnectAzureKeyVault -keyVaultCredentials $keyVaultCredentials
-
-        Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName | ForEach-Object { Write-Host "Secret: $($_.Name)" }
+        try {
+            Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName | ForEach-Object { $_.Name } | Out-Null
+        }
+        catch {
+            if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
+                throw "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
+            }
+            else {
+                throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+        }
     }
 
     $secretSplit = $secretName.Split('=')
@@ -237,9 +232,6 @@ function GetKeyVaultSecret {
             [Runtime.InteropServices.Marshal]::FreeBSTR($bstr)
             MaskValue -key $envVar -value $value
         }
-    }
-    else {
-        Write-Host "KeyVault secret $secret not found in $($keyVaultCredentials.keyVaultName)"
     }
     return $value
 }
