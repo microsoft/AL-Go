@@ -178,8 +178,8 @@ function ConnectAzureKeyVault {
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
             Connect-AzAccount -ApplicationId $keyVaultCredentials.ClientId -Tenant $keyVaultCredentials.TenantId -FederatedToken $keyVaultCredentials.ClientAssertion -WarningAction SilentlyContinue | Out-Host
-            Get-AzADUser | out-host
-#            Get-AzSubscription | Out-Host
+#            Get-AzADUser | out-host
+            Get-AzSubscription | Out-Host
             Write-Host $keyVaultCredentials.SubscriptionId
             Write-Host $keyVaultCredentials.TenantId
             Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Host
