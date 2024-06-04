@@ -99,6 +99,14 @@ function GetKeyVaultCredentials {
             # Check thet $creds contains the needed properties
             $creds.ClientId | Out-Null
             $creds.TenantId | Out-Null
+            if ($creds.PSObject.Properties.Name -eq 'ErrorAction') {
+                if (@('Error','Warning','None') -notcontains $creds.ErrorAction) {
+                    throw "AZURE_CREDENTIALS.ErrorAction needs to be one of 'Error', 'Warning' or 'None'."
+                }
+            }
+            else {
+                $creds | Add-Member -MemberType NoteProperty -Name 'ErrorAction' -Value 'None'
+            }
         }
         catch {
             throw "Secret AZURE_CREDENTIALS is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
@@ -197,16 +205,40 @@ function GetKeyVaultSecret {
 
     if (-not $script:keyvaultConnectionExists) {
         InstallKeyVaultModuleIfNeeded
-        ConnectAzureKeyVault -keyVaultCredentials $keyVaultCredentials
+        $message = ''
         try {
-            Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName | ForEach-Object { $_.Name } | Out-Null
+            ConnectAzureKeyVault -keyVaultCredentials $keyVaultCredentials
         }
         catch {
-            if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
-                throw "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
+            $message = "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+        }
+        if (-not $message) {
+            try {
+                Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName | ForEach-Object { $_.Name } | Out-Null
             }
-            else {
-                throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+            catch {
+                if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
+                    $message = "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
+                }
+                else {
+                    $message = "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+                }
+            }
+        }
+        if ($message) {
+            $script:isKeyvaultSet = $false
+            switch($keyVaultCredentials.ErrorAction) {
+                'Error' {
+                    throw $message
+                }
+                'Warning' {
+                    Write-Host "::WARNING::$message"
+                    return $null
+                }
+                default {
+                    Write-Host $message
+                    return $null
+                }
             }
         }
     }

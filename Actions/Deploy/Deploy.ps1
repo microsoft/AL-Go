@@ -20,16 +20,6 @@ $deploymentSettings = $deploymentEnvironments."$environmentName"
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
 
-# Check obsolete secrets
-"$($envName)-EnvironmentName","$($envName)_EnvironmentName","EnvironmentName" | ForEach-Object {
-    if ($secrets."$_") {
-        throw "The secret $_ is obsolete and should be replaced by using the EnvironmentName property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
-    }
-}
-if ($secrets.Projects) {
-    throw "The secret Projects is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
-}
-
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
     if ($secrets."$secretName") {
