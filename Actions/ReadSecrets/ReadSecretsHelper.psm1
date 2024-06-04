@@ -75,7 +75,7 @@ function GetKeyVaultCredentials {
         }
         try {
             $creds = $jsonStr | ConvertFrom-Json
-            if ($creds.ClientSecret) {
+            if ($creds.PSObject.Properties.Name -eq 'ClientSecret' -and $creds.ClientSecret) {
                 # Mask ClientSecret
                 MaskValue -key 'ClientSecret' -value $creds.ClientSecret
                 $creds.ClientSecret = ConvertTo-SecureString $creds.ClientSecret -AsPlainText -Force
