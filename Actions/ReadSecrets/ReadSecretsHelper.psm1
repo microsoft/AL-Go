@@ -84,7 +84,6 @@ function GetKeyVaultCredentials {
             }
             else {
                 try {
-                    Get-PSCallStack | Out-Host
                     Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
                     $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
                     $creds | Add-Member -MemberType NoteProperty -Name 'ClientAssertion' -Value $result.value
