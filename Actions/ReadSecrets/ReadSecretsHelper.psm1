@@ -105,7 +105,7 @@ function GetKeyVaultCredentials {
                 }
             }
             else {
-                $creds | Add-Member -MemberType NoteProperty -Name 'ErrorAction' -Value 'None'
+                $creds | Add-Member -MemberType NoteProperty -Name 'ErrorAction' -Value 'Warning'
             }
         }
         catch {
@@ -231,12 +231,12 @@ function GetKeyVaultSecret {
                 'Error' {
                     throw $message
                 }
-                'Warning' {
-                    Write-Host "::WARNING::$message"
+                'None' {
+                    Write-Host $message
                     return $null
                 }
                 default {
-                    Write-Host $message
+                    Write-Host "::WARNING::$message"
                     return $null
                 }
             }
