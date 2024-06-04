@@ -2410,7 +2410,7 @@ function ConnectAz {
     try {
         Clear-AzContext -Scope Process
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
-        if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret') {
+        if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret' -and $azureCredentials.ClientSecret) {
             $credential = New-Object PSCredential -argumentList $azureCredentials.ClientId, $azureCredentials.ClientSecret
             Connect-AzAccount -ServicePrincipal -Tenant $azureCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
         }
@@ -2424,7 +2424,7 @@ function ConnectAz {
             }
             Connect-AzAccount -ApplicationId $azureCredentials.ClientId -Tenant $azureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
         }
-        if ($azureCredentials.PSObject.Properties.Name -eq 'SubScriptionId') {
+        if ($azureCredentials.PSObject.Properties.Name -eq 'SubScriptionId' -and $azureCredentials.subscriptionId) {
             Set-AzContext -SubscriptionId $azureCredentials.SubscriptionId -Tenant $azureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
         }
         $script:keyvaultConnectionExists = $true

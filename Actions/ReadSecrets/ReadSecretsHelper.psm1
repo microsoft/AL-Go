@@ -139,11 +139,11 @@ function GetKeyVaultSecret {
                 Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName | ForEach-Object { $_.Name } | Out-Null
             }
             catch {
-                if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
-                    $message = "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
+                if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientSecret') {
+                    $message = "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
                 }
                 else {
-                    $message = "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+                    $message = "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
                 }
             }
         }
