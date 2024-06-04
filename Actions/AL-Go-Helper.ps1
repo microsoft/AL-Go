@@ -2361,3 +2361,76 @@ function Get-PackageVersion($PackageName) {
         throw "Package $PackageName is not in the list of packages"
     }
 }
+
+function InstallAzModuleIfNeeded {
+    Param(
+        [string] $moduleName
+    )
+
+    if (Get-Module -Name $moduleName) {
+        # Already installed
+        return
+    }
+    if ($isWindows) {
+        # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
+        # Remove AzureRm modules from PSModulePath and add AZ modules
+        if (Test-Path 'C:\Modules\az_*') {
+            $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
+            if ($azModulesPath) {
+              Write-Host "Adding AZ module path: $($azModulesPath.FullName)"
+              $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
+            }
+        }
+    }
+    else {
+        # Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
+    }
+    $azModule = Get-Module -name $moduleName -ListAvailable | Select-Object -First 1
+    if ($azModule) {
+        Write-Host "$moduleName Module is available in version $($azModule.Version)"
+        Write-Host "Using $moduleName version $($azModule.Version)"
+    }
+    else {
+        $AzModule = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue
+        if ($AzModule) {
+            Write-Host "$moduleName version $($AzModule.Version) is installed"
+        }
+        else {
+            Write-Host "Installing and importing $moduleName"
+            Install-Module $moduleName -Force
+        }
+    }
+    Import-Module $moduleName -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+}
+
+function ConnectAz {
+    param(
+        [PsCustomObject] $azureCredentials
+    )
+    try {
+        Clear-AzContext -Scope Process
+        Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
+        if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret') {
+            $credential = New-Object PSCredential -argumentList $azureCredentials.ClientId, $azureCredentials.ClientSecret
+            Connect-AzAccount -ServicePrincipal -Tenant $azureCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
+        }
+        else {
+            try {
+                Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
+                $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+            }
+            catch {
+                throw "Unable to get ID_TOKEN, maybe id_token: write permissions are missing. Error was $($_.Exception.Message)"
+            }
+            Connect-AzAccount -ApplicationId $azureCredentials.ClientId -Tenant $azureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
+        }
+        if ($azureCredentials.PSObject.Properties.Name -eq 'SubScriptionId') {
+            Set-AzContext -SubscriptionId $azureCredentials.SubscriptionId -Tenant $azureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        }
+        $script:keyvaultConnectionExists = $true
+        Write-Host "Successfully connected to Azure Key Vault."
+    }
+    catch {
+        throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
+    }
+}

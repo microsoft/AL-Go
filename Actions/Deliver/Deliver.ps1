@@ -20,30 +20,61 @@
     [bool] $goLive
 )
 
-$telemetryScope = $null
+function ConnectAzStorageAccount {
+    Param(
+        [PSCustomObject] $storageAccountCredentials
+    )
 
-function EnsureAzStorageModule() {
-    if (get-command New-AzStorageContext -ErrorAction SilentlyContinue) {
-        Write-Host "Using Az.Storage PowerShell module"
+    $azStorageContext = $null
+    $message = ''
+    if ($storageAccountCredentials.PSObject.Properties.Name -eq 'sastoken') {
+        try {
+            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -SasToken $storageAccountCredentials.sastoken
+        }
+        catch {
+            $message = "Unable to create AzStorageContext based on StorageAccountName and sastoken.`nError was: $($_.Exception.Message)"
+        }
+    }
+    elseif ($storageAccountCredentials.PSObject.Properties.Name -eq 'StorageAccountKey') {
+        try {
+            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -StorageAccountKey $storageAccountCredentials.StorageAccountKey
+        }
+        catch {
+            $message = "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey.`nError was: $($_.Exception.Message)"
+        }
+    }
+    elseif ($storageAccountCredentials.Keys -contains 'ClientID' -and $storageAccountCredentials.Keys -contains 'TenantID' -and $storageAccountCredentials.Keys -contains 'SubscriptionId') {
+        try {
+            InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
+            ConnectAz -azureCredentials $storageAccountCredentials
+            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -UseConnectedAccount
+        }
+        catch {
+            $message = "Unable to create AzStorageContext based on StorageAccountName and federated credentials.`nError was: $($_.Exception.Message)"
+        }
     }
     else {
-        $azureStorageModule = Get-Module -name 'Azure.Storage' -ListAvailable | Select-Object -First 1
-        if ($azureStorageModule) {
-            Write-Host "Azure.Storage Module is available in version $($azureStorageModule.Version)"
-            Write-Host "Using Azure.Storage version $($azureStorageModule.Version)"
-            Import-Module  'Azure.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-            Set-Alias -Name New-AzStorageContext -Value New-AzureStorageContext -Scope Script
-            Set-Alias -Name Get-AzStorageContainer -Value Get-AzureStorageContainer -Scope Script
-            Set-Alias -Name New-AzStorageContainer -Value New-AzureStorageContainer -Scope Script
-            Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
-        }
-        else {
-            Write-Host "Installing and importing Az.Storage."
-            Install-Module 'Az.Storage' -Force
-            Import-Module  'Az.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+        $message = "Insufficient information in StorageContext secret. See https://aka.ms/algosettings#storagecontext for details"
+    }
+    if ($message) {
+        switch($storageAccountCredentials.ErrorAction) {
+            'Error' {
+                throw $message
+            }
+            'None' {
+                Write-Host $message
+                $azStorageContext = $null
+            }
+            default {
+                Write-Host "::WARNING::$message"
+                $azStorageContext = $null
+             }
         }
     }
+    return $azStorageContext
 }
+
+$telemetryScope = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
@@ -315,38 +346,22 @@ try {
             Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
         }
         elseif ($deliveryTarget -eq "Storage") {
-            EnsureAzStorageModule
+            InstallAzModuleIfNeeded -moduleName 'Az.Storage'
             try {
-                $storageAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json | ConvertTo-HashTable
-                # Check that containerName and blobName are present
-                $storageAccount.containerName | Out-Null
-                $storageAccount.blobName | Out-Null
+                $storageAccountCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json
+                $storageAccountCredentials.StorageAccountName | Out-Null
+                if (!($storageAccountCredentials.PSObject.Properties.Name -eq 'ErrorAction')) {
+                    $storageAccountCredentials | Add-Member -MemberType NoteProperty -Name 'ErrorAction' -Value 'Warning'
+                }
+                $storageContainerName = $storageAccountCredentials.containerName
+                $storageBlobName = $storageAccountCredentials.blobName
             }
             catch {
-                throw "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey.`nError was: $($_.Exception.Message)"
+                throw "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName.`nError was: $($_.Exception.Message)"
             }
-            if ($storageAccount.Keys -contains 'sastoken') {
-                try {
-                    $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
-                }
-                catch {
-                    throw "Unable to create AzStorageContext based on StorageAccountName and sastoken.`nError was: $($_.Exception.Message)"
-                }
-            }
-            else {
-                try {
-                    $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
-                }
-                catch {
-                    throw "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey.`nError was: $($_.Exception.Message)"
-                }
-            }
-
-            $storageContainerName =  $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).replace('{branch}',$refname).ToLowerInvariant()
-            $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
+            $azStorageContext = ConnectAzStorageAccount -storageAccountCredentials $storageAccountCredentials
             Write-Host "Storage Container Name is $storageContainerName"
             Write-Host "Storage Blob Name is $storageBlobName"
-
             $containerExists = $true
             try {
                 Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
@@ -415,7 +430,8 @@ try {
             # if type is Release, we only get here with the projects that needs to be delivered to AppSource
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
             if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
-                EnsureAzStorageModule
+                # AppSource submission requires the Az.Storage module
+                InstallAzModuleIfNeeded -moduleName 'Az.Storage'
                 $appSourceContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext)) | ConvertFrom-Json | ConvertTo-HashTable
                 if (!$appSourceContext) {
                     throw "appSourceContext secret is missing"

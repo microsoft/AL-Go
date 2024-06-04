@@ -8,9 +8,7 @@ $script:keyvaultConnectionExists = $false
 $script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
 $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
-if ($PSVersionTable.PSVersion -lt [Version]"6.0.0") {
-    $script:isWindows = $true
-}
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 function MaskValue {
     Param(
@@ -82,16 +80,6 @@ function GetKeyVaultCredentials {
                 MaskValue -key 'ClientSecret' -value $creds.ClientSecret
                 $creds.ClientSecret = ConvertTo-SecureString $creds.ClientSecret -AsPlainText -Force
             }
-            else {
-                try {
-                    Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
-                    $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
-                    $creds | Add-Member -MemberType NoteProperty -Name 'ClientAssertion' -Value $result.value
-                }
-                catch {
-                    Write-Host "::WARNING::Unable to get ID_TOKEN, maybe id_token: write permissions are missing"
-                }
-            }
             # Check thet $creds contains the needed properties
             $creds.ClientId | Out-Null
             $creds.TenantId | Out-Null
@@ -126,68 +114,6 @@ function GetKeyVaultCredentials {
     return $creds
 }
 
-function InstallKeyVaultModuleIfNeeded {
-    if (Get-Module -Name 'Az.KeyVault') {
-        # Already installed
-        return
-    }
-    if ($isWindows) {
-        # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
-        # Remove AzureRm modules from PSModulePath and add AZ modules
-        if (Test-Path 'C:\Modules\az_*') {
-            $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
-            if ($azModulesPath) {
-              Write-Host "Adding AZ module path: $($azModulesPath.FullName)"
-              $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
-            }
-        }
-    }
-    else {
-        # Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
-    }
-    $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
-    if ($azKeyVaultModule) {
-        Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
-        Write-Host "Using Az.KeyVault version $($azKeyVaultModule.Version)"
-    }
-    else {
-        $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -ErrorAction SilentlyContinue
-        if ($AzKeyVaultModule) {
-            Write-Host "Az.KeyVault version $($AzKeyVaultModule.Version) is installed"
-        }
-        else {
-            Write-Host "Installing and importing Az.KeyVault"
-            Install-Module 'Az.KeyVault' -Force
-        }
-    }
-    Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-}
-
-function ConnectAzureKeyVault {
-    param(
-        [PsCustomObject] $keyVaultCredentials
-    )
-    try {
-        Clear-AzContext -Scope Process
-        Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
-        if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientAssertion') {
-            Connect-AzAccount -ApplicationId $keyVaultCredentials.ClientId -Tenant $keyVaultCredentials.TenantId -FederatedToken $keyVaultCredentials.ClientAssertion -WarningAction SilentlyContinue | Out-Null
-        }
-        else {
-            $credential = New-Object PSCredential -argumentList $keyVaultCredentials.ClientId, $keyVaultCredentials.ClientSecret
-            Connect-AzAccount -ServicePrincipal -Tenant $keyVaultCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
-        }
-        if ($keyVaultCredentials.PSObject.Properties.Name -eq 'SubScriptionId') {
-            Set-AzContext -SubscriptionId $keyVaultCredentials.SubscriptionId -Tenant $keyVaultCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
-        }
-        $script:keyvaultConnectionExists = $true
-        Write-Host "Successfully connected to Azure Key Vault."
-    }
-    catch {
-        throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
-    }
-}
-
 function GetKeyVaultSecret {
     param (
         [string] $secretName,
@@ -200,10 +126,10 @@ function GetKeyVaultSecret {
     }
 
     if (-not $script:keyvaultConnectionExists) {
-        InstallKeyVaultModuleIfNeeded
+        InstallAzModuleIfNeeded -moduleName 'Az.KeyVault'
         $message = ''
         try {
-            ConnectAzureKeyVault -keyVaultCredentials $keyVaultCredentials
+            ConnectAz -azureCredentials $keyVaultCredentials
         }
         catch {
             $message = "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
