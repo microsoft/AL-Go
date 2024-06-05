@@ -12,43 +12,6 @@ param(
     [string] $ParentTelemetryScopeJson = '7b7d'
 )
 
-function InstallKeyVaultModuleIfNeeded {
-    if (Get-Module -Name 'Az.KeyVault') {
-        # Already installed
-        return
-    }
-    if ($isWindows) {
-        # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
-        # Remove AzureRm modules from PSModulePath and add AZ modules
-        if (Test-Path 'C:\Modules\az_*') {
-            $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
-            if ($azModulesPath) {
-              Write-Host "Adding AZ module path: $($azModulesPath.FullName)"
-              $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
-            }
-        }
-    }
-    else {
-        # Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
-    }
-    $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
-    if ($azKeyVaultModule) {
-        Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
-        Write-Host "Using Az.KeyVault version $($azKeyVaultModule.Version)"
-    }
-    else {
-        $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -ErrorAction SilentlyContinue
-        if ($AzKeyVaultModule) {
-            Write-Host "Az.KeyVault version $($AzKeyVaultModule.Version) is installed"
-        }
-        else {
-            Write-Host "Installing and importing Az.KeyVault"
-            Install-Module 'Az.KeyVault' -Force
-        }
-    }
-    Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-}
-
 $telemetryScope = $null
 
 try {
