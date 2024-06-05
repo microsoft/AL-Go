@@ -29,6 +29,7 @@ function ConnectAzStorageAccount {
     $message = ''
     if ($storageAccountCredentials.PSObject.Properties.Name -eq 'sastoken') {
         try {
+            Write-Host "Creating AzStorageContext based on StorageAccountName and sastoken"
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -SasToken $storageAccountCredentials.sastoken
         }
         catch {
@@ -37,20 +38,22 @@ function ConnectAzStorageAccount {
     }
     elseif ($storageAccountCredentials.PSObject.Properties.Name -eq 'StorageAccountKey') {
         try {
+            Write-Host "Creating AzStorageContext based on StorageAccountName and StorageAccountKey"
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -StorageAccountKey $storageAccountCredentials.StorageAccountKey
         }
         catch {
             $message = "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey.`nError was: $($_.Exception.Message)"
         }
     }
-    elseif (($storageAccountCredentials.PSObject.Properties.Name -eq 'ClientID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'TenantID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'SubscriptionId')) {
+    elseif (($storageAccountCredentials.PSObject.Properties.Name -eq 'clientID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'tenantID')) {
         try {
             InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
             ConnectAz -azureCredentials $storageAccountCredentials
+            Write-Host "Creating AzStorageContext based on StorageAccountName and managed identity/app registration"
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -UseConnectedAccount
         }
         catch {
-            $message = "Unable to create AzStorageContext based on StorageAccountName and federated credentials.`nError was: $($_.Exception.Message)"
+            $message = "Unable to create AzStorageContext based on StorageAccountName and managed identity.`nError was: $($_.Exception.Message)"
         }
     }
     else {

@@ -2411,26 +2411,29 @@ function ConnectAz {
         Clear-AzContext -Scope Process
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret' -and $azureCredentials.ClientSecret) {
+            Write-Host "Connecting to Azure using clientId and clientSecret."
             $credential = New-Object PSCredential -argumentList $azureCredentials.ClientId, $azureCredentials.ClientSecret
             Connect-AzAccount -ServicePrincipal -Tenant $azureCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
         }
         else {
             try {
-                Write-Host "Query ID_TOKEN from $ENV:ACTIONS_ID_TOKEN_REQUEST_URL"
+                Write-Host "Query federated token"
                 $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
             }
             catch {
-                throw "Unable to get ID_TOKEN, maybe id_token: write permissions are missing. Error was $($_.Exception.Message)"
+                throw "Unable to get federated token, maybe id_token: write permissions are missing. Error was $($_.Exception.Message)"
             }
+            Write-Host "Connecting to Azure using clientId and federated token."
             Connect-AzAccount -ApplicationId $azureCredentials.ClientId -Tenant $azureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
         }
         if ($azureCredentials.PSObject.Properties.Name -eq 'SubScriptionId' -and $azureCredentials.subscriptionId) {
+            Write-Host "Selecting subscription $($azureCredentials.SubscriptionId)"
             Set-AzContext -SubscriptionId $azureCredentials.SubscriptionId -Tenant $azureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
         }
         $script:keyvaultConnectionExists = $true
-        Write-Host "Successfully connected to Azure Key Vault."
+        Write-Host "Successfully connected to Azure"
     }
     catch {
-        throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
+        throw "Error trying to authenticate to Azure. Error was $($_.Exception.Message)"
     }
 }
