@@ -33,7 +33,7 @@ function ConnectAzStorageAccount {
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -SasToken $storageAccountCredentials.sastoken
         }
         catch {
-            $message = "Unable to create AzStorageContext based on StorageAccountName and sastoken.`nError was: $($_.Exception.Message)"
+            $message = "Unable to create AzStorageContext based on StorageAccountName and sastoken. Error was: $($_.Exception.Message)"
         }
     }
     elseif ($storageAccountCredentials.PSObject.Properties.Name -eq 'StorageAccountKey') {
@@ -42,7 +42,7 @@ function ConnectAzStorageAccount {
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -StorageAccountKey $storageAccountCredentials.StorageAccountKey
         }
         catch {
-            $message = "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey.`nError was: $($_.Exception.Message)"
+            $message = "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey. Error was: $($_.Exception.Message)"
         }
     }
     elseif (($storageAccountCredentials.PSObject.Properties.Name -eq 'clientID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'tenantID')) {
@@ -53,7 +53,7 @@ function ConnectAzStorageAccount {
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -UseConnectedAccount
         }
         catch {
-            $message = "Unable to create AzStorageContext based on StorageAccountName and managed identity.`nError was: $($_.Exception.Message)"
+            $message = "Unable to create AzStorageContext based on StorageAccountName and managed identity. Error was: $($_.Exception.Message)"
         }
     }
     else {
