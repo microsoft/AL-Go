@@ -43,7 +43,7 @@ function ConnectAzStorageAccount {
             $message = "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey.`nError was: $($_.Exception.Message)"
         }
     }
-    elseif ($storageAccountCredentials.Keys -contains 'ClientID' -and $storageAccountCredentials.Keys -contains 'TenantID' -and $storageAccountCredentials.Keys -contains 'SubscriptionId') {
+    elseif (($storageAccountCredentials.PSObject.Properties.Name -eq 'ClientID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'TenantID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'SubscriptionId')) {
         try {
             InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
             ConnectAz -azureCredentials $storageAccountCredentials
