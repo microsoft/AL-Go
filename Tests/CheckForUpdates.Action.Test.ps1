@@ -1,4 +1,4 @@
-﻿Get-Module TestActionsHelper | Remove-Module -Force
+Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
@@ -119,6 +119,33 @@ Describe "CheckForUpdates Action Tests" {
         $permissionsContent.content.Count | Should -be 2 # Only the first two lines should remain
         $permissionsContent.content[0].Trim() | Should -be 'contents: read'
         $permissionsContent.content[1].Trim() | Should -be 'actions: read'
+    }
+
+    It 'Test Custom Template Files' {
+        $repoSettings1 = @{
+            'templateFiles' = @(
+                'scripts/*.ps1',
+                'pre-commit-config.yaml',
+                '.github',
+                'docs/*/*',
+                '',
+                '*',
+                '.vscode/*'
+            )
+        }
+        $checkFiles1 = GetCustomTemplateFiles -repoSettings $repoSettings1
+        $checkFiles1.Count | Should -be 6
+        $checkFiles1[0] | Should -be @{ 'dstPath' = 'scripts'; 'srcPath' = 'scripts'; 'pattern' = '*.ps1'; 'type' = 'custom' }
+        $checkFiles1[1] | Should -be @{ 'dstPath' = '.'; 'srcPath' = '.'; 'pattern' = 'pre-commit-config.yaml'; 'type' = 'custom' }
+        $checkFiles1[2] | Should -be @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*'; 'type' = 'custom' }
+        $checkFiles1[3] | Should -be @{ 'dstPath' = 'docs\\*'; 'srcPath' = 'docs\\*'; 'pattern' = '*'; 'type' = 'custom' }
+        $checkFiles1[4] | Should -be @{ 'dstPath' = ''; 'srcPath' = ''; 'pattern' = '*'; 'type' = 'custom' }
+        $checkFiles1[5] | Should -be @{ 'dstPath' = '.vscode'; 'srcPath' = '.vscode'; 'pattern' = '*'; 'type' = 'custom' }
+
+        $repoSettings2 = @{
+        }
+        $checkFiles2 = GetCustomTemplateFiles -repoSettings $repoSettings2
+        $checkFiles2 | Should -be $null
     }
 
     # Call action
