@@ -47,7 +47,7 @@ function ConnectAzStorageAccount {
         try {
             InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
             ConnectAz -azureCredentials $storageAccountCredentials
-            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -UseConnectedAccount
+            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -UseConnectedAccount
         }
         catch {
             $message = "Unable to create AzStorageContext based on StorageAccountName and federated credentials.`nError was: $($_.Exception.Message)"
@@ -376,7 +376,7 @@ try {
                 New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
             }
 
-            Write-Host "Delivering to $storageContainerName in $($storageAccount.StorageAccountName)"
+            Write-Host "Delivering to $storageContainerName in $($storageAccountCredentials.StorageAccountName)"
             $atypes.Split(',') | ForEach-Object {
                 $atype = $_
                 Write-Host "Looking for: $project-$refname-$atype-*.*.*.*"
