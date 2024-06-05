@@ -2412,7 +2412,6 @@ function ConnectAz {
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret' -and $azureCredentials.ClientSecret) {
             Write-Host "Connecting to Azure using clientId and clientSecret."
-            $azureCredentials.clientSecret.GetType() | Out-Host
             $credential = New-Object pscredential -ArgumentList $azureCredentials.ClientId, (ConvertTo-SecureString -String $azureCredentials.ClientSecret -AsPlainText -Force)
             Connect-AzAccount -ServicePrincipal -Tenant $azureCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
         }
