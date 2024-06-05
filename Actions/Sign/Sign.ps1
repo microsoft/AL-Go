@@ -46,7 +46,6 @@ try {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
-    InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
     $AzureCredentialParams = @{
         "ClientId" = $AzureCredentials.clientId
         "TenantId" = $AzureCredentials.tenantId
@@ -55,6 +54,7 @@ try {
         $AzureCredentialParams += @{ "ClientSecret" = $AzureCredentials.clientSecret }
     }
     else {
+        InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
         ConnectAz -azureCredentials $storageAccountCredentials
     }
     $description = "Signed with AL-Go for GitHub"
