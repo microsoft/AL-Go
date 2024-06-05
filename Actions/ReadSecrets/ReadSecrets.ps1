@@ -101,7 +101,7 @@ try {
                             MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
-                    if ($json.ContainsKey('clientID') -and !$json.ContainsKey('clientSecret')) {
+                    if ($json.ContainsKey('clientID') -and !($json.ContainsKey('clientSecret') -or $json.ContainsKey('refreshToken'))) {
                         try {
                             Write-Host "Query federated token"
                             $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
