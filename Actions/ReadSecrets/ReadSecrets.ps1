@@ -102,7 +102,9 @@ try {
                         }
                     }
                     if ($json.ContainsKey('clientID')) {
+                        Write-Host "clientID found"
                         if ($json.ContainsKey('clientSecret')) {
+                            Write-Host "clientSecret found"
                             $json.clientSecret = ConvertTo-SecureString $json.clientSecret -AsPlainText -Force
                         }
                         else {
