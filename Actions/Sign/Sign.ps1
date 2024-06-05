@@ -55,7 +55,7 @@ try {
     }
     else {
         InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
-        ConnectAz -azureCredentials $storageAccountCredentials
+        ConnectAz -azureCredentials $AzureCredentialParams
     }
     $description = "Signed with AL-Go for GitHub"
     $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
