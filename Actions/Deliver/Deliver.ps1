@@ -353,8 +353,8 @@ try {
                 if (!($storageAccountCredentials.PSObject.Properties.Name -eq 'ErrorAction')) {
                     $storageAccountCredentials | Add-Member -MemberType NoteProperty -Name 'ErrorAction' -Value 'Warning'
                 }
-                $storageContainerName = $storageAccountCredentials.containerName
-                $storageBlobName = $storageAccountCredentials.blobName
+                $storageContainerName =  $storageAccountCredentials.ContainerName.ToLowerInvariant().replace('{project}',$projectName).replace('{branch}',$refname).ToLowerInvariant()
+                $storageBlobName = $storageAccountCredentials.BlobName.ToLowerInvariant()
             }
             catch {
                 throw "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName.`nError was: $($_.Exception.Message)"
