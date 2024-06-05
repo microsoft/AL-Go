@@ -2413,7 +2413,7 @@ function ConnectAz {
         if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret' -and $azureCredentials.ClientSecret) {
             Write-Host "Connecting to Azure using clientId and clientSecret."
             $azureCredentials.clientSecret.GetType() | Out-Host
-            $credential = New-Object pscredential -ArgumentList $azureCredentials.ClientId, $azureCredentials.ClientSecret
+            $credential = New-Object pscredential -ArgumentList $azureCredentials.ClientId, (ConvertTo-SecureString -String $azureCredentials.ClientSecret -AsPlainText -Force)
             Connect-AzAccount -ServicePrincipal -Tenant $azureCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
         }
         else {
