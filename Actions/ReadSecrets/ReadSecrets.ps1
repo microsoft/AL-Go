@@ -1,5 +1,4 @@
-﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'GitHub Secrets come in as plain text')]
-Param(
+﻿Param(
     [Parameter(HelpMessage = "All GitHub Secrets in compressed JSON format", Mandatory = $true)]
     [string] $gitHubSecrets = "",
     [Parameter(HelpMessage = "Comma-separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted", Mandatory = $true)]
@@ -101,22 +100,15 @@ try {
                             MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
-                    if ($json.ContainsKey('clientID')) {
-                        Write-Host "clientID found"
-                        if ($json.ContainsKey('clientSecret')) {
-                            Write-Host "clientSecret found"
-                            $json.clientSecret = ConvertTo-SecureString $json.clientSecret -AsPlainText -Force
+                    if ($json.ContainsKey('clientID') -and !$json.ContainsKey('clientSecret')) {
+                        try {
+                            Write-Host "Query federated token"
+                            $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+                            $json += @{ "clientAssertion" = $result.value }
+                            $secretValue = $json | ConvertTo-Json -Compress
                         }
-                        else {
-                            try {
-                                Write-Host "Query federated token"
-                                $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
-                                $json += @{ "clientAssertion" = $result.value }
-                                $secretValue = $json | ConvertTo-Json -Compress
-                            }
-                            catch {
-                                Write-Host "::WARNING::Unable to get ID_TOKEN, maybe id_token: write permissions are missing"
-                            }
+                        catch {
+                            Write-Host "::WARNING::Unable to get ID_TOKEN, maybe id_token: write permissions are missing"
                         }
                     }
                 }
