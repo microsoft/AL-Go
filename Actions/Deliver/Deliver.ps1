@@ -362,6 +362,7 @@ try {
             $azStorageContext = ConnectAzStorageAccount -storageAccountCredentials $storageAccountCredentials
             Write-Host "Storage Container Name is $storageContainerName"
             Write-Host "Storage Blob Name is $storageBlobName"
+
             $containerExists = $true
             try {
                 Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
