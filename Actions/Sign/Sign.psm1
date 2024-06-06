@@ -100,7 +100,7 @@ function Invoke-SigningTool() {
             $FilesToSign
     }
     else {
-        Write-Host "Using managed identity"
+        Write-Host "Invoking signing tool using managed identity"
         . $signingToolExe code azure-key-vault `
             --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
             --azure-key-vault-certificate $CertificateName `
