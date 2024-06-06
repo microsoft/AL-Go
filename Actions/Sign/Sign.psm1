@@ -84,7 +84,7 @@ function Invoke-SigningTool() {
 
     # Sign files
     if ($ClientSecret) {
-        Write-Host "Using client secret"
+        Write-Host "Invoking signing tool using client secret"
         . $signingToolExe code azure-key-vault `
             --azure-key-vault-url "https://$KeyVaultName.vault.azure.net/" `
             --azure-key-vault-certificate $CertificateName `
