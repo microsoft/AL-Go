@@ -75,7 +75,6 @@ if (Test-Path $customScript) {
     . $customScript -parameters $parameters
 }
 else {
-    $authContext | ConvertFrom-Json | ConvertTo-Json | Out-Host
     try {
         $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable
         $bcAuthContext = New-BcAuthContext @authContextParams

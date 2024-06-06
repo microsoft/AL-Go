@@ -46,12 +46,13 @@ try {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
-    $AzureCredentialParams = @{
-        "ClientId" = $AzureCredentials.clientId
-        "TenantId" = $AzureCredentials.tenantId
-    }
+    $AzureCredentialParams = @{}
     if ($AzureCredentials.PSobject.Properties.name -eq "clientSecret") {
-        $AzureCredentialParams += @{ "ClientSecret" = $AzureCredentials.clientSecret }
+        $AzureCredentialParams += @{
+            "ClientId" = $AzureCredentials.clientId
+            "ClientSecret" = $AzureCredentials.clientSecret
+            "TenantId" = $AzureCredentials.tenantId
+        }
     }
     else {
         InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
