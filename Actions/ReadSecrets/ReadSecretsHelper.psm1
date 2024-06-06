@@ -52,9 +52,6 @@ function GetGithubSecret {
         $value = $script:githubSecrets."$secret"
         if ($value) {
             MaskValue -key $envVar -value $value
-            if ($envVar -eq 'authcontext') {
-                $value | ConvertFrom-Json | ConvertTo-Json | Out-Host
-            }
             if ($encrypted) {
                 # Return encrypted string
                 return (ConvertTo-SecureString -String $value -AsPlainText -Force | ConvertFrom-SecureString)

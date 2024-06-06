@@ -94,7 +94,6 @@ try {
                     $json = @{}
                 }
                 if ($json.Keys.Count) {
-                    $json.Keys | Out-Host
                     foreach($keyName in $json.Keys) {
                         if ((IsPropertySecret -propertyName $keyName) -and ($json."$keyName" -isnot [boolean])) {
                             # Mask individual values if property is secret
