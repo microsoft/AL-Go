@@ -1,3 +1,6 @@
+
+## v5.2
+
 ### Issues
 - Issue 1084 Automatic updates for AL-Go are failing when main branch requires Pull Request
 
