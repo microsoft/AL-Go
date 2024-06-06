@@ -453,11 +453,6 @@ function CreateAlGoRepository {
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
     $runson = "windows-latest"
     $shell = "powershell"
-    if ($private) {
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
-        $runson = "self-hosted"
-    }
     if ($linux) {
         $runson = "ubuntu-latest"
         $shell = "pwsh"
