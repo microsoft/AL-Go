@@ -1,17 +1,11 @@
 
-## v5.2
-
-### Issues
-- Issue 1084 Automatic updates for AL-Go are failing when main branch requires Pull Request
-
 ### Business Central Performance Toolkit Test Result Viewer
 
 In the summary after a Test Run, you now also have the result of performance tests.
 
 ### New Settings
 
-- `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
-- `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
+of the PowerPlatform environment to deploy to.
 - `bcptThresholds` is a JSON object with properties for the default thresholds for the Business Central Performance Toolkit
   - **DurationWarning** - a warning is issued if the duration of a bcpt test degrades more than this percentage (default 10)
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
@@ -20,6 +14,16 @@ In the summary after a Test Run, you now also have the result of performance tes
 
 > [!NOTE]
 > Duration thresholds are subject to varying results depending on the performance of the agent running the tests. Number of SQL statements executed by a test is often the most reliable indicator of performance degredation.
+
+## v5.2
+
+### Issues
+- Issue 1084 Automatic updates for AL-Go are failing when main branch requires Pull Request
+
+### New Settings
+
+- `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
+- `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
 
 ### New Actions
 
