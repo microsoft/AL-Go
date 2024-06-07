@@ -1,3 +1,6 @@
+### New Settings
+
+- `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
 
 ## v5.2
 
