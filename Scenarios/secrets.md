@@ -60,7 +60,7 @@ By creating a secret called Azure_Credentials you can give your GitHub repositor
 > [!NOTE]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
 
-A KeyVault can be setup for two different security models: Role Based Access Control (RBAC = recommended) and Vault Access Policy (VAP). In order for AL-Go for GitHub to use the KeyVault, the following roles/permissions needs to be assigned to the App Registration or Managed Identity on which the authentication is performed:
+A KeyVault can be setup for two different security models: Role Based Access Control (RBAC = recommended) and Vault Access Policy (VAP). In order for AL-Go for GitHub to use the KeyVault, the following roles/permissions needs to be assigned to the app registration or Managed Identity on which the authentication is performed:
 
 | Security Model | Read Secrets | Sign Apps |
 | :-- | :-- | :-- |
@@ -73,15 +73,15 @@ Whether you use a managed identity or an app registration for authentication, yo
 
 #### Federated credential
 
-Using a federated credential, you need to register your GitHub repository in your managed identity under settings -> federated credentials or in the App Registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing the clientId and the tenantId. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
+Using a federated credential, you need to register your GitHub repository in your managed identity under settings -> federated credentials or in the app registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing the clientId and the tenantId. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
 
-Example: `{"keyVaultName":"MyKeyVault","clientId":"55ce849b-c99d-484c-8999-df9f8df958bd","tenantId":"72f988bf-86f1-41af-91ab-2d7cd011db47"}`
+Example: `{"keyVaultName":"MyKeyVault","clientId":"ed79570c-0384-4826-8099-bf0577af6667","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045"}`
 
 #### ClientSecret
 
-ClientSecret can only be used using an app registration. Under Certificates & Secrets in the App Registration, you need to create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
+ClientSecret can only be used using an app registration. Under Certificates & Secrets in the app registration, you need to create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
 
-Example: `{"keyVaultName":"MyKeyVault","clientId":"a26651f5-0e90-473c-b4f9-e96119aac8b8","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"72f988bf-86f1-41af-91ab-2d7cd011db47"}`
+Example: `{"keyVaultName":"MyKeyVault","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045"}`
 
 With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your KeyVault in order for AL-Go for GitHub to sign your apps.
 
@@ -99,25 +99,27 @@ Specifying a RefreshToken allows AL-Go for GitHub to get access to impersonate t
 
 Providing an AuthContext secret with a refreshtoken typically allows you to get access for 90 days. After the 90 days, you need to refresh the AuthContext secret with a new refreshToken. Note that anybody with the refreshToken can get access to call the API on behalf of the user, it doesn't have to be inside a workflow/pipeline.
 
-Example: `{"TenantID":"69cb4a05-4ea8-482d-9f33-10fb5cf7db05","Scopes":"https://api.businesscentral.dynamics.com/","RefreshToken":"0.AUUAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_s6Eo4YOI","ClientID":"1950a258-227b-4e31-a9cf-717495945fc2"}`
+Example: `{"tenantId":"d630ce39-5a0c-41ec-bf0d-6758ad558f0c","scopes":"https://api.businesscentral.dynamics.com/","RefreshToken":"0.AUUAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_s6Eo4YOI","clientId":"1950a258-227b-4e31-a9cf-717495945fc2"}`
 
 ### App Registration (Service to service authentication)
 
-In order to use an App Registration for publishing apps to Business Central, you need to register the ClientId (Application Id) of is App Registration inside Business Central. This will create a user inside Business Central and you need to give the following permissions to that user: D365 AUTOMATION and EXTEN. MGT. - ADMIN. After this, there are two ways you can authenticate, either using Federated credential or using a Client Secret.
+In order to use an app registration for publishing apps to Business Central, you need to register the ClientId (Application Id) of is app registration inside Business Central. This will create a user inside Business Central and you need to give the following permissions to that user: D365 AUTOMATION and EXTEN. MGT. - ADMIN. After this, there are two ways you can authenticate, either using Federated credential or using a Client Secret.
 
 #### Federated credential
 
-Using a federated credential, you need to register your GitHub repository in the App Registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing this information. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
+Using a federated credential, you need to register your GitHub repository in the app registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing this information. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
 
-Example:`{"TenantID":"69cb4a05-4ea8-482d-9f33-10fb5cf7db05","Scopes":"https://api.businesscentral.dynamics.com/","ClientID":"a26651f5-0e90-473c-b4f9-e96119aac8b8"}`
+Example:`{"tenantId":"d630ce39-5a0c-41ec-bf0d-6758ad558f0c","scopes":"https://api.businesscentral.dynamics.com/","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32"}`
 
 #### Client Secret
 
-Under Certificates & Secrets in the App Registration, you can create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
+Under Certificates & Secrets in the app registration, you can create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
 
-Example: `{"TenantID":"69cb4a05-4ea8-482d-9f33-10fb5cf7db05","Scopes":"https://api.businesscentral.dynamics.com/","ClientID":"a26651f5-0e90-473c-b4f9-e96119aac8b8","ClientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge"}`
+Example: `{"tenantId":"d630ce39-5a0c-41ec-bf0d-6758ad558f0c","scopes":"https://api.businesscentral.dynamics.com/","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge"}`
 
 ## <a id="AppSourceContext"></a>**AppSourceContext** -> Deliver to AppSource
+
+Adding a secret called AppSourceContext to an AL-Go for GitHub repository from the AppSource template, enables automatic delivery to AppSource.
 
 ### Managed identity
 
@@ -125,21 +127,23 @@ Managed identities cannot be used for this as this is not an Azure resource
 
 ### App Registration (Service to service authentication)
 
-In order to use an App Registration for publishing apps to AppSource, you need to register the ClientId (Application Id) of is App Registration in Partner Center. After this, there are two ways you can authenticate, either using Federated credential or using a Client Secret.
+In order to use an app registration for publishing apps to AppSource, you need to register the ClientId (Application Id) of is app registration in Partner Center. After this, there are two ways you can authenticate, either using Federated credential or using a Client Secret.
 
 #### Federated credential
 
-Using a federated credential, you need to register your GitHub repository in the App Registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing this information. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
+Using a federated credential, you need to register your GitHub repository in the app registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing this information. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
 
-Example:`{"clientId":"a26651f5-0e90-473c-b4f9-e96119aac8b8","tenantId":"72f988bf-86f1-41af-91ab-2d7cd011db47","Scopes":"https://api.partner.microsoft.com/.default"}`
+Example:`{"clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","scopes":"https://api.partner.microsoft.com/.default"}`
 
 #### Client Secret
 
-Under Certificates & Secrets in the App Registration, you can create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. Note that who ever has access to the clientId and clientSecret can publish apps on AppSource on your behalf.
+Under Certificates & Secrets in the app registration, you can create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. Note that who ever has access to the clientId and clientSecret can publish apps on AppSource on your behalf.
 
-Example: `{"tenantId":"72f988bf-86f1-41af-91ab-2d7cd011db47","Scopes":"https://api.partner.microsoft.com/.default","clientID":"a26651f5-0e90-473c-b4f9-e96119aac8b8","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge"}`
+Example: `{"tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","scopes":"https://api.partner.microsoft.com/.default","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge"}`
 
 ## <a id="StorageContext"></a>**StorageContext** -> Deliver to storage
+
+Adding a secret called StorageContext to an AL-Go for GitHub repository, enables automatic delivery to an Azure storage account.
 
 In AL-Go for GitHub, the Storage Context can be specified in 5 different ways, 5 different authentication mechanism towards an Azure Storage Account.
 
@@ -147,19 +151,19 @@ In AL-Go for GitHub, the Storage Context can be specified in 5 different ways, 5
 
 As a storage account is an Azure resource, we can use managed identities. Managed identities are like virtual users in Azure, using federated credentials for authentication. Using a federated credential, you need to register your GitHub repository in the managed identity under Settings -> Federated Credentials. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
 
-Example: `{"storageAccountName":"MyStorageName","clientId":"08b6d80c-68cf-48f9-a5ff-b054326e2ec3","tenantId":"72f988bf-86f1-41af-91ab-2d7cd011db47","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
+Example: `{"storageAccountName":"MyStorageName","clientId":"08b6d80c-68cf-48f9-a5ff-b054326e2ec3","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
 
 ### App Registration/Federated credential
 
-An App Registration with federated credential is harder to setup than a managed identity, but just as secure. The mechanism is the same for obtaining an ID_TOKEN and providing this as proof of authenticity towards the app registration.
+An app registration with federated credential is harder to setup than a managed identity, but just as secure. The mechanism is the same for obtaining an ID_TOKEN and providing this as proof of authenticity towards the app registration.
 
-Example: `{"storageAccountName":"MyStorageName","clientId":"a26651f5-0e90-473c-b4f9-e96119aac8b8","tenantId":"72f988bf-86f1-41af-91ab-2d7cd011db47","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
+Example: `{"storageAccountName":"MyStorageName","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
 
 ### App Registration/Client Secret
 
 An app registration with a client Secret is less secure than using federated credentials. Who ever has access to the clientSecret has access to everything the app registration has access to, until you recycle the client Secret.
 
-Example: `{"storageAccountName":"MyStorageName","clientId":"a26651f5-0e90-473c-b4f9-e96119aac8b8","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"72f988bf-86f1-41af-91ab-2d7cd011db47","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
+Example: `{"storageAccountName":"MyStorageName","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
 
 ### storageAccountName/sastoken
 
@@ -177,4 +181,4 @@ Example: `{"storageAccountName":"MyStorageName","storageAccountKey":"JHFZErCyfQ8
 
 If you create a secret called GitHubPackagesContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will also use this NuGet feed for dependency resolution when building apps, giving you automatic dependency resolution within all your apps.
 
-Example: `{"token":"ghp_NDdI2ExxxxxxxxxxxxxxxxxAYQh","serverUrl":"https://nuget.pkg.github.com/freddydkorg/index.json"}`
+Example: `{"token":"ghp_NDdI2ExxxxxxxxxxxxxxxxxAYQh","serverUrl":"https://nuget.pkg.github.com/mygithuborg/index.json"}`
