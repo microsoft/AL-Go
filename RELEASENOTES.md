@@ -1,3 +1,6 @@
+### Support managed identities and federated credentials
+
+All authentication context secrets now supports managed identities and federated credentials. See more [here](Scenarios/secrets.md). Furthermore, you can now use https://aka.ms/algosecrets#authcontext to learn more about the formatting of that secret.
 
 ## v5.2
 
