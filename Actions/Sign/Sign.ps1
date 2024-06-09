@@ -46,18 +46,18 @@ try {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
-    $AzureCredentialParams = @{}
+    $AzureCredentialParams += @{
+        "ClientId" = $AzureCredentials.clientId
+        "TenantId" = $AzureCredentials.tenantId
+    }
     if ($AzureCredentials.PSobject.Properties.name -eq "clientSecret") {
         $AzureCredentialParams += @{
-            "ClientId" = $AzureCredentials.clientId
             "ClientSecret" = $AzureCredentials.clientSecret
-            "TenantId" = $AzureCredentials.tenantId
         }
     }
-    else {
-        InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
-        ConnectAz -azureCredentials $AzureCredentialParams
-    }
+    InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
+    ConnectAz -azureCredentials $AzureCredentialParams
+
     $description = "Signed with AL-Go for GitHub"
     $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
 
