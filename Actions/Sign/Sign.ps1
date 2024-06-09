@@ -46,7 +46,7 @@ try {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
 
-    $AzureCredentialParams += @{
+    $AzureCredentialParams = @{
         "ClientId" = $AzureCredentials.clientId
         "TenantId" = $AzureCredentials.tenantId
     }
