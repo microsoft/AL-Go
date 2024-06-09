@@ -6,10 +6,9 @@
 )
 
 function IncludeBranch([string] $deliveryTarget) {
-    $settings | ConvertTo-Json | Out-Host
     $settingsName = "DeliverTo$deliveryTarget"
     if ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('Branches')) {
-        Write-Host "- Branches defined: $($settings."$settingsName".Branches -join ', ') - "
+        Write-Host "- Branches defined: $($settings."$settingsName".Branches -join ', ')"
         return ($null -ne ($settings."$settingsName".Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }))
     }
     else {
