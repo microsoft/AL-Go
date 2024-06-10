@@ -82,8 +82,8 @@ Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver
 
 # Test artifacts generated
 $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/actions/runs/$($run.id)/artifacts | ConvertFrom-Json
-@($artifacts.artifacts.Name) -like 'Library Apps-e2e-Apps-*.*.*.0' | Should -Be $true
-@($artifacts.artifacts.Name) -like 'Main App-e2e-Apps-*.*.*.0' | Should -Be $true
-@($artifacts.artifacts.Name) -like 'Main App-e2e-Dependencies-*.*.*.0' | Should -Be $true
+@($artifacts.artifacts.Name) -like "Library Apps-$branch-Apps-*.*.*.0" | Should -Be $true
+@($artifacts.artifacts.Name) -like "Main App-$branch-Apps-*.*.*.0" | Should -Be $true
+@($artifacts.artifacts.Name) -like "Main App-$branch-Dependencies-*.*.*.0" | Should -Be $true
 
 Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
