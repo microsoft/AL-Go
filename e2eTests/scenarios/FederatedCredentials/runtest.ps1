@@ -73,7 +73,7 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -repository 
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Check that workflow run uses federated credentials and signing was successful
-Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default) Main App (Default)' -stepName 'Sign' -expectedText 'Connecting to Azure using clientId and federated token'
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Connecting to Azure using clientId and federated token'
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Signing succeeded'
 
 # Check that Deliver to AppSource uses federated credentials and that a new submission was created
