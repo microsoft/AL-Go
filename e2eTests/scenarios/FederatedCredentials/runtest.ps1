@@ -64,10 +64,14 @@ function Register-NavSip() {
             try {
                 Write-Host "Downloading $vcredist_x64_exe"
                 Invoke-RestMethod -Method Get -UseBasicParsing -Uri $vcredist_x64_140url -OutFile $vcredist_x64_exe
+                Unblock-File -Path $vcredist_x64_exe
                 Write-Host "Installing $vcredist_x64_exe"
                 $process = start-process -Wait -FilePath $vcredist_x64_exe -ArgumentList /q, /norestart
-                if (($null -ne $process.ExitCode) -and ($process.ExitCode -ne 0)) {
-                    Write-Host "Failed to install $vcredist_x64_exe. Exit code was $($process.ExitCode)"
+                if ($null -ne $process) {
+                    $process | Out-Host
+                    if ($process.ExitCode -ne 0) {
+                        Write-Host "Failed to install $vcredist_x64_exe. Exit code was $($process.ExitCode)"
+                    }
                 }
             }
             finally {
