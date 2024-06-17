@@ -59,6 +59,22 @@ function Register-NavSip() {
     try {
         if (-not (Test-Path $navSipDllPath)) {
             GetNavSipFromArtifacts -NavSipDestination $navSipDllPath
+            $vsredist_x64_140url = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
+            $vsredist_x64_exe = 'vcredist_x64_140.exe'
+            try {
+                Write-Host "Downloading $vsredist_x64_exe"
+                Invoke-RestMethod -Method Get -UseBasicParsing -Uri $vsredist_x64_140url -OutFile $vsredist_x64_exe
+                Write-Host "Installing $vsredist_x64_exe"
+                $process = start-process -Wait -FilePath $vsredist_x64_exe -ArgumentList /q, /norestart
+                if ($process.ExitCode -ne 0) {
+                    Write-Host "Failed to install $vsredist_x64_exe. Exit code was $($process.ExitCode)"
+                }
+            }
+            finally {
+                if (Test-Path $vsredist_x64_exe) {
+                    Remove-Item $vsredist_x64_exe
+                }
+            }
         }
         Write-Host "Unregistering dll $navSipDllPath"
         RegSvr32 /u /s $navSipDllPath
