@@ -131,7 +131,7 @@ $appFile = (Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app").FullName
 # Check app signature
 Write-Host "Register NavSip.dll"
 Register-NavSip
-Write-Host "Check App Signature"cd
+Write-Host "Check App Signature"
 $signResult = Get-AuthenticodeSignature -FilePath $appFile
 $signResult.Status | Should -Be 'Valid'
 
