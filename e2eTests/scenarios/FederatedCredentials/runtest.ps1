@@ -125,14 +125,13 @@ $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Ve
 @($artifacts.artifacts.Name) -like "Main App-$branch-Dependencies-*.*.*.0" | Should -Be $true
 
 Write-Host "Download build artifacts"
-invoke-gh run download $run.id --dir 'signedApps'
-Get-ChildItem 'signedApps' -Recurse | Out-Host
+invoke-gh run download $run.id --repo $repository --dir 'signedApps'
 $appFile = (Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app").FullName
 
 # Check app signature
 Write-Host "Register NavSip.dll"
 Register-NavSip
-Write-Host "Check App Signature"
+Write-Host "Check App Signature"cd
 $signResult = Get-AuthenticodeSignature -FilePath $appFile
 $signResult.Status | Should -Be 'Valid'
 
