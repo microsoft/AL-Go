@@ -105,7 +105,6 @@ Get-BCArtifactUrl -country core | Out-Host
 Write-Host "Register NavSip.dll"
 Register-NavSip
 
-
 $branch = "e2e"
 $template = "https://github.com/$appSourceTemplate"
 $repository = 'microsoft/bcsamples-bingmaps.appsource'
@@ -147,11 +146,13 @@ $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Ve
 
 Write-Host "Download build artifacts"
 invoke-gh run download $run.id --repo $repository --dir 'signedApps'
-$appFile = (Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app").FullName
 
-Write-Host "Check App Signature $appFile"
-$signResult = Get-AuthenticodeSignature -FilePath $appFile
-$signResult | Out-Host
-$signResult.Status | Should -Be 'Valid'
+Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app" | ForEach-Object {
+    $appFile = $_.FullName
+    Write-Host "Check App Signature $appFile"
+    $signResult = Get-AuthenticodeSignature -FilePath $appFile
+    $signResult | Format-List | Out-Host
+    $signResult.Status | Should -Be 'Valid'
+}
 
 Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
