@@ -5,7 +5,6 @@ In the summary after a Test Run, you now also have the result of performance tes
 
 ### New Settings
 
-of the PowerPlatform environment to deploy to.
 - `bcptThresholds` is a JSON object with properties for the default thresholds for the Business Central Performance Toolkit
   - **DurationWarning** - a warning is issued if the duration of a bcpt test degrades more than this percentage (default 10)
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
