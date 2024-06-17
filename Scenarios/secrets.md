@@ -14,6 +14,8 @@ Secrets in GitHub can be defined on the Organizational level, on the repository 
 
 **Environment secrets** are defined underneath an environment and is only available to the workflow during deployment to this environment. For the free GitHub plan, environments (and secrets obviously) are only available on public repositories.
 
+See also [https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#about-secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#about-secrets).
+
 > [!NOTE]
 > In AL-Go for GitHub you can also define your secrets in an Azure KeyVault, but you would still need to create one secret in GitHub called [Azure_Credentials](https://aka.ms/algosecrets#azure_credentials) to be able to access the Azure KeyVault.
 
