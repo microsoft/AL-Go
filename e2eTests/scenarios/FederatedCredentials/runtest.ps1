@@ -41,29 +41,17 @@ Write-Host -ForegroundColor Yellow @'
 #  - Remove the branch e2e in repository microsoft/bcsamples-bingmaps.appsource
 #
 '@
-function GetNavSipFromArtifacts
-(
-    [string] $NavSipDestination
-)
-{
-    $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 
-    try {
-        Write-Host "Download and install BcContainerHelper"
-        DownloadAndImportBcContainerHelper
-        Write-Host "Download core artifacts"
-        Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox -country core) -basePath $artifactTempFolder | Out-Null
-        Write-Host "Downloaded artifacts to $artifactTempFolder"
-        $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
-        Write-Host "Found navsip at $($navsip.FullName)"
-        Copy-Item -Path $navsip.FullName -Destination $NavSipDestination -Force | Out-Null
-        Write-Host "Copied navsip to $NavSipDestination"
-    }
-    finally {
-        if (Test-Path $artifactTempFolder) {
-            Remove-Item -Path $artifactTempFolder -Recurse -Force
-        }
-    }
+function GetNavSipFromArtifacts([string] $NavSipDestination) {
+    Write-Host "Download and install BcContainerHelper"
+    DownloadAndImportBcContainerHelper
+    Write-Host "Download core artifacts"
+    $artifactTempFolder = Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox -country core)
+    Write-Host "Downloaded artifacts to $artifactTempFolder"
+    $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
+    Write-Host "Found navsip at $($navsip.FullName)"
+    Copy-Item -Path $navsip.FullName -Destination $NavSipDestination -Force | Out-Null
+    Write-Host "Copied navsip to $NavSipDestination"
 }
 
 function Register-NavSip() {
@@ -73,16 +61,14 @@ function Register-NavSip() {
         if (-not (Test-Path $navSipDllPath)) {
             GetNavSipFromArtifacts -NavSipDestination $navSipDllPath
         }
-
         Write-Host "Unregistering dll $navSipDllPath"
         RegSvr32 /u /s $navSipDllPath
         Write-Host "Registering dll $navSipDllPath"
         RegSvr32 /s $navSipDllPath
     }
     catch {
-        Write-Host "Failed to copy navsip to $navSipDestination"
+        Write-Host "Failed to copy navsip to $navSipDestination. Error was $($_.Exception.Message)"
     }
-
 }
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
