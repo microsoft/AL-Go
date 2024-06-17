@@ -44,7 +44,8 @@ Write-Host -ForegroundColor Yellow @'
 
 function GetNavSipFromArtifacts([string] $NavSipDestination) {
     Write-Host "Download core artifacts"
-    $artifactTempFolder = Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox -country core)
+    $artifactUrl = Get-BCArtifactUrl -country core
+    $artifactTempFolder = Download-Artifacts -artifactUrl $artifactUrl
     Write-Host "Downloaded artifacts to $artifactTempFolder"
     $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
     Write-Host "Found navsip at $($navsip.FullName)"
@@ -73,9 +74,17 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
+. (Join-Path $PSScriptRoot "..\..\Actions\AL-Go-Helper.ps1" -Resolve)
 
 Write-Host "Download and install BcContainerHelper"
 DownloadAndImportBcContainerHelper
+
+Get-BCArtifactUrl -country core | Out-Host
+
+# Check app signature
+Write-Host "Register NavSip.dll"
+Register-NavSip
+
 
 $branch = "e2e"
 $template = "https://github.com/$appSourceTemplate"
@@ -120,9 +129,6 @@ Write-Host "Download build artifacts"
 invoke-gh run download $run.id --repo $repository --dir 'signedApps'
 $appFile = (Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app").FullName
 
-# Check app signature
-Write-Host "Register NavSip.dll"
-Register-NavSip
 Write-Host "Check App Signature"
 $signResult = Get-AuthenticodeSignature -FilePath $appFile
 $signResult.Status | Should -Be 'Valid'
