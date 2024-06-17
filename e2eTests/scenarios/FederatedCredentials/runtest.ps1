@@ -43,8 +43,6 @@ Write-Host -ForegroundColor Yellow @'
 '@
 
 function GetNavSipFromArtifacts([string] $NavSipDestination) {
-    Write-Host "Download and install BcContainerHelper"
-    DownloadAndImportBcContainerHelper
     Write-Host "Download core artifacts"
     $artifactTempFolder = Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox -country core)
     Write-Host "Downloaded artifacts to $artifactTempFolder"
@@ -75,6 +73,9 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
+
+Write-Host "Download and install BcContainerHelper"
+DownloadAndImportBcContainerHelper
 
 $branch = "e2e"
 $template = "https://github.com/$appSourceTemplate"
