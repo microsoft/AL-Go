@@ -49,6 +49,9 @@ function GetNavSipFromArtifacts
     $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 
     try {
+        Write-Host "Download and install BcContainerHelper"
+        DownloadAndImportBcContainerHelper
+        Write-Host "Download core artifacts"
         Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox -country core) -basePath $artifactTempFolder | Out-Null
         Write-Host "Downloaded artifacts to $artifactTempFolder"
         $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
@@ -57,7 +60,9 @@ function GetNavSipFromArtifacts
         Write-Host "Copied navsip to $NavSipDestination"
     }
     finally {
-        Remove-Item -Path $artifactTempFolder -Recurse -Force
+        if (Test-Path $artifactTempFolder) {
+            Remove-Item -Path $artifactTempFolder -Recurse -Force
+        }
     }
 }
 
