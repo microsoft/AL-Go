@@ -41,6 +41,44 @@ Write-Host -ForegroundColor Yellow @'
 #  - Remove the branch e2e in repository microsoft/bcsamples-bingmaps.appsource
 #
 '@
+function GetNavSipFromArtifacts
+(
+    [string] $NavSipDestination
+)
+{
+    $artifactTempFolder = Join-Path $([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+
+    try {
+        Download-Artifacts -artifactUrl (Get-BCArtifactUrl -type Sandbox -country core) -basePath $artifactTempFolder | Out-Null
+        Write-Host "Downloaded artifacts to $artifactTempFolder"
+        $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
+        Write-Host "Found navsip at $($navsip.FullName)"
+        Copy-Item -Path $navsip.FullName -Destination $NavSipDestination -Force | Out-Null
+        Write-Host "Copied navsip to $NavSipDestination"
+    }
+    finally {
+        Remove-Item -Path $artifactTempFolder -Recurse -Force
+    }
+}
+
+function Register-NavSip() {
+    $navSipDestination = "C:\Windows\System32"
+    $navSipDllPath = Join-Path $navSipDestination "navsip.dll"
+    try {
+        if (-not (Test-Path $navSipDllPath)) {
+            GetNavSipFromArtifacts -NavSipDestination $navSipDllPath
+        }
+
+        Write-Host "Unregistering dll $navSipDllPath"
+        RegSvr32 /u /s $navSipDllPath
+        Write-Host "Registering dll $navSipDllPath"
+        RegSvr32 /s $navSipDllPath
+    }
+    catch {
+        Write-Host "Failed to copy navsip to $navSipDestination"
+    }
+
+}
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
@@ -85,5 +123,17 @@ $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Ve
 @($artifacts.artifacts.Name) -like "Library Apps-$branch-Apps-*.*.*.0" | Should -Be $true
 @($artifacts.artifacts.Name) -like "Main App-$branch-Apps-*.*.*.0" | Should -Be $true
 @($artifacts.artifacts.Name) -like "Main App-$branch-Dependencies-*.*.*.0" | Should -Be $true
+
+Write-Host "Download build artifacts"
+invoke-gh run download $run.id --dir 'signedApps'
+Get-ChildItem 'signedApps' -Recurse | Out-Host
+$appFile = (Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app").FullName
+
+# Check app signature
+Write-Host "Register NavSip.dll"
+Register-NavSip
+Write-Host "Check App Signature"
+$signResult = Get-AuthenticodeSignature -FilePath $appFile
+$signResult.Status | Should -Be 'Valid'
 
 Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
