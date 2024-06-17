@@ -74,7 +74,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
-. (Join-Path $PSScriptRoot "..\..\Actions\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path $PSScriptRoot "..\..\..\Actions\AL-Go-Helper.ps1" -Resolve)
 
 Write-Host "Download and install BcContainerHelper"
 DownloadAndImportBcContainerHelper
