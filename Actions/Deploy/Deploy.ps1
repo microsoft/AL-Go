@@ -100,7 +100,7 @@ else {
 
     try {
         $sandboxEnvironment = ($response.environmentType -eq 1)
-        if ($sandboxEnvironment -and !($bcAuthContext.ClientSecret)) {
+        if ($sandboxEnvironment -and !($bcAuthContext.ClientSecret -or $bcAuthContext.ClientAssertion)) {
             # Sandbox and not S2S -> use dev endpoint (Publish-BcContainerApp)
             $parameters = @{
                 "bcAuthContext" = $bcAuthContext
