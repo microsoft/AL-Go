@@ -47,7 +47,7 @@ try {
     # Collect all projects (AL and PowerPlatform Solution)
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
     $PPprojects = @(GetMatchingProjects -projects @($settings.powerPlatformSolutionFolder) -selectProjects $projects)
-    if ($projectList.Count -eq 0 -and $PPproject.Count -eq 0) {
+    if ($projectList.Count -eq 0 -and $PPprojects.Count -eq 0) {
         throw "No projects matches '$selectProjects'"
     }
 
