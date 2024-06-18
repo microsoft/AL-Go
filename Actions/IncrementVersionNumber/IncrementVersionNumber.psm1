@@ -124,6 +124,30 @@ function Set-VersionInSettingsFile {
     $settingsJson | Set-JsonContentLF -Path $settingsFilePath
 }
 
+function Test-SettingExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $settingsFilePath,
+        [Parameter(Mandatory = $true)]
+        [string] $settingName
+    )
+
+    if (-not (Test-Path $settingsFilePath)) {
+        throw "Settings file ($settingsFilePath) not found."
+    }
+
+    Write-Host "Reading settings from $settingsFilePath"
+    try {
+        $settingsJson = Get-Content $settingsFilePath -Encoding UTF8 -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "Settings file ($settingsFilePath) is malformed: $_"
+    }
+
+    $settingExists = [bool] ($settingsJson.PSObject.Properties.Name -eq $settingName)
+    return $settingExists
+}
+
 <#
     .Synopsis
         Changes the version number of a project.

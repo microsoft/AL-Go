@@ -51,16 +51,20 @@ try {
         throw "No projects matches '$selectProjects'"
     }
 
+    $repositorySettingsPath = Join-Path $baseFolder $RepoSettingsFile # $RepoSettingsFile is defined in AL-Go-Helper.ps1
+    Set-VersionInSettingsFile -settingsFilePath $repositorySettingsPath -settingName 'repoVersion' -newValue $versionNumber
+
     # Increment version number in AL Projects
     if ($projectList.Count -gt 0) {
         $allAppFolders = @()
+        $repoVersionExistsInRepoSettings = Test-SettingExists -settingsFilePath $repositorySettingsPath -settingName 'repoVersion'
         foreach($project in $projectList) {
             $projectPath = Join-Path $baseFolder $project
             $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
             $settings = ReadSettings -baseFolder $baseFolder -project $project
 
-            # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
-            Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
+            # Ensure the repoVersion setting exists in the project settings if it isn't already in the repo settings. Defaults to 1.0 if it doesn't exist.
+            Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force:(!$repoVersionExistsInRepoSettings)
 
             # Set repoVersion in project settings according to the versionNumber parameter
             Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
