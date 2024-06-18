@@ -282,4 +282,4 @@ function Set-PowerPlatformSolutionVersion {
     }
 }
 
-Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests, Set-PowerPlatformSolutionVersion
+Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests, Set-PowerPlatformSolutionVersion, Test-SettingExists
