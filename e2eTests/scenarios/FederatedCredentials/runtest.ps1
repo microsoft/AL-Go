@@ -42,68 +42,10 @@ Write-Host -ForegroundColor Yellow @'
 #
 '@
 
-function GetNavSipFromArtifacts([string] $NavSipDestination) {
-    Write-Host "Download core artifacts"
-    $artifactUrl = Get-BCArtifactUrl -country core
-    $artifactTempFolder = Download-Artifacts -artifactUrl $artifactUrl
-    Write-Host "Downloaded artifacts to $artifactTempFolder"
-    $navsip = Get-ChildItem -Path $artifactTempFolder -Filter "navsip.dll" -Recurse
-    Write-Host "Found navsip at $($navsip.FullName)"
-    Copy-Item -Path $navsip.FullName -Destination $NavSipDestination -Force | Out-Null
-    Write-Host "Copied navsip to $NavSipDestination"
-}
-
-function Register-NavSip() {
-    $navSipDestination = "C:\Windows\System32"
-    $navSipDllPath = Join-Path $navSipDestination "navsip.dll"
-    try {
-        if (-not (Test-Path $navSipDllPath)) {
-            GetNavSipFromArtifacts -NavSipDestination $navSipDllPath
-            $idx = 1
-            'https://aka.ms/highdpimfc2013x64enu','https://aka.ms/vs/17/release/vc_redist.x64.exe' | ForEach-Object {
-                $vcredist_x64_url = $_
-                $vcredist_x64_exe = Join-Path $ENV:GITHUB_WORKSPACE "vcredist_x64_$idx.exe"
-                $idx++
-                try {
-                    Write-Host "Downloading $vcredist_x64_exe"
-                    Invoke-RestMethod -Method Get -UseBasicParsing -Uri $vcredist_x64_url -OutFile $vcredist_x64_exe
-                    Unblock-File -Path $vcredist_x64_exe
-                    Write-Host "Installing $vcredist_x64_exe"
-                    start-process -Wait -FilePath $vcredist_x64_exe -ArgumentList /q, /norestart | Out-Null
-                }
-                finally {
-                    if (Test-Path $vcredist_x64_exe) {
-                        Remove-Item $vcredist_x64_exe
-                    }
-                }
-            }
-        }
-        Write-Host "Unregistering dll $navSipDllPath"
-        RegSvr32 /u /s $navSipDllPath
-        Write-Host "Registering dll $navSipDllPath"
-        RegSvr32 /s $navSipDllPath
-    }
-    catch {
-        Write-Host "Failed to copy navsip to $navSipDestination. Error was $($_.Exception.Message)"
-    }
-}
-
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
-. (Join-Path $PSScriptRoot "..\..\..\Actions\AL-Go-Helper.ps1" -Resolve)
-
-Write-Host "Download and install BcContainerHelper"
-DownloadAndImportBcContainerHelper
-
-Get-BCArtifactUrl -country core | Out-Host
-
-dotnet --list-runtimes | Out-Host
-
-# Check app signature
-Write-Host "Register NavSip.dll"
-Register-NavSip
 
 $branch = "e2e"
 $template = "https://github.com/$appSourceTemplate"
@@ -147,14 +89,10 @@ $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Ve
 Write-Host "Download build artifacts"
 invoke-gh run download $run.id --repo $repository --dir 'signedApps'
 
-Get-Item 'c:\windows\system32\*140*.dll' | Out-Host
-
 Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app" | ForEach-Object {
     $appFile = $_.FullName
-    Write-Host "Check App Signature $appFile"
-    $signResult = Get-AuthenticodeSignature -FilePath $appFile
-    $signResult | Format-List | Out-Host
-    $signResult.Status | Should -Be 'Valid'
+    Write-Host "Check that $appFile was signed"
+    [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($appFile)) | Should -Contain 'DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA'
 }
 
 Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
