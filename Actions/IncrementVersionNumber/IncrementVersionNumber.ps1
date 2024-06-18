@@ -48,7 +48,7 @@ try {
     $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
     $PPprojects = @(GetMatchingProjects -projects @($settings.powerPlatformSolutionFolder) -selectProjects $projects)
     if ($projectList.Count -eq 0 -and $PPprojects.Count -eq 0) {
-        throw "No projects matches '$selectProjects'"
+        throw "No projects matches '$projects'"
     }
 
     $repositorySettingsPath = Join-Path $baseFolder $RepoSettingsFile # $RepoSettingsFile is defined in AL-Go-Helper.ps1
