@@ -89,10 +89,14 @@ $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Ve
 Write-Host "Download build artifacts"
 invoke-gh run download $run.id --repo $repository --dir 'signedApps'
 
+$noOfApps = 0
 Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app" | ForEach-Object {
     $appFile = $_.FullName
     Write-Host "Check that $appFile was signed"
     [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($appFile)) | Should -Contain 'DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA'
+    $noOfApps++
 }
+# Check that two apps were signed
+$noOfApps | Should -Be 2
 
 Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
