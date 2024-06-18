@@ -59,24 +59,22 @@ function Register-NavSip() {
     try {
         if (-not (Test-Path $navSipDllPath)) {
             GetNavSipFromArtifacts -NavSipDestination $navSipDllPath
-            $vcredist_x64_140url = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
-            $vcredist_x64_exe = Join-Path $ENV:GITHUB_WORKSPACE 'vcredist_x64_140.exe'
-            try {
-                Write-Host "Downloading $vcredist_x64_exe"
-                Invoke-RestMethod -Method Get -UseBasicParsing -Uri $vcredist_x64_140url -OutFile $vcredist_x64_exe
-                Unblock-File -Path $vcredist_x64_exe
-                Write-Host "Installing $vcredist_x64_exe"
-                $process = start-process -Wait -FilePath $vcredist_x64_exe -ArgumentList /q, /norestart
-                if ($null -ne $process) {
-                    $process | Out-Host
-                    if ($process.ExitCode -ne 0) {
-                        Write-Host "Failed to install $vcredist_x64_exe. Exit code was $($process.ExitCode)"
-                    }
+            $idx = 1
+            'https://aka.ms/highdpimfc2013x64enu','https://aka.ms/vs/17/release/vc_redist.x64.exe' | ForEach-Object {
+                $vcredist_x64_url = $_
+                $vcredist_x64_exe = Join-Path $ENV:GITHUB_WORKSPACE "vcredist_x64_$idx.exe"
+                $idx++
+                try {
+                    Write-Host "Downloading $vcredist_x64_exe"
+                    Invoke-RestMethod -Method Get -UseBasicParsing -Uri $vcredist_x64_url -OutFile $vcredist_x64_exe
+                    Unblock-File -Path $vcredist_x64_exe
+                    Write-Host "Installing $vcredist_x64_exe"
+                    start-process -Wait -FilePath $vcredist_x64_exe -ArgumentList /q, /norestart | Out-Null
                 }
-            }
-            finally {
-                if (Test-Path $vcredist_x64_exe) {
-                    Remove-Item $vcredist_x64_exe
+                finally {
+                    if (Test-Path $vcredist_x64_exe) {
+                        Remove-Item $vcredist_x64_exe
+                    }
                 }
             }
         }
@@ -100,6 +98,8 @@ Write-Host "Download and install BcContainerHelper"
 DownloadAndImportBcContainerHelper
 
 Get-BCArtifactUrl -country core | Out-Host
+
+dotnet --list-runtimes | Out-Host
 
 # Check app signature
 Write-Host "Register NavSip.dll"
@@ -146,6 +146,8 @@ $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Ve
 
 Write-Host "Download build artifacts"
 invoke-gh run download $run.id --repo $repository --dir 'signedApps'
+
+Get-Item 'c:\windows\system32\*140*.dll' | Out-Host
 
 Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app" | ForEach-Object {
     $appFile = $_.FullName
