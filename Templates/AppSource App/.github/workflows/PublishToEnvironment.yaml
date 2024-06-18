@@ -158,7 +158,7 @@ jobs:
       - name: Get Artifacts for deployment
         uses: microsoft/AL-Go-Actions/GetArtifactsForDeployment@main
         with:
-          shell: powershell
+          shell: ${{ matrix.shell }}
           artifactsVersion: ${{ github.event.inputs.appVersion }}
           artifactsFolder: '.artifacts'
 
@@ -180,7 +180,7 @@ jobs:
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
-          shell: powershell
+          shell: ${{ matrix.shell }}
           environmentName: ${{ matrix.environment }}
           artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
@@ -197,6 +197,6 @@ jobs:
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
         with:
-          shell: powershell
+          shell: ${{ matrix.shell }}
           eventId: "DO0097"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
