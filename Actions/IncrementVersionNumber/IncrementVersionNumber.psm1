@@ -124,6 +124,16 @@ function Set-VersionInSettingsFile {
     $settingsJson | Set-JsonContentLF -Path $settingsFilePath
 }
 
+<#
+    .Synopsis
+        Checks if a setting exists in a settings file.
+    .Description
+        Checks if a setting exists in a settings file.
+    .Parameter settingsFilePath
+        Path to a JSON file containing the settings.
+    .Parameter settingName
+        Name of the setting to check.
+#>
 function Test-SettingExists {
     param(
         [Parameter(Mandatory = $true)]
