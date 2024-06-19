@@ -51,9 +51,12 @@ try {
         throw "No projects matches '$projects'"
     }
 
+    $repositorySettingsPath = Join-Path $baseFolder $RepoSettingsFile # $RepoSettingsFile is defined in AL-Go-Helper.ps1
+
     # Increment version number in AL Projects
     if ($projectList.Count -gt 0) {
         $allAppFolders = @()
+        $repoVersionExistsInRepoSettings = Test-SettingExists -settingsFilePath $repositorySettingsPath -settingName 'repoVersion'
         $updateRepoVersionInRepoSettings = $false
         foreach($project in $projectList) {
             $projectPath = Join-Path $baseFolder $project
@@ -63,10 +66,13 @@ try {
             if (Test-SettingExists -settingsFilePath $projectSettingsPath -settingName 'repoVersion') {
                 # If 'repoVersion' exists in the project settings, update it there
                 Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
-            } else {
-                # If 'repoVersion' is not found in project settings, update it in repo settings instead if it exists there
+            } elseif ($repoVersionExistsInRepoSettings) {
+                # If 'repoVersion' is not found in project settings but it exists in repo settings, update it there instead
                 Write-Host "Setting 'repoVersion' not found in $projectSettingsPath. Updating it on repo level instead"
                 $updateRepoVersionInRepoSettings = $true
+            } else {
+                # If 'repoVersion' is neither found in project settings nor in repo settings, force create it in project settings
+                Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber -Force
             }
 
             # Resolve project folders to get all app folders that contain an app.json file
@@ -92,8 +98,7 @@ try {
         }
     }
 
-    if ($updateRepoVersionInRepoSettings) {
-        $repositorySettingsPath = Join-Path $baseFolder $RepoSettingsFile # $RepoSettingsFile is defined in AL-Go-Helper.ps1
+    if ($updateRepoVersionInRepoSettings -or ($projects -eq '*')) {
         Set-VersionInSettingsFile -settingsFilePath $repositorySettingsPath -settingName 'repoVersion' -newValue $versionNumber
     }
 
