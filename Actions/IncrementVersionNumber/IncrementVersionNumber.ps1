@@ -72,7 +72,9 @@ try {
                 $updateRepoVersionInRepoSettings = $true
             } else {
                 # If 'repoVersion' is neither found in project settings nor in repo settings, force create it in project settings
-                Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber -Force
+                # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
+                Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
+                Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
             }
 
             # Resolve project folders to get all app folders that contain an app.json file
@@ -99,6 +101,7 @@ try {
     }
 
     if ($updateRepoVersionInRepoSettings -or ($projects -eq '*')) {
+        # Update 'repoVersion' in repo settings if it's already there
         Set-VersionInSettingsFile -settingsFilePath $repositorySettingsPath -settingName 'repoVersion' -newValue $versionNumber
     }
 
