@@ -67,8 +67,8 @@ try {
                 Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
             } elseif ($repoVersionExistsInRepoSettings) {
                 # If 'repoVersion' is not found in project settings but it exists in repo settings, update it there instead
-                Write-Host "Setting 'repoVersion' not found in $projectSettingsPath. Updating it on repo level instead"
                 if (-not $repoVersionInRepoSettingsWasUpdated) {
+                    Write-Host "Setting 'repoVersion' not found in $projectSettingsPath. Updating it on repo level instead"
                     Set-VersionInSettingsFile -settingsFilePath $repositorySettingsPath -settingName 'repoVersion' -newValue $versionNumber
                     $repoVersionInRepoSettingsWasUpdated = $true
                 }
