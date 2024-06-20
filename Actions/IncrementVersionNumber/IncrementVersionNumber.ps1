@@ -57,11 +57,10 @@ try {
     if ($projectList.Count -gt 0) {
         $allAppFolders = @()
         $repoVersionExistsInRepoSettings = Test-SettingExists -settingsFilePath $repositorySettingsPath -settingName 'repoVersion'
-        $updateRepoVersionInRepoSettings = $false
+        $repoVersionInRepoSettingsWasUpdated = $false
         foreach($project in $projectList) {
             $projectPath = Join-Path $baseFolder $project
             $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
-            $settings = ReadSettings -baseFolder $baseFolder -project $project
 
             if (Test-SettingExists -settingsFilePath $projectSettingsPath -settingName 'repoVersion') {
                 # If 'repoVersion' exists in the project settings, update it there
@@ -69,10 +68,14 @@ try {
             } elseif ($repoVersionExistsInRepoSettings) {
                 # If 'repoVersion' is not found in project settings but it exists in repo settings, update it there instead
                 Write-Host "Setting 'repoVersion' not found in $projectSettingsPath. Updating it on repo level instead"
-                $updateRepoVersionInRepoSettings = $true
+                if (-not $repoVersionInRepoSettingsWasUpdated) {
+                    Set-VersionInSettingsFile -settingsFilePath $repositorySettingsPath -settingName 'repoVersion' -newValue $versionNumber
+                    $repoVersionInRepoSettingsWasUpdated = $true
+                }
             } else {
                 # If 'repoVersion' is neither found in project settings nor in repo settings, force create it in project settings
                 # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
+                $settings = ReadSettings -baseFolder $baseFolder -project $project
                 Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
                 Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
             }
@@ -98,11 +101,6 @@ try {
             # Set dependencies in app manifests
             Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
         }
-    }
-
-    if ($updateRepoVersionInRepoSettings -or ($projects -eq '*')) {
-        # Update 'repoVersion' in repo settings if it's already there
-        Set-VersionInSettingsFile -settingsFilePath $repositorySettingsPath -settingName 'repoVersion' -newValue $versionNumber
     }
 
     # Increment version number in PowerPlatform Solution
