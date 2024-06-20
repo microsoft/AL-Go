@@ -3,7 +3,6 @@ Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 
 Describe "AnalyzeTests Action Tests" {
     BeforeAll {
-
         function GetBcptTestResultFile {
             Param(
                 [int] $noOfSuites = 1,
