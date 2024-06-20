@@ -38,7 +38,7 @@ function GetTestResultSummaryMD {
                 $appTime = 0.0
                 $appFailed = 0
                 $appSkipped = 0
-                $suites = $testResults.testsuites.testsuite | where-Object { $_.Properties.property | Where-Object  $_.Name -eq 'appName' -and $_.Value -eq $appName } }
+                $suites = $testResults.testsuites.testsuite | where-Object { $_.Properties.property | Where-Object { $_.Name -eq 'appName' -and $_.Value -eq $appName } }
                 foreach($suite in $suites) {
                     $appTests += [int]$suite.tests
                     $appFailed += [int]$suite.failures
