@@ -638,6 +638,12 @@ function ReadSettings {
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "pullRequestTrigger"                            = "pull_request_target"
+        "bcptThresholds"                                = [ordered]@{
+            "DurationWarning"                           = 10
+            "DurationError"                             = 25
+            "NumberOfSqlStmtsWarning"                   = 5
+            "NumberOfSqlStmtsError"                     = 10
+        }
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
         "alDoc"                                         = [ordered]@{
