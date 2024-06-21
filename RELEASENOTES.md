@@ -14,6 +14,9 @@ In the summary after a Test Run, you now also have the result of performance tes
 > [!NOTE]
 > Duration thresholds are subject to varying results depending on the performance of the agent running the tests. Number of SQL statements executed by a test is often the most reliable indicator of performance degredation.
 
+### Issues
+- Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
+
 ## v5.2
 
 ### Issues
