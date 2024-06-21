@@ -1,12 +1,15 @@
 # Check for updates
+
 Check for updates to AL-Go system files and perform the update if requested
 
 ## INPUT
 
 ### ENV variables
+
 none
 
 ### Parameters
+
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
@@ -19,4 +22,5 @@ none
 | directCommit | | True if the action should create a direct commit against the branch or false to create a Pull Request | false |
 
 ## OUTPUT
+
 none

@@ -54,5 +54,6 @@ Here is a list of the telemetry signals for different workflows:
 | DO0103 | AL-Go workflow ran: PublishToAppSource |
 | DO0104 | AL-Go workflow ran: PullRequestHandler |
 
----
+______________________________________________________________________
+
 [back](../README.md)

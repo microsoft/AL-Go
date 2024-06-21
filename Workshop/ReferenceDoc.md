@@ -2,14 +2,14 @@
 
 A vital part of your development processes is reference documentation. AL-Go for GitHub supports the ALDoc tool for reference documentation generation, either continuously as part of CI/CD, manually or scheduled.
 
-> [!NOTE]
+> \[!NOTE\]
 > The [ALDoc tool](https://learn.microsoft.com/dynamics365/business-central/dev-itpro/help/help-aldoc-generate-help) generates content based on the source code. Generating content based on source code has many advantages such as accuracy, 100% reflection of the current codebase, less error-prone documentation, and it saves time. The ALDoc tool generates documentation from symbolic and syntactical information, code comments, and overall application structure based on input .app file(s). The tool also generates a help site with these reference articles, sorted by the application structure, based on the provided template.
 
 AL-Go for GitHub supports deploying the reference documentation to GitHub Pages. GitHub Pages is websites for you and your projects, hosted directly from your GitHub repository. It is also possible to deploy the reference documentation to other static HTML hosting providers, but this requires some scripting and is not included here.
 
 ## GitHub Pages
 
-> [!NOTE]
+> \[!NOTE\]
 > GitHub Pages is available in public repositories with GitHub Free and GitHub Free for organizations, and in public and private repositories with GitHub Pro, GitHub Team, GitHub Enterprise Cloud, and GitHub Enterprise Server. For more information, see [GitHub’s plans](https://docs.github.com/en/get-started/learning-about-github/githubs-plans).
 
 Navigate to your Common repository, go to **Settings** -> **Pages** and under **Build and deployment** select **GitHub Actions** as the source.
@@ -59,7 +59,7 @@ To allow daily generation of the reference documentation, modify the .github/AL-
   "DeployReferenceDocumentationSchedule": "0 4 * * *"
 ```
 
-> [!NOTE]
+> \[!NOTE\]
 > This will update the reference documentation every night at 4
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/5b3a1c0a-6696-483c-857a-590e39dfa860) |
@@ -75,7 +75,7 @@ If you want to setup continuous deployment of the reference documentation, you c
   }
 ```
 
-> [!NOTE]
+> \[!NOTE\]
 > There are other settings in the ALDoc settings structure, which controls the generation of the reference documentation. Inspect [https://aka.ms/algosettings#aldoc](https://aka.ms/algosettings#aldoc) to see them all.
 
 Adding this to the ALGOORGSETTINGS organizational variable causes all repositories to continuously deploy reference documentation:
@@ -92,5 +92,6 @@ Running CI/CD after enabling continuous deployment reveals the **Deploy Referenc
 
 Maybe it is about time to actually explain how you create a development environment and code your app?
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](DevelopmentEnvironments.md)
+______________________________________________________________________
+
+[Index](Index.md)  [next](DevelopmentEnvironments.md)

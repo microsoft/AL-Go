@@ -87,7 +87,7 @@ replacing **freddydkorg** with your organization name obviously.
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/0ae5d283-0494-4a3d-b6a0-661092b46e09) |
 |-|
 
-> [!NOTE]
+> \[!NOTE\]
 > Make sure you create a repository variable and not a repository secret
 
 This setting means that all projects in this repository will download the **latest build** from **freddydkorg/Common** and a subsequent build will succeed. Go to **Actions**, select the **CI/CD** workflow, click **Run workflow** and wait for the workflow to complete.
@@ -95,13 +95,13 @@ This setting means that all projects in this repository will download the **late
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/b10c3050-dd45-47a0-8c2b-fbeb517c94c2) |
 |-|
 
-> [!NOTE]
+> \[!NOTE\]
 > You can also define **appDependencyProbingPaths** in the settings file for individual projects (f.ex. **W1** project). This would also work when using **useProjectDependencies**.
 > When using **include** however the **DK** and **US** projects would **fail** as they would **include** the source code for the **W1** project, but not the settings (i.e. the appDependencyProbingPaths).
 
 ## Using GitHub Packages
 
-> [!NOTE]
+> \[!NOTE\]
 > If you already added appDependencyProbingPaths, then please remove these settings before continuing, making your build fail again.
 
 In order to use GitHub Packages for dependency resolution, we need to create an organizational secret called **GitHubPackagesContext**. The format of this secret needs to be **compressed JSON** containing two values: **serverUrl** and **token**. Example:
@@ -112,7 +112,7 @@ In order to use GitHub Packages for dependency resolution, we need to create an 
 
 Where **ghp_XXX** should be replaced by a **personal access token** with permissions to **write:packages** and **freddydkorg** should be replaced by your **organization name**.
 
-> [!NOTE]
+> \[!NOTE\]
 > Fine-grained personal access tokens doesn't support packages at this time, you need to use classic personal access tokens.
 
 To create a personal access token, navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new), give it a name and select write:packages.
@@ -120,7 +120,7 @@ To create a personal access token, navigate to [https://github.com/settings/toke
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/48f7a8c5-728b-499d-ab38-1a4726b52da8) |
 |-|
 
-> [!NOTE]
+> \[!NOTE\]
 > You can also use the BcContainerHelper function **New-ALGoNuGetContext** to create a correctly formed JSON structure.
 
 Go to your organization settings and create an **organizational secret** called **GitHubPackagesContext** with the your secret value.
@@ -162,5 +162,6 @@ and looking at packages for the organization, we will now see that there are 5 p
 
 Continuous Delivery is not only GitHub Packages. Let's have a look at continuous delivery...
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](ContinuousDelivery.md)
+______________________________________________________________________
+
+[Index](Index.md)  [next](ContinuousDelivery.md)

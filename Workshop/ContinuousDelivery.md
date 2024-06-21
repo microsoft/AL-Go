@@ -1,7 +1,9 @@
 # Continuous Delivery
+
 Continuous Delivery is where AL-Go delivers your apps to whereever you like.
 
 Currently, the following targets are supported:
+
 - GitHub Packages
 - Storage
 - AppSource
@@ -11,9 +13,10 @@ Currently, the following targets are supported:
 This workshop has already described how to setup continuous delivery for GitHub Packages [here](Dependencies2.md).
 
 ## Storage
+
 Setting up continuous delivery to a storage account is done in the same mechanism as we did with GitHub Packages.
 
-In order to setup **continuous delivery** to a **storage account**, you need to have an Azure Account and setup a storage account in the **Azure Portal**. You can create a **blob container** with the name of the the calculated container (based on containerName in the StorageContext) or you can add a setting called **DeliverToStorage** in your repository settings gile (.github/AL-Go-Settings.json) with a property called **CreateContainerIfNotExist** set to true for auto generation of the blob container. 
+In order to setup **continuous delivery** to a **storage account**, you need to have an Azure Account and setup a storage account in the **Azure Portal**. You can create a **blob container** with the name of the the calculated container (based on containerName in the StorageContext) or you can add a setting called **DeliverToStorage** in your repository settings gile (.github/AL-Go-Settings.json) with a property called **CreateContainerIfNotExist** set to true for auto generation of the blob container.
 
 ```json
   "DeliverToStorage": {
@@ -35,7 +38,7 @@ or
 
 ContainerName and BlobName can contain placeholders, like {project}, {version} and {type} which will be replaced by the real values when delivering.
 
-> [!NOTE]
+> \[!NOTE\]
 > You can use the **BcContainerHelper** function **New-ALGoStorageContext** to assist in the correct format of the secret.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/7287e068-b2d5-4fc2-b428-d0ddd4ffa0e3) |
@@ -62,15 +65,19 @@ Checking the storage account using Storage Explorer reveals the new container an
 |-|
 
 ## AppSource
+
 Continuous delivery to **AppSource** is supported by the AppSource template and will be included in the workshop later, but basically, creating a secret called **AppSourceContext** and setting a **AppSourceContinuousDelivery** to true in the repository settings file.
 
 ## NuGet
+
 Still work-in-progress. Delivery to NuGet is supposed to be delivery to a NuGet feed, where your partners can get access to your apps or runtime packages. This section will be updated when we release delivery to NuGet in it's final version.
 
 ## Custom delivery
+
 Custom delivery will be handled in an advanced part of this workshop later.
 
 OK, so **CD** stands for **Continuous Delivery**, I thought it was **Continuous Deployment**? Well, it is actually both, so let's talk about **Continuous Deployment**...
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](ContinuousDeployment.md)
+______________________________________________________________________
+
+[Index](Index.md)  [next](ContinuousDeployment.md)

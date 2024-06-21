@@ -32,7 +32,7 @@ on:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip). Leave empty to use latest (or preview for preview branches)'
         required: false
         default: 'latest'
-        
+
 permissions:
   contents: read
   actions: read

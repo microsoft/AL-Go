@@ -52,7 +52,7 @@ runs:
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
-        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
+        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         environmentName: ${{ inputs.environmentName }}
 
     - name: Determine Power Platform solution location
@@ -69,7 +69,7 @@ runs:
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
           exit 1
         }
-  
+
     - name: Unpack solution artifact
       if: env.powerPlatformSolutionFilePath != ''
       uses: microsoft/powerplatform-actions/unpack-solution@v1

@@ -34,7 +34,7 @@ jobs:
         with:
           shell: powershell
           eventId: "DO0097"
-        
+
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
@@ -49,22 +49,22 @@ jobs:
           shell: powershell
           getEnvironments: 'github-pages'
           type: 'Publish'
-            
+
       - name: Setup Pages
         if: steps.DetermineDeploymentEnvironments.outputs.deployALDocArtifact == 1
         uses: actions/configure-pages@v5
-        
+
       - name: Build Reference Documentation
         uses: microsoft/AL-Go-Actions/BuildReferenceDocumentation@main
         with:
           shell: powershell
           artifacts: 'latest'
-        
+
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ".aldoc/_site/"
-        
+
       - name: Deploy to GitHub Pages
         if: steps.DetermineDeploymentEnvironments.outputs.deployALDocArtifact == 1
         id: deployment
