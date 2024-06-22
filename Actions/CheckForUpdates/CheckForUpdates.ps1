@@ -224,7 +224,6 @@ else {
         # Calculate the release notes, while updating
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
-            Write-Host "<<<<<<<< $($_.SrcFile)"
             Write-Host ">>>>>>>> $($_.DstFile)"
             # Create the destination folder if it doesn't exist
             $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
