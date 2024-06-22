@@ -2377,6 +2377,7 @@ function InstallAzModuleIfNeeded {
         # Already installed
         return
     }
+    # GitHub hosted Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
     if ($isWindows) {
         # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
         # Remove AzureRm modules from PSModulePath and add AZ modules
@@ -2387,9 +2388,6 @@ function InstallAzModuleIfNeeded {
               $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
             }
         }
-    }
-    else {
-        # Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
     }
     $azModule = Get-Module -name $moduleName -ListAvailable | Select-Object -First 1
     if ($azModule) {
