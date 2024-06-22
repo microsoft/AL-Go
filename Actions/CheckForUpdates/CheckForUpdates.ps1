@@ -224,29 +224,19 @@ else {
         # Calculate the release notes, while updating
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
+            Write-Host "<<<<<<<< $($_.SrcFile)"
+            Write-Host ">>>>>>>> $($_.DstFile)"
             # Create the destination folder if it doesn't exist
             $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
             if (-not (Test-Path -path $path -PathType Container)) {
                 New-Item -Path $path -ItemType Directory | Out-Null
             }
             if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
-                while ($oldReleaseNotes) {
-                    $releaseNotes = $_.Content
-                    if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
-                        $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
-                        $oldReleaseNotes = ""
-                    }
-                    else {
-                        $idx = $oldReleaseNotes.IndexOf("`n## ")
-                        if ($idx -gt 0) {
-                            $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
-                        }
-                        else {
-                            $oldReleaseNotes = ""
-                        }
-                    }
-                }
+                $oldReleaseNotes = Get-ContentLF -path $file
+                $releaseNotes = $_.Content
+                $version = $oldReleaseNotes.Split("`n") | Where-Object { $_ -like '## v*.*' } | Select-Object -First 1
+                $index = $releaseNotes.IndexOf("`n$version`n")
+                if ($index -ge 0) { $releaseNotes = $releaseNotes.Substring(0,$index) }
             }
             Write-Host "Update $($_.DstFile)"
             $_.Content | Set-ContentLF -Path $_.DstFile
