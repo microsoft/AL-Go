@@ -231,7 +231,7 @@ else {
                 New-Item -Path $path -ItemType Directory | Out-Null
             }
             if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                $oldReleaseNotes = Get-ContentLF -path $file
+                $oldReleaseNotes = Get-ContentLF -path $_.DstFile
                 $releaseNotes = $_.Content
                 $version = $oldReleaseNotes.Split("`n") | Where-Object { $_ -like '## v*.*' } | Select-Object -First 1
                 $index = $releaseNotes.IndexOf("`n$version`n")
