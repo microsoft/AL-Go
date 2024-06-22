@@ -101,7 +101,7 @@ $checkfiles = @(
 )
 if ($isDirectALGo) {
     $checkfiles += @(
-        @{ 'dstPath' = '.github'; 'srcPath' = ''; 'pattern' = 'releasenotes.md'; 'type' = 'releasenotes' }
+        @{ 'dstPath' = '.github'; 'srcPath' = '.'; 'pattern' = 'RELEASENOTES.md'; 'type' = 'releasenotes' }
     )
 }
 else {
