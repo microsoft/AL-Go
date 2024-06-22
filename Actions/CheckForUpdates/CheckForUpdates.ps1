@@ -96,12 +96,11 @@ if (-not $isDirectALGo) {
 # - All files in .github that ends with .copy.md
 # - All PowerShell scripts in .AL-Go folders (all projects)
 $checkfiles = @(
-    @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
-    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' }
 )
 if ($isDirectALGo) {
     $checkfiles += @(
-        @{ 'dstPath' = '.github'; 'srcPath' = '.'; 'pattern' = 'RELEASENOTES.md'; 'type' = 'releasenotes' }
+        @{ 'dstPath' = '.github'; 'srcPath' = '../..'; 'pattern' = 'RELEASENOTES.md'; 'type' = 'releasenotes' }
     )
 }
 else {
