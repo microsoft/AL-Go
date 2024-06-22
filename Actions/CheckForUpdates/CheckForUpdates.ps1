@@ -97,7 +97,7 @@ if (-not $isDirectALGo) {
 # - All PowerShell scripts in .AL-Go folders (all projects)
 $checkfiles = @(
     @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
-    @{ 'dstPath' = '.github'; 'srcPath' = '.AL-Go'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
 )
 
 # Get the list of projects in the current repository
