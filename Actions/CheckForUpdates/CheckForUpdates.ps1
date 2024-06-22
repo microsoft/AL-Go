@@ -99,6 +99,16 @@ $checkfiles = @(
     @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
     @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
 )
+if ($isDirectALGo) {
+    $checkfiles += @(
+        @{ 'dstPath' = '.github'; 'srcPath' = ''; 'pattern' = 'releasenotes.md'; 'type' = 'releasenotes' }
+    )
+}
+else {
+    $checkfiles += @(
+        @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    )
+}
 
 # Get the list of projects in the current repository
 $baseFolder = $ENV:GITHUB_WORKSPACE
@@ -144,6 +154,9 @@ foreach($checkfile in $checkfiles) {
                 $fileName = $_.Name
                 Write-Host "- $filename"
                 $dstFile = Join-Path $dstFolder $fileName
+                if ($fileName -eq "releasenotes.md" -and $type -eq "releasenotes") {
+                    $dstFile = Join-Path $dstFolder 'RELEASENOTES.copy.md'
+                }
                 $srcFile = $_.FullName
                 Write-Host "SrcFolder: $srcFolder"
                 if ($type -eq "workflow") {
