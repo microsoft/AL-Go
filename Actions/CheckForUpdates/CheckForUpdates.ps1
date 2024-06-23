@@ -238,7 +238,7 @@ else {
                 # The first line with ## vX.Y, this is the latest shipped version already installed
                 $version = $oldReleaseNotes.Split("`n") | Where-Object { $_ -like '## v*.*' } | Select-Object -First 1
                 if ($version) {
-                    # Grab all release notes up to the version already installed
+                    # Only use the release notes up to the version already installed
                     $index = $releaseNotes.IndexOf("`n$version`n")
                     if ($index -ge 0) {
                         $releaseNotes = $releaseNotes.Substring(0,$index)
