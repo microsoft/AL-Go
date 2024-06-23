@@ -233,9 +233,15 @@ else {
             if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
                 $oldReleaseNotes = Get-ContentLF -path $_.DstFile
                 $releaseNotes = $_.Content
+                # Get the first line in the release notes with ## vX.Y, this is the latest shipped version already installed
                 $version = $oldReleaseNotes.Split("`n") | Where-Object { $_ -like '## v*.*' } | Select-Object -First 1
-                $index = $releaseNotes.IndexOf("`n$version`n")
-                if ($index -ge 0) { $releaseNotes = $releaseNotes.Substring(0,$index) }
+                if ($version) {
+                    # Grab all release notes up to the version already installed
+                    $index = $releaseNotes.IndexOf("`n$version`n")
+                    if ($index -ge 0) {
+                        $releaseNotes = $releaseNotes.Substring(0,$index)
+                    }
+                }
             }
             Write-Host "Update $($_.DstFile)"
             $_.Content | Set-ContentLF -Path $_.DstFile
