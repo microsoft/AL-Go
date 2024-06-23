@@ -87,7 +87,7 @@ function GetKeyVaultCredentials {
     $jsonStr = GetAzureCredentials
     if ($jsonStr) {
         if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
-            throw "Secret $(GetAzureCredentialsSecretName) cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
+            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
         }
         try {
             $creds = $jsonStr | ConvertFrom-Json
@@ -100,7 +100,7 @@ function GetKeyVaultCredentials {
             $creds.TenantId | Out-Null
         }
         catch {
-            throw "Secret $(GetAzureCredentialsSecretName) is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
+            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
         }
         $keyVaultNameExists = $creds.PSObject.Properties.Name -eq 'keyVaultName'
         $settings = $env:Settings | ConvertFrom-Json
