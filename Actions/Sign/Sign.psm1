@@ -11,7 +11,7 @@ function Install-SigningTool() {
     $tempFolder = Join-Path -Path ([System.IO.Path]::GetTempPath()) "SigningTool-$(Get-Random)"
 
     # Get version of the signing tool
-    $version = Get-PackageVersion -PackageName "sign"
+    $version = GetPackageVersion -PackageName "sign"
 
     # Install the signing tool in the temp folder
     Write-Host "Installing signing tool version $version in $tempFolder"

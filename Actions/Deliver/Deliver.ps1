@@ -47,7 +47,7 @@ function ConnectAzStorageAccount {
     }
     elseif (($storageAccountCredentials.PSObject.Properties.Name -eq 'clientID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'tenantID')) {
         try {
-            InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
+            InstallAzModuleIfNeeded -name 'Az.Accounts'
             ConnectAz -azureCredentials $storageAccountCredentials
             Write-Host "Creating AzStorageContext based on StorageAccountName and managed identity/app registration"
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -UseConnectedAccount
@@ -349,7 +349,7 @@ try {
             Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
         }
         elseif ($deliveryTarget -eq "Storage") {
-            InstallAzModuleIfNeeded -moduleName 'Az.Storage'
+            InstallAzModuleIfNeeded -name 'Az.Storage'
             try {
                 $storageAccountCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json
                 $storageAccountCredentials.StorageAccountName | Out-Null
@@ -435,7 +435,7 @@ try {
             # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
             if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
                 # AppSource submission requires the Az.Storage module
-                InstallAzModuleIfNeeded -moduleName 'Az.Storage'
+                InstallAzModuleIfNeeded -name 'Az.Storage'
                 $appSourceContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext)) | ConvertFrom-Json | ConvertTo-HashTable
                 if (!$appSourceContext) {
                     throw "appSourceContext secret is missing"

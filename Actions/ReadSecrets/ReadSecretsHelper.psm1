@@ -125,7 +125,7 @@ function GetKeyVaultSecret {
     }
 
     if (-not $script:keyvaultConnectionExists) {
-        InstallAzModuleIfNeeded -moduleName 'Az.KeyVault'
+        InstallAzModuleIfNeeded -name 'Az.KeyVault'
         $message = ''
         try {
             ConnectAz -azureCredentials $keyVaultCredentials

@@ -1269,21 +1269,31 @@ function GetProjectFolders {
     $projectFolders
 }
 
-function installModules {
+function installModule {
     Param(
-        [String[]] $modules
+        [String] $name,
+        [System.Version] $minimumVersion = $null
     )
 
-    $modules | ForEach-Object {
-        if (-not (get-installedmodule -Name $_ -ErrorAction SilentlyContinue)) {
-            Write-Host "Installing module $_"
-            Install-Module $_ -Force | Out-Null
+    if ($null -eq $minimumVersion) {
+        $minimumVersion = [System.Version](GetPackageVersion -packageName $name)
+    }
+    $module = Get-Module -name $name -ListAvailable | Select-Object -First 1
+    if ($module -and $module.Version -ge $minimumVersion) {
+        Write-Host "Module $name is available in version $($module.Version)"
+    }
+    else {
+        $module = Get-InstalledModule -Name $name -MinimumVersion "$minimumVersion" -ErrorAction SilentlyContinue
+        if ($module) {
+            Write-Host "$name version $($module.Version) is installed"
+        }
+        else {
+            Write-Host "Installing module $name (minimum version $minimumVersion)"
+            Install-Module -Name $name -MinimumVersion "$minimumVersion" -Force | Out-Null
         }
     }
-    $modules | ForEach-Object {
-        Write-Host "Importing module $_"
-        Import-Module $_ -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-    }
+    Write-Host "Importing module $name (minimum version $minimumVersion)"
+    Import-Module -Name $name -MinimumVersion $minimumVersion -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
 function CloneIntoNewFolder {
@@ -1663,7 +1673,7 @@ function CreateDevEnv {
 
             if (($settings.keyVaultName) -and -not ($bcAuthContext)) {
                 Write-Host "Reading Key Vault $($settings.keyVaultName)"
-                installModules -modules @('Az.KeyVault')
+                InstallAzModuleIfNeeded -name 'Az.KeyVault'
 
                 if ($kind -eq "local") {
                     $LicenseFileSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.licenseFileUrlSecretName
@@ -2356,12 +2366,12 @@ function GetProjectsFromRepository {
     return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
 }
 
-function Get-PackageVersion($PackageName) {
+function GetPackageVersion($packageName) {
     $alGoPackages = Get-Content -Path "$PSScriptRoot\Packages.json" | ConvertFrom-Json
 
     # Check if the package is in the list of packages
-    if ($alGoPackages.PSobject.Properties.name -match $PackageName) {
-        return $alGoPackages.$PackageName
+    if ($alGoPackages.PSobject.Properties.name -eq $PackageName) {
+        return $alGoPackages."$PackageName"
     }
     else {
         throw "Package $PackageName is not in the list of packages"
@@ -2370,15 +2380,21 @@ function Get-PackageVersion($PackageName) {
 
 function InstallAzModuleIfNeeded {
     Param(
-        [string] $moduleName
+        [string] $name,
+        [System.version] $minimumVersion = $null
     )
 
-    if (Get-Module -Name $moduleName) {
+    if ($null -eq $minimumVersion) {
+        $minimumVersion = [System.Version](GetPackageVersion -packageName $name)
+    }
+    $azModule = Get-Module -Name $name
+    if ($azModule -and $azModule.Version -ge $minimumVersion) {
         # Already installed
         return
     }
     # GitHub hosted Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
     if ($isWindows) {
+        # GitHub hosted Windows Runners have AzureRm PowerShell modules installed (deprecated)
         # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
         # Remove AzureRm modules from PSModulePath and add AZ modules
         if (Test-Path 'C:\Modules\az_*') {
@@ -2389,22 +2405,7 @@ function InstallAzModuleIfNeeded {
             }
         }
     }
-    $azModule = Get-Module -name $moduleName -ListAvailable | Select-Object -First 1
-    if ($azModule) {
-        Write-Host "$moduleName Module is available in version $($azModule.Version)"
-        Write-Host "Using $moduleName version $($azModule.Version)"
-    }
-    else {
-        $AzModule = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue
-        if ($AzModule) {
-            Write-Host "$moduleName version $($AzModule.Version) is installed"
-        }
-        else {
-            Write-Host "Installing and importing $moduleName"
-            Install-Module $moduleName -Force
-        }
-    }
-    Import-Module $moduleName -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+    InstallModule -name $name -minimumVersion $minimumVersion
 }
 
 function ConnectAz {

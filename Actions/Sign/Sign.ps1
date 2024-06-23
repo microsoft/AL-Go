@@ -55,7 +55,7 @@ try {
             "ClientSecret" = $AzureCredentials.clientSecret
         }
     }
-    InstallAzModuleIfNeeded -moduleName 'Az.Accounts'
+    InstallAzModuleIfNeeded -name 'Az.Accounts'
     ConnectAz -azureCredentials $AzureCredentialParams
 
     $description = "Signed with AL-Go for GitHub"
