@@ -74,7 +74,7 @@ Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
-$templateRepo = $templateUrl.Split('/')[4]
+$templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
@@ -252,7 +252,7 @@ else {
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
 
-        $releaseNotes = "# $templateOwner/$templateRepo@$templateBranch`n`n$releaseNotes"
+        $releaseNotes = "## $templateInfo`n`n$releaseNotes"
 
         if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes)) {
             OutputWarning "No updates available for AL-Go for GitHub."
