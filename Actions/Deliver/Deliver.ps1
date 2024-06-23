@@ -26,14 +26,13 @@ function ConnectAzStorageAccount {
     )
 
     $azStorageContext = $null
-    $message = ''
     if ($storageAccountCredentials.PSObject.Properties.Name -eq 'sastoken') {
         try {
             Write-Host "Creating AzStorageContext based on StorageAccountName and sastoken"
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -SasToken $storageAccountCredentials.sastoken
         }
         catch {
-            $message = "Unable to create AzStorageContext based on StorageAccountName and sastoken. Error was: $($_.Exception.Message)"
+            throw "Unable to create AzStorageContext based on StorageAccountName and sastoken. Error was: $($_.Exception.Message)"
         }
     }
     elseif ($storageAccountCredentials.PSObject.Properties.Name -eq 'StorageAccountKey') {
@@ -42,7 +41,7 @@ function ConnectAzStorageAccount {
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -StorageAccountKey $storageAccountCredentials.StorageAccountKey
         }
         catch {
-            $message = "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey. Error was: $($_.Exception.Message)"
+            throw "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey. Error was: $($_.Exception.Message)"
         }
     }
     elseif (($storageAccountCredentials.PSObject.Properties.Name -eq 'clientID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'tenantID')) {
@@ -53,26 +52,11 @@ function ConnectAzStorageAccount {
             $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -UseConnectedAccount
         }
         catch {
-            $message = "Unable to create AzStorageContext based on StorageAccountName and managed identity. Error was: $($_.Exception.Message)"
+            throw "Unable to create AzStorageContext based on StorageAccountName and managed identity. Error was: $($_.Exception.Message)"
         }
     }
     else {
-        $message = "Insufficient information in StorageContext secret. See https://aka.ms/algosettings#storagecontext for details"
-    }
-    if ($message) {
-        switch($storageAccountCredentials.ErrorAction) {
-            'Error' {
-                throw $message
-            }
-            'None' {
-                Write-Host $message
-                $azStorageContext = $null
-            }
-            default {
-                Write-Host "::WARNING::$message"
-                $azStorageContext = $null
-             }
-        }
+        throw "Insufficient information in StorageContext secret. See https://aka.ms/algosettings#storagecontext for details"
     }
     return $azStorageContext
 }
