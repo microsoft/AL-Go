@@ -74,6 +74,7 @@ Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
+$templateRepo = $templateUrl.Split('/')[4]
 
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
@@ -96,18 +97,9 @@ if (-not $isDirectALGo) {
 # - All files in .github that ends with .copy.md
 # - All PowerShell scripts in .AL-Go folders (all projects)
 $checkfiles = @(
-    @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' }
+    @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
+    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
 )
-if ($isDirectALGo) {
-    $checkfiles += @(
-        @{ 'dstPath' = '.github'; 'srcPath' = '../..'; 'pattern' = 'RELEASENOTES.md'; 'type' = 'releasenotes' }
-    )
-}
-else {
-    $checkfiles += @(
-        @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
-    )
-}
 
 # Get the list of projects in the current repository
 $baseFolder = $ENV:GITHUB_WORKSPACE
@@ -153,9 +145,6 @@ foreach($checkfile in $checkfiles) {
                 $fileName = $_.Name
                 Write-Host "- $filename"
                 $dstFile = Join-Path $dstFolder $fileName
-                if ($fileName -eq "releasenotes.md" -and $type -eq "releasenotes") {
-                    $dstFile = Join-Path $dstFolder 'RELEASENOTES.copy.md'
-                }
                 $srcFile = $_.FullName
                 Write-Host "SrcFolder: $srcFolder"
                 if ($type -eq "workflow") {
@@ -262,6 +251,8 @@ else {
 
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
+
+        $releaseNotes = "# $templateOwner/$templateRepo@$templateBranch`n`n$releaseNotes"
 
         if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes)) {
             OutputWarning "No updates available for AL-Go for GitHub."
