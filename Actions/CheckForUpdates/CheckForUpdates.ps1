@@ -206,7 +206,7 @@ else {
     # $update set, update the files
     try {
         # If a pull request already exists with the same REF, then exit
-        $commitMessage = "[$updateBranch] Update AL-Go System Files - $templateSha"
+        $commitMessage = "[$updateBranch] Update AL-Go System Files from $templateInfo -  $templateSha"
         $env:GH_TOKEN = $token
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
@@ -225,7 +225,6 @@ else {
         # Calculate the release notes, while updating
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
-            Write-Host ">>>>>>>> $($_.DstFile)"
             # Create the destination folder if it doesn't exist
             $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
             if (-not (Test-Path -path $path -PathType Container)) {
