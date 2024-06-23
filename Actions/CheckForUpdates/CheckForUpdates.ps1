@@ -231,9 +231,11 @@ else {
                 New-Item -Path $path -ItemType Directory | Out-Null
             }
             if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
-                $oldReleaseNotes = Get-ContentLF -path $_.DstFile
+                # Read the release notes of the version currently installed
+                $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
+                # Get the release notes of the new version (for the PR body)
                 $releaseNotes = $_.Content
-                # Get the first line in the release notes with ## vX.Y, this is the latest shipped version already installed
+                # The first line with ## vX.Y, this is the latest shipped version already installed
                 $version = $oldReleaseNotes.Split("`n") | Where-Object { $_ -like '## v*.*' } | Select-Object -First 1
                 if ($version) {
                     # Grab all release notes up to the version already installed
