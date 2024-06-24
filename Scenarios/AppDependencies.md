@@ -26,5 +26,6 @@ The `appDependencyProbingPaths` key in the settings expects a json array with th
 
 **projects** specifies the project in a multi project repository. “\*” means all projects.
 
----
+______________________________________________________________________
+
 [back](../README.md)
