@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
+
 ### Support managed identities and federated credentials
 
 All authentication context secrets now supports managed identities and federated credentials. See more [here](Scenarios/secrets.md). Furthermore, you can now use https://aka.ms/algosecrets#authcontext to learn more about the formatting of that secret.
