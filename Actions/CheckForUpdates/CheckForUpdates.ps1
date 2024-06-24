@@ -87,6 +87,7 @@ Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
+$templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 
 $indirectTemplateRepoSettings = @{}
 $indirectTemplateProjectSettings = @{}
@@ -138,7 +139,7 @@ if (-not $isDirectALGo) {
 # - All PowerShell scripts in .AL-Go folders (all projects)
 $checkfiles = @(
     @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
-    @{ 'dstPath' = '.github'; 'srcPath' = '.AL-Go'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
 )
 
 # Get the list of projects in the current repository
@@ -278,7 +279,7 @@ else {
     # $update set, update the files
     try {
         # If a pull request already exists with the same REF, then exit
-        $commitMessage = "[$updateBranch] Update AL-Go System Files - $templateSha"
+        $commitMessage = "[$updateBranch] Update AL-Go System Files from $templateInfo -  $templateSha"
         $env:GH_TOKEN = $token
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
@@ -303,21 +304,17 @@ else {
                 New-Item -Path $path -ItemType Directory | Out-Null
             }
             if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
+                # Read the release notes of the version currently installed
                 $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
-                while ($oldReleaseNotes) {
-                    $releaseNotes = $_.Content
-                    if ($releaseNotes.indexOf($oldReleaseNotes) -gt 0) {
-                        $releaseNotes = $releaseNotes.SubString(0, $releaseNotes.indexOf($oldReleaseNotes))
-                        $oldReleaseNotes = ""
-                    }
-                    else {
-                        $idx = $oldReleaseNotes.IndexOf("`n## ")
-                        if ($idx -gt 0) {
-                            $oldReleaseNotes = $oldReleaseNotes.Substring($idx)
-                        }
-                        else {
-                            $oldReleaseNotes = ""
-                        }
+                # Get the release notes of the new version (for the PR body)
+                $releaseNotes = $_.Content
+                # The first line with ## vX.Y, this is the latest shipped version already installed
+                $version = $oldReleaseNotes.Split("`n") | Where-Object { $_ -like '## v*.*' } | Select-Object -First 1
+                if ($version) {
+                    # Only use the release notes up to the version already installed
+                    $index = $releaseNotes.IndexOf("`n$version`n")
+                    if ($index -ge 0) {
+                        $releaseNotes = $releaseNotes.Substring(0,$index)
                     }
                 }
             }
@@ -335,7 +332,7 @@ else {
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
 
-        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch)) {
+        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes)) {
             OutputWarning "No updates available for AL-Go for GitHub."
         }
     }

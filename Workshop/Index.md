@@ -1,4 +1,5 @@
 # AL-Go for GitHub Workshop
+
 This workshop shows you how to take advantage of the functionality, which is provided out-of-the-box by AL-Go for GitHub.
 
 1. [Introduction](Introduction.md) - Introduction to GitHub, AL-Go for GitHub, personal and organizational accounts.
@@ -30,6 +31,7 @@ This workshop shows you how to take advantage of the functionality, which is pro
 1. [Using Indirect Templates](IndirectTemplates.md) - *FUTURE TOPIC: Using indirect templates to ensure that all repositories are using the same customizations*
 
 ## Additional Future topics
+
 1. Dependencies to other apps
 1. AppSource validation
 1. Publish to AppSource
@@ -38,4 +40,3 @@ This workshop shows you how to take advantage of the functionality, which is pro
 1. Power Platform solution
 1. Self Hosted Runners
 1. Make it your own
-
