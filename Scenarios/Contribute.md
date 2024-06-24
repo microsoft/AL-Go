@@ -40,6 +40,10 @@ Please ensure that all unit tests run and create a Pull Request against [https:/
 > \[!NOTE\]
 > You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your personal fork of the AL-Go repository** you publish to the 3 repositories.
 
+## Pre-Commit
+
+In the AL-Go repository we use a number of precommit hooks to help us identify issues in the code. We run the precommit hooks locally but also as a PR check. In order to ensure this check passes please install pre-commit in your local AL-Go repository. Pre-Commit can be installed by following the instructions on https://pre-commit.com/#quick-start. Once the precommint hooks are installed you can run `pre-commit run --all-files` to verify your changes.
+
 ## Unit tests
 
 The Tests folder, in the AL-Go repository, contains a number of unit-tests. Open Tests/runtests.ps1 in VS Code and select Run. Unit tests are quick and will run on every PR and every Push. We will be adding a lot of unit tests going forward.
