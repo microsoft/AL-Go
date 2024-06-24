@@ -16,7 +16,7 @@ Secrets in GitHub can be defined on the Organizational level, on the repository 
 
 See also [https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#about-secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#about-secrets).
 
-> [!NOTE]
+> \[!NOTE\]
 > In AL-Go for GitHub you can also define your secrets in an Azure KeyVault, but you would still need to create one secret in GitHub called [Azure_Credentials](https://aka.ms/algosecrets#azure_credentials) to be able to access the Azure KeyVault.
 
 ## Important information about secrets (e.g. common mistakes...)
@@ -25,7 +25,7 @@ Please read the following topics carefully and make sure that you do not run int
 
 ### Don't have secrets that are not secret
 
-All secrets exposed to a repository will be masked (i.e. replaced with ***) in the workflow logs of that repository, ensuring that secret values are not exposed to the public. In GitHub, secrets are also not allowed to be transferred between jobs. If a variable transferred between two jobs contains a secret, you will see warnings like this in the output:
+All secrets exposed to a repository will be masked (i.e. replaced with \*\*\*) in the workflow logs of that repository, ensuring that secret values are not exposed to the public. In GitHub, secrets are also not allowed to be transferred between jobs. If a variable transferred between two jobs contains a secret, you will see warnings like this in the output:
 
 ![image](https://github.com/microsoft/AL-Go/assets/10775043/b280360b-d3e8-47b9-8993-39b0de76d44a)
 
@@ -35,7 +35,7 @@ So, don't have secrets that are not secrets as this might break core functionali
 
 ### Use compressed json
 
-AL-Go for GitHub uses json structures for some secrets (like authentication contexts). AL-Go for GitHub will ensure that individual secret property values are masked in the log as well as the full json structure. When creating a json structure secret, it is important to use compressed json as GitHub will mask individual lines as well. This means that a non-compressed json structure will cause the curly bracket characters to be handled as secrets, breaking AL-Go for GitHub. In the logs you will see that the curly brackets are replaced with ***
+AL-Go for GitHub uses json structures for some secrets (like authentication contexts). AL-Go for GitHub will ensure that individual secret property values are masked in the log as well as the full json structure. When creating a json structure secret, it is important to use compressed json as GitHub will mask individual lines as well. This means that a non-compressed json structure will cause the curly bracket characters to be handled as secrets, breaking AL-Go for GitHub. In the logs you will see that the curly brackets are replaced with \*\*\*
 
 ![image](https://github.com/microsoft/AL-Go/assets/10775043/58bbc120-f36d-499d-8e6c-8cc87f55d918)
 
@@ -59,7 +59,7 @@ If your GitHub organization might have many organizational secrets, please only 
 
 By creating a secret called Azure_Credentials you can give your GitHub repository access to an Azure KeyVault, from which you can read secrets and use for managed signing of your apps. You can use a managed identity or an app registration (service to service) for authentication.
 
-> [!NOTE]
+> \[!NOTE\]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
 
 A KeyVault can be setup for two different security models: Role Based Access Control (RBAC = recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the KeyVault, the following roles/permissions needs to be assigned to the app registration or Managed Identity on which the authentication is performed:
