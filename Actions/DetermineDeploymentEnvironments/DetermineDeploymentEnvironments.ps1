@@ -105,6 +105,7 @@ if (!($environments)) {
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
                 "SyncMode" = $null
+                "Scope" = $null
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
                 "shell" = $settings."shell"
@@ -143,6 +144,7 @@ else {
             "BranchesFromPolicy" = @()
             "Projects" = '*'
             "SyncMode" = $null
+            "Scope" = $null
             "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
             "shell" = $settings."shell"
@@ -159,9 +161,18 @@ else {
             $keys = @($deploymentSettings.Keys)
             foreach($key in $keys) {
                 if ($deployTo.ContainsKey($key)) {
+                    if ($deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
+                        Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                    }
                     Write-Host "Property $key = $($deployTo."$key")"
                     $deploymentSettings."$key" = $deployTo."$key"
                 }
+                else {
+                    $deploymentSettings += @{
+                        "$key" = $deployTo."$key"
+                    }
+                }
+
             }
             if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
                 throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
