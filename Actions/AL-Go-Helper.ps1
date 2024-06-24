@@ -1269,7 +1269,7 @@ function GetProjectFolders {
     $projectFolders
 }
 
-function installModule {
+function InstallModule {
     Param(
         [String] $name,
         [System.Version] $minimumVersion = $null
