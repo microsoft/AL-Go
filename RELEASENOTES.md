@@ -1,6 +1,10 @@
 ### Issues
 
 - Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
+- Issue 980 Allow Scope to be PTE in continuousDeployment for PTE extensions in Sandbox (enhancement request)
+- Issue 1079 AppSource App deployment failes with PerTenantExtensionCop Error PTE0001 and PTE0002
+- Issue 866 Accessing GitHub Environment Variables in DeployToCustom Scenarios for PowerShell Scripts
+- Issue 1083 SyncMode for custom deployments?
 
 ### Business Central Performance Toolkit Test Result Viewer
 
