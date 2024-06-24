@@ -337,9 +337,6 @@ try {
             try {
                 $storageAccountCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json
                 $storageAccountCredentials.StorageAccountName | Out-Null
-                if (!($storageAccountCredentials.PSObject.Properties.Name -eq 'ErrorAction')) {
-                    $storageAccountCredentials | Add-Member -MemberType NoteProperty -Name 'ErrorAction' -Value 'Warning'
-                }
                 $storageContainerName =  $storageAccountCredentials.ContainerName.ToLowerInvariant().replace('{project}',$projectName).replace('{branch}',$refname).ToLowerInvariant()
                 $storageBlobName = $storageAccountCredentials.BlobName.ToLowerInvariant()
             }
