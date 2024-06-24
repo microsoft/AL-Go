@@ -1,9 +1,11 @@
 # AL-Go Actions
+
 This repository contains a set of GitHub actions used by the AL-Go for GitHub templates.
 
 Please go to https://aka.ms/AL-Go to learn more.
 
 ## Actions
+
 | Name | Description |
 | :-- | :-- |
 | [Add existing app](AddExistingApp) | Add an existing app to an AL-Go for GitHub repository |
