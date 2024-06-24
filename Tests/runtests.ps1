@@ -12,4 +12,3 @@ catch {
   Write-Host "::Error::Error when running tests. The Error was $($_.Exception.Message)"
   $host.SetShouldExit(1)
 }
-

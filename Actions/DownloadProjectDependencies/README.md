@@ -1,4 +1,5 @@
 # Download project dependencies
+
 Downloads artifacts from AL-Go projects, that are dependencies of a given AL-Go project
 
 The action constructs arrays of paths to .app files, that are dependencies of the apps in an AL-Go project
@@ -6,12 +7,14 @@ The action constructs arrays of paths to .app files, that are dependencies of th
 ## INPUT
 
 ### ENV variables
+
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
 | Secrets | env.Secrets must be read by a prior call to the ReadSecrets Action with appDependencyProbingPathsSecrets in getSecrets |
 
 ### Parameters
+
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
@@ -23,6 +26,7 @@ The action constructs arrays of paths to .app files, that are dependencies of th
 ## OUTPUT
 
 ### ENV variables
+
 | Name | Description |
 | :-- | :-- |
 | appFolders | A JSON-formatted array of appFolders |
@@ -30,6 +34,7 @@ The action constructs arrays of paths to .app files, that are dependencies of th
 | bcptTestFolders | A JSON-formatted array of bcptTestFolders |
 
 ### OUTPUT variables
+
 | Name | Description |
 | :-- | :-- |
 | DownloadedApps | A JSON-formatted list of paths to .app files, that dependencies of the apps |

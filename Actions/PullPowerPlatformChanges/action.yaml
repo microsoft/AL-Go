@@ -64,7 +64,7 @@ runs:
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
-        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
+        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         environmentName: ${{ inputs.environmentName }}
 
     - name: Set up new branch for changes
