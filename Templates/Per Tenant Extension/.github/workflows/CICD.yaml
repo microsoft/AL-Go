@@ -182,7 +182,7 @@ jobs:
   DeployALDoc:
     needs: [ Initialization, Build ]
     if: (!cancelled()) && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     name: Deploy Reference Documentation
     permissions:
       contents: read

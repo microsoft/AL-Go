@@ -2,6 +2,6 @@
 
 This topic will be finalized later
 
+______________________________________________________________________
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](Index.md)
+[Index](Index.md)  [next](Index.md)
