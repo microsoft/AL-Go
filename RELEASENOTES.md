@@ -11,6 +11,7 @@ In the summary after a Test Run, you now also have the result of performance tes
 - `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
 
 - `bcptThresholds` is a JSON object with properties for the default thresholds for the Business Central Performance Toolkit
+
   - **DurationWarning** - a warning is issued if the duration of a bcpt test degrades more than this percentage (default 10)
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
   - **NumberOfSqlStmtsWarning** - a warning is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 5)
