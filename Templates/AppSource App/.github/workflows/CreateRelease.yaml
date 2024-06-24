@@ -101,7 +101,7 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForPush'
           useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
-  
+
       - name: Determine Projects
         id: determineProjects
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
