@@ -37,12 +37,12 @@ runs:
     - name: Install Power Platform Tools
       uses: microsoft/powerplatform-actions/actions-install@v1
 
-    - name: Update Power Platform Files 
+    - name: Update Power Platform Files
       shell: ${{ inputs.shell }}
       env:
         _solutionFolder: ${{ inputs.solutionFolder }}
         _companyId: ${{ inputs.companyId }}
-        _environmentName: ${{ inputs.environmentName }}      
+        _environmentName: ${{ inputs.environmentName }}
         _appBuild: ${{ inputs.appBuild }}
         _appRevision: ${{ inputs.appRevision }}
       run: |
@@ -53,7 +53,7 @@ runs:
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
           exit 1
-        }    
+        }
 
     - name: Test Pack (Not real - just workaround for https://github.com/microsoft/powerplatform-vscode/issues/412)
       uses: microsoft/powerplatform-actions/pack-solution@v1
@@ -74,7 +74,7 @@ runs:
         solution-folder: ${{ inputs.solutionFolder }}
         solution-type: "Unmanaged"
         process-canvas-apps: true
-     
+
 branding:
   icon: terminal
   color: blue

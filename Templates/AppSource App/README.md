@@ -1,4 +1,5 @@
 # AL-Go AppSource App Template
+
 This template repository can be used for managing AppSource Apps for Business Central.
 
 Please go to https://aka.ms/AL-Go to learn more.
