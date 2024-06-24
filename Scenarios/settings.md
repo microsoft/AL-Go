@@ -23,6 +23,7 @@ When running a workflow or a local script, the settings are applied by reading s
 1. `.AL-Go/<username>.settings.json` is the **user-specific settings file**. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
 
 <a id="basic"></a>
+
 ## Basic Project settings
 
 | Name | Description | Default value |
@@ -78,6 +79,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="buildModes"></a>buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go project will be built using each build mode. AL-Go ships with the following build modes out of the box:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: _PreprocessorSymbols_ are enabled when compiling the apps. The values for the symbols correspond to the `cleanModePreprocessorSymbols` setting of the AL-Go project.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps.<br /><br />It is also possible to specify custom build modes by adding a build mode that is different than 'Default', 'Clean' or 'Translated'. |
 
 <a id="advanced"></a>
+
 ## Advanced settings
 
 | Name | Description | Default value |
@@ -127,6 +129,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id=""></a>keyVaultCertificateUrlSecretName<br />keyVaultCertificatePasswordSecretName<br />keyVaultClientIdSecretName | If you want to enable KeyVault access for your AppSource App, you need to provide 3 secrets as GitHub Secrets or in the Azure KeyVault. The names of those secrets (**NOT the secrets**) should be specified in the settings file with these 3 settings. Default is to not have KeyVault access from your AppSource App. Read [this](EnableKeyVaultForAppSourceApp.md) for more information. | |
 
 <a id="conditional"></a>
+
 ## Conditional Settings
 
 In any of the settings files, you can add conditional settings by using the ConditionalSettings setting.
@@ -179,6 +182,7 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 > You can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
 
 <a id="expert"></a>
+
 # Expert level
 
 The settings and functionality in the expert section might requires knowledge about GitHub Workflows/Actions, yaml, docker and PowerShell. Please only change these settings and use this functionality after careful consideration as these things might change in the future and will require you to modify the functionality you added based on this.
@@ -206,6 +210,7 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | \[ \] |
 
 <a id="customdelivery"></a>
+
 ## Custom Delivery
 
 You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named DeliverTo\*.ps1 in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release.
@@ -248,6 +253,7 @@ Here are the parameters to use in your custom script:
 | `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0 |
 
 <a id="customdeployment"></a>
+
 ## Custom Deployment
 
 You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named `DeployTo<EnvironmentType>.ps1` in the .github folder. Default Environment Type is SaaS, but you can define your own type by specifying EnvironmentType in the `DeployTo<EnvironmentName>` setting. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
@@ -328,6 +334,7 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | DefaultNewContainerParameters | A list of parameters to be added to all container creations in this repo | { } |
 
 <a id="customjobs"></a>
+
 ## Custom jobs in AL-Go for GitHub workflows
 
 Adding a custom job to any AL-Go for GitHub workflow is done by adding a job with the name `CustomJob<something>` to the end of an AL-Go for GitHub workflow, like this:
@@ -360,9 +367,11 @@ Custom jobs will be preserved when running Update AL-Go System Files.
 **Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
 
 <a id="customsteps"></a>
-## Custom steps in the _BuildALGoProject workflow
 
-Adding a custom step is done by adding a step with the name `CustomStep<something>` to the _BuildALGoProject.yaml workflow at one of these anchor points:
+## Custom steps in the \_BuildALGoProject workflow
+
+Adding a custom step is done by adding a step with the name `CustomStep<something>` to the \_BuildALGoProject.yaml workflow at one of these anchor points:
+
 - Before Read Settings
 - Before Read Secrets
 - Before or After Build
@@ -384,6 +393,7 @@ Custom steps will be preserved when running Update AL-Go System Files.
 **Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
 
 <a id="indirect"></a>
+
 ## Indirect template repositories
 
 If you are utilizing script overrides, custom jobs, custom steps, custom delivery or like in many repositories, you might want to take advantage of the indirect template repository feature.
@@ -393,11 +403,12 @@ An indirect template repository is an AL-Go for GitHub repository (without any a
 This would make sure that all repositories would have this script (and updated versions of the script) in the future.
 
 The items, which are currently supported from indirect template repositories are:
+
 - Repository script overrides in the .github folder
 - Project script overrides in the .AL-Go folder
 - Custom workflows in the .github/workflows folder
 - Custom jobs in any AL-Go for GitHub workflow
-- Custom steps in the _BuildALGoProject workflow
+- Custom steps in the \_BuildALGoProject workflow
 - New repository settings
 - New project settings
 
