@@ -16,12 +16,10 @@ How you do this might depend on which Certificate Authority you are getting your
 2. A KeyVault can be setup for two different security models: Role Based Access Control (RBAC = recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the KeyVault, the following roles/permissions needs to be assigned to the app registration or Managed Identity on which the authentication is performed:
 
 Role Based Access Control, roles needed:
-
 - Key Vault Crypto User
 - Key Vault Certificate User
 
 Vault Access Policy, permissions needed:
-
 - Cryptographic Operations: Sign
 - Certificate permissions: Get
 
