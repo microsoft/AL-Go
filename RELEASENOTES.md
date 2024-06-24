@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
 - Issue 1098 Support for specifying the name of the AZURE_CREDENTIALS secret by adding a AZURE_CREDENTIALSSecretName setting
 
 ### Business Central Performance Toolkit Test Result Viewer
