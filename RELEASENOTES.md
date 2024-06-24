@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
+
 ### Business Central Performance Toolkit Test Result Viewer
 
 In the summary after a Test Run, you now also have the result of performance tests.
