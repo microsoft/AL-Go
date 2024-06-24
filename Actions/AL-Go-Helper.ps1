@@ -1339,7 +1339,7 @@ function CommitFromNewFolder {
     Param(
         [string] $serverUrl,
         [string] $commitMessage,
-        [string] $body = '',
+        [string] $body = $commitMessage,
         [string] $branch
     )
 
