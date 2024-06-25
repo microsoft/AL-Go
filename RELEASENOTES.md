@@ -6,6 +6,7 @@
 - Issue 1079 AppSource App deployment failes with PerTenantExtensionCop Error PTE0001 and PTE0002
 - Issue 866 Accessing GitHub Environment Variables in DeployToCustom Scenarios for PowerShell Scripts
 - Issue 1083 SyncMode for custom deployments?
+- Issue 1109 Why filter deployment settings?
 
 ### Dependencies to PowerShell modules
 
