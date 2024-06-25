@@ -31,19 +31,15 @@ All secrets exposed to a repository will be masked (i.e. replaced with \*\*\*) i
 
 In this case, a secret with the value "windows" have been created and since the Initialization step transfers the githubRunner to the Build steps with the value "windows-latest", this will break AL-Go for GitHub.
 
-
 So, don't have secrets that are not secrets as this might break core functionality in AL-Go for GitHub.
 
 ### Use compressed JSON
 
-
 AL-Go for GitHub uses JSON structures for some secrets (like authentication contexts). AL-Go for GitHub will ensure that individual secret property values are masked in the log as well as the full JSON structure. When creating a JSON structure secret, it is important to use compressed JSON as GitHub will mask individual lines as well. This means that a non-compressed JSON structure will cause the curly bracket characters to be handled as secrets, breaking AL-Go for GitHub. In the logs you will see that the curly brackets are replaced with \*\*\*
-
 
 ![image](https://github.com/microsoft/AL-Go/assets/10775043/58bbc120-f36d-499d-8e6c-8cc87f55d918)
 
 In this case, a secret is created with the following value:
-
 
 ```
 {
@@ -55,7 +51,6 @@ So, don't have multi-line secrets, where individual lines are not secrets as thi
 
 ### Only expose secrets that are necessary to your repositories that run on AL-Go for GitHub.
 
-
 If your GitHub organization might have many organizational secrets, please only allow access to the secrets actually used by your AL-Go for GitHub repository. If any of the secrets made available to your repository contains multi-line secrets or have secrets, where the value is not really a secret, it might break core functionality in AL-Go for GitHub.
 
 # Secrets
@@ -63,7 +58,6 @@ If your GitHub organization might have many organizational secrets, please only 
 ## <a id="Azure_Credentials"></a>**Azure_Credentials** -> Connect to Azure
 
 By creating a secret called Azure_Credentials you can give your GitHub repository access to an Azure Key Vault, from which you can read secrets and use for managed signing of your apps. You can use a managed identity or an app registration (service to service) for authentication.
-
 
 > \[!NOTE\]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
@@ -92,7 +86,6 @@ ClientSecret can only be used using an app registration. Under Certificates & Se
 Example: `{"keyVaultName":"MyKeyVault","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045"}`
 
 With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your Key Vault in order for AL-Go for GitHub to sign your apps.
-
 
 ## <a id="AuthContext"></a>**AuthContext** -> Deploy to an environment
 
