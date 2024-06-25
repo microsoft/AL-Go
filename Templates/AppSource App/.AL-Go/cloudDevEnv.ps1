@@ -6,7 +6,8 @@
 Param(
     [string] $environmentName = "",
     [bool] $reuseExistingEnvironment,
-    [switch] $fromVSCode
+    [switch] $fromVSCode,
+    [switch] $clean
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -78,7 +79,8 @@ CreateDevEnv `
     -environmentName $environmentName `
     -reuseExistingEnvironment:$reuseExistingEnvironment `
     -baseFolder $baseFolder `
-    -project $project
+    -project $project `
+    -clean:$clean
 }
 catch {
     Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"

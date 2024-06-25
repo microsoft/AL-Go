@@ -18,34 +18,105 @@ on:
         description: Push directly to the target branch. If not set, a PR will be created.
         required: false
         default: false
+      requireEndToEndTests:
+        type: boolean
+        description: Require successful end 2 end tests before deploying
+        required: false
+        default: true
+      createRelease:
+        type: boolean
+        description: Create a release in this repository
+        required: false
+        default: false
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip). Leave empty to use latest (or preview for preview branches)'
         required: false
-        default: ''
+        default: 'latest'
+
+permissions:
+  contents: read
+  actions: read
 
 defaults:
   run:
     shell: pwsh
 
 jobs:
+  Inputs:
+    runs-on: [ ubuntu-latest ]
+    outputs:
+      branch: ${{ steps.CreateInputs.outputs.branch }}
+      copyToMain: ${{ steps.CreateInputs.outputs.copyToMain }}
+      directCommit: ${{ steps.CreateInputs.outputs.directCommit }}
+      requireEndToEndTests: ${{ steps.CreateInputs.outputs.requireEndToEndTests }}
+      createRelease: ${{ steps.CreateInputs.outputs.createRelease }}
+      defaultBcContainerHelperVersion: ${{ steps.CreateInputs.outputs.defaultBcContainerHelperVersion }}
+    steps:
+      - name: Create inputs
+        id: CreateInputs
+        run: |
+          $branch = '${{ github.event.inputs.branch }}'
+          $copyToMain = '${{ github.event.inputs.copyToMain }}'
+          $directCommit = '${{ github.event.inputs.directCommit }}'
+          $requireEndToEndTests = '${{ github.event.inputs.requireEndToEndTests }}'
+          $createRelease = '${{ github.event.inputs.createRelease }}'
+          $defaultBcContainerHelperVersion = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
+          Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "branch=$branch"
+          Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "copyToMain=$copyToMain"
+          Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "directCommit=$directCommit"
+          Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "requireEndToEndTests=$requireEndToEndTests"
+          Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "createRelease=$createRelease"
+          Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "defaultBcContainerHelperVersion=$defaultBcContainerHelperVersion"
+
+  CheckEndToEnd:
+    runs-on: [ ubuntu-latest ]
+    needs: [ Inputs ]
+    steps:
+      - name: Check successful end 2 end tests have run
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.requireEndToEndTests == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $errorActionPreference = "Stop"
+          $end2endRuns = (gh api "/repos/$($env:GITHUB_REPOSITORY)/actions/workflows/E2E.yaml/runs?per_page=100&branch=main" | ConvertFrom-Json).workflow_runs
+          $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
+          $latestRun = $end2endruns | Where-Object { $_.Name -eq "End to end tests - $latestSha" } | select-object -first 1
+          if (!$latestRun) {
+            throw "No End to end tests run found for the latest commit on main"
+          }
+          if ($latestRun.status -ne 'completed') {
+            throw "End to end tests run for the latest commit on main is not completed - see $($latestRun.html_url)"
+          }
+          if ($latestRun.conclusion -ne 'success') {
+            throw "End to end tests run for the latest commit on main did not succeed - see $($latestRun.html_url)"
+          }
+          $allJobs = (gh api --paginate /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
+          foreach($job in $allJobs) {
+            if ($job.conclusion -ne 'success') {
+              throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
+            }
+          }
+
   Deploy:
     runs-on: [ ubuntu-latest ]
+    needs: [ CheckEndToEnd, Inputs ]
     environment: Production
+    permissions:
+      contents: write
     steps:
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
         env:
           GH_TOKEN: ${{ github.token }}
-          branch: ${{ github.event.inputs.branch }}
-          repository: ${{ github.repository }}
+          branch: ${{ needs.Inputs.outputs.branch }}
           runId: ${{ github.run_id }}
         run: |
           $errorActionPreference = "Stop"
           if ($env:branch -eq 'preview') {
             Write-Host "Deploying to preview branch. No validation required"
           } else {
-            $approval = gh api /repos/$($env:repository)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
-            $run = gh api /repos/$($env:repository)/actions/runs/$($env:runId) | ConvertFrom-Json
+            $approval = gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:runId)/approvals | ConvertFrom-Json
+            $run = gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:runId) | ConvertFrom-Json
 
             if ($approval.user.login -eq $run.actor.login) {
               throw "You cannot approve your own deployment"
@@ -56,10 +127,10 @@ jobs:
 
       - name: Deploy
         env:
-          branch: ${{ github.event.inputs.branch }}
-          copyToMain: ${{ github.event.inputs.copyToMain }}
-          directCommit: ${{ github.event.inputs.directCommit }}
-          defaultBcContainerHelperVersion: ${{ github.event.inputs.defaultBcContainerHelperVersion }}
+          branch: ${{ needs.Inputs.outputs.branch }}
+          copyToMain: ${{ needs.Inputs.outputs.copyToMain }}
+          directCommit: ${{ needs.Inputs.outputs.directCommit }}
+          defaultBcContainerHelperVersion: ${{ needs.Inputs.outputs.defaultBcContainerHelperVersion }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
@@ -67,7 +138,7 @@ jobs:
             if (!$token) {
               throw "In order to run the Deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token"
             }
-            $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
+            $githubOwner = "$env:GITHUB_REPOSITORY_OWNER"
             if ("$env:defaultBcContainerHelperVersion" -eq "") {
               if ($env:branch -eq 'preview') {
                 $env:defaultBcContainerHelperVersion = 'preview'
@@ -90,3 +161,38 @@ jobs:
             Write-Host "::Error::Error deploying repositories. The error was $($_.Exception.Message)"
             exit 1
           }
+
+      - name: Calculate Release Notes
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $releaseNotesFile = Join-Path $env:GITHUB_WORKSPACE "RELEASENOTES.md"
+          $releaseNotes = (Get-Content -Encoding utf8 -Path $releaseNotesFile) -join "`n"
+          $lastVersion = $releaseNotes.indexof("`n## ")
+          $releaseNotes = $releaseNotes.Substring(0, $lastVersion)
+          Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -Value "ReleaseNotes=$([Uri]::EscapeDataString($releaseNotes))"
+
+      - name: Create release
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
+        uses: actions/github-script@v7
+        id: createrelease
+        env:
+          branch: ${{ needs.Inputs.outputs.branch }}
+          bodyMD: ${{ env.ReleaseNotes }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            var bodyMD = process.env.bodyMD
+            const createReleaseResponse = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: '${{ env.branch }}',
+              name: '${{ env.branch }}',
+              body: decodeURIComponent(bodyMD),
+              draft: false,
+              prerelease: false
+            });
+            const {
+              data: { id: releaseId, html_url: htmlUrl, upload_url: uploadUrl }
+            } = createReleaseResponse;
+            core.setOutput('releaseId', releaseId);

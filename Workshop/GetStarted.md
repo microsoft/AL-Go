@@ -1,4 +1,5 @@
 # Get Started
+
 With our prerequisites in place, it is time to get started and create our first repository.
 
 In a browser, navigate to https://aka.ms/algopte:
@@ -39,5 +40,6 @@ After this step, we are done setting up a basic AL-Go for GitHub repository and 
 
 So, let's add an app...
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](AddAnApp.md)
+______________________________________________________________________
+
+[Index](Index.md)  [next](AddAnApp.md)

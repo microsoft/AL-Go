@@ -1,5 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe 'CalculateArtifactNames Action Tests' {
 
@@ -12,7 +13,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
 
-        $env:Settings = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-GO"}'
+        $env:Settings = '{ "appBuild": 123, "repoVersion": "22.0", "appRevision": 0,"repoName": "AL-Go"}'
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'project', Justification = 'False positive.')]
         $project = "ALGOProject"
     }
@@ -148,6 +149,7 @@ Describe 'CalculateArtifactNames Action Tests' {
             "ThisBuildDependenciesArtifactsName" = "Artifact name for dependencies of apps being built in the current workflow run"
             "ThisBuildTestAppsArtifactsName" = "Artifact name for test apps being built in the current workflow run"
             "AppsArtifactsName" = "Artifacts name for Apps"
+            "PowerPlatformSolutionArtifactsName" = "Artifacts name for PowerPlatform Solution"
             "DependenciesArtifactsName" = "Artifacts name for Dependencies"
             "TestAppsArtifactsName" = "Artifacts name for TestApps"
             "TestResultsArtifactsName" = "Artifacts name for TestResults"

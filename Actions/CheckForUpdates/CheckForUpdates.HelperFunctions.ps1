@@ -28,7 +28,7 @@ function DownloadTemplateRepository {
 
     if ($downloadLatest) {
         # Get Branches from template repository
-        $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches" -retry
+        $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
         $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
         if (!$branchInfo) {
             throw "$templateUrl doesn't exist"
@@ -103,7 +103,7 @@ function ModifyRunsOnAndShell {
 
     # The default for runs-on is windows-latest and the default for shell is powershell
     # The default for GitHubRunner/GitHubRunnerShell is runs-on/shell (unless Ubuntu-latest are selected here, as build jobs cannot run on Ubuntu)
-    # We do not change runs-on in Update AL Go System Files and Pull Request Handler workflows
+    # We do not change runs-on in Update AL-Go System Files and Pull Request Handler workflows
     # These workflows will always run on windows-latest (or maybe Ubuntu-latest later) and not follow settings
     # Reasons:
     # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself
@@ -122,11 +122,17 @@ function ModifyRunsOnAndShell {
 function ModifyBuildWorkflows {
     Param(
         [Yaml] $yaml,
-        [int] $depth
+        [int] $depth,
+        [bool] $includeBuildPP
     )
 
     $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
     $build = $yaml.Get('jobs:/Build:/')
+    $buildPP = $yaml.Get('jobs:/BuildPP:/')
+    $deliver = $yaml.Get('jobs:/Deliver:/')
+    $deploy = $yaml.Get('jobs:/Deploy:/')
+    $deployALDoc = $yaml.Get('jobs:/DeployALDoc:/')
+    $postProcess = $yaml.Get('jobs:/PostProcess:/')
     if (!$build) {
         throw "No build job found in the workflow"
     }
@@ -179,6 +185,44 @@ function ModifyBuildWorkflows {
 
     # Replace the entire build: job with the new build job list
     $yaml.Replace('jobs:/Build:', $newBuild)
+
+    if (!$includeBuildPP -and $buildPP) {
+        # Remove the BuildPP job from the workflow
+        [int]$start = 0
+        [int]$count = 0
+        if ($yaml.Find('jobs:/BuildPP:', [ref] $start, [ref] $count)) {
+            $yaml.Remove($start, $count+1)
+        }
+    }
+
+    $needs += @("Build")
+    $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped')"
+    if ($includeBuildPP -and $buildPP) {
+        $needs += @("BuildPP")
+        $ifpart += " && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
+    }
+
+    $postProcessNeeds = $needs
+    # Modify Deliver and Deploy steps depending on build jobs
+    if ($deploy) {
+        $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
+        $yaml.Replace('jobs:/Deploy:/', $deploy.content)
+        $postProcessNeeds += @('Deploy')
+    }
+    if ($deliver) {
+        $deliver.Replace('needs:', "needs: [ $($needs -join ', ') ]")
+        $deliver.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.deliveryTargetsJson != '[]'")
+        $yaml.Replace('jobs:/Deliver:/', $deliver.content)
+        $postProcessNeeds += @('Deliver')
+    }
+    if ($deployALDoc) {
+        $postProcessNeeds += @('DeployALDoc')
+    }
+    if ($postProcess) {
+        $postProcess.Replace('needs:', "needs: [ $($postProcessNeeds -join ', ') ]")
+        $yaml.Replace('jobs:/PostProcess:/', $postProcess.content)
+    }
 }
 
 function ModifyUpdateALGoSystemFiles {
@@ -220,7 +264,8 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth
+        [int] $depth,
+        [bool] $includeBuildPP
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -250,8 +295,8 @@ function GetWorkflowContentWithChangesFromSettings {
 
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
-    if ($depth -gt 1 -and ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor')) {
-        ModifyBuildWorkflows -yaml $yaml -depth $depth
+    if ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
+        ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP $includeBuildPP
     }
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {

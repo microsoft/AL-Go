@@ -1,4 +1,5 @@
 name: ' Publish To AppSource'
+run-name: 'Publish To AppSource - Version ${{ inputs.appVersion }}, Projects ${{ inputs.projects }}'
 
 on:
   workflow_dispatch:

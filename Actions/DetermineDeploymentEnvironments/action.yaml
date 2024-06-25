@@ -9,7 +9,7 @@ inputs:
     description: Specifies the pattern of the environments you want to retreive (* for all)
     required: true
   type:
-    description: Type of deployment (CD or Publish)
+    description: Type of deployment (CD, Publish or All)
     required: true
 outputs:
   EnvironmentsMatrixJson:

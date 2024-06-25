@@ -20,7 +20,7 @@ $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -400,6 +400,9 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
             if ($bcContainerHelperVersion -like "https://*") {
                 throw "Setting BcContainerHelperVersion to a URL in settings is not allowed. Fork the AL-Go repository and use direct AL-Go development instead."
             }
+            if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
+                Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
+            }
         }
         $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
     }
@@ -410,10 +413,6 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
 
     if ($bcContainerHelperVersion -eq 'private') {
         throw "ContainerHelperVersion private is no longer supported. Use direct AL-Go development and a direct download url instead."
-    }
-
-    if ($bcContainerHelperVersion -ne 'latest' -and $bcContainerHelperVersion -ne 'preview') {
-        Write-Host "::Warning::Using a specific version of BcContainerHelper is not recommended and will lead to build failures in the future. Consider removing the setting."
     }
 
     $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
@@ -556,6 +555,7 @@ function ReadSettings {
         "unusedALGoSystemFiles"                         = @()
         "updateALGoBranches"                            = @("main")
         "projects"                                      = @()
+        "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
         "artifact"                                      = ""
         "companyName"                                   = ""
@@ -639,6 +639,12 @@ function ReadSettings {
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "pullRequestTrigger"                            = "pull_request_target"
+        "bcptThresholds"                                = [ordered]@{
+            "DurationWarning"                           = 10
+            "DurationError"                             = 25
+            "NumberOfSqlStmtsWarning"                   = 5
+            "NumberOfSqlStmtsError"                     = 10
+        }
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
         "alDoc"                                         = [ordered]@{
@@ -1311,9 +1317,8 @@ function CloneIntoNewFolder {
     Set-Location *
     invoke-git checkout $updateBranch
 
-    $branch = ''
+    $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
     if (!$directCommit) {
-        $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
         invoke-git checkout -b $branch
     }
 
@@ -1325,6 +1330,7 @@ function CommitFromNewFolder {
     Param(
         [string] $serverUrl,
         [string] $commitMessage,
+        [string] $body = '',
         [string] $branch
     )
 
@@ -1335,17 +1341,28 @@ function CommitFromNewFolder {
             $commitMessage = "$($commitMessage.Substring(0,250))...)"
         }
         invoke-git commit --allow-empty -m "$commitMessage"
-        if ($branch) {
-            invoke-git push -u $serverUrl $branch
+        $activeBranch = invoke-git -returnValue -silent name-rev --name-only HEAD
+        # $branch is the name of the branch to be used when creating a Pull Request
+        # $activeBranch is the name of the branch that is currently checked out
+        # If activeBranch and branch are the same - we are creating a PR
+        if ($activeBranch -ne $branch) {
             try {
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+                invoke-git push $serverUrl
+                return $true
             }
             catch {
-                OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+                OutputWarning("Direct Commit wasn't allowed, trying to create a Pull Request instead")
+                invoke-git reset --soft HEAD~
+                invoke-git checkout -b $branch
+                invoke-git commit --allow-empty -m "$commitMessage"
             }
         }
-        else {
-            invoke-git push $serverUrl
+        invoke-git push -u $serverUrl $branch
+        try {
+            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body"
+        }
+        catch {
+            OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
         }
         return $true
     }
@@ -1555,7 +1572,8 @@ function CreateDevEnv {
         [Parameter(ParameterSetName = 'local')]
         [string] $containerName = "",
         [string] $licenseFileUrl = "",
-        [switch] $accept_insiderEula
+        [switch] $accept_insiderEula,
+        [switch] $clean
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1713,10 +1731,13 @@ function CreateDevEnv {
             Write-Host "Repository is empty"
         }
 
-        if ($kind -eq "local" -and $settings.type -eq "AppSource App" ) {
-            if ($licenseFileUrl -eq "") {
-                OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-            }
+        if ($clean) {
+            $appFolders = @()
+            $testFolders = @()
+        }
+        else {
+            $appFolders = $settings.appFolders
+            $testFolders = $settings.testFolders
         }
 
         $installApps = $settings.installApps
@@ -1913,8 +1934,8 @@ function CreateDevEnv {
                 -installApps $installApps `
                 -installTestApps $installTestApps `
                 -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-                -appFolders $settings.appFolders `
-                -testFolders $settings.testFolders `
+                -appFolders $appFolders `
+                -testFolders $testFolders `
                 -testResultsFile $testResultsFile `
                 -testResultsFormat 'JUnit' `
                 -customCodeCops $settings.customCodeCops `
@@ -2209,9 +2230,28 @@ function DetermineArtifactUrl {
         $version = $segments[2]
         $country = $segments[3]; if ($country -eq "") { $country = $projectSettings.country }
         $select = $segments[4]; if ($select -eq "") { $select = "latest" }
-        $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -accept_insiderEula | Select-Object -First 1
-        if (-not $artifactUrl) {
-            throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+        if ($version -eq '*') {
+            $version = "$(([Version]$projectSettings.applicationDependency).Major).$(([Version]$projectSettings.applicationDependency).Minor)"
+            $allArtifactUrls = @(Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select all -accept_insiderEula | Where-Object { [Version]$_.Split('/')[4] -ge [Version]$projectSettings.applicationDependency })
+            if ($select -eq 'latest') {
+                $artifactUrl = $allArtifactUrls | Select-Object -Last 1
+            }
+            elseif ($select -eq 'first') {
+                $artifactUrl = $allArtifactUrls | Select-Object -First 1
+            }
+            else {
+                throw "Invalid artifact setting ($artifact) in $ALGoSettingsFile. Version can only be '*' if select is first or latest."
+            }
+            Write-Host "Found $($allArtifactUrls.Count) artifacts for version $version matching application dependency $($projectSettings.applicationDependency), selecting $select."
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile, when application dependency is $($projectSettings.applicationDependency)"
+            }
+        }
+        else {
+            $artifactUrl = Get-BCArtifactUrl -storageAccount $storageAccount -type $artifactType -version $version -country $country -select $select -accept_insiderEula | Select-Object -First 1
+            if (-not $artifactUrl) {
+                throw "No artifacts found for the artifact setting ($artifact) in $ALGoSettingsFile"
+            }
         }
         $version = $artifactUrl.Split('/')[4]
         $storageAccount = $artifactUrl.Split('/')[2]
@@ -2280,12 +2320,30 @@ function RetryCommand {
     }
 }
 
+function GetMatchingProjects {
+    Param(
+        [string[]] $projects,
+        [string] $selectProjects = ''
+    )
+
+    if ($selectProjects) {
+        # Filter the project list based on the projects parameter
+        if ($selectProjects.StartsWith('[')) {
+            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
+        }
+        $projectArr = $selectProjects.Split(',').Trim()
+        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
+    }
+    return $projects
+}
+
 function GetProjectsFromRepository {
     Param(
         [string] $baseFolder,
         [string[]] $projectsFromSettings,
         [string] $selectProjects = ''
     )
+
     if ($projectsFromSettings) {
         $projects = $projectsFromSettings
     }
@@ -2297,18 +2355,7 @@ function GetProjectsFromRepository {
             $projects += @(".")
         }
     }
-    if ($selectProjects) {
-        # Filter the project list based on the projects parameter
-        if ($selectProjects.StartsWith('[')) {
-            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
-        }
-        $projectArr = $selectProjects.Split(',').Trim()
-        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
-        if ($projects.Count -eq 0) {
-            throw "No projects matches '$selectProjects'"
-        }
-    }
-    return $projects
+    return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
 }
 
 function Get-PackageVersion($PackageName) {

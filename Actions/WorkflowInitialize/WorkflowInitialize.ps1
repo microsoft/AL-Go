@@ -1,6 +1,10 @@
 ﻿Param(
     [Parameter(HelpMessage = "The event id of the initiating workflow", Mandatory = $true)]
-    [string] $eventId
+    [string] $eventId,
+    [Parameter(HelpMessage = "The repository of the action", Mandatory = $false)]
+    [string] $actionsRepo,
+    [Parameter(HelpMessage = "The ref of the action", Mandatory = $false)]
+    [string] $actionsRef
 )
 
 $telemetryScope = $null
@@ -9,18 +13,17 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-TestRepoHelper.ps1" -Resolve)
 
-    $ap = "$ENV:GITHUB_ACTION_PATH".Split('\')
-    $branch = $ap[$ap.Count-2]
-    $owner = $ap[$ap.Count-4]
-
-    if ($owner -ne "microsoft") {
-        $verstr = "d"
+    if ($actionsRepo -eq 'microsoft/AL-Go-Actions') {
+        Write-Host "Using AL-Go for GitHub $actionsRef"
+        $verstr = $actionsRef
     }
-    elseif ($branch -eq "preview") {
+    elseif ($actionsRepo -eq 'microsoft/AL-Go') {
+        Write-Host "Using AL-Go for GitHub Preview ($actionsRef)"
         $verstr = "p"
     }
     else {
-        $verstr = $branch
+        Write-Host "Using direct AL-Go development ($($actionsRepo)@$actionsRef)"
+        $verstr = "d"
     }
 
     Write-Big -str "a$verstr"

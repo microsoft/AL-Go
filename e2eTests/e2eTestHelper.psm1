@@ -101,6 +101,26 @@ function Add-PropertiesToJsonFile {
     }
 }
 
+function Remove-PropertiesFromJsonFile {
+    Param(
+        [string] $path,
+        [string[]] $properties
+    )
+
+    Write-Host -ForegroundColor Yellow "`nRemove Properties from $([System.IO.Path]::GetFileName($path))"
+    Write-Host "Properties"
+    $properties | Out-Host
+
+    $json = Get-Content $path -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $keys = @($json.Keys)
+    $keys | ForEach-Object {
+        $key = $_
+        if ($properties | Where-Object { $key -like $_ }) {
+            $json.Remove($key)
+        }
+    }
+    $json | Set-JsonContentLF -path $path
+}
 
 function DisplayTokenAndRepository {
     Write-Host "Token: $token"
@@ -126,15 +146,7 @@ function RunWorkflow {
     }
 
     $headers = GetHeader -token $token
-    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit" -retry).Content | ConvertFrom-Json).rate
-    $percent = [int]($rate.remaining*100/$rate.limit)
-    Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percent%)"
-    if ($percent -lt 10) {
-        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
-        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
-        Write-Host "Less than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
-    }
+    WaitForRateLimit -headers $headers -displayStatus
 
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
@@ -256,8 +268,9 @@ function WaitWorkflow {
     $status = ""
     do {
         if ($delay) {
-            Start-Sleep -Seconds 60
+            Start-Sleep -Seconds 120
         }
+        WaitForRateLimit -headers $headers
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
         $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
         if ($run.status -ne $status) {
@@ -365,7 +378,7 @@ function CreateAlGoRepository {
     $templateRepo = $template.Split('@')[0]
 
     $tempPath = [System.IO.Path]::GetTempPath()
-    $path = Join-Path $tempPath ([GUID]::NewGuid().ToString())
+    $path = Join-Path $tempPath ( [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()))
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
     if ($waitMinutes) {
@@ -440,11 +453,6 @@ function CreateAlGoRepository {
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
     $runson = "windows-latest"
     $shell = "powershell"
-    if ($private) {
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
-        $runson = "self-hosted"
-    }
     if ($linux) {
         $runson = "ubuntu-latest"
         $shell = "pwsh"
@@ -561,13 +569,22 @@ function RemoveRepository {
         $repository = $defaultRepository
     }
     if ($repository) {
-        Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         try {
+            $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
+            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository (user $($user.login))"
             $owner = $repository.Split("/")[0]
-            @((invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
+            if ($owner -eq $user.login) {
+                # Package belongs to a user
+                $ownerStr = "users/$owner"
+            }
+            else {
+                # Package belongs to an organization
+                $ownerStr = "orgs/$owner"
+            }
+            @((invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /$ownerStr/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
                 Write-Host "+ package $($_.name)"
                 # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
-                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages/nuget/$($_.name) --input
+                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /$ownerStr/packages/nuget/$($_.name) --input
             }
         }
         catch {

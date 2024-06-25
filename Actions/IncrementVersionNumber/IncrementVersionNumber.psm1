@@ -48,18 +48,18 @@ function Set-VersionInSettingsFile {
         $settingsJson | Add-Member -MemberType NoteProperty -Name $settingName -Value $null
     }
 
-    $oldValue = [System.Version] $settingsJson.$settingName
+    $oldVersion = [System.Version] $settingsJson.$settingName
     # Validate new version value
     if ($newValue.StartsWith('+')) {
         # Handle incremental version number
 
+        # Defensive check. Should never happen.
         $allowedIncrementalVersionNumbers = @('+1', '+0.1')
         if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
             throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
         }
-
         # Defensive check. Should never happen.
-        if($null -eq $oldValue) {
+        if($null -eq $oldVersion) {
             throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
         }
     }
@@ -78,13 +78,13 @@ function Set-VersionInSettingsFile {
     switch($newValue) {
         '+1' {
             # Increment major version number
-            $versionNumbers += $oldValue.Major + 1
+            $versionNumbers += $oldVersion.Major + 1
             $versionNumbers += 0
         }
         '+0.1' {
             # Increment minor version number
-            $versionNumbers += $oldValue.Major
-            $versionNumbers += $oldValue.Minor + 1
+            $versionNumbers += $oldVersion.Major
+            $versionNumbers += $oldVersion.Minor + 1
 
         }
         default {
@@ -94,34 +94,68 @@ function Set-VersionInSettingsFile {
     }
 
     # Include build and revision numbers if they exist in the old version number
-    if ($oldValue -and ($oldValue.Build -ne -1)) {
+    if ($oldVersion -and ($oldVersion.Build -ne -1)) {
         $versionNumbers += 0 # Always set the build number to 0
-        if ($oldValue.Revision -ne -1) {
+        if ($oldVersion.Revision -ne -1) {
             $versionNumbers += 0 # Always set the revision number to 0
         }
     }
 
     # Construct the new version number. Cast to System.Version to validate if the version number is valid.
-    $newValue = [System.Version] "$($versionNumbers -join '.')"
+    $newVersion = [System.Version] "$($versionNumbers -join '.')"
 
-    if($newValue -lt $oldValue) {
-        throw "The new version number ($newValue) is less than the old version number ($oldValue). The version number must be incremented."
+    if($newVersion -lt $oldVersion) {
+        throw "The new version number ($newVersion) is less than the old version number ($oldVersion). The version number must be incremented."
     }
 
-    if($newValue -eq $oldValue) {
-        Write-Host "The setting $settingName is already set to $newValue in $settingsFilePath"
+    if($newVersion -eq $oldVersion) {
+        Write-Host "The setting $settingName is already set to $newVersion in $settingsFilePath"
         return
     }
 
-    if($null -eq $oldValue) {
-        Write-Host "Setting setting $settingName to $newValue in $settingsFilePath"
+    if($null -eq $oldVersion) {
+        Write-Host "Setting setting $settingName to $newVersion in $settingsFilePath"
     }
     else {
-        Write-Host "Changing $settingName from $oldValue to $newValue in $settingsFilePath"
+        Write-Host "Changing $settingName from $oldVersion to $newVersion in $settingsFilePath"
     }
 
-    $settingsJson.$settingName = $newValue.ToString()
+    $settingsJson.$settingName = $newVersion.ToString()
     $settingsJson | Set-JsonContentLF -Path $settingsFilePath
+}
+
+<#
+    .Synopsis
+        Checks if a setting exists in a settings file.
+    .Description
+        Checks if a setting exists in a settings file.
+    .Parameter settingsFilePath
+        Path to a JSON file containing the settings.
+    .Parameter settingName
+        Name of the setting to check.
+#>
+function Test-SettingExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $settingsFilePath,
+        [Parameter(Mandatory = $true)]
+        [string] $settingName
+    )
+
+    if (-not (Test-Path $settingsFilePath)) {
+        throw "Settings file ($settingsFilePath) not found."
+    }
+
+    Write-Host "Reading settings from $settingsFilePath"
+    try {
+        $settingsJson = Get-Content $settingsFilePath -Encoding UTF8 -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "Settings file ($settingsFilePath) is malformed: $_"
+    }
+
+    $settingExists = [bool] ($settingsJson.PSObject.Properties.Name -eq $settingName)
+    return $settingExists
 }
 
 <#
@@ -201,4 +235,61 @@ function Set-DependenciesVersionInAppManifests {
     }
 }
 
-Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests
+<#
+    .Synopsis
+        Sets the version number of a Power Platform solution.
+    .Description
+        Sets the version number of a Power Platform solution.
+        The version number is changed in the Solution.xml file of the Power Platform solution.
+    .Parameter powerPlatformSolutionPath
+        Path to the Power Platform solution.
+    .Parameter newValue
+        New version number. If the version number starts with a +, the new version number will be added to the old version number. Else the new version number will replace the old version number.
+        Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a full version number (e.g. major.minor.build.revision).
+#>
+function Set-PowerPlatformSolutionVersion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $powerPlatformSolutionPath,
+        [Parameter(Mandatory = $true)]
+        [string] $newValue
+    )
+
+    Write-Host "Updating Power Platform solution version"
+    $files = Get-ChildItem -Path $powerPlatformSolutionPath -filter 'Solution.xml' -Recurse -File | Where-Object { $_.Directory.Name -eq "other" }
+    if (-not $files) {
+        Write-Host "Power Platform solution file not found"
+    }
+    else {
+        foreach ($file in $files) {
+            $xml = [xml](Get-Content -Encoding UTF8 -Path $file.FullName)
+            if ($newValue.StartsWith('+')) {
+                # Increment version
+                $versionNumbers = $xml.SelectNodes("//Version")[0].InnerText.Split(".")
+                switch($newValue) {
+                    '+1' {
+                        # Increment major version number
+                        $versionNumbers[0] = "$(([int]$versionNumbers[0])+1)"
+                    }
+                    '+0.1' {
+                        # Increment minor version number
+                        $versionNumbers[1] = "$(([int]$versionNumbers[1])+1)"
+                    }
+                    default {
+                        throw "Unexpected version number $newValue"
+                    }
+                }
+                $newVersion = [string]::Join(".", $versionNumbers)
+            }
+            else {
+                $newVersion = $newValue
+            }
+
+            Write-Host "Updating $($file.FullName) with new version $newVersion"
+            $xml.SelectNodes("//Version")[0].InnerText = $newVersion
+            $xml.Save($file.FullName)
+        }
+    }
+}
+
+Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests, Set-PowerPlatformSolutionVersion, Test-SettingExists

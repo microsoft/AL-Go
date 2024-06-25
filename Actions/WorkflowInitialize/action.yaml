@@ -8,6 +8,14 @@ inputs:
   eventId:
     description: The event id of the initiating workflow
     required: true
+  actionsRepo:
+    description: The repository of the action
+    required: false
+    default: ${{ github.action_repository }}
+  actionsRef:
+    description: The ref of the action
+    required: false
+    default: ${{ github.action_ref }}
 outputs:
   correlationId:
     description: A correlation Id for the workflow
@@ -23,10 +31,12 @@ runs:
       id: workflowinitialize
       env:
         _eventId: ${{ inputs.eventId }}
+        _actionsRepo: ${{ inputs.actionsRepo }}
+        _actionsRef: ${{ inputs.actionsRef }}
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId $ENV:_eventId
+          ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId $ENV:_eventId -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
