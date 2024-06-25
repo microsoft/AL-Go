@@ -37,7 +37,8 @@ So, don't have secrets that are not secrets as this might break core functionali
 ### Use compressed JSON
 
 
-AL-Go for GitHub uses json structures for some secrets (like authentication contexts). AL-Go for GitHub will ensure that individual secret property values are masked in the log as well as the full json structure. When creating a json structure secret, it is important to use compressed json as GitHub will mask individual lines as well. This means that a non-compressed json structure will cause the curly bracket characters to be handled as secrets, breaking AL-Go for GitHub. In the logs you will see that the curly brackets are replaced with \*\*\*
+AL-Go for GitHub uses JSON structures for some secrets (like authentication contexts). AL-Go for GitHub will ensure that individual secret property values are masked in the log as well as the full JSON structure. When creating a JSON structure secret, it is important to use compressed JSON as GitHub will mask individual lines as well. This means that a non-compressed JSON structure will cause the curly bracket characters to be handled as secrets, breaking AL-Go for GitHub. In the logs you will see that the curly brackets are replaced with \*\*\*
+
 
 ![image](https://github.com/microsoft/AL-Go/assets/10775043/58bbc120-f36d-499d-8e6c-8cc87f55d918)
 
