@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
+- Issue 1073 Publish to AppSource - Automated validation: failure
 
 ### Business Central Performance Toolkit Test Result Viewer
 
