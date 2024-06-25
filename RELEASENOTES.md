@@ -5,7 +5,7 @@
 
 ### Dependencies to PowerShell modules
 
-AL-Go for GitHub relies on specific PowerShell modules, and the minimum versions required for these modules are tracked in [Packages.json](https://raw.githubusercontent.com/microsoft/AL-Go/main/Actions/Packages.json) file. Should the installed modules on the GitHub runner not meet these minimum requirements, the necessary modules will be installed as needed.”
+AL-Go for GitHub relies on specific PowerShell modules, and the minimum versions required for these modules are tracked in [Packages.json](https://raw.githubusercontent.com/microsoft/AL-Go/main/Actions/Packages.json) file. Should the installed modules on the GitHub runner not meet these minimum requirements, the necessary modules will be installed as needed.
 
 ### Support managed identities and federated credentials
 
