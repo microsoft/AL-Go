@@ -124,17 +124,6 @@ function GetKeyVaultSecret {
         catch {
             throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
         }
-        try {
-            Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName | ForEach-Object { $_.Name } | Out-Null
-        }
-        catch {
-            if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientSecret') {
-                throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
-            }
-            else {
-                throw "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
-            }
-        }
     }
 
     $secretSplit = $secretName.Split('=')
@@ -145,7 +134,17 @@ function GetKeyVaultSecret {
     }
 
     $value = $null
-    $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
+    try {
+        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret
+    }
+    catch {
+        if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientSecret') {
+            throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+        }
+        else {
+            throw "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
+        }
+    }
     if ($keyVaultSecret) {
         if ($encrypted) {
             # Return encrypted string

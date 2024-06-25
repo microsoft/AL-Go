@@ -108,7 +108,7 @@ try {
                             $secretValue = $json | ConvertTo-Json -Compress
                         }
                         catch {
-                            Write-Host "::WARNING::Unable to get ID_TOKEN, maybe id_token: write permissions are missing"
+                            throw "$SecretName doesn't contain any ClientSecret and AL-Go is unable to acquire an ID_TOKEN. Error was $($_.Exception.Message)"
                         }
                     }
                 }

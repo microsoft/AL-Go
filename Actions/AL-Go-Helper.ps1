@@ -1283,14 +1283,8 @@ function InstallModule {
         Write-Host "Module $name is available in version $($module.Version)"
     }
     else {
-        $module = Get-InstalledModule -Name $name -MinimumVersion "$minimumVersion" -ErrorAction SilentlyContinue
-        if ($module) {
-            Write-Host "$name version $($module.Version) is installed"
-        }
-        else {
-            Write-Host "Installing module $name (minimum version $minimumVersion)"
-            Install-Module -Name $name -MinimumVersion "$minimumVersion" -Force | Out-Null
-        }
+        Write-Host "Installing module $name (minimum version $minimumVersion)"
+        Install-Module -Name $name -MinimumVersion "$minimumVersion" -Force | Out-Null
     }
     Write-Host "Importing module $name (minimum version $minimumVersion)"
     Import-Module -Name $name -MinimumVersion $minimumVersion -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
