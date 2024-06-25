@@ -100,6 +100,17 @@ try {
                             MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
+                    if ($json.ContainsKey('clientID') -and !($json.ContainsKey('clientSecret') -or $json.ContainsKey('refreshToken'))) {
+                        try {
+                            Write-Host "Query federated token"
+                            $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+                            $json += @{ "clientAssertion" = $result.value }
+                            $secretValue = $json | ConvertTo-Json -Compress
+                        }
+                        catch {
+                            throw "$SecretName doesn't contain any ClientSecret and AL-Go is unable to acquire an ID_TOKEN. Error was $($_.Exception.Message)"
+                        }
+                    }
                 }
                 $base64value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 $outSecrets += @{ "$secretsProperty" = $base64value }
