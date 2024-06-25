@@ -147,6 +147,16 @@ else {
                 if ($syncMode -eq 'ForceSync') { $syncMode = 'Force' }
                 $parameters += @{ "SchemaSyncMode" = $syncMode }
             }
+            if ($deploymentSettings.scope) {
+                if (@('DEV', 'PTE') -notcontains $deploymentSettings.scope) {
+                    throw "Invalid scope $($deploymentSettings.SyncMode) when deploying using the automation API. Valid values are DEV and PTE."
+                }
+                Write-Host "Using $($deploymentSettings.scope)"
+                $scope = $deploymentSettings.scope
+                if ($scope -eq '') { $scope = 'DEV' }
+                $parameters += @{ "scope" = $scope }
+            }
+
             Write-Host "Publishing apps using automation API"
             Publish-PerTenantExtensionApps @parameters
         }
