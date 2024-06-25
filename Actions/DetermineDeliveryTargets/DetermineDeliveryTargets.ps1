@@ -8,7 +8,7 @@
 function IncludeBranch([string] $deliveryTarget) {
     $settingsName = "DeliverTo$deliveryTarget"
     if ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('Branches')) {
-        Write-Host "- Branches defined: $($settings."$settingsName".Branches -join ', ') - "
+        Write-Host "- Branches defined: $($settings."$settingsName".Branches -join ', ')"
         return ($null -ne ($settings."$settingsName".Branches | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }))
     }
     else {
@@ -18,7 +18,7 @@ function IncludeBranch([string] $deliveryTarget) {
 }
 
 function IncludeDeliveryTarget([string] $deliveryTarget) {
-    Write-Host "DeliveryTarget $_ - "
+    Write-Host "DeliveryTarget $_"
     # DeliveryTarget Context Secret needs to be specified for a delivery target to be included
     $contextName = "$($_)Context"
     $secrets = $env:Secrets | ConvertFrom-Json
@@ -38,7 +38,7 @@ if ($settings.type -eq "AppSource App") {
     ($projectsJson | ConvertFrom-Json) | ForEach-Object {
         $projectSettings = ReadSettings -project $_
         if ($projectSettings.deliverToAppSource.ContinuousDelivery -or ($projectSettings.Contains('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery)) {
-            Write-Host "Project $_ is setup for Continuous Delivery"
+            Write-Host "Project $_ is setup for Continuous Delivery to AppSource"
             $deliveryTargets += @("AppSource")
         }
     }

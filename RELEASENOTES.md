@@ -1,10 +1,19 @@
 ### Issues
 
 - Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
+- Issue 1073 Publish to AppSource - Automated validation: failure
 - Issue 980 Allow Scope to be PTE in continuousDeployment for PTE extensions in Sandbox (enhancement request)
 - Issue 1079 AppSource App deployment failes with PerTenantExtensionCop Error PTE0001 and PTE0002
 - Issue 866 Accessing GitHub Environment Variables in DeployToCustom Scenarios for PowerShell Scripts
 - Issue 1083 SyncMode for custom deployments?
+
+### Dependencies to PowerShell modules
+
+AL-Go for GitHub relies on specific PowerShell modules, and the minimum versions required for these modules are tracked in [Packages.json](https://raw.githubusercontent.com/microsoft/AL-Go/main/Actions/Packages.json) file. Should the installed modules on the GitHub runner not meet these minimum requirements, the necessary modules will be installed as needed.
+
+### Support managed identities and federated credentials
+
+All authentication context secrets now supports managed identities and federated credentials. See more [here](Scenarios/secrets.md). Furthermore, you can now use https://aka.ms/algosecrets#authcontext to learn more about the formatting of that secret.
 
 ### Business Central Performance Toolkit Test Result Viewer
 

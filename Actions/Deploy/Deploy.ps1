@@ -21,16 +21,6 @@ $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json
 
-# Check obsolete secrets
-"$($envName)-EnvironmentName","$($envName)_EnvironmentName","EnvironmentName" | ForEach-Object {
-    if ($secrets."$_") {
-        throw "The secret $_ is obsolete and should be replaced by using the EnvironmentName property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
-    }
-}
-if ($secrets.Projects) {
-    throw "The secret Projects is obsolete and should be replaced by using the Projects property in the DeployTo$envName setting in .github/AL-Go-Settings.json instead"
-}
-
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
     if ($secrets."$secretName") {
@@ -113,7 +103,8 @@ else {
         $sandboxEnvironment = ($response.environmentType -eq 1)
         $scope = $deploymentSettings.Scope
         if ($null -eq $scope) {
-            if ($settings.Type -eq 'AppSource App' -or ($sandboxEnvironment -and !($bcAuthContext.ClientSecret))) {
+            if ($settings.Type -eq 'AppSource App' -or ($sandboxEnvironment -and !($bcAuthContext.ClientSecret -or $bcAuthContext.ClientAssertion))) {
+                # Sandbox and not S2S -> use dev endpoint (Publish-BcContainerApp)
                 $scope = 'Dev'
             }
             else {
@@ -131,7 +122,6 @@ else {
             if (!$sandboxEnvironment) {
                 throw "Scope Dev is only valid for sandbox environments"
             }
-            # Sandbox and not S2S -> use dev endpoint (Publish-BcContainerApp)
             $parameters = @{
                 "bcAuthContext" = $bcAuthContext
                 "environment" = $deploymentSettings.EnvironmentName
