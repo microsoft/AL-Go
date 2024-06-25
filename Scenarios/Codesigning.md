@@ -13,7 +13,7 @@ This guide will take you through how to set up your AL-Go project with an Azure 
 
 How you do this might depend on which Certificate Authority you are getting your certificate from. DigiCert and GlobalSign have integrations with Azure Key Vault. You can follow [this guide](https://learn.microsoft.com/en-us/azure/key-vault/certificates/how-to-integrate-certificate-authority) on how to set up that integration if you are using one of those CAs. Once you have set up the integration, you can request a certificate from within your Azure Key Vault. If you are using another CA you can try following this guide to [Generate a CSR and Install a Certificate in Microsoft Azure Key Vault](https://www.ssl.com/how-to/generate-csr-install-certificate-microsoft-azure-key-vault/). If neither of those options work for you, please engage with your CA to get the certificate into the Key Vault.
 
-2. A KeyVault can be setup for two different security models: Role Based Access Control (RBAC = recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the KeyVault, the following roles/permissions needs to be assigned to the app registration or Managed Identity on which the authentication is performed:
+2. An Azure Key Vault can be set up for two different security models: Role Based Access Control (RBAC) (recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the Key Vault, the following roles/permissions need to be assigned to the app registration or Managed Identity, on which the authentication is performed:
 
 Role Based Access Control, roles needed:
 
