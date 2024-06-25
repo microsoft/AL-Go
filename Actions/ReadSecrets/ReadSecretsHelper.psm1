@@ -132,15 +132,7 @@ function GetKeyVaultSecret {
         return $null
     }
 
-    if (-not $script:keyvaultConnectionExists) {
-        InstallAzModuleIfNeeded -name 'Az.KeyVault'
-        try {
-            ConnectAz -azureCredentials $keyVaultCredentials
-        }
-        catch {
-            throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
-        }
-    }
+    ConnectAz -azureCredentials $keyVaultCredentials
 
     $secretSplit = $secretName.Split('=')
     $envVar = $secretSplit[0]
