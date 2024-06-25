@@ -29,7 +29,8 @@ All secrets exposed to a repository will be masked (i.e. replaced with \*\*\*) i
 
 ![image](https://github.com/microsoft/AL-Go/assets/10775043/b280360b-d3e8-47b9-8993-39b0de76d44a)
 
-In this case, I have created a secret with the value "windows" and since the Initialization step transfers the githubRunner to the Build steps with the value "windows-latest", this will break AL-Go for GitHub.
+In this case, a secret with the value "windows" have been created and since the Initialization step transfers the githubRunner to the Build steps with the value "windows-latest", this will break AL-Go for GitHub.
+
 
 So, don't have secrets that are not secrets as this might break core functionality in AL-Go for GitHub.
 
