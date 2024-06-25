@@ -9,7 +9,7 @@ inputs:
   includeBranches:
     description: JSON-formatted array branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported.
     required: false
-    default: ''
+    default: '[]'
 outputs:
   Branches:
     description: JSON-formatted array of branch names

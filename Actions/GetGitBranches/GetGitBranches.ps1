@@ -1,6 +1,6 @@
 ﻿param(
     [Parameter(Mandatory = $false, HelpMessage = "JSON-formatted array branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported.")]
-    [string] $includeBranches = ''
+    [string] $includeBranches = '[]'
 )
 
 $gitHubHelperPath = Join-Path $PSScriptRoot '../Github-Helper.psm1' -Resolve
