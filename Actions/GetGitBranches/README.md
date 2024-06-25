@@ -10,7 +10,7 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| includeBranches | | JSON-formatted array of branches to include if they exist. If not specified, all branches are returned. Wildcards are supported. ||
+| includeBranches | | JSON-formatted array branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported. ||
 
 ## OUTPUT
 
@@ -20,4 +20,4 @@ none
 ### OUTPUT variables
 | Name | Description |
 | :-- | :-- |
-| Branches | The list of branches on the remote repository |
+| Branches | JSON-formatted array of branch names |
