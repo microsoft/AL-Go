@@ -61,7 +61,8 @@ If your GitHub organization might have many organizational secrets, please only 
 
 ## <a id="Azure_Credentials"></a>**Azure_Credentials** -> Connect to Azure
 
-By creating a secret called Azure_Credentials you can give your GitHub repository access to an Azure KeyVault, from which you can read secrets and use for managed signing of your apps. You can use a managed identity or an app registration (service to service) for authentication.
+By creating a secret called Azure_Credentials you can give your GitHub repository access to an Azure Key Vault, from which you can read secrets and use for managed signing of your apps. You can use a managed identity or an app registration (service to service) for authentication.
+
 
 > \[!NOTE\]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
