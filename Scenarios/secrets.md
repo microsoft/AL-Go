@@ -100,7 +100,7 @@ Whenever AL-Go for GitHub is doing to deploy to an environment, it will need an 
 
 ### Managed identity
 
-Managed identities cannot be used for this as this is not an Azure resource
+Managed identities cannot be used for deploying to a Business Central environment as this is not an Azure resource
 
 ### Impersonation/RefreshToken
 
@@ -132,7 +132,7 @@ Adding a secret called AppSourceContext to an AL-Go for GitHub repository from t
 
 ### Managed identity
 
-Managed identities cannot be used for this as this is not an Azure resource
+Managed identities cannot be used for submitting to AppSource as the partner center API is not an Azure resource
 
 ### App Registration (Service to service authentication)
 
