@@ -5,10 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  token:
-    description: The GitHub token running the action
-    required: false
-    default: ${{ github.token }}
   environmentName:
     description: Name of environment to deploy to
     required: true
