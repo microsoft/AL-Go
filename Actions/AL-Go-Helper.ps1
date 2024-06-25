@@ -2427,7 +2427,7 @@ function ConnectAz {
             Write-Host "Connecting to Azure using clientId and federated token."
             Connect-AzAccount -ApplicationId $azureCredentials.ClientId -Tenant $azureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
         }
-        if ($azureCredentials.PSObject.Properties.Name -eq 'SubScriptionId' -and $azureCredentials.subscriptionId) {
+        if ($azureCredentials.PSObject.Properties.Name -eq 'SubscriptionId' -and $azureCredentials.SubscriptionId) {
             Write-Host "Selecting subscription $($azureCredentials.SubscriptionId)"
             Set-AzContext -SubscriptionId $azureCredentials.SubscriptionId -Tenant $azureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
         }
