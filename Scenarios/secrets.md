@@ -88,7 +88,8 @@ ClientSecret can only be used using an app registration. Under Certificates & Se
 
 Example: `{"keyVaultName":"MyKeyVault","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045"}`
 
-With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your KeyVault in order for AL-Go for GitHub to sign your apps.
+With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your Key Vault in order for AL-Go for GitHub to sign your apps.
+
 
 ## <a id="AuthContext"></a>**AuthContext** -> Deploy to an environment
 
