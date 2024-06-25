@@ -42,7 +42,8 @@ AL-Go for GitHub uses JSON structures for some secrets (like authentication cont
 
 ![image](https://github.com/microsoft/AL-Go/assets/10775043/58bbc120-f36d-499d-8e6c-8cc87f55d918)
 
-In this case, I created a secret with the value:
+In this case, a secret is created with the following value:
+
 
 ```
 {
