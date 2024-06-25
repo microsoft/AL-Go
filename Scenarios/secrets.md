@@ -68,7 +68,7 @@ By creating a secret called Azure_Credentials you can give your GitHub repositor
 > \[!NOTE\]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
 
-A KeyVault can be setup for two different security models: Role Based Access Control (RBAC = recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the KeyVault, the following roles/permissions needs to be assigned to the app registration or Managed Identity on which the authentication is performed:
+n Azure Key Vault can be set up for two different security models: Role Based Access Control (RBAC) (recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the Key Vault, the following roles/permissions need to be assigned to the app registration or Managed Identity, on which the authentication is performed:
 
 | Security Model | Read Secrets | Sign Apps |
 | :-- | :-- | :-- |
