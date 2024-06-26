@@ -2,6 +2,11 @@
 
 - Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
 - Issue 1073 Publish to AppSource - Automated validation: failure
+- Issue 980 Allow Scope to be PTE in continuousDeployment for PTE extensions in Sandbox (enhancement request)
+- Issue 1079 AppSource App deployment failes with PerTenantExtensionCop Error PTE0001 and PTE0002
+- Issue 866 Accessing GitHub Environment Variables in DeployToCustom Scenarios for PowerShell Scripts
+- Issue 1083 SyncMode for custom deployments?
+- Issue 1109 Why filter deployment settings?
 - Fix issue with github ref when running reusable workflows
 
 ### Dependencies to PowerShell modules
@@ -18,7 +23,13 @@ In the summary after a Test Run, you now also have the result of performance tes
 
 ### New Settings
 
+- `deployTo<environmentName>`: is not really new, but has a new property:
+
+  - **Scope** = specifies the scope of the deployment: Dev, PTE. If not specified, AL-Go for GitHub will always use the Dev Scope for AppSource Apps, but also for PTEs when deploying to sandbox environments when impersonation (refreshtoken) is used for authentication.
+  - **\<custom>** = custom properties are now supported and will be transferred to a custom deployment script in the hashtable.
+
 - `bcptThresholds` is a JSON object with properties for the default thresholds for the Business Central Performance Toolkit
+
   - **DurationWarning** - a warning is issued if the duration of a bcpt test degrades more than this percentage (default 10)
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
   - **NumberOfSqlStmtsWarning** - a warning is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 5)
