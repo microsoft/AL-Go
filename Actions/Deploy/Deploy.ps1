@@ -17,6 +17,7 @@ $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | Conve
 $deploymentSettings = $deploymentEnvironments."$environmentName"
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
+$settings = $env:Settings | ConvertFrom-Json
 
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
@@ -98,8 +99,27 @@ else {
 
     try {
         $sandboxEnvironment = ($response.environmentType -eq 1)
-        if ($sandboxEnvironment -and !($bcAuthContext.ClientSecret -or $bcAuthContext.ClientAssertion)) {
-            # Sandbox and not S2S -> use dev endpoint (Publish-BcContainerApp)
+        $scope = $deploymentSettings.Scope
+        if ($null -eq $scope) {
+            if ($settings.Type -eq 'AppSource App' -or ($sandboxEnvironment -and !($bcAuthContext.ClientSecret -or $bcAuthContext.ClientAssertion))) {
+                # Sandbox and not S2S -> use dev endpoint (Publish-BcContainerApp)
+                $scope = 'Dev'
+            }
+            else {
+                $scope = 'PTE'
+            }
+        }
+        elseif (@('Dev','PTE') -notcontains $scope) {
+            throw "Invalid Scope $($scope). Valid values are Dev and PTE."
+        }
+        if (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.continuousDeployment)) {
+            # Continuous deployment is undefined in settings - we will not deploy to production environments
+            Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
+        }
+        elseif ($scope -eq 'Dev') {
+            if (!$sandboxEnvironment) {
+                throw "Scope Dev is only valid for sandbox environments"
+            }
             $parameters = @{
                 "bcAuthContext" = $bcAuthContext
                 "environment" = $deploymentSettings.EnvironmentName
@@ -114,10 +134,6 @@ else {
             }
             Write-Host "Publishing apps using development endpoint"
             Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages -replacePackageId
-        }
-        elseif (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.continuousDeployment)) {
-            # Continuous deployment is undefined in settings - we will not deploy to production environments
-            Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
         }
         else {
             # Use automation API for production environments (Publish-PerTenantExtensionApps)
