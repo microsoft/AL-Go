@@ -484,8 +484,10 @@ try {
                 }
                 Write-Host "Submitting to AppSource"
                 $status = New-AppSourceSubmission -authContext $authContext -productId $projectSettings.deliverToAppSource.productId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
-                if ($status.state -ne 'Published' -or ($status.substate -ne 'ReadyToPublish' -and $status.substate -ne 'InStore')) {
-                    throw "AppSource submission failed. Status is $($status.state/$status.substate)"
+                if ($goLive) {
+                    if ($status.state -ne 'Published' -or ($status.substate -ne 'ReadyToPublish' -and $status.substate -ne 'InStore')) {
+                        throw "AppSource submission failed. Status is $($status.state)/$($status.substate)"
+                    }
                 }
             }
         }
