@@ -34,7 +34,7 @@ try {
     Write-Host "::endgroup::"
 
     # Get parameters for signing
-    $AzureCredentials = ConvertFrom-Json $AzureCredentialsJson
+    $AzureCredentials = ConvertFrom-Json ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($AzureCredentialsJson)))
     $settings = $env:Settings | ConvertFrom-Json
     if ($settings.keyVaultName) {
         $AzureKeyVaultName = $settings.keyVaultName
