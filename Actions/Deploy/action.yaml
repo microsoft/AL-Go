@@ -5,10 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  token:
-    description: The GitHub token running the action
-    required: false
-    default: ${{ github.token }}
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -33,7 +29,6 @@ runs:
       shell: ${{ inputs.shell }}
       id: Deploy
       env:
-        _token: ${{ inputs.token }}
         _environmentName: ${{ inputs.environmentName }}
         _artifactsFolder: ${{ inputs.artifactsFolder }}
         _type: ${{ inputs.type }}
@@ -41,7 +36,7 @@ runs:
       run: |
         $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
         try {
-          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
+          ${{ github.action_path }}/Deploy.ps1 -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
         }
         catch {
           Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
