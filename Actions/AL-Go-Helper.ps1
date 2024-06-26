@@ -553,6 +553,7 @@ function ReadSettings {
     $settings = [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
+        "updateALGoBranches"                            = @()
         "projects"                                      = @()
         "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
