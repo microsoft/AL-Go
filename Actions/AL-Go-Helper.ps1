@@ -2403,11 +2403,17 @@ function InstallAzModuleIfNeeded {
     InstallModule -name $name -minimumVersion $minimumVersion
 }
 
+$script:AzConnected = $false
+
 function ConnectAz {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'GitHub Secrets come in as plain text')]
     param(
         [PsCustomObject] $azureCredentials
     )
+    if ($script:AzConnected) {
+        return
+    }
+    InstallAzModuleIfNeeded -name 'Az.KeyVault'
     try {
         Clear-AzContext -Scope Process
         Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
@@ -2431,7 +2437,7 @@ function ConnectAz {
             Write-Host "Selecting subscription $($azureCredentials.SubscriptionId)"
             Set-AzContext -SubscriptionId $azureCredentials.SubscriptionId -Tenant $azureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
         }
-        $script:keyvaultConnectionExists = $true
+        $script:AzConnected = $true
         Write-Host "Successfully connected to Azure"
     }
     catch {

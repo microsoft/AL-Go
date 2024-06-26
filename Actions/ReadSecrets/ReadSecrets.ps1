@@ -106,6 +106,7 @@ try {
                             $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
                             $json += @{ "clientAssertion" = $result.value }
                             $secretValue = $json | ConvertTo-Json -Compress
+                            MaskValue -key "$secretName with federated token" -value $secretValue
                         }
                         catch {
                             throw "$SecretName doesn't contain any ClientSecret and AL-Go is unable to acquire an ID_TOKEN. Error was $($_.Exception.Message)"

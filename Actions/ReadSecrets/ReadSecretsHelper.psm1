@@ -4,11 +4,28 @@ Param(
 )
 
 $script:gitHubSecrets = $_gitHubSecrets | ConvertFrom-Json
-$script:keyvaultConnectionExists = $false
-$script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
 $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+function GetAzureCredentialsSecretName {
+    $settings = $env:Settings | ConvertFrom-Json
+    if ($settings.PSObject.Properties.Name -eq "AZURE_CREDENTIALSSecretName") {
+        return $settings.AZURE_CREDENTIALSSecretName
+    }
+    else {
+        return "AZURE_CREDENTIALS"
+    }
+}
+
+function GetAzureCredentials {
+    $secretName = GetAzureCredentialsSecretName
+    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
+        return $script:gitHubSecrets."$secretName"
+    }
+    return $null
+}
+
 
 function MaskValue {
     Param(
@@ -68,10 +85,10 @@ function GetGithubSecret {
 
 function GetKeyVaultCredentials {
     $creds = $null
-    if ($script:isKeyvaultSet) {
-        $jsonStr = $script:gitHubSecrets.AZURE_CREDENTIALS
+    $jsonStr = GetAzureCredentials
+    if ($jsonStr) {
         if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
-            throw "Secret AZURE_CREDENTIALS cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
+            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
         }
         try {
             $creds = $jsonStr | ConvertFrom-Json
@@ -84,7 +101,7 @@ function GetKeyVaultCredentials {
             $creds.TenantId | Out-Null
         }
         catch {
-            throw "Secret AZURE_CREDENTIALS is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
+            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
         }
         $keyVaultNameExists = $creds.PSObject.Properties.Name -eq 'keyVaultName'
         $settings = $env:Settings | ConvertFrom-Json
@@ -111,20 +128,11 @@ function GetKeyVaultSecret {
         [PsCustomObject] $keyVaultCredentials,
         [switch] $encrypted
     )
-
-    if (-not $script:isKeyvaultSet) {
+    if ($null -eq $keyVaultCredentials) {
         return $null
     }
 
-    if (-not $script:keyvaultConnectionExists) {
-        InstallAzModuleIfNeeded -name 'Az.KeyVault'
-        try {
-            ConnectAz -azureCredentials $keyVaultCredentials
-        }
-        catch {
-            throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
-        }
-    }
+    ConnectAz -azureCredentials $keyVaultCredentials
 
     $secretSplit = $secretName.Split('=')
     $envVar = $secretSplit[0]

@@ -8,6 +8,7 @@
 - Issue 1083 SyncMode for custom deployments?
 - Issue 1109 Why filter deployment settings?
 - Fix issue with github ref when running reusable workflows
+- Issue 1098 Support for specifying the name of the AZURE_CREDENTIALS secret by adding a AZURE_CREDENTIALSSecretName setting
 
 ### Dependencies to PowerShell modules
 
