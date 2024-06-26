@@ -7,6 +7,7 @@
 - Issue 866 Accessing GitHub Environment Variables in DeployToCustom Scenarios for PowerShell Scripts
 - Issue 1083 SyncMode for custom deployments?
 - Issue 1109 Why filter deployment settings?
+- Fix issue with github ref when running reusable workflows
 
 ### Dependencies to PowerShell modules
 
