@@ -38,6 +38,7 @@ jobs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
+      checkoutRef: ${{ github.event.pull_request.merge_commit_sha }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
