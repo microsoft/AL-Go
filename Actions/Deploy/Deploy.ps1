@@ -1,6 +1,4 @@
 Param(
-    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token,
     [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
     [string] $environmentName,
     [Parameter(HelpMessage = "Path to the downloaded artifacts to deploy", Mandatory = $true)]
