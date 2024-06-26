@@ -6,7 +6,7 @@ inputs:
     required: false
     default: powershell
   azureCredentialsJson:
-    description: Azure Credentials secret
+    description: Azure Credentials secret (Base 64 encoded)
     required: true
   pathToFiles:
     description: The path to the files to be signed

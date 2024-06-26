@@ -16,6 +16,7 @@ permissions:
   contents: read
   actions: read
   pull-requests: read
+  id-token: write
 
 env:
   workflowDepth: 1
@@ -52,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-          ref: refs/pull/${{ github.event.number }}/merge
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
       - name: Initialize the workflow
         id: init
@@ -92,7 +93,7 @@ jobs:
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
       runsOn: ${{ needs.Initialization.outputs.githubRunner }}
-      checkoutRef: refs/pull/${{ github.event.number }}/merge
+      checkoutRef: ${{ github.event.pull_request.merge_commit_sha }}
       parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
