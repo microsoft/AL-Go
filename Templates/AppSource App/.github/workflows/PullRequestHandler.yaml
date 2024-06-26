@@ -38,7 +38,6 @@ jobs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
-      checkoutRef: ${{ github.event.pull_request.merge_commit_sha }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
@@ -54,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-          ref: refs/pull/${{ github.event.number }}/merge
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
       - name: Initialize the workflow
         id: init
@@ -94,6 +93,7 @@ jobs:
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
       runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+      checkoutRef: ${{ github.event.pull_request.merge_commit_sha }}
       parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
