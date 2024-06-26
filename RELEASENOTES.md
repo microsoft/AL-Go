@@ -2,6 +2,7 @@
 
 - Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
 - Issue 1073 Publish to AppSource - Automated validation: failure
+- Fix issue with github ref when running reusable workflows
 
 ### Dependencies to PowerShell modules
 
