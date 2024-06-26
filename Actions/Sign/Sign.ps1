@@ -1,6 +1,6 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 param(
-    [Parameter(HelpMessage = "Azure Credentials secret", Mandatory = $true)]
+    [Parameter(HelpMessage = "Azure Credentials secret (Base 64 encoded)", Mandatory = $true)]
     [string] $AzureCredentialsJson,
     [Parameter(HelpMessage = "The path to the files to be signed", Mandatory = $true)]
     [String] $PathToFiles,
