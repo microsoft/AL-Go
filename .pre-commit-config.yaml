@@ -6,7 +6,7 @@ repos:
     rev: 0.7.17
     hooks:
       - id: mdformat
-        args: [--end-of-line=crlf]
+        args: [--end-of-line=keep]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
