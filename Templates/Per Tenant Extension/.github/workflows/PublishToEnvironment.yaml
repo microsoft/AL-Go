@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 defaults:
   run:
@@ -152,7 +153,7 @@ jobs:
         with:
           shell: ${{ matrix.shell }}
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
       - name: Get Artifacts for deployment
         uses: microsoft/AL-Go-Actions/GetArtifactsForDeployment@main

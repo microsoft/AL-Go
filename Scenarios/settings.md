@@ -1,6 +1,8 @@
 # Settings
 
-The behavior of AL-Go for GitHub is very much controlled by settings.
+The behavior of AL-Go for GitHub is very much controlled by settings and secrets.
+
+To learn more about the secrets used by AL-Go for GitHub, please navigate to [Secrets](secrets.md).
 
 ## Where are the settings located
 

@@ -1269,21 +1269,25 @@ function GetProjectFolders {
     $projectFolders
 }
 
-function installModules {
+function InstallModule {
     Param(
-        [String[]] $modules
+        [String] $name,
+        [System.Version] $minimumVersion = $null
     )
 
-    $modules | ForEach-Object {
-        if (-not (get-installedmodule -Name $_ -ErrorAction SilentlyContinue)) {
-            Write-Host "Installing module $_"
-            Install-Module $_ -Force | Out-Null
-        }
+    if ($null -eq $minimumVersion) {
+        $minimumVersion = [System.Version](GetPackageVersion -packageName $name)
     }
-    $modules | ForEach-Object {
-        Write-Host "Importing module $_"
-        Import-Module $_ -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+    $module = Get-Module -name $name -ListAvailable | Select-Object -First 1
+    if ($module -and $module.Version -ge $minimumVersion) {
+        Write-Host "Module $name is available in version $($module.Version)"
     }
+    else {
+        Write-Host "Installing module $name (minimum version $minimumVersion)"
+        Install-Module -Name $name -MinimumVersion "$minimumVersion" -Force | Out-Null
+    }
+    Write-Host "Importing module $name (minimum version $minimumVersion)"
+    Import-Module -Name $name -MinimumVersion $minimumVersion -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
 function CloneIntoNewFolder {
@@ -1329,7 +1333,7 @@ function CommitFromNewFolder {
     Param(
         [string] $serverUrl,
         [string] $commitMessage,
-        [string] $body = '',
+        [string] $body = $commitMessage,
         [string] $branch
     )
 
@@ -1664,7 +1668,7 @@ function CreateDevEnv {
 
             if (($settings.keyVaultName) -and -not ($bcAuthContext)) {
                 Write-Host "Reading Key Vault $($settings.keyVaultName)"
-                installModules -modules @('Az.KeyVault')
+                InstallAzModuleIfNeeded -name 'Az.KeyVault'
 
                 if ($kind -eq "local") {
                     $LicenseFileSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.licenseFileUrlSecretName
@@ -2357,14 +2361,80 @@ function GetProjectsFromRepository {
     return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
 }
 
-function Get-PackageVersion($PackageName) {
+function GetPackageVersion($packageName) {
     $alGoPackages = Get-Content -Path "$PSScriptRoot\Packages.json" | ConvertFrom-Json
 
     # Check if the package is in the list of packages
-    if ($alGoPackages.PSobject.Properties.name -match $PackageName) {
-        return $alGoPackages.$PackageName
+    if ($alGoPackages.PSobject.Properties.name -eq $PackageName) {
+        return $alGoPackages."$PackageName"
     }
     else {
         throw "Package $PackageName is not in the list of packages"
+    }
+}
+
+function InstallAzModuleIfNeeded {
+    Param(
+        [string] $name,
+        [System.version] $minimumVersion = $null
+    )
+
+    if ($null -eq $minimumVersion) {
+        $minimumVersion = [System.Version](GetPackageVersion -packageName $name)
+    }
+    $azModule = Get-Module -Name $name
+    if ($azModule -and $azModule.Version -ge $minimumVersion) {
+        # Already installed
+        return
+    }
+    # GitHub hosted Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
+    if ($isWindows) {
+        # GitHub hosted Windows Runners have AzureRm PowerShell modules installed (deprecated)
+        # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
+        # Remove AzureRm modules from PSModulePath and add AZ modules
+        if (Test-Path 'C:\Modules\az_*') {
+            $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
+            if ($azModulesPath) {
+              Write-Host "Adding AZ module path: $($azModulesPath.FullName)"
+              $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
+            }
+        }
+    }
+    InstallModule -name $name -minimumVersion $minimumVersion
+}
+
+function ConnectAz {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'GitHub Secrets come in as plain text')]
+    param(
+        [PsCustomObject] $azureCredentials
+    )
+    try {
+        Clear-AzContext -Scope Process
+        Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
+        if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret' -and $azureCredentials.ClientSecret) {
+            Write-Host "Connecting to Azure using clientId and clientSecret."
+            $credential = New-Object pscredential -ArgumentList $azureCredentials.ClientId, (ConvertTo-SecureString -string $azureCredentials.ClientSecret -AsPlainText -Force)
+            Connect-AzAccount -ServicePrincipal -Tenant $azureCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
+        }
+        else {
+            try {
+                Write-Host "Query federated token"
+                $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+            }
+            catch {
+                throw "Unable to get federated token, maybe id_token: write permissions are missing. Error was $($_.Exception.Message)"
+            }
+            Write-Host "Connecting to Azure using clientId and federated token."
+            Connect-AzAccount -ApplicationId $azureCredentials.ClientId -Tenant $azureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
+        }
+        if ($azureCredentials.PSObject.Properties.Name -eq 'SubscriptionId' -and $azureCredentials.SubscriptionId) {
+            Write-Host "Selecting subscription $($azureCredentials.SubscriptionId)"
+            Set-AzContext -SubscriptionId $azureCredentials.SubscriptionId -Tenant $azureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        }
+        $script:keyvaultConnectionExists = $true
+        Write-Host "Successfully connected to Azure"
+    }
+    catch {
+        throw "Error trying to authenticate to Azure. Error was $($_.Exception.Message)"
     }
 }
