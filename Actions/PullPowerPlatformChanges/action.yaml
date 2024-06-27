@@ -59,7 +59,7 @@ runs:
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
-        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
+        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         environmentName: ${{ inputs.environmentName }}
 
     - name: Set up new branch for changes
@@ -72,7 +72,7 @@ runs:
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
           ${{ github.action_path }}/GitCloneReponsitory.ps1 -actor $ENV:_actor -token $ENV:_token -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
-        } 
+        }
 
     - name: Export Solution (username)
       if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''

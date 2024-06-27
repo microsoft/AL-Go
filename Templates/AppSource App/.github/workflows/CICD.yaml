@@ -17,6 +17,7 @@ permissions:
   contents: read
   actions: read
   pages: read
+  id-token: write
 
 env:
   workflowDepth: 1
@@ -166,7 +167,7 @@ jobs:
   DeployALDoc:
     needs: [ Initialization, Build ]
     if: (!cancelled()) && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
-    runs-on: windows-latest
+    runs-on: [ windows-latest ]
     name: Deploy Reference Documentation
     permissions:
       contents: read
@@ -250,7 +251,7 @@ jobs:
         with:
           shell: ${{ matrix.shell }}
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
       - name: Deploy to Business Central
         id: Deploy

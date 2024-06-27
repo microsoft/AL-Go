@@ -49,6 +49,7 @@ permissions:
   contents: write
   pull-requests: write
   actions: read
+  id-token: write
 
 concurrency: release
 
@@ -100,7 +101,7 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForPush'
           useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
-  
+
       - name: Determine Projects
         id: determineProjects
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main

@@ -12,13 +12,14 @@ Per default, AL-Go logs some basic telemetry to Microsoft. If you want to opt-ou
 "microsoftTelemetryConnectionString":  ""
 ```
 
-By setting the Microsoft telemetry connection string to be an empty string you opt-out of sending basic telemetry to Microsoft. If on the other hand you want to send extended telemetry to Microsoft you can do that with the following setting. 
+By setting the Microsoft telemetry connection string to be an empty string you opt-out of sending basic telemetry to Microsoft. If on the other hand you want to send extended telemetry to Microsoft you can do that with the following setting.
 
 ```
 "SendExtendedTelemetryToMicrosoft" : true
 ```
 
-Sending extended telemetry to Microsoft is helpful for when we need to help investigate an issue in your repository. 
+Sending extended telemetry to Microsoft is helpful for when we need to help investigate an issue in your repository.
 
----
+______________________________________________________________________
+
 [back](../README.md)

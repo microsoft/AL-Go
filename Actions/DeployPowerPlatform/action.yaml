@@ -47,7 +47,7 @@ runs:
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
-        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }} 
+        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         environmentName: ${{ inputs.environmentName }}
 
     - name: Determine Power Platform solution location
@@ -58,7 +58,7 @@ runs:
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
           ${{ github.action_path }}/DeterminePowerPlatformSolutionFolder.ps1 -artifactsFolder $ENV:_artifactsFolder -solutionFolder $ENV:_solutionFolder
-        } 
+        }
 
     - name: Unpack solution artifact
       if: env.powerPlatformSolutionFilePath != ''

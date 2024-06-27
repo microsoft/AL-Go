@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 defaults:
   run:
@@ -29,6 +30,7 @@ env:
 
 jobs:
   UpdateALGoSystemFiles:
+    name: 'Update AL-Go System Files'
     needs: [ ]
     runs-on: [ windows-latest ]
     steps:

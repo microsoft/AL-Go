@@ -126,6 +126,40 @@ function Set-VersionInSettingsFile {
 
 <#
     .Synopsis
+        Checks if a setting exists in a settings file.
+    .Description
+        Checks if a setting exists in a settings file.
+    .Parameter settingsFilePath
+        Path to a JSON file containing the settings.
+    .Parameter settingName
+        Name of the setting to check.
+#>
+function Test-SettingExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $settingsFilePath,
+        [Parameter(Mandatory = $true)]
+        [string] $settingName
+    )
+
+    if (-not (Test-Path $settingsFilePath)) {
+        throw "Settings file ($settingsFilePath) not found."
+    }
+
+    Write-Host "Reading settings from $settingsFilePath"
+    try {
+        $settingsJson = Get-Content $settingsFilePath -Encoding UTF8 -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "Settings file ($settingsFilePath) is malformed: $_"
+    }
+
+    $settingExists = [bool] ($settingsJson.PSObject.Properties.Name -eq $settingName)
+    return $settingExists
+}
+
+<#
+    .Synopsis
         Changes the version number of a project.
     .Description
         Changes the version number of a project.
@@ -258,4 +292,4 @@ function Set-PowerPlatformSolutionVersion {
     }
 }
 
-Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests, Set-PowerPlatformSolutionVersion
+Export-ModuleMember -Function Set-VersionInSettingsFile, Set-VersionInAppManifests, Set-DependenciesVersionInAppManifests, Set-PowerPlatformSolutionVersion, Test-SettingExists

@@ -17,7 +17,7 @@ on:
       checkoutRef:
         description: Ref to checkout
         required: false
-        default: ${{ github.ref }}
+        default: ${{ github.sha }}
         type: string
       project:
         description: Name of the built project

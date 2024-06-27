@@ -1,4 +1,4 @@
-﻿Param(
+﻿﻿Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -10,7 +10,7 @@
     [Parameter(HelpMessage = "The artifacts to deliver or a folder in which the artifacts have been downloaded", Mandatory = $true)]
     [string] $artifacts,
     [Parameter(HelpMessage = "Type of delivery (CD or Release)", Mandatory = $false)]
-    [ValidateSet('CD','Release')]
+    [ValidateSet('CD', 'Release')]
     [string] $type = "CD",
     [Parameter(HelpMessage = "Types of artifacts to deliver (Apps,Dependencies,TestApps)", Mandatory = $false)]
     [string] $atypes = "Apps,Dependencies,TestApps",
@@ -18,35 +18,53 @@
     [bool] $goLive
 )
 
-function EnsureAzStorageModule() {
-    if (get-command New-AzStorageContext -ErrorAction SilentlyContinue) {
-        Write-Host "Using Az.Storage PowerShell module"
+function ConnectAzStorageAccount {
+    Param(
+        [PSCustomObject] $storageAccountCredentials
+    )
+
+    $azStorageContext = $null
+    if ($storageAccountCredentials.PSObject.Properties.Name -eq 'sastoken') {
+        try {
+            Write-Host "Creating AzStorageContext based on StorageAccountName and sastoken"
+            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -SasToken $storageAccountCredentials.sastoken
+        }
+        catch {
+            throw "Unable to create AzStorageContext based on StorageAccountName and sastoken. Error was: $($_.Exception.Message)"
+        }
+    }
+    elseif ($storageAccountCredentials.PSObject.Properties.Name -eq 'StorageAccountKey') {
+        try {
+            Write-Host "Creating AzStorageContext based on StorageAccountName and StorageAccountKey"
+            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -StorageAccountKey $storageAccountCredentials.StorageAccountKey
+        }
+        catch {
+            throw "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey. Error was: $($_.Exception.Message)"
+        }
+    }
+    elseif (($storageAccountCredentials.PSObject.Properties.Name -eq 'clientID') -and ($storageAccountCredentials.PSObject.Properties.Name -eq 'tenantID')) {
+        try {
+            InstallAzModuleIfNeeded -name 'Az.Accounts'
+            ConnectAz -azureCredentials $storageAccountCredentials
+            Write-Host "Creating AzStorageContext based on StorageAccountName and managed identity/app registration"
+            $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccountCredentials.StorageAccountName -UseConnectedAccount
+        }
+        catch {
+            throw "Unable to create AzStorageContext based on StorageAccountName and managed identity. Error was: $($_.Exception.Message)"
+        }
     }
     else {
-        $azureStorageModule = Get-Module -name 'Azure.Storage' -ListAvailable | Select-Object -First 1
-        if ($azureStorageModule) {
-            Write-Host "Azure.Storage Module is available in version $($azureStorageModule.Version)"
-            Write-Host "Using Azure.Storage version $($azureStorageModule.Version)"
-            Import-Module  'Azure.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-            Set-Alias -Name New-AzStorageContext -Value New-AzureStorageContext -Scope Script
-            Set-Alias -Name Get-AzStorageContainer -Value Get-AzureStorageContainer -Scope Script
-            Set-Alias -Name New-AzStorageContainer -Value New-AzureStorageContainer -Scope Script
-            Set-Alias -Name Set-AzStorageBlobContent -Value Set-AzureStorageBlobContent -Scope Script
-        }
-        else {
-            Write-Host "Installing and importing Az.Storage."
-            Install-Module 'Az.Storage' -Force
-            Import-Module  'Az.Storage' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-        }
+        throw "Insufficient information in StorageContext secret. See https://aka.ms/algosettings#storagecontext for details"
     }
+    return $azStorageContext
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
-$refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
+$refname = "$ENV:GITHUB_REF_NAME".Replace('/', '_')
 
-$artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
+$artifacts = $artifacts.Replace('/', ([System.IO.Path]::DirectorySeparatorChar)).Replace('\', ([System.IO.Path]::DirectorySeparatorChar))
 
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = ReadSettings -baseFolder $baseFolder
@@ -59,10 +77,10 @@ Write-Host "Projects:"
 $projectList | Out-Host
 
 $secrets = $env:Secrets | ConvertFrom-Json
-foreach($thisProject in $projectList) {
+foreach ($thisProject in $projectList) {
     # $project should be the project part of the artifact name generated from the build
     if ($thisProject -and ($thisProject -ne '.')) {
-        $project = $thisProject.Replace('\','_').Replace('/','_')
+        $project = $thisProject.Replace('\', '_').Replace('/', '_')
     }
     else {
         $project = $settings.repoName
@@ -86,7 +104,7 @@ foreach($thisProject in $projectList) {
         }
         elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
             # project is the project name as used in release asset names
-            $project = [Uri]::EscapeDataString($project.Replace(' ','.')).Replace('%','')
+            $project = [Uri]::EscapeDataString($project.Replace(' ', '.')).Replace('%', '')
 
             # latest released version
             $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
@@ -102,7 +120,7 @@ foreach($thisProject in $projectList) {
             if (!($release)) {
                 throw "Unable to locate $artifacts release"
             }
-            foreach($mask in $atypes.Split(',')) {
+            foreach ($mask in $atypes.Split(',')) {
                 $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask $mask
                 Write-Host "'$artifactFile'"
                 if (!$artifactFile -or !(Test-Path $artifactFile)) {
@@ -114,7 +132,7 @@ foreach($thisProject in $projectList) {
                     if ($artifactFile -notlike '*.zip') {
                         throw "Downloaded artifact is not a .zip file"
                     }
-                    Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                    Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0, $artifactFile.Length - 4))
                     Remove-Item $artifactFile -Force
                 }
             }
@@ -133,7 +151,7 @@ foreach($thisProject in $projectList) {
                         if ($artifactFile -notlike '*.zip') {
                             throw "Downloaded artifact is not a .zip file"
                         }
-                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0, $artifactFile.Length - 4))
                         Remove-Item $artifactFile -Force
                     }
                 }
@@ -164,11 +182,11 @@ foreach($thisProject in $projectList) {
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
         $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
         $parameters = @{
-            "Project" = $thisProject
-            "ProjectName" = $projectName
-            "type" = $type
-            "Context" = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context"))
-            "RepoSettings" = $settings
+            "Project"         = $thisProject
+            "ProjectName"     = $projectName
+            "type"            = $type
+            "Context"         = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context"))
+            "RepoSettings"    = $settings
             "ProjectSettings" = $projectSettings
         }
         #Calculate the folders per artifact type
@@ -179,7 +197,7 @@ foreach($thisProject in $projectList) {
             $singleArtifactFilter = "$project-$refname-$artifactType-*.*.*.*";
 
             # Get the folder holding the artifacts from the standard build
-            $artifactFolder =  @(Get-ChildItem -Path (Join-Path $artifactsFolder $singleArtifactFilter) -Directory)
+            $artifactFolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder $singleArtifactFilter) -Directory)
 
             # Verify that there is an apps folder
             if ($artifactFolder.Count -eq 0 -and $artifactType -eq "Apps") {
@@ -219,10 +237,10 @@ foreach($thisProject in $projectList) {
             elseif ($folder.Count -eq 1) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                     $parameters = @{
-                        "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                        "gitHubRepository"         = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
                         "includeNuGetDependencies" = $true
-                        "dependencyIdTemplate" = "AL-Go-{id}"
-                        "packageId" = "AL-Go-{id}"
+                        "dependencyIdTemplate"     = "AL-Go-{id}"
+                        "packageId"                = "AL-Go-{id}"
                     }
                     $parameters.appFiles = $_.FullName
                     $package = New-BcNuGetPackage @parameters
@@ -271,7 +289,7 @@ foreach($thisProject in $projectList) {
             $parameters.dependencyAppFiles = @(Get-Item -Path (Join-Path $dependenciesFolder[0] "*.app") | ForEach-Object { $_.FullName })
         }
         if ($nuGetAccount.Keys -contains 'PackageName') {
-            $parameters.packageId = $nuGetAccount.PackageName.replace('{project}',$projectName).replace('{owner}',$ENV:GITHUB_REPOSITORY_OWNER).replace('{repo}',$settings.repoName)
+            $parameters.packageId = $nuGetAccount.PackageName.replace('{project}', $projectName).replace('{owner}', $ENV:GITHUB_REPOSITORY_OWNER).replace('{repo}', $settings.repoName)
         }
         else {
             if ($thisProject -and ($thisProject -eq '.')) {
@@ -284,7 +302,7 @@ foreach($thisProject in $projectList) {
         if ($type -eq 'CD') {
             $parameters.packageId += "-preview"
         }
-        $parameters.packageVersion = [System.Version]$appsFolder[0].Name.SubString($appsFolder[0].Name.IndexOf("-Apps-")+6)
+        $parameters.packageVersion = [System.Version]$appsFolder[0].Name.SubString($appsFolder[0].Name.IndexOf("-Apps-") + 6)
         if ($nuGetAccount.Keys -contains 'PackageTitle') {
             $parameters.packageTitle = $nuGetAccount.PackageTitle
         }
@@ -307,35 +325,17 @@ foreach($thisProject in $projectList) {
         Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
     }
     elseif ($deliveryTarget -eq "Storage") {
-        EnsureAzStorageModule
+        InstallAzModuleIfNeeded -name 'Az.Storage'
         try {
-            $storageAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json | ConvertTo-HashTable
-            # Check that containerName and blobName are present
-            $storageAccount.containerName | Out-Null
-            $storageAccount.blobName | Out-Null
+            $storageAccountCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json
+            $storageAccountCredentials.StorageAccountName | Out-Null
+            $storageContainerName = $storageAccountCredentials.ContainerName.ToLowerInvariant().replace('{project}', $projectName).replace('{branch}', $refname).ToLowerInvariant()
+            $storageBlobName = $storageAccountCredentials.BlobName.ToLowerInvariant()
         }
         catch {
-            throw "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName and sastoken or storageAccountKey.`nError was: $($_.Exception.Message)"
+            throw "StorageContext secret is malformed. Needs to be formatted as Json, containing StorageAccountName, containerName, blobName.`nError was: $($_.Exception.Message)"
         }
-        if ($storageAccount.Keys -contains 'sastoken') {
-            try {
-                $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -SasToken $storageAccount.sastoken
-            }
-            catch {
-                throw "Unable to create AzStorageContext based on StorageAccountName and sastoken.`nError was: $($_.Exception.Message)"
-            }
-        }
-        else {
-            try {
-                $azStorageContext = New-AzStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageAccount.StorageAccountKey
-            }
-            catch {
-                throw "Unable to create AzStorageContext based on StorageAccountName and StorageAccountKey.`nError was: $($_.Exception.Message)"
-            }
-        }
-
-        $storageContainerName =  $storageAccount.ContainerName.ToLowerInvariant().replace('{project}',$projectName).replace('{branch}',$refname).ToLowerInvariant()
-        $storageBlobName = $storageAccount.BlobName.ToLowerInvariant()
+        $azStorageContext = ConnectAzStorageAccount -storageAccountCredentials $storageAccountCredentials
         Write-Host "Storage Container Name is $storageContainerName"
         Write-Host "Storage Blob Name is $storageBlobName"
 
@@ -352,7 +352,7 @@ foreach($thisProject in $projectList) {
             New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
         }
 
-        Write-Host "Delivering to $storageContainerName in $($storageAccount.StorageAccountName)"
+        Write-Host "Delivering to $storageContainerName in $($storageAccountCredentials.StorageAccountName)"
         $atypes.Split(',') | ForEach-Object {
             $atype = $_
             Write-Host "Looking for: $project-$refname-$atype-*.*.*.*"
@@ -371,11 +371,11 @@ foreach($thisProject in $projectList) {
             }
             else {
                 $artfolder = $artfolder[0].FullName
-                $version = $artfolder.SubString($artfolder.IndexOf("-$refname-$atype-")+"-$refname-$atype-".Length)
+                $version = $artfolder.SubString($artfolder.IndexOf("-$refname-$atype-") + "-$refname-$atype-".Length)
                 Write-Host $artfolder
-                $versions = @("$version-preview","preview")
+                $versions = @("$version-preview", "preview")
                 if ($type -eq "Release") {
-                    $versions += @($version,"latest")
+                    $versions += @($version, "latest")
                 }
                 $tempFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::newguid().ToString()).zip"
                 try {
@@ -383,7 +383,7 @@ foreach($thisProject in $projectList) {
                     Compress-Archive -Path (Join-Path $artfolder '*') -DestinationPath $tempFile -Force
                     $versions | ForEach-Object {
                         $version = $_
-                        $blob = $storageBlobName.replace('{project}',$projectName).replace('{branch}',$refname).replace('{version}',$version).replace('{type}',$atype).ToLowerInvariant()
+                        $blob = $storageBlobName.replace('{project}', $projectName).replace('{branch}', $refname).replace('{version}', $version).replace('{type}', $atype).ToLowerInvariant()
                         Write-Host "Delivering $blob"
                         Set-AzStorageBlobContent -Context $azStorageContext -Container $storageContainerName -File $tempFile -blob $blob -Force | Out-Null
                     }
@@ -398,7 +398,7 @@ foreach($thisProject in $projectList) {
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
         $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
         # Use old settings and issue warnings
-        'continuousDelivery','mainAppFolder','productId' | ForEach-Object {
+        'continuousDelivery', 'mainAppFolder', 'productId' | ForEach-Object {
             if ($projectSettings.Keys -contains "AppSource$_") {
                 OutputWarning "Using AppSource$_ in $thisProject/.AL-Go/settings.json is deprecated. Use deliverToAppSource.$_ instead. If both values are defined, the value in AppSource$_ is used (even if it is deprecated)."
                 $projectSettings.deliverToAppSource."$_" = $projectSettings."AppSource$_"
@@ -407,7 +407,8 @@ foreach($thisProject in $projectList) {
         # if type is Release, we only get here with the projects that needs to be delivered to AppSource
         # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
         if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
-            EnsureAzStorageModule
+            # AppSource submission requires the Az.Storage module
+            InstallAzModuleIfNeeded -name 'Az.Storage'
             $appSourceContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.appSourceContext)) | ConvertFrom-Json | ConvertTo-HashTable
             if (!$appSourceContext) {
                 throw "appSourceContext secret is missing"
@@ -474,7 +475,12 @@ foreach($thisProject in $projectList) {
                 throw "Unable to locate main app file ($mainAppFileName doesn't exist)"
             }
             Write-Host "Submitting to AppSource"
-            New-AppSourceSubmission -authContext $authContext -productId $projectSettings.deliverToAppSource.productId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
+            $status = New-AppSourceSubmission -authContext $authContext -productId $projectSettings.deliverToAppSource.productId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
+            if ($goLive) {
+                if ($status.state -ne 'Published' -or ($status.substate -ne 'ReadyToPublish' -and $status.substate -ne 'InStore')) {
+                    throw "AppSource submission failed. Status is $($status.state)/$($status.substate)"
+                }
+            }
         }
     }
     else {

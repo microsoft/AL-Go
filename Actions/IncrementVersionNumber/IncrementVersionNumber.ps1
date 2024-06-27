@@ -13,7 +13,6 @@
     [bool] $directCommit
 )
 
-
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path -path $PSScriptRoot -ChildPath "IncrementVersionNumber.psm1" -Resolve)
 
@@ -40,23 +39,40 @@ else {
 # Collect all projects (AL and PowerPlatform Solution)
 $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
 $PPprojects = @(GetMatchingProjects -projects @($settings.powerPlatformSolutionFolder) -selectProjects $projects)
-if ($projectList.Count -eq 0 -and $PPproject.Count -eq 0) {
-    throw "No projects matches '$selectProjects'"
+if ($projectList.Count -eq 0 -and $PPprojects.Count -eq 0) {
+    throw "No projects matches '$projects'"
 }
+
+$repositorySettingsPath = Join-Path $baseFolder $RepoSettingsFile # $RepoSettingsFile is defined in AL-Go-Helper.ps1
 
 # Increment version number in AL Projects
 if ($projectList.Count -gt 0) {
     $allAppFolders = @()
-    foreach($project in $projectList) {
+    $repoVersionExistsInRepoSettings = Test-SettingExists -settingsFilePath $repositorySettingsPath -settingName 'repoVersion'
+    $repoVersionInRepoSettingsWasUpdated = $false
+    foreach ($project in $projectList) {
         $projectPath = Join-Path $baseFolder $project
         $projectSettingsPath = Join-Path $projectPath $ALGoSettingsFile # $ALGoSettingsFile is defined in AL-Go-Helper.ps1
-        $settings = ReadSettings -baseFolder $baseFolder -project $project
 
-        # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
-        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
-
-        # Set repoVersion in project settings according to the versionNumber parameter
-        Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
+        if (Test-SettingExists -settingsFilePath $projectSettingsPath -settingName 'repoVersion') {
+            # If 'repoVersion' exists in the project settings, update it there
+            Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
+        }
+        elseif ($repoVersionExistsInRepoSettings) {
+            # If 'repoVersion' is not found in project settings but it exists in repo settings, update it there instead
+            if (-not $repoVersionInRepoSettingsWasUpdated) {
+                Write-Host "Setting 'repoVersion' not found in $projectSettingsPath. Updating it on repo level instead"
+                Set-VersionInSettingsFile -settingsFilePath $repositorySettingsPath -settingName 'repoVersion' -newValue $versionNumber
+                $repoVersionInRepoSettingsWasUpdated = $true
+            }
+        }
+        else {
+            # If 'repoVersion' is neither found in project settings nor in repo settings, force create it in project settings
+            # Ensure the repoVersion setting exists in the project settings. Defaults to 1.0 if it doesn't exist.
+            $settings = ReadSettings -baseFolder $baseFolder -project $project
+            Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $settings.repoVersion -Force
+            Set-VersionInSettingsFile -settingsFilePath $projectSettingsPath -settingName 'repoVersion' -newValue $versionNumber
+        }
 
         # Resolve project folders to get all app folders that contain an app.json file
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $project
@@ -72,7 +88,7 @@ if ($projectList.Count -gt 0) {
     }
 
     # Set dependencies in app manifests
-    if($allAppFolders.Count -eq 0) {
+    if ($allAppFolders.Count -eq 0) {
         Write-Host "No App folders found for projects $projects"
     }
     else {
@@ -82,7 +98,7 @@ if ($projectList.Count -gt 0) {
 }
 
 # Increment version number in PowerPlatform Solution
-foreach($PPproject in $PPprojects) {
+foreach ($PPproject in $PPprojects) {
     $projectPath = Join-Path $baseFolder $PPproject
     Set-PowerPlatformSolutionVersion -powerPlatformSolutionPath $projectPath -newValue $versionNumber
 }
