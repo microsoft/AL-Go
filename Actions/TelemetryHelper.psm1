@@ -23,7 +23,7 @@ function DownloadNugetPackage($PackageName, $PackageVersion) {
 }
 
 function LoadApplicationInsightsDll() {
-    $packagePath = DownloadNugetPackage -PackageName "Microsoft.ApplicationInsights" -PackageVersion (Get-PackageVersion -PackageName "Microsoft.ApplicationInsights")
+    $packagePath = DownloadNugetPackage -PackageName "Microsoft.ApplicationInsights" -PackageVersion (GetPackageVersion -PackageName "Microsoft.ApplicationInsights")
     $AppInsightsDllPath = "$packagePath/lib/net46/Microsoft.ApplicationInsights.dll"
 
     if (-not (Test-Path -Path $AppInsightsDllPath)) {
