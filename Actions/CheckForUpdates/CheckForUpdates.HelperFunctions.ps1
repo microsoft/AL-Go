@@ -363,7 +363,7 @@ function IsDirectALGo {
 
 function GetSrcFolder {
     Param(
-        [hashtable] $repoSettings,
+        [string] $repoType,
         [string] $templateUrl,
         [string] $templateFolder,
         [string] $srcPath
@@ -375,7 +375,7 @@ function GetSrcFolder {
         return ''
     }
     if (IsDirectALGo -templateUrl $templateUrl) {
-        switch ($repoSettings.type) {
+        switch ($repoType) {
             "PTE" {
                 $typePath = "Per Tenant Extension"
             }
