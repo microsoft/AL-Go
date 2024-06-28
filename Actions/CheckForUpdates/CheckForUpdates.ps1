@@ -31,12 +31,6 @@ if ($update -eq 'Y') {
     }
 }
 
-# Use Authenticated API request to avoid the 60 API calls per hour limit
-$headers = @{
-    "Accept" = "application/vnd.github.baptiste-preview+json"
-    "Authorization" = "Bearer $token"
-}
-
 if (-not $templateUrl.Contains('@')) {
     $templateUrl += "@main"
 }
@@ -69,7 +63,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
     $downloadLatest = $true
 }
 
-$templateFolder = DownloadTemplateRepository -headers $headers -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+$templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]

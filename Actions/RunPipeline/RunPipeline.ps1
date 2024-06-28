@@ -119,6 +119,31 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
+    if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
+        Write-Host "Reading TrustedNuGetFeeds"
+        foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
+            Write-Host $trustedNuGetFeed.Url
+            if ($trustedNuGetFeed.AuthTokenSecret) {
+                Write-Host $trustedNuGetFeed.AuthTokenSecret
+                $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret
+                if ($secrets.Keys -notcontains $authTokenSecret) {
+                    OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
+                }
+                else {
+                    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
+                    if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
+                        Write-Host "Set token"
+                        $trustedNuGetFeed.Token = $token
+                    }
+                    else {
+                        Write-Host "Add token"
+                        $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name Token -Value $token
+                    }
+                }
+            }
+        }
+    }
+
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
@@ -282,8 +307,13 @@ try {
         }
     }
 
-    if ($gitHubPackagesContext -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
-        $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
+    if ((($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds') -and ($bcContainerHelperConfig.TrustedNuGetFeeds.Count -gt 0)) -or ($gitHubPackagesContext)) -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
+        if ($githubPackagesContext) {
+            $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
+        }
+        else {
+            $gitHubPackagesCredential = [PSCustomObject]@{ "serverUrl" = ''; "token" = '' }
+        }
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
@@ -295,7 +325,7 @@ try {
                     $publishParams = @{
                         "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
                         "nuGetToken" = $gitHubPackagesCredential.token
-                        "packageName" = "AL-Go-$appId"
+                        "packageName" = $appId
                         "version" = $version
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
@@ -304,10 +334,10 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
-                        Copy-BcNuGetPackageToFolder -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
 
                 }
