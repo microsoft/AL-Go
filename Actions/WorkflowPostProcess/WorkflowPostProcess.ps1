@@ -56,13 +56,21 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
         Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowTiming
     }
 
+    # Log additional telemetry from AL-Go settings
     $alGoSettingsPath = "$ENV:GITHUB_WORKSPACE/.github/AL-Go-Settings.json"
     if (Test-Path -Path $alGoSettingsPath) {
         $repoSettings = Get-Content -Path $alGoSettingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-        # Log the repository type
         if ($repoSettings.PSObject.Properties.Name -contains 'type') {
             Add-TelemetryProperty -Hashtable $AdditionalData -Key 'RepoType' -Value $repoSettings.type
+        }
+
+        if ($repoSettings.PSObject.Properties.Name -contains 'githubRunner') {
+            Add-TelemetryProperty -Hashtable $AdditionalData -Key 'GitHubRunner' -Value $repoSettings.githubRunner
+        }
+
+        if ($repoSettings.PSObject.Properties.Name -contains 'runs-on') {
+            Add-TelemetryProperty -Hashtable $AdditionalData -Key 'RunsOn' -Value $repoSettings.'runs-on'
         }
     }
 
