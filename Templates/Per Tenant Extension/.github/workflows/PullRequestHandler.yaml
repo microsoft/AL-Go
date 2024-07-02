@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || format('refs/pull/${0}/merge', github.event.pull_request.number) }}
 
       - name: Initialize the workflow
         id: init
@@ -93,7 +93,7 @@ jobs:
     with:
       shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
       runsOn: ${{ needs.Initialization.outputs.githubRunner }}
-      checkoutRef: ${{ github.event.pull_request.merge_commit_sha }}
+      checkoutRef: ${{ github.event_name == 'pull_request' && github.sha || format('refs/pull/${0}/merge', github.event.pull_request.number) }}
       parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
