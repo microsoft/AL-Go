@@ -15,7 +15,6 @@ Determines the artifactUrl to use for a given project
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | project | | Project folder if repository is setup for multiple projects | . |
 
 ## OUTPUT
