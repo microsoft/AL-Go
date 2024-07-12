@@ -78,7 +78,11 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
         Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ALGoVersion' -Value $AlGoVersion
     }
 
-    Trace-Information -Message "AL-Go workflow ran: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
+    if ($workflowConclusion -eq "Failure") {
+        Trace-Exception -Message "AL-Go workflow failed: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
+    } else {
+        Trace-Information -Message "AL-Go workflow ran: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
+    }
 }
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)

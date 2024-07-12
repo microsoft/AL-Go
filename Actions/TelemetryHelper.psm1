@@ -136,6 +136,9 @@ function Trace-Information() {
     .DESCRIPTION
     Logs an exception message to telemetry
 
+    .PARAMETER Message
+    The message to log to telemetry
+
     .PARAMETER ActionName
     The name of the action to log to telemetry
 
@@ -147,7 +150,9 @@ function Trace-Information() {
 #>
 function Trace-Exception() {
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Message', Mandatory = $true)]
+        [String] $Message,
+        [Parameter(ParameterSetName = 'ActionName', Mandatory = $true)]
         [String] $ActionName,
         [Parameter(Mandatory = $false)]
         [System.Management.Automation.ErrorRecord] $ErrorRecord = $null
@@ -158,7 +163,9 @@ function Trace-Exception() {
         Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ErrorMessage' -Value $ErrorRecord.Exception.Message
     }
 
-    $Message = "AL-Go action failed: $ActionName"
+    if (-not $Message) {
+        $Message = "AL-Go action failed: $ActionName"
+    }
     AddTelemetryEvent -Message $Message -Severity 'Error' -Data $AdditionalData
 }
 
