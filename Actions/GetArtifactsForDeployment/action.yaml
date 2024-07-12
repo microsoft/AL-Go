@@ -25,7 +25,7 @@ runs:
         _artifactsVersion: ${{ inputs.artifactsVersion }}
         _artifactsFolder: ${{ inputs.artifactsFolder }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetArtifactsForDeployment" -Action {
           ${{ github.action_path }}/GetArtifactsForDeployment.ps1 -token $ENV:_token -artifactsVersion $ENV:_artifactsVersion -artifactsFolder $ENV:_artifactsFolder
         }
 branding:

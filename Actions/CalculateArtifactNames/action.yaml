@@ -63,7 +63,7 @@ runs:
         _buildMode: ${{ inputs.buildMode }}
         _suffix: ${{ inputs.suffix }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CalculateArtifactNames" -Action {
           ${{ github.action_path }}/CalculateArtifactNames.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -suffix $ENV:_suffix
         }
 branding:

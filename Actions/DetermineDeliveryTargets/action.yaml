@@ -30,7 +30,7 @@ runs:
         _projectsJson: ${{ inputs.projectsJson }}
         _checkContextSecrets: ${{ inputs.checkContextSecrets }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineDeliveryTargets" -Action {
           ${{ github.action_path }}/DetermineDeliveryTargets.ps1 -projectsJson $ENV:_projectsJson -checkContextSecrets ($ENV:_checkContextSecrets -eq 'true')
         }
 branding:

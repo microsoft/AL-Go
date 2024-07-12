@@ -27,7 +27,7 @@ runs:
         _currentJobContext: ${{ inputs.currentJobContext }}
         _actionsRef: ${{ inputs.actionsRef }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "WorkflowPostProcess" -Action {
           ${{ github.action_path }}/WorkflowPostProcess.ps1 -telemetryScopeJson $ENV:_telemetryScopeJson -currentJobContext $ENV:_currentJobContext -actionsRef $ENV:_actionsRef
         }
 branding:

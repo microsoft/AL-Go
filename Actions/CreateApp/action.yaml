@@ -66,7 +66,7 @@ runs:
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CreateApp" -Action {
           ${{ github.action_path }}/CreateApp.ps1 -actor $ENV:_actor -token $ENV:_token -project $ENV:_project -type $ENV:_type -name $ENV:_name -publisher $ENV:_publisher -idrange $ENV:_idrange -sampleCode ($ENV:_sampleCode -eq 'true') -sampleSuite ($ENV:_sampleSuite -eq 'true') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:

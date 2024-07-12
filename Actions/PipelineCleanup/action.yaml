@@ -17,7 +17,7 @@ runs:
       env:
         _project: ${{ inputs.project }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PipelineCleanup" -Action {
           ${{ github.action_path }}/PipelineCleanup.ps1 -project $ENV:_project
         }
 branding:

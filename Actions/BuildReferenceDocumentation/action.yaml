@@ -21,7 +21,7 @@ runs:
         _token: ${{ inputs.token }}
         _artifacts: ${{ inputs.artifacts }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "BuildReferenceDocumentation" -Action {
           ${{ github.action_path }}/BuildReferenceDocumentation.ps1 -token $ENV:_token -artifacts $ENV:_artifacts
         }
 branding:

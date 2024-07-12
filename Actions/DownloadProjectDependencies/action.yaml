@@ -46,7 +46,7 @@ runs:
         _gitHubToken: ${{ github.token }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DownloadProjectDependencies" -Action {
           ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectsDependenciesJson $ENV:_projectsDependenciesJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
         }
 branding:

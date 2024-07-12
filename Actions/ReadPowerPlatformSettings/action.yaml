@@ -46,7 +46,7 @@ runs:
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         _environmentName: ${{ inputs.environmentName }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadPowerPlatformSettings" -Action {
           ${{ github.action_path }}/ReadPowerPlatformSettings.ps1 -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -environmentName $ENV:_environmentName
         }
 branding:

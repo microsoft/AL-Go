@@ -11,7 +11,7 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PullRequestStatusCheck" -Action {
           ${{ github.action_path }}/PullRequestStatusCheck.ps1
         }
 branding:

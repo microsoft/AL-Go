@@ -45,20 +45,6 @@ function Get-ApplicationInsightsTelemetryClient($TelemetryConnectionString)
 }
 #endregion
 
-#region Helper functions
-<#
-    .DESCRIPTION
-    Get the action name from the GITHUB_ACTION_PATH environment variable
-    The assumption is that the action name is the last part of the path after the last slash
-#>
-function GetActionName() {
-    if ($null -eq $ENV:GITHUB_ACTION_PATH) {
-        return ""
-    }
-    return $ENV:GITHUB_ACTION_PATH.Split("/\")[-1]
-}
-#endregion
-
 function AddTelemetryEvent()
 {
     param(
@@ -117,6 +103,9 @@ function AddTelemetryEvent()
     .PARAMETER Message
     The message to log to telemetry
 
+    .PARAMETER ActionName
+    The name of the action to log to telemetry
+
     .PARAMETER AdditionalData
     Additional data to log to telemetry
 
@@ -125,12 +114,16 @@ function AddTelemetryEvent()
 #>
 function Trace-Information() {
     param(
+        [Parameter(ParameterSetName = 'Message', Mandatory = $true)]
         [String] $Message,
+        [Parameter(ParameterSetName = 'ActionName', Mandatory = $true)]
+        [String] $ActionName,
+        [Parameter(Mandatory = $false)]
         [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     )
 
     if (-not $Message) {
-        $Message = "AL-Go action ran: $(GetActionName)"
+        $Message = "AL-Go action ran: $ActionName"
     }
 
     AddTelemetryEvent -Message $Message -Severity 'Information' -Data $AdditionalData
@@ -143,6 +136,9 @@ function Trace-Information() {
     .DESCRIPTION
     Logs an exception message to telemetry
 
+    .PARAMETER ActionName
+    The name of the action to log to telemetry
+
     .PARAMETER ErrorRecord
     The error record to log to telemetry
 
@@ -151,6 +147,9 @@ function Trace-Information() {
 #>
 function Trace-Exception() {
     param(
+        [Parameter(Mandatory = $true)]
+        [String] $ActionName,
+        [Parameter(Mandatory = $false)]
         [System.Management.Automation.ErrorRecord] $ErrorRecord = $null
     )
 
@@ -159,7 +158,7 @@ function Trace-Exception() {
         Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ErrorMessage' -Value $ErrorRecord.Exception.Message
     }
 
-    $Message = "AL-Go action failed: $(GetActionName)"
+    $Message = "AL-Go action failed: $ActionName"
     AddTelemetryEvent -Message $Message -Severity 'Error' -Data $AdditionalData
 }
 

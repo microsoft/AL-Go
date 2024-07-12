@@ -27,7 +27,7 @@ runs:
         _actionsRepo: ${{ inputs.actionsRepo }}
         _actionsRef: ${{ inputs.actionsRef }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "WorkflowInitialize" -Action {
           ${{ github.action_path }}/WorkflowInitialize.ps1 -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
         }
 branding:

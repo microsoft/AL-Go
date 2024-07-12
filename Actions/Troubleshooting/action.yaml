@@ -19,7 +19,7 @@ runs:
       env:
         _displayNameOfSecrets: ${{ inputs.displayNameOfSecrets }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Troubleshooting" -Action {
           ${{ github.action_path }}/Troubleshooting.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -displayNameOfSecrets ($ENV:_displayNameOfSecrets -eq 'true')
         }
 branding:

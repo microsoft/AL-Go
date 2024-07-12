@@ -54,7 +54,7 @@ runs:
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CreateDevelopmentEnvironment" -Action {
           ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor $ENV:_actor -token $ENV:_token -environmentName $ENV:_environmentName -project $ENV:_project -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -reUseExistingEnvironment ($ENV:_reUseExistingEnvironment -eq 'true') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:

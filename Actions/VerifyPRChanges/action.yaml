@@ -27,7 +27,7 @@ runs:
         _prBaseRepository: ${{ inputs.prBaseRepository }}
         _pullRequestId: ${{ inputs.pullRequestId }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "VerifyPRChanges" -Action {
           ${{ github.action_path }}/VerifyPRChanges.ps1 -token $ENV:_token -prBaseRepository $ENV:_prBaseRepository -pullRequestId $ENV:_pullRequestId
         }
 branding:

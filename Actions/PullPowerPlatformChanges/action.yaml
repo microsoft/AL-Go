@@ -43,7 +43,7 @@ runs:
         actionsRepo: ${{ github.action_repository }}
         actionsRef: ${{ github.action_ref }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -SkipTelemetry -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PullPowerPlatformChanges" -SkipTelemetry -Action {
           ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
         }
 
@@ -70,7 +70,7 @@ runs:
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PullPowerPlatformChanges" -Action {
           ${{ github.action_path }}/GitCloneReponsitory.ps1 -actor $ENV:_actor -token $ENV:_token -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 
@@ -118,7 +118,7 @@ runs:
         _solutionFolder: ${{ inputs.solutionFolder }}
         _environmentName: ${{ inputs.environmentName }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PullPowerPlatformChanges" -Action {
           ${{ github.action_path }}/GitCommitChanges.ps1 -Actor $ENV:_actor -Token $ENV:_token -PowerPlatformSolutionName $ENV:_solutionFolder -EnvironmentName $ENV:_environmentName -Location $ENV:clonedRepoPath -ServerUrl $ENV:serverUrl -GitHubBranch $ENV:gitHubBranch
         }
 

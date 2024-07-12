@@ -17,7 +17,7 @@ runs:
       env:
         _project: ${{ inputs.project }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "AnalyzeTests" -Action {
           ${{ github.action_path }}/AnalyzeTests.ps1 -project $ENV:_project
         }
 branding:

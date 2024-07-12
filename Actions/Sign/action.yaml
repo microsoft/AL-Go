@@ -30,7 +30,7 @@ runs:
         _timestampService: ${{ inputs.timestampService }}
         _digestAlgorithm: ${{ inputs.digestAlgorithm }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Sign" -Action {
           ${{ github.action_path }}/Sign.ps1 -AzureCredentialsJson $ENV:_azureCredentialsJson -PathToFiles $ENV:_pathToFiles -TimestampService $ENV:_timestampService -digestAlgorithm $ENV:_digestAlgorithm
         }
 branding:

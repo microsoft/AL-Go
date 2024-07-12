@@ -17,7 +17,7 @@ runs:
       env:
         _project: ${{ inputs.project }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineArtifactUrl" -Action {
           ${{ github.action_path }}/DetermineArtifactUrl.ps1 -project $ENV:_project
         }
 branding:

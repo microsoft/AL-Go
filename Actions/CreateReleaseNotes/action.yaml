@@ -37,7 +37,7 @@ runs:
         _tag_name: ${{ inputs.tag_name }}
         _target_commitish: ${{ inputs.target_commitish }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CreateReleaseNotes" -Action {
           ${{ github.action_path }}/CreateReleaseNotes.ps1 -token $ENV:_token -tag_name $ENV:_tag_name -target_commitish $ENV:_target_commitish
         }
 branding:
