@@ -1,0 +1,12 @@
+name: Question about AL-Go for GitHub
+description: Question about AL-Go for GitHub
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Please type in your question about AL-Go for GitHub below
+    validations:
+      required: true
