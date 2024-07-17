@@ -271,6 +271,9 @@ function GetWorkflowContentWithChangesFromSettings {
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
     $yaml = [Yaml]::Load($srcFile)
     $workflowScheduleKey = "$($baseName)Schedule"
+    $workflowBlacklist = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
+    $runnerWhitelist = @('windows-latest', 'ubuntu-latest')
+    $modifyRunsOnAndShell = $true
 
     # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have a RepoSetting called <workflowname>Schedule, which will be used to set the schedule for the workflow
     if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
@@ -289,7 +292,14 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne 'Troubleshooting') {
+    # Workflows in the blacklist may only run on runners listed in the whitelist
+    if($workflowBlacklist -contains $baseName) {
+        if($runnerWhitelist -notcontains $repoSettings."runs-on") {
+            $modifyRunsOnAndShell = $false
+        }
+    }
+
+    if ($modifyRunsOnAndShell) {
         ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings
     }
 
