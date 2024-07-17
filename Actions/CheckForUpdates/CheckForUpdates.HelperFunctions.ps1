@@ -115,6 +115,9 @@ function ModifyRunsOnAndShell {
     if ($repoSettings.shell -ne "powershell" -and $repoSettings.shell -ne "pwsh") {
         throw "The shell can only be set to powershell or pwsh"
     }
+    if ($repoSettings."runs-on" -eq "ubuntu-latest" -and $repoSettings.shell -eq "powershell") {
+        throw "The shell cannot be set to powershell when runs-on is ubuntu-latest. Use pwsh instead."
+    }
     Write-Host "Setting shell to $($repoSettings.shell)"
     $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings.shell)")
 }
