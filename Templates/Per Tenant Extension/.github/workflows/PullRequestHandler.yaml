@@ -37,7 +37,7 @@ jobs:
 
   Initialization:
     needs: [ PregateCheck ]
-    if: (!failure() && !cancelled())
+    if: (!failure() && !cancelled()) && (github.event.pull_request.draft == false)
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -87,7 +87,7 @@ jobs:
 
   Build:
     needs: [ Initialization ]
-    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0 && (github.event.pull_request.draft == false)
     strategy:
       matrix:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
@@ -111,7 +111,7 @@ jobs:
 
   StatusCheck:
     needs: [ Initialization, Build ]
-    if: (!cancelled())
+    if: (!cancelled()) && (github.event.pull_request.draft == false)
     runs-on: [ windows-latest ]
     name: Pull Request Status Check
     steps:
