@@ -22,6 +22,11 @@ All authentication context secrets now supports managed identities and federated
 
 In the summary after a Test Run, you now also have the result of performance tests.
 
+### Ubuntu runners for all AL Go workflows
+
+Previously, the workflows "Update AL Go System Files" and "Pull Request Handler" were excluded when changing the two parameters to prevent deadlocks and security issues.
+From now on, a check will only allow changing the parameters of the blacklisted workflows if the `runs-on` parameter is either `windows-latest` or `ubuntu-latest`. Additionally, a check in the function `ModifyRunsOnAndShell` ensures only the value `pwsh` is allowed when using an `ubuntu-latest` runner.
+
 ### New Settings
 
 - `deployTo<environmentName>`: is not really new, but has a new property:
