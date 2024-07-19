@@ -292,13 +292,13 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    $workflowBlacklist = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
-    $runnerWhitelist = @('windows-latest', 'ubuntu-latest')
+    $excludedWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
+    $allowedRunners = @('windows-latest', 'ubuntu-latest')
     $modifyRunsOnAndShell = $true
 
-    # Workflows in the blacklist may only run on runners listed in the whitelist
-    if($workflowBlacklist -contains $baseName) {
-        if($runnerWhitelist -notcontains $repoSettings."runs-on") {
+    # Excluded workflows may only run on allowed runners
+    if($excludedWorkflows -contains $baseName) {
+        if($allowedRunners -notcontains $repoSettings."runs-on") {
             $modifyRunsOnAndShell = $false
         }
     }
