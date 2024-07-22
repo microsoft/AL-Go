@@ -131,10 +131,6 @@ function GetKeyVaultSecret {
     if ($null -eq $keyVaultCredentials) {
         return $null
     }
-    if ($secretName.Contains('_')) {
-        # Secret name contains a '_', which is not allowed in Key Vault secret names
-        return $null
-    }
 
     ConnectAz -azureCredentials $keyVaultCredentials
 
@@ -143,6 +139,10 @@ function GetKeyVaultSecret {
     $secret = $envVar
     if ($secretSplit.Count -gt 1) {
         $secret = $secretSplit[1]
+    }
+    if ($secret.Contains('_')) {
+        # Secret name contains a '_', which is not allowed in Key Vault secret names
+        return $null
     }
 
     $value = $null
