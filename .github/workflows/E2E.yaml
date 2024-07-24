@@ -196,8 +196,8 @@ jobs:
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
-          Write-Host "repoName='$repoName'"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName=$repoName"
+          Write-Host "repoName=$repoName"
           Write-Host "Repo URL (Windows): https://github.com/${{ needs.Check.outputs.githubowner }}/$($repoName)w"
           Write-Host "Repo URL (Linux): https://github.com/${{ needs.Check.outputs.githubowner }}/$($repoName)l"
 
