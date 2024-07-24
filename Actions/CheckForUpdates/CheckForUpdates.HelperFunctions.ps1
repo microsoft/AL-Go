@@ -405,7 +405,10 @@ function GetSrcFolder {
     else {
         $path = Join-Path $templateFolder "*/$srcPath"
     }
-    Resolve-Path -Path $path -ErrorAction SilentlyContinue
+    Write-Host "'$path'"
+    $path = Resolve-Path -Path $path -ErrorAction SilentlyContinue
+    Write-Host "'$path'"
+    return $path
 }
 
 function UpdateSettingsFile {
