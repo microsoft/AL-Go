@@ -400,14 +400,19 @@ function GetSrcFolder {
                 throw "Unknown repository type"
             }
         }
-        $path = Join-Path $templateFolder "*/Templates/$typePath/$srcPath"
+        $path = Join-Path $templateFolder "*/Templates/$typePath/.github/workflows"
     }
     else {
-        $path = Join-Path $templateFolder "*/$srcPath"
+        $path = Join-Path $templateFolder "*/.github/workflows"
     }
-    Write-Host "'$path'"
+    # Due to this PowerShell bug: https://github.com/PowerShell/PowerShell/issues/6473#issuecomment-375930843
+    # We need to resolve the path of a non-hidden folder (.github/workflows)
+    # and then get the parent folder of the parent folder of that path
     $path = Resolve-Path -Path $path -ErrorAction SilentlyContinue
-    Write-Host "'$path'"
+    if (!$path) {
+        throw "No workflows found in the template repository"
+    }
+    $path = Join-Path -Path (Split-Path -Path (Split-Path -Path $path -Parent) -Parent) -ChildPath $srcPath
     return $path
 }
 
