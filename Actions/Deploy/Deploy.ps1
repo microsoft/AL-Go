@@ -15,6 +15,10 @@ DownloadAndImportBcContainerHelper
 
 $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deploymentSettings = $deploymentEnvironments."$environmentName"
+$buildMode = $deploymentSettings.buildMode
+if ($null -eq $buildMode -or $buildMode -eq 'default') {
+    $buildMode = ''
+}
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json
@@ -43,10 +47,10 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $project = $_.Replace('\','_').Replace('/','_')
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
-        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
         if (!($projectApps)) {
             if ($project -ne '*') {
-                throw "There are no artifacts present in $artifactsFolder matching $project-$refname-Apps-<version>."
+                throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)Apps-<version>."
             }
         }
         else {

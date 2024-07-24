@@ -140,6 +140,10 @@ function GetKeyVaultSecret {
     if ($secretSplit.Count -gt 1) {
         $secret = $secretSplit[1]
     }
+    if ($secret.Contains('_')) {
+        # Secret name contains a '_', which is not allowed in Key Vault secret names
+        return $null
+    }
 
     $value = $null
     try {
