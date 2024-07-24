@@ -198,12 +198,13 @@ jobs:
           $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
           Write-Host "repoName='$repoName'"
-          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+          Write-Host "Repo URL (Windows): https://github.com/${{ needs.Check.outputs.githubowner }}/$($repoName)w"
+          Write-Host "Repo URL (Linux): https://github.com/${{ needs.Check.outputs.githubowner }}/$($repoName)l"
 
       - name: Run test on Linux
         run: |
           try {
-            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}'
+            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}l' -token '${{ Secrets.E2EPAT }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}'
           }
           catch {
             Write-Host $_.Exception.Message
@@ -215,7 +216,7 @@ jobs:
       - name: Run test on Windows
         run: |
           try {
-            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -token '${{ Secrets.E2EPAT }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}'
+            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}w' -token '${{ Secrets.E2EPAT }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}'
           }
           catch {
             Write-Host $_.Exception.Message
