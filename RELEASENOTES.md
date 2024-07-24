@@ -33,6 +33,7 @@ From now on, a check will only allow changing the parameters of the excluded wor
 - `deployTo<environmentName>`: is not really new, but has a new property:
 
   - **Scope** = specifies the scope of the deployment: Dev, PTE. If not specified, AL-Go for GitHub will always use the Dev Scope for AppSource Apps, but also for PTEs when deploying to sandbox environments when impersonation (refreshtoken) is used for authentication.
+  - **BuildMode** = specifies which buildMode to use for the deployment. Default is to use the Default buildMode.
   - **\<custom>** = custom properties are now supported and will be transferred to a custom deployment script in the hashtable.
 
 - `bcptThresholds` is a JSON object with properties for the default thresholds for the Business Central Performance Toolkit
