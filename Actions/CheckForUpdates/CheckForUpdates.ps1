@@ -136,10 +136,11 @@ foreach($checkfile in $checkfiles) {
     $dstFolder = Join-Path $baseFolder $dstPath
     $srcFolder = GetSrcFolder -repoSettings $repoSettings -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
     if ($srcFolder) {
+        Write-Host $srcFolder
         Push-Location -Path $srcFolder
         try {
             # Loop through all files in the template repository matching the pattern
-            Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
+            Get-ChildItem -Path $srcFolder | Where-Object { $_.name -like $checkfile.pattern } | ForEach-Object {
                 # Read the template file and modify it based on the settings
                 # Compare the modified file with the file in the current repository
                 $fileName = $_.Name
