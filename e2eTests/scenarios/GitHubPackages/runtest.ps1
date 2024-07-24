@@ -2,6 +2,7 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
+    [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
@@ -69,7 +70,7 @@ $githubPackagesContextJson = ($githubPackagesContext | ConvertTo-Json -Compress)
 # Create repository1
 CreateAlGoRepository `
     -github:$github `
-    -linux `
+    -linux:$linux `
     -template $template `
     -repository $repository1 `
     -branch $branch `
@@ -86,7 +87,7 @@ $run1 = RunCICD -repository $repository1 -branch $branch
 
 CreateAlGoRepository `
     -github:$github `
-    -linux `
+    -linux:$linux `
     -template $template `
     -repository $repository2 `
     -branch $branch `
@@ -101,7 +102,7 @@ $repoPath2 = (Get-Location).Path
 
 CreateAlGoRepository `
     -github:$github `
-    -linux `
+    -linux:$linux `
     -template $template `
     -repository $repository `
     -branch $branch `
