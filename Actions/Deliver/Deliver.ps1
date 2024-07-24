@@ -246,6 +246,9 @@ try {
                     Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                         $parameters = @{
                             "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                            "includeNuGetDependencies" = $true
+                            "dependencyIdTemplate" = "AL-Go-{id}"
+                            "packageId" = "AL-Go-{id}"
                         }
                         $parameters.appFiles = $_.FullName
                         $package = New-BcNuGetPackage @parameters
