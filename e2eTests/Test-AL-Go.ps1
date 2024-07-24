@@ -265,7 +265,8 @@ TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
 Set-Location $prevLocation
 
-RemoveRepository -repository $repository -path $repoPath
+# TODO: Before merge uncomment this.
+# RemoveRepository -repository $repository -path $repoPath
 
 if ($adminCenterApiToken) {
     try {
