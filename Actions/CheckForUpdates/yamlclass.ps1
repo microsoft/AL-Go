@@ -394,8 +394,8 @@ class Yaml {
         catch {
             return
         }
-        $srcPermissions = $srcYaml.GetPropertyArray('permissions:')
-        $yamlPermissions = $yaml.GetPropertyArray('permissions:')
+        $srcPermissions = $srcYaml.Get('permissions:/')
+        $yamlPermissions = $yaml.Get('permissions:/')
         if ($srcPermissions) {
             $yamlPermissions | ForEach-Object {
                 if ($srcPermissions -notcontains $_) {
