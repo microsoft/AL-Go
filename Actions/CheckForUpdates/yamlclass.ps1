@@ -415,14 +415,14 @@ class Yaml {
             if ($permissions.PSObject.Properties.Name -eq $_) {
                 $permission = $permissions."$_"
                 $permission2 = $permissions2."$_"
-                if ($permission -eq 'Write' -or $permission2 -eq 'Write') {
-                    $permissions."$_" = 'Write'
+                if ($permission -eq 'write' -or $permission2 -eq 'write') {
+                    $permissions."$_" = 'write'
                 }
-                elseif ($permission -eq 'Read' -or $permission2 -eq 'Read') {
-                    $permissions."$_" = 'Read'
+                elseif ($permission -eq 'read' -or $permission2 -eq 'read') {
+                    $permissions."$_" = 'read'
                 }
                 else {
-                    $permissions."$_" = 'None'
+                    $permissions."$_" = 'none'
                 }
             }
             else {
