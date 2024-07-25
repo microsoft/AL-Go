@@ -426,7 +426,7 @@ class Yaml {
                 }
             }
             else {
-                $permissions | Add-Member -MemberType NoteProperty -Name $_ -Value $permissions2[$_]
+                $permissions | Add-Member -MemberType NoteProperty -Name $_ -Value $permissions2."$_"
             }
         }
         return $permissions
