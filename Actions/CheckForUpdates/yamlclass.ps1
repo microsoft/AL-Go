@@ -394,6 +394,44 @@ class Yaml {
         }
     }
 
+    static [hashtable] GetPermissionsFromArray([string[]] $permissionsArray) {
+        $permissions = @{}
+        $permissionsArray | ForEach-Object {
+            $permissions += @{ $_.Split(':')[0].Trim() = $_.Split(':')[1].Trim() }
+        }
+        return $permissions
+    }
+
+    static [string[]] GetPermissionsArray([hashtable] $permissions) {
+        $permissionsArray = @()
+        $permissions.Keys | ForEach-Object {
+            $permissionsArray += "$($_): $($permissions[$_])"
+        }
+        return $permissionsArray
+    }
+
+    static [hashtable] MergePermissions([hashtable] $permissions, [hashtable] $permissions2) {
+        $permissions2.Keys | ForEach-Object {
+            if ($permissions.ContainsKey($_)) {
+                $permission = $permissions[$_]
+                $permission2 = $permissions2[$_]
+                if ($permission -eq 'Write' -or $permission2 -eq 'Write') {
+                    $permissions[$_] = 'Write'
+                }
+                elseif ($permission -eq 'Read' -or $permission2 -eq 'Read') {
+                    $permissions[$_] = 'Read'
+                }
+                else {
+                    $permissions[$_] = 'None'
+                }
+            }
+            else {
+                $permissions += @{ $_ = $permissions2[$_] }
+            }
+        }
+        return $permissions
+    }
+
     static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [hashtable] $anchors) {
         $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
         try {
@@ -404,24 +442,9 @@ class Yaml {
         }
         # Merge permissions
         Write-host "Merge permissions"
-        $srcPermissions = $srcYaml.Get('permissions:/')
-        $yamlPermissions = $yaml.Get('permissions:/')
-        Write-Host "yamlPermissions:"
-        $yamlPermissions.content | Out-Host
-        Write-Host "srcPermissions:"
-        $srcPermissions.content | Out-Host
-        if ($srcPermissions) {
-            $yamlPermissions.content | ForEach-Object {
-                Write-Host $_
-                if ($srcPermissions.content -notcontains $_) {
-                    Write-Host "Add permission $_"
-                    $srcPermissions.Add($_)
-                }
-            }
-        }
-        Write-Host "srcPermissions (after):"
-        $srcPermissions.content | Out-Host
-        $srcYaml.Replace('permissions:/', $srcPermissions.content)
+        $srcPermissions = [Yaml]::GetPermissionsFromArray($srcYaml.Get('permissions:/').content)
+        $yamlPermissions = [Yaml]::GetPermissionsFromArray($yaml.Get('permissions:/').content)
+        $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
         $filename = [System.IO.Path]::GetFileName($yamlFile)
         if ($anchors.ContainsKey($filename)) {
             $fileAnchors = $anchors."$filename"
