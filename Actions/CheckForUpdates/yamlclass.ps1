@@ -225,6 +225,14 @@ class Yaml {
         }
     }
 
+    # Add lines to Yaml content
+    [void] Add([string[]] $yamlContent) {
+        if (!$yamlContent) {
+            return
+        }
+        $this.Insert($this.content.Count, $yamlContent)
+    }
+
     # Locate jobs in YAML based on a name pattern
     # Example:
     # GetCustomJobsFromYaml() returns @("CustomJob1", "CustomJob2")
@@ -394,6 +402,7 @@ class Yaml {
         catch {
             return
         }
+        # Merge permissions
         $srcPermissions = $srcYaml.Get('permissions:/')
         $yamlPermissions = $yaml.Get('permissions:/')
         if ($srcPermissions) {
