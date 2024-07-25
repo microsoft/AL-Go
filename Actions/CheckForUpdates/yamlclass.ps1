@@ -403,15 +403,25 @@ class Yaml {
             return
         }
         # Merge permissions
+        Write-host "Merge permissions"
         $srcPermissions = $srcYaml.Get('permissions:/')
         $yamlPermissions = $yaml.Get('permissions:/')
+        Write-Host "yamlPermissions:"
+        $yamlPermissions.content | Out-Host
+        Write-Host "srcPermissions:"
+        $srcPermissions.content | Out-Host
         if ($srcPermissions) {
-            $yamlPermissions | ForEach-Object {
-                if ($srcPermissions -notcontains $_) {
+            $yamlPermissions.content | ForEach-Object {
+                Write-Host $_
+                if ($srcPermissions.content -notcontains $_) {
+                    Write-Host "Add permission $_"
                     $srcPermissions.Add($_)
                 }
             }
         }
+        Write-Host "srcPermissions (after):"
+        $srcPermissions.content | Out-Host
+        $srcYaml.Replace('permissions:/', $srcPermissions.content)
         $filename = [System.IO.Path]::GetFileName($yamlFile)
         if ($anchors.ContainsKey($filename)) {
             $fileAnchors = $anchors."$filename"
