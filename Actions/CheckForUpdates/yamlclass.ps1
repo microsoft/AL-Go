@@ -394,6 +394,15 @@ class Yaml {
         catch {
             return
         }
+        $srcPermissions = $srcYaml.GetPropertyArray('permissions:')
+        $yamlPermissions = $yaml.GetPropertyArray('permissions:')
+        if ($srcPermissions) {
+            $yamlPermissions | ForEach-Object {
+                if ($srcPermissions -notcontains $_) {
+                    $srcPermissions.Add($_)
+                }
+            }
+        }
         $filename = [System.IO.Path]::GetFileName($yamlFile)
         if ($anchors.ContainsKey($filename)) {
             $fileAnchors = $anchors."$filename"
