@@ -445,6 +445,7 @@ class Yaml {
         $srcPermissions = [Yaml]::GetPermissionsFromArray($srcYaml.Get('permissions:/').content)
         $yamlPermissions = [Yaml]::GetPermissionsFromArray($yaml.Get('permissions:/').content)
         $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+        Write-Host "Apply custom steps"
         $filename = [System.IO.Path]::GetFileName($yamlFile)
         if ($anchors.ContainsKey($filename)) {
             $fileAnchors = $anchors."$filename"
@@ -457,6 +458,7 @@ class Yaml {
             }
         }
         # Locate custom jobs in destination YAML
+        Write-Host "Apply custom jobs"
         $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
         if ($customJobs) {
             # Add custom jobs to template YAML
