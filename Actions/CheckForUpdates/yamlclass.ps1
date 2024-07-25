@@ -394,39 +394,39 @@ class Yaml {
         }
     }
 
-    static [hashtable] GetPermissionsFromArray([string[]] $permissionsArray) {
-        $permissions = @{}
+    static [PSCustomObject] GetPermissionsFromArray([string[]] $permissionsArray) {
+        $permissions = [PSCustomObject]@{}
         $permissionsArray | ForEach-Object {
-            $permissions += @{ $_.Split(':')[0].Trim() = $_.Split(':')[1].Trim() }
+            $permissions | Add-Member -MemberType NoteProperty -Name $_.Split(':')[0].Trim() -Value $_.Split(':')[1].Trim()
         }
         return $permissions
     }
 
-    static [string[]] GetPermissionsArray([hashtable] $permissions) {
+    static [string[]] GetPermissionsArray([PSCustomObject] $permissions) {
         $permissionsArray = @()
-        $permissions.Keys | ForEach-Object {
+        $permissions.PSObject.Properties.Name | ForEach-Object {
             $permissionsArray += "$($_): $($permissions[$_])"
         }
         return $permissionsArray
     }
 
-    static [hashtable] MergePermissions([hashtable] $permissions, [hashtable] $permissions2) {
-        $permissions2.Keys | ForEach-Object {
-            if ($permissions.ContainsKey($_)) {
+    static [PSCustomObject] MergePermissions([PSCustomObject] $permissions, [PSCustomObject] $permissions2) {
+        $permissions2.PSObject.Properties.Name | ForEach-Object {
+            if ($permissions.PSObject.Properties.Name -eq $_) {
                 $permission = $permissions[$_]
                 $permission2 = $permissions2[$_]
                 if ($permission -eq 'Write' -or $permission2 -eq 'Write') {
-                    $permissions[$_] = 'Write'
+                    $permissions."$_" = 'Write'
                 }
                 elseif ($permission -eq 'Read' -or $permission2 -eq 'Read') {
-                    $permissions[$_] = 'Read'
+                    $permissions."$_" = 'Read'
                 }
                 else {
-                    $permissions[$_] = 'None'
+                    $permissions."$_" = 'None'
                 }
             }
             else {
-                $permissions += @{ $_ = $permissions2[$_] }
+                $permissions | Add-Member -MemberType NoteProperty -Name $_ -Value $permissions2[$_]
             }
         }
         return $permissions
