@@ -115,6 +115,9 @@ function ModifyRunsOnAndShell {
     if ($repoSettings.shell -ne "powershell" -and $repoSettings.shell -ne "pwsh") {
         throw "The shell can only be set to powershell or pwsh"
     }
+    if ($repoSettings."runs-on" -eq "ubuntu-latest" -and $repoSettings.shell -eq "powershell") {
+        throw "The shell cannot be set to powershell when runs-on is ubuntu-latest. Use pwsh instead."
+    }
     Write-Host "Setting shell to $($repoSettings.shell)"
     $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings.shell)")
 }
@@ -289,7 +292,18 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    if ($baseName -ne "UpdateGitHubGoSystemFiles" -and $baseName -ne 'Troubleshooting') {
+    $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
+    $allowedRunners = @('windows-latest', 'ubuntu-latest')
+    $modifyRunsOnAndShell = $true
+
+    # Critical workflows may only run on allowed runners (must always be able to run)
+    if($criticalWorkflows -contains $baseName) {
+        if($allowedRunners -notcontains $repoSettings."runs-on") {
+            $modifyRunsOnAndShell = $false
+        }
+    }
+
+    if ($modifyRunsOnAndShell) {
         ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings
     }
 
@@ -386,12 +400,20 @@ function GetSrcFolder {
                 throw "Unknown repository type"
             }
         }
-        $path = Join-Path $templateFolder "*/Templates/$typePath/$srcPath"
+        $path = Join-Path $templateFolder "*/Templates/$typePath/.github/workflows"
     }
     else {
-        $path = Join-Path $templateFolder "*/$srcPath"
+        $path = Join-Path $templateFolder "*/.github/workflows"
     }
-    Resolve-Path -Path $path -ErrorAction SilentlyContinue
+    # Due to this PowerShell bug: https://github.com/PowerShell/PowerShell/issues/6473#issuecomment-375930843
+    # We need to resolve the path of a non-hidden folder (.github/workflows)
+    # and then get the parent folder of the parent folder of that path
+    $path = Resolve-Path -Path $path -ErrorAction SilentlyContinue
+    if (!$path) {
+        throw "No workflows found in the template repository"
+    }
+    $path = Join-Path -Path (Split-Path -Path (Split-Path -Path $path -Parent) -Parent) -ChildPath $srcPath
+    return $path
 }
 
 function UpdateSettingsFile {
