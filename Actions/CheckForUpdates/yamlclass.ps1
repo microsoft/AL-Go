@@ -405,7 +405,7 @@ class Yaml {
     static [string[]] GetPermissionsArray([PSCustomObject] $permissions) {
         $permissionsArray = @()
         $permissions.PSObject.Properties.Name | ForEach-Object {
-            $permissionsArray += "$($_): $($permissions[$_])"
+            $permissionsArray += "$($_): $($permissions."$_")"
         }
         return $permissionsArray
     }
