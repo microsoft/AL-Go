@@ -413,8 +413,8 @@ class Yaml {
     static [PSCustomObject] MergePermissions([PSCustomObject] $permissions, [PSCustomObject] $permissions2) {
         $permissions2.PSObject.Properties.Name | ForEach-Object {
             if ($permissions.PSObject.Properties.Name -eq $_) {
-                $permission = $permissions[$_]
-                $permission2 = $permissions2[$_]
+                $permission = $permissions."$_"
+                $permission2 = $permissions2."$_"
                 if ($permission -eq 'Write' -or $permission2 -eq 'Write') {
                     $permissions."$_" = 'Write'
                 }
