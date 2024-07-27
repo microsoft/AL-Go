@@ -308,7 +308,7 @@ else {
                 }
             }
             Write-Host "Update $($_.DstFile)"
-            $_.Content | Set-ContentLF -Path $_.DstFile
+            Set-ContentLF -Path $_.DstFile -Content $_.Content
         }
         if ($releaseNotes -eq "") {
             $releaseNotes = "No release notes available!"

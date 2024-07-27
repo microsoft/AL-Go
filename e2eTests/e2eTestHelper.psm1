@@ -337,7 +337,7 @@ function CreateNewAppInFolder {
     $folder = Join-Path $folder $name
     New-Item -Path $folder -ItemType Directory | Out-Null
     $appJson | Set-JsonContentLF -Path (Join-Path $folder "app.json")
-    $al -join "`n" | Set-ContentLF -Path (Join-Path $folder "$name.al")
+    Set-ContentLF -Path (Join-Path $folder "$name.al") -Content $al
     $id
 }
 

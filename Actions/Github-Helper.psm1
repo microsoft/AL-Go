@@ -715,12 +715,15 @@ function Set-ContentLF {
     Process {
         $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
         if ($content -is [array]) {
-            $content = $content -join "`n"
+            Write-Host "array"
+            $contentStr = $content -join "`n"
+            Write-Host $contentStr
         }
         else {
-            $content = "$content".Replace("`r", "")
+            Write-Host "String"
+            $contentStr = "$content".Replace("`r", "")
         }
-        [System.IO.File]::WriteAllText($path, "$content`n")
+        [System.IO.File]::WriteAllText($path, "$contentStr`n")
     }
 }
 

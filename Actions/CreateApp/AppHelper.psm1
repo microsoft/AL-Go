@@ -97,7 +97,7 @@ function UpdateALFile
         $al = $al.Replace("$_", $startId)
         $startId++
     }
-    $al | Set-ContentLF -Path (Join-Path $destinationFolder $alFileName)
+    Set-ContentLF -Path (Join-Path $destinationFolder $alFileName) -Content $al
 }
 
 <#
