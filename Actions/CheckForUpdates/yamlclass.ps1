@@ -20,7 +20,7 @@ class Yaml {
 
     # Save the Yaml file with LF line endings using UTF8 encoding
     Save([string] $filename) {
-        Set-ContentLF -Path $filename -Content $this.content
+        $this.content -join "`n" | Set-ContentLF -Path $filename
     }
 
     # Find the lines for the specified Yaml path, given by $line
