@@ -445,6 +445,8 @@ class Yaml {
         $srcPermissions = [Yaml]::GetPermissionsFromArray($srcYaml.Get('permissions:/').content)
         $yamlPermissions = [Yaml]::GetPermissionsFromArray($yaml.Get('permissions:/').content)
         $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+
+        # Apply cystom steps
         Write-Host "Apply custom steps"
         $filename = [System.IO.Path]::GetFileName($yamlFile)
         if ($anchors.ContainsKey($filename)) {

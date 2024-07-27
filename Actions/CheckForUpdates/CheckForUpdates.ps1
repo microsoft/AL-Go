@@ -22,18 +22,6 @@
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
-$anchors = @{
-    "_BuildALGoProject.yaml" = @{
-        "BuildALGoProject" = @(
-            @{ "Step" = 'Read settings'; "Before" = $false }
-            @{ "Step" = 'Read secrets'; "Before" = $false }
-            @{ "Step" = 'Build'; "Before" = $true }
-            @{ "Step" = 'Build'; "Before" = $false }
-            @{ "Step" = 'Cleanup'; "Before" = $true }
-        )
-    }
-}
-
 if ($update -eq 'Y') {
     if (-not $token) {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
@@ -227,10 +215,11 @@ foreach($checkfile in $checkfiles) {
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
+                $customizationAnchors = GetCustomizationAnchors
                 if ($type -eq 'workflow' -and $realSrcFile -ne $srcFile) {
                     # Apply customizations from indirect template repository
                     Write-Host "Apply customizations from indirect template repository: $srcFile"
-                    [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $anchors)
+                    [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $customizationAnchors)
                 }
 
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
@@ -244,7 +233,7 @@ foreach($checkfile in $checkfiles) {
                 elseif ($dstFileExists) {
                     if ($type -eq 'workflow') {
                         Write-Host "Apply customizations from my repository: $dstFile"
-                        [Yaml]::ApplyCustomizations([ref] $srcContent,$dstFile, $anchors)
+                        [Yaml]::ApplyCustomizations([ref] $srcContent,$dstFile, $customizationAnchors)
                     }
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
