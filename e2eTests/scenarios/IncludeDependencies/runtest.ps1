@@ -2,6 +2,7 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
+    [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
@@ -56,6 +57,7 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateAlGoRepository `
     -github:$github `
+    -linux:$linux `
     -template $template `
     -repository $repository `
     -branch $branch `
