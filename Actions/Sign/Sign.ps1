@@ -48,7 +48,7 @@ if ($AzureCredentials.PSobject.Properties.name -eq "clientSecret") {
     }
 }
 InstallAzModuleIfNeeded -name 'Az.Accounts'
-ConnectAz -azureCredentials $AzureCredentialParams
+ConnectAz -azureCredentials $AzureCredentials
 
 $description = "Signed with AL-Go for GitHub"
 $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"

@@ -106,6 +106,7 @@ if (!($environments)) {
                 "Projects" = '*'
                 "SyncMode" = $null
                 "Scope" = $null
+                "buildMode" = $null
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
                 "shell" = $settings."shell"
@@ -145,6 +146,7 @@ else {
             "Projects" = '*'
             "SyncMode" = $null
             "Scope" = $null
+            "buildMode" = $null
             "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
             "shell" = $settings."shell"
