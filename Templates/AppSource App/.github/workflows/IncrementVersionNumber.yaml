@@ -22,9 +22,10 @@ on:
         default: false
 
 permissions:
+  actions: read
   contents: write
-  pull-requests: write
   id-token: write
+  pull-requests: write
 
 defaults:
   run:

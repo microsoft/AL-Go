@@ -46,10 +46,10 @@ on:
         default: false
 
 permissions:
-  contents: write
-  pull-requests: write
   actions: read
+  contents: write
   id-token: write
+  pull-requests: write
 
 concurrency: release
 

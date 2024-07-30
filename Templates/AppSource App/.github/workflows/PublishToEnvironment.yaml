@@ -12,8 +12,8 @@ on:
         required: true
 
 permissions:
-  contents: read
   actions: read
+  contents: read
   id-token: write
 
 defaults:
