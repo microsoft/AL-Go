@@ -145,6 +145,9 @@ function Trace-Information() {
     .PARAMETER ErrorRecord
     The error record to log to telemetry
 
+    .PARAMETER AdditionalData
+    Additional data to log to telemetry
+
     .EXAMPLE
     Trace-Exception -ErrorRecord $ErrorRecord
 #>
@@ -155,10 +158,11 @@ function Trace-Exception() {
         [Parameter(ParameterSetName = 'ActionName', Mandatory = $true)]
         [String] $ActionName,
         [Parameter(Mandatory = $false)]
-        [System.Management.Automation.ErrorRecord] $ErrorRecord = $null
+        [System.Management.Automation.ErrorRecord] $ErrorRecord = $null,
+        [Parameter(Mandatory = $false)]
+        [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     )
 
-    [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     if ($ErrorRecord -ne $null) {
         Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ErrorMessage' -Value $ErrorRecord.Exception.Message
     }
