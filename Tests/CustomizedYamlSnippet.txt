@@ -1,0 +1,97 @@
+name: 'CI/CD'
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Pull Request Handler"]
+    types:
+      - completed
+  push:
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/*.yaml'
+      - '!.github/workflows/CICD.yaml'
+    branches: [ 'main', 'release/*', 'feature/*' ]
+
+run-name: ${{ fromJson(format('["","Check pull request from {1}/{2}{0} {3}"]',':',github.event.workflow_run.head_repository.owner.login,github.event.workflow_run.head_branch,github.event.workflow_run.display_title))[github.event_name == 'workflow_run'] }}
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  checks: write
+
+defaults:
+  run:
+    shell: powershell
+
+env:
+  workflowDepth: 1
+
+jobs:
+  Initialization:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: [ windows-latest ]
+    outputs:
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Initialize the workflow
+        id: init
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
+        with:
+          shell: powershell
+          eventId: "DO0091"
+
+      - name: CustomStep-MyStep1
+        run: |
+          Write-Host 'My own step1!'
+
+      - name: CustomStep-MyStepX
+        run: |
+          Write-Host 'Some stepX!'
+
+      - name: Read settings
+        id: ReadSettings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+
+      - name: CustomStep-MyStep2
+        run: |
+          Write-Host 'My own step2!'
+
+  CheckForUpdates:
+    runs-on: [ windows-latest ]
+    needs: [ Initialization, CustomJob-MyJob ]
+    if: github.event_name != 'workflow_run'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          get: templateUrl
+
+      - name: Check for updates to AL-Go system files
+        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
+        with:
+          shell: powershell
+          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          templateUrl: ${{ env.templateUrl }}
+
+  CustomJob-MyJob:
+    needs: [ Initialization ]
+    runs-on: [ windows-latest ]
+    steps:
+      - name: MyStep
+        run: |
+          Write-Host 'My own job!'
