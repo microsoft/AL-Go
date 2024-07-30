@@ -12,14 +12,14 @@ Param(
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  _____           _ _               _     _______                   _       _       
-# |_   _|         | (_)             | |   |__   __|                 | |     | |      
-#   | |  _ __   __| |_ _ __ ___  ___| |_     | | ___ _ __ ___  _ __ | | __ _| |_ ___ 
+#  _____           _ _               _     _______                   _       _
+# |_   _|         | (_)             | |   |__   __|                 | |     | |
+#   | |  _ __   __| |_ _ __ ___  ___| |_     | | ___ _ __ ___  _ __ | | __ _| |_ ___
 #   | | | '_ \ / _` | | '__/ _ \/ __| __|    | |/ _ \ '_ ` _ \| '_ \| |/ _` | __/ _ \
 #  _| |_| | | | (_| | | | |  __/ (__| |_     | |  __/ | | | | | |_) | | (_| | ||  __/
 # |_____|_| |_|\__,_|_|_|  \___|\___|\__|    |_|\___|_| |_| |_| .__/|_|\__,_|\__\___|
-#                                                             | |                    
-#                                                             |_|                    
+#                                                             | |
+#                                                             |_|
 # This test tests the following scenario:
 #
 #  - Create a new repository based on the PTE template with no apps (this will be the "indirect" template repository)
@@ -92,7 +92,7 @@ $buildALGoProjectWorkflow = Join-Path $templateRepoPath '.github/workflows/_Buil
 $buildYaml = [yaml]::Load($buildALGoProjectWorkflow)
 $buildYaml | Should -Not -BeNullOrEmpty
 
-# Modify the permissions 
+# Modify the permissions
 $buildYaml.Replace('permissions:/contents: read', @('contents: write', 'issues: read'))
 
 # Add customization steps
@@ -118,7 +118,8 @@ $buildYaml.Save($buildALGoProjectWorkflow)
 $cicdWorkflow = Join-Path $templateRepoPath '.github/workflows/CICD.yaml'
 $cicdYaml = [yaml]::Load($cicdWorkflow)
 $cicdYaml | Should -Not -BeNullOrEmpty
-# Modify the permissions 
+
+# Modify the permissions
 $cicdYaml.Replace('permissions:/contents: read', @('contents: write', 'issues: read'))
 $customJobs = @(
     @{
@@ -191,7 +192,8 @@ $buildYaml.Save($buildALGoProjectWorkflow)
 $cicdWorkflow = Join-Path $repoPath '.github/workflows/CICD.yaml'
 $cicdYaml = [yaml]::Load($cicdWorkflow)
 $cicdYaml | Should -Not -BeNullOrEmpty
-# Modify the permissions 
+
+# Modify the permissions
 $cicdYaml.Replace('permissions:/contents: read', @('contents: read', 'issues: write'))
 
 $customJobs = @(
