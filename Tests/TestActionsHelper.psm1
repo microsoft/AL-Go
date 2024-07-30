@@ -148,7 +148,7 @@ function YamlTest {
     else {
         $yaml.AppendLine("      run: |") | Out-Null
     }
-    $yaml.AppendLine('        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -Action {') | Out-Null
+    $yaml.AppendLine("        `${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName `"$actionName`" -Action {") | Out-Null
     $yaml.AppendLine("          `${{ github.action_path }}/$actionName.ps1$parameterString") | Out-Null
     $yaml.AppendLine("        }") | Out-Null
     $yaml.AppendLine("branding:") | Out-Null
