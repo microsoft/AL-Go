@@ -86,4 +86,11 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
 }
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext -AlGoVersion (GetAlGoVersion -ActionRef $actionsRef)
+
+try {
+    LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext -AlGoVersion (GetAlGoVersion -ActionRef $actionsRef)
+} catch {
+    # Log the exception to telemetry but don't fail the action if gathering telemetry fails
+    Write-Host "::Warning::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
+    Trace-Exception -ActionName "WorkflowPostProcess" -ErrorRecord $_
+}
