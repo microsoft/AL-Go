@@ -25,6 +25,7 @@ Write-Host -ForegroundColor Yellow @'
 #
 # - Login to GitHub
 # - Create a new repository based on the selected template
+# - Create the GHTOKENWORKFLOW secret
 # - Run the "Add an existing app" workflow and add an app as a Pull Request
 # -  Test that a Pull Request was created and merge the Pull Request
 # - Run the "CI/CD" workflow
@@ -42,7 +43,6 @@ Write-Host -ForegroundColor Yellow @'
 # - Modify repository versioning strategy and remove some scripts + a .yaml file
 # - Run the CI/CD workflow
 # -  Test that artifacts created from CI/CD are correct and of the right version (also apps version numbers should be updated)
-# - Create the GHTOKENWORKFLOW secret
 # - Run the "Update AL-Go System Files" workflow as a Pull Request
 # -  Test that a Pull Request was created and merge the Pull Request
 # -  Test that the previously deleted files are now updated
@@ -109,6 +109,9 @@ $repoPath = (Get-Location).Path
 
 # Wait for GitHub to create the repository
 Start-Sleep -Seconds 60
+
+# Set the GHTOKENWORKFLOW. Later steps will need this since creating PRs from the GITHUB_TOKEN is not allowed with the GitHub token
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 
 # Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)
 $runs = GetNumberOfRuns -repository $repository
@@ -225,7 +228,6 @@ Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2}
 
 # Update AL-Go System Files
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -repository $repository -branch $branch | Out-Null
 $runs++
 MergePRandPull -branch $branch -wait | Out-Null
