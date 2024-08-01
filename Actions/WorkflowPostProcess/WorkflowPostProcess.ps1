@@ -14,6 +14,12 @@ function GetWorkflowConclusion($JobContext) {
         if ($jobContext.status -eq 'failure') {
             return "Failure"
         }
+        if ($jobContext.status -eq 'timed_out') {
+            return "TimedOut"
+        }
+        if ($jobContext.status -eq 'cancelled') {
+            return "Cancelled"
+        }
     }
 
     # Check the conclusion for the past jobs in the workflow
@@ -22,6 +28,14 @@ function GetWorkflowConclusion($JobContext) {
         $failedJobs = $workflowJobs.jobs | Where-Object { $_.conclusion -eq "failure" }
         if ($null -ne $failedJobs) {
             return "Failure"
+        }
+        $timedOutJobs = $workflowJobs.jobs | Where-Object { $_.conclusion -eq "timed_out" }
+        if ($null -ne $timedOutJobs) {
+            return "TimedOut"
+        }
+        $cancelledJobs = $workflowJobs.jobs | Where-Object { $_.conclusion -eq "cancelled" }
+        if ($null -ne $cancelledJobs) {
+            return "Cancelled"
         }
     }
 
