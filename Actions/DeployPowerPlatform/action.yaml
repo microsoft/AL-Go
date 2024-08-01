@@ -31,7 +31,7 @@ runs:
         actionsRepo: ${{ github.action_repository }}
         actionsRef: ${{ github.action_ref }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DeployPowerPlatform" -SkipTelemetry -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetActionsRepoAndRef" -SkipTelemetry -Action {
           ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
         }
 
@@ -56,7 +56,7 @@ runs:
         _artifactsFolder: ${{ inputs.artifactsFolder }}
         _solutionFolder: ${{ inputs.solutionFolder }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DeployPowerPlatform" -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DeterminePowerPlatformSolutionFolder" -Action {
           ${{ github.action_path }}/DeterminePowerPlatformSolutionFolder.ps1 -artifactsFolder $ENV:_artifactsFolder -solutionFolder $ENV:_solutionFolder
         }
 
