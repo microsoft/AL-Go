@@ -122,8 +122,10 @@ if ($appSourceApp) {
     $runs++
 }
 
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+
 # Add Existing Test App
-RunAddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch | Out-Null
+RunAddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch -useGhTokenWorkflow | Out-Null
 $runs++
 
 # Merge and run CI/CD + Tests
@@ -190,7 +192,7 @@ if ($adminCenterApiToken -and -not $multiProject) {
 }
 
 # Increment version number on one project
-RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.1 -wait -branch $branch | Out-Null
+RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.1 -wait -branch $branch -useGhTokenWorkflow | Out-Null
 $runs++
 $run = MergePRandPull -branch $branch -wait
 $runs++
@@ -225,7 +227,6 @@ Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2}
 
 # Update AL-Go System Files
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -repository $repository -branch $branch | Out-Null
 $runs++
 MergePRandPull -branch $branch -wait | Out-Null
