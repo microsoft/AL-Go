@@ -148,7 +148,7 @@ TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Create Release
-RunCreateRelease -appVersion "1.0.$($runs-2).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
+RunCreateRelease -appVersion "1.0.$($runs-3).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
 $runs++
 
 # Create New App
