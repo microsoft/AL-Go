@@ -133,7 +133,7 @@ CancelAllWorkflows -repository $repository -branch $branch
 $runs++
 
 # Merge and run CI/CD
-$run = MergePRandPull -branch $branch -wait | Out-Null
+$run = MergePRandPull -branch $branch -wait
 $runs++
 
 if ($useCompilerFolder) {

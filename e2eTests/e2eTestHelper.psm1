@@ -268,7 +268,7 @@ function WaitWorkflow {
     $status = ""
     do {
         if ($delay) {
-            Start-Sleep -Seconds 120
+            Start-Sleep -Seconds 60
         }
         WaitForRateLimit -headers $headers
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
