@@ -128,12 +128,12 @@ SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $toke
 RunAddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch -useGhTokenWorkflow | Out-Null
 $runs++
 
-# Merge and run CI/CD + Tests
-MergePRandPull -branch $branch | Out-Null
+# PR Build
+CancelAllWorkflows -repository $repository -branch $branch
 $runs++
 
-# Wait for CI/CD to finish
-$run = RunCICD -wait -branch $branch
+# Merge and run CI/CD
+$run = MergePRandPull -branch $branch -wait | Out-Null
 $runs++
 
 if ($useCompilerFolder) {
@@ -194,6 +194,12 @@ if ($adminCenterApiToken -and -not $multiProject) {
 # Increment version number on one project
 RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.1 -wait -branch $branch -useGhTokenWorkflow | Out-Null
 $runs++
+
+# Wait for PR build to succeed
+WaitAllWorkflows -repository $repository
+$runs++
+
+# Merge and run CI/CD + Tests
 $run = MergePRandPull -branch $branch -wait
 $runs++
 if ($multiProject) {
@@ -229,8 +235,13 @@ Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2}
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
 RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -repository $repository -branch $branch | Out-Null
 $runs++
+
+# PR Build
+$runs++
+
+# Merge and run CI/CD + Tests
 MergePRandPull -branch $branch -wait | Out-Null
-$runs += 2
+$runs++
 if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scripts in the .AL-Go folder was not updated by Update AL-Go System Files" }
 if (!(Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml")) { throw "AddExistingAppOrTestApp.yaml was not updated by Update AL-Go System Files" }
 
