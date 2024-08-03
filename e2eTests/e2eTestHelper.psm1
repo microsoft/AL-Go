@@ -283,7 +283,7 @@ function WaitWorkflow {
     } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
     Write-Host
     Write-Host $run.conclusion
-    if ($run.conclusion -ne "Success") {
+    if ($run.conclusion -ne "Success" -and $run.conclusion -ne "cancelled") {
         if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
     }
 }
