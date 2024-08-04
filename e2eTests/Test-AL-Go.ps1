@@ -196,7 +196,7 @@ RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.1 -wait -branch $bra
 $runs++
 
 # Wait for PR build to succeed
-WaitAllWorkflows -repository $repository
+WaitAllWorkflows -repository $repository -top 1
 $runs++
 
 # Merge and run CI/CD + Tests

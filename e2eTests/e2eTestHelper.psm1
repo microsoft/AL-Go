@@ -241,13 +241,15 @@ function WaitAllWorkflows {
     Param(
         [string] $repository,
         [switch] $noDelay,
-        [switch] $noError
+        [switch] $noError,
+        [int] $top = 999
     )
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
     $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
-    foreach($run in $runs.workflow_runs) {
+    $workflowRuns = $runs.workflow_runs | Select-Object -First $top
+    foreach($run in $workflowRuns) {
         WaitWorkflow -repository $repository -runid $run.id -noDelay -noError:$noError
     }
 }
