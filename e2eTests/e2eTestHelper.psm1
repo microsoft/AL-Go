@@ -466,10 +466,10 @@ function CreateAlGoRepository {
             $content = Get-ContentLF -Path $_.FullName
             $srcPattern = "runs-on: [ windows-latest ]`n"
             $replacePattern = "runs-on: [ $runson ]`n"
-            $content = $content.Replace($srcPattern, $replacePattern)
+            $content = "$content`n".Replace($srcPattern, $replacePattern).TrimEnd("`n")
             $srcPattern = "shell: powershell`n"
             $replacePattern = "shell: $shell`n"
-            $content = $content.Replace($srcPattern, $replacePattern)
+            $content = "$content`n".Replace($srcPattern, $replacePattern).TrimEnd("`n")
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
