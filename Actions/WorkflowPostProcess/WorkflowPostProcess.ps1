@@ -94,6 +94,10 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
 
     if ($workflowConclusion -eq "Failure") {
         Trace-Exception -Message "AL-Go workflow failed: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
+    } elseif ($workflowConclusion -eq "TimedOut") {
+        Trace-Exception -Message "AL-Go workflow timed out: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
+    } elseif ($workflowConclusion -eq "Cancelled") {
+        Trace-Information -Message "AL-Go workflow cancelled: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
     } else {
         Trace-Information -Message "AL-Go workflow ran: $($ENV:GITHUB_WORKFLOW.Trim())" -AdditionalData $AdditionalData
     }
