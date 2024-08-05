@@ -66,24 +66,7 @@ Additional Dimensions:
 
 | Dimension | Description |
 |-----------|-------------|
-| WorkflowConclusion | Success or Failure |
-| WorkflowDuration | The duration of the workflow run |
-| RepoType | AppSource or PTE |
-| GitHubRunner | Value of the GitHubRunner setting |
-| RunsOn | Value of the RunsOn setting |
-| ALGoVersion | The AL-Go version used for the workflow run |
-
-### AL-Go workflow cancelled
-
-Telemetry message: AL-Go workflow cancelled
-
-SeverityLevel: 1
-
-Additional Dimensions:
-
-| Dimension | Description |
-|-----------|-------------|
-| WorkflowConclusion | Success or Failure |
+| WorkflowConclusion | Success or Cancelled |
 | WorkflowDuration | The duration of the workflow run |
 | RepoType | AppSource or PTE |
 | GitHubRunner | Value of the GitHubRunner setting |
@@ -100,24 +83,7 @@ Additional Dimensions:
 
 | Dimension | Description |
 |-----------|-------------|
-| WorkflowConclusion | Success or Failure |
-| WorkflowDuration | The duration of the workflow run |
-| RepoType | AppSource or PTE |
-| GitHubRunner | Value of the GitHubRunner setting |
-| RunsOn | Value of the RunsOn setting |
-| ALGoVersion | The AL-Go version used for the workflow run |
-
-### AL-Go workflow timed out
-
-Telemetry message: AL-Go workflow failed
-
-SeverityLevel: 3
-
-Additional Dimensions:
-
-| Dimension | Description |
-|-----------|-------------|
-| WorkflowConclusion | Success or Failure |
+| WorkflowConclusion | Failure or TimedOut |
 | WorkflowDuration | The duration of the workflow run |
 | RepoType | AppSource or PTE |
 | GitHubRunner | Value of the GitHubRunner setting |
