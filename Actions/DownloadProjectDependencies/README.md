@@ -11,7 +11,7 @@ The action constructs arrays of paths to .app files, that are dependencies of th
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
-| Secrets | env.Secrets must be read by a prior call to the ReadSecrets Action with appDependencyProbingPathsSecrets in getSecrets |
+| Secrets | env.Secrets must be read by a prior call to the ReadSecrets Action with appDependencySecrets in getSecrets |
 
 ### Parameters
 
