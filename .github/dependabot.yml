@@ -4,18 +4,11 @@
 version: 2
 updates:
 - package-ecosystem: github-actions
-  directory: ".github/workflows/"
-  schedule:
-    interval: weekly
-- package-ecosystem: github-actions
-  directory: "/Templates/Per Tenant Extension/.github/workflows/"
-  schedule:
-    interval: weekly
+  directories: 
+    - ".github/workflows/"
+    - "/Templates/Per Tenant Extension/.github/workflows/"
+    - "/Templates/AppSource App/.github/workflows/"
   ignore:
     - dependency-name: "microsoft/AL-Go-Actions/*"
-- package-ecosystem: github-actions
-  directory: "/Templates/AppSource App/.github/workflows/"
   schedule:
     interval: weekly
-  ignore:
-    - dependency-name: "microsoft/AL-Go-Actions/*"
