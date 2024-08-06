@@ -15,7 +15,6 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | maxBuildDepth | | Specifies the maximum build depth suppored by the workflow running the action | 0 |
 
 ## OUTPUT
