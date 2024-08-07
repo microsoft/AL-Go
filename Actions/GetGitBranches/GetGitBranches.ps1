@@ -1,6 +1,6 @@
 ﻿param(
     [Parameter(Mandatory = $false, HelpMessage = "JSON-formatted array branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported.")]
-    [string] $includeBranches = '[]'
+    [string] $includeBranches = ''
 )
 
 $gitHubHelperPath = Join-Path $PSScriptRoot '../Github-Helper.psm1' -Resolve
@@ -11,8 +11,8 @@ $allBranches = @(invoke-git -returnValue for-each-ref --format="%(refname:short)
 
 $branches = @()
 
-if ($includeBranchesPatterns) {
-    $includeBranchesPatterns = ConvertFrom-Json $includeBranches
+if ($includeBranches) {
+    $includeBranchesPatterns = $includeBranches -split ',' | ForEach-Object { $_.Trim() }
     Write-Host "Filtering branches by: $($includeBranchesPatterns -join ', ')"
     foreach ($branchPattern in $includeBranchesPatterns) {
         $branches += $allBranches | Where-Object { $_ -like $branchPattern }
