@@ -15,8 +15,7 @@ Sign apps with a certificate stored in Azure Key Vault
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
-| azureCredentialsJson | Yes | Azure Credentials secret | |
+| azureCredentialsJson | Yes | Azure Credentials secret (Base 64 encoded) | |
 | timestampService | | The URI of the timestamp server | http://timestamp.digicert.com |
 | digestAlgorithm | | The digest algorithm to use for signing and timestamping | SHA256 |
 | pathToFiles | Yes | The path to the files to be signed |

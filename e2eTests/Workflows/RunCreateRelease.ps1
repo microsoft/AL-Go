@@ -8,6 +8,7 @@
         [switch] $createReleaseBranch,
         [string] $updateVersionNumber = '',
         [switch] $directCommit,
+        [switch] $useGhTokenWorkflow,
         [switch] $wait,
         [string] $repository,
         [string] $branch = "main"
@@ -23,6 +24,7 @@
         "createReleaseBranch" = @("true","false")[!$createReleaseBranch]
         "updateVersionNumber" = $updateVersionNumber
         "directCommit" = @("true","false")[!$directCommit]
+        "useGhTokenWorkflow" = @("true","false")[!$useGhTokenWorkflow]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

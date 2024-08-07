@@ -4,14 +4,28 @@ Param(
 )
 
 $script:gitHubSecrets = $_gitHubSecrets | ConvertFrom-Json
-$script:keyvaultConnectionExists = $false
-$script:azureRm210 = $false
-$script:isKeyvaultSet = $script:gitHubSecrets.PSObject.Properties.Name -eq "AZURE_CREDENTIALS"
 $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
-function IsKeyVaultSet {
-    return $script:isKeyvaultSet
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+function GetAzureCredentialsSecretName {
+    $settings = $env:Settings | ConvertFrom-Json
+    if ($settings.PSObject.Properties.Name -eq "AZURE_CREDENTIALSSecretName") {
+        return $settings.AZURE_CREDENTIALSSecretName
+    }
+    else {
+        return "AZURE_CREDENTIALS"
+    }
 }
+
+function GetAzureCredentials {
+    $secretName = GetAzureCredentialsSecretName
+    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
+        return $script:gitHubSecrets."$secretName"
+    }
+    return $null
+}
+
 
 function MaskValue {
     Param(
@@ -71,23 +85,23 @@ function GetGithubSecret {
 
 function GetKeyVaultCredentials {
     $creds = $null
-    if ($script:isKeyvaultSet) {
-        $jsonStr = $script:gitHubSecrets.AZURE_CREDENTIALS
+    $jsonStr = GetAzureCredentials
+    if ($jsonStr) {
         if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
-            throw "Secret AZURE_CREDENTIALS cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
+            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
         }
         try {
             $creds = $jsonStr | ConvertFrom-Json
-            # Mask ClientSecret
-            MaskValue -key 'clientSecret' -value $creds.ClientSecret
-            $creds.ClientSecret = ConvertTo-SecureString $creds.ClientSecret -AsPlainText -Force
+            if ($creds.PSObject.Properties.Name -eq 'ClientSecret' -and $creds.ClientSecret) {
+                # Mask ClientSecret
+                MaskValue -key 'ClientSecret' -value $creds.ClientSecret
+            }
             # Check thet $creds contains the needed properties
             $creds.ClientId | Out-Null
-            $creds.subscriptionId | Out-Null
             $creds.TenantId | Out-Null
         }
         catch {
-            throw "Secret AZURE_CREDENTIALS is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
+            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
         }
         $keyVaultNameExists = $creds.PSObject.Properties.Name -eq 'keyVaultName'
         $settings = $env:Settings | ConvertFrom-Json
@@ -108,90 +122,17 @@ function GetKeyVaultCredentials {
     return $creds
 }
 
-function InstallKeyVaultModuleIfNeeded {
-    if ($isWindows -and (Test-Path 'C:\Modules\az_*')) {
-        $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
-        if ($azModulesPath) {
-          Write-Host $azModulesPath.FullName
-          $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
-        }
-    }
-
-    $azKeyVaultModule = Get-Module -name 'Az.KeyVault' -ListAvailable | Select-Object -First 1
-    if ($azKeyVaultModule) {
-        Write-Host "Az.KeyVault Module is available in version $($azKeyVaultModule.Version)"
-        Write-Host "Using Az.KeyVault version $($azKeyVaultModule.Version)"
-        Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-    }
-    else {
-        $AzKeyVaultModule = Get-InstalledModule -Name 'Az.KeyVault' -ErrorAction SilentlyContinue
-        if ($AzKeyVaultModule) {
-            Write-Host "Az.KeyVault version $($AzKeyVaultModule.Version) is installed"
-            Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue
-        }
-        else {
-            $azureRmKeyVaultModule = Get-Module -name 'AzureRm.KeyVault' -ListAvailable | Select-Object -First 1
-            if ($azureRmKeyVaultModule) { Write-Host "AzureRm.KeyVault Module is available in version $($azureRmKeyVaultModule.Version)" }
-            $azureRmProfileModule = Get-Module -name 'AzureRm.Profile' -ListAvailable | Select-Object -First 1
-            if ($azureRmProfileModule) { Write-Host "AzureRm.Profile Module is available in version $($azureRmProfileModule.Version)" }
-            if ($azureRmKeyVaultModule -and $azureRmProfileModule -and "$($azureRmKeyVaultModule.Version)" -eq "2.1.0" -and "$($azureRmProfileModule.Version)" -eq "2.1.0") {
-                Write-Host "Using AzureRM version 2.1.0"
-                $script:azureRm210 = $true
-                $azureRmKeyVaultModule | Import-Module -WarningAction SilentlyContinue
-                $azureRmProfileModule | Import-Module -WarningAction SilentlyContinue
-                Disable-AzureRmDataCollection -WarningAction SilentlyContinue
-            }
-            else {
-                Write-Host "Installing and importing Az.KeyVault."
-                Install-Module 'Az.KeyVault' -Force
-                Import-Module  'Az.KeyVault' -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
-            }
-        }
-    }
-}
-
-function ConnectAzureKeyVault {
-    param(
-        [string] $subscriptionId,
-        [string] $tenantId,
-        [string] $clientId,
-        [SecureString] $clientSecret
-    )
-    try {
-        $credential = New-Object PSCredential -argumentList $clientId, $clientSecret
-        if ($script:azureRm210) {
-            Add-AzureRmAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
-            Set-AzureRmContext -SubscriptionId $subscriptionId -Tenant $tenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
-        }
-        else {
-            Clear-AzContext -Scope Process
-            Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
-            Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
-            Set-AzContext -SubscriptionId $subscriptionId -Tenant $tenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
-        }
-        $script:keyvaultConnectionExists = $true
-        Write-Host "Successfully connected to Azure Key Vault."
-    }
-    catch {
-        throw "Error trying to authenticate to Azure using Az. Error was $($_.Exception.Message)"
-    }
-}
-
 function GetKeyVaultSecret {
     param (
         [string] $secretName,
         [PsCustomObject] $keyVaultCredentials,
         [switch] $encrypted
     )
-
-    if (-not $script:isKeyvaultSet) {
+    if ($null -eq $keyVaultCredentials) {
         return $null
     }
 
-    if (-not $script:keyvaultConnectionExists) {
-        InstallKeyVaultModuleIfNeeded
-        ConnectAzureKeyVault -subscriptionId $keyVaultCredentials.subscriptionId -tenantId $keyVaultCredentials.tenantId -clientId $keyVaultCredentials.clientId -clientSecret $keyVaultCredentials.clientSecret
-    }
+    ConnectAz -azureCredentials $keyVaultCredentials
 
     $secretSplit = $secretName.Split('=')
     $envVar = $secretSplit[0]
@@ -199,13 +140,22 @@ function GetKeyVaultSecret {
     if ($secretSplit.Count -gt 1) {
         $secret = $secretSplit[1]
     }
+    if ($secret.Contains('_')) {
+        # Secret name contains a '_', which is not allowed in Key Vault secret names
+        return $null
+    }
 
     $value = $null
-    if ($script:azureRm210) {
-        $keyVaultSecret = Get-AzureKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
+    try {
+        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret
     }
-    else {
-        $keyVaultSecret = Get-AzKeyVaultSecret -VaultName $keyVaultCredentials.keyVaultName -Name $secret -ErrorAction SilentlyContinue
+    catch {
+        if ($keyVaultCredentials.PSObject.Properties.Name -eq 'ClientSecret') {
+            throw "Error trying to get secrets from Azure Key Vault. Error was $($_.Exception.Message)"
+        }
+        else {
+            throw "Error trying to get secrets from Azure Key Vault, maybe your Key Vault isn't setup for role based access control?. Error was $($_.Exception.Message)"
+        }
     }
     if ($keyVaultSecret) {
         if ($encrypted) {
