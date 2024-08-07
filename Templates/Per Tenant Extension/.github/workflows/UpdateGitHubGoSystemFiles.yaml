@@ -17,6 +17,7 @@ on:
         default: false
 
 permissions:
+  actions: read
   contents: read
   id-token: write
 
@@ -47,7 +48,6 @@ jobs:
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with:
           shell: powershell
-          eventId: "DO0098"
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -105,7 +105,9 @@ jobs:
       - name: Finalize the workflow
         if: always()
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
-          eventId: "DO0098"
           telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          currentJobContext: ${{ toJson(job) }}
