@@ -10,7 +10,7 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| includeBranches | | JSON-formatted array branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported. |[]|
+| includeBranches | | Comma-separated value of branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported. |''|
 
 ## OUTPUT
 
