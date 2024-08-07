@@ -57,7 +57,7 @@ jobs:
             }
             else {
               Write-Host "Running Update AL-Go System Files on a manual trigger."
-              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=[${{ github.ref_name }}]"
+              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=['${{ github.ref_name }}']"
             }
 
   UpdateALGoSystemFiles:
