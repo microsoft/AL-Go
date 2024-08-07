@@ -25,7 +25,9 @@ In the summary after a Test Run, you now also have the result of performance tes
 
 ### Run "Update AL-Go System Files" on a schedule on multiple branches
 
-When run on a schedule, `Update AL-Go System Files` only runs on the `main` branch. By setting `updateALGoBranches` setting to an array of branches, you can now run the workflow on a schedule on multiple branches. Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
+When run on a schedule, `Update AL-Go System Files` only runs on the `main` branch. By setting `ALGo_UpdateBranches` GitHub variable to an array of branches, you can now run the workflow on a schedule on multiple branches. Read more at [Creating configuration variables for a repository](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/variables#creating-configuration-variables-for-a-repository).
+
+Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
 
 ### Support Ubuntu runners for all AL-Go workflows
 
@@ -50,6 +52,7 @@ AL-Go for GitHub now includes a new telemetry module. For detailed information o
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
   - **NumberOfSqlStmtsWarning** - a warning is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 5)
   - **NumberOfSqlStmtsError** - an error is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 10)
+
 - `updateALGoBranches` is an array of branches to run `Update AL-Go System Files` on. Wildcards are supported.
 
 > \[!NOTE\]
