@@ -1,6 +1,5 @@
 name: Get Git Branches
 author: Microsoft Corporation
-description: Get the list of branches in the repository
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
