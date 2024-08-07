@@ -38,14 +38,7 @@ jobs:
     steps:
       - name: Checkout
         if: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: actions/checkout@v4
-
-      - name: Read settings
-        if: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: microsoft/AL-Go-Actions/ReadSettings@main
-        with:
-          shell: powershell
-          get: updateALGoBranches
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Get Supported Branches
         if: ${{ github.event_name != 'workflow_dispatch' }}
@@ -53,18 +46,18 @@ jobs:
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ env.updateALGoBranches }}
+          includeBranches: ${{ vars.ALGo_UpdateBranches }}
 
       - name: Determine branches to update
         id: DetermineBranches
         run: |
-            if ('${{ github.event_name }}' != 'workflow_dispatch') {
+            if ('${{ github.event_name }}' -ne 'workflow_dispatch') {
               Write-Host "Running Update AL-Go System Files on a schedule."
-              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result='${{ steps.GetSupportedBranches.outputs.Branches }}'"
+              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=${{ steps.GetSupportedBranches.outputs.Branches }}"
             }
             else {
               Write-Host "Running Update AL-Go System Files on a manual trigger."
-              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result='[${{ github.ref_name }}]'"
+              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=[${{ github.ref_name }}]"
             }
 
   UpdateALGoSystemFiles:
