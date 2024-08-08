@@ -80,7 +80,7 @@ try {
 
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString','cicdAuthContext' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -186,6 +186,19 @@ try {
     }
     $authContext = $null
     $environmentName = ""
+    if ($cicdAuthContext) {
+        $authContext = $cicdAuthContext | ConvertFrom-Json | ConvertTo-HashTable
+        if ($authContext.ContainsKey('environmentName')) {
+            $environmentName = $authContext.environmentName
+            $authContext.Remove('environmentName')
+            if ($environmentName -notlike 'https://*') {
+                $authContext = New-BcAuthContext @authContext
+            }
+        }
+        else {
+            Write-Host "::WARNING::CI/CD AuthContext is missing environmentName, ignoring cicdAuthContext secret."
+        }
+    }
     $CreateRuntimePackages = $false
 
     if ($settings.versioningStrategy -eq -1) {
