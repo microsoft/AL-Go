@@ -193,6 +193,7 @@ try {
             $authContext.Remove('environmentName')
             if ($environmentName -notlike 'https://*') {
                 $authContext = New-BcAuthContext @authContext
+                Write-Host $authContext.accesstoken
             }
         }
         else {
