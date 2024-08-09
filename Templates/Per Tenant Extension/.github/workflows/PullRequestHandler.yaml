@@ -119,6 +119,7 @@ jobs:
       - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        if: success() || failure()
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
