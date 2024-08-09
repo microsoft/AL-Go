@@ -23,6 +23,12 @@ All authentication context secrets now supports managed identities and federated
 
 In the summary after a Test Run, you now also have the result of performance tests.
 
+### Run "Update AL-Go System Files" on a schedule on multiple branches
+
+When run on a schedule, `Update AL-Go System Files` only runs on the `main` branch. By setting `ALGo_UpdateBranches` GitHub variable to an array of branches, you can now run the workflow on a schedule on multiple branches. Read more at [Creating configuration variables for a repository](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/variables#creating-configuration-variables-for-a-repository).
+
+Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
+
 ### Support Ubuntu runners for all AL-Go workflows
 
 Previously, the workflows "Update AL-Go System Files" and "TroubleShooting" were hardcoded to always run on `windows-latest` to prevent deadlocks and security issues.
@@ -46,6 +52,8 @@ AL-Go for GitHub now includes a new telemetry module. For detailed information o
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
   - **NumberOfSqlStmtsWarning** - a warning is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 5)
   - **NumberOfSqlStmtsError** - an error is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 10)
+
+- `updateALGoBranches` is an array of branches to run `Update AL-Go System Files` on. Wildcards are supported.
 
 > \[!NOTE\]
 > Duration thresholds are subject to varying results depending on the performance of the agent running the tests. Number of SQL statements executed by a test is often the most reliable indicator of performance degredation.
