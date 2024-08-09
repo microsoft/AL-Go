@@ -80,7 +80,6 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |$global:E2EgitHubOwner| String | The GitHub owner of the test repositories (like `freddydk` or `microsoft`) |
 |$global:SecureE2EPAT| SecureString | A personal access token with workflow permissions |
 |$global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
-|$global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
 |$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
 |$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
 

@@ -1,3 +1,17 @@
+function GetCustomizationAnchors {
+    return @{
+        "_BuildALGoProject.yaml" = @{
+            "BuildALGoProject" = @(
+                @{ "Step" = 'Read settings'; "Before" = $false }
+                @{ "Step" = 'Read secrets'; "Before" = $false }
+                @{ "Step" = 'Build'; "Before" = $true }
+                @{ "Step" = 'Build'; "Before" = $false }
+                @{ "Step" = 'Cleanup'; "Before" = $true }
+            )
+        }
+    }
+}
+
 <#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
@@ -377,7 +391,7 @@ function IsDirectALGo {
 
 function GetSrcFolder {
     Param(
-        [hashtable] $repoSettings,
+        [string] $repoType,
         [string] $templateUrl,
         [string] $templateFolder,
         [string] $srcPath
@@ -389,7 +403,7 @@ function GetSrcFolder {
         return ''
     }
     if (IsDirectALGo -templateUrl $templateUrl) {
-        switch ($repoSettings.type) {
+        switch ($repoType) {
             "PTE" {
                 $typePath = "Per Tenant Extension"
             }
