@@ -252,6 +252,12 @@ try {
             }
             Set-Content -Path (Join-Path "./.github" "RELEASENOTES.copy.md") -Value $releaseNotes -Encoding utf8
         }
+        # Replace template_owner in README.md
+        $readmeFile = Join-Path $baseRepoPath "README.md"
+        $readme = (Get-Content -Encoding utf8 -Path $readmeFile) -join "`n"
+        $readme.Replace('&template_owner=microsoft)', "&template_owner=$($config.githubOwner))")
+        Set-Content -Path $readmeFile -Encoding utf8 -Value $readme
+        # Push changes
         PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
 
     }
