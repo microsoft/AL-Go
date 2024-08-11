@@ -116,7 +116,7 @@ try {
         "appSourceAppRepo" = "$($config.githubOwner)/$($config.appSourceAppRepo)"
     }
 
-    if ($config.branch -eq 'preview') {
+    if ($config.branch -eq 'preview' -or $config.githubOwner -ne 'microsoft') {
         # When deploying to preview, we are NOT going to deploy to a branch in the AL-Go-Actions repository
         # Instead, we are going to have AL-Go-PTE and AL-Go-AppSource point directly to the SHA in AL-Go
         $dstOwnerAndRepo += @{
@@ -252,11 +252,13 @@ try {
             }
             Set-Content -Path (Join-Path "./.github" "RELEASENOTES.copy.md") -Value $releaseNotes -Encoding utf8
         }
+
         # Replace template_owner in README.md
-        $readmeFile = Join-Path $baseRepoPath "README.md"
+        $readmeFile = './README.md'
         $readme = (Get-Content -Encoding utf8 -Path $readmeFile) -join "`n"
         $readme.Replace('&template_owner=microsoft)', "&template_owner=$($config.githubOwner))")
         Set-Content -Path $readmeFile -Encoding utf8 -Value $readme
+
         # Push changes
         PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
 
