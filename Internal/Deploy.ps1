@@ -256,9 +256,11 @@ try {
         # Replace template_owner in README.md
         $readmeFile = './README.md'
         $readme = (Get-Content -Encoding utf8 -Path $readmeFile) -join "`n"
+        Write-Host "------------------------------------------"
         Write-Host $readme
         $readme.Replace('&template_owner=microsoft)', "&template_owner=$($config.githubOwner))")
         Set-Content -Path $readmeFile -Encoding utf8 -Value $readme
+        Write-Host "=========================================="
         Write-Host $readme
 
         # Push changes
