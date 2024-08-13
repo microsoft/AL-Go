@@ -179,6 +179,7 @@ foreach($checkfile in $checkfiles) {
                 $updateFiles += @{ "DstFile" = Join-Path $dstPath "settings.json"; "content" = (Get-Content -Path $projectSettingsFile -Encoding UTF8 -Raw) }
             }
 
+            # Remove unused AL-Go system files
             $unusedALGoSystemFiles | ForEach-Object {
                 if (Test-Path -Path (Join-Path $dstFolder $_) -PathType Leaf) {
                     Write-Host "Remove unused AL-Go system file: $_"
@@ -230,35 +231,24 @@ foreach($checkfile in $checkfiles) {
                     [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $customizationAnchors)
                 }
 
-                Write-Host "Checking $dstFile"
-                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
-                Write-Host "DstFileExists: $dstFileExists"
-                Write-Host "Filename: $fileName"
-                Write-Host "DstPath: $dstPath"
-                $unusedALGoSystemFiles | Out-Host
-                if ($unusedALGoSystemFiles -contains $fileName) {
-                    # file is not used by ALGo, remove it if it exists
-                    # do not add it to $updateFiles if it does not exist
-                    if ($dstFileExists) {
-                        $removeFiles += @(Join-Path $dstPath $filename)
+                if ($unusedALGoSystemFiles -notcontains $fileName) {
+                    if (Test-Path -Path $dstFile -PathType Leaf) {
+                        if ($type -eq 'workflow') {
+                            Write-Host "Apply customizations from my repository: $dstFile"
+                            [Yaml]::ApplyCustomizations([ref] $srcContent,$dstFile, $customizationAnchors)
+                        }
+                        # file exists, compare and add to $updateFiles if different
+                        $dstContent = Get-ContentLF -Path $dstFile
+                        if ($dstContent -cne $srcContent) {
+                            Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
+                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+                        }
                     }
-                }
-                elseif ($dstFileExists) {
-                    if ($type -eq 'workflow') {
-                        Write-Host "Apply customizations from my repository: $dstFile"
-                        [Yaml]::ApplyCustomizations([ref] $srcContent,$dstFile, $customizationAnchors)
-                    }
-                    # file exists, compare and add to $updateFiles if different
-                    $dstContent = Get-ContentLF -Path $dstFile
-                    if ($dstContent -cne $srcContent) {
-                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
+                    else {
+                        # new file, add to $updateFiles
+                        Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
                         $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                     }
-                }
-                else {
-                    # new file, add to $updateFiles
-                    Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
-                    $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }
         }
