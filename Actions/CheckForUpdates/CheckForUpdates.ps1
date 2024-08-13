@@ -222,7 +222,12 @@ foreach($checkfile in $checkfiles) {
                     [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $customizationAnchors)
                 }
 
+                Write-Host "Checking $dstFile"
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
+                Write-Host "DstFileExists: $dstFileExists"
+                Write-Host "Filename: $fileName"
+                Write-Host "DstPath: $dstPath"
+                $unusedALGoSystemFiles | Out-Host
                 if ($unusedALGoSystemFiles -contains $fileName) {
                     # file is not used by ALGo, remove it if it exists
                     # do not add it to $updateFiles if it does not exist
