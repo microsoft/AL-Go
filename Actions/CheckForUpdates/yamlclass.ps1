@@ -445,9 +445,7 @@ class Yaml {
         Write-host "Merge permissions"
         $srcPermissions = [Yaml]::GetPermissionsFromArray($srcYaml.Get('permissions:/').content)
         $yamlPermissions = [Yaml]::GetPermissionsFromArray($yaml.Get('permissions:/').content)
-        Write-Host "'$srcPermissions'"
-        Write-Host "'$yamlPermissions'"
-        if ($srcPermissions -and $yamlPermissions) {
+        if ("$srcPermissions" -ne "" -and "$yamlPermissions" -ne "") {
             $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
         }
 
