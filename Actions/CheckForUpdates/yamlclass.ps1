@@ -445,7 +445,9 @@ class Yaml {
         Write-host "Merge permissions"
         $srcPermissions = [Yaml]::GetPermissionsFromArray($srcYaml.Get('permissions:/').content)
         $yamlPermissions = [Yaml]::GetPermissionsFromArray($yaml.Get('permissions:/').content)
-        $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+        if ($srcPermissions -and $yamlPermissions) {
+            $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+        }
 
         # Apply cystom steps
         Write-Host "Apply custom steps"
