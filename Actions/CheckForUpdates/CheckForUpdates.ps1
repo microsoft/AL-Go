@@ -178,6 +178,14 @@ foreach($checkfile in $checkfiles) {
                 UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -additionalSettings $indirectTemplateProjectSettings
                 $updateFiles += @{ "DstFile" = Join-Path $dstPath "settings.json"; "content" = (Get-Content -Path $projectSettingsFile -Encoding UTF8 -Raw) }
             }
+
+            $unusedALGoSystemFiles | ForEach-Object {
+                if (Test-Path -Path (Join-Path $dstFolder $_) -PathType Leaf) {
+                    Write-Host "Remove unused AL-Go system file: $_"
+                    $removeFiles += @(Join-Path $dstPath $_)
+                }
+            }
+
             # Loop through all files in the template repository matching the pattern
             Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
                 # Read the template file and modify it based on the settings
