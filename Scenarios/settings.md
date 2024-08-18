@@ -4,6 +4,8 @@ The behavior of AL-Go for GitHub is very much controlled by settings and secrets
 
 To learn more about the secrets used by AL-Go for GitHub, please navigate to [Secrets](secrets.md).
 
+<a id="settings"></a>
+
 ## Where are the settings located
 
 Settings can be defined in GitHub variables or in various settings file. An AL-Go repository can consist of a single project (with multiple apps) or multiple projects (each with multiple apps). Settings can be applied on the project level or on the repository level. Multiple projects in a single repository are comparable to multiple repositories; they are built, deployed, and tested separately. All apps in each project (single or multiple) are built together in the same pipeline, published and tested together. If a repository is multiple projects, each project is stored in a separate folder in the root of the repository.
@@ -210,12 +212,13 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="memoryLimit"></a>memoryLimit | Specifies the memory limit for the build container. By default, this is left to BcContainerHelper to handle and will currently be set to 8G | 8G |
 | <a id="BcContainerHelperVersion"></a>BcContainerHelperVersion | This setting can be set to a specific version (ex. 3.0.8) of BcContainerHelper to force AL-Go to use this version. **latest** means that AL-Go will use the latest released version. **preview** means that AL-Go will use the latest preview version. **dev** means that AL-Go will use the dev branch of containerhelper. | latest (or preview for AL-Go preview) |
 | <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | \[ \] |
+| <a id="customALGoSystemFiles"></a>customALGoSystemFiles | An array of objects, specifying custom AL-Go System Files. Each object must contain **Destination** and **Source** url and if the source url points to a .zip file, you can also add **FileSpec** and **Recurse**. See more [here](./CustomizingALGoForGitHub.md#customALGoSystemFiles) | \[ \] |
 
 <a id="customdelivery"></a>
 
 ## Custom Delivery
 
-You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named DeliverTo\*.ps1 in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release.
+You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named `DeliverTo<DeliveryTarget>.ps1` in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release. Beside the script, you also need to create a secret called `<DeliveryTarget>Context`, formatted as compressed json, containing delivery information for your delivery target.
 
 ### DeliverToSharePoint.ps1
 
@@ -227,6 +230,7 @@ Param(
 Write-Host "Current project path: $($parameters.project)"
 Write-Host "Current project name: $($parameters.projectName)"
 Write-Host "Delivery Type (CD or Release): $($parameters.type)"
+Write-Host "Delivery Context: $($parameters.context)"
 Write-Host "Folder containing apps: $($parameters.appsFolder)"
 Write-Host "Folder containing test apps: $($parameters.testAppsFolder)"
 Write-Host "Folder containing dependencies (requires generateDependencyArtifact set to true): $($parameters.dependenciesFolder)"
@@ -306,6 +310,8 @@ Here are the parameters to use in your custom script:
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 | `$parameters."shell"` | Shell used to run the deployment script, pwsh or powershell | powershell |
 
+<a id="scriptoverrides"></a>
+
 ## Run-AlPipeline script override
 
 AL-Go for GitHub utilizes the Run-AlPipeline function from BcContainerHelper to perform the actual build (compile, publish, test etc). The Run-AlPipeline function supports overriding functions for creating containers, compiling apps and a lot of other things.
@@ -316,6 +322,7 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 
 | Override | Description |
 | :-- | :-- |
+| PipelineInitialize.ps1 | Initialize the pipeline |
 | DockerPull.ps1 | Pull the image specified by the parameter $imageName |
 | NewBcContainer.ps1 | Create the container using the parameters transferred in the $parameters hashtable |
 | ImportTestToolkitToBcContainer.ps1 | Import the test toolkit apps specified by the $parameters hashtable |
@@ -330,6 +337,7 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | GetBcContainerAppRuntimePackage.ps1 | Get the runtime package specified by the $parameters hashtable |
 | RemoveBcContainer.ps1 | Cleanup based on the $parameters hashtable |
 | InstallMissingDependencies | Install missing dependencies |
+| PipelineFinalize.ps1 | Finalize the pipeline |
 
 ## BcContainerHelper settings
 

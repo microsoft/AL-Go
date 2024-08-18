@@ -116,6 +116,9 @@ if (-not $isDirectALGo) {
     }
 }
 
+# Apply Custom AL-Go System Files from settings
+ApplyCustomALGoSystemFiles -path $templateFolder -settings $repoSettings
+
 # CheckFiles is an array of hashtables with the following properties:
 # dstPath: The path to the file in the current repository
 # srcPath: The path to the file in the template repository
