@@ -466,7 +466,6 @@ function UpdateSettingsFile {
 
 function GetCustomALGoSystemFiles {
     Param(
-        [string] $path,
         [hashtable] $settings,
         [string[]] $projects
     )

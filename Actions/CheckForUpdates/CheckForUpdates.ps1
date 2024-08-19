@@ -259,7 +259,7 @@ foreach($checkfile in $checkfiles) {
 }
 
 # Apply Custom AL-Go System Files from settings
-$updateFiles += @(GetCustomALGoSystemFiles -path $baseFolder -settings $repoSettings -projects $projects)
+$updateFiles += @(GetCustomALGoSystemFiles -settings $repoSettings -projects $projects)
 
 $updateFiles | Out-Host
 
