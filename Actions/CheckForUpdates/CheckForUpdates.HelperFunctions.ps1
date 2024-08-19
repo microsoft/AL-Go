@@ -473,6 +473,7 @@ function GetCustomALGoSystemFiles {
 
     function YieldItem{
         Param(
+            [string] $baseFolder,
             [string] $source,
             [string] $destination,
             [string[]] $projects
@@ -487,9 +488,10 @@ function GetCustomALGoSystemFiles {
         $destinations | ForEach-Object {
             Write-Host "- $_"
             $content = Get-ContentLF -Path $source
+            $existingFile = Join-Path $baseFolder $_
             $existingContent = ''
-            if (Test-Path -Path $_) {
-                $existingContent = Get-ContentLF -Path $_
+            if (Test-Path -Path $existingFile) {
+                $existingContent = Get-ContentLF -Path $existingFile
             }
             if ($content -ne $existingContent) {
                 Write-Output @{ "DstFile" = $_; "content" = $content }
@@ -497,7 +499,6 @@ function GetCustomALGoSystemFiles {
         }
     }
 
-    Push-Location $baseFolder
     if ($settings.customALGoSystemFiles -isnot [Array]) {
         throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
     }
@@ -541,7 +542,7 @@ function GetCustomALGoSystemFiles {
                         $destRelativeFileName = Resolve-Path $_.FullName -Relative
                         $destFileName = Join-Path $destination $destRelativeFileName
                         $destFileName = $destFileName.TrimStart('\/')
-                        YieldItem -source $_.FullName -destination $destFileName -projects $projects
+                        YieldItem -baseFolder $baseFolder -source $_.FullName -destination $destFileName -projects $projects
                     }
                 }
                 finally {
@@ -558,7 +559,7 @@ function GetCustomALGoSystemFiles {
                 Write-Host "$($destination):"
                 $tempFilename = Join-Path $tempFolder ([System.IO.Path]::GetFileName($source))
                 Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $tempFilename
-                YieldItem -source $tempFilename -destination $destination -projects $projects
+                YieldItem -baseFolder $baseFolder -source $tempFilename -destination $destination -projects $projects
             }
         }
         finally {
@@ -566,5 +567,4 @@ function GetCustomALGoSystemFiles {
             Remove-Item -Path $tempFolder -Recurse -Force
         }
     }
-    Pop-Location
 }
