@@ -264,6 +264,14 @@ $updateFiles += @(GetCustomALGoSystemFiles -baseFolder $baseFolder -settings $re
 if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available
     if (($updateFiles) -or ($removeFiles)) {
+        if ($updateFiles) {
+            Write-Host "Updated files:"
+            $updateFiles | ForEach-Object { Write-Host "- $($_.DstFile)"
+        }
+        if ($removeFiles) {
+            Write-Host "Removed files:"
+            $removeFiles | ForEach-Object { Write-Host "- $_"
+        }
         OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
     }
     else {
