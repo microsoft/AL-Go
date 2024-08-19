@@ -497,7 +497,7 @@ function ApplyCustomALGoSystemFiles {
             else {
                 Write-Host "- $_"
             }
-            Copy-Item -Path $source -Destination $finalDestination
+            Write-Output @{ "DstFile" = $finalDestination; "content" = (Get-Content -Raw -Encoding UTF8 -Path $source) }
         }
     }
 
