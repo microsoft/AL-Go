@@ -464,17 +464,16 @@ function UpdateSettingsFile {
     $settings | Set-JsonContentLF -path $settingsFile
 }
 
-function ApplyCustomALGoSystemFiles {
+function GetCustomALGoSystemFiles {
     Param(
         [string] $path,
         [hashtable] $settings,
         [string[]] $projects
     )
 
-    function CopyItem{
+    function YieldItem{
         Param(
             [string] $source,
-            [string] $basePath,
             [string] $destination,
             [string[]] $projects
         )
@@ -486,18 +485,8 @@ function ApplyCustomALGoSystemFiles {
             $destinations = @($destination)
         }
         $destinations | ForEach-Object {
-            $finalDestination = Join-Path $basePath $_
-            $finalDestinationFolder = [System.IO.Path]::GetDirectoryName($finalDestination)
-            if (!(Test-Path -Path $finalDestinationFolder -PathType Container)) {
-                New-Item -path $finalDestinationFolder -ItemType Directory | Out-Null
-            }
-            if (Test-Path $finalDestination) {
-                Write-Host "- $_ (overriding existing file)"
-            }
-            else {
-                Write-Host "- $_"
-            }
-            Write-Output @{ "DstFile" = $finalDestination; "content" = (Get-Content -Raw -Encoding UTF8 -Path $source) }
+            Write-Host "- $_"
+            Write-Output @{ "DstFile" = $_; "content" = (Get-Content -Raw -Encoding UTF8 -Path $source) }
         }
     }
 
@@ -524,7 +513,6 @@ function ApplyCustomALGoSystemFiles {
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
         $ext = [System.IO.Path]::GetExtension($source)
         $zipName = "$tempFolder$ext"
-        Push-Location -Path $path
         try {
             if ($ext -eq '.zip') {
                 Write-Host "$($destination):"
@@ -545,7 +533,7 @@ function ApplyCustomALGoSystemFiles {
                         $destRelativeFileName = Resolve-Path $_.FullName -Relative
                         $destFileName = Join-Path $destination $destRelativeFileName
                         $destFileName = $destFileName.TrimStart('\/')
-                        CopyItem -source $_.FullName -basePath $path -destination $destFileName -projects $projects
+                        YieldItem -source $_.FullName -destination $destFileName -projects $projects
                     }
                 }
                 finally {
@@ -562,11 +550,10 @@ function ApplyCustomALGoSystemFiles {
                 Write-Host "$($destination):"
                 $tempFilename = Join-Path $tempFolder ([System.IO.Path]::GetFileName($source))
                 Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $tempFilename
-                CopyItem -source $tempFilename -basePath $path -destination $destination -projects $projects
+                YieldItem -source $tempFilename -destination $destination -projects $projects
             }
         }
         finally {
-            Pop-Location
             if (Test-Path -Path $zipName) { Remove-Item $zipName -Force }
             Remove-Item -Path $tempFolder -Recurse -Force
         }
