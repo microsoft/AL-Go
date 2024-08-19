@@ -466,6 +466,7 @@ function UpdateSettingsFile {
 
 function GetCustomALGoSystemFiles {
     Param(
+        [string] $baseFolder,
         [hashtable] $settings,
         [string[]] $projects
     )
@@ -485,10 +486,17 @@ function GetCustomALGoSystemFiles {
         }
         $destinations | ForEach-Object {
             Write-Host "- $_"
-            Write-Output @{ "DstFile" = $_; "content" = (Get-Content -Raw -Encoding UTF8 -Path $source) }
+            $content = Get-ContentLF -Path $source
+            if (Test-Path -Path $_) {
+                $existingContent = Get-ContentLF -Path $_
+            }
+            if ($content -ne $existingContent) {
+                Write-Output @{ "DstFile" = $_; "content" = $content }
+            }
         }
     }
 
+    Push-Location $baseFolder
     if ($settings.customALGoSystemFiles -isnot [Array]) {
         throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
     }
@@ -527,17 +535,13 @@ function GetCustomALGoSystemFiles {
                 Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
                 $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
                 Push-Location -Path $subFolder
-                try {
-                    Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
-                        $destRelativeFileName = Resolve-Path $_.FullName -Relative
-                        $destFileName = Join-Path $destination $destRelativeFileName
-                        $destFileName = $destFileName.TrimStart('\/')
-                        YieldItem -source $_.FullName -destination $destFileName -projects $projects
-                    }
+                Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
+                    $destRelativeFileName = Resolve-Path $_.FullName -Relative
+                    $destFileName = Join-Path $destination $destRelativeFileName
+                    $destFileName = $destFileName.TrimStart('\/')
+                    YieldItem -source $_.FullName -destination $destFileName -projects $projects
                 }
-                finally {
-                    Pop-Location
-                }
+                Pop-Location
             }
             else {
                 if ($customSpec.ContainsKey('FileSpec') -or $customSpec.ContainsKey('Recurse')) {
@@ -557,4 +561,5 @@ function GetCustomALGoSystemFiles {
             Remove-Item -Path $tempFolder -Recurse -Force
         }
     }
+    Pop-Location
 }

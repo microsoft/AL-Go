@@ -259,7 +259,7 @@ foreach($checkfile in $checkfiles) {
 }
 
 # Apply Custom AL-Go System Files from settings
-$updateFiles += @(GetCustomALGoSystemFiles -settings $repoSettings -projects $projects)
+$updateFiles += @(GetCustomALGoSystemFiles -baseFolder $baseFolder -settings $repoSettings -projects $projects)
 
 if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available
