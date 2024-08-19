@@ -116,9 +116,6 @@ if (-not $isDirectALGo) {
     }
 }
 
-# Apply Custom AL-Go System Files from settings
-ApplyCustomALGoSystemFiles -path $templateFolder -settings $repoSettings
-
 # CheckFiles is an array of hashtables with the following properties:
 # dstPath: The path to the file in the current repository
 # srcPath: The path to the file in the template repository
@@ -260,6 +257,9 @@ foreach($checkfile in $checkfiles) {
         }
     }
 }
+
+# Apply Custom AL-Go System Files from settings
+ApplyCustomALGoSystemFiles -path $baseFolder -settings $repoSettings -projects $projects
 
 if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available

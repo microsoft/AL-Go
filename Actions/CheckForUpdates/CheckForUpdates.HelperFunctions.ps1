@@ -467,95 +467,108 @@ function UpdateSettingsFile {
 function ApplyCustomALGoSystemFiles {
     Param(
         [string] $path,
-        [hashtable] $settings
+        [hashtable] $settings,
+        [string[]] $projects
     )
 
-    Push-Location -Path $path
-    try {
-        if ($settings.customALGoSystemFiles -isnot [Array]) {
+    function CopyItem{
+        Param(
+            [string] $source,
+            [string] $basePath,
+            [string] $destination,
+            [string[]] $projects
+        )
+    
+        if ($destination -like ".AL-Go$([IO.Path]::DirectorySeparatorChar)*") {
+            $destinations = $projects | ForEach-Object { Join-Path $_ $destination }
+        }
+        else {
+            $destinations = @($destination)
+        }
+        $destinations | ForEach-Object {
+            $finalDestination = Join-Path $basePath $_
+            $finalDestinationFolder = [System.IO.Path]::GetDirectoryName($finalDestination)
+            if (!(Test-Path -Path $finalDestinationFolder -PathType Container)) {
+                New-Item -path $finalDestinationFolder -ItemType Directory | Out-Null
+            }
+            if (Test-Path $finalDestination) {
+                Write-Host "- $_ (overriding existing file)"
+            }
+            else {
+                Write-Host "- $_"
+            }
+            Copy-Item -Path $source -Destination $finalDestination
+        }
+    }
+
+    if ($settings.customALGoSystemFiles -isnot [Array]) {
+        throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
+    }
+    foreach($customspec in $settings.customALGoSystemFiles) {
+        if ($customspec -isnot [Hashtable]) {
             throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
         }
-        foreach($customspec in $settings.customALGoSystemFiles) {
-            if ($customspec -isnot [Hashtable]) {
-                throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
-            }
-            if (!($customSpec.ContainsKey('Source') -and $customSpec.ContainsKey('Destination'))) {
-                throw "customALGoSystemFiles setting is wrongly formatted, Source and Destination must be specified. See https://aka.ms/algosettings#customalgosystemfiles."
-            }
-            $source = $customspec.Source
-            $destination = $customSpec.Destination
-            if ($source -isnot [string] -or $destination -isnot [string]) {
-                throw "customALGoSystemFiles setting is wrongly formatted, Source and Destination must be strings. See https://aka.ms/algosettings#customalgosystemfiles."
-            }
-        
-            $finalDestination = Join-Path $path $destination
-            $ext = [System.IO.Path]::GetExtension($source)
+        if (!($customSpec.ContainsKey('Source') -and $customSpec.ContainsKey('Destination'))) {
+            throw "customALGoSystemFiles setting is wrongly formatted, Source and Destination must be specified. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+        $source = $customspec.Source
+        $destination = $customSpec.Destination.Replace('/',[IO.Path]::DirectorySeparatorChar).Replace('\',[IO.Path]::DirectorySeparatorChar)
+        if ($destination -isnot [string] -or $destination -eq '') {
+            throw "customALGoSystemFiles setting is wrongly formatted, Destination must be a string, which isn't blank. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+        if ($source -isnot [string] -or $source -notlike 'https://*' -or (-not [System.Uri]::IsWellFormedUriString($source,1))) {
+            throw "customALGoSystemFiles setting is wrongly formatted, Source must secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        New-Item -Path $tempFolder -ItemType Directory | Out-Null
+        $ext = [System.IO.Path]::GetExtension($source)
+        $zipName = "$tempFolder$ext"
+        Push-Location -Path $path
+        try {
             if ($ext -eq '.zip') {
-                Write-Host $destination.Replace('/',[IO.Path]::DirectorySeparatorChar).Replace('\',[IO.Path]::DirectorySeparatorChar)
+                Write-Host "$($destination):"
                 if ($customSpec.ContainsKey('FileSpec')) { $fileSpec = $customSpec.FileSpec } else { $fileSpec = '*' }
                 if ($customSpec.ContainsKey('Recurse')) { $recurse = $customSpec.Recurse } else { $recurse = $true }
                 if ($fileSpec -isnot [string] -or $recurse -isnot [boolean]) {
                     throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string and Recurse must be boolean. See https://aka.ms/algosettings#customalgosystemfiles."
                 }
-                if (Test-Path $finalDestination -PathType Leaf) {
-                    throw "A file with that name already exists - destination must point to a folder when adding custom AL-Go System Files from a .zip file. See https://aka.ms/algosettings#customalgosystemfiles."
+                if (!($destination.EndsWith([IO.Path]::DirectorySeparatorChar))) {
+                    throw "customALGoSystemFiles setting is wrongly formatted, destination must be a folder (terminated with / or \). See https://aka.ms/algosettings#customalgosystemfiles."
                 }
-                $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-                New-Item -Path $tempFolder -ItemType Directory | Out-Null
-                $zipName = "$tempFolder$ext"
+                Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $zipName
+                Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
+                $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
+                Push-Location -Path $subFolder
                 try {
-                    Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $zipName
-                    Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
-                    $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
-                    Push-Location -Path $subFolder
-                    try {
-                        Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
-                            $destRelativeFileName = Resolve-Path $_.FullName -Relative
-                            $destFinalFileName = Join-Path $finalDestination $destRelativeFileName
-                            $destFinalFolder = [System.IO.Path]::GetDirectoryName($destFinalFileName)
-                            if (Test-Path -Path $destFinalFolder -PathType Leaf) {
-                                throw "A file ($destFinalFolder) already exists, where a folder is expected when applying CustomALGoSystemFiles."
-                            }
-                            if (!(Test-Path -Path $destFinalFolder)) {
-                                New-Item -path $destFinalFolder -ItemType Directory | Out-Null
-                            }
-                            Write-Host "- $($destRelativeFileName.Substring(2))"
-                            Copy-Item -Path $_.FullName -Destination $destFinalFileName
-                        }
-                    }
-                    finally {
-                        Pop-Location
+                    Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
+                        $destRelativeFileName = Resolve-Path $_.FullName -Relative
+                        $destFileName = Join-Path $destination $destRelativeFileName
+                        $destFileName = $destFileName.TrimStart('\/')
+                        CopyItem -source $_.FullName -basePath $path -destination $destFileName -projects $projects
                     }
                 }
                 finally {
-                    if (Test-Path -Path $zipName) { Remove-Item $zipName -Force }
-                    Remove-Item -Path $tempFolder -Recurse -Force
+                    Pop-Location
                 }
             }
             else {
                 if ($customSpec.ContainsKey('FileSpec') -or $customSpec.ContainsKey('Recurse')) {
                     throw "customALGoSystemFiles setting is wrongly formatted, FileSpec and Recurse are only allowed with .zip files. See https://aka.ms/algosettings#customalgosystemfiles."
                 }
-                if (Test-Path -Path $finalDestination -PathType Container) {
-                    $finalDestination = Join-Path $finalDestination ([System.IO.Path]::GetFileName($source))
+                if ($destination.endsWith([IO.Path]::DirectorySeparatorChar)) {
+                    $destination = Join-Path $destination ([System.IO.Path]::GetFileName($source))
                 }
-                else {
-                    if ($destination.endsWith('\') -or $destination.endsWith('/')) {
-                        New-Item -Path $finalDestination -ItemType Directory | Out-Null
-                        $finalDestination = Join-Path $finalDestination ([System.IO.Path]::GetFileName($source))
-                    }
-                }
-                $overridingStr = ''
-                if (Test-Path -Path $finalDestination -PathType Leaf) {
-                    $overridingStr = ' (Overriding existing file)'
-                }
-                $relativeFolder = Resolve-Path -Path ([System.IO.Path]::GetDirectoryName($finalDestination)) -Relative
-                Write-Host "$(Join-Path $relativeFolder ([System.IO.Path]::GetFileName($finalDestination)))$overridingStr"
-                Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $finalDestination
+                Write-Host "$($destination):"
+                $tempFilename = Join-Path $tempFolder ([System.IO.Path]::GetFileName($source))
+                Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $tempFilename
+                CopyItem -source $tempFilename -basePath $path -destination $destination -projects $projects
             }
         }
-    }
-    finally {
-        Pop-Location
+        finally {
+            Pop-Location
+            if (Test-Path -Path $zipName) { Remove-Item $zipName -Force }
+            Remove-Item -Path $tempFolder -Recurse -Force
+        }
     }
 }

@@ -150,16 +150,12 @@ By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings
 ```
   "customALGoSystemFiles": [
     {
-      "Destionation": ".AL-Go/",
-      "Source": "https://raw.githubusercontent.com/freddydk/CustomALGoSystemFiles/main/.AL-Go/myDevEnv.ps1",
+      "Destination": ".AL-Go/",
+      "Source": "https://raw.githubusercontent.com/freddydk/CustomALGoSystemFiles/main/.AL-Go/myDevEnv.ps1"
     },
     {
-      "Destionation": ".AL-Go/",
-      "Source": "https://raw.githubusercontent.com/freddydk/CustomALGoSystemFiles/main/.AL-Go/myDevEnv.ps1",
-    },
-    {
-      "Destionation": ".AL-Go/NewBcContainer.ps1",
-      "Source": "https://raw.githubusercontent.com/microsoft/BCApps/main/build/scripts/NewBcContainer.ps1",
+      "Destination": ".AL-Go/NewBcContainer.ps1",
+      "Source": "https://raw.githubusercontent.com/microsoft/BCApps/main/build/scripts/NewBcContainer.ps1"
     },
     {
       "Destination": ".github/",
