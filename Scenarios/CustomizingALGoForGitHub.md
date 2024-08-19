@@ -253,7 +253,7 @@ If any of your custom steps require permissions, which exceeds the permissions a
 
 ## Using indirect templates
 
-If you have have customizations you want to apply to multiple repositories, you might want to consider using an indirect template. An indirect template is really just an AL-Go repository (can be customized), which you use as a template repository for your repositories. This way, you can control your scripts, jobs or steps in a central location, potentially for specific purposes.
+If you have have customizations you want to apply to multiple repositories, you might want to consider using an indirect template. An indirect template is really just an AL-Go repository (which can be customized), which you use as a template repository for your repositories. This way, you can control your scripts, jobs or steps in a central location, potentially for specific purposes.
 
 > \[!NOTE\]
 > Indirect templates can be public or private.
@@ -261,8 +261,7 @@ If you have have customizations you want to apply to multiple repositories, you 
 
 
 > \[!TIP\]
-> The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a GhTokenWorkflow secret and then run the `Update AL-Go System Files` workflow with your indirect template specied.
-
+> The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a GhTokenWorkflow secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.
 
 
 
