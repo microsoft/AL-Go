@@ -487,6 +487,7 @@ function GetCustomALGoSystemFiles {
         $destinations | ForEach-Object {
             Write-Host "- $_"
             $content = Get-ContentLF -Path $source
+            $existingContent = ''
             if (Test-Path -Path $_) {
                 $existingContent = Get-ContentLF -Path $_
             }
@@ -535,13 +536,17 @@ function GetCustomALGoSystemFiles {
                 Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
                 $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
                 Push-Location -Path $subFolder
-                Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
-                    $destRelativeFileName = Resolve-Path $_.FullName -Relative
-                    $destFileName = Join-Path $destination $destRelativeFileName
-                    $destFileName = $destFileName.TrimStart('\/')
-                    YieldItem -source $_.FullName -destination $destFileName -projects $projects
+                try {
+                    Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
+                        $destRelativeFileName = Resolve-Path $_.FullName -Relative
+                        $destFileName = Join-Path $destination $destRelativeFileName
+                        $destFileName = $destFileName.TrimStart('\/')
+                        YieldItem -source $_.FullName -destination $destFileName -projects $projects
+                    }
                 }
-                Pop-Location
+                finally {
+                    Pop-Location
+                }
             }
             else {
                 if ($customSpec.ContainsKey('FileSpec') -or $customSpec.ContainsKey('Recurse')) {
