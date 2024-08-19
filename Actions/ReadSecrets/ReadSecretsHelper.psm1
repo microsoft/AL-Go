@@ -125,7 +125,6 @@ function GetKeyVaultCredentials {
     }
     if ($testSecretName) {
         try {
-            Write-Host "TEST GET SECRET"
             # check that we have access to get secrets from the keyvault
             GetKeyVaultSecret -secretName $testSecretName -keyVaultCredentials $creds -encrypted | Out-Null
         }
