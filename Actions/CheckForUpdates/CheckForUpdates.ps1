@@ -266,11 +266,11 @@ if ($update -ne 'Y') {
     if (($updateFiles) -or ($removeFiles)) {
         if ($updateFiles) {
             Write-Host "Updated files:"
-            $updateFiles | ForEach-Object { Write-Host "- $($_.DstFile)"
+            $updateFiles | ForEach-Object { Write-Host "- $($_.DstFile)" }
         }
         if ($removeFiles) {
             Write-Host "Removed files:"
-            $removeFiles | ForEach-Object { Write-Host "- $_"
+            $removeFiles | ForEach-Object { Write-Host "- $_" }
         }
         OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
     }
