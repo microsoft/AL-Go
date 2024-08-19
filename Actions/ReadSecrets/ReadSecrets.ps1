@@ -26,7 +26,7 @@ try {
 
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $keyVaultCredentials = GetKeyVaultCredentials -testSecretName 'algotestsecret'
+    $keyVaultCredentials = GetKeyVaultCredentials
     $getAppDependencyProbingPathsSecrets = $false
     $getTokenForPush = $false
     [System.Collections.ArrayList]$secretsCollection = @()
