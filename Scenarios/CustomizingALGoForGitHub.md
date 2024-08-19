@@ -170,8 +170,8 @@ By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings
 
 | Property | Description | Mandatory | Default |
 | :-- | :-- | :-: | :-- |
-| Destination | Path in which the file should be placed (Can include the filename if the source doesn't point to a .zip file) | Yes | |
-| Source | URL to a either a single file or a .zip file containing   | Yes | |
+| Destination | Path in which the file should be placed. Can include the filename if the source doesn't point to a .zip file, must include a terminating / or \\ if a filename is not included. | Yes | |
+| Source | URL to a either a single file or a .zip file containing custom AL-Go System Files. Must be https.  | Yes | |
 | FileSpec | If the source URL points to a .zip file, this property can specify which files to include if the source URL points to a .zip file. The FileSpec can include a subfolder inside the .zip file, and must include a file name pattern.  | No | * |
 | Recurse | Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec) | No | true |
 
