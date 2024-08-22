@@ -65,10 +65,10 @@ jobs:
 
       - name: Override templateUrl
         env:
-          templateUrl: ${{ github.event.inputs.templateUrl }}
+          newTemplateUrl: ${{ github.event.inputs.templateUrl }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $templateUrl = $ENV:templateUrl
+          $templateUrl = $ENV:newTemplateUrl
           if ($templateUrl) {
             Write-Host "Using Template Url: $templateUrl"
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
