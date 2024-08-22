@@ -1,3 +1,7 @@
+### New Settings
+
+- `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
+
 ## v5.3
 
 ### Issues
@@ -37,8 +41,6 @@ AL-Go for GitHub now includes a new telemetry module. For detailed information o
 
 ### New Settings
 
-- `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
-
 - `deployTo<environmentName>`: is not really new, but has a new property:
 
   - **Scope** = specifies the scope of the deployment: Dev, PTE. If not specified, AL-Go for GitHub will always use the Dev Scope for AppSource Apps, but also for PTEs when deploying to sandbox environments when impersonation (refreshtoken) is used for authentication.
@@ -65,7 +67,6 @@ AL-Go for GitHub now includes a new telemetry module. For detailed information o
 
 - `PowerPlatformSolutionFolder`: Contains the name of the folder containing a PowerPlatform Solution (only one)
 - `DeployTo<environment>` now has two additional properties `companyId` is the Company Id from Business Central (for PowerPlatform connection) and `ppEnvironmentUrl` is the Url of the PowerPlatform environment to deploy to.
-- `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
 
 ### New Actions
 
