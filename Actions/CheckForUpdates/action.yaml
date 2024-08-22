@@ -48,6 +48,7 @@ runs:
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
+        _ghTokenWorkflow: ${{ inputs.ghTokenWorkflow }}
         _templateUrl: ${{ inputs.templateUrl }}
         _downloadLatest: ${{ inputs.downloadLatest }}
         _update: ${{ inputs.update }}
@@ -55,7 +56,7 @@ runs:
         _directCommit: ${{ inputs.directCommit }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CheckForUpdates" -Action {
-          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -templateUrl $ENV:_templateUrl -downloadLatest ($ENV:_downloadLatest -eq 'true') -update $ENV:_update -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -ghTokenWorkflow $ENV:_ghTokenWorkflow -templateUrl $ENV:_templateUrl -downloadLatest ($ENV:_downloadLatest -eq 'true') -update $ENV:_update -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal
