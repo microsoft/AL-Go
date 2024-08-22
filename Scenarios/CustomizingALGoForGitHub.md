@@ -258,22 +258,21 @@ If you have have customizations you want to apply to multiple repositories, you 
 > \[!NOTE\]
 > Indirect templates can be public or private. If you are using a private indirect template, AL-Go for GitHub will use the GhTokenWorkflow secret for downloading the template during Update AL-Go System Files and check for updates.
 
-Repository and project settings from the indirect template will also be applied to the new repository during update AL-Go System Files, unless the setting already exists in the repository being updated.
-
-> \[!NOTE\]
-> UnusedALGoSystemFiles and CustomALGoSystemFiles will NOT be copied from the indirect template, they will be applied during Update AL-Go System Files.
+Repository and project settings from the indirect template will also be applied to the new repository during update AL-Go System Files, unless the setting already exists in the repository being updated. **UnusedALGoSystemFiles** and **CustomALGoSystemFiles** will NOT be copied from the indirect template, they will be applied during Update AL-Go System Files.
 
 > \[!TIP\]
-> The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a GhTokenWorkflow secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.
-
-
+> The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a **GhTokenWorkflow** secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.
 
 > \[!NOTE\]
-> If you use the indirect template as a GitHub template, for creating the repository, then you need to re-specify the indirect Template the first time you run Update `AL-Go System Files` as the repository will be a copy of the template repository and by default point to the template repository of the indirect template as it's template repository.
+> If you use the indirect template as a GitHub template for creating the repository, by clicking use this template in your indirect template - then you need to re-specify the indirect Template the first time you run Update `AL-Go System Files` as the repository will be a copy of the template repository and by default point to the template repository of the indirect template as it's template repository.
 
+Repositories based on your indirect template will notify you that changes are available for your AL-Go System Files when you update the indirect template only. You will not be notified when new versions of AL-Go for GitHub is released in every repository - only in the indirect template repository.
 
+> \[!WARNING\]
+> You should ensure that your indirect template repository is kept up-to-date with the latest changes in AL-Go for GitHub.
 
-
+> \[!TIP\]
+> You can setup the Update AL-Go System Files workflow to run on a schedule to uptake new releases of AL-Go for GitHub regularly.
 
 ## Forking AL-Go for GitHub and making your "own" **public** version
 
