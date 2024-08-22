@@ -36,8 +36,6 @@ jobs:
       generateALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.GenerateALDocArtifact }}
       deployALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.DeployALDocArtifact }}
       deliveryTargetsJson: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
-      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
-      githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
