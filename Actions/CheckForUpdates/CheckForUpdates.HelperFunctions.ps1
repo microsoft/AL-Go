@@ -494,7 +494,7 @@ function GetCustomALGoSystemFiles {
             [string] $destination,
             [string[]] $projects
         )
-    
+
         if ($destination -like ".AL-Go$([IO.Path]::DirectorySeparatorChar)*") {
             $destinations = $projects | ForEach-Object { Join-Path $_ $destination }
         }
