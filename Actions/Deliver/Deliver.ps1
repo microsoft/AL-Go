@@ -61,10 +61,11 @@ function ConnectAzStorageAccount {
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
-import-module (Join-Path -path $PSScriptRoot -ChildPath "../TelemetryHelper.psm1" -Resolve)
-$telemetryScope = CreateScope -eventId 'DO0081' -parentTelemetryScopeJson $parentTelemetryScopeJson
+
 $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
+
 $artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
+
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = ReadSettings -baseFolder $baseFolder
 $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
@@ -74,8 +75,9 @@ if ($deliveryTarget -eq "AppSource") {
 Write-Host "Artifacts $artifacts"
 Write-Host "Projects:"
 $projectList | Out-Host
+
 $secrets = $env:Secrets | ConvertFrom-Json
-foreach($thisProject in $projectList) {
+foreach ($thisProject in $projectList) {
     # $project should be the project part of the artifact name generated from the build
     if ($thisProject -and ($thisProject -ne '.')) {
         $project = $thisProject.Replace('\','_').Replace('/','_')
@@ -86,6 +88,7 @@ foreach($thisProject in $projectList) {
     # projectName is the project name stripped for special characters
     $projectName = $project -replace "[^a-z0-9]", "-"
     Write-Host "ProjectName '$projectName'"
+
     if ($artifacts -like "$($baseFolder)*") {
         $artifactsFolder = $artifacts
     }
@@ -101,7 +104,8 @@ foreach($thisProject in $projectList) {
         }
         elseif ($artifacts -eq "current" -or $artifacts -eq "prerelease" -or $artifacts -eq "draft") {
             # project is the project name as used in release asset names
-            $project = [Uri]::EscapeDataString($project.Replace(' ','.')).Replace('%','')
+            $project = [Uri]::EscapeDataString($project.Replace(' ', '.')).Replace('%', '')
+
             # latest released version
             $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
             if ($artifacts -eq "current") {
@@ -116,7 +120,7 @@ foreach($thisProject in $projectList) {
             if (!($release)) {
                 throw "Unable to locate $artifacts release"
             }
-            foreach($mask in $atypes.Split(',')) {
+            foreach ($mask in $atypes.Split(',')) {
                 $artifactFile = DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask $mask
                 Write-Host "'$artifactFile'"
                 if (!$artifactFile -or !(Test-Path $artifactFile)) {
@@ -128,7 +132,7 @@ foreach($thisProject in $projectList) {
                     if ($artifactFile -notlike '*.zip') {
                         throw "Downloaded artifact is not a .zip file"
                     }
-                    Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                    Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0, $artifactFile.Length - 4))
                     Remove-Item $artifactFile -Force
                 }
             }
@@ -147,7 +151,7 @@ foreach($thisProject in $projectList) {
                         if ($artifactFile -notlike '*.zip') {
                             throw "Downloaded artifact is not a .zip file"
                         }
-                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0,$artifactFile.Length-4))
+                        Expand-Archive -Path $artifactFile -DestinationPath ($artifactFile.SubString(0, $artifactFile.Length - 4))
                         Remove-Item $artifactFile -Force
                     }
                 }
@@ -162,45 +166,54 @@ foreach($thisProject in $projectList) {
             }
         }
     }
+
     Write-Host "Project '$project'"
     Write-Host "Artifacts:"
     Get-ChildItem -Path $artifactsFolder | ForEach-Object {
         Write-Host "- $($_.Name)"
     }
+
     # Check if there is a custom script to run for the delivery target
     $customScript = Join-Path $baseFolder ".github/DeliverTo$deliveryTarget.ps1"
+
     if (Test-Path $customScript -PathType Leaf) {
         Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
+
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
         $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
         $parameters = @{
-            "Project" = $thisProject
-            "ProjectName" = $projectName
-            "type" = $type
-            "Context" = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context"))
-            "RepoSettings" = $settings
+            "Project"         = $thisProject
+            "ProjectName"     = $projectName
+            "type"            = $type
+            "Context"         = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context"))
+            "RepoSettings"    = $settings
             "ProjectSettings" = $projectSettings
         }
-        #Calculate the folders per artifact type
+
         #Calculate the folders per artifact type
         'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
             $artifactType = $_
             $singleArtifactFilter = "$project-$refname-$artifactType-*.*.*.*";
+
             # Get the folder holding the artifacts from the standard build
             $artifactFolder =  @(Get-ChildItem -Path (Join-Path $artifactsFolder $singleArtifactFilter) -Directory)
+
             # Verify that there is an apps folder
             if ($artifactFolder.Count -eq 0 -and $artifactType -eq "Apps") {
                 throw "Internal error - unable to locate apps folder"
             }
+
             # Verify that there is only at most one artifact folder for the standard build
             if ($artifactFolder.Count -gt 1) {
                 $artifactFolder | Out-Host
                 throw "Internal error - multiple $artifactType folders located"
             }
+
             # Add the artifact folder to the parameters
             if ($artifactFolder.Count -ne 0) {
                 $parameters[$artifactType.ToLowerInvariant() + "Folder"] = $artifactFolder[0].FullName
             }
+
             # Get the folders holding the artifacts from all build modes
             $multipleArtifactFilter = "$project-$refname-*$artifactType-*.*.*.*";
             $artifactFolders = @(Get-ChildItem -Path (Join-Path $artifactsFolder $multipleArtifactFilter) -Directory)
@@ -250,7 +263,7 @@ foreach($thisProject in $projectList) {
         try {
             $storageAccountCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json
             $storageAccountCredentials.StorageAccountName | Out-Null
-            $storageContainerName =  $storageAccountCredentials.ContainerName.ToLowerInvariant().replace('{project}',$projectName).replace('{branch}',$refname).ToLowerInvariant()
+            $storageContainerName =  $storageAccountCredentials.ContainerName.ToLowerInvariant().replace('{project}', $projectName).replace('{branch}', $refname).ToLowerInvariant()
             $storageBlobName = $storageAccountCredentials.BlobName.ToLowerInvariant()
         }
         catch {
@@ -259,6 +272,7 @@ foreach($thisProject in $projectList) {
         $azStorageContext = ConnectAzStorageAccount -storageAccountCredentials $storageAccountCredentials
         Write-Host "Storage Container Name is $storageContainerName"
         Write-Host "Storage Blob Name is $storageBlobName"
+
         $containerExists = $true
         try {
             Get-AzStorageContainer -Context $azStorageContext -name $storageContainerName | Out-Null
@@ -266,10 +280,12 @@ foreach($thisProject in $projectList) {
         catch {
             $containerExists = $false
         }
+
         if (-not $containerExists -and $settings.Contains('DeliverToStorage') -and $settings."DeliverToStorage".Contains('CreateContainerIfNotExist') -and $settings."DeliverToStorage"."CreateContainerIfNotExist" -eq $true) {
             Write-Host "Container $storageContainerName does not exist. Creating..."
             New-AzStorageContainer -Context $azStorageContext -Name $storageContainerName | Out-Null
         }
+
         Write-Host "Delivering to $storageContainerName in $($storageAccountCredentials.StorageAccountName)"
         $atypes.Split(',') | ForEach-Object {
             $atype = $_
@@ -289,11 +305,11 @@ foreach($thisProject in $projectList) {
             }
             else {
                 $artfolder = $artfolder[0].FullName
-                $version = $artfolder.SubString($artfolder.IndexOf("-$refname-$atype-")+"-$refname-$atype-".Length)
+                $version = $artfolder.SubString($artfolder.IndexOf("-$refname-$atype-") + "-$refname-$atype-".Length)
                 Write-Host $artfolder
-                $versions = @("$version-preview","preview")
+                $versions = @("$version-preview", "preview")
                 if ($type -eq "Release") {
-                    $versions += @($version,"latest")
+                    $versions += @($version, "latest")
                 }
                 $tempFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::newguid().ToString()).zip"
                 try {
@@ -301,7 +317,7 @@ foreach($thisProject in $projectList) {
                     Compress-Archive -Path (Join-Path $artfolder '*') -DestinationPath $tempFile -Force
                     $versions | ForEach-Object {
                         $version = $_
-                        $blob = $storageBlobName.replace('{project}',$projectName).replace('{branch}',$refname).replace('{version}',$version).replace('{type}',$atype).ToLowerInvariant()
+                        $blob = $storageBlobName.replace('{project}', $projectName).replace('{branch}', $refname).replace('{version}', $version).replace('{type}', $atype).ToLowerInvariant()
                         Write-Host "Delivering $blob"
                         Set-AzStorageBlobContent -Context $azStorageContext -Container $storageContainerName -File $tempFile -blob $blob -Force | Out-Null
                     }
