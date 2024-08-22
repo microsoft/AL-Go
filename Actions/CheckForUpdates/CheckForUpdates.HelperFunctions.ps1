@@ -434,7 +434,7 @@ function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
         [hashtable] $updateSettings,
-        [hashtable] $additionalSettings = @{}
+        [hashtable] $indirectTemplateSettings = @{}
     )
 
     # Update Repo Settings file with the template URL
@@ -453,13 +453,19 @@ function UpdateSettingsFile {
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
         }
     }
-    # Grab settings from additionalSettings if they are not already in settings
-    foreach($key in $additionalSettings.Keys) {
+    # Grab settings from indirectTemplateSettings if they are not already in settings
+    foreach($key in $indirectTemplateSettings.Keys) {
+        # CustomALGoSystemFiles will not be copied from the indirect template settings - they will be applied to the indirect template
+        # UnusedALGoSystemFiles will not be copied from the indirect template settings - they will be used during the update process
+        if (@('customALGoSystemFiles','unusedALGoSystemFiles') -contains $key) {
+            continue
+        }
         if (!($settings.PSObject.Properties.Name -eq $key)) {
             # Add the property if it doesn't exist
-            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $additionalSettings."$key"
+            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $indirectTemplateSettings."$key"
         }
     }
+
     # Save the file with LF line endings and UTF8 encoding
     $settings | Set-JsonContentLF -path $settingsFile
 }

@@ -107,6 +107,10 @@ if (-not $isDirectALGo) {
             $templateOwner = $realTemplateUrl.Split('/')[3]
 
             $indirectTemplateRepoSettings = $templateRepoSettings
+            # If the indirect template contains unusedALGoSystemFiles, we need to remove them from the current repository
+            if ($indirectTemplateRepoSettings.ContainsKey('unusedALGoSystemFiles')) {
+                $unusedALGoSystemFiles += $indirectTemplateRepoSettings.unusedALGoSystemFiles
+            }
             $myALGoSettingsFile = Join-Path $templateFolder "*/$ALGoSettingsFile"
             if (Test-Path $myALGoSettingsFile -PathType Leaf) {
                 Write-Host "Read project settings from indirect template repository"
@@ -175,7 +179,7 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "Update Project Settings"
                 # Copy individual settings from the indirect template repository .AL-Go/settings.json (if the setting doesn't exist in the project folder)
                 $projectSettingsFile = Join-Path $dstFolder "settings.json"
-                UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -additionalSettings $indirectTemplateProjectSettings
+                UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -indirectTemplateSettings $indirectTemplateProjectSettings
                 $updateFiles += @{ "DstFile" = Join-Path $dstPath "settings.json"; "content" = (Get-Content -Path $projectSettingsFile -Encoding UTF8 -Raw) }
             }
 
@@ -295,7 +299,7 @@ else {
 
         invoke-git status
 
-        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha } -additionalSettings $indirectTemplateRepoSettings
+        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha } -indirectTemplateSettings $indirectTemplateRepoSettings
 
         # Update the files
         # Calculate the release notes, while updating

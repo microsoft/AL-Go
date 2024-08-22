@@ -258,7 +258,10 @@ If you have have customizations you want to apply to multiple repositories, you 
 > \[!NOTE\]
 > Indirect templates can be public or private.
 
+Repository and project settings from the indirect template will also be applied to the new repository during update AL-Go System Files, unless the setting already exists in the repository being updated.
 
+> \[!NOTE\]
+> CustomALGoSystemFiles will NOT be copied from the indirect template, they will be applied there and UnusedALGoSystemFiles will be merged.
 
 > \[!TIP\]
 > The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a GhTokenWorkflow secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.
