@@ -156,7 +156,7 @@ function CreateBuildDimensions {
 
     foreach($project in $projects) {
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
-        $gitHubRunner = "windows-latest" #$projectSettings.githubRunner
+        $gitHubRunner = "windows-latest" | ConvertTo-Json -compress #$projectSettings.githubRunner $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
         $githubRunnerShell = "powershell" # $projectSettings.githubRunnerShell
         $buildModes = @($projectSettings.buildModes)
 
