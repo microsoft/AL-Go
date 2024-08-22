@@ -437,20 +437,26 @@ function UpdateSettingsFile {
         [hashtable] $indirectTemplateSettings = @{}
     )
 
+    $modified = $false
     # Update Repo Settings file with the template URL
     if (Test-Path $settingsFile) {
         $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
     }
     else {
         $settings = [PSCustomObject]@{}
+        $modified = $true
     }
     foreach($key in $updateSettings.Keys) {
         if ($settings.PSObject.Properties.Name -eq $key) {
-            $settings."$key" = $updateSettings."$key"
+            if ($settings."$key" -ne $updateSettings."$key") {
+                $settings."$key" = $updateSettings."$key"
+                $modified = $true
+            }
         }
         else {
             # Add the property if it doesn't exist
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
+            $modified = $true
         }
     }
     # Grab settings from indirectTemplateSettings if they are not already in settings
@@ -463,11 +469,15 @@ function UpdateSettingsFile {
         if (!($settings.PSObject.Properties.Name -eq $key)) {
             # Add the property if it doesn't exist
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $indirectTemplateSettings."$key"
+            $modified = $true
         }
     }
 
-    # Save the file with LF line endings and UTF8 encoding
-    $settings | Set-JsonContentLF -path $settingsFile
+    if ($modified) {
+        # Save the file with LF line endings and UTF8 encoding
+        $settings | Set-JsonContentLF -path $settingsFile
+    }
+    return $modified
 }
 
 function GetCustomALGoSystemFiles {

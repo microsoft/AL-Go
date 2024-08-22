@@ -182,8 +182,9 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "Update Project Settings"
                 # Copy individual settings from the indirect template repository .AL-Go/settings.json (if the setting doesn't exist in the project folder)
                 $projectSettingsFile = Join-Path $dstFolder "settings.json"
-                UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -indirectTemplateSettings $indirectTemplateProjectSettings
-                $updateFiles += @{ "DstFile" = Join-Path $dstPath "settings.json"; "content" = (Get-Content -Path $projectSettingsFile -Encoding UTF8 -Raw) }
+                if (UpdateSettingsFile -settingsFile $projectSettingsFile -updateSettings @{} -indirectTemplateSettings $indirectTemplateProjectSettings) {
+                    $updateFiles += @{ "DstFile" = Join-Path $dstPath "settings.json"; "content" = (Get-Content -Path $projectSettingsFile -Encoding UTF8 -Raw) }
+                }
             }
 
             # Remove unused AL-Go system files
@@ -273,7 +274,7 @@ if ($update -ne 'Y') {
     if (($updateFiles) -or ($removeFiles)) {
         if ($updateFiles) {
             Write-Host "Updated files:"
-            $updateFiles | ForEach-Object { Write-Host "- $($_.DstFile)"; Write-Host "'$($_.Content)'" }
+            $updateFiles | ForEach-Object { Write-Host "- $($_.DstFile)" }
 
         }
         if ($removeFiles) {
@@ -303,7 +304,10 @@ else {
 
         invoke-git status
 
-        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha } -indirectTemplateSettings $indirectTemplateRepoSettings
+        $repoSettingsFile = Join-Path ".github" "AL-Go-Settings.json"
+        if (UpdateSettingsFile -settingsFile $repoSettingsFile -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha } -indirectTemplateSettings $indirectTemplateRepoSettings) {
+            $updateFiles += @{ "DstFile" = $repoSettingsFile; "content" = (Get-Content -Path $repoSettingsFile -Encoding UTF8 -Raw) }
+        }
 
         # Update the files
         # Calculate the release notes, while updating
