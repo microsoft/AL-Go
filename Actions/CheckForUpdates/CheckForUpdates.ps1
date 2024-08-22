@@ -31,6 +31,7 @@ if (-not $token) {
     }
 }
 else {
+    # Specified token is GhTokenWorkflow secret - decode from base 64
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
 
