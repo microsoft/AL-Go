@@ -443,10 +443,14 @@ class Yaml {
         }
         # Merge permissions
         Write-host "Merge permissions"
-        $srcPermissions = [Yaml]::GetPermissionsFromArray($srcYaml.Get('permissions:/').content)
-        $yamlPermissions = [Yaml]::GetPermissionsFromArray($yaml.Get('permissions:/').content)
-        if ("$srcPermissions" -ne "" -and "$yamlPermissions" -ne "") {
-            $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+        $srcPermissionsObj = $srcYaml.Get('permissions:/')
+        $yamlPermissionsObj = $yaml.Get('permissions:/')
+        if ($srcPermissionsObj -and $yamlPermissionsObj) {
+            $srcPermissions = [Yaml]::GetPermissionsFromArray($srcPermissionsObj.content)
+            $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
+            if ("$srcPermissions" -ne "" -and "$yamlPermissions" -ne "") {
+                $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+            }
         }
 
         # Apply cystom steps
