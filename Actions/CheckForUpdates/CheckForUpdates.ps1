@@ -1,10 +1,10 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
-    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token,
     [Parameter(HelpMessage = "Base64 encoded GhTokenWorkflow secret", Mandatory = $false)]
-    [string] $ghTokenWorkflow,
+    [string] $token,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
+    [string] $githubToken,
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $true)]
@@ -24,12 +24,17 @@
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
-if ($ghTokenWorkflow) {
+if ($token) {
     # Specified token is GhTokenWorkflow secret - decode from base 64
-    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ghTokenWorkflow))
+    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
-elseif ($update -eq 'Y') {
-    throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
+else {
+    if ($update -eq 'Y') {
+        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
+    }
+    else {
+        $token = $githubToken
+    }
 }
 
 # Use Authenticated API request to avoid the 60 API calls per hour limit

@@ -14,13 +14,13 @@ inputs:
     required: false
     default: ${{ github.actor }}
   token:
-    description: The GitHub token running the action
-    required: false
-    default: ${{ github.token }}
-  ghTokenWorkflow:
     description: Base64 encoded GhTokenWorkflow secret
     required: false
     default: ''
+  githubToken:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
   templateUrl:
     description: URL of the template repository (default is the template repository used to create the repository)
     required: false
@@ -48,7 +48,7 @@ runs:
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
-        _ghTokenWorkflow: ${{ inputs.ghTokenWorkflow }}
+        _githubToken: ${{ inputs.githubToken }}
         _templateUrl: ${{ inputs.templateUrl }}
         _downloadLatest: ${{ inputs.downloadLatest }}
         _update: ${{ inputs.update }}
@@ -56,7 +56,7 @@ runs:
         _directCommit: ${{ inputs.directCommit }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CheckForUpdates" -Action {
-          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -ghTokenWorkflow $ENV:_ghTokenWorkflow -templateUrl $ENV:_templateUrl -downloadLatest ($ENV:_downloadLatest -eq 'true') -update $ENV:_update -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -githubToken $ENV:_githubToken -templateUrl $ENV:_templateUrl -downloadLatest ($ENV:_downloadLatest -eq 'true') -update $ENV:_update -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal

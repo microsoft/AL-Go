@@ -146,7 +146,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           shell: powershell
-          ghTokenWorkflow: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           templateUrl: ${{ env.templateUrl }}
           downloadLatest: true
 
