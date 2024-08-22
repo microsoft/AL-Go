@@ -10,6 +10,7 @@
 - Fix issue with github ref when running reusable workflows
 - Issue 1098 Support for specifying the name of the AZURE_CREDENTIALS secret by adding a AZURE_CREDENTIALSSecretName setting
 - Fix placeholder syntax for git ref in PullRequestHandler.yaml
+- Issue 1164 Getting secrets from Azure key vault fails in Preview
 
 ### Dependencies to PowerShell modules
 
