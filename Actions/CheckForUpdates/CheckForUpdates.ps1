@@ -28,6 +28,7 @@ if (-not $token) {
     }
     else {
         $token = $env:GITHUB_TOKEN
+        Write-Host $token.Length
     }
 }
 else {
