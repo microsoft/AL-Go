@@ -273,7 +273,8 @@ if ($update -ne 'Y') {
     if (($updateFiles) -or ($removeFiles)) {
         if ($updateFiles) {
             Write-Host "Updated files:"
-            $updateFiles | ForEach-Object { Write-Host "- $($_.DstFile)" }
+            $updateFiles | ForEach-Object { Write-Host "- $($_.DstFile)"; Write-Host "'$($_.Content)'" }
+
         }
         if ($removeFiles) {
             Write-Host "Removed files:"
