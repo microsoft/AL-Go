@@ -13,7 +13,6 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | project | Yes | Name of project to analyze or . if the repository is setup for single project | |
 
 ## OUTPUT

@@ -31,13 +31,8 @@ runs:
         actionsRepo: ${{ github.action_repository }}
         actionsRef: ${{ github.action_ref }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetActionsRepoAndRef" -SkipTelemetry -Action {
           ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
         }
 
     - name: Check out AL-Go Actions
@@ -61,13 +56,8 @@ runs:
         _artifactsFolder: ${{ inputs.artifactsFolder }}
         _solutionFolder: ${{ inputs.solutionFolder }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DeterminePowerPlatformSolutionFolder" -Action {
           ${{ github.action_path }}/DeterminePowerPlatformSolutionFolder.ps1 -artifactsFolder $ENV:_artifactsFolder -solutionFolder $ENV:_solutionFolder
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
         }
 
     - name: Unpack solution artifact
