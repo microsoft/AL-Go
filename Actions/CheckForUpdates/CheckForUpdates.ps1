@@ -22,18 +22,16 @@
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
-if ($update -eq 'Y') {
-    if (-not $token) {
+if (-not $token) {
+    if ($update -eq 'Y') {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
     }
     else {
-        $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
+        $token = $env:GITHUB_TOKEN
     }
 }
 else {
-    if (-not $token) {
-        $token = $env:GITHUB_TOKEN
-    }
+    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
 
 # Use Authenticated API request to avoid the 60 API calls per hour limit

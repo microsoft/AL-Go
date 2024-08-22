@@ -256,12 +256,12 @@ If any of your custom steps require permissions, which exceeds the permissions a
 If you have have customizations you want to apply to multiple repositories, you might want to consider using an indirect template. An indirect template is really just an AL-Go repository (which can be customized), which you use as a template repository for your repositories. This way, you can control your scripts, jobs or steps in a central location, potentially for specific purposes.
 
 > \[!NOTE\]
-> Indirect templates can be public or private.
+> Indirect templates can be public or private. If you are using a private indirect template, AL-Go for GitHub will use the GhTokenWorkflow secret for downloading the template during Update AL-Go System Files and check for updates.
 
 Repository and project settings from the indirect template will also be applied to the new repository during update AL-Go System Files, unless the setting already exists in the repository being updated.
 
 > \[!NOTE\]
-> CustomALGoSystemFiles will NOT be copied from the indirect template, they will be applied there and UnusedALGoSystemFiles will be merged.
+> UnusedALGoSystemFiles and CustomALGoSystemFiles will NOT be copied from the indirect template, they will be applied during Update AL-Go System Files.
 
 > \[!TIP\]
 > The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a GhTokenWorkflow secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.
