@@ -126,11 +126,9 @@ try {
                 else {
                     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
                     if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
-                        Write-Host "Set token"
                         $trustedNuGetFeed.Token = $token
                     }
                     else {
-                        Write-Host "Add token"
                         $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name Token -Value $token
                     }
                 }
