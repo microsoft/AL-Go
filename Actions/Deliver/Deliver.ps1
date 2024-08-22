@@ -62,9 +62,9 @@ function ConnectAzStorageAccount {
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
-$refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
+$refname = "$ENV:GITHUB_REF_NAME".Replace('/', '_')
 
-$artifacts = $artifacts.Replace('/',([System.IO.Path]::DirectorySeparatorChar)).Replace('\',([System.IO.Path]::DirectorySeparatorChar))
+$artifacts = $artifacts.Replace('/', ([System.IO.Path]::DirectorySeparatorChar)).Replace('\', ([System.IO.Path]::DirectorySeparatorChar))
 
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = ReadSettings -baseFolder $baseFolder
@@ -80,7 +80,7 @@ $secrets = $env:Secrets | ConvertFrom-Json
 foreach ($thisProject in $projectList) {
     # $project should be the project part of the artifact name generated from the build
     if ($thisProject -and ($thisProject -ne '.')) {
-        $project = $thisProject.Replace('\','_').Replace('/','_')
+        $project = $thisProject.Replace('\', '_').Replace('/', '_')
     }
     else {
         $project = $settings.repoName
@@ -196,7 +196,7 @@ foreach ($thisProject in $projectList) {
             $singleArtifactFilter = "$project-$refname-$artifactType-*.*.*.*";
 
             # Get the folder holding the artifacts from the standard build
-            $artifactFolder =  @(Get-ChildItem -Path (Join-Path $artifactsFolder $singleArtifactFilter) -Directory)
+            $artifactFolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder $singleArtifactFilter) -Directory)
 
             # Verify that there is an apps folder
             if ($artifactFolder.Count -eq 0 -and $artifactType -eq "Apps") {
@@ -221,6 +221,7 @@ foreach ($thisProject in $projectList) {
                 $parameters[$artifactType.ToLowerInvariant() + "Folders"] = $artifactFolders.FullName
             }
         }
+
         Write-Host "Calling custom script: $customScript"
         . $customScript -parameters $parameters
     }
@@ -249,8 +250,8 @@ foreach ($thisProject in $projectList) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                     $parameters = @{
                         "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-                        "preReleaseTag" = $preReleaseTag
-                        "appFile" = $_.FullName
+                        "preReleaseTag"    = $preReleaseTag
+                        "appFile"          = $_.FullName
                     }
                     $package = New-BcNuGetPackage @parameters
                     Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
@@ -263,7 +264,7 @@ foreach ($thisProject in $projectList) {
         try {
             $storageAccountCredentials = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.storageContext)) | ConvertFrom-Json
             $storageAccountCredentials.StorageAccountName | Out-Null
-            $storageContainerName =  $storageAccountCredentials.ContainerName.ToLowerInvariant().replace('{project}', $projectName).replace('{branch}', $refname).ToLowerInvariant()
+            $storageContainerName = $storageAccountCredentials.ContainerName.ToLowerInvariant().replace('{project}', $projectName).replace('{branch}', $refname).ToLowerInvariant()
             $storageBlobName = $storageAccountCredentials.BlobName.ToLowerInvariant()
         }
         catch {
@@ -332,7 +333,7 @@ foreach ($thisProject in $projectList) {
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
         $projectSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $thisProject -doNotCheckArtifactSetting -doNotIssueWarnings
         # Use old settings and issue warnings
-        'continuousDelivery','mainAppFolder','productId' | ForEach-Object {
+        'continuousDelivery', 'mainAppFolder', 'productId' | ForEach-Object {
             if ($projectSettings.Keys -contains "AppSource$_") {
                 OutputWarning "Using AppSource$_ in $thisProject/.AL-Go/settings.json is deprecated. Use deliverToAppSource.$_ instead. If both values are defined, the value in AppSource$_ is used (even if it is deprecated)."
                 $projectSettings.deliverToAppSource."$_" = $projectSettings."AppSource$_"
@@ -348,6 +349,7 @@ foreach ($thisProject in $projectList) {
                 throw "appSourceContext secret is missing"
             }
             $authContext = New-BcAuthContext @appSourceContext
+
             if ($projectSettings.deliverToAppSource.MainAppFolder) {
                 $AppSourceMainAppFolder = $projectSettings.deliverToAppSource.MainAppFolder
             }
@@ -363,6 +365,7 @@ foreach ($thisProject in $projectList) {
                 throw "deliverToAppSource.ProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
             }
             Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
+
             $mainAppJson = Get-Content -Path (Join-Path $baseFolder "$thisProject/$AppSourceMainAppFolder/app.json") -Encoding UTF8 | ConvertFrom-Json
             $mainAppFileName = ("$($mainAppJson.Publisher)_$($mainAppJson.Name)_".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "*.*.*.*.app"
             $artfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
@@ -376,6 +379,7 @@ foreach ($thisProject in $projectList) {
             $artfolder = $artfolder[0].FullName
             $appFile = Get-ChildItem -path $artFolder | Where-Object { $_.name -like $mainAppFileName } | ForEach-Object { $_.FullName }
             $libraryAppFiles = @(Get-ChildItem -path $artFolder | Where-Object { $_.name -notlike $mainAppFileName } | ForEach-Object { $_.FullName })
+
             $appSourceIncludeDependencies = $projectSettings.deliverToAppSource.includeDependencies
             if ($appSourceIncludeDependencies -and $appSourceIncludeDependencies.count -gt 0) {
                 $depfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
@@ -392,6 +396,7 @@ foreach ($thisProject in $projectList) {
                     $appSourceIncludeDependencies | Where-Object { $name -like $_ }
                 } | ForEach-Object { $_.FullName })
             }
+
             Write-Host "Main App File:"
             Write-Host "- $([System.IO.Path]::GetFileName($appFile))"
             Write-Host "Library App Files:"
@@ -421,4 +426,3 @@ foreach ($thisProject in $projectList) {
         Remove-Item $artifactsFolder -Recurse -Force
     }
 }
-
