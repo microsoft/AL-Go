@@ -768,6 +768,11 @@ function ReadSettings {
     if ($settings.shell -ne "powershell" -and $settings.shell -ne "pwsh") {
         throw "Invalid value for setting: shell: $($settings.githubRunnerShell)"
     }
+    if (($settings.githubRunner -like "ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
+        Write-Host "Switching shell to pwsh for ubuntu"
+        $settings.githubRunnerShell = "pwsh"
+    }
+
     if($settings.projectName -eq '') {
         $settings.projectName = $project # Default to project path as project name
     }
