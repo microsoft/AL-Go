@@ -26,6 +26,7 @@ DownloadAndImportBcContainerHelper
 
 if ($token) {
     # Specified token is GhTokenWorkflow secret - decode from base 64
+    Write-Host "Using ghTokenWorkflow secret"
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
 else {
@@ -33,6 +34,7 @@ else {
         throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
     }
     else {
+        Write-Host "Using GitHub Token"
         $token = $githubToken
     }
 }
