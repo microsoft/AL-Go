@@ -1,5 +1,3 @@
-## v5.3
-
 ### Issues
 
 ### New Settings
