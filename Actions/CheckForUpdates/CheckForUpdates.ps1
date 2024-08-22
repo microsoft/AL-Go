@@ -30,6 +30,11 @@ if ($update -eq 'Y') {
         $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
     }
 }
+else {
+    if (-not $token) {
+        $token = $env:GITHUB_TOKEN
+    }
+}
 
 # Use Authenticated API request to avoid the 60 API calls per hour limit
 $headers = @{
