@@ -14,7 +14,7 @@ Microsoft will continuously develop and maintain AL-Go for GitHub and ensure tha
 
 Keeping your repositories up-to-date can be done manually or on a schedule (like Windows update really). You will be notified when an update is available and we recommend that you keep your repositories up-to-date at all time. If you make modifications to the AL-Go System Files (scripts and workflows) in your repository, in other ways than described in this document, these changes will be removed with the next AL-Go update.
 
-> \[!TIP]
+> \[!TIP\]
 > If for some reason the updated version of AL-Go for GitHub doesn't work for you, we recommend that you file an issue [here](https://github.com/microsoft/AL-Go/issues) with a detailed description of the problem and full logs of the failing workflows. You can then revert back to the prior version of AL-Go for GitHub until the issue is resolved.
 >
 > It is important to get back to the mainstream version of AL-Go for GitHub as soon as the issue is resolved.
@@ -222,13 +222,13 @@ At this time, the anchor-points where you can add custom steps are:
 
 | Workflow | Job | Step | Before or AFter |
 | :-- | :-- | :-- | :-: |
-| _BuildALGoProject.yaml | BuildALGoProject | Read settings | After |
+| \_BuildALGoProject.yaml | BuildALGoProject | Read settings | After |
 | | | Read secrets | After |
 | | | Build | Before |
 | | | Read secrets | After |
 | | | Cleanup | Before |
 
-The custom step needs to be named `CustomStep<something>` and if inserted in any of the specified anchor-points, it will be maintained after running Update AL-Go System Files. An example of a custom step could be a step, which modifies settings based on some business logic 
+The custom step needs to be named `CustomStep<something>` and if inserted in any of the specified anchor-points, it will be maintained after running Update AL-Go System Files. An example of a custom step could be a step, which modifies settings based on some business logic
 
 ```yaml
       - name: CustomStep-ModifySettings
