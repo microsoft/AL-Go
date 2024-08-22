@@ -1,0 +1,53 @@
+name: Report a bug
+description: Report a bug in AL-Go for GitHub
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+        Before you create a new issue, please check the following:
+        🔎 Search existing issues to avoid creating duplicates.
+
+  - type: input
+    id: algoversion
+    attributes:
+      label: AL-Go version
+      description: The version of AL-Go you are using
+      placeholder: For example 5.1 or preview
+    validations:
+      required: true
+  - type: textarea
+    id: describe-the-issue
+    attributes:
+      label: Describe the issue
+      description: A clear and concise description of what the issue is
+      placeholder: Describe the issue
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Describe what behavior you expected
+      placeholder: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List of steps to reproduce
+      placeholder: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context (logs, screenshots, etc.)
+      description: To help us understand the issue better please paste some logs in the box below. Without logs, it will be harder to understand the issue. Make sure you don't share any sensitive information such as API keys, passwords, etc.
+      placeholder: Screenshots, log output, etc.
+    validations:
+      required: false

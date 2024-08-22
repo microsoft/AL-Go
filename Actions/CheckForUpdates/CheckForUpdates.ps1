@@ -123,7 +123,7 @@ if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
 
 # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
 foreach($checkfile in $checkfiles) {
-    Write-Host "Checking $($checkfile.srcPath)\$($checkfile.pattern)"
+    Write-Host "Checking $($checkfile.srcPath)/$($checkfile.pattern)"
     $type = $checkfile.type
     $srcPath = $checkfile.srcPath
     $dstPath = $checkfile.dstPath
