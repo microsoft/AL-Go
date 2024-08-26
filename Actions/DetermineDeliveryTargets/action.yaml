@@ -30,13 +30,8 @@ runs:
         _projectsJson: ${{ inputs.projectsJson }}
         _checkContextSecrets: ${{ inputs.checkContextSecrets }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineDeliveryTargets" -Action {
           ${{ github.action_path }}/DetermineDeliveryTargets.ps1 -projectsJson $ENV:_projectsJson -checkContextSecrets ($ENV:_checkContextSecrets -eq 'true')
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
         }
 branding:
   icon: terminal

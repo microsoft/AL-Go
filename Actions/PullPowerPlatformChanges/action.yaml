@@ -43,13 +43,8 @@ runs:
         actionsRepo: ${{ github.action_repository }}
         actionsRef: ${{ github.action_ref }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetActionsRepoAndRef" -SkipTelemetry -Action {
           ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
         }
 
     - name: Check out AL-Go Actions
@@ -75,13 +70,8 @@ runs:
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GitCloneReponsitory" -Action {
           ${{ github.action_path }}/GitCloneReponsitory.ps1 -actor $ENV:_actor -token $ENV:_token -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
         }
 
     - name: Export Solution (username)
@@ -128,13 +118,8 @@ runs:
         _solutionFolder: ${{ inputs.solutionFolder }}
         _environmentName: ${{ inputs.environmentName }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GitCommitChanges" -Action {
           ${{ github.action_path }}/GitCommitChanges.ps1 -Actor $ENV:_actor -Token $ENV:_token -PowerPlatformSolutionName $ENV:_solutionFolder -EnvironmentName $ENV:_environmentName -Location $ENV:clonedRepoPath -ServerUrl $ENV:serverUrl -GitHubBranch $ENV:gitHubBranch
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
         }
 
 branding:

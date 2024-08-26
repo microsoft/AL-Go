@@ -17,7 +17,6 @@ Run pipeline in AL-Go repository
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | token | | The GitHub token running the action | github.token |
-| parentTelemetryScopeJson | | Specifies the parent telemetry scope for the telemetry signal | {} |
 | artifact | | ArtifactUrl to use for the build | settings.artifact |
 | project | | Project name if the repository is setup for multiple projects | . |
 | buildMode | | Specifies a mode to use for the build steps | Default |
