@@ -1,3 +1,5 @@
+## v5.3
+
 ### Issues
 
 - Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
