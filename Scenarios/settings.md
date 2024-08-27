@@ -52,10 +52,10 @@ The repository settings are only read from the repository settings file (.github
 
 | Name | Description |
 | :-- | :-- |
-| <a id="type"></a>type | Specifies the type of project. Allowed values are **PTE** or **AppSource App**. This value comes with the default repository. Default value is PTE. |
+| <a id="type"></a>type | Specifies the type of repository. Allowed values are **PTE** or **AppSource App**. This value comes with the default repository. Default value is PTE. |
 | <a id="projects"></a>projects | Specifies the list of projects in this repository (names of folders containing AL-Go projects). If not specified, AL-Go will **enumerate folders in the two levels under the root of the repository** for folders containing a `.AL-Go` folder with a `settings.json` file. |
 | <a id="powerPlatformSolutionFolder"></a>powerPlatformSolutionFolder | Contains the name of the folder containing a PowerPlatform Solution (only one) |
-| <a id="templateUrl"></a>templateUrl | Defines the URL of the template repository used to create this project and is used for checking and downloading updates to AL-Go System files. |
+| <a id="templateUrl"></a>templateUrl | Defines the URL of the template repository used to create this repository and is used for checking and downloading updates to AL-Go System files. |
 | <a id="nextMajorSchedule"></a>nextMajorSchedule | CRON schedule for when NextMajor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
 | <a id="nextMinorSchedule"></a>nextMinorSchedule | CRON schedule for when NextMinor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
 | <a id="currentSchedule"></a>currentSchedule | CRON schedule for when Current workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
