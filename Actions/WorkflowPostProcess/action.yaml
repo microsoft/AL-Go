@@ -29,6 +29,7 @@ runs:
       env:
         _telemetryScopeJson: ${{ inputs.telemetryScopeJson }}
         _currentJobContext: ${{ inputs.currentJobContext }}
+        _actionsRepo: ${{ inputs.actionsRepo }}
         _actionsRef: ${{ inputs.actionsRef }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "WorkflowPostProcess" -Action {
