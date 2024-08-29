@@ -3,6 +3,8 @@
     [string] $telemetryScopeJson = '',
     [Parameter(HelpMessage = "The current job context", Mandatory = $false)]
     [string] $currentJobContext = '',
+    [Parameter(HelpMessage = "The repository of the action", Mandatory = $false)]
+    [string] $actionsRepo,
     [Parameter(HelpMessage = "The ref of the action", Mandatory = $false)]
     [string] $actionsRef
 )
@@ -42,10 +44,11 @@ function GetWorkflowConclusion($JobContext) {
     return "Success"
 }
 
-function GetAlGoVersion($ActionRef) {
-    if ($ENV:GITHUB_REPOSITORY -eq "microsoft/AL-Go") {
+function GetAlGoVersion($ActionsRepo, $ActionRef) {
+    Write-Host "ActionsRepo: $ActionsRepo, ActionRef: $ActionRef"
+    if ($ActionsRepo -eq "microsoft/AL-Go") {
         return "Preview"
-    } elseif($ENV:GITHUB_REPOSITORY -notlike "microsoft/*") {
+    } elseif($ActionsRepo -notlike "microsoft/*") {
         return "Developer/Private"
     } else {
         return $ActionRef
@@ -102,7 +105,7 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
 
 try {
-    LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext -AlGoVersion (GetAlGoVersion -ActionRef $actionsRef)
+    LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext -AlGoVersion (GetAlGoVersion -ActionsRepo $actionsRepo -ActionRef $actionsRef)
 } catch {
     # Log the exception to telemetry but don't fail the action if gathering telemetry fails
     Write-Host "::Warning::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
