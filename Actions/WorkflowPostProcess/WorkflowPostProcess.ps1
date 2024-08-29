@@ -43,9 +43,9 @@ function GetWorkflowConclusion($JobContext) {
 }
 
 function GetAlGoVersion($ActionRef) {
-    if ($ENV:GITHUB_REPOSITORY -eq "microsoft/AL-Go") {
+    if ($ENV:GITHUB_ACTION_REPOSITORY -eq "microsoft/AL-Go") {
         return "Preview"
-    } elseif($ENV:GITHUB_REPOSITORY -notlike "microsoft/*") {
+    } elseif($ENV:GITHUB_ACTION_REPOSITORY -notlike "microsoft/*") {
         return "Developer/Private"
     } else {
         return $ActionRef
