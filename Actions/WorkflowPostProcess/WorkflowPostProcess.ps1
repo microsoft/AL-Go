@@ -45,7 +45,6 @@ function GetWorkflowConclusion($JobContext) {
 }
 
 function GetAlGoVersion($ActionsRepo, $ActionRef) {
-    Write-Host "ActionsRepo: $ActionsRepo, ActionRef: $ActionRef"
     if ($ActionsRepo -eq "microsoft/AL-Go") {
         return "Preview"
     } elseif($ActionsRepo -notlike "microsoft/*") {
