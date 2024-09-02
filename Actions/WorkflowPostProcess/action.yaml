@@ -13,6 +13,10 @@ inputs:
     description: The current job context
     required: false
     default: ''
+  actionsRepo:
+    description: The repository of the action
+    required: false
+    default: ${{ github.action_repository }}
   actionsRef:
     description: The ref of the action
     required: false
@@ -25,10 +29,11 @@ runs:
       env:
         _telemetryScopeJson: ${{ inputs.telemetryScopeJson }}
         _currentJobContext: ${{ inputs.currentJobContext }}
+        _actionsRepo: ${{ inputs.actionsRepo }}
         _actionsRef: ${{ inputs.actionsRef }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "WorkflowPostProcess" -Action {
-          ${{ github.action_path }}/WorkflowPostProcess.ps1 -telemetryScopeJson $ENV:_telemetryScopeJson -currentJobContext $ENV:_currentJobContext -actionsRef $ENV:_actionsRef
+          ${{ github.action_path }}/WorkflowPostProcess.ps1 -telemetryScopeJson $ENV:_telemetryScopeJson -currentJobContext $ENV:_currentJobContext -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
         }
 branding:
   icon: terminal
