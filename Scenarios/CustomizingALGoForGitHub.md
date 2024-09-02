@@ -2,7 +2,7 @@
 
 AL-Go for GitHub is a plug-and-play DevOps solution, intended to support 100% of the functionality needed by 90% of the people developing applications for Microsoft Dynamics 365 Business Central out-of-the-box.
 
-If AL-Go functionality out-of-the-box doesn't match your needs, you really three options:
+If AL-Go functionality out-of-the-box doesn't match your needs, you really have three options:
 
 1. Customize AL-Go for GitHub to fit your needs
 1. Select another managed DevOps solution
