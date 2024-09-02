@@ -23,7 +23,7 @@ There are three ways you can customize AL-Go for GitHub to fit your needs. You c
 
 1. customize the repository with custom scripts, workflows, jobs or steps following the guidelines below
 1. create a customized repository and use this as your template repository (indirect template)
-1. fork the AL-Go for GitHub and create your "own" version
+1. fork the AL-Go for GitHub and create your "own" version (not recommended)
 
 > \[!CAUTION\]
 > The more you customize AL-Go for GitHub, the more likely you are to be broken by future updates to AL-Go for GitHub, meaning that you will have to update your customizations to match the changes in AL-Go for GitHub.
