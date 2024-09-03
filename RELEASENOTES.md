@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1184 Publish to Environment fails on 'Permission Denied'
+
 ### New Settings
 
 - `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
