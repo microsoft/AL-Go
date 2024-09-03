@@ -5,6 +5,16 @@
 ### New Settings
 
 - `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
+- `TrustedNuGetFeeds` - TODO: write docs
+  - Url - NuGet Server Url
+  - Token - 
+  - Patterns - only download packages, which matches any of the name patterns in this list
+  - FingerPrints - only download packages signed with fingerprints in this list
+  - AuthTokenSecret
+
+### Support for delivering to NuGet and GitHub Packages
+
+TODO: Write documentation
 
 ## v5.3
 

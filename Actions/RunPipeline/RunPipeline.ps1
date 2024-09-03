@@ -116,21 +116,21 @@ try {
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
         Write-Host "Reading TrustedNuGetFeeds"
         foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
-            Write-Host $trustedNuGetFeed.Url
+            if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
+                if ($trustedNuGetFeed.Token -ne '') {
+                    OutputWarning -message "Auth token for NuGet feed is defined in settings. This is not recommended. Use a secret instead and specify the secret name in the AuthTokenSecret property"
+                }
+            }
+            else {
+                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value ''
+            }
             if ($trustedNuGetFeed.AuthTokenSecret) {
-                Write-Host $trustedNuGetFeed.AuthTokenSecret
                 $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret
                 if ($secrets.Keys -notcontains $authTokenSecret) {
                     OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
-                    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
-                    if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
-                        $trustedNuGetFeed.Token = $token
-                    }
-                    else {
-                        $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name Token -Value $token
-                    }
+                    $trustedNuGetFeed.Token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
                 }
             }
         }
