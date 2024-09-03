@@ -1,4 +1,5 @@
 ### Issues
+- Issue 1184 Publish to Environment fails on 'Permission Denied'
 
 ### New Settings
 
