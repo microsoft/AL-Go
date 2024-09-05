@@ -120,16 +120,15 @@ $removeFiles = @()
 # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
 $depth = 1
 if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
-    $buildAlso = @{}
-    $projectDependencies = @{}
-    $projectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-    $depth = $projectsOrder.Count
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100
+    $depth = $buildOrder.Count
     Write-Host "Calculated dependency depth to be $depth"
 }
 
 # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
 foreach($checkfile in $checkfiles) {
-    Write-Host "Checking $($checkfile.srcPath)\$($checkfile.pattern)"
+    Write-Host "Checking $($checkfile.srcPath)/$($checkfile.pattern)"
     $type = $checkfile.type
     $srcPath = $checkfile.srcPath
     $dstPath = $checkfile.dstPath

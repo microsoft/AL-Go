@@ -81,7 +81,7 @@ Example: `{"keyVaultName":"MyKeyVault","clientId":"ed79570c-0384-4826-8099-bf057
 
 #### ClientSecret
 
-ClientSecret can only be used using an app registration. Under Certificates & Secrets in the app registration, you need to create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
+ClientSecret can only be used using an app registration. Under Certificates & Secrets in the app registration, you need to create a Client Secret, which you can specify in the Azure_Credentials secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
 
 Example: `{"keyVaultName":"MyKeyVault","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045"}`
 

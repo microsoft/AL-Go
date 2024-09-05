@@ -5,9 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  eventId:
-    description: The event id of the initiating workflow
-    required: true
   actionsRepo:
     description: The repository of the action
     required: false
@@ -17,9 +14,6 @@ inputs:
     required: false
     default: ${{ github.action_ref }}
 outputs:
-  correlationId:
-    description: A correlation Id for the workflow
-    value: ${{ steps.workflowinitialize.outputs.correlationId }}
   telemetryScopeJson:
     description: A telemetryScope that covers the workflow
     value: ${{ steps.workflowinitialize.outputs.telemetryScopeJson }}
@@ -30,17 +24,11 @@ runs:
       shell: ${{ inputs.shell }}
       id: workflowinitialize
       env:
-        _eventId: ${{ inputs.eventId }}
         _actionsRepo: ${{ inputs.actionsRepo }}
         _actionsRef: ${{ inputs.actionsRef }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/WorkflowInitialize.ps1 -eventId $ENV:_eventId -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "WorkflowInitialize" -Action {
+          ${{ github.action_path }}/WorkflowInitialize.ps1 -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
         }
 branding:
   icon: terminal

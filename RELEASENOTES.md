@@ -1,5 +1,11 @@
 ### Issues
 
+- Issue 1184 Publish to Environment fails on 'Permission Denied'
+
+## v5.3
+
+### Issues
+
 - Issue 1105 Increment Version Number - repoVersion in .github/AL-Go-Settings.json is not updated
 - Issue 1073 Publish to AppSource - Automated validation: failure
 - Issue 980 Allow Scope to be PTE in continuousDeployment for PTE extensions in Sandbox (enhancement request)
@@ -7,6 +13,10 @@
 - Issue 866 Accessing GitHub Environment Variables in DeployToCustom Scenarios for PowerShell Scripts
 - Issue 1083 SyncMode for custom deployments?
 - Issue 1109 Why filter deployment settings?
+- Fix issue with github ref when running reusable workflows
+- Issue 1098 Support for specifying the name of the AZURE_CREDENTIALS secret by adding a AZURE_CREDENTIALSSecretName setting
+- Fix placeholder syntax for git ref in PullRequestHandler.yaml
+- Issue 1164 Getting secrets from Azure key vault fails in Preview
 
 ### Dependencies to PowerShell modules
 
@@ -20,11 +30,21 @@ All authentication context secrets now supports managed identities and federated
 
 In the summary after a Test Run, you now also have the result of performance tests.
 
+### Support Ubuntu runners for all AL-Go workflows
+
+Previously, the workflows "Update AL-Go System Files" and "TroubleShooting" were hardcoded to always run on `windows-latest` to prevent deadlocks and security issues.
+From now on, `ubuntu-lates` will also be allowed for these mission critical workflows, when changing the `runs-on` setting. Additionally, only the value `pwsh` for `shell` setting is allowed when using `ubuntu-latest` runners.
+
+### Updated AL-Go telemetry
+
+AL-Go for GitHub now includes a new telemetry module. For detailed information on how to enable or disable telemetry and to see what data AL-Go logs, check out [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md).
+
 ### New Settings
 
 - `deployTo<environmentName>`: is not really new, but has a new property:
 
   - **Scope** = specifies the scope of the deployment: Dev, PTE. If not specified, AL-Go for GitHub will always use the Dev Scope for AppSource Apps, but also for PTEs when deploying to sandbox environments when impersonation (refreshtoken) is used for authentication.
+  - **BuildMode** = specifies which buildMode to use for the deployment. Default is to use the Default buildMode.
   - **\<custom>** = custom properties are now supported and will be transferred to a custom deployment script in the hashtable.
 
 - `bcptThresholds` is a JSON object with properties for the default thresholds for the Business Central Performance Toolkit

@@ -2,6 +2,7 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
+    [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
@@ -43,6 +44,11 @@ Write-Host -ForegroundColor Yellow @'
 '@
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+if ($linux) {
+    Write-Host 'This test is using bcsamples-bingmaps.appsource and should only run once (either Windows or Linux)'
+    exit
+}
 
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking

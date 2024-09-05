@@ -52,12 +52,10 @@ The repository settings are only read from the repository settings file (.github
 
 | Name | Description |
 | :-- | :-- |
-| <a id="type"></a>type | Specifies the type of project. Allowed values are **PTE** or **AppSource App**. This value comes with the default repository. Default value is PTE. |
-| <a id="appFolders"></a>appFolders | appFolders should be an array of folders (relative to project root), which contains apps for this project. Apps in these folders are sorted based on dependencies and built and published in that order.<br />If appFolders are not specified, AL-Go for GitHub will try to locate appFolders in the root of the project. |
-| <a id="testFolders"></a>testFolders | testFolders should be an array of folders (relative to project root), which contains test apps for this project. Apps in these folders are sorted based on dependencies and built, published and tests are run in that order.<br />If testFolders are not specified, AL-Go for GitHub will try to locate testFolders in the root of the project.|
-| <a id="bcptTestFolders"></a>bcptTestFolders | bcptTestFolders should be an array of folders (relative to project root), which contains performance test apps for this project. Apps in these folders are sorted based on dependencies and built, published and bcpt tests are run in that order.<br />If bcptTestFolders are not specified, AL-Go for GitHub will try to locate bcptTestFolders in the root of the project. |
+| <a id="type"></a>type | Specifies the type of repository. Allowed values are **PTE** or **AppSource App**. This value comes with the default repository. Default value is PTE. |
+| <a id="projects"></a>projects | Specifies the list of projects in this repository (names of folders containing AL-Go projects). If not specified, AL-Go will **enumerate folders in the two levels under the root of the repository** for folders containing a `.AL-Go` folder with a `settings.json` file. |
 | <a id="powerPlatformSolutionFolder"></a>powerPlatformSolutionFolder | Contains the name of the folder containing a PowerPlatform Solution (only one) |
-| <a id="templateUrl"></a>templateUrl | Defines the URL of the template repository used to create this project and is used for checking and downloading updates to AL-Go System files. |
+| <a id="templateUrl"></a>templateUrl | Defines the URL of the template repository used to create this repository and is used for checking and downloading updates to AL-Go System files. |
 | <a id="nextMajorSchedule"></a>nextMajorSchedule | CRON schedule for when NextMajor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
 | <a id="nextMinorSchedule"></a>nextMinorSchedule | CRON schedule for when NextMinor workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
 | <a id="currentSchedule"></a>currentSchedule | CRON schedule for when Current workflow should run. Default is no scheduled run, only manual trigger. Build your CRON string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
@@ -68,7 +66,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="githubRunnerShell"></a>githubRunnerShell | Specifies which shell is used for build jobs in workflows including a build job. The default is to use the same as defined in **shell**. If the shell setting isn't defined, **powershell** is the default, which results in using _PowerShell 5.1_. Use **pwsh** for _PowerShell 7_. |
 | <a id="environments"></a>environments | Array of logical environment names. You can specify environments in GitHub environments or in the repo settings file. If you specify environments in the settings file, you can create your AUTHCONTEXT secret using **\<environmentname>\_AUTHCONTEXT**. You can specify additional information about environments in a setting called **DeployTo\<environmentname>** |
 | <a id="deliverto"></a>DeliverTo\<deliveryTarget> | Structure with additional properties for the deliveryTarget specified. Some properties are deliveryTarget specific. The structure can contain the following properties:<br />**Branches** = an array of branch patterns, which are allowed to deliver to this deliveryTarget. (Default main)<br />**CreateContainerIfNotExist** = *\[Only for DeliverToStorage\]* Create Blob Storage Container if it doesn't already exist. (Default false)<br /> |
-| <a id="deployto"></a>DeployTo\<environmentname> | Structure with additional properties for the environment specified. The structure can contain the following properties:<br />**EnvironmentType** = specifies the type of environment. The environment type can be used to invoke a custom deployment. (Default SaaS)<br />**EnvironmentName** = specifies the "real" name of the environment if it differs from the GitHub environment.<br />**Branches** = an array of branch patterns, which are allowed to deploy to this environment. These branches can also be defined under the environment in GitHub settings and both settings are honored. If neither setting is defined, the default is the **main** branch only.<br />**Projects** = In multi-project repositories, this property can be a comma separated list of project patterns to deploy to this environment. (Default \*)<br />**Scope** = Determines the mechanism for deployment to the environment (Dev or PTE). If not specified, AL-Go for GitHub will always use the Dev Scope for AppSource Apps, but also for PTEs when deploying to sandbox environments when impersonation (refreshtoken) is used for authentication.<br />**SyncMode** = ForceSync if deployment to this environment should happen with ForceSync, else Add. If deploying to the development endpoint you can also specify Development or Clean. (Default Add)<br />**ContinuousDeployment** = true if this environment should be used for continuous deployment, else false. (Default: AL-Go will continuously deploy to sandbox environments or environments, which doesn't end in (PROD) or (FAT)<br />**runs-on** = specifies which runner to use when deploying to this environment. (Default is settings.runs-on)<br />**shell** = specifies which shell to use when deploying to this environment, pwsh or powershell. (Default is settings.shell)<br />**companyId** = Company Id from Business Central (for PowerPlatform connection)<br />**ppEnvironmentUrl** = Url of the PowerPlatform environment to deploy to<br /> |
+| <a id="deployto"></a>DeployTo\<environmentname> | Structure with additional properties for the environment specified. `<environmentName>` refers to the GitHub environment name. The structure can contain the following properties:<br />**EnvironmentType** = specifies the type of environment. The environment type can be used to invoke a custom deployment. (Default SaaS)<br />**EnvironmentName** = specifies the "real" name of the environment if it differs from the GitHub environment.<br />**Branches** = an array of branch patterns, which are allowed to deploy to this environment. These branches can also be defined under the environment in GitHub settings and both settings are honored. If neither setting is defined, the default is the **main** branch only.<br />**Projects** = In multi-project repositories, this property can be a comma separated list of project patterns to deploy to this environment. (Default \*)<br />**Scope** = Determines the mechanism for deployment to the environment (Dev or PTE). If not specified, AL-Go for GitHub will always use the Dev Scope for AppSource Apps, but also for PTEs when deploying to sandbox environments when impersonation (refreshtoken) is used for authentication.<br />**SyncMode** = ForceSync if deployment to this environment should happen with ForceSync, else Add. If deploying to the development endpoint you can also specify Development or Clean. (Default Add)<br />**BuildMode** = specifies which buildMode to use for the deployment. Default is to use the Default buildMode<br />**ContinuousDeployment** = true if this environment should be used for continuous deployment, else false. (Default: AL-Go will continuously deploy to sandbox environments or environments, which doesn't end in (PROD) or (FAT)<br />**runs-on** = specifies which runner to use when deploying to this environment. (Default is settings.runs-on)<br />**shell** = specifies which shell to use when deploying to this environment, pwsh or powershell. (Default is settings.shell)<br />**companyId** = Company Id from Business Central (for PowerPlatform connection)<br />**ppEnvironmentUrl** = Url of the PowerPlatform environment to deploy to<br /> |
 | <a id="aldoc"></a>alDoc | Structure with properties for the aldoc reference document generation. The structure can contain the following properties:<br />**continuousDeployment** = Determines if reference documentation will be deployed continuously as part of CI/CD. You can run the **Deploy Reference Documentation** workflow to deploy manually or on a schedule. (Default false)<br />**deployToGitHubPages** = Determines whether or not the reference documentation site should be deployed to GitHub Pages for the repository. In order to deploy to GitHub Pages, GitHub Pages must be enabled and set to GitHub Actuibs. (Default true)<br />**maxReleases** = Maximum number of releases to include in the reference documentation. (Default 3)<br />**groupByProject** = Determines whether projects in multi-project repositories are used as folders in reference documentation<br />**includeProjects** = An array of projects to include in the reference documentation. (Default all)<br />**excludeProjects** = An array of projects to exclude in the reference documentation. (Default none)<br />**header** = Header for the documentation site. (Default: Documentation for...)<br />**footer** = Footer for the documentation site. (Default: Made with...)<br />**defaultIndexMD** = Markdown for the landing page of the documentation site. (Default: Reference documentation...)<br />**defaultReleaseMD** = Markdown for the landing page of the release sites. (Default: Release reference documentation...)<br />*Note that in header, footer, defaultIndexMD and defaultReleaseMD you can use the following placeholders: {REPOSITORY}, {VERSION}, {INDEXTEMPLATERELATIVEPATH}, {RELEASENOTES}* |
 | <a id="useProjectDependencies"></a>useProjectDependencies | Determines whether your projects are built using a multi-stage built workflow or single stage. After setting useProjectDependencies to true, you need to run Update AL-Go System Files and your workflows including a build job will change to have multiple build jobs, depending on each other. The number of build jobs will be determined by the dependency depth in your projects.<br />You can change dependencies between your projects, but if the dependency **depth** changes, AL-Go will warn you that updates for your AL-Go System Files are available and you will need to run the workflow. |
 | <a id="CICDPushBranches"></a>CICDPushBranches | CICDPushBranches can be specified as an array of branches, which triggers a CI/CD workflow on commit. You need to run the Update AL-Go System Files workflow for the schedule to take effect.<br />Default is \[ "main", "release/\*", "feature/\*" \] |
@@ -203,9 +201,9 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 
 You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named DeliverTo\*.ps1 in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release.
 
-DeliverToSharePoint.ps1
+### DeliverToSharePoint.ps1
 
-```
+```powershell
 Param(
     [Hashtable]$parameters
 )
@@ -242,11 +240,11 @@ Here are the parameters to use in your custom script:
 
 ## Custom Deployment
 
-You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named `DeployTo<EnvironmentType>.ps1` in the .github folder. Default Environment Type is SaaS, but you can define your own type by specifying EnvironmentType in the `DeployTo<EnvironmentName>` setting. The following example will spin up a deployment job to SharePoint on CI/CD and Publish To Environment.
+You can override existing AL-Go Deployment functionality or you can define your own custom deployment mechanism for AL-Go for GitHub. By specifying a PowerShell script named `DeployTo<EnvironmentType>.ps1` in the .github folder. Default Environment Type is SaaS, but you can define your own type by specifying EnvironmentType in the `DeployTo<EnvironmentName>` setting. The following example will create a script, which would be called by CI/CD and Publish To Environment, when EnvironmentType is set to OnPrem.
 
-DeployToMyEnvironment.ps1
+### DeployToOnPrem.ps1
 
-```
+```powershell
 Param(
     [Hashtable]$parameters
 )
@@ -255,10 +253,21 @@ Write-Host "Deployment Type (CD or Release): $($parameters.type)"
 Write-Host "Apps to deploy: $($parameters.apps)"
 Write-Host "Environment Type: $($parameters.EnvironmentType)"
 Write-Host "Environment Name: $($parameters.EnvironmentName)"
+
+$tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $tempPath | Out-Null
+Copy-AppFilesToFolder -appFiles $parameters.apps -folder $tempPath | Out-Null
+$appsList = @(Get-ChildItem -Path $tempPath -Filter *.app)
+if (-not $appsList -or $appsList.Count -eq 0) {
+    Write-Host "::error::No apps to publish found."
+    exit 1
+}
+Write-Host "Apps:"
+$appsList | ForEach-Object { Write-Host "- $($_.Name)" }
 ```
 
 > \[!NOTE\]
-> You can create one script to override all deployment functionality, by creating a script called Deploy.ps1 in the .github folder.
+> You can override existing AL-Go for GitHub deployment functionality by creating a script called f.ex. DeployToSaas.ps1 in the .github folder, as the default deployment type is Saas.
 
 Here are the parameters to use in your custom script:
 
@@ -272,6 +281,9 @@ Here are the parameters to use in your custom script:
 | `$parameters.AuthContext` | AuthContext in a compressed Json structure | {"refreshToken":"mytoken"} |
 | `$parameters.BranchesFromPolicy` | Branches which should deploy to this environment (from GitHub environments) | main |
 | `$parameters.Projects` | Projects to deploy to this environment | |
+| `$parameters.Scope` | Identifies the scope for the deployment, Dev or PTE | PTE |
+| `$parameters.SyncMode` | Is the SyncMode to use for the deployment: ForceSync or Add. If deploying to the dev scope, it can also be Development or Clean | Add |
+| `$parameters.BuildMode` | Is the buildMode used for the deployment | Clean |
 | `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 | `$parameters."shell"` | Shell used to run the deployment script, pwsh or powershell | powershell |
