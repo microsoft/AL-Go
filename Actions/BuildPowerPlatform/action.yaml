@@ -1,0 +1,75 @@
+name: Build Power Platform Solution
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  solutionFolder:
+    description: The Power Platform solution path
+    required: true
+  outputFolder:
+    description: Output folder where the zip file will be placed
+    required: true
+  outputFileName:
+    description: The name of the output zip file
+    required: true
+  companyId:
+    description: The Business Central company ID
+    required: false
+    default: ''
+  environmentName:
+    description: The Business Central environment name
+    required: false
+    default: ''
+  appBuild:
+    description: The app build number
+    required: false
+    default: ''
+  appRevision:
+    description: The app revision number
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Install Power Platform Tools
+      uses: microsoft/powerplatform-actions/actions-install@v1
+
+    - name: Update Power Platform Files
+      shell: ${{ inputs.shell }}
+      env:
+        _solutionFolder: ${{ inputs.solutionFolder }}
+        _companyId: ${{ inputs.companyId }}
+        _environmentName: ${{ inputs.environmentName }}
+        _appBuild: ${{ inputs.appBuild }}
+        _appRevision: ${{ inputs.appRevision }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "BuildPowerPlatform" -Action {
+          ${{ github.action_path }}/BuildPowerPlatform.ps1 -solutionFolder $ENV:_solutionFolder -companyId $ENV:_companyId -environmentName $ENV:_environmentName -appBuild $ENV:_appBuild -appRevision $ENV:_appRevision
+        }
+
+    - name: Test Pack (Not real - just workaround for https://github.com/microsoft/powerplatform-vscode/issues/412)
+      uses: microsoft/powerplatform-actions/pack-solution@v1
+      with:
+        solution-file: forgetMe.zip
+        solution-folder: ${{ inputs.solutionFolder }}
+        process-canvas-apps: true
+
+    - name: Remove test pack
+      shell: ${{ inputs.shell }}
+      run: |
+        Remove-Item -Path forgetMe.zip -Force
+
+    - name: Pack Solution
+      uses: microsoft/powerplatform-actions/pack-solution@v1
+      with:
+        solution-file: ${{ inputs.outputFolder }}/${{ inputs.outputFileName }}.zip
+        solution-folder: ${{ inputs.solutionFolder }}
+        solution-type: "Unmanaged"
+        process-canvas-apps: true
+
+branding:
+  icon: terminal
+  color: blue

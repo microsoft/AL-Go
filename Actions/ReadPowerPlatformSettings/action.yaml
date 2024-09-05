@@ -1,0 +1,54 @@
+name: Read Power Platform Settings
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  deploymentEnvironmentsJson:
+    description: The settings for all Deployment Environments
+    required: true
+  environmentName:
+    description: Name of environment to deploy to
+    required: true
+outputs:
+  ppEnvironmentUrl:
+    description: Power Platform Environment URL
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
+  ppUserName:
+    description: Power Platform Username
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
+  ppPassword:
+    description: Power Platform Password
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
+  ppApplicationId:
+    description: Power Platform Application Id
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
+  ppTenantId:
+    description: Power Platform Tenant Id
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
+  ppClientSecret:
+    description: Power Platform Client Secret
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
+  companyId:
+    description: Business Central Company Id
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.companyId }}
+  environmentName:
+    description: Business Central Environment Name
+    value: ${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: ReadPowerPlatformSettings
+      env:
+        _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
+        _environmentName: ${{ inputs.environmentName }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadPowerPlatformSettings" -Action {
+          ${{ github.action_path }}/ReadPowerPlatformSettings.ps1 -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -environmentName $ENV:_environmentName
+        }
+branding:
+  icon: terminal
+  color: blue

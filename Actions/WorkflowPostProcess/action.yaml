@@ -5,29 +5,35 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  eventId:
-    description: The event Id of the initiating workflow
-    required: true
   telemetryScopeJson:
     description: Telemetry scope generated during the workflow initialization
     required: false
     default: '7b7d'
+  currentJobContext:
+    description: The current job context
+    required: false
+    default: ''
+  actionsRepo:
+    description: The repository of the action
+    required: false
+    default: ${{ github.action_repository }}
+  actionsRef:
+    description: The ref of the action
+    required: false
+    default: ${{ github.action_ref }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
       env:
-        _eventId: ${{ inputs.eventId }}
         _telemetryScopeJson: ${{ inputs.telemetryScopeJson }}
+        _currentJobContext: ${{ inputs.currentJobContext }}
+        _actionsRepo: ${{ inputs.actionsRepo }}
+        _actionsRef: ${{ inputs.actionsRef }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/WorkflowPostProcess.ps1 -eventId $ENV:_eventId -telemetryScopeJson $ENV:_telemetryScopeJson
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "WorkflowPostProcess" -Action {
+          ${{ github.action_path }}/WorkflowPostProcess.ps1 -telemetryScopeJson $ENV:_telemetryScopeJson -currentJobContext $ENV:_currentJobContext -actionsRepo $ENV:_actionsRepo -actionsRef $ENV:_actionsRef
         }
 branding:
   icon: terminal

@@ -19,8 +19,7 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
-$microsoftTelemetryConnectionString = "InstrumentationKey=84bd9223-67d4-4378-8590-9e4a46023be2;IngestionEndpoint=https://westeurope-1.in.applicationinsights.azure.com/"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -554,6 +553,7 @@ function ReadSettings {
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
         "projects"                                      = @()
+        "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
         "artifact"                                      = ""
         "companyName"                                   = ""
@@ -630,13 +630,19 @@ function ReadSettings {
         "cacheImageName"                                = "my"
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
-        "microsoftTelemetryConnectionString"            = $microsoftTelemetryConnectionString
+        "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
         "partnerTelemetryConnectionString"              = ""
         "sendExtendedTelemetryToMicrosoft"              = $false
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "pullRequestTrigger"                            = "pull_request_target"
+        "bcptThresholds"                                = [ordered]@{
+            "DurationWarning"                           = 10
+            "DurationError"                             = 25
+            "NumberOfSqlStmtsWarning"                   = 5
+            "NumberOfSqlStmtsError"                     = 10
+        }
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
         "alDoc"                                         = [ordered]@{
@@ -1262,21 +1268,25 @@ function GetProjectFolders {
     $projectFolders
 }
 
-function installModules {
+function InstallModule {
     Param(
-        [String[]] $modules
+        [String] $name,
+        [System.Version] $minimumVersion = $null
     )
 
-    $modules | ForEach-Object {
-        if (-not (get-installedmodule -Name $_ -ErrorAction SilentlyContinue)) {
-            Write-Host "Installing module $_"
-            Install-Module $_ -Force | Out-Null
-        }
+    if ($null -eq $minimumVersion) {
+        $minimumVersion = [System.Version](GetPackageVersion -packageName $name)
     }
-    $modules | ForEach-Object {
-        Write-Host "Importing module $_"
-        Import-Module $_ -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
+    $module = Get-Module -name $name -ListAvailable | Select-Object -First 1
+    if ($module -and $module.Version -ge $minimumVersion) {
+        Write-Host "Module $name is available in version $($module.Version)"
     }
+    else {
+        Write-Host "Installing module $name (minimum version $minimumVersion)"
+        Install-Module -Name $name -MinimumVersion "$minimumVersion" -Force | Out-Null
+    }
+    Write-Host "Importing module $name (minimum version $minimumVersion)"
+    Import-Module -Name $name -MinimumVersion $minimumVersion -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
 function CloneIntoNewFolder {
@@ -1309,9 +1319,8 @@ function CloneIntoNewFolder {
     Set-Location *
     invoke-git checkout $updateBranch
 
-    $branch = ''
+    $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
     if (!$directCommit) {
-        $branch = "$newBranchPrefix/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-development-environment/main/210101120000
         invoke-git checkout -b $branch
     }
 
@@ -1323,6 +1332,7 @@ function CommitFromNewFolder {
     Param(
         [string] $serverUrl,
         [string] $commitMessage,
+        [string] $body = $commitMessage,
         [string] $branch
     )
 
@@ -1333,17 +1343,28 @@ function CommitFromNewFolder {
             $commitMessage = "$($commitMessage.Substring(0,250))...)"
         }
         invoke-git commit --allow-empty -m "$commitMessage"
-        if ($branch) {
-            invoke-git push -u $serverUrl $branch
+        $activeBranch = invoke-git -returnValue -silent name-rev --name-only HEAD
+        # $branch is the name of the branch to be used when creating a Pull Request
+        # $activeBranch is the name of the branch that is currently checked out
+        # If activeBranch and branch are the same - we are creating a PR
+        if ($activeBranch -ne $branch) {
             try {
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME
+                invoke-git push $serverUrl
+                return $true
             }
             catch {
-                OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+                OutputWarning("Direct Commit wasn't allowed, trying to create a Pull Request instead")
+                invoke-git reset --soft HEAD~
+                invoke-git checkout -b $branch
+                invoke-git commit --allow-empty -m "$commitMessage"
             }
         }
-        else {
-            invoke-git push $serverUrl
+        invoke-git push -u $serverUrl $branch
+        try {
+            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body"
+        }
+        catch {
+            OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
         }
         return $true
     }
@@ -1646,7 +1667,7 @@ function CreateDevEnv {
 
             if (($settings.keyVaultName) -and -not ($bcAuthContext)) {
                 Write-Host "Reading Key Vault $($settings.keyVaultName)"
-                installModules -modules @('Az.KeyVault')
+                InstallAzModuleIfNeeded -name 'Az.KeyVault'
 
                 if ($kind -eq "local") {
                     $LicenseFileSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.licenseFileUrlSecretName
@@ -2301,12 +2322,30 @@ function RetryCommand {
     }
 }
 
+function GetMatchingProjects {
+    Param(
+        [string[]] $projects,
+        [string] $selectProjects = ''
+    )
+
+    if ($selectProjects) {
+        # Filter the project list based on the projects parameter
+        if ($selectProjects.StartsWith('[')) {
+            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
+        }
+        $projectArr = $selectProjects.Split(',').Trim()
+        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
+    }
+    return $projects
+}
+
 function GetProjectsFromRepository {
     Param(
         [string] $baseFolder,
         [string[]] $projectsFromSettings,
         [string] $selectProjects = ''
     )
+
     if ($projectsFromSettings) {
         $projects = $projectsFromSettings
     }
@@ -2318,28 +2357,89 @@ function GetProjectsFromRepository {
             $projects += @(".")
         }
     }
-    if ($selectProjects) {
-        # Filter the project list based on the projects parameter
-        if ($selectProjects.StartsWith('[')) {
-            $selectProjects = ($selectProjects | ConvertFrom-Json) -join ","
-        }
-        $projectArr = $selectProjects.Split(',').Trim()
-        $projects = @($projects | Where-Object { $project = $_; if ($projectArr | Where-Object { $project -like $_ }) { $project } })
-        if ($projects.Count -eq 0) {
-            throw "No projects matches '$selectProjects'"
-        }
-    }
-    return $projects
+    return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
 }
 
-function Get-PackageVersion($PackageName) {
+function GetPackageVersion($packageName) {
     $alGoPackages = Get-Content -Path "$PSScriptRoot\Packages.json" | ConvertFrom-Json
 
     # Check if the package is in the list of packages
-    if ($alGoPackages.PSobject.Properties.name -match $PackageName) {
-        return $alGoPackages.$PackageName
+    if ($alGoPackages.PSobject.Properties.name -eq $PackageName) {
+        return $alGoPackages."$PackageName"
     }
     else {
         throw "Package $PackageName is not in the list of packages"
+    }
+}
+
+function InstallAzModuleIfNeeded {
+    Param(
+        [string] $name,
+        [System.version] $minimumVersion = $null
+    )
+
+    if ($null -eq $minimumVersion) {
+        $minimumVersion = [System.Version](GetPackageVersion -packageName $name)
+    }
+    $azModule = Get-Module -Name $name
+    if ($azModule -and $azModule.Version -ge $minimumVersion) {
+        # Already installed
+        return
+    }
+    # GitHub hosted Linux runners have AZ PowerShell module saved in /usr/share/powershell/Modules/Az.*
+    if ($isWindows) {
+        # GitHub hosted Windows Runners have AzureRm PowerShell modules installed (deprecated)
+        # GitHub hosted Windows Runners have AZ PowerShell module saved in C:\Modules\az_*
+        # Remove AzureRm modules from PSModulePath and add AZ modules
+        if (Test-Path 'C:\Modules\az_*') {
+            $azModulesPath = Get-ChildItem 'C:\Modules\az_*' | Where-Object { $_.PSIsContainer }
+            if ($azModulesPath) {
+              Write-Host "Adding AZ module path: $($azModulesPath.FullName)"
+              $ENV:PSModulePath = "$($azModulesPath.FullName);$(("$ENV:PSModulePath".Split(';') | Where-Object { $_ -notlike 'C:\\Modules\Azure*' }) -join ';')"
+            }
+        }
+    }
+    InstallModule -name $name -minimumVersion $minimumVersion
+}
+
+$script:AzConnected = $false
+
+function ConnectAz {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'GitHub Secrets come in as plain text')]
+    param(
+        [PsCustomObject] $azureCredentials
+    )
+    if ($script:AzConnected) {
+        return
+    }
+    InstallAzModuleIfNeeded -name 'Az.KeyVault'
+    try {
+        Clear-AzContext -Scope Process
+        Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
+        if ($azureCredentials.PSObject.Properties.Name -eq 'ClientSecret' -and $azureCredentials.ClientSecret) {
+            Write-Host "Connecting to Azure using clientId and clientSecret."
+            $credential = New-Object pscredential -ArgumentList $azureCredentials.ClientId, (ConvertTo-SecureString -string $azureCredentials.ClientSecret -AsPlainText -Force)
+            Connect-AzAccount -ServicePrincipal -Tenant $azureCredentials.TenantId -Credential $credential -WarningAction SilentlyContinue | Out-Null
+        }
+        else {
+            try {
+                Write-Host "Query federated token"
+                $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+            }
+            catch {
+                throw "Unable to get federated token, maybe id_token: write permissions are missing. Error was $($_.Exception.Message)"
+            }
+            Write-Host "Connecting to Azure using clientId and federated token."
+            Connect-AzAccount -ApplicationId $azureCredentials.ClientId -Tenant $azureCredentials.TenantId -FederatedToken $result.value -WarningAction SilentlyContinue | Out-Null
+        }
+        if ($azureCredentials.PSObject.Properties.Name -eq 'SubscriptionId' -and $azureCredentials.SubscriptionId) {
+            Write-Host "Selecting subscription $($azureCredentials.SubscriptionId)"
+            Set-AzContext -SubscriptionId $azureCredentials.SubscriptionId -Tenant $azureCredentials.TenantId -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        }
+        $script:AzConnected = $true
+        Write-Host "Successfully connected to Azure"
+    }
+    catch {
+        throw "Error trying to authenticate to Azure. Error was $($_.Exception.Message)"
     }
 }

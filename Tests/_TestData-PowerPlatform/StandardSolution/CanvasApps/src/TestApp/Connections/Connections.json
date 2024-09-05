@@ -1,0 +1,87 @@
+{
+  "0ff5df45-9575-4f2b-8cac-8ae027644295": {
+    "appActions": [
+      "providers/PowerPlatform.Governance/Operations/Read",
+      "providers/PowerPlatform.Governance/Operations/Write"
+    ],
+    "connectionRef": {
+      "apiTier": "Premium",
+      "displayName": "Dynamics 365 Business Central",
+      "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1678/1.0.1678.3636/dynamicssmbsaas/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_dynamicssmbsaas",
+      "parameterHints": {},
+      "parameterHintsV2": {}
+    },
+    "datasets": {
+      "TestEnvironmentName,TestCompanyId": {
+        "dataSources": {
+          "coffeeItems (microsoft/powerApps/beta)": {
+            "tableName": "coffeeItems,microsoft%252FpowerApps%252Fbeta"
+          },
+          "customers (v2.0)": {
+            "tableName": "customers,v2.0"
+          },
+          "salesOrderLines (v2.0)": {
+            "tableName": "salesOrderLines,v2.0"
+          },
+          "salesOrders (v2.0)": {
+            "tableName": "salesOrders,v2.0"
+          }
+        }
+      }
+    },
+    "dataSources": [
+      "salesOrderLines (v2.0)",
+      "salesOrders (v2.0)",
+      "customers (v2.0)",
+      "coffeeItems (microsoft/powerApps/beta)"
+    ],
+    "dependencies": {},
+    "dependents": [
+      "ea874b1a-7601-47f4-8e74-74b9da7b451c"
+    ],
+    "id": "0ff5df45-9575-4f2b-8cac-8ae027644295"
+  },
+  "ea874b1a-7601-47f4-8e74-74b9da7b451c": {
+    "appActions": [
+      "Run"
+    ],
+    "connectionRef": {
+      "apiTier": "Standard",
+      "displayName": "Logic flows",
+      "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png",
+      "id": "/providers/microsoft.powerapps/apis/shared_logicflows",
+      "parameterHints": {
+        "0ff5df45-9575-4f2b-8cac-8ae027644295": {
+          "value": "shared_dynamicssmbsaas_1"
+        },
+        "workflowEntityId": {
+          "value": "aba81736-12d9-ed11-a7c7-000d3a991110"
+        },
+        "workflowName": {
+          "value": "e6d4b0e2-4e50-44bc-a567-be8d48eac5ed"
+        }
+      },
+      "parameterHintsV2": {
+        "shared_dynamicssmbsaas_1": {
+          "value": "0ff5df45-9575-4f2b-8cac-8ae027644295"
+        },
+        "workflowEntityId": {
+          "value": "aba81736-12d9-ed11-a7c7-000d3a991110"
+        },
+        "workflowName": {
+          "value": "e6d4b0e2-4e50-44bc-a567-be8d48eac5ed"
+        }
+      }
+    },
+    "datasets": {},
+    "dataSources": [
+      "UploadImageToSalesOrder"
+    ],
+    "dependencies": {
+      "shared_dynamicssmbsaas_1": "0ff5df45-9575-4f2b-8cac-8ae027644295"
+    },
+    "dependents": [],
+    "id": "ea874b1a-7601-47f4-8e74-74b9da7b451c"
+  }
+}

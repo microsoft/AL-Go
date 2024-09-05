@@ -2,13 +2,13 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
+    [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText)
+    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -58,6 +58,7 @@ $publisherName = 'Freddy'
 # Create repository1
 CreateAlGoRepository `
     -github:$github `
+    -linux:$linux `
     -template $template `
     -repository $repository `
     -branch $branch `
@@ -98,21 +99,10 @@ $html | Should -belike "*Documentation for $repository*"
 # Remove downloaded artifacts
 Remove-Item -Path 'artifacts' -Recurse -Force
 
-# Set GitHubRunner and runs-on to ubuntu-latest (and use CompilerFolder)
-Pull
-Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-latest"; "gitHubRunner" = "ubuntu-latest"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
-CommitAndPush -commitMessage 'Shift to Linux'
-
-# Upgrade AL-Go System Files
-RunUpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template -ghTokenWorkflow $token | Out-Null
-
-# Cancel all running workflows
-CancelAllWorkflows -repository $repository
-
 # Set continuous deployment of ALDoc and modify the header
 Pull
 Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "alDoc" = @{ "ContinuousDeployment" = $true; "deployToGitHubPages" = $true; "Header" = "Documentazione per {REPOSITORY}" } }
-CommitAndPush -commitMessage 'Shift to Linux'
+CommitAndPush -commitMessage 'Continuous Deployment of ALDoc'
 
 # Wait for CI/CD run after config change
 WaitAllWorkflows -repository $repository -noError

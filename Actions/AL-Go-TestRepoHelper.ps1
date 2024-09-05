@@ -54,6 +54,12 @@ function Test-SettingsJson {
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'shell'
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'gitHubRunnerShell'
 
+    if ($json.Keys -contains 'bcContainerHelperVersion') {
+        if ($json.bcContainerHelperVersion -ne 'latest' -and $json.bcContainerHelperVersion -ne 'preview') {
+            OutputWarning -Message "Using a specific version of BcContainerHelper in $settingsDescription is not recommended and will lead to build failures in the future. Consider removing the setting."
+        }
+    }
+
     if ($type -eq 'Repo') {
         # Test for things that should / should not exist in a repo settings file
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -should
@@ -61,6 +67,7 @@ function Test-SettingsJson {
     if ($type -eq 'Project') {
         # GitHubRunner should not be in a project settings file (only read from repo or workflow settings)
         Test-Property -settingsDescription $settingsDescription -json $json -key 'githubRunner' -shouldnot
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'bcContainerHelperVersion' -shouldnot
     }
     if ($type -eq 'Workflow') {
         # Test for things that should / should not exist in a workflow settings file

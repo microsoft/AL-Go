@@ -31,11 +31,11 @@ on:
         type: boolean
         description: Create a release in this repository
         required: false
-        default: true
+        default: false
       defaultBcContainerHelperVersion:
         description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip). Leave empty to use latest (or preview for preview branches)'
         required: false
-        default: ''
+        default: 'latest'
         
 permissions:
   contents: write
@@ -90,28 +90,36 @@ jobs:
     needs: [ Inputs ]
     steps:
       - name: Check successful end 2 end tests have run
-        if: github.repository_owner == 'freddydk' && needs.Inputs.outputs.requireEndToEndTests == 'true'
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.requireEndToEndTests == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $errorActionPreference = "Stop"
-          $end2endRuns = (gh api /repos/$($env:GITHUB_REPOSITORY)/actions/runs?per_page=100 | ConvertFrom-Json).workflow_runs | Where-Object { $_.name -eq 'End 2 End Tests' }
+          $end2endRuns = (gh api "/repos/$($env:GITHUB_REPOSITORY)/actions/workflows/E2E.yaml/runs?per_page=100&branch=main" | ConvertFrom-Json).workflow_runs
           $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
-          $latestRun = $end2endruns | Where-Object { $_.head_sha -eq $latestSha }
+          $latestRun = $end2endruns | Where-Object { $_.Name -eq "End to end tests - $latestSha" } | select-object -first 1
           if (!$latestRun) {
-            throw "No End 2 End Tests run found for the latest commit on main"
+            throw "No End to end tests run found for the latest commit on main"
           }
           if ($latestRun.status -ne 'completed') {
-            throw "End 2 End Tests run for the latest commit on main is not completed"
+            throw "End to end tests run for the latest commit on main is not completed - see $($latestRun.html_url)"
           }
           if ($latestRun.conclusion -ne 'success') {
-            throw "End 2 End Tests run for the latest commit on main did not succeed"
+            throw "End to end tests run for the latest commit on main did not succeed - see $($latestRun.html_url)"
+          }
+          $allJobs = (gh api --paginate /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
+          foreach($job in $allJobs) {
+            if ($job.conclusion -ne 'success') {
+              throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
+            }
           }
 
   Deploy:
     runs-on: [ ubuntu-latest ]
     needs: [ CheckEndToEnd, Inputs ]
     environment: Production
+    permissions:
+      contents: write
     steps:
       - name: Validate Deployment
         if: github.repository_owner == 'freddydk'
@@ -132,7 +140,7 @@ jobs:
             }
           }
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Deploy
         env:
@@ -172,7 +180,7 @@ jobs:
           }
 
       - name: Calculate Release Notes
-        if: github.repository_owner == 'freddydk' && needs.Inputs.outputs.createRelease == 'true'
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $releaseNotesFile = Join-Path $env:GITHUB_WORKSPACE "RELEASENOTES.md"
@@ -182,8 +190,8 @@ jobs:
           Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -Value "ReleaseNotes=$([Uri]::EscapeDataString($releaseNotes))"
 
       - name: Create release
-        if: github.repository_owner == 'freddydk' && needs.Inputs.outputs.createRelease == 'true'
-        uses: actions/github-script@v7
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         id: createrelease
         env:
           branch: ${{ needs.Inputs.outputs.branch }}

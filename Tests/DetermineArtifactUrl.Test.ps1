@@ -110,7 +110,7 @@ Describe "DetermineArtifactUrl" {
     It 'Artifact setting wins over country setting' {
         $projectSettings.country = 'dk'
         $projectSettings.artifact = "///us/latest"
-        DetermineArtifactUrl -projectSettings $projectSettings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
+        DetermineArtifactUrl -projectSettings $projectSettings -doNotIssueWarnings | should -be 'https://bcartifacts/sandbox/22.1.12345.12345/us'
     }
 
     It 'Artifact setting when using version = * and first' {

@@ -2,8 +2,7 @@
 Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
 Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
-Get-Module TelemetryHelper | Remove-Module -Force
-Import-Module (Join-Path $PSScriptRoot '..\Actions\TelemetryHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe 'CreateReleaseNotes Tests' {
     BeforeAll {
@@ -44,9 +43,8 @@ Describe 'CreateReleaseNotes Tests' {
             ""body"": ""Mocked notes""
         }" }
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScope  {}
 
-        . $scriptPath -token "" -tag_name "1.0.5" -parentTelemetryScopeJson "{}"
+        . $scriptPath -token "" -tag_name "1.0.5"
 
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.5" -and $previous_tag_name -eq "1.0.0.0" }
@@ -61,9 +59,8 @@ Describe 'CreateReleaseNotes Tests' {
             ""body"": ""Mocked notes""
         }"}
         Mock DownloadAndImportBcContainerHelper  {}
-        Mock CreateScope  {}
 
-        . $scriptPath -token "" -tag_name "1.0.5" -parentTelemetryScopeJson "{}"
+        . $scriptPath -token "" -tag_name "1.0.5"
 
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.5" -and $previous_tag_name -eq "" }

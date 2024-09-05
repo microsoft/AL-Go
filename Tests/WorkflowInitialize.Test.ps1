@@ -1,5 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "WorkflowInitialize Action Tests" {
     BeforeAll {
@@ -20,7 +21,6 @@ Describe "WorkflowInitialize Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-          "correlationId" = "A correlation Id for the workflow"
           "telemetryScopeJson" = "A telemetryScope that covers the workflow"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs

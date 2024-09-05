@@ -1,0 +1,33 @@
+name: Get Artifacts for deployment
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  artifactsVersion:
+    description: Artifacts version to download (current, prerelease, draft, latest or version number)
+    required: true
+  artifactsFolder:
+    description: Folder in which the artifacts will be downloaded
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _token: ${{ inputs.token }}
+        _artifactsVersion: ${{ inputs.artifactsVersion }}
+        _artifactsFolder: ${{ inputs.artifactsFolder }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetArtifactsForDeployment" -Action {
+          ${{ github.action_path }}/GetArtifactsForDeployment.ps1 -token $ENV:_token -artifactsVersion $ENV:_artifactsVersion -artifactsFolder $ENV:_artifactsFolder
+        }
+branding:
+  icon: terminal
+  color: blue
