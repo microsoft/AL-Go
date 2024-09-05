@@ -66,7 +66,7 @@ function Add-PropertiesToJsonFile {
         $headers = GetHeader -token $token
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
-        $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+        $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
         if ($previousrunids) {
             Write-Host "Previous runs: $($previousrunids -join ', ')"
         }
@@ -89,7 +89,7 @@ function Add-PropertiesToJsonFile {
         if ($wait) {
             while ($true) {
                 Start-Sleep -Seconds 10
-                $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
+                $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
                 if ($run) {
                     break
                 }
@@ -101,6 +101,26 @@ function Add-PropertiesToJsonFile {
     }
 }
 
+function Remove-PropertiesFromJsonFile {
+    Param(
+        [string] $path,
+        [string[]] $properties
+    )
+
+    Write-Host -ForegroundColor Yellow "`nRemove Properties from $([System.IO.Path]::GetFileName($path))"
+    Write-Host "Properties"
+    $properties | Out-Host
+
+    $json = Get-Content $path -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $keys = @($json.Keys)
+    $keys | ForEach-Object {
+        $key = $_
+        if ($properties | Where-Object { $key -like $_ }) {
+            $json.Remove($key)
+        }
+    }
+    $json | Set-JsonContentLF -path $path
+}
 
 function DisplayTokenAndRepository {
     Write-Host "Token: $token"
@@ -126,24 +146,16 @@ function RunWorkflow {
     }
 
     $headers = GetHeader -token $token
-    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit" -retry).Content | ConvertFrom-Json).rate
-    $percent = [int]($rate.remaining*100/$rate.limit)
-    Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percent%)"
-    if ($percent -lt 10) {
-        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
-        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
-        Write-Host "Less than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
-    }
+    WaitForRateLimit -headers $headers -displayStatus
 
     Write-Host "Get Workflows"
     $url = "https://api.github.com/repos/$repository/actions/workflows"
-    $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
+    $workflows = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflows
     $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
     if (!$workflows) {
         Write-Host "No workflows found, waiting 60 seconds and retrying"
         Start-Sleep -seconds 60
-        $workflows = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflows
+        $workflows = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflows
         $workflows | ForEach-Object { Write-Host "- $($_.Name)"}
         if (!$workflows) {
             throw "No workflows found"
@@ -156,7 +168,7 @@ function RunWorkflow {
 
     Write-Host "Get Previous runs"
     $url = "https://api.github.com/repos/$repository/actions/runs"
-    $previousrun = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
+    $previousrun = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
     if ($previousrun) {
         Write-Host "Previous run: $($previousrun.id)"
     }
@@ -177,7 +189,7 @@ function RunWorkflow {
     do {
         Start-Sleep -Seconds 10
         $url = "https://api.github.com/repos/$repository/actions/runs"
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
+        $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.workflow_id -eq $workflow.id -and $_.event -eq 'workflow_dispatch' } | Select-Object -First 1
         Write-Host "."
     } until (($run) -and ((!$previousrun) -or ($run.id -ne $previousrun.id)))
     $runid = $run.id
@@ -200,18 +212,54 @@ function DownloadWorkflowLog {
     }
     $headers = GetHeader -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
-    $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
+    $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
     $tempFileName = "$([System.IO.Path]::GetTempFileName()).zip"
     [System.IO.File]::WriteAllBytes($tempFileName, $log.Content)
     Expand-Archive -Path $tempFileName -DestinationPath $path
 }
 
+function CancelAllWorkflows {
+    Param(
+        [string] $repository,
+        [switch] $noDelay
+    )
+    if (-not $noDelay.IsPresent) {
+        Start-Sleep -Seconds 60
+    }
+    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    foreach($run in $runs.workflow_runs) {
+        Write-Host $run.name
+        if ($run.status -eq 'in_progress') {
+            Write-Host "Cancelling $($run.name) run $($run.id)"
+            gh api --method POST /repos/$repository/actions/runs/$($run.id)/cancel | Out-Null
+        }
+    }
+}
+
+function WaitAllWorkflows {
+    Param(
+        [string] $repository,
+        [switch] $noDelay,
+        [switch] $noError,
+        [int] $top = 999
+    )
+    if (-not $noDelay.IsPresent) {
+        Start-Sleep -Seconds 60
+    }
+    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    $workflowRuns = $runs.workflow_runs | Select-Object -First $top
+    foreach($run in $workflowRuns) {
+        WaitWorkflow -repository $repository -runid $run.id -noDelay -noError:$noError
+    }
+}
+
 function WaitWorkflow {
     Param(
         [string] $repository,
         [string] $runid,
-        [switch] $noDelay
+        [switch] $noDelay,
+        [switch] $noError
     )
 
     $delay = !$noDelay.IsPresent
@@ -224,8 +272,9 @@ function WaitWorkflow {
         if ($delay) {
             Start-Sleep -Seconds 60
         }
+        WaitForRateLimit -headers $headers
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url | ConvertFrom-Json)
+        $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
         if ($run.status -ne $status) {
             if ($status) { Write-Host }
             $status = $run.status
@@ -236,8 +285,8 @@ function WaitWorkflow {
     } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
     Write-Host
     Write-Host $run.conclusion
-    if ($run.conclusion -ne "Success") {
-        throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)"
+    if ($run.conclusion -ne "Success" -and $run.conclusion -ne "cancelled") {
+        if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
     }
 }
 
@@ -331,7 +380,7 @@ function CreateAlGoRepository {
     $templateRepo = $template.Split('@')[0]
 
     $tempPath = [System.IO.Path]::GetTempPath()
-    $path = Join-Path $tempPath ([GUID]::NewGuid().ToString())
+    $path = Join-Path $tempPath ( [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()))
     New-Item $path -ItemType Directory | Out-Null
     Set-Location $path
     if ($waitMinutes) {
@@ -406,11 +455,6 @@ function CreateAlGoRepository {
     $repoSettings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json
     $runson = "windows-latest"
     $shell = "powershell"
-    if ($private) {
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunner" -Value "self-hosted"
-        $repoSettings | Add-Member -MemberType NoteProperty -Name "gitHubRunnerShell" -Value "powershell"
-        $runson = "self-hosted"
-    }
     if ($linux) {
         $runson = "ubuntu-latest"
         $shell = "pwsh"
@@ -419,15 +463,15 @@ function CreateAlGoRepository {
     if ($runson -ne "windows-latest" -or $shell -ne "powershell") {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value $runson
         $repoSettings | Add-Member -MemberType NoteProperty -Name "shell" -Value $shell
-        Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" -and $_.BaseName -ne "PullRequestHandler" } | ForEach-Object {
+        Get-ChildItem -Path '.\.github\workflows\*.yaml' | ForEach-Object {
             Write-Host $_.FullName
             $content = Get-ContentLF -Path $_.FullName
             $srcPattern = "runs-on: [ windows-latest ]`n"
             $replacePattern = "runs-on: [ $runson ]`n"
-            $content = $content.Replace($srcPattern, $replacePattern)
+            $content = "$content`n".Replace($srcPattern, $replacePattern).TrimEnd("`n")
             $srcPattern = "shell: powershell`n"
             $replacePattern = "shell: $shell`n"
-            $content = $content.Replace($srcPattern, $replacePattern)
+            $content = "$content`n".Replace($srcPattern, $replacePattern).TrimEnd("`n")
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
@@ -483,7 +527,7 @@ function MergePRandPull {
     Write-Host "Get Previous runs"
     $headers = GetHeader -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs"
-    $previousrunids = @(InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+    $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
         Write-Host "Previous runs: $($previousrunids -join ', ')"
     }
@@ -503,7 +547,7 @@ function MergePRandPull {
     invoke-gh pr merge $prid --squash --delete-branch --repo $repository | Out-Host
     while ($true) {
         Start-Sleep -Seconds 10
-        $run = (InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
+        $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
         if ($run) {
             break
         }
@@ -527,20 +571,29 @@ function RemoveRepository {
         $repository = $defaultRepository
     }
     if ($repository) {
-        Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
         try {
+            $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
+            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository (user $($user.login))"
             $owner = $repository.Split("/")[0]
-            @((invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
+            if ($owner -eq $user.login) {
+                # Package belongs to a user
+                $ownerStr = "users/$owner"
+            }
+            else {
+                # Package belongs to an organization
+                $ownerStr = "orgs/$owner"
+            }
+            @((invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /$ownerStr/packages?package_type=nuget -silent -returnvalue -ErrorAction SilentlyContinue | ConvertFrom-Json)) | Where-Object { $_.PSObject.Properties.Name -eq 'repository' } | Where-Object { $_.repository.full_name -eq $repository } | ForEach-Object {
                 Write-Host "+ package $($_.name)"
                 # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
-                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/$owner/packages/nuget/$($_.name) --input
+                '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /$ownerStr/packages/nuget/$($_.name) --input
             }
         }
         catch {
             Write-Host -ForegroundColor Red "Error removing packages"
             Write-Host -ForegroundColor Red $_.Exception.Message
         }
-        invoke-gh repo delete $repository --confirm | Out-Host
+        invoke-gh repo delete $repository --yes | Out-Host
     }
 
     if ($path) {
@@ -577,6 +630,7 @@ function Test-LogContainsFromRun {
 . (Join-Path $PSScriptRoot "Workflows\RunAddExistingAppOrTestApp.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCICD.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateApp.ps1")
+. (Join-Path $PSScriptRoot "Workflows\RunDeployReferenceDocumentation.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateOnlineDevelopmentEnvironment.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateRelease.ps1")
 . (Join-Path $PSScriptRoot "Workflows\RunCreateTestApp.ps1")

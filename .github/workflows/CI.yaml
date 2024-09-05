@@ -15,13 +15,13 @@ jobs:
   Test:
     runs-on: [ ubuntu-latest ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Run Tests
         run: |
           . (Join-Path "." "Tests/runtests.ps1")
 
-      - name: Test AL-GO Workflows
+      - name: Test AL-Go Workflows
         if: github.repository_owner == 'microsoft'
         run: |
           try {

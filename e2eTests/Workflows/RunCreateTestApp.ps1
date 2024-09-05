@@ -5,6 +5,7 @@
         [string] $publisher,
         [string] $idrange,
         [switch] $directCommit,
+        [switch] $useGhTokenWorkflow,
         [switch] $wait,
         [string] $repository,
         [string] $branch = "main"
@@ -16,7 +17,8 @@
         "name" = $name
         "publisher" = $publisher
         "idrange" = $idrange
-        "directCommit" = @("Y","N")[!$directCommit]
+        "directCommit" = @("true","false")[!$directCommit]
+        "useGhTokenWorkflow" = @("true","false")[!$useGhTokenWorkflow]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

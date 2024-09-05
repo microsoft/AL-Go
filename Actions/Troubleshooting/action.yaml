@@ -1,0 +1,27 @@
+name: Troubleshooting
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  gitHubSecrets:
+    description: All GitHub Secrets in compressed JSON format
+    required: true
+  displayNameOfSecrets:
+    description: Display the name (not the value) of secrets available to the repository
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _displayNameOfSecrets: ${{ inputs.displayNameOfSecrets }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Troubleshooting" -Action {
+          ${{ github.action_path }}/Troubleshooting.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -displayNameOfSecrets ($ENV:_displayNameOfSecrets -eq 'true')
+        }
+branding:
+  icon: terminal
+  color: blue

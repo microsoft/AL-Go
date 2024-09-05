@@ -1,9 +1,9 @@
-# Performance Testing
+# FUTURE TOPIC: Performance Testing
 
 This topic will be finalized later
 
+Testing is an important part of the app quality, but so is documentation. Let's look at generating reference documentation your app, and... - keeping it up-to-date...
 
-Maybe it is about time to actually explain how you create a development environment and code your app?
+______________________________________________________________________
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](DevelopmentEnvironments.md)
+[Index](Index.md)  [next](ReferenceDoc.md)

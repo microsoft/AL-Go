@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Pooya Kharamesh
+name: Create Release Notes
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write
@@ -12,10 +12,6 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   tag_name:
     description: Tag name
     required: true
@@ -24,9 +20,9 @@ inputs:
     required: false
     default: ''
 outputs:
-  ReleaseBranch:
-    description: Name of the release branch
-    value: ${{ steps.createreleasenotes.outputs.ReleaseBranch }}
+  ReleaseVersion:
+    description: The release version
+    value: ${{ steps.createreleasenotes.outputs.releaseVersion }}
   ReleaseNotes:
     description: Release note generated based on the changes
     value: ${{ steps.createreleasenotes.outputs.ReleaseNotes }}
@@ -38,17 +34,11 @@ runs:
       id: createreleasenotes
       env:
         _token: ${{ inputs.token }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _tag_name: ${{ inputs.tag_name }}
         _target_commitish: ${{ inputs.target_commitish }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/CreateReleaseNotes.ps1 -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -tag_name $ENV:_tag_name -target_commitish $ENV:_target_commitish
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CreateReleaseNotes" -Action {
+          ${{ github.action_path }}/CreateReleaseNotes.ps1 -token $ENV:_token -tag_name $ENV:_tag_name -target_commitish $ENV:_target_commitish
         }
 branding:
   icon: terminal

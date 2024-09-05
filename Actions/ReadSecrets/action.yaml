@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Read Secrets
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -9,7 +9,7 @@ inputs:
     description: All GitHub Secrets in compressed JSON format
     required: true
   getSecrets:
-    description: Comma separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted
+    description: Comma-separated list of Secrets to get. Secrets preceded by an asterisk are returned encrypted
     required: true
   useGhTokenWorkflowForPush:
     description: Determines whether you want to use the GhTokenWorkflow secret for TokenForPush
@@ -32,13 +32,8 @@ runs:
         _getSecrets: ${{ inputs.getSecrets }}
         _useGhTokenWorkflowForPush: ${{ inputs.useGhTokenWorkflowForPush }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadSecrets" -Action {
           ${{ github.action_path }}/ReadSecrets.ps1 -gitHubSecrets '${{ inputs.gitHubSecrets }}' -getSecrets $ENV:_getSecrets -useGhTokenWorkflowForPush $ENV:_useGhTokenWorkflowForPush
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
         }
 branding:
   icon: terminal

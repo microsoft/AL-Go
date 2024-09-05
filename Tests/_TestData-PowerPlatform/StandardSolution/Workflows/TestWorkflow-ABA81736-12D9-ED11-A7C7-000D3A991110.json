@@ -1,0 +1,134 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_dynamicssmbsaas_1": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "cr301_BcConnection"
+        },
+        "api": {
+          "name": "shared_dynamicssmbsaas"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_a_record_is_created_(V3)": {
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "bcenvironment": "TestEnvironmentName",
+              "company": "TestCompanyId",
+              "dataset": "v2.0",
+              "table": "dimensions"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+              "connectionName": "shared_dynamicssmbsaas",
+              "operationId": "CreateOnNewItemsSubscriptionV3"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Create_record_(V3)": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "a8fbd4cc-94d0-4e04-aa0a-8a3254ac8480"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_dynamicssmbsaas_1",
+              "operationId": "PostItemV3",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas"
+            },
+            "parameters": {
+              "bcenvironment": "TestEnvironmentName",
+              "company": "TestCompanyId",
+              "dataset": "v2.0",
+              "table": "documentAttachments",
+              "item/fileName": "Rendered3D.png",
+              "item/parentType": "2",
+              "item/parentId": "@triggerBody()['text']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Respond_to_a_PowerApp_or_flow": {
+          "runAfter": {
+            "Update_an_image,_file_or_document_(V3)": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "db725cb7-194e-4ca0-b5d5-4fc3559b9bf8"
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "status": "success"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "title": "status",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "Update_an_image,_file_or_document_(V3)": {
+          "runAfter": {
+            "Create_record_(V3)": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "91343282-6ec2-40dc-81fd-80fb1942b37e"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_dynamicssmbsaas_1",
+              "operationId": "PatchBlobFromNavigationV3",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas"
+            },
+            "parameters": {
+              "bcenvironment": "sandbox",
+              "company": "5736fe89-41bc-ee11-907d-6045bdc8c244",
+              "dataset": "v2.0",
+              "blobnavigationpath": "salesOrders/documentAttachments/attachmentContent",
+              "pathParameters/salesOrders": "@outputs('Create_record_(V3)')?['body/parentId']",
+              "pathParameters/salesOrders~1documentAttachments": "@outputs('Create_record_(V3)')?['body/id']",
+              "pathParameters/$content": "@triggerBody()?['file']?['contentBytes']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

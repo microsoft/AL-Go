@@ -4,11 +4,19 @@
     [string] $baseFolder,
     [string] $buildMode = 'Default',
     [string] $projectsDependenciesJson,
+    [string] $baselineWorkflowRunID = '0',
     [string] $destinationPath,
     [string] $token
 )
 
-function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinationPath, $token) {
+function DownloadDependenciesFromProbingPaths {
+    param(
+        $baseFolder,
+        $project,
+        $destinationPath,
+        $token
+    )
+
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
@@ -17,7 +25,17 @@ function DownloadDependenciesFromProbingPaths($baseFolder, $project, $destinatio
     }
 }
 
-function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDependencies, $buildMode, $destinationPath, $token) {
+function DownloadDependenciesFromCurrentBuild {
+    param(
+        $baseFolder,
+        $project,
+        $projectsDependencies,
+        $buildMode,
+        $baselineWorkflowRunID,
+        $destinationPath,
+        $token
+    )
+
     Write-Host "Downloading dependencies for project '$project'"
 
     $dependencyProjects = @()
@@ -40,12 +58,16 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             $dependencyBuildMode = 'Default';
         }
 
-        $currentBranch = $ENV:GITHUB_REF_NAME
+        $headBranch = $ENV:GITHUB_HEAD_REF
+        # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+        if (!$headBranch) {
+            $headBranch = $ENV:GITHUB_REF_NAME
+        }
 
-        $baseBranch = $ENV:GITHUB_BASE_REF_NAME
-        # $ENV:GITHUB_BASE_REF_NAME is specified only for pull requests, so if it is not specified, use the current branch
+        $baseBranch = $ENV:GITHUB_BASE_REF
+        # $ENV:GITHUB_BASE_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
         if (!$baseBranch) {
-            $baseBranch = $currentBranch
+            $baseBranch = $ENV:GITHUB_REF_NAME
         }
 
         $dependeciesProbingPaths += @(@{
@@ -54,8 +76,9 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
             "buildMode"       = $dependencyBuildMode
             "projects"        = $dependencyProject
             "repo"            = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-            "branch"          = $currentBranch
+            "branch"          = $headBranch
             "baseBranch"      = $baseBranch
+            "baselineWorkflowID" = $baselineWorkflowRunID
             "authTokenSecret" = $token
         })
     }
@@ -67,8 +90,9 @@ function DownloadDependenciesFromCurrentBuild($baseFolder, $project, $projectsDe
         $project = $probingPath.projects
         $branch = $probingPath.branch
         $baseBranch = $probingPath.baseBranch
+        $baselineWorkflowRunID = $probingPath.baselineWorkflowID
 
-        Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch"
+        Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowRunID"
 
         $dependency = GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ }
         $downloadedDependencies += $dependency
@@ -85,7 +109,7 @@ $downloadedDependencies = @()
 
 Write-Host "::group::Downloading project dependencies from current build"
 $projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -destinationPath $destinationPath -token $token
+$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading project dependencies from probing paths"

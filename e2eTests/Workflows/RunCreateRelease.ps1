@@ -8,6 +8,7 @@
         [switch] $createReleaseBranch,
         [string] $updateVersionNumber = '',
         [switch] $directCommit,
+        [switch] $useGhTokenWorkflow,
         [switch] $wait,
         [string] $repository,
         [string] $branch = "main"
@@ -18,11 +19,12 @@
         "appVersion" = $appVersion
         "name" = $name
         "tag" = $tag
-        "prerelease" = @("Y","N")[!$prerelease]
-        "draft" = @("Y","N")[!$draft]
-        "createReleaseBranch" = @("Y","N")[!$createReleaseBranch]
+        "prerelease" = @("true","false")[!$prerelease]
+        "draft" = @("true","false")[!$draft]
+        "createReleaseBranch" = @("true","false")[!$createReleaseBranch]
         "updateVersionNumber" = $updateVersionNumber
-        "directCommit" = @("Y","N")[!$directCommit]
+        "directCommit" = @("true","false")[!$directCommit]
+        "useGhTokenWorkflow" = @("true","false")[!$useGhTokenWorkflow]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

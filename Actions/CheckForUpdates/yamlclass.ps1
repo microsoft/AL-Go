@@ -1,4 +1,4 @@
-﻿#requires -Version 5.0
+#requires -Version 5.0
 
 # This class holds the content of a Yaml file
 # The content is stored in an array of strings, where each string is a line of the Yaml file
@@ -141,15 +141,8 @@ class Yaml {
             else {
                 $yamlContent = $content
             }
-            if ($start -eq 0) {
-                $this.content = $yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
-            }
-            elseif ($start+$count -eq $this.content.Count) {
-                $this.content = $this.content[0..($start-1)]+$yamlContent
-            }
-            else {
-                $this.content = $this.content[0..($start-1)]+$yamlContent+$this.content[($start+$count)..($this.content.Count-1)]
-            }
+            $this.Remove($start, $count)
+            $this.Insert($start, $yamlContent)
         }
         else {
             Write-Host -ForegroundColor Red "cannot locate $line"
@@ -159,5 +152,37 @@ class Yaml {
     # Replace all occurrences of $from with $to throughout the Yaml content
     [void] ReplaceAll([string] $from, [string] $to) {
         $this.content = $this.content | ForEach-Object { $_.replace($from, $to) }
+    }
+
+    # Remove lines in Yaml content
+    [void] Remove([int] $start, [int] $count) {
+        if ($count -eq 0) {
+            return
+        }
+        if ($start -eq 0) {
+            $this.content = $this.content[$count..($this.content.Count-1)]
+        }
+        elseif($start + $count -ge $this.content.Count) {
+            $this.content = $this.content[0..($start-1)]
+        }
+        else {
+            $this.content = $this.content[0..($start-1)] + $this.content[($start+$count)..($this.content.Count-1)]
+        }
+    }
+
+    # Insert lines in Yaml content
+    [void] Insert([int] $index, [string[]] $yamlContent) {
+        if (!$yamlContent) {
+            return
+        }
+        if ($index -eq 0) {
+            $this.content = $yamlContent + $this.content
+        }
+        elseif ($index -eq $this.content.Count) {
+            $this.content = $this.content + $yamlContent
+        }
+        else {
+            $this.content = $this.content[0..($index-1)] + $yamlContent + $this.content[$index..($this.content.Count-1)]
+        }
     }
 }

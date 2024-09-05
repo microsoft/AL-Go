@@ -1,5 +1,8 @@
-# Dependencies to other apps
+# Dependencies #3 - Dependencies to third party apps
+
 Dependencies to apps from other partners...
+
+TO:DO
 
 With symbols, you can compile your app
 

@@ -1,0 +1,13 @@
+# Configuration options at https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml
+
+version: 2
+updates:
+- package-ecosystem: github-actions
+  directories:
+    - ".github/workflows/"
+    - "/Templates/Per Tenant Extension/.github/workflows/"
+    - "/Templates/AppSource App/.github/workflows/"
+  ignore:
+    - dependency-name: "microsoft/AL-Go-Actions/*"
+  schedule:
+    interval: weekly

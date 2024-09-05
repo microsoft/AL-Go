@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Increment Version Number
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write
@@ -16,25 +16,21 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
-  project:
-    description: Project name if the repository is setup for multiple projects (* for all projects)
+  projects:
+    description: List of project names if the repository is setup for multiple projects (* for all projects)
     required: false
     default: '*'
-  versionnumber:
-    description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
+  versionNumber:
+    description: The version to update to. Use Major.Minor for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version
     required: true
   updateBranch:
     description: Set the branch to update
     required: false
     default: ${{ github.ref_name }}
   directCommit:
-    description: Direct Commit (Y/N)
+    description: Direct Commit?
     required: false
-    default: 'N'
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -43,19 +39,13 @@ runs:
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
-        _project: ${{ inputs.project }}
-        _versionnumber: ${{ inputs.versionnumber }}
+        _projects: ${{ inputs.projects }}
+        _versionNumber: ${{ inputs.versionNumber }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -versionnumber $ENV:_versionnumber -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "IncrementVersionNumber" -Action {
+          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -projects $ENV:_projects -versionNumber $ENV:_versionNumber -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal

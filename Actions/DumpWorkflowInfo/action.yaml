@@ -1,0 +1,19 @@
+name: Dump Workflow Info
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DumpWorkflowInfo" -Action {
+          ${{ github.action_path }}/DumpWorkflowInfo.ps1
+        }
+branding:
+  icon: terminal
+  color: blue

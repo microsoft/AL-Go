@@ -3,23 +3,24 @@
 This section describes how to contribute to AL-Go. How to set up your own environment (your own set of actions and your own templates)
 
 You can do this in two ways:
+
 - Use a fork of AL-Go for GitHub in your own **personal GitHub account** in development mode
 - Use 3 public repositories in your own **personal GitHub account** (AL-Go-PTE, AL-Go-AppSource and AL-Go-Actions, much like in production)
 
 ## Use a fork of AL-Go for GitHub in "development mode"
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **personal GitHub account**.
-2. You can optionally also create a branch in the AL-Go fork for the feature you are working on.
+1. You can optionally also create a branch in the AL-Go fork for the feature you are working on.
 
 **https://github.com/<yourGitHubUserName>/AL-Go@<yourBranch>** can now be used as a template in your AL-Go project when running _Update AL-Go System Files_ to use the actions/workflows from this fork.
 
 ## Use 3 public repositories in "production mode"
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **personal GitHub account**.
-2. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
-3. In your personal fork of AL-Go, create a New Repository Secret called **OrgPAT** with your personal access token as content. See **https://github.com/yourGitHubUserName/AL-Go/settings/secrets/actions**.
-4. In your personal fork of AL-Go, navigate to **Actions**, select the **Deploy** workflow and choose **Run Workflow**.
-5. Using the default settings press **Run workflow**. Select the AL-Go branch to run from and the branch to deploy to.
+1. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
+1. In your personal fork of AL-Go, create a New Repository Secret called **OrgPAT** with your personal access token as content. See **https://github.com/yourGitHubUserName/AL-Go/settings/secrets/actions**.
+1. In your personal fork of AL-Go, navigate to **Actions**, select the **Deploy** workflow and choose **Run Workflow**.
+1. Using the default settings press **Run workflow**. Select the AL-Go branch to run from and the branch to deploy to.
 
 Now you should have 3 new public repositories:
 
@@ -27,7 +28,8 @@ Now you should have 3 new public repositories:
 - [https://github.com/yourGitHubUserName/AL-Go-AppSource](https://github.com/yourGitHubUserName/AL-Go-AppSource)
 - [https://github.com/yourGitHubUserName/AL-Go-PTE](https://github.com/yourGitHubUserName/AL-Go-PTE)
 
-> **Note:** Deploying to a branch called **preview** will only update the two template repositories (and use your AL-Go project with the current SHA as actions repository).
+> \[!NOTE\]
+> Deploying to a branch called **preview** will only update the two template repositories (and use your AL-Go project with the current SHA as actions repository).
 
 You can optionally also create a branch in the AL-Go fork for the feature you are working on and then select that branch when running Deploy (both as **Use workflow from** and as **Branch to deploy to**).
 
@@ -35,13 +37,21 @@ You can optionally also create a branch in the AL-Go fork for the feature you ar
 
 Please ensure that all unit tests run and create a Pull Request against [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go). You are very welcome to run the end to end tests as well, but we will also run the end to end tests as part of the code review process.
 
-> **Note**: You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your personal fork of the AL-Go repository** you publish to the 3 repositories.
+> \[!NOTE\]
+> You can also deploy to a different branch in the 3 public repositories by specifying a branch name under **Branch to deploy** to when running the **Deploy** workflow. The branch you specify in **Use workflow from** indicates which branch in **your personal fork of the AL-Go repository** you publish to the 3 repositories.
+
+## Pre-Commit
+
+In the AL-Go repository we use a number of precommit hooks to help us identify issues in the code. We run the precommit hooks locally but also as a PR check. In order to ensure this check passes please install pre-commit in your local AL-Go repository. Pre-Commit can be installed by following the instructions on https://pre-commit.com/#quick-start. Once the precommint hooks are installed you can run `pre-commit run --all-files` to verify your changes.
 
 ## Unit tests
+
 The Tests folder, in the AL-Go repository, contains a number of unit-tests. Open Tests/runtests.ps1 in VS Code and select Run. Unit tests are quick and will run on every PR and every Push. We will be adding a lot of unit tests going forward.
 
 ## End to End tests
+
 In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end tests.
+
 - Test-AL-Go.ps1 contains an end-2-end test scenario and is in E2E.yaml run for all combinations of Public/Private, Windows/Linux, Single/Multiproject and PTE/AppSource.
 - Test-AL-Go-Upgrade.ps1 contains an end-2-end upgrade scenario and is run for all prior releases of AL-Go for GitHub to test that you can successfully upgrade that version to the latestand run CI/CD successfully.
 - The scenarios folder contains a set of AL-Go scenarios, which tests specific functionality end to end. Every folder under e2eTests/scenarios, which contains a runtests.ps1 will be run as a scenario test, like:
@@ -52,11 +62,11 @@ In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end
   - SpecialCharacters - testing that various settings (+ publisher name and app name) can contain special national characters
 
 In your personal fork, you can now run the end to end tests, if the following pre-requisites are available:
+
 - You need the following secrets:
   - E2EPAT needs to be a Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_
   - AdminCenterApiCredentials needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
   - LicenseFileUrl needs to be a direct download URL to a developer .bclicense file
-  - InsiderSasToken needs to contain the Insider Sas Token from https://aka.ms/collaborate
 - Beside the secrets, you need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)
 
 Run the End to end tests by running the *End to end tests* workflow and specify your organization in the corresponding field.
@@ -71,9 +81,9 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |$global:SecureE2EPAT| SecureString | A personal access token with workflow permissions |
 |$global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
 |$global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
-|$global:SecureInsiderSasToken | SecureString | The Insider SAS Token from https://aka.ms/collaborate  |
 |$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
 |$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
 
----
+______________________________________________________________________
+
 [back](../README.md)

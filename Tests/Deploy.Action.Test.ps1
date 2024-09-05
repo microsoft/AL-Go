@@ -1,5 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "Deploy Action Tests" {
     BeforeAll {
@@ -20,6 +21,7 @@ Describe "Deploy Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
+            "environmentUrl" = "The URL of the deployed environment"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }

@@ -18,7 +18,7 @@ jobs:
     outputs:
       githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Check secrets
         id: check
@@ -52,7 +52,7 @@ jobs:
     runs-on: [ ubuntu-latest ]
     needs: [ Check ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Remove Temp Repositories
         run: |
@@ -70,5 +70,5 @@ jobs:
                   # Pipe empty string into GH API --METHOD DELETE due to https://github.com/cli/cli/issues/3937
                   '' | invoke-gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "/orgs/$repoOwner/packages/nuget/$($_.name)" --input -
               }
-              invoke-gh repo delete "https://github.com/$repo" --confirm | Out-Host
+              invoke-gh repo delete "https://github.com/$repo" --yes | Out-Host
           }

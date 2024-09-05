@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Create Development Environment
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write
@@ -16,10 +16,6 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   environmentName:
     description: Name of the online environment
     required: true
@@ -32,17 +28,17 @@ inputs:
     required: false
     default: ''
   reUseExistingEnvironment:
-    description: Reuse environment if it exists
+    description: Reuse environment if it exists?
     required: false
-    default: 'N'
+    default: 'false'
   updateBranch:
     description: Set the branch to update
     required: false
     default: ${{ github.ref_name }}
   directCommit:
-    description: Direct Commit (Y/N)
+    description: Direct Commit?
     required: false
-    default: 'N'
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -51,7 +47,6 @@ runs:
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _environmentName: ${{ inputs.environmentName }}
         _project: ${{ inputs.project }}
         _adminCenterApiCredentials: ${{ inputs.adminCenterApiCredentials }}
@@ -59,13 +54,8 @@ runs:
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -environmentName $ENV:_environmentName -project $ENV:_project -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -reUseExistingEnvironment ($ENV:_reUseExistingEnvironment -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CreateDevelopmentEnvironment" -Action {
+          ${{ github.action_path }}/CreateDevelopmentEnvironment.ps1 -actor $ENV:_actor -token $ENV:_token -environmentName $ENV:_environmentName -project $ENV:_project -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -reUseExistingEnvironment ($ENV:_reUseExistingEnvironment -eq 'true') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal

@@ -1,5 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "WorkflowInitialize Action Tests" {
     BeforeAll {
@@ -20,7 +21,6 @@ Describe "WorkflowInitialize Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-          "correlationId" = "A correlation Id for the workflow"
           "telemetryScopeJson" = "A telemetryScope that covers the workflow"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
@@ -51,7 +51,7 @@ Describe "WorkflowInitialize Action Tests" {
                 Set-Content -Path (Join-Path $githubFolder 'AL-Go-Settings.json') -Value $repoSettings -Encoding UTF8
                 Set-Content -Path (Join-Path $ALGoFolder 'settings.json') -Value $projectSettings -Encoding UTF8
                 Set-Content -Path (Join-Path $Project1ALGoFolder 'settings.json') -Value $project1Settings -Encoding UTF8
-                Test-ALGoRepository -baseFolder $tempDir
+                TestALGoRepository -baseFolder $tempDir
             }
             finally {
                 Remove-Item -Path $tempDir -Recurse -Force
@@ -62,6 +62,7 @@ Describe "WorkflowInitialize Action Tests" {
         . (Join-Path $PSScriptRoot "..\Actions\AL-Go-TestRepoHelper.ps1" -Resolve)
 
         Mock Write-Host { }
+        Mock OutputError { throw $message }
 
         TestSettingsFiles `
             -ALGoOrgSettings '{}' `

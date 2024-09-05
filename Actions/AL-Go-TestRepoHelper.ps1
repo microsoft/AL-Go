@@ -12,18 +12,18 @@
     $exists = $json.Keys -contains $key
     if ($exists) {
         if ($maynot) {
-            throw "Property '$key' may not exist in $settingsDescription"
+            OutputError "Property '$key' may not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
         elseif ($shouldnot) {
-            Write-Host "::Warning::Property '$key' should not exist in $settingsDescription"
+            OutputWarning -Message "Property '$key' should not exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
     else {
         if ($must) {
-            throw "Property '$key' must exist in $settingsDescription"
+            OutputError "Property '$key' must exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
         elseif ($should) {
-            Write-Host "::Warning::Property '$key' should exist in $settingsDescription"
+            OutputWarning -Message "Property '$key' should exist in $settingsDescription. See https://aka.ms/algosettings#$key"
         }
     }
 }
@@ -38,7 +38,7 @@ function Test-Shell {
     if ($json.Keys -contains $property) {
         $shell = $json.$property
         if ($shell -ne 'powershell' -and $shell -ne 'pwsh') {
-            throw "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription"
+            OutputError "$property is '$shell', must be 'powershell' or 'pwsh' in $settingsDescription. See https://aka.ms/algosettings#$property"
         }
     }
 }
@@ -54,12 +54,20 @@ function Test-SettingsJson {
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'shell'
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'gitHubRunnerShell'
 
+    if ($json.Keys -contains 'bcContainerHelperVersion') {
+        if ($json.bcContainerHelperVersion -ne 'latest' -and $json.bcContainerHelperVersion -ne 'preview') {
+            OutputWarning -Message "Using a specific version of BcContainerHelper in $settingsDescription is not recommended and will lead to build failures in the future. Consider removing the setting."
+        }
+    }
+
     if ($type -eq 'Repo') {
         # Test for things that should / should not exist in a repo settings file
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -should
     }
     if ($type -eq 'Project') {
-        # Test for things that should / should not exist in a project settings file
+        # GitHubRunner should not be in a project settings file (only read from repo or workflow settings)
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'githubRunner' -shouldnot
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'bcContainerHelperVersion' -shouldnot
     }
     if ($type -eq 'Workflow') {
         # Test for things that should / should not exist in a workflow settings file
@@ -72,7 +80,8 @@ function Test-SettingsJson {
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -maynot
 
         # schedules and runs-on should not be in Project or Workflow settings
-        'nextMajorSchedule','nextMinorSchedule','currentSchedule','githubRunner','runs-on' | ForEach-Object {
+        # These properties are used in Update AL-Go System Files, hence they should only be in Repo settings
+        'nextMajorSchedule','nextMinorSchedule','currentSchedule','runs-on' | ForEach-Object {
             Test-Property -settingsDescription $settingsDescription -json $json -key $_ -shouldnot
         }
     }
@@ -87,7 +96,7 @@ function Test-JsonStr {
     )
 
     if ($jsonStr -notlike '{*') {
-        throw "Settings in $settingsDescription is not recognized as JSON (does not start with '{'))"
+        OutputError "Settings in $settingsDescription is not recognized as JSON (does not start with '{'))"
     }
 
     try {
@@ -95,7 +104,7 @@ function Test-JsonStr {
         Test-SettingsJson -json $json -settingsDescription $settingsDescription -type:$type
     }
     catch {
-        throw "$($_.Exception.Message.Replace("`r",'').Replace("`n",' '))"
+        OutputError "$($_.Exception.Message.Replace("`r",'').Replace("`n",' ')) in $settingsDescription"
     }
 
 }
@@ -114,7 +123,22 @@ function Test-JsonFile {
     Test-JsonStr -org -jsonStr (Get-Content -Path $jsonFile -Raw -Encoding UTF8) -settingsDescription $settingsFile -type $type
 }
 
-function Test-ALGoRepository {
+function TestRunnerPrerequisites {
+    try {
+        invoke-gh version
+    }
+    catch {
+        OutputWarning -Message "GitHub CLI is not installed"
+    }
+    try {
+        invoke-git version
+    }
+    catch {
+        OutputWarning -Message "Git is not installed"
+    }
+}
+
+function TestALGoRepository {
     Param(
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE
     )

@@ -15,6 +15,10 @@ inputs:
   projectsDependenciesJson:
     description: A JSON object that matches eash project with its dependency projects
     required: true
+  baselineWorkflowRunId:
+    description: The ID of the workflow run that was used as baseline for the current build
+    required: false
+    default: '0'
 outputs:
   DownloadedApps:
     description: A JSON-formatted array of paths to .app files of the apps that were downloaded
@@ -26,7 +30,7 @@ runs:
   using: composite
   steps:
     - name: Download artifacts from current build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: ${{ github.workspace }}/.dependencies
 
@@ -40,14 +44,10 @@ runs:
         _baseFolder: ${{ github.workspace }}
         _destinationPath: ${{ github.workspace }}/.dependencies
         _gitHubToken: ${{ github.token }}
+        _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectsDependenciesJson $ENV:_projectsDependenciesJson -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))"
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DownloadProjectDependencies" -Action {
+          ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectsDependenciesJson $ENV:_projectsDependenciesJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
         }
 branding:
   icon: terminal

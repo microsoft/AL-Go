@@ -1,30 +1,45 @@
 # Get Started
+
 With our prerequisites in place, it is time to get started and create our first repository.
 
 In a browser, navigate to https://aka.ms/algopte:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231536061-8594cfec-d312-4f5b-9ff4-a3d0cf46ab69.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/1c6a3d1d-b712-4837-9654-58fccbdd911e) |
 |-|
 
-Click **Use This Template** and select **Create a new repository**. Select your **organizational account** as **owner** and enter **repo1** as repository name. Make the repo **public** and click **Create repository form template**.
+And you should see:
 
-| ![image](https://user-images.githubusercontent.com/10775043/231535787-43d8af7d-1554-4e11-9753-8e7d7d21401c.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/7e74715a-0e9a-4f7a-b261-a7107fad8888) |
 |-|
 
-Click **Actions**, select the **CI/CD** workflow, click **Run workflow** and run the CI/CD workflow on our empty repository. Wait for the CI/CD workflow to complete.
+Click **Use This Template** and select **Create a new repository**. Select your **organizational account** as **owner** and enter **repo1** as repository name. Make the repo **public** and click **Create repository**.
 
-![image](https://github.com/microsoft/AL-Go/assets/10775043/d411bc1f-8494-4c00-93b5-26046ecda6a1)
-
- By clicking the workflow in the list, and scrolling down, you should see:
-
-| ![image](https://user-images.githubusercontent.com/10775043/231540402-05af1336-0f60-45e7-a86c-501a95a657de.png) |
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/32ce5b05-b347-4174-b83d-e344756f2d06) |
 |-|
 
-Note the three warnings explaining that no apps have been added.  The CI/CD workflow doesn't have anything to compile yet as you didn't add any source code.
+After a few seconds, your new repository should be ready for you.
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/11d7f51d-f38c-4163-a929-a55f2360911d) |
+|-|
+
+Click **Actions**, and you should see that a CI/CD workflow has already been kicked off on our empty repository.
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/e13fc12d-c36d-4014-bbe5-0f8003c90bb0) |
+|-|
+
+Wait for the CI/CD workflow to complete and click the completed workflow to see details.
+
+| ![image](https://github.com/microsoft/AL-Go/assets/10775043/cc181fb1-0496-45aa-87c5-69fd000d772f) |
+|-|
+
+Note the warnings explaining that no apps have been added. The CI/CD workflow doesn't have anything to compile yet as you didn't add any source code.
+
+Ignore the warning about available updates for now.
 
 After this step, we are done setting up a basic AL-Go for GitHub repository and we only need to add our apps.
 
 So, let's add an app...
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](AddAnApp.md)
+______________________________________________________________________
+
+[Index](Index.md)  [next](AddAnApp.md)

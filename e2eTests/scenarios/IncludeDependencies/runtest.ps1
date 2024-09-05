@@ -2,14 +2,13 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
+    [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText)
+    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -58,6 +57,7 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateAlGoRepository `
     -github:$github `
+    -linux:$linux `
     -template $template `
     -repository $repository `
     -branch $branch `
@@ -85,8 +85,8 @@ $repoPath = (Get-Location).Path
 
     # Launch Current, NextMinor and NextMajor builds
     $runTestCurrent = RunTestCurrent -branch $branch
-    $runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-    $runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+    $runTestNextMinor = RunTestNextMinor -branch $branch
+    $runTestNextMajor = RunTestNextMajor -branch $branch
 
     # Wait for CI/CD workflow to finish
     WaitWorkflow -runid $run.id
@@ -112,7 +112,7 @@ $repoPath = (Get-Location).Path
         CommitAndPush -commitMessage 'Shift to Linux'
 
         # Upgrade AL-Go System Files
-        RunUpdateAlGoSystemFiles -directCommit -commitMessage 'Update system files' -wait -templateUrl $template
+        RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository | Out-Null
     }
 }
 

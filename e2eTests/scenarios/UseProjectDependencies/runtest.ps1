@@ -2,14 +2,13 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
+    [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText)
+    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -59,7 +58,7 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateAlGoRepository `
     -github:$github `
-    -linux `
+    -linux:$linux `
     -template $template `
     -repository $repository `
     -branch $branch `
@@ -83,15 +82,15 @@ CreateAlGoRepository `
 $repoPath = (Get-Location).Path
 
 # Update AL-Go System Files to uptake UseProjectDependencies setting
-RunUpdateAlGoSystemFiles -templateUrl $template -wait -branch $branch -directCommit -ghTokenWorkflow $token | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
 
 # Run CI/CD workflow
 $run = RunCICD -branch $branch
 
 # Launch Current, NextMinor and NextMajor builds
 $runTestCurrent = RunTestCurrent -branch $branch
-$runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+$runTestNextMinor = RunTestNextMinor -branch $branch
+$runTestNextMajor = RunTestNextMajor -branch $branch
 
 # Wait for all workflows to finish
 WaitWorkflow -runid $run.id

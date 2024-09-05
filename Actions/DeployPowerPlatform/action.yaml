@@ -1,0 +1,107 @@
+name: Deploy PowerPlatform Solution
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  environmentName:
+    description: Name of environment to deploy to
+    required: true
+  artifactsFolder:
+    description: Path to the downloaded artifacts to deploy (when deploying from a build)
+    required: false
+    default: ''
+  solutionFolder:
+    description: Path to the unpacked solution to deploy (when deploying from branch)
+    required: false
+    default: ''
+  deploymentEnvironmentsJson:
+    description: The settings for all Deployment Environments
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install Power Platform Tools
+      uses: microsoft/powerplatform-actions/actions-install@v1
+
+    - name: Set Actions Repo and Ref
+      shell: ${{ inputs.shell }}
+      env:
+        actionsRepo: ${{ github.action_repository }}
+        actionsRef: ${{ github.action_ref }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetActionsRepoAndRef" -SkipTelemetry -Action {
+          ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
+        }
+
+    - name: Check out AL-Go Actions
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.actionsRepo }}
+        ref: ${{ env.actionsRef }}
+        path: ${{ env.actionsPath }}
+
+    - name: Parse DeployToSettings and AuthContext
+      id: ReadPowerPlatformSettings
+      uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
+      with:
+        shell: ${{ inputs.shell }}
+        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
+        environmentName: ${{ inputs.environmentName }}
+
+    - name: Determine Power Platform solution location
+      shell: ${{ inputs.shell }}
+      env:
+        _artifactsFolder: ${{ inputs.artifactsFolder }}
+        _solutionFolder: ${{ inputs.solutionFolder }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DeterminePowerPlatformSolutionFolder" -Action {
+          ${{ github.action_path }}/DeterminePowerPlatformSolutionFolder.ps1 -artifactsFolder $ENV:_artifactsFolder -solutionFolder $ENV:_solutionFolder
+        }
+
+    - name: Unpack solution artifact
+      if: env.powerPlatformSolutionFilePath != ''
+      uses: microsoft/powerplatform-actions/unpack-solution@v1
+      with:
+        solution-file: ${{ env.powerPlatformSolutionFilePath }}
+        solution-folder: ${{ env.powerPlatformSolutionFolder }}
+        solution-type: "Unmanaged"
+        process-canvas-apps: true
+
+    - name: Rebuild solution
+      uses: ./_AL-Go/Actions/BuildPowerPlatform
+      with:
+        shell: ${{ inputs.shell }}
+        solutionFolder: ${{ env.powerPlatformSolutionFolder }}
+        outputFolder: .artifacts/_tempPPSolution
+        outputFileName: ppsolution
+        companyId: ${{ steps.ReadPowerPlatformSettings.outputs.companyId }}
+        environmentName: ${{ steps.ReadPowerPlatformSettings.outputs.environmentName }}
+
+    - name: Publish solution to Power Platform (userName)
+      if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
+      uses: microsoft/powerplatform-actions/import-solution@v1
+      with:
+        user-name: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
+        password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
+        solution-file: .artifacts/_tempPPSolution/ppsolution.zip
+        force-overwrite: true
+        publish-changes: true
+
+    - name: Publish solution to Power Platform (ApplicationId)
+      if: steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
+      uses: microsoft/powerplatform-actions/import-solution@v1
+      with:
+        tenant-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
+        app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
+        client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
+        solution-file: .artifacts/_tempPPSolution/ppsolution.zip
+        force-overwrite: true
+        publish-changes: true
+
+branding:
+  icon: terminal
+  color: blue

@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Add Existing App
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write
@@ -16,10 +16,6 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   project:
     description: Project name if the repository is setup for multiple projects
     required: false
@@ -32,9 +28,9 @@ inputs:
     required: false
     default: ${{ github.ref_name }}
   directCommit:
-    description: Direct Commit (Y/N)
+    description: Direct Commit?
     required: false
-    default: 'N'
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -43,19 +39,13 @@ runs:
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
         _url: ${{ inputs.url }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/AddExistingApp.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project -url $ENV:_url -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "AddExistingApp" -Action {
+          ${{ github.action_path }}/AddExistingApp.ps1 -actor $ENV:_actor -token $ENV:_token -project $ENV:_project -url $ENV:_url -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal

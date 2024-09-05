@@ -1,8 +1,9 @@
 ﻿function RunIncrementVersionNumber {
     Param(
-        [string] $project,
+        [string] $projects,
         [string] $versionNumber,
         [switch] $directCommit,
+        [switch] $useGhTokenWorkflow,
         [switch] $wait,
         [string] $repository,
         [string] $branch = "main"
@@ -10,9 +11,10 @@
 
     $workflowName = 'Increment Version Number'
     $parameters = @{
-        "project" = $project
+        "projects" = $projects
         "versionNumber" = $versionNumber
-        "directCommit" = @("Y","N")[!$directCommit]
+        "directCommit" = @("true","false")[!$directCommit]
+        "useGhTokenWorkflow" = @("true","false")[!$useGhTokenWorkflow]
     }
     RunWorkflow -name $workflowName -parameters $parameters -wait:$wait -branch $branch -repository $repository
 }

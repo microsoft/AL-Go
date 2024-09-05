@@ -1,14 +1,11 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
     [string] $artifact = "",
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
-    [ValidateSet('Default', 'Translated', 'Clean')]
     [string] $buildMode = 'Default',
     [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
     [string] $installAppsJson = '[]',
@@ -16,16 +13,12 @@
     [string] $installTestAppsJson = '[]'
 )
 
-$telemetryScope = $null
 $containerBaseFolder = $null
 $projectPath = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     DownloadAndImportBcContainerHelper
-
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0080' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -77,10 +70,17 @@ try {
 
     Write-Host "use settings and secrets"
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    # ENV:Secrets is not set when running Pull_Request trigger
+    if ($env:Secrets) {
+        $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    else {
+        $secrets = @{}
+    }
+
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','insiderSasToken','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','codeSignCertificateUrl','*codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -94,12 +94,7 @@ try {
     }
 
     $analyzeRepoParams = @{}
-    # If UseCompilerFolder is set, set the parameter on Run-AlPipeline
-    if ($settings.useCompilerFolder) {
-        $runAlPipelineParams += @{
-            "useCompilerFolder" = $true
-        }
-    }
+
     if ($artifact) {
         # Avoid checking the artifact setting in AnalyzeRepo if we have an artifactUrl
         $settings.artifact = $artifact
@@ -115,18 +110,12 @@ try {
         }
     }
 
-    $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -insiderSasToken $insiderSasToken @analyzeRepoParams
+    $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
-    }
-
-    if ($settings.type -eq "AppSource App" ) {
-        if ($licenseFileUrl -eq "") {
-            OutputWarning -message "When building an AppSource App, you should create a secret called LicenseFileUrl, containing a secure URL to your license file with permission to the objects used in the app."
-        }
     }
 
     $installApps = $settings.installApps
@@ -275,6 +264,7 @@ try {
                             $packageId = $_.Split(',')[1]
                             UploadImportAndApply-ConfigPackageInBcContainer `
                                 -containerName $parameters.containerName `
+                                -companyName $settings.companyName `
                                 -Credential $parameters.credential `
                                 -Tenant $parameters.tenant `
                                 -ConfigPackage $configPackage `
@@ -332,7 +322,9 @@ try {
     "enableCodeCop",
     "enableAppSourceCop",
     "enablePerTenantExtensionCop",
-    "enableUICop" | ForEach-Object {
+    "enableUICop",
+    "enableCodeAnalyzersOnTestApps",
+    "useCompilerFolder" | ForEach-Object {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
@@ -361,12 +353,13 @@ try {
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
+        -accept_insiderEula `
         -pipelinename $workflowName `
         -containerName $containerName `
         -imageName $imageName `
         -bcAuthContext $authContext `
         -environment $environmentName `
-        -artifact $settings.artifact.replace('{INSIDERSASTOKEN}',$insiderSasToken) `
+        -artifact $settings.artifact.replace('{INSIDERSASTOKEN}','') `
         -vsixFile $settings.vsixFile `
         -companyName $settings.companyName `
         -memoryLimit $settings.memoryLimit `
@@ -376,7 +369,7 @@ try {
         -installApps $installApps `
         -installTestApps $installTestApps `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
-        -generateDependencyArtifact:$settings.generateDependencyArtifact `
+        -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
         -previousApps $previousApps `
         -appFolders $settings.appFolders `
@@ -391,6 +384,7 @@ try {
         -failOn $settings.failOn `
         -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
         -rulesetFile $settings.rulesetFile `
+        -enableExternalRulesets:$settings.enableExternalRulesets `
         -appSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
         -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
@@ -400,7 +394,6 @@ try {
         -uninstallRemovedApps
 
     if ($containerBaseFolder) {
-
         Write-Host "Copy artifacts and build output back from build container"
         $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
         Copy-Item -Path (Join-Path $projectPath ".buildartifacts") -Destination $destFolder -Recurse -Force
@@ -410,13 +403,8 @@ try {
         Copy-Item -Path $buildOutputFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
-
-    TrackTrace -telemetryScope $telemetryScope
 }
 catch {
-    if (Get-Module BcContainerHelper) {
-        TrackException -telemetryScope $telemetryScope -errorRecord $_
-    }
     throw
 }
 finally {
@@ -425,8 +413,11 @@ finally {
             Write-Host "Get Event Log from container"
             $eventlogFile = Get-BcContainerEventLog -containerName $containerName -doNotOpen
             Copy-Item -Path $eventLogFile -Destination $containerEventLogFile
-            $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
-            Copy-Item -Path $containerEventLogFile -Destination $destFolder
+            if ($project) {
+                # Copy event log to project folder if multiproject
+                $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+                Copy-Item -Path $containerEventLogFile -Destination $destFolder
+            }
         }
     }
     catch {

@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Deliver
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -13,10 +13,6 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   projects:
     description: Projects to deliver (default is all)
     required: false
@@ -25,7 +21,7 @@ inputs:
     description: Delivery target (AppSource or Storage)
     required: true
   artifacts:
-    description: Artifacts to deliver
+    description: The artifacts to deliver or a folder in which the artifacts have been downloaded
     required: true
   type:
     description: Type of delivery (CD or Release)
@@ -36,9 +32,9 @@ inputs:
     required: false
     default: 'Apps,Dependencies,TestApps'
   goLive:
-    description: Promote AppSource App to Go Live? (Y/N)
+    description: Promote AppSource App to Go Live?
     required: false
-    default: 'N'
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -47,7 +43,6 @@ runs:
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _projects: ${{ inputs.projects }}
         _deliveryTarget: ${{ inputs.deliveryTarget }}
         _artifacts: ${{ inputs.artifacts }}
@@ -55,13 +50,8 @@ runs:
         _atypes: ${{ inputs.atypes }}
         _goLive: ${{ inputs.goLive }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/Deliver.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -projects $ENV:_projects -deliveryTarget $ENV:_deliveryTarget -artifacts $ENV:_artifacts -type $ENV:_type -atypes $ENV:_atypes -goLive ($ENV:_goLive -eq 'Y')
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Deliver" -Action {
+          ${{ github.action_path }}/Deliver.ps1 -actor $ENV:_actor -token $ENV:_token -projects $ENV:_projects -deliveryTarget $ENV:_deliveryTarget -artifacts $ENV:_artifacts -type $ENV:_type -atypes $ENV:_atypes -goLive ($ENV:_goLive -eq 'true')
         }
 branding:
   icon: terminal

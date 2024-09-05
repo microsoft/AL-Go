@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Check For Updates
+author: Microsoft Corporation
 permissions:
   contents: write
   pull-requests: write
@@ -17,18 +17,13 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   templateUrl:
     description: URL of the template repository (default is the template repository used to create the repository)
     required: false
     default: ''
-  templateBranch:
-    description: Branch in template repository to use for the update (default is the default branch)
-    required: false
-    default: ''
+  downloadLatest:
+    description: Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)
+    required: true
   update:
     description: Set this input to Y in order to update AL-Go System Files if needed
     required: false
@@ -38,9 +33,9 @@ inputs:
     required: false
     default: ${{ github.ref_name }}
   directCommit:
-    description: Direct Commit (Y/N)
+    description: Direct Commit?
     required: false
-    default: 'N'
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -49,20 +44,14 @@ runs:
       env:
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _templateUrl: ${{ inputs.templateUrl }}
-        _templateBranch: ${{ inputs.templateBranch }}
+        _downloadLatest: ${{ inputs.downloadLatest }}
         _update: ${{ inputs.update }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -templateUrl $ENV:_templateUrl -templateBranch $ENV:_templateBranch -update ($ENV:_update -eq 'Y') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'Y')
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CheckForUpdates" -Action {
+          ${{ github.action_path }}/CheckForUpdates.ps1 -actor $ENV:_actor -token $ENV:_token -templateUrl $ENV:_templateUrl -downloadLatest ($ENV:_downloadLatest -eq 'true') -update $ENV:_update -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal

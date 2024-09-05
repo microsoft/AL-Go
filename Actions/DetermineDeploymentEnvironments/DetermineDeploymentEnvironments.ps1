@@ -1,17 +1,30 @@
 ﻿Param(
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (* for all)", Mandatory = $true)]
     [string] $getEnvironments,
-    [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $true)]
-    [ValidateSet('CD','Publish')]
+    [Parameter(HelpMessage = "Type of deployment (CD, Publish or All)", Mandatory = $true)]
+    [ValidateSet('CD','Publish','All')]
     [string] $type
 )
+
+function IsGitHubPagesAvailable() {
+    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
+    try {
+        Write-Host "Requesting GitHub Pages settings from GitHub"
+        $ghPages = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
+        return ($ghPages.build_type -eq 'workflow')
+    }
+    catch {
+        return $false
+    }
+}
 
 function GetGitHubEnvironments() {
     $headers = GetHeader -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
     try {
         Write-Host "Requesting environments from GitHub"
-        $ghEnvironments = @((InvokeWebRequest -Headers $headers -Uri $url -ignoreErrors | ConvertFrom-Json).environments)
+        $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
     }
     catch {
         $ghEnvironments = @()
@@ -29,12 +42,12 @@ function Get-BranchesFromPolicy($ghEnvironment) {
             if ($ghEnvironment.deployment_branch_policy.protected_branches) {
                 Write-Host "GitHub Environment $($ghEnvironment.name) only allows protected branches, getting protected branches from GitHub API"
                 $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches"
-                return (InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name }
+                return ((InvokeWebRequest -Headers $headers -Uri $branchesUrl).Content | ConvertFrom-Json) | Where-Object { $_.protected } | ForEach-Object { $_.name }
             }
             elseif ($ghEnvironment.deployment_branch_policy.custom_branch_policies) {
                 Write-Host "GitHub Environment $($ghEnvironment.name) has custom deployment branch policies, getting branches from GitHub API"
                 $branchesUrl = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments/$([Uri]::EscapeDataString($ghEnvironment.name))/deployment-branch-policies"
-                return (InvokeWebRequest -Headers $headers -Uri $branchesUrl -ignoreErrors | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name }
+                return ((InvokeWebRequest -Headers $headers -Uri $branchesUrl).Content | ConvertFrom-Json).branch_policies | ForEach-Object { $_.name }
             }
         }
         else {
@@ -46,16 +59,38 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+
+$includeGitHubPages = $getEnvironments.Split(',') | Where-Object { 'github-pages' -like $_ }
+$generateALDocArtifact = ($includeGitHubPages) -and (($type -eq 'Publish') -or $settings.alDoc.continuousDeployment)
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
+Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
+
+$deployToGitHubPages = $settings.alDoc.DeployToGitHubPages
+if ($generateALDocArtifact -and $deployToGitHubPages) {
+    $deployToGitHubPages = IsGitHubPagesAvailable
+    if (!$deployToGitHubPages) {
+        Write-Host "::Warning::GitHub Pages is not available in this repository (or GitHub Pages is not set to use GitHub Actions). Go to Settings -> Pages and set Source to GitHub Actions"
+    }
+}
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DeployALDocArtifact=$([int]$deployToGitHubPages)"
+Write-Host "DeployALDocArtifact=$([int]$deployToGitHubPages)"
+
+if ($getEnvironments -eq 'github-pages') {
+    # if github-pages is specified as environment - only include if GitHub Pages is available
+    exit 0
+}
+
 Write-Host "Environment pattern to use: $getEnvironments"
 $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_ -and $_ -like $getEnvironments }
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
 $deploymentEnvironments = @{}
+$unknownEnvironment = 0
 
 if (!($environments)) {
     # If no environments are defined and the user specified a single environment, use that environment
@@ -64,15 +99,22 @@ if (!($environments)) {
         $envName = $getEnvironments.Split(' ')[0]
         $deploymentEnvironments += @{
             "$getEnvironments" = @{
+                "EnvironmentType" = "SaaS"
                 "EnvironmentName" = $envName
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
                 "SyncMode" = $null
-                "ContinuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
+                "Scope" = $null
+                "buildMode" = $null
+                "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
+                "shell" = $settings."shell"
+                "companyId" = ''
+                "ppEnvironmentUrl" = ''
             }
         }
+        $unknownEnvironment = 1
     }
 }
 else {
@@ -93,6 +135,9 @@ else {
         # - projects: all
         # - continuous deployment: only for environments not tagged with PROD or FAT
         # - runs-on: same as settings."runs-on"
+        # - shell: same as settings."shell"
+        # - no companyId
+        # - no ppEnvironmentUrl
         $deploymentSettings = @{
             "EnvironmentType" = "SaaS"
             "EnvironmentName" = $envName
@@ -100,19 +145,39 @@ else {
             "BranchesFromPolicy" = @()
             "Projects" = '*'
             "SyncMode" = $null
-            "ContinuousDeployment" = $null
+            "Scope" = $null
+            "buildMode" = $null
+            "continuousDeployment" = $null
             "runs-on" = @($settings."runs-on".Split(',').Trim())
+            "shell" = $settings."shell"
+            "companyId" = ''
+            "ppEnvironmentUrl" = ''
         }
 
         # Check DeployTo<environmentName> setting
         $settingsName = "DeployTo$envName"
         if ($settings.ContainsKey($settingsName)) {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+            Write-Host "Setting $settingsName"
             $deployTo = $settings."$settingsName"
-            foreach($key in 'EnvironmentType','EnvironmentName','Branches','Projects','SyncMode','ContinuousDeployment','runs-on') {
-                if ($deployTo.ContainsKey($key)) {
+            $keys = @($deployTo.Keys)
+            foreach($key in $keys) {
+                if ($deploymentSettings.ContainsKey($key)) {
+                    if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
+                        Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                    }
+                    Write-Host "Property $key = $($deployTo."$key")"
                     $deploymentSettings."$key" = $deployTo."$key"
                 }
+                else {
+                    $deploymentSettings += @{
+                        "$key" = $deployTo."$key"
+                    }
+                }
+
+            }
+            if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
+                throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
             }
         }
 
@@ -124,13 +189,34 @@ else {
         # - Type is not Continous Deployment
         # - Environment is setup for Continuous Deployment (in settings)
         # - Continuous Deployment is unset in settings and environment name doesn't contain PROD or FAT tags
-        $includeEnvironment = ($type -ne "CD" -or $deploymentSettings.ContinuousDeployment -or ($null -eq $deploymentSettings.ContinuousDeployment -and !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')))
+        switch ($type) {
+            'CD' {
+                if ($null -eq $deploymentSettings.continuousDeployment) {
+                    # Continuous Deployment is unset in settings - only include environments not tagged with PROD or FAT
+                    $includeEnvironment = !($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')
+                }
+                else {
+                    # Continuous Deployment is set in settings, use this value
+                    $includeEnvironment = $deploymentSettings.continuousDeployment
+                }
+            }
+            'Publish' {
+                # Publish can publish to all environments
+                $includeEnvironment = $true
+            }
+            'All' {
+                $includeEnvironment = $true
+            }
+            default {
+                throw "Unknown type: $type"
+            }
+        }
 
         # Check branch policies and settings
         if (-not $includeEnvironment) {
             Write-Host "Environment $environmentName is not setup for continuous deployment"
         }
-        else {
+        elseif ($type -ne 'All') {
             # Check whether any GitHub policy disallows this branch to deploy to this environment
             if ($deploymentSettings.BranchesFromPolicy) {
                 # Check whether GITHUB_REF_NAME is allowed to deploy to this environment
@@ -166,7 +252,7 @@ else {
 $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
 $deploymentEnvironments.Keys | Sort-Object | ForEach-Object {
     $deploymentEnvironment = $deploymentEnvironments."$_"
-    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)" }
+    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)"; "shell" = $deploymentEnvironment."shell" }
 }
 $environmentsMatrixJson = $json | ConvertTo-Json -Depth 99 -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsMatrixJson=$environmentsMatrixJson"
@@ -178,3 +264,6 @@ Write-Host "DeploymentEnvironmentsJson=$deploymentEnvironmentsJson"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
+
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
+Write-Host "UnknownEnvironment=$unknownEnvironment"

@@ -1,5 +1,5 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Run Pipeline
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
@@ -9,10 +9,6 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   artifact:
     description: ArtifactUrl to use for the build
     required: false
@@ -40,20 +36,14 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _token: ${{ inputs.token }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _artifact: ${{ inputs.artifact }}
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
         _installAppsJson: ${{ inputs.installAppsJson }}
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunPipeline" -Action {
+          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson
         }
 branding:
   icon: terminal

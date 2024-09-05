@@ -2,14 +2,13 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
+    [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText)
+    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -49,11 +48,11 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 # Create repo
 CreateAlGoRepository `
     -github:$github `
-    -linux `
+    -linux:$linux `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated" ); "cleanModePreprocessorSymbols" = @( "CLEAN" )} `
+    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated", "CustomBuildMode" ); "cleanModePreprocessorSymbols" = @( "CLEAN" )} `
     -contentScript {
         Param([string] $path)
         CreateNewAppInFolder -folder $path -name "App" | Out-Null
@@ -65,7 +64,7 @@ Start-Process $repoPath
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Test number of artifacts
-Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1} -repoVersion '1.0' -appVersion '1.0'
+Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1;"CustomBuildModeApps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation
 

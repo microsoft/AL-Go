@@ -3,8 +3,6 @@
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "Specifies the parent telemetry scope for the telemetry signal", Mandatory = $false)]
-    [string] $parentTelemetryScopeJson = '7b7d',
     [Parameter(HelpMessage = "Project name if the repository is setup for multiple projects", Mandatory = $false)]
     [string] $project = '.',
     [ValidateSet("PTE", "AppSource App" , "Test App", "Performance Test App")]
@@ -16,32 +14,23 @@
     [string] $publisher,
     [Parameter(HelpMessage = "ID range", Mandatory = $true)]
     [string] $idrange,
-    [Parameter(HelpMessage = "Include Sample Code (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Include Sample Code?", Mandatory = $false)]
     [bool] $sampleCode,
-    [Parameter(HelpMessage = "Include Sample BCPT Suite (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Include Sample BCPT Suite?", Mandatory = $false)]
     [bool] $sampleSuite,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
-    [Parameter(HelpMessage = "Direct Commit (Y/N)", Mandatory = $false)]
+    [Parameter(HelpMessage = "Direct Commit?", Mandatory = $false)]
     [bool] $directCommit
 )
 
-$telemetryScope = $null
 $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-    $branch = ''
-    if (!$directcommit) {
-        # If not direct commit, create a new branch with name, relevant to the current date and base branch, and switch to it
-        $branch = "create-$($type.replace(' ','-').ToLowerInvariant())/$updateBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))" # e.g. create-pte/main/210101120000
-    }
-    $serverUrl = CloneIntoNewFolder -actor $actor -token $token -branch $branch
+    $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix "create-$($type.replace(' ','-').ToLowerInvariant())"
     $baseFolder = (Get-Location).Path
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder
-
-    import-module (Join-Path -path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
-    $telemetryScope = CreateScope -eventId 'DO0072' -parentTelemetryScopeJson $parentTelemetryScopeJson
 
     import-module (Join-Path -path $PSScriptRoot -ChildPath "AppHelper.psm1" -Resolve)
     Write-Host "Template type : $type"
@@ -134,15 +123,9 @@ try {
     UpdateWorkspaces -projectFolder $projectFolder -appName $folderName
 
     Set-Location $baseFolder
-    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch
-
-    TrackTrace -telemetryScope $telemetryScope
-
+    CommitFromNewFolder -serverUrl $serverUrl -commitMessage "New $type ($Name)" -branch $branch | Out-Null
 }
 catch {
-    if (Get-Module BcContainerHelper) {
-        TrackException -telemetryScope $telemetryScope -errorRecord $_
-    }
     throw
 }
 finally {

@@ -1,0 +1,127 @@
+name: Pull PowerPlatform Changes
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  actor:
+    description: The GitHub actor running the action
+    required: false
+    default: ${{ github.actor }}
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  environmentName:
+    description: Name of environment to pull changes from
+    required: true
+  solutionFolder:
+    description: Name of the solution to download and folder in which to download the solution
+    required: false
+    default: ''
+  deploymentEnvironmentsJson:
+    description: The settings for all Deployment Environments
+    required: true
+  updateBranch:
+    description: Set the branch to update
+    required: false
+    default: ${{ github.ref_name }}
+  directCommit:
+    description: Direct Commit?
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Install Power Platform Tools
+      uses: microsoft/powerplatform-actions/actions-install@v1
+
+    - name: Set Actions Repo and Ref
+      shell: ${{ inputs.shell }}
+      env:
+        actionsRepo: ${{ github.action_repository }}
+        actionsRef: ${{ github.action_ref }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetActionsRepoAndRef" -SkipTelemetry -Action {
+          ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
+        }
+
+    - name: Check out AL-Go Actions
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.actionsRepo }}
+        ref: ${{ env.actionsRef }}
+        path: ${{ env.actionsPath }}
+
+    - name: Parse DeployToSettings and AuthContext
+      id: ReadPowerPlatformSettings
+      uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
+      with:
+        shell: ${{ inputs.shell }}
+        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
+        environmentName: ${{ inputs.environmentName }}
+
+    - name: Set up new branch for changes
+      shell: ${{ inputs.shell }}
+      env:
+        _actor: ${{ inputs.actor }}
+        _token: ${{ inputs.token }}
+        _updateBranch: ${{ inputs.updateBranch }}
+        _directCommit: ${{ inputs.directCommit }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GitCloneReponsitory" -Action {
+          ${{ github.action_path }}/GitCloneReponsitory.ps1 -actor $ENV:_actor -token $ENV:_token -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+        }
+
+    - name: Export Solution (username)
+      if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
+      uses: microsoft/powerplatform-actions/export-solution@v1
+      with:
+        user-name: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
+        password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
+        solution-name: ${{ inputs.solutionFolder }}
+        solution-output-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
+
+    - name: Export Solution (application ID)
+      if: steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
+      uses: microsoft/powerplatform-actions/export-solution@v1
+      with:
+        tenant-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
+        app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
+        client-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppClientSecret }}
+        environment-url: ${{ steps.ReadPowerPlatformSettings.outputs.ppEnvironmentUrl }}
+        solution-name: ${{ inputs.solutionFolder }}
+        solution-output-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
+
+    - name: Unpack Solution
+      uses: microsoft/powerplatform-actions/unpack-solution@v1
+      with:
+        solution-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
+        solution-folder: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}
+        solution-type: "Unmanaged"
+        overwrite-files: false
+        process-canvas-apps: true
+
+    - name: Remove zip file
+      shell: ${{ inputs.shell }}
+      env:
+        _solutionFolder: ${{ inputs.solutionFolder }}
+      run: Remove-Item '${{ env.clonedRepoPath }}/${{ env._solutionFolder }}.zip' -Force
+
+    - name: Commit to git repository
+      shell: ${{ inputs.shell }}
+      env:
+        _actor: ${{ inputs.actor }}
+        _token: ${{ inputs.token }}
+        _solutionFolder: ${{ inputs.solutionFolder }}
+        _environmentName: ${{ inputs.environmentName }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GitCommitChanges" -Action {
+          ${{ github.action_path }}/GitCommitChanges.ps1 -Actor $ENV:_actor -Token $ENV:_token -PowerPlatformSolutionName $ENV:_solutionFolder -EnvironmentName $ENV:_environmentName -Location $ENV:clonedRepoPath -ServerUrl $ENV:serverUrl -GitHubBranch $ENV:gitHubBranch
+        }
+
+branding:
+  icon: terminal
+  color: blue

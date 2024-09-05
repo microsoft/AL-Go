@@ -1,0 +1,29 @@
+name: Build Reference Documentation
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  artifacts:
+    description: The artifacts to build documentation for or a folder in which the artifacts have been downloaded
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _token: ${{ inputs.token }}
+        _artifacts: ${{ inputs.artifacts }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "BuildReferenceDocumentation" -Action {
+          ${{ github.action_path }}/BuildReferenceDocumentation.ps1 -token $ENV:_token -artifacts $ENV:_artifacts
+        }
+branding:
+  icon: terminal
+  color: blue

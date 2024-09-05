@@ -1,4 +1,4 @@
-name: PowerShell script
+name: Calculate Artifact Names
 author: Microsoft Corporation
 inputs:
   shell:
@@ -11,9 +11,6 @@ inputs:
   buildMode:
     description: Build mode used when building the artifacts
     required: true
-  branchName:
-    description: Name of the branch the workflow is running on
-    required: true
   suffix:
     description: Suffix to add to the artifacts names
     required: false
@@ -22,12 +19,18 @@ outputs:
   ThisBuildAppsArtifactsName:
     description: Artifact name for apps being built in the current workflow run
     value: ${{ steps.calculateartifactnames.outputs.ThisBuildAppsArtifactsName }}
+  ThisBuildDependenciesArtifactsName:
+    description: Artifact name for dependencies of apps being built in the current workflow run
+    value: ${{ steps.calculateartifactnames.outputs.ThisBuildDependenciesArtifactsName }}
   ThisBuildTestAppsArtifactsName:
     description: Artifact name for test apps being built in the current workflow run
     value: ${{ steps.calculateartifactnames.outputs.ThisBuildTestAppsArtifactsName }}
   AppsArtifactsName:
     description: Artifacts name for Apps
     value: ${{ steps.calculateartifactnames.outputs.AppsArtifactsName }}
+  PowerPlatformSolutionArtifactsName:
+    description: Artifacts name for PowerPlatform Solution
+    value: ${{ steps.calculateartifactnames.outputs.PowerPlatformSolutionArtifactsName }}
   DependenciesArtifactsName:
     description: Artifacts name for Dependencies
     value: ${{ steps.calculateartifactnames.outputs.DependenciesArtifactsName }}
@@ -58,16 +61,10 @@ runs:
       env:
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
-        _branchName: ${{ inputs.branchName }}
         _suffix: ${{ inputs.suffix }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/CalculateArtifactNames.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -branchName $ENV:_branchName -suffix $ENV:_suffix
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CalculateArtifactNames" -Action {
+          ${{ github.action_path }}/CalculateArtifactNames.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -suffix $ENV:_suffix
         }
 branding:
   icon: terminal

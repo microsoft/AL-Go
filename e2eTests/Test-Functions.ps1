@@ -14,7 +14,12 @@
         $runs = gh run list --limit 1000 --repo $repository --json $returnFields | ConvertFrom-Json | Where-Object { $_.workflowName -ne "workflow_run" }
     }
     $runs | Out-Host
-    $runs.Count
+    if ($runs) {
+        return $runs.Count
+    }
+    else {
+        return 0
+    }
 }
 
 function TestNumberOfRuns {
@@ -75,20 +80,20 @@ function Test-ArtifactsFromRun {
     foreach($type in $expectedArtifacts.Keys) {
         $expected = $expectedArtifacts."$type"
         Write-Host "Type: $type, Expected: $expected"
+        # Reason for the ? instead of \ is that the folder separator is \ on Windows and / on Linux
         if ($type -eq 'thisbuild') {
             $fileNamePattern = "thisbuild-*-Apps?*$appVersion.*.*.app"
-            Write-Host "FileNamePattern: $fileNamePattern"
-            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
-                $_.FullName.Substring($path.Length+1) -like $fileNamePattern
-            }).Count
+        }
+        elseif ($type -eq 'github-pages') {
+            $fileNamePattern = "github-pages?artifact.tar"
         }
         else {
             $fileNamePattern = "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
-            Write-Host "FileNamePattern: $fileNamePattern"
-            $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
-                $_.FullName.SubString($path.Length+1) -like $fileNamePattern
-            }).Count
         }
+        Write-Host "FileNamePattern: $fileNamePattern"
+        $actual = @(Get-ChildItem -Path $path -File -Recurse | Where-Object {
+            $_.FullName.Substring($path.Length+1) -like $fileNamePattern
+        }).Count
         if ($actual -ne $expected) {
             Write-Host "::Error::Expected number of $type was $expected. Actual number of $type is $actual"
             $err = $true

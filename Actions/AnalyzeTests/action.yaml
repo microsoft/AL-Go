@@ -1,38 +1,24 @@
-name: PowerShell script
-author: Freddy Kristiansen
+name: Analyze Tests
+author: Microsoft Corporation
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   project:
     description: Project to analyze
-    required: true
-outputs:
-  TestResultMD:
-    description: MarkDown of test result
-    value: ${{ steps.AnalyzeTests.outputs.TestResultMD }}
+    required: false
+    default: '.'
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      id: AnalyzeTests
       env:
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _project: ${{ inputs.project }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/AnalyzeTests.ps1 -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson -project $ENV:_project
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "AnalyzeTests" -Action {
+          ${{ github.action_path }}/AnalyzeTests.ps1 -project $ENV:_project
         }
 branding:
   icon: terminal

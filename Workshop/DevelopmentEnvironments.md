@@ -1,7 +1,7 @@
-# Development Environments
+# FUTURE TOPIC: Development Environments
 
 This topic will be finalized later
 
+______________________________________________________________________
 
----
-[Index](Index.md)&nbsp;&nbsp;[next](TheDevelopmentProcess.md)
+[Index](Index.md)  [next](TheDevelopmentProcess.md)

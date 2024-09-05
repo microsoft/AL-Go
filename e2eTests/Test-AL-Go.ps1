@@ -6,8 +6,6 @@ Param(
     [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
     [string] $template = $global:pteTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $licenseFileUrl = ($global:SecureLicenseFileUrl | Get-PlainText),
-    [string] $insiderSasToken = ($global:SecureInsiderSasToken | Get-PlainText),
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private,
@@ -27,7 +25,6 @@ Write-Host -ForegroundColor Yellow @'
 #
 # - Login to GitHub
 # - Create a new repository based on the selected template
-# - If (AppSource App) Create a licensefileurl secret
 # - Run the "Add an existing app" workflow and add an app as a Pull Request
 # -  Test that a Pull Request was created and merge the Pull Request
 # - Run the "CI/CD" workflow
@@ -71,13 +68,13 @@ $repository = "$githubOwner/$repoName"
 $branch = "main"
 
 if ($appSourceApp) {
-    $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/apps.zip"
-    $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-appsource-preview/2.0.47.0/testapps.zip"
+    $sampleApp1 = "https://github.com/BusinessCentralApps/helloworld.appsource/releases/download/2.0.0/helloworld.appsource-main-Apps-2.0.6.0.zip"
+    $sampleTestApp1 = "https://github.com/BusinessCentralApps/helloworld.appsource/releases/download/2.0.0/helloworld.appsource-main-TestApps-2.0.6.0.zip"
     $idRange = @{ "from" = 75055000; "to" = 75056000 }
 }
 else {
-    $sampleApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/apps.zip"
-    $sampleTestApp1 = "https://businesscentralapps.blob.core.windows.net/githubhelloworld-preview/2.0.82.0/testapps.zip"
+    $sampleApp1 = "https://github.com/BusinessCentralApps/helloworld.pte/releases/download/2.0.0/helloworld.pte-main-Apps-2.0.5.0.zip"
+    $sampleTestApp1 = "https://github.com/BusinessCentralApps/helloworld.pte/releases/download/2.0.0/helloworld.pte-main-TestApps-2.0.5.0.zip"
     $idRange = @{ "from" = 55000; "to" = 56000 }
 }
 if ($multiProject) {
@@ -85,7 +82,8 @@ if ($multiProject) {
     $project1Folder = 'P1\'
     $project2Param = @{ "project" = "P2" }
     $project2Folder = 'P2\'
-    $allProjectsParam = @{ "project" = "*" }
+    $p2ProjectsParam = @{ "projects" = "P2" }
+    $allProjectsParam = @{ "projects" = "*" }
     $projectSettingsFiles = @("P1\.AL-Go\settings.json", "P2\.AL-Go\settings.json")
 }
 else {
@@ -93,6 +91,7 @@ else {
     $project1Folder = ""
     $project2Param = @{}
     $project2Folder = ""
+    $p2ProjectsParam = @{}
     $allProjectsParam = @{}
     $projectSettingsFiles = @(".AL-Go\settings.json")
 }
@@ -115,9 +114,6 @@ Start-Sleep -Seconds 60
 $runs = GetNumberOfRuns -repository $repository
 
 # Add Existing App
-if ($appSourceApp) {
-    SetRepositorySecret -repository $repository -name 'LICENSEFILEURL' -value $licenseFileUrl
-}
 RunAddExistingAppOrTestApp @project1Param -url $sampleApp1 -wait -directCommit -branch $branch | Out-Null
 $runs++
 if ($appSourceApp) {
@@ -126,16 +122,18 @@ if ($appSourceApp) {
     $runs++
 }
 
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+
 # Add Existing Test App
-RunAddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch | Out-Null
+RunAddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch -useGhTokenWorkflow | Out-Null
 $runs++
 
-# Merge and run CI/CD + Tests
-MergePRandPull -branch $branch | Out-Null
+# PR Build
+CancelAllWorkflows -repository $repository -branch $branch
 $runs++
 
-# Wait for CI/CD to finish
-$run = RunCICD -wait -branch $branch
+# Merge and run CI/CD
+$run = MergePRandPull -branch $branch -wait
 $runs++
 
 if ($useCompilerFolder) {
@@ -150,7 +148,7 @@ TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Create Release
-RunCreateRelease -appVersion "1.0.$($runs-2).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
+RunCreateRelease -appVersion "1.0.$($runs-3).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
 $runs++
 
 # Create New App
@@ -167,11 +165,11 @@ if ($appSourceApp) {
         "brief" = "Hello World for AppSource"
         "description" = "Hello World sample app for AppSource"
         "logo" = "helloworld256x240.png"
-        "url" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "EULA" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "privacyStatement" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "help" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
-        "contextSensitiveHelpUrl" = "https://dev.azure.com/businesscentralapps/HelloWorld.AppSource"
+        "url" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "EULA" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "privacyStatement" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "help" = "https://github.com/BusinessCentralApps/helloworld.appsource"
+        "contextSensitiveHelpUrl" = "https://github.com/BusinessCentralApps/helloworld.appsource"
         "features" = @( "TranslationFile" )
     }
     $runs++
@@ -194,15 +192,21 @@ if ($adminCenterApiToken -and -not $multiProject) {
 }
 
 # Increment version number on one project
-RunIncrementVersionNumber @project2Param -versionNumber 2.0 -wait -branch $branch | Out-Null
+RunIncrementVersionNumber @p2ProjectsParam -versionNumber 2.1 -wait -branch $branch -useGhTokenWorkflow | Out-Null
 $runs++
+
+# Wait for PR build to succeed
+WaitAllWorkflows -repository $repository -top 1
+$runs++
+
+# Merge and run CI/CD + Tests
 $run = MergePRandPull -branch $branch -wait
 $runs++
 if ($multiProject) {
-    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.1' -appVersion ''
 }
 else {
-    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.0' -appVersion ''
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.1' -appVersion ''
 }
 TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 
@@ -217,7 +221,7 @@ Remove-Item -Path ".github\workflows\AddExistingAppOrTestApp.yaml" -Force
 CommitAndPush -commitMessage "Version strategy change"
 $runs++
 
-# Increment version number on all project (and on all apps)
+# Increment version number on all projects (and on all apps)
 RunIncrementVersionNumber @allProjectsParam -versionNumber 3.0 -directCommit -wait -branch $branch | Out-Null
 $runs++
 Pull -branch $branch
@@ -229,11 +233,15 @@ Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2}
 
 # Update AL-Go System Files
 $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | ConvertFrom-Json
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -repository $repository -branch $branch | Out-Null
 $runs++
-MergePRandPull -branch $branch | Out-Null
-$runs += 2
+
+# PR Build
+$runs++
+
+# Merge and run CI/CD + Tests
+MergePRandPull -branch $branch -wait | Out-Null
+$runs++
 if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scripts in the .AL-Go folder was not updated by Update AL-Go System Files" }
 if (!(Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml")) { throw "AddExistingAppOrTestApp.yaml was not updated by Update AL-Go System Files" }
 
@@ -243,8 +251,8 @@ $runs++
 
 # Launch Current, NextMinor and NextMajor builds
 $runTestCurrent = RunTestCurrent -branch $branch
-$runTestNextMinor = RunTestNextMinor -branch $branch -insiderSasToken $insiderSasToken
-$runTestNextMajor = RunTestNextMajor -branch $branch -insiderSasToken $insiderSasToken
+$runTestNextMinor = RunTestNextMinor -branch $branch
+$runTestNextMajor = RunTestNextMajor -branch $branch
 
 # TODO: Test workspace
 
