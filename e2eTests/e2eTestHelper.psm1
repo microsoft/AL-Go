@@ -241,13 +241,15 @@ function WaitAllWorkflows {
     Param(
         [string] $repository,
         [switch] $noDelay,
-        [switch] $noError
+        [switch] $noError,
+        [int] $top = 999
     )
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
     $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
-    foreach($run in $runs.workflow_runs) {
+    $workflowRuns = $runs.workflow_runs | Select-Object -First $top
+    foreach($run in $workflowRuns) {
         WaitWorkflow -repository $repository -runid $run.id -noDelay -noError:$noError
     }
 }
@@ -268,7 +270,7 @@ function WaitWorkflow {
     $status = ""
     do {
         if ($delay) {
-            Start-Sleep -Seconds 120
+            Start-Sleep -Seconds 60
         }
         WaitForRateLimit -headers $headers
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
@@ -283,7 +285,7 @@ function WaitWorkflow {
     } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
     Write-Host
     Write-Host $run.conclusion
-    if ($run.conclusion -ne "Success") {
+    if ($run.conclusion -ne "Success" -and $run.conclusion -ne "cancelled") {
         if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
     }
 }
@@ -461,15 +463,15 @@ function CreateAlGoRepository {
     if ($runson -ne "windows-latest" -or $shell -ne "powershell") {
         $repoSettings | Add-Member -MemberType NoteProperty -Name "runs-on" -Value $runson
         $repoSettings | Add-Member -MemberType NoteProperty -Name "shell" -Value $shell
-        Get-ChildItem -Path '.\.github\workflows\*.yaml' | Where-Object { $_.BaseName -ne "UpdateGitHubGoSystemFiles" -and $_.BaseName -ne "PullRequestHandler" } | ForEach-Object {
+        Get-ChildItem -Path '.\.github\workflows\*.yaml' | ForEach-Object {
             Write-Host $_.FullName
             $content = Get-ContentLF -Path $_.FullName
             $srcPattern = "runs-on: [ windows-latest ]`n"
             $replacePattern = "runs-on: [ $runson ]`n"
-            $content = $content.Replace($srcPattern, $replacePattern)
+            $content = "$content`n".Replace($srcPattern, $replacePattern).TrimEnd("`n")
             $srcPattern = "shell: powershell`n"
             $replacePattern = "shell: $shell`n"
-            $content = $content.Replace($srcPattern, $replacePattern)
+            $content = "$content`n".Replace($srcPattern, $replacePattern).TrimEnd("`n")
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }

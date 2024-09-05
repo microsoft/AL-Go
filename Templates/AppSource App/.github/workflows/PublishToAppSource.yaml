@@ -18,8 +18,8 @@ on:
         default: false
 
 permissions:
-  contents: read
   actions: read
+  contents: read
   id-token: write
 
 defaults:
@@ -43,14 +43,13 @@ jobs:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Initialize the workflow
         id: init
         uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
         with:
           shell: powershell
-          eventId: "DO0103"
 
   Deliver:
     needs: [ Initialization ]
@@ -58,7 +57,7 @@ jobs:
     name: Deliver to AppSource
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -79,7 +78,6 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
-          parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
           type: 'Release'
           projects: ${{ github.event.inputs.projects }}
           deliveryTarget: 'AppSource'
@@ -92,12 +90,14 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
-          eventId: "DO0103"
           telemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+          currentJobContext: ${{ toJson(job) }}

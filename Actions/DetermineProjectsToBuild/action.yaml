@@ -6,10 +6,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
   maxBuildDepth:
     description: Specifies the maximum build depth suppored by the workflow running the action
     required: false
@@ -37,16 +33,10 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineProjectsToBuild
       env:
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -maxBuildDepth $env:_maxBuildDepth -parentTelemetryScopeJson $env:_parentTelemetryScopeJson -token ${{ github.token }}
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -maxBuildDepth $env:_maxBuildDepth -token ${{ github.token }}
         }
 branding:
   icon: terminal

@@ -148,13 +148,8 @@ function YamlTest {
     else {
         $yaml.AppendLine("      run: |") | Out-Null
     }
-    $yaml.AppendLine('        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0') | Out-Null
-    $yaml.AppendLine("        try {") | Out-Null
+    $yaml.AppendLine("        `${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName `"$actionName`" -Action {") | Out-Null
     $yaml.AppendLine("          `${{ github.action_path }}/$actionName.ps1$parameterString") | Out-Null
-    $yaml.AppendLine("        }") | Out-Null
-    $yaml.AppendLine("        catch {") | Out-Null
-    $yaml.AppendLine('          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'''').Replace("`n",'' '')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'''').Replace("`n",'' <- ''))";') | Out-Null
-    $yaml.AppendLine("          exit 1") | Out-Null
     $yaml.AppendLine("        }") | Out-Null
     $yaml.AppendLine("branding:") | Out-Null
     $yaml.AppendLine("  icon: terminal") | Out-Null

@@ -9,10 +9,6 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  parentTelemetryScopeJson:
-    description: Specifies the parent telemetry scope for the telemetry signal
-    required: false
-    default: '7b7d'
 runs:
   using: composite
   steps:
@@ -20,15 +16,9 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _project: ${{ inputs.project }}
-        _parentTelemetryScopeJson: ${{ inputs.parentTelemetryScopeJson }}
       run: |
-        $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-        try {
-          ${{ github.action_path }}/PipelineCleanup.ps1 -project $ENV:_project -parentTelemetryScopeJson $ENV:_parentTelemetryScopeJson
-        }
-        catch {
-          Write-Host "::ERROR::Unexpected error when running action. Error Message: $($_.Exception.Message.Replace("`r",'').Replace("`n",' ')), StackTrace: $($_.ScriptStackTrace.Replace("`r",'').Replace("`n",' <- '))";
-          exit 1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PipelineCleanup" -Action {
+          ${{ github.action_path }}/PipelineCleanup.ps1 -project $ENV:_project
         }
 branding:
   icon: terminal
