@@ -29,6 +29,10 @@ Create an AL-Go for GitHub repository based on [https://aka.ms/algopte](https://
 
 Note that customized repositories might break by future changes to AL-Go for GitHub. If you are customizing AL-Go for GitHub, you should always doublecheck the pull request when updating AL-Go system files in your indirect template repositories.
 
+### Allow GitHubRunner and GitHubRunnerShell as project settings
+
+Previously, AL-Go required the GitHubRunner and GitHubRunnerShell settings to be set on repository level. This has now been changed such that they can be set on project level.
+
 ## v5.3
 
 ### Issues
