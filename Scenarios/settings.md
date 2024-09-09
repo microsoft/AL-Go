@@ -187,7 +187,7 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 
 # Expert level
 
-The settings and functionality in the expert section might requires knowledge about GitHub Workflows/Actions, yaml, docker and PowerShell. Please only change these settings and use this functionality after careful consideration as these things might change in the future and will require you to modify the functionality you added based on this.
+The settings and functionality in the expert section might require knowledge about GitHub Workflows/Actions, YAML, docker and PowerShell. Please only change these settings and use this functionality after careful consideration as these things might change in the future and will require you to modify the functionality you added based on this.
 
 Please read the release notes carefully when installing new versions of AL-Go for GitHub.
 
