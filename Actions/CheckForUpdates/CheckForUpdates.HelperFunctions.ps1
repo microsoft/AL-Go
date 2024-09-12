@@ -65,8 +65,6 @@ function GetLatestTemplateSha {
     }
 
     return $branchInfo.commit.sha
-    #Write-Host "Latest SHA for $($templateUrl): $($templateSha.Value)"
-    #return $templateSha.Value
 }
 
 function ModifyCICDWorkflow {
