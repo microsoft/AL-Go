@@ -152,7 +152,7 @@ jobs:
         id: sign
         uses: microsoft/AL-Go-Actions/Sign@main
         with:
-          shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+          shell: ${{ inputs.shell }}
           azureCredentialsJson: '${{ fromJson(steps.ReadSecrets.outputs.Secrets).AZURE_CREDENTIALS }}'
           pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
 

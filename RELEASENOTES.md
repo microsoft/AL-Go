@@ -15,6 +15,10 @@
 
 TODO: Write documentation
 
+### Allow GitHubRunner and GitHubRunnerShell as project settings
+
+Previously, AL-Go required the GitHubRunner and GitHubRunnerShell settings to be set on repository level. This has now been changed such that they can be set on project level.
+
 ## v5.3
 
 ### Issues

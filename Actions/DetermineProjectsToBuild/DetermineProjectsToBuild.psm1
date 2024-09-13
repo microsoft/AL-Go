@@ -156,6 +156,8 @@ function CreateBuildDimensions {
 
     foreach($project in $projects) {
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        $gitHubRunner = $projectSettings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
+        $githubRunnerShell = $projectSettings.githubRunnerShell
         $buildModes = @($projectSettings.buildModes)
 
         if(!$buildModes) {
@@ -168,6 +170,8 @@ function CreateBuildDimensions {
                 project = $project
                 projectName = $projectSettings.projectName
                 buildMode = $buildMode
+                gitHubRunner = $gitHubRunner
+                githubRunnerShell = $githubRunnerShell
             }
         }
     }
