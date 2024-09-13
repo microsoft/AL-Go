@@ -124,7 +124,7 @@ try {
             else {
                 $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value ''
             }
-            if ($trustedNuGetFeed.AuthTokenSecret) {
+            if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'AuthTokenSecret' -and $trustedNuGetFeed.AuthTokenSecret) {
                 $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret
                 if ($secrets.Keys -notcontains $authTokenSecret) {
                     OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
