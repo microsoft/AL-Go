@@ -465,6 +465,10 @@ function MergeCustomObjectIntoOrderedDictionary {
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
+            elseif ($dstProp -is [String] -and $srcProp -is [Object[]]) {
+                # For properties like "runs-on", which is a string, you can specify an array in settings, which gets joined with a comma
+                $dst."$prop" = $srcProp -join ', '
+            }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
                 # This is not seen as an error and will not throw an error
