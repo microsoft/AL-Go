@@ -12,17 +12,11 @@ If true, the latest SHA of the template repository will be downloaded
 #>
 function DownloadTemplateRepository {
     Param(
-        [string] $token,
+        [hashtable] $headers,
         [string] $templateUrl,
         [ref] $templateSha,
         [bool] $downloadLatest
     )
-
-    # Use Authenticated API request to avoid the 60 API calls per hour limit
-    $headers = @{
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-        "Authorization" = "Bearer $token"
-    }
 
     # Construct API URL
     $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
