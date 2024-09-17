@@ -331,7 +331,6 @@ try {
                     else {
                         Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
-
                 }
             }
         }
