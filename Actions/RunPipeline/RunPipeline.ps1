@@ -135,6 +135,15 @@ try {
             }
         }
     }
+    else {
+        $bcContainerHelperConfig.TrustedNuGetFeeds = @()
+    }
+    if ($settings.trustMicrosoftNuGetFeeds) {
+        $bcContainerHelperConfig.TrustedNuGetFeeds += @([PSCustomObject]@{
+            "url" = "https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/AppSourceSymbols/nuget/v3/index.json"
+            "token" = ''
+        })
+    }
 
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"

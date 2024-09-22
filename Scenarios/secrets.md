@@ -181,6 +181,12 @@ Example: `{"storageAccountName":"MyStorageName","storageAccountKey":"JHFZErCyfQ8
 
 ## <a id="GitHubPackagesContext"></a>**GitHubPackagesContext** -> Deliver to GitHub Packages
 
-If you create a secret called GitHubPackagesContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will also use this NuGet feed for dependency resolution when building apps, giving you automatic dependency resolution within all your apps.
+If you create a secret called GitHubPackagesContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will also use this NuGet feed for dependency resolution when building apps, giving you automatic dependency resolution within all your repositories sharing this secret.
 
 Example: `{"token":"ghp_NDdI2ExxxxxxxxxxxxxxxxxAYQh","serverUrl":"https://nuget.pkg.github.com/mygithuborg/index.json"}`
+
+## <a id="NuGetContext"></a>**NuGetContext** -> Deliver to NuGet
+
+If you create a secret called NuGetContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will NOT use this NuGet feed for dependency resolution when building apps. If you want to use this feed for dependency resolution as well, you need to add this to the [trustedNuGetFeeds](https://aka.ms/algosettings#trustedNuGetFeeds) setting.
+
+Example: `{"token":"ydtaxlw66xxxxxxxxxxxxxxgqdq","serverUrl":"https://pkgs.dev.azure.com/myorg/apps/_packaging/myrepo/nuget/v3/index.json"}`
