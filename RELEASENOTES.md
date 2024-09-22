@@ -4,16 +4,17 @@
 
 ### New Settings
 
-- `DeliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
-- `TrustedNuGetFeeds` - TODO: write docs
-  - Url - NuGet Server Url
-  - Patterns - only download packages, which matches any of the name patterns in this list
-  - FingerPrints - only download packages signed with fingerprints in this list
-  - AuthTokenSecret
+- `deliverTo<deliverytarget>` now has an additional property called `ContinuousDelivery`, indicating whether or not to run continuous delivery to this deliveryTarget. Default is true.
+- `trustMicrosoftNuGetFeeds` Unless this setting is set to false, AL-Go for GitHub will trust the NuGet feeds provided by Microsoft. The feeds provided by Microsoft contains all Microsoft apps, all Microsoft symbols and symbols for all AppSource apps.
+- `trustedNuGetFeeds` - can be an array of NuGet feed specifications, which AL-Go for GitHub will use for dependency resolution. Every feed specification must include a url property and can optionally include a few other properties:
+  - Url - The URL of the feed (examples: https://pkgs.dev.azure.com/myorg/apps/\_packaging/myrepo/nuget/v3/index.json or https://nuget.pkg.github.com/mygithuborg/index.json")
+  - Patterns - AL-Go for Github will only trust packages, where the ID matches this pattern. Default is all packages (\*).
+  - FingerPrints - If specified, AL-Go for GitHub will only trust packages signed with one of the fingerprints specified in this array of fingerprints.
+  - AuthTokenSecret - If the NuGet feed specified by URL is private, the authTokenSecret must be the name of a secret containing the authentication token with permissions to search and read packages from the NuGet feed
 
-### Support for delivering to NuGet and GitHub Packages
+### Support for delivering to GitHub Packages and NuGet
 
-TODO: Write documentation
+With this release the implementation for delivering to NuGet packages (by adding the NuGetContext secret), is similar to the functionality behind delivering to GitHub packages and the implementation is final.
 
 ### Allow GitHubRunner and GitHubRunnerShell as project settings
 
