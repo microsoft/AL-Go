@@ -113,6 +113,11 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
+    if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
+        Write-Host "Repository is empty, exiting"
+        exit
+    }
+
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
         Write-Host "Reading TrustedNuGetFeeds"
         foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
@@ -143,11 +148,6 @@ try {
             "url" = "https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/AppSourceSymbols/nuget/v3/index.json"
             "token" = ''
         })
-    }
-
-    if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
-        Write-Host "Repository is empty, exiting"
-        exit
     }
 
     $installApps = $settings.installApps

@@ -230,6 +230,8 @@ foreach ($thisProject in $projectList) {
         try {
             $nuGetAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context")) | ConvertFrom-Json | ConvertTo-HashTable
             if ($deliveryTarget -eq 'NuGet' -and $type -eq 'CD') {
+                # When doing continuous delivery to NuGet, we always use the preview tag
+                # When doing a release, we do not add a preview tag
                 $preReleaseTag = 'preview'
             }
             $nuGetServerUrl = $nuGetAccount.ServerUrl

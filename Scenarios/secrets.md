@@ -77,13 +77,13 @@ Whether you use a managed identity or an app registration for authentication, yo
 
 Using a federated credential, you need to register your GitHub repository in your managed identity under settings -> federated credentials or in the app registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing the clientId and the tenantId. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
 
-Example: `{"keyVaultName":"MyKeyVault","clientId":"ed79570c-0384-4826-8099-bf0577af6667","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045"}`
+Example: `{"keyVaultName":"MyKeyVault","clientId":"<clientId>","tenantId":"<tenantId>"}`
 
 #### ClientSecret
 
 ClientSecret can only be used using an app registration. Under Certificates & Secrets in the app registration, you need to create a Client Secret, which you can specify in the Azure_Credentials secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
 
-Example: `{"keyVaultName":"MyKeyVault","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045"}`
+Example: `{"keyVaultName":"MyKeyVault","clientId":"<clientId>","clientSecret":"<clientSecret>","tenantId":"<tenantId>"}`
 
 With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your Key Vault in order for AL-Go for GitHub to sign your apps.
 
@@ -101,7 +101,7 @@ Specifying a RefreshToken allows AL-Go for GitHub to get access to impersonate t
 
 Providing an AuthContext secret with a refreshtoken typically allows you to get access for 90 days. After the 90 days, you need to refresh the AuthContext secret with a new refreshToken. Note that anybody with the refreshToken can get access to call the API on behalf of the user, it doesn't have to be inside a workflow/pipeline.
 
-Example: `{"tenantId":"d630ce39-5a0c-41ec-bf0d-6758ad558f0c","scopes":"https://api.businesscentral.dynamics.com/","RefreshToken":"0.AUUAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_s6Eo4YOI","clientId":"1950a258-227b-4e31-a9cf-717495945fc2"}`
+Example: `{"tenantId":"<tenantId>","scopes":"https://api.businesscentral.dynamics.com/","RefreshToken":"<refreshToken>","clientId":"<clientId>"}`
 
 ### App Registration (Service to service authentication)
 
@@ -117,7 +117,7 @@ Example:`{"tenantId":"d630ce39-5a0c-41ec-bf0d-6758ad558f0c","scopes":"https://ap
 
 Under Certificates & Secrets in the app registration, you can create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
 
-Example: `{"tenantId":"d630ce39-5a0c-41ec-bf0d-6758ad558f0c","scopes":"https://api.businesscentral.dynamics.com/","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge"}`
+Example: `{"tenantId":"<tenantId>","scopes":"https://api.businesscentral.dynamics.com/","clientId":"<clientId>","clientSecret":"<clientSecret>"}`
 
 ## <a id="AppSourceContext"></a>**AppSourceContext** -> Deliver to AppSource
 
@@ -135,13 +135,13 @@ In order to use an app registration for publishing apps to AppSource, you need t
 
 Using a federated credential, you need to register your GitHub repository in the app registration under Certificates & Secrets. This registration will allow AL-Go for GitHub running in this repository to authenticate without the Client Secret stored. You still need to create a secret containing this information. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
 
-Example:`{"clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","scopes":"https://api.partner.microsoft.com/.default"}`
+Example:`{"clientId":"<clientId>","tenantId":"<tenantId>","scopes":"https://api.partner.microsoft.com/.default"}`
 
 #### Client Secret
 
 Under Certificates & Secrets in the app registration, you can create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. Note that who ever has access to the clientId and clientSecret can publish apps on AppSource on your behalf.
 
-Example: `{"tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","scopes":"https://api.partner.microsoft.com/.default","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge"}`
+Example: `{"tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","scopes":"https://api.partner.microsoft.com/.default","clientId":"<clientId>","clientSecret":"<clientSecret>"}`
 
 ## <a id="StorageContext"></a>**StorageContext** -> Deliver to storage
 
@@ -153,40 +153,40 @@ In AL-Go for GitHub, the Storage Context can be specified in 5 different ways, 5
 
 As a storage account is an Azure resource, we can use managed identities. Managed identities are like virtual users in Azure, using federated credentials for authentication. Using a federated credential, you need to register your GitHub repository in the managed identity under Settings -> Federated Credentials. The way this works is that AL-Go for GitHub will request an ID_TOKEN from GitHub as a proof of authenticity and use this when authenticating. This way, only workflows running in the specified branch/environment in GitHub will be able to authenticate.
 
-Example: `{"storageAccountName":"MyStorageName","clientId":"08b6d80c-68cf-48f9-a5ff-b054326e2ec3","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
+Example: `{"storageAccountName":"MyStorageName","clientId":"<clientId>","tenantId":"<tenantId>","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
 
 ### App Registration/Federated credential
 
 An app registration with federated credential is harder to setup than a managed identity, but just as secure. The mechanism is the same for obtaining an ID_TOKEN and providing this as proof of authenticity towards the app registration.
 
-Example: `{"storageAccountName":"MyStorageName","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
+Example: `{"storageAccountName":"MyStorageName","clientId":"<clientId>","tenantId":"<tenantId>","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
 
 ### App Registration/Client Secret
 
 An app registration with a client Secret is less secure than using federated credentials. Who ever has access to the clientSecret has access to everything the app registration has access to, until you recycle the client Secret.
 
-Example: `{"storageAccountName":"MyStorageName","clientId":"d48b773f-2c26-4394-8bd2-c5b64e0cae32","clientSecret":"OPXxxxxxxxxxxxxxxxxxxxxxxabge","tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
+Example: `{"storageAccountName":"MyStorageName","clientId":"<clientId>","clientSecret":"<clientSecret>","tenantId":"<tenantId>","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
 
 ### storageAccountName/sastoken
 
 A sas token for a storage account can be setup to function in a limited timeframe, giving access to perform a certain number of tasks on the storage account. Who ever has access to the sastoken can perform these tasks on the storage account until it expires or you recycle the storage account key used to create the sastoken.
 
-Example: `{"storageAccountName":"MyStorageName","sastoken":"sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytf&se=2024-08-06T20:22:08Z&st=2024-04-06T12:22:08Z&spr=https&sig=IZyIf5xxxxxxxxxxxxxxxxxxxxxtq7tj6b5I%3D","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
+Example: `{"storageAccountName":"MyStorageName","sastoken":"sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytf&se=2024-08-06T20:22:08Z&st=2024-04-06T12:22:08Z&spr=https&sig=<signature>","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"}`
 
 ### storageAccountName/storageAccountKey
 
 Using storageAccount Name and Key is by far the most unsecure way of authenticating to an Azure Storage Account. If ever compromised, people can do anything with these credentials, until the storageAccount key is cycled.
 
-Example: `{"storageAccountName":"MyStorageName","storageAccountKey":"JHFZErCyfQ8xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxStj7AHXQ==","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"} `
+Example: `{"storageAccountName":"MyStorageName","storageAccountKey":"<storageAccountKey>","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"} `
 
 ## <a id="GitHubPackagesContext"></a>**GitHubPackagesContext** -> Deliver to GitHub Packages
 
 If you create a secret called GitHubPackagesContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will also use this NuGet feed for dependency resolution when building apps, giving you automatic dependency resolution within all your repositories sharing this secret.
 
-Example: `{"token":"ghp_NDdI2ExxxxxxxxxxxxxxxxxAYQh","serverUrl":"https://nuget.pkg.github.com/mygithuborg/index.json"}`
+Example: `{"token":"<gitHubToken>","serverUrl":"https://nuget.pkg.github.com/mygithuborg/index.json"}`
 
 ## <a id="NuGetContext"></a>**NuGetContext** -> Deliver to NuGet
 
 If you create a secret called NuGetContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will NOT use this NuGet feed for dependency resolution when building apps. If you want to use this feed for dependency resolution as well, you need to add this to the [trustedNuGetFeeds](https://aka.ms/algosettings#trustedNuGetFeeds) setting.
 
-Example: `{"token":"ydtaxlw66xxxxxxxxxxxxxxgqdq","serverUrl":"https://pkgs.dev.azure.com/myorg/apps/_packaging/myrepo/nuget/v3/index.json"}`
+Example: `{"token":"<nuGetToken>","serverUrl":"https://pkgs.dev.azure.com/myorg/apps/_packaging/myrepo/nuget/v3/index.json"}`
