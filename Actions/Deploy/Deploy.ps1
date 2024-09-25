@@ -48,6 +48,8 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+        $projectDependencies = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
+        $projectApps = $projectApps + $projectDependencies
         if (!($projectApps)) {
             if ($project -ne '*') {
                 throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)Apps-<version>."
