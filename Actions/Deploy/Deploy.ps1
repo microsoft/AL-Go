@@ -52,7 +52,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $projectApps = $projectApps + $projectDependencies
         if (!($projectApps)) {
             if ($project -ne '*') {
-                throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)Apps-<version>."
+                throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)Apps-<version> or $project-$refname-$($buildMode)Dependencies-<version>."
             }
         }
         else {
