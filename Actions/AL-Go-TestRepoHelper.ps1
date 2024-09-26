@@ -65,8 +65,7 @@ function Test-SettingsJson {
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -should
     }
     if ($type -eq 'Project') {
-        # GitHubRunner should not be in a project settings file (only read from repo or workflow settings)
-        Test-Property -settingsDescription $settingsDescription -json $json -key 'githubRunner' -shouldnot
+        # Test for things that should / should not exist in a project settings file
         Test-Property -settingsDescription $settingsDescription -json $json -key 'bcContainerHelperVersion' -shouldnot
     }
     if ($type -eq 'Workflow') {

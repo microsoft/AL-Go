@@ -5,6 +5,27 @@
     [bool] $checkContextSecrets
 )
 
+function ContinuousDelivery([string] $deliveryTarget) {
+    $settingsName = "DeliverTo$deliveryTarget"
+    if ($deliveryTarget -eq 'AppSource' -and $settings.type -eq "AppSource App") {
+        # For multi-project repositories, ContinuousDelivery can be set on the projects
+        foreach($project in ($projectsJson | ConvertFrom-Json)) {
+            $projectSettings = ReadSettings -project $project
+            if ($projectSettings.deliverToAppSource.ContinuousDelivery -or ($projectSettings.Contains('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery)) {
+                Write-Host "Project $project is setup for Continuous Delivery to AppSource"
+                return $true
+            }
+        }
+        return $false
+    }
+    elseif ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('ContinuousDelivery')) {
+        return $settings."$settingsName".ContinuousDelivery
+    }
+    else {
+        return $true
+    }
+}
+
 function IncludeBranch([string] $deliveryTarget) {
     $settingsName = "DeliverTo$deliveryTarget"
     if ($settings.Contains($settingsName) -and $settings."$settingsName".Contains('Branches')) {
@@ -26,7 +47,7 @@ function IncludeDeliveryTarget([string] $deliveryTarget) {
         Write-Host "- Secret '$contextName' not found"
         return $false
     }
-    return (IncludeBranch -deliveryTarget $deliveryTarget)
+    return (IncludeBranch -deliveryTarget $deliveryTarget) -and (ContinuousDelivery -deliveryTarget $deliveryTarget)
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -34,14 +55,7 @@ function IncludeDeliveryTarget([string] $deliveryTarget) {
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deliveryTargets = @('GitHubPackages','NuGet','Storage')
 if ($settings.type -eq "AppSource App") {
-    # For multi-project repositories, we will add deliveryTarget AppSource if any project has AppSourceContinuousDelivery set to true
-    ($projectsJson | ConvertFrom-Json) | ForEach-Object {
-        $projectSettings = ReadSettings -project $_
-        if ($projectSettings.deliverToAppSource.ContinuousDelivery -or ($projectSettings.Contains('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery)) {
-            Write-Host "Project $_ is setup for Continuous Delivery to AppSource"
-            $deliveryTargets += @("AppSource")
-        }
-    }
+    $deliveryTargets += @("AppSource")
 }
 # Include custom delivery targets
 $namePrefix = 'DeliverTo'

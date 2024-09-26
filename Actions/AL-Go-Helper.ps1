@@ -657,6 +657,7 @@ function ReadSettings {
             "defaultIndexMD"                            = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
             "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
+        "trustMicrosoftNuGetFeeds"                      = $true
     }
 
     # Read settings from files and merge them into the settings object
@@ -768,6 +769,11 @@ function ReadSettings {
     if ($settings.shell -ne "powershell" -and $settings.shell -ne "pwsh") {
         throw "Invalid value for setting: shell: $($settings.githubRunnerShell)"
     }
+    if (($settings.githubRunner -like "ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
+        Write-Host "Switching shell to pwsh for ubuntu"
+        $settings.githubRunnerShell = "pwsh"
+    }
+
     if($settings.projectName -eq '') {
         $settings.projectName = $project # Default to project path as project name
     }

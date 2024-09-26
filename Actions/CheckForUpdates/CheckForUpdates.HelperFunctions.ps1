@@ -20,20 +20,14 @@ function DownloadTemplateRepository {
 
     # Construct API URL
     $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
-    $branch = $templateUrl.Split('@')[1]
 
     Write-Host "TemplateUrl: $templateUrl"
     Write-Host "TemplateSha: $($templateSha.Value)"
     Write-Host "DownloadLatest: $downloadLatest"
 
     if ($downloadLatest) {
-        # Get Branches from template repository
-        $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
-        $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
-        if (!$branchInfo) {
-            throw "$templateUrl doesn't exist"
-        }
-        $templateSha.Value = $branchInfo.commit.sha
+        # Get latest commit SHA from the template repository
+        $templateSha.Value = GetLatestTemplateSha -headers $headers -apiUrl $apiUrl -templateUrl $templateUrl
         Write-Host "Latest SHA for $($templateUrl): $($templateSha.Value)"
     }
     $archiveUrl = "$apiUrl/zipball/$($templateSha.Value)"
@@ -45,6 +39,32 @@ function DownloadTemplateRepository {
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     return $tempName
+}
+
+function GetLatestTemplateSha {
+    Param(
+        [hashtable] $headers,
+        [string] $apiUrl,
+        [string] $templateUrl
+    )
+    $branch = $templateUrl.Split('@')[1]
+
+    try {
+        $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
+        $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
+    } catch {
+        if ($_.Exception.Message -like "*401*") {
+            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+        } else {
+            throw $_.Exception.Message
+        }
+    }
+
+    if (!$branchInfo) {
+        throw "$templateUrl doesn't exist"
+    }
+
+    return $branchInfo.commit.sha
 }
 
 function ModifyCICDWorkflow {

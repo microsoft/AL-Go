@@ -27,7 +27,7 @@ try {
     $outSecrets = [ordered]@{}
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $keyVaultCredentials = GetKeyVaultCredentials
-    $getAppDependencyProbingPathsSecrets = $false
+    $getAppDependencySecrets = $false
     $getTokenForPush = $false
     [System.Collections.ArrayList]$secretsCollection = @()
     foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
@@ -38,8 +38,8 @@ try {
             $secret = 'ghTokenWorkflow'
         }
         $secretNameProperty = "$($secret.TrimStart('*'))SecretName"
-        if ($secret -eq 'AppDependencyProbingPathsSecrets') {
-            $getAppDependencyProbingPathsSecrets = $true
+        if ($secret -eq 'AppDependencySecrets') {
+            $getAppDependencySecrets = $true
         }
         else {
             $secretName = $secret
@@ -61,12 +61,19 @@ try {
         }
     }
 
-    # Loop through appDependencyProbingPaths and add secrets to the collection of secrets to get
-    if ($getAppDependencyProbingPathsSecrets -and $settings.Keys -contains 'appDependencyProbingPaths') {
-        foreach($appDependencyProbingPath in $settings.appDependencyProbingPaths) {
-            if ($appDependencyProbingPath.PsObject.Properties.name -eq "AuthTokenSecret") {
-                if ($secretsCollection -notcontains $appDependencyProbingPath.authTokenSecret) {
-                    $secretsCollection += $appDependencyProbingPath.authTokenSecret
+    if ($getAppDependencySecrets) {
+        # Loop through appDependencyProbingPaths and trustedNuGetFeeds and add secrets to the collection of secrets to get
+        $settingsCollection = @()
+        if ($settings.Keys -contains 'appDependencyProbingPaths') {
+            $settingsCollection += $settings.appDependencyProbingPaths
+        }
+        if ($settings.Keys -contains 'trustedNuGetFeeds') {
+            $settingsCollection += $settings.trustedNuGetFeeds
+        }
+        foreach($settingsItem in $settingsCollection) {
+            if ($settingsItem.PsObject.Properties.name -eq "AuthTokenSecret") {
+                if ($secretsCollection -notcontains $settingsItem.authTokenSecret) {
+                    $secretsCollection += $settingsItem.authTokenSecret
                 }
             }
         }
