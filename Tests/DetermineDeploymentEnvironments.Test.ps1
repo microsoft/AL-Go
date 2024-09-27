@@ -60,7 +60,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]";"shell"="pwsh"};@{"environment"="test";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
-        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""}}
+        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""}}
         $EnvironmentCount | Should -Be 2
 
         . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'CD'
@@ -83,7 +83,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
-        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""}}
+        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""}}
         $EnvironmentCount | Should -Be 1
 
         $env:GITHUB_REF_NAME = 'branch'
@@ -109,7 +109,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
         $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
-        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""}}
+        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"=""}}
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
 

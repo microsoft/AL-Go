@@ -119,14 +119,14 @@ else {
 }
 
 Write-Host "Apps to deploy"
-$apps | ForEach-Object { 
+$apps | ForEach-Object {
     Write-Host "- $([System.IO.Path]::GetFileName($_))"
 }
 
 if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
     Write-Host "Dependencies to $($deploymentSettings.DependencyInstallMode)"
     if ($dependencies) {
-        $dependencies | ForEach-Object { 
+        $dependencies | ForEach-Object {
             Write-Host "- $([System.IO.Path]::GetFileName($_))"
         }
     }
