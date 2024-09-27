@@ -10,16 +10,6 @@ Param(
     [string] $deploymentEnvironmentsJson
 )
 
-function GetAppFiles {
-    Param(
-        [string[]] $apps,
-        [string] $tempPath
-    )
-
-    Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
-    return @(Get-ChildItem -Path $tempPath -Filter *.app)
-}
-
 function InstallOrUpgradeApps {
     Param(
         [hashtable] $bcAuthContext,
