@@ -51,6 +51,12 @@ function InstallOrUpgradeApps {
                 Write-Host "App $($appJson.name) is not installed."
                 $needsInstall = $true
             }
+            if ($needsUpgrade) {
+                if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
+                    Write-Host "AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    $needsUpgrade = $false
+                }
+            }
             if ($needsUpgrade -or $needsInstall) {
                 if ($isPTE) {
                     $PTEsToInstall += $app
