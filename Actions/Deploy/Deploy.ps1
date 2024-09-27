@@ -34,19 +34,17 @@ function InstallOrUpgradeApps {
             $needsUpgrade = $false
             $needsInstall = $false
             if ($installedApp) {
-                if ($installMode -eq 'upgrade') {
-                    $newVersion = [version]::new($appJson.Version)
-                    $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
-                    if ($newVersion -gt $installedVersion) {
-                        Write-Host "App $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion. Needs upgrade."
-                        $needsUpgrade = $true
-                    }
-                    elseif ($newVersion -lt $installedVersion) {
-                        Write-Host "WARNING: App $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion."
-                    }
-                    else {
-                        Write-Host "App $($appJson.name) is already installed in version $installedVersion."
-                    }
+                $newVersion = [version]::new($appJson.Version)
+                $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+                if ($installMode -eq 'upgrade' -and $newVersion -gt $installedVersion) {
+                    Write-Host "App $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion. Needs upgrade."
+                    $needsUpgrade = $true
+                }
+                elseif ($newVersion -lt $installedVersion) {
+                    Write-Host "::WARNING::App $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion, used for this build."
+                }
+                else {
+                    Write-Host "App $($appJson.name) is already installed in version $installedVersion."
                 }
             }
             else {
