@@ -10,6 +10,17 @@ Param(
     [string] $deploymentEnvironmentsJson
 )
 
+function GetAppFiles {
+    Param(
+        [string[]] $apps
+    )
+
+    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $tempPath | Out-Null
+    Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
+    return @(Get-ChildItem -Path $tempPath -Filter *.app)
+}
+
 function InstallOrUpgradeApps {
     Param(
         [hashtable] $bcAuthContext,
@@ -18,6 +29,7 @@ function InstallOrUpgradeApps {
         [string] $installMode
     )
 
+    $apps = GetAppFiles -apps $apps
     $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
     $PTEsToInstall = @()
     # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
@@ -63,6 +75,9 @@ function InstallOrUpgradeApps {
         # Install or upgrade PTEs
         Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode "Add"
     }
+    $apps | ForEach-Object {
+        Remove-Item -Path $_.FullName -Force
+    }   
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -103,9 +118,9 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $project = $_.Replace('\','_').Replace('/','_')
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
-        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*/*.app") | ForEach-Object { $_.FullName })
+        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
-            $dependencies += @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Dependencies-*.*.*.*/*.app") | ForEach-Object { $_.FullName })
+            $dependencies += @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
         }
         if (!($projectApps)) {
             if ($project -ne '*') {
