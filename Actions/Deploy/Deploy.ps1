@@ -22,6 +22,7 @@ function InstallOrUpgradeApps {
     $PTEsToInstall = @()
     # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
     foreach($app in $apps) {
+        # Get AppJson (works for full .app files, symbol files and also runtime packages)
         $appJson = Get-AppJsonFromAppFile -appFile $app
         $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
         $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
