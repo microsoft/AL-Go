@@ -37,22 +37,30 @@ jobs:
       SupportedBranches: ${{ steps.DetermineBranches.outputs.Result }}
     steps:
       - name: Checkout
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'schedule' }}
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
+      - name: Read settings
+        id: ReadSettings
+        if: ${{ github.event_name == 'schedule' }}
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+          get: updateALGoSystemFilesSettings
+
       - name: Get Supported Branches
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'schedule' }}
         id: GetSupportedBranches
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ vars.ALGo_UpdateBranches }}
+          includeBranches: ${{ join(fromJson($env:updateALGoSystemFilesSettings).includeBranches, ',') }}
 
       - name: Determine branches to update
         id: DetermineBranches
         run: |
-            if ('${{ github.event_name }}' -ne 'workflow_dispatch') {
-              Write-Host "Running Update AL-Go System Files on a schedule."
+            if ('${{ github.event_name }}' -eq 'schedule') {
+              Write-Host "Running 'Update AL-Go System Files' on a schedule."
               Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=${{ steps.GetSupportedBranches.outputs.Branches }}"
             }
             else {
@@ -90,10 +98,9 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: templateUrl
+          get: templateUrl,updateALGoSystemFilesSettings
 
       - name: Read secrets
-        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
@@ -101,6 +108,7 @@ jobs:
           getSecrets: 'ghTokenWorkflow'
 
       - name: Override templateUrl
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           templateUrl: ${{ github.event.inputs.templateUrl }}
         run: |
@@ -111,7 +119,8 @@ jobs:
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
           }
 
-      - name: Calculate Input
+      - name: Calculate Input (manual trigger)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           directCommit: '${{ github.event.inputs.directCommit }}'
           downloadLatest: ${{ github.event.inputs.downloadLatest }}
@@ -128,6 +137,15 @@ jobs:
           }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
+
+      - name: Calculate Input (schedule trigger)
+        if: ${{ github.event_name == 'schedule' }}
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+          $updateALGoSettings = $env:updateALGoSystemFilesSettings
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$(-not $updateALGoSettings.createPR)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$true"
 
       - name: Update AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main

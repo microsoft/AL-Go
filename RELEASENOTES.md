@@ -11,6 +11,7 @@
   - patterns - AL-Go for GitHub will only trust packages, where the ID matches this pattern. Default is all packages (\*).
   - fingerprints - If specified, AL-Go for GitHub will only trust packages signed with a certificate with a fingerprint matching one of the fingerprints in this array.
   - authTokenSecret - If the NuGet feed specified by URL is private, the authTokenSecret must be the name of a secret containing the authentication token with permissions to search and read packages from the NuGet feed.
+- `updateALGoSystemFilesSettings` - settings to use when running "Update AL-Go System Files" on a schedule.
 
 ### Support for delivering to GitHub Packages and NuGet
 
@@ -19,6 +20,12 @@ With this release the implementation for delivering to NuGet packages (by adding
 ### Allow GitHubRunner and GitHubRunnerShell as project settings
 
 Previously, AL-Go required the GitHubRunner and GitHubRunnerShell settings to be set on repository level. This has now been changed such that they can be set on project level.
+
+### Run "Update AL-Go System Files" on a schedule on multiple branches
+
+When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `updateALGoSystemFilesSettings` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosecrets#updateALGoSystemFilesSettings.
+
+Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
 
 ## v5.3
 
@@ -47,12 +54,6 @@ All authentication context secrets now supports managed identities and federated
 ### Business Central Performance Toolkit Test Result Viewer
 
 In the summary after a Test Run, you now also have the result of performance tests.
-
-### Run "Update AL-Go System Files" on a schedule on multiple branches
-
-When run on a schedule, `Update AL-Go System Files` only runs on the `main` branch. By setting `ALGo_UpdateBranches` GitHub variable to an array of branches, you can now run the workflow on a schedule on multiple branches. Read more at [Creating configuration variables for a repository](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/variables#creating-configuration-variables-for-a-repository).
-
-Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
 
 ### Support Ubuntu runners for all AL-Go workflows
 
