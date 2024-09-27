@@ -53,6 +53,8 @@ function InstallOrUpgradeApps {
             }
             else {
                 Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
+                # Update installed apps list as dependencies may have changed / been installed
+                $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
             }
         }
     }
