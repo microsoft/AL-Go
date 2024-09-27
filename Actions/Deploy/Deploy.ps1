@@ -53,7 +53,7 @@ function InstallOrUpgradeApps {
             }
             if ($needsUpgrade) {
                 if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
-                    Write-Host "AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    Write-Host "::WARNING::AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
                     $needsUpgrade = $false
                 }
             }
