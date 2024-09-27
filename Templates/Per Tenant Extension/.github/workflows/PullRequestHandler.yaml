@@ -35,8 +35,6 @@ jobs:
     if: (!failure() && !cancelled())
     runs-on: [ windows-latest ]
     outputs:
-      githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
-      githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
@@ -90,8 +88,8 @@ jobs:
     uses: ./.github/workflows/_BuildALGoProject.yaml
     secrets: inherit
     with:
-      shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
-      runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+      shell: ${{ matrix.githubRunnerShell }}
+      runsOn: ${{ matrix.githubRunner }}
       checkoutRef: ${{ github.event_name == 'pull_request' && github.sha || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
@@ -119,6 +117,7 @@ jobs:
       - name: Finalize the workflow
         id: PostProcess
         uses: microsoft/AL-Go-Actions/WorkflowPostProcess@main
+        if: success() || failure()
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
