@@ -22,7 +22,7 @@ function InstallOrUpgradeApps {
     New-Item -ItemType Directory -Path $tempPath | Out-Null
     try {
         Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
-        $apps = @(Get-ChildItem -Path $tempPath -Filter *.app)
+        $apps = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
         $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
         $PTEsToInstall = @()
         # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
