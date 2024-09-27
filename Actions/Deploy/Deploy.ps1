@@ -12,11 +12,10 @@ Param(
 
 function GetAppFiles {
     Param(
-        [string[]] $apps
+        [string[]] $apps,
+        [string] $tempPath
     )
 
-    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
-    New-Item -ItemType Directory -Path $tempPath | Out-Null
     Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
     return @(Get-ChildItem -Path $tempPath -Filter *.app)
 }
@@ -29,55 +28,60 @@ function InstallOrUpgradeApps {
         [string] $installMode
     )
 
-    $apps = GetAppFiles -apps $apps
-    $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-    $PTEsToInstall = @()
-    # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
-    foreach($app in $apps) {
-        # Get AppJson (works for full .app files, symbol files and also runtime packages)
-        $appJson = Get-AppJsonFromAppFile -appFile $app
-        $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
-        $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
-        $needsUpgrade = $false
-        $needsInstall = $false
-        if ($installedApp) {
-            if ($installMode -eq 'upgrade') {
-                $newVersion = [version]::new($appJson.Version)
-                $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
-                if ($newVersion -gt $installedVersion) {
-                    Write-Host "App $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion. Needs upgrade."
-                    $needsUpgrade = $true
+    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $tempPath | Out-Null
+    try {
+        Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
+        $apps = @(Get-ChildItem -Path $tempPath -Filter *.app)
+        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+        $PTEsToInstall = @()
+        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
+        foreach($app in $apps) {
+            # Get AppJson (works for full .app files, symbol files and also runtime packages)
+            $appJson = Get-AppJsonFromAppFile -appFile $app
+            $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
+            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+            $needsUpgrade = $false
+            $needsInstall = $false
+            if ($installedApp) {
+                if ($installMode -eq 'upgrade') {
+                    $newVersion = [version]::new($appJson.Version)
+                    $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+                    if ($newVersion -gt $installedVersion) {
+                        Write-Host "App $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion. Needs upgrade."
+                        $needsUpgrade = $true
+                    }
+                    elseif ($newVersion -lt $installedVersion) {
+                        Write-Host "WARNING: App $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion."
+                    }
+                    else {
+                        Write-Host "App $($appJson.name) is already installed in version $installedVersion."
+                    }
                 }
-                elseif ($newVersion -lt $installedVersion) {
-                    Write-Host "WARNING: App $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion."
-                }
-                else {
-                    Write-Host "App $($appJson.name) is already installed in version $installedVersion."
-                }
-            }
-        }
-        else {
-            Write-Host "App $($appJson.name) is not installed."
-            $needsInstall = $true
-        }
-        if ($needsUpgrade -or $needsInstall) {
-            if ($isPTE) {
-                $PTEsToInstall += $app
             }
             else {
-                Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
-                # Update installed apps list as dependencies may have changed / been installed
-                $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+                Write-Host "App $($appJson.name) is not installed."
+                $needsInstall = $true
+            }
+            if ($needsUpgrade -or $needsInstall) {
+                if ($isPTE) {
+                    $PTEsToInstall += $app
+                }
+                else {
+                    Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
+                    # Update installed apps list as dependencies may have changed / been installed
+                    $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+                }
             }
         }
+        if ($PTEsToInstall) {
+            # Install or upgrade PTEs
+            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode "Add"
+        }
     }
-    if ($PTEsToInstall) {
-        # Install or upgrade PTEs
-        Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode "Add"
+    finally {
+        Remove-Item -Path $tempPath -Force -Recurse
     }
-    $apps | ForEach-Object {
-        Remove-Item -Path $_.FullName -Force
-    }   
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
