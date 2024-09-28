@@ -77,3 +77,15 @@ Write-Host "GitHubRunnerJson=$githubRunner"
 $gitHubRunnerShell = $settings.githubRunnerShell
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
 Write-Host "GitHubRunnerShell=$githubRunnerShell"
+
+
+Write-Host "Testing settings against the settings schema"
+$outSettingsJson = ConvertTo-Json -InputObject $outSettings -Depth 99
+$schema = Get-Content -Path "$PSScriptRoot\..\settings.schema.json" -Raw
+
+try{
+    Test-Json -json $outSettingsJson -schema $schema
+}
+catch {
+    throw "Settings are not valid. Error: $_.Exception.Message"
+}
