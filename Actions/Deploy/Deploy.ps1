@@ -37,7 +37,7 @@ function InstallOrUpgradeApps {
                 $newVersion = [version]::new($appJson.Version)
                 $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
                 if ($newVersion -gt $installedVersion) {
-                    $msg = "App $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion."
+                    $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion."
                     if ($installMode -eq 'upgrade') {
                         Write-Host "$msg Needs upgrade."
                         $needsUpgrade = $true
@@ -47,19 +47,19 @@ function InstallOrUpgradeApps {
                     }
                 }
                 elseif ($newVersion -lt $installedVersion) {
-                    Write-Host "::WARNING::App $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion, used for this build."
+                    Write-Host "::WARNING::Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion, used for this build. Please update your local copy of this dependency."
                 }
                 else {
-                    Write-Host "App $($appJson.name) is already installed in version $installedVersion."
+                    Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion."
                 }
             }
             else {
-                Write-Host "App $($appJson.name) is not installed."
+                Write-Host "Dependency app $($appJson.name) is not installed."
                 $needsInstall = $true
             }
             if ($needsUpgrade) {
                 if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
-                    Write-Host "::WARNING::AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
                     $needsUpgrade = $false
                 }
             }
