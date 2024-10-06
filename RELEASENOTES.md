@@ -1,3 +1,5 @@
+## v6.0
+
 ### Issues
 
 - Issue 1184 Publish to Environment fails on 'Permission Denied'
