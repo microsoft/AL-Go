@@ -1,3 +1,7 @@
+### New Settings
+
+- `deployTo<environment>` now has an additional property called DependencyInstallMode, which determines how dependencies are deployed if GenerateDependencyArtifact is true. Default value is install to install dependencies if not already installed. Other values are ignore for ignoring dependencies and upgrade for upgrading dependencies if possible.
+
 ## v6.0
 
 ### Issues
