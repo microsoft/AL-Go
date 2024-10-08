@@ -144,6 +144,7 @@ else {
             "Branches" = @()
             "BranchesFromPolicy" = @()
             "Projects" = '*'
+            "DependencyInstallMode" = "install"  # ignore, install or upgrade
             "SyncMode" = $null
             "Scope" = $null
             "buildMode" = $null
