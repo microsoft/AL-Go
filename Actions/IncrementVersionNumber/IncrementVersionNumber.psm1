@@ -204,8 +204,11 @@ function Set-DependenciesVersionInAppManifests {
         [string[]] $appFolders
     )
 
+    # Get all distinct app folders
+    $distinctAppFolders = $appFolders | Sort-Object -Unique
+
     # Get all apps info: app ID and app version
-    $appsInfos = @($appFolders | ForEach-Object {
+    $appsInfos = @($distinctAppFolders | ForEach-Object {
         $appJson = Join-Path $_ "app.json"
         $app = Get-Content -Path $appJson -Encoding UTF8 -Raw | ConvertFrom-Json
         return [PSCustomObject]@{
@@ -224,7 +227,7 @@ function Set-DependenciesVersionInAppManifests {
 
         $dependencies | ForEach-Object {
             $dependency = $_
-            $appInfo = $appsInfos | Where-Object { $_.Id -eq $dependency.id }
+            $appInfo = $appsInfos | Where-Object { $_.Id -eq $dependency.id } | Select-Object -First 1
             if ($appInfo) {
                 Write-Host "Updating dependency app $($dependency.id) in $appJsonPath from $($dependency.version) to $($appInfo.Version)"
                 $dependency.version = $appInfo.Version
