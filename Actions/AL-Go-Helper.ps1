@@ -18,7 +18,7 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
-$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
+$defaultBcContainerHelperVersion = "https://github.com/microsoft/navcontainerhelper/archive/refs/heads/freddydk/PageScripting.zip" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName")
 
 $runAlPipelineOverrides = @(
@@ -581,6 +581,8 @@ function ReadSettings {
         "testDependencies"                              = @()
         "testFolders"                                   = @()
         "bcptTestFolders"                               = @()
+        "pageScriptingTests"                            = @()
+        "restoreDatabases"                              = @()
         "installApps"                                   = @()
         "installTestApps"                               = @()
         "installOnlyReferencedApps"                     = $true
@@ -606,6 +608,7 @@ function ReadSettings {
         "doNotBuildTests"                               = $false
         "doNotRunTests"                                 = $false
         "doNotRunBcptTests"                             = $false
+        "doNotRunPageScriptingTests"                    = $false
         "doNotPublishApps"                              = $false
         "doNotSignApps"                                 = $false
         "configPackages"                                = @()

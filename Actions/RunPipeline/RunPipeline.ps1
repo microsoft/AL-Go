@@ -350,6 +350,7 @@ try {
     "doNotBuildTests",
     "doNotRunTests",
     "doNotRunBcptTests",
+    "doNotRunPageScriptingTests",
     "doNotPublishApps",
     "installTestRunner",
     "installTestFramework",
@@ -411,6 +412,8 @@ try {
         -appFolders $settings.appFolders `
         -testFolders $settings.testFolders `
         -bcptTestFolders $settings.bcptTestFolders `
+        -pageScriptingTests $settings.pageScriptingTests `
+        -restoreDatabases $settings.restoreDatabases `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
@@ -425,6 +428,8 @@ try {
         -additionalCountries $additionalCountries `
         -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `
+        -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
+        -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
