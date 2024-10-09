@@ -1,0 +1,546 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "Schema for AL-Go settings",
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "minLength": 1
+        },
+        "unusedALGoSystemFiles": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "projects": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "powerPlatformSolutionFolder": {
+            "type": "string"
+        },
+        "country": {
+            "type": "string",
+            "minLength": 1
+        },
+        "artifact": {
+            "type": "string"
+        },
+        "companyName": {
+            "type": "string"
+        },
+        "repoVersion": {
+            "type": "string",
+            "minLength": 1
+        },
+        "repoName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "versioningStrategy": {
+            "type": "number"
+        },
+        "runNumberOffset": {
+            "type": "number"
+        },
+        "appBuild": {
+            "type": "number"
+        },
+        "appRevision": {
+            "type": "number"
+        },
+        "keyVaultName": {
+            "type": "string"
+        },
+        "licenseFileUrlSecretName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "ghTokenWorkflowSecretName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "adminCenterApiCredentialsSecretName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "applicationInsightsConnectionStringSecretName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "keyVaultCertificateUrlSecretName": {
+            "type": "string"
+        },
+        "keyVaultCertificatePasswordSecretName": {
+            "type": "string"
+        },
+        "keyVaultClientIdSecretName": {
+            "type": "string"
+        },
+        "keyVaultCodesignCertificateName": {
+            "type": "string"
+        },
+        "codeSignCertificateUrlSecretName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "codeSignCertificatePasswordSecretName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "additionalCountries": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "appDependencies": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "projectName": {
+            "type": "string"
+        },
+        "appFolders": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "testDependencies": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "testFolders": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "bcptTestFolders": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "installApps": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "installTestApps": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "installOnlyReferencedApps": {
+            "type": "boolean"
+        },
+        "generateDependencyArtifact": {
+            "type": "boolean"
+        },
+        "skipUpgrade": {
+            "type": "boolean"
+        },
+        "applicationDependency": {
+            "type": "string",
+            "minLength": 1
+        },
+        "updateDependencies": {
+            "type": "boolean"
+        },
+        "installTestRunner": {
+            "type": "boolean"
+        },
+        "installTestFramework": {
+            "type": "boolean"
+        },
+        "installTestLibraries": {
+            "type": "boolean"
+        },
+        "installPerformanceToolkit": {
+            "type": "boolean"
+        },
+        "enableCodeCop": {
+            "type": "boolean"
+        },
+        "enableUICop": {
+            "type": "boolean"
+        },
+        "enableCodeAnalyzersOnTestApps": {
+            "type": "boolean"
+        },
+        "customCodeCops": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "failOn": {
+            "type": "string",
+            "minLength": 1
+        },
+        "treatTestFailuresAsWarnings": {
+            "type": "boolean"
+        },
+        "rulesetFile": {
+            "type": "string"
+        },
+        "enableExternalRulesets": {
+            "type": "boolean"
+        },
+        "vsixFile": {
+            "type": "string"
+        },
+        "assignPremiumPlan": {
+            "type": "boolean"
+        },
+        "enableTaskScheduler": {
+            "type": "boolean"
+        },
+        "doNotBuildTests": {
+            "type": "boolean"
+        },
+        "doNotRunTests": {
+            "type": "boolean"
+        },
+        "doNotRunBcptTests": {
+            "type": "boolean"
+        },
+        "doNotPublishApps": {
+            "type": "boolean"
+        },
+        "doNotSignApps": {
+            "type": "boolean"
+        },
+        "configPackages": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "appSourceCopMandatoryAffixes": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "deliverToAppSource": {
+            "type": "object",
+            "properties": {
+                "mainAppFolder": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "string"
+                },
+                "includeDependencies": {
+                    "type": "array",
+                    "items": {
+                        "required": [],
+                        "properties": {}
+                    }
+                },
+                "continuousDelivery": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "mainAppFolder",
+                "productId",
+                "includeDependencies",
+                "continuousDelivery"
+            ]
+        },
+        "obsoleteTagMinAllowedMajorMinor": {
+            "type": "string"
+        },
+        "memoryLimit": {
+            "type": "string"
+        },
+        "templateUrl": {
+            "type": "string"
+        },
+        "templateSha": {
+            "type": "string"
+        },
+        "templateBranch": {
+            "type": "string"
+        },
+        "appDependencyProbingPaths": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "useProjectDependencies": {
+            "type": "boolean"
+        },
+        "runs-on": {
+            "type": "string",
+            "minLength": 1
+        },
+        "shell": {
+            "type": "string",
+            "pattern": "^(|powershell|pwsh)$"
+        },
+        "githubRunner": {
+            "type": "string"
+        },
+        "githubRunnerShell": {
+            "type": "string"
+        },
+        "cacheImageName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "cacheKeepDays": {
+            "type": "number"
+        },
+        "alwaysBuildAllProjects": {
+            "type": "boolean"
+        },
+        "microsoftTelemetryConnectionString": {
+            "type": "string",
+            "minLength": 1
+        },
+        "partnerTelemetryConnectionString": {
+            "type": "string"
+        },
+        "sendExtendedTelemetryToMicrosoft": {
+            "type": "boolean"
+        },
+        "environments": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "buildModes": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "useCompilerFolder": {
+            "type": "boolean"
+        },
+        "pullRequestTrigger": {
+            "type": "string",
+            "minLength": 1
+        },
+        "bcptThresholds": {
+            "type": "object",
+            "properties": {
+                "DurationWarning": {
+                    "type": "number"
+                },
+                "DurationError": {
+                    "type": "number"
+                },
+                "NumberOfSqlStmtsWarning": {
+                    "type": "number"
+                },
+                "NumberOfSqlStmtsError": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "DurationWarning",
+                "DurationError",
+                "NumberOfSqlStmtsWarning",
+                "NumberOfSqlStmtsError"
+            ]
+        },
+        "fullBuildPatterns": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "excludeEnvironments": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "alDoc": {
+            "type": "object",
+            "properties": {
+                "continuousDeployment": {
+                    "type": "boolean"
+                },
+                "deployToGitHubPages": {
+                    "type": "boolean"
+                },
+                "maxReleases": {
+                    "type": "number"
+                },
+                "groupByProject": {
+                    "type": "boolean"
+                },
+                "includeProjects": {
+                    "type": "array",
+                    "items": {
+                        "required": [],
+                        "properties": {}
+                    }
+                },
+                "excludeProjects": {
+                    "type": "array",
+                    "items": {
+                        "required": [],
+                        "properties": {}
+                    }
+                },
+                "header": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "footer": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "defaultIndexMD": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "defaultReleaseMD": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            },
+            "required": [
+                "continuousDeployment",
+                "deployToGitHubPages",
+                "maxReleases",
+                "groupByProject",
+                "includeProjects",
+                "excludeProjects",
+                "header",
+                "footer",
+                "defaultIndexMD",
+                "defaultReleaseMD"
+            ]
+        },
+        "trustMicrosoftNuGetFeeds": {
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "type",
+        "unusedALGoSystemFiles",
+        "projects",
+        "powerPlatformSolutionFolder",
+        "country",
+        "artifact",
+        "companyName",
+        "repoVersion",
+        "repoName",
+        "versioningStrategy",
+        "runNumberOffset",
+        "appBuild",
+        "appRevision",
+        "keyVaultName",
+        "licenseFileUrlSecretName",
+        "ghTokenWorkflowSecretName",
+        "adminCenterApiCredentialsSecretName",
+        "applicationInsightsConnectionStringSecretName",
+        "keyVaultCertificateUrlSecretName",
+        "keyVaultCertificatePasswordSecretName",
+        "keyVaultClientIdSecretName",
+        "keyVaultCodesignCertificateName",
+        "codeSignCertificateUrlSecretName",
+        "codeSignCertificatePasswordSecretName",
+        "additionalCountries",
+        "appDependencies",
+        "projectName",
+        "appFolders",
+        "testDependencies",
+        "testFolders",
+        "bcptTestFolders",
+        "installApps",
+        "installTestApps",
+        "installOnlyReferencedApps",
+        "generateDependencyArtifact",
+        "skipUpgrade",
+        "applicationDependency",
+        "updateDependencies",
+        "installTestRunner",
+        "installTestFramework",
+        "installTestLibraries",
+        "installPerformanceToolkit",
+        "enableCodeCop",
+        "enableUICop",
+        "enableCodeAnalyzersOnTestApps",
+        "customCodeCops",
+        "failOn",
+        "treatTestFailuresAsWarnings",
+        "rulesetFile",
+        "enableExternalRulesets",
+        "vsixFile",
+        "assignPremiumPlan",
+        "enableTaskScheduler",
+        "doNotBuildTests",
+        "doNotRunTests",
+        "doNotRunBcptTests",
+        "doNotPublishApps",
+        "doNotSignApps",
+        "configPackages",
+        "appSourceCopMandatoryAffixes",
+        "deliverToAppSource",
+        "obsoleteTagMinAllowedMajorMinor",
+        "memoryLimit",
+        "templateUrl",
+        "templateSha",
+        "templateBranch",
+        "appDependencyProbingPaths",
+        "useProjectDependencies",
+        "runs-on",
+        "shell",
+        "githubRunner",
+        "githubRunnerShell",
+        "cacheImageName",
+        "cacheKeepDays",
+        "alwaysBuildAllProjects",
+        "microsoftTelemetryConnectionString",
+        "partnerTelemetryConnectionString",
+        "sendExtendedTelemetryToMicrosoft",
+        "environments",
+        "buildModes",
+        "useCompilerFolder",
+        "pullRequestTrigger",
+        "bcptThresholds",
+        "fullBuildPatterns",
+        "excludeEnvironments",
+        "alDoc",
+        "trustMicrosoftNuGetFeeds"
+    ]
+}
