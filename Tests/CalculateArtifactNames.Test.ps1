@@ -42,6 +42,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "TestAppsArtifactsName=ALGOProject-main-CleanTestApps-22.0.123.0"
         $generatedOutPut | Should -Contain "TestResultsArtifactsName=ALGOProject-main-CleanTestResults-22.0.123.0"
         $generatedOutPut | Should -Contain "BcptTestResultsArtifactsName=ALGOProject-main-CleanBcptTestResults-22.0.123.0"
+        $generatedOutPut | Should -Contain "PageScriptingTestResultsArtifactsName=ALGOProject-main-CleanPageScriptingTestResults-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject-main-CleanBuildOutput-22.0.123.0"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-main-CleanContainerEventLog-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildMode=Clean"
@@ -63,6 +64,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "TestAppsArtifactsName=ALGOProject-main-TestApps-22.0.123.0"
         $generatedOutPut | Should -Contain "TestResultsArtifactsName=ALGOProject-main-TestResults-22.0.123.0"
         $generatedOutPut | Should -Contain "BcptTestResultsArtifactsName=ALGOProject-main-BcptTestResults-22.0.123.0"
+        $generatedOutPut | Should -Contain "PageScriptingTestResultsArtifactsName=ALGOProject-main-PageScriptingTestResults-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject-main-BuildOutput-22.0.123.0"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-main-ContainerEventLog-22.0.123.0"
     }
@@ -82,6 +84,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "TestAppsArtifactsName=ALGOProject-releases_1.0-TestApps-22.0.123.0"
         $generatedOutPut | Should -Contain "TestResultsArtifactsName=ALGOProject-releases_1.0-TestResults-22.0.123.0"
         $generatedOutPut | Should -Contain "BcptTestResultsArtifactsName=ALGOProject-releases_1.0-BcptTestResults-22.0.123.0"
+        $generatedOutPut | Should -Contain "PageScriptingTestResultsArtifactsName=ALGOProject-releases_1.0-PageScriptingTestResults-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject-releases_1.0-BuildOutput-22.0.123.0"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-22.0.123.0"
     }
@@ -107,6 +110,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $env:GITHUB_OUTPUT | Should -FileContentMatch "TestAppsArtifactsName=ALGOProject-releases_1.0-TestApps-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "TestResultsArtifactsName=ALGOProject-releases_1.0-TestResults-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "BcptTestResultsArtifactsName=ALGOProject-releases_1.0-BcptTestResults-Current-$currentDate"
+        $env:GITHUB_OUTPUT | Should -FileContentMatch "PageScriptingTestResultsArtifactsName=ALGOProject-releases_1.0-PageScriptingTestResults-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "BuildOutputArtifactsName=ALGOProject-releases_1.0-BuildOutput-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-Current-$currentDate"
     }
@@ -133,6 +137,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $env:GITHUB_OUTPUT | Should -FileContentMatch "TestAppsArtifactsName=ALGOProject_øåæ-releases_1.0-TestApps-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "TestResultsArtifactsName=ALGOProject_øåæ-releases_1.0-TestResults-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "BcptTestResultsArtifactsName=ALGOProject_øåæ-releases_1.0-BcptTestResults-Current-$currentDate"
+        $env:GITHUB_OUTPUT | Should -FileContentMatch "PageScriptingTestResultsArtifactsName=ALGOProject_øåæ-releases_1.0-PageScriptingTestResults-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "BuildOutputArtifactsName=ALGOProject_øåæ-releases_1.0-BuildOutput-Current-$currentDate"
         $env:GITHUB_OUTPUT | Should -FileContentMatch "ContainerEventLogArtifactsName=ALGOProject_øåæ-releases_1.0-ContainerEventLog-Current-$currentDate"
     }
@@ -154,6 +159,7 @@ Describe 'CalculateArtifactNames Action Tests' {
             "TestAppsArtifactsName" = "Artifacts name for TestApps"
             "TestResultsArtifactsName" = "Artifacts name for TestResults"
             "BcptTestResultsArtifactsName" = "Artifacts name for BcptTestResults"
+            "PageScriptingTestResultsArtifactsName" = "Artifacts name for PageScriptingTestResults"
             "BuildOutputArtifactsName" = "Artifacts name for BuildOutput"
             "ContainerEventLogArtifactsName" = "Artifacts name for ContainerEventLog"
             "BuildMode" = "Build mode used when building the artifacts"

@@ -43,6 +43,9 @@ outputs:
   BcptTestResultsArtifactsName:
     description: Artifacts name for BcptTestResults
     value: ${{ steps.calculateartifactnames.outputs.BcptTestResultsArtifactsName }}
+  PageScriptingTestResultsArtifactsName:
+    description: Artifacts name for PageScriptingTestResults
+    value: ${{ steps.calculateartifactnames.outputs.PageScriptingTestResultsArtifactsName }}
   BuildOutputArtifactsName:
     description: Artifacts name for BuildOutput
     value: ${{ steps.calculateartifactnames.outputs.BuildOutputArtifactsName }}
