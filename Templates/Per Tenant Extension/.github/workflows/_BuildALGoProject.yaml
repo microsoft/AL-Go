@@ -235,26 +235,26 @@ jobs:
 
       - name: Publish artifacts - test results
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-        if: (success() || failure()) && (hashFiles(format('{0}/TestResults.xml',inputs.project)) != '')
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/TestResults.xml',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestResultsArtifactsName }}
-          path: '${{ inputs.project }}/TestResults.xml'
+          path: '${{ inputs.project }}/.buildartifacts/TestResults.xml'
           if-no-files-found: ignore
 
       - name: Publish artifacts - bcpt test results
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-        if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',inputs.project)) != '')
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/bcptTestResults.json',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.BcptTestResultsArtifactsName }}
-          path: '${{ inputs.project }}/bcptTestResults.json'
+          path: '${{ inputs.project }}/.buildartifacts/bcptTestResults.json'
           if-no-files-found: ignore
 
       - name: Publish artifacts - page scripting test results
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-        if: (success() || failure()) && (hashFiles(format('{0}/PageScriptingTestResults.zip',inputs.project)) != '')
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/PageScriptingTestResults.zip',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.PageScriptingTestResultsArtifactsName }}
-          path: '${{ inputs.project }}/PageScriptingTestResults.zip'
+          path: '${{ inputs.project }}/.buildartifacts/PageScriptingTestResults.zip'
           if-no-files-found: ignore
 
       - name: Analyze Test Results
