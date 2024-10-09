@@ -108,6 +108,7 @@ if (!($environments)) {
                 "Scope" = $null
                 "buildMode" = $null
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
+                "pageScriptingTests" = @()
                 "runs-on" = @($settings."runs-on".Split(',').Trim())
                 "shell" = $settings."shell"
                 "companyId" = ''
@@ -134,6 +135,7 @@ else {
         # - branches: main
         # - projects: all
         # - continuous deployment: only for environments not tagged with PROD or FAT
+        # - pageScriptingTests: an array of page scripting tests to execute after deployment
         # - runs-on: same as settings."runs-on"
         # - shell: same as settings."shell"
         # - no companyId
@@ -148,6 +150,7 @@ else {
             "Scope" = $null
             "buildMode" = $null
             "continuousDeployment" = $null
+            "pageScriptingTests" = @()
             "runs-on" = @($settings."runs-on".Split(',').Trim())
             "shell" = $settings."shell"
             "companyId" = ''

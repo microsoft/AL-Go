@@ -34,6 +34,9 @@ When running a workflow or a local script, the settings are applied by reading s
 | <a id="appFolders"></a>appFolders | appFolders should be an array of folders (relative to project root), which contains apps for this project. Apps in these folders are sorted based on dependencies and built and published in that order.<br />If appFolders are not specified, AL-Go for GitHub will try to locate appFolders in the root of the project. | \[ \] |
 | <a id="testFolders"></a>testFolders | testFolders should be an array of folders (relative to project root), which contains test apps for this project. Apps in these folders are sorted based on dependencies and built, published and tests are run in that order.<br />If testFolders are not specified, AL-Go for GitHub will try to locate testFolders in the root of the project. | \[ \] |
 | <a id="bcptTestFolders"></a>bcptTestFolders | bcptTestFolders should be an array of folders (relative to project root), which contains performance test apps for this project. Apps in these folders are sorted based on dependencies and built, published and bcpt tests are run in that order.<br />If bcptTestFolders are not specified, AL-Go for GitHub will try to locate bcptTestFolders in the root of the project. | \[ \] |
+| <a id="pageScriptingTests"></a>pageScriptingTests | TODO: pageScriptingTests | \[ \] |
+| <a id="doNotRunpageScriptingTests"></a>doNotRunpageScriptingTests | TODO: doNotRunpageScriptingTests (right place?) | \[ \] |
+| <a id="restoreDatabases"></a>restoreDatabases | TODO: restoreDatabases (right place?) | \[ \] |
 | <a id="appDependencyProbingPaths"></a>appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version (default latest)<br />**release_status** = latestBuild/release/prerelease/draft (default release)<br />**projects** = projects (default * = all)<br />**branch** = branch (default main)<br />**AuthTokenSecret** = Name of secret containing auth token (default none)<br /> | \[ \] |
 | <a id="cleanModePreprocessorSymbols"></a>cleanModePreprocessorSymbols | List of clean tags to be used in _Clean_ build mode | \[ \] |
 | <a id="bcptThresholds"></a>bcptThresholds | Structure with properties for the thresholds when running performance tests using the Business Central Performance Toolkit.<br />**DurationWarning** = a warning is shown if the duration of a bcpt test degrades more than this percentage (default 10)<br />**DurationError** - an error is shown if the duration of a bcpt test degrades more than this percentage (default 25)<br />**NumberOfSqlStmtsWarning** - a warning is shown if the number of SQL statements from a bcpt test increases more than this percentage (default 5)<br />**NumberOfSqlStmtsError** - an error is shown if the number of SQL statements from a bcpt test increases more than this percentage (default 10)<br />*Note that errors and warnings on the build in GitHub are only issued when a threshold is exceeded on the codeunit level, when an individual operation threshold is exceeded, it is only shown in the test results viewer.* |
@@ -287,6 +290,7 @@ Here are the parameters to use in your custom script:
 | `$parameters.SyncMode` | Is the SyncMode to use for the deployment: ForceSync or Add. If deploying to the dev scope, it can also be Development or Clean | Add |
 | `$parameters.BuildMode` | Is the buildMode used for the deployment | Clean |
 | `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
+| `$parameters.PageScriptingTests` | An array of page scripting tests, which will be run after deployment | \[ \] |
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 | `$parameters."shell"` | Shell used to run the deployment script, pwsh or powershell | powershell |
 
@@ -311,6 +315,9 @@ This functionality is also available in AL-Go for GitHub, by adding a file to th
 | RunTestsInBcContainer.ps1 | Run the tests specified by the $parameters hashtable |
 | GetBcContainerAppRuntimePackage.ps1 | Get the runtime package specified by the $parameters hashtable |
 | RemoveBcContainer.ps1 | Cleanup based on the $parameters hashtable |
+| InstallMissingDependencies | Install missing dependencies |
+| BackupBcContainerDatabases | Backup Databases in container for subsequent restore(s) |
+| RestoreDatabasesInBcContainer | Restore Databases in container |
 | InstallMissingDependencies | Install missing dependencies |
 
 ## BcContainerHelper settings

@@ -428,6 +428,7 @@ try {
         -additionalCountries $additionalCountries `
         -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `
+        -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResults') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps

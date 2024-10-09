@@ -2,6 +2,20 @@
 
 - Issue 1241 Increment Version Number might produce wrong app.json
 
+### Support for Page Scripting Tests
+
+TODO: During CI/CD and deployment
+
+### New Repository Settings
+
+- `deployTo<environment>`now has an additional property called PageScriptingTests. PageScriptingTests can be a series of PageScriptingTests, executed after deploying the apps to the environment to verify critical scenarios.
+
+### New Project Settings
+
+- `pageScriptingTests` TODO: doc
+- `doNotRunPageScriptingTests` TODO: doc
+- `restoreDatabases` TODO: doc
+
 ## v6.0
 
 ### Issues
