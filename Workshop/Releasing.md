@@ -22,7 +22,7 @@ Select **Actions**, select the **Create Release** workflow and click **Run workf
 | Prerelease | :black_square_button: |
 | Draft | :black_square_button: |
 | Create Release Branch | :ballot_box_with_check: |
-| New Version Number | `+1.0` |
+| New Version Number | `+1` |
 | Direct Commit | :black_square_button: |
 | Use GhTokenWorkflow | :black_square_button: |
 
