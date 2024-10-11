@@ -43,12 +43,12 @@ outputs:
   BcptTestResultsArtifactsName:
     description: Artifacts name for BcptTestResults
     value: ${{ steps.calculateartifactnames.outputs.BcptTestResultsArtifactsName }}
-  PageScriptingTestResultDetailsArtifactsName:
-    description: Artifacts name for PageScriptingTestResultDetails
-    value: ${{ steps.calculateartifactnames.outputs.PageScriptingTestResultDetailsArtifactsName }}
   PageScriptingTestResultsArtifactsName:
     description: Artifacts name for PageScriptingTestResults
     value: ${{ steps.calculateartifactnames.outputs.PageScriptingTestResultsArtifactsName }}
+  PageScriptingTestResultDetailsArtifactsName:
+    description: Artifacts name for PageScriptingTestResultDetails
+    value: ${{ steps.calculateartifactnames.outputs.PageScriptingTestResultDetailsArtifactsName }}
   BuildOutputArtifactsName:
     description: Artifacts name for BuildOutput
     value: ${{ steps.calculateartifactnames.outputs.BuildOutputArtifactsName }}
