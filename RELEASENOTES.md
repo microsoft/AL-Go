@@ -1,6 +1,13 @@
 ### Issues
 
+- Issue 1241 Increment Version Number might produce wrong app.json
+
+## v6.0
+
+### Issues
+
 - Issue 1184 Publish to Environment fails on 'Permission Denied'
+- AL Language extension in 25.0 doesn't contain the linux executable, use dotnet to invoke the dll instead.
 
 ### New Settings
 
