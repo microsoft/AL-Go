@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -189,7 +189,6 @@ foreach ($thisProject in $projectList) {
             "RepoSettings"    = $settings
             "ProjectSettings" = $projectSettings
         }
-        #Calculate the folders per artifact type
 
         #Calculate the folders per artifact type
         'Apps', 'TestApps', 'Dependencies' | ForEach-Object {
@@ -226,9 +225,24 @@ foreach ($thisProject in $projectList) {
         Write-Host "Calling custom script: $customScript"
         . $customScript -parameters $parameters
     }
-    elseif ($deliveryTarget -eq "GitHubPackages") {
-        $githubPackagesCredential = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.githubPackagesContext)) | ConvertFrom-Json
-        'Apps' | ForEach-Object {
+    elseif ($deliveryTarget -eq 'GitHubPackages' -or $deliveryTarget -eq 'NuGet') {
+        $preReleaseTag = ''
+        try {
+            $nuGetAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($deliveryTarget)Context")) | ConvertFrom-Json | ConvertTo-HashTable
+            if ($deliveryTarget -eq 'NuGet' -and $type -eq 'CD') {
+                # When doing continuous delivery to NuGet, we always use the preview tag
+                # When doing a release, we do not add a preview tag
+                $preReleaseTag = 'preview'
+            }
+            $nuGetServerUrl = $nuGetAccount.ServerUrl
+            Write-Host $nuGetAccount.ServerUrl
+            $nuGetToken = $nuGetAccount.Token
+            Write-Host "$($deliveryTarget)Context secret OK"
+        }
+        catch {
+            throw "$($deliveryTarget)Context secret is malformed. Needs to be formatted as Json, containing serverUrl and token as a minimum."
+        }
+        'Apps','TestApps' | ForEach-Object {
             $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
             if ($folder.Count -gt 1) {
                 $folder | Out-Host
@@ -237,92 +251,15 @@ foreach ($thisProject in $projectList) {
             elseif ($folder.Count -eq 1) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                     $parameters = @{
-                        "gitHubRepository"         = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-                        "includeNuGetDependencies" = $true
-                        "dependencyIdTemplate"     = "AL-Go-{id}"
-                        "packageId"                = "AL-Go-{id}"
+                        "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                        "preReleaseTag"    = $preReleaseTag
+                        "appFile"          = $_.FullName
                     }
-                    $parameters.appFiles = $_.FullName
                     $package = New-BcNuGetPackage @parameters
-                    Push-BcNuGetPackage -nuGetServerUrl $gitHubPackagesCredential.serverUrl -nuGetToken $gitHubPackagesCredential.token -bcNuGetPackage $package
+                    Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
                 }
             }
         }
-    }
-    elseif ($deliveryTarget -eq "NuGet") {
-        try {
-            $nuGetAccount = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.nuGetContext)) | ConvertFrom-Json | ConvertTo-HashTable
-            $nuGetServerUrl = $nuGetAccount.ServerUrl
-            $nuGetToken = $nuGetAccount.Token
-            Write-Host "NuGetContext secret OK"
-        }
-        catch {
-            throw "NuGetContext secret is malformed. Needs to be formatted as Json, containing serverUrl and token as a minimum."
-        }
-        $appsfolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") | Where-Object { $_.PSIsContainer })
-        if ($appsFolder.Count -eq 0) {
-            throw "Internal error - unable to locate apps folder"
-        }
-        elseif ($appsFolder.Count -gt 1) {
-            $appsFolder | Out-Host
-            throw "Internal error - multiple apps folders located"
-        }
-        $testAppsFolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-TestApps-*.*.*.*") | Where-Object { $_.PSIsContainer })
-        if ($testAppsFolder.Count -gt 1) {
-            $testAppsFolder | Out-Host
-            throw "Internal error - multiple testApps folders located"
-        }
-        $dependenciesFolder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Dependencies-*.*.*.*") | Where-Object { $_.PSIsContainer })
-        if ($dependenciesFolder.Count -gt 1) {
-            $dependenciesFolder | Out-Host
-            throw "Internal error - multiple dependencies folders located"
-        }
-
-        $parameters = @{
-            "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-        }
-        $parameters.appFiles = @(Get-Item -Path (Join-Path $appsFolder[0] "*.app") | ForEach-Object { $_.FullName })
-        if ($testAppsFolder.Count -gt 0) {
-            $parameters.testAppFiles = @(Get-Item -Path (Join-Path $testAppsFolder[0] "*.app") | ForEach-Object { $_.FullName })
-        }
-        if ($dependenciesFolder.Count -gt 0) {
-            $parameters.dependencyAppFiles = @(Get-Item -Path (Join-Path $dependenciesFolder[0] "*.app") | ForEach-Object { $_.FullName })
-        }
-        if ($nuGetAccount.Keys -contains 'PackageName') {
-            $parameters.packageId = $nuGetAccount.PackageName.replace('{project}', $projectName).replace('{owner}', $ENV:GITHUB_REPOSITORY_OWNER).replace('{repo}', $settings.repoName)
-        }
-        else {
-            if ($thisProject -and ($thisProject -eq '.')) {
-                $parameters.packageId = "$($ENV:GITHUB_REPOSITORY_OWNER)-$($settings.repoName)"
-            }
-            else {
-                $parameters.packageId = "$($ENV:GITHUB_REPOSITORY_OWNER)-$($settings.repoName)-$ProjectName"
-            }
-        }
-        if ($type -eq 'CD') {
-            $parameters.packageId += "-preview"
-        }
-        $parameters.packageVersion = [System.Version]$appsFolder[0].Name.SubString($appsFolder[0].Name.IndexOf("-Apps-") + 6)
-        if ($nuGetAccount.Keys -contains 'PackageTitle') {
-            $parameters.packageTitle = $nuGetAccount.PackageTitle
-        }
-        else {
-            $parameters.packageTitle = $parameters.packageId
-        }
-        if ($nuGetAccount.Keys -contains 'PackageDescription') {
-            $parameters.packageDescription = $nuGetAccount.PackageDescription
-        }
-        else {
-            $parameters.packageDescription = $parameters.packageTitle
-        }
-        if ($nuGetAccount.Keys -contains 'PackageAuthors') {
-            $parameters.packageAuthors = $nuGetAccount.PackageAuthors
-        }
-        else {
-            $parameters.packageAuthors = $actor
-        }
-        $package = New-BcNuGetPackage @parameters
-        Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
     }
     elseif ($deliveryTarget -eq "Storage") {
         InstallAzModuleIfNeeded -name 'Az.Storage'
@@ -457,9 +394,9 @@ foreach ($thisProject in $projectList) {
                 }
                 $depfolder = $depfolder[0].FullName
                 $libraryAppFiles += @(Get-ChildItem -path $depFolder | Where-Object {
-                        $name = $_.name
-                        $appSourceIncludeDependencies | Where-Object { $name -like $_ }
-                    } | ForEach-Object { $_.FullName })
+                    $name = $_.name
+                    $appSourceIncludeDependencies | Where-Object { $name -like $_ }
+                } | ForEach-Object { $_.FullName })
             }
 
             Write-Host "Main App File:"

@@ -118,6 +118,38 @@ try {
         exit
     }
 
+    if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
+        Write-Host "Reading TrustedNuGetFeeds"
+        foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
+            if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'Token') {
+                if ($trustedNuGetFeed.Token -ne '') {
+                    OutputWarning -message "Auth token for NuGet feed is defined in settings. This is not recommended. Use a secret instead and specify the secret name in the AuthTokenSecret property"
+                }
+            }
+            else {
+                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value ''
+            }
+            if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'AuthTokenSecret' -and $trustedNuGetFeed.AuthTokenSecret) {
+                $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret
+                if ($secrets.Keys -notcontains $authTokenSecret) {
+                    OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
+                }
+                else {
+                    $trustedNuGetFeed.Token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
+                }
+            }
+        }
+    }
+    else {
+        $bcContainerHelperConfig.TrustedNuGetFeeds = @()
+    }
+    if ($settings.trustMicrosoftNuGetFeeds) {
+        $bcContainerHelperConfig.TrustedNuGetFeeds += @([PSCustomObject]@{
+            "url" = "https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/AppSourceSymbols/nuget/v3/index.json"
+            "token" = ''
+        })
+    }
+
     $installApps = $settings.installApps
     $installTestApps = $settings.installTestApps
 
@@ -289,8 +321,13 @@ try {
         }
     }
 
-    if ($gitHubPackagesContext -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
-        $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
+    if ((($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds') -and ($bcContainerHelperConfig.TrustedNuGetFeeds.Count -gt 0)) -or ($gitHubPackagesContext)) -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
+        if ($githubPackagesContext) {
+            $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
+        }
+        else {
+            $gitHubPackagesCredential = [PSCustomObject]@{ "serverUrl" = ''; "token" = '' }
+        }
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
@@ -302,7 +339,7 @@ try {
                     $publishParams = @{
                         "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
                         "nuGetToken" = $gitHubPackagesCredential.token
-                        "packageName" = "AL-Go-$appId"
+                        "packageName" = $appId
                         "version" = $version
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
@@ -311,12 +348,11 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification @publishParams
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
-                        Copy-BcNuGetPackageToFolder -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
-
                 }
             }
         }
