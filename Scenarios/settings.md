@@ -290,7 +290,6 @@ Here are the parameters to use in your custom script:
 | `$parameters.SyncMode` | Is the SyncMode to use for the deployment: ForceSync or Add. If deploying to the dev scope, it can also be Development or Clean | Add |
 | `$parameters.BuildMode` | Is the buildMode used for the deployment | Clean |
 | `$parameters.ContinuousDeployment` | Is this environment setup for continuous deployment | false |
-| `$parameters.PageScriptingTests` | An array of page scripting tests, which will be run after deployment | \[ \] |
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 | `$parameters."shell"` | Shell used to run the deployment script, pwsh or powershell | powershell |
 
