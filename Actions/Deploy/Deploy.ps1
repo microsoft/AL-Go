@@ -215,7 +215,7 @@ else {
         }
         else {
             if ($dependencies) {
-                InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies
+                InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode
             }
             if ($scope -eq 'Dev') {
                 if (!$sandboxEnvironment) {
