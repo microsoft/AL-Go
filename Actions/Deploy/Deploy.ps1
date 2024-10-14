@@ -18,6 +18,11 @@ function InstallOrUpgradeApps {
         [string] $installMode
     )
 
+    $schemaSyncMode = "Add"
+    if ($installMode -eq 'ForceUpgrade') {
+        $schemaSyncMode = "Force"
+        $installMode = 'upgrade'
+    }
     $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
     New-Item -ItemType Directory -Path $tempPath | Out-Null
     try {
@@ -43,7 +48,7 @@ function InstallOrUpgradeApps {
                         $needsUpgrade = $true
                     }
                     else {
-                        Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' to upgrade dependencies."
+                        Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
                     }
                 }
                 elseif ($newVersion -lt $installedVersion) {
@@ -76,7 +81,7 @@ function InstallOrUpgradeApps {
         }
         if ($PTEsToInstall) {
             # Install or upgrade PTEs
-            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode "Add"
+            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode $schemaSyncMode
         }
     }
     finally {
