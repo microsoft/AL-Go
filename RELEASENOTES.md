@@ -4,11 +4,7 @@
 
 ### Support for Page Scripting Tests
 
-TODO: During CI/CD and deployment
-
-### New Repository Settings
-
-- `deployTo<environment>`now has an additional property called PageScriptingTests. PageScriptingTests can be a series of PageScriptingTests, executed after deploying the apps to the environment to verify critical scenarios.
+TODO: Page scripting support During CI/CD
 
 ### New Project Settings
 
