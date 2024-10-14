@@ -11,7 +11,7 @@ Page Scripting tests are now supported as part of CI/CD. By specifying pageScrip
 
 ### New Project Settings
 
-- `pageScriptingTests` should be an array of page scripting test file specifications, relative to the AL-Go project. Examples of file specifications: `recordings/my*.yml` (for all yaml files in the recordings subfolder matching my*.yml), `recordings` (for all *.yml files in the recordings subfolder) or `recordings/test.yml` (for a single yml file)
+- `pageScriptingTests` should be an array of page scripting test file specifications, relative to the AL-Go project. Examples of file specifications: `recordings/my*.yml` (for all yaml files in the recordings subfolder matching my\*.yml), `recordings` (for all \*.yml files in the recordings subfolder) or `recordings/test.yml` (for a single yml file)
 - `doNotRunPageScriptingTests` can force the pipeline to NOT run the page scripting tests specified in pageScriptingTests. Note this setting can be set in a [workflow specific settings file](#where-are-the-settings-located) to only apply to that workflow
 - `restoreDatabases` should be an array of events, indicating when you want to start with clean databases in the container. Possible events are: `BeforeBcpTests`, `BeforePageScriptingTests`, `BeforeEachTestApp`, `BeforeEachBcptTestApp`, `BeforeEachPageScriptingTest`
 
