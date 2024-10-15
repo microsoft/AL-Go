@@ -5,8 +5,11 @@ updates:
 - package-ecosystem: github-actions
   directories:
     - ".github/workflows/"
-    - "/Templates/Per Tenant Extension/.github/workflows/"
-    - "/Templates/AppSource App/.github/workflows/"
+    - "/Templates/**/.github/workflows/"
+  groups:
+    External-Dependencies:
+      applies-to: version-updates
+      dependency-type: "production"
   ignore:
     - dependency-name: "microsoft/AL-Go-Actions/*"
   schedule:
