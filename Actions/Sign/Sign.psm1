@@ -16,10 +16,14 @@ function Install-SigningTool() {
     # Install the signing tool in the temp folder
     Write-Host "Installing signing tool version $version in $tempFolder"
     New-Item -ItemType Directory -Path $tempFolder | Out-Null
-    dotnet tool install sign --version $version --tool-path $tempFolder | Out-Null
+    $dotnetInstallOutput = dotnet tool install sign --version $version --tool-path $tempFolder
+    Write-Host $dotnetInstallOutput
 
     # Return the path to the signing tool
-    $signingTool = Join-Path -Path $tempFolder "sign.exe" -Resolve
+    $signingTool = Join-Path -Path $tempFolder "sign.exe"
+    if (-not (Test-Path -Path $signingTool)) {
+        throw "Failed to install signing tool. If you are using a self-hosted runner, make sure the runner has .NET installed and nuget.org set up as a nuget source."
+    }
     return $signingTool
 }
 
