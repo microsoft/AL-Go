@@ -1,5 +1,17 @@
 <#
     .SYNOPSIS
+    Checks whether nuget.org is added as a nuget source.
+#>
+function AssertNugetSourceIsAdded() {
+    $nugetSource = "https://api.nuget.org/v3/index.json"
+    $nugetSourceExists = dotnet nuget list source | Select-String -Pattern $nugetSource
+    if (-not $nugetSourceExists) {
+        throw "Nuget source $nugetSource is not added. Please add the source using 'dotnet nuget add source $nugetSource' or add another source with nuget.org as an upstream source."
+    }
+}
+
+<#
+    .SYNOPSIS
     Installs the dotnet signing tool.
     .DESCRIPTION
     Installs the dotnet signing tool.
@@ -16,13 +28,16 @@ function Install-SigningTool() {
     # Install the signing tool in the temp folder
     Write-Host "Installing signing tool version $version in $tempFolder"
     New-Item -ItemType Directory -Path $tempFolder | Out-Null
-    $dotnetInstallOutput = dotnet tool install sign --version $version --tool-path $tempFolder
-    Write-Host $dotnetInstallOutput
+    dotnet tool install sign --version $version --tool-path $tempFolder | Out-Host
 
     # Return the path to the signing tool
     $signingTool = Join-Path -Path $tempFolder "sign.exe"
     if (-not (Test-Path -Path $signingTool)) {
-        throw "Failed to install signing tool. If you are using a self-hosted runner, make sure the runner has .NET installed and nuget.org set up as a nuget source."
+        # Check if nuget.org is added as a nuget source
+        AssertNugetSourceIsAdded
+
+        # If the tool is not found, throw an error
+        throw "Failed to install signing tool. If you are using a self-hosted runner please make sure you've followed all the steps described in https://aka.ms/algosettings#runs-on."
     }
     return $signingTool
 }
