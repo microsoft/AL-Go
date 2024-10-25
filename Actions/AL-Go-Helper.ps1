@@ -581,6 +581,8 @@ function ReadSettings {
         "testDependencies"                              = @()
         "testFolders"                                   = @()
         "bcptTestFolders"                               = @()
+        "pageScriptingTests"                            = @()
+        "restoreDatabases"                              = @()
         "installApps"                                   = @()
         "installTestApps"                               = @()
         "installOnlyReferencedApps"                     = $true
@@ -606,6 +608,7 @@ function ReadSettings {
         "doNotBuildTests"                               = $false
         "doNotRunTests"                                 = $false
         "doNotRunBcptTests"                             = $false
+        "doNotRunPageScriptingTests"                    = $false
         "doNotPublishApps"                              = $false
         "doNotSignApps"                                 = $false
         "configPackages"                                = @()

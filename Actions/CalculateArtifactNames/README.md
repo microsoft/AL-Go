@@ -38,6 +38,8 @@ none
 | TestAppsArtifactsName | Artifacts name for TestApps |
 | TestResultsArtifactsName | Artifacts name for TestResults |
 | BcptTestResultsArtifactsName | Artifacts name for BcptTestResults |
+| PageScriptingTestResultsArtifactsName | Artifacts name for PageScriptingTestResults |
+| PageScriptingTestResultDetailsArtifactsName | Artifacts name for PageScriptingTestResultDetails |
 | BuildOutputArtifactsName | Artifacts name for BuildOutput |
 | ContainerEventLogArtifactsName | Artifacts name for ContainerEventLog |
 | BuildMode | Build mode used when building the artifacts |
