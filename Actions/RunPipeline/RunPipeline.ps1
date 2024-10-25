@@ -18,6 +18,7 @@ $projectPath = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
 
     if ($isWindows) {
@@ -255,6 +256,8 @@ try {
         $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
             Write-Host "Add override for $scriptName"
+            Trace-Information -Message "Using override for $scriptName"
+
             $runAlPipelineParams += @{
                 "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
             }
