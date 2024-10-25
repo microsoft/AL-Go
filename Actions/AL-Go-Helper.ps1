@@ -495,61 +495,13 @@ function MergeCustomObjectIntoOrderedDictionary {
     }
 }
 
-# Read settings from the settings files
-# Settings are read from the following files:
-# - ALGoOrgSettings (github Variable)                 = Organization settings variable
-# - .github/AL-Go-Settings.json                       = Repository Settings file
-# - ALGoRepoSettings (github Variable)                = Repository settings variable
-# - <project>/.AL-Go/settings.json                    = Project settings file
-# - .github/<workflowName>.settings.json              = Workflow settings file
-# - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
-# - <project>/.AL-Go/<userName>.settings.json         = User settings file
-function ReadSettings {
-    Param(
-        [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
-        [string] $repoName = "$ENV:GITHUB_REPOSITORY",
-        [string] $project = '.',
-        [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
-        [string] $userName = "$ENV:GITHUB_ACTOR",
-        [string] $branchName = "$ENV:GITHUB_REF_NAME",
-        [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
-        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
-    )
-
-    # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
-    if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
-        $branchName = $env:GITHUB_BASE_REF
-    }
-
-    function GetSettingsObject {
-        Param(
-            [string] $path
-        )
-
-        if (Test-Path $path) {
-            try {
-                Write-Host "Applying settings from $path"
-                $settings = Get-Content $path -Encoding UTF8 | ConvertFrom-Json
-                if ($settings) {
-                    return $settings
-                }
-            }
-            catch {
-                throw "Error reading $path. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
-            }
-        }
-        else {
-            Write-Host "No settings found in $path"
-        }
-        return $null
-    }
-
-    $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
-    $githubFolder = Join-Path $baseFolder ".github"
-    $workflowName = $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
-
-    # Start with default settings
-    $settings = [ordered]@{
+function GetDefaultSettings
+(
+    [Parameter(Mandatory = $true)]
+    [string] $repoName
+)
+{
+    return [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
         "projects"                                      = @()
@@ -659,6 +611,63 @@ function ReadSettings {
         }
         "trustMicrosoftNuGetFeeds"                      = $true
     }
+}
+
+# Read settings from the settings files
+# Settings are read from the following files:
+# - ALGoOrgSettings (github Variable)                 = Organization settings variable
+# - .github/AL-Go-Settings.json                       = Repository Settings file
+# - ALGoRepoSettings (github Variable)                = Repository settings variable
+# - <project>/.AL-Go/settings.json                    = Project settings file
+# - .github/<workflowName>.settings.json              = Workflow settings file
+# - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
+# - <project>/.AL-Go/<userName>.settings.json         = User settings file
+function ReadSettings {
+    Param(
+        [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
+        [string] $repoName = "$ENV:GITHUB_REPOSITORY",
+        [string] $project = '.',
+        [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
+        [string] $userName = "$ENV:GITHUB_ACTOR",
+        [string] $branchName = "$ENV:GITHUB_REF_NAME",
+        [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
+        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
+    )
+
+    # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
+    if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
+        $branchName = $env:GITHUB_BASE_REF
+    }
+
+    function GetSettingsObject {
+        Param(
+            [string] $path
+        )
+
+        if (Test-Path $path) {
+            try {
+                Write-Host "Applying settings from $path"
+                $settings = Get-Content $path -Encoding UTF8 | ConvertFrom-Json
+                if ($settings) {
+                    return $settings
+                }
+            }
+            catch {
+                throw "Error reading $path. Error was $($_.Exception.Message).`n$($_.ScriptStackTrace)"
+            }
+        }
+        else {
+            Write-Host "No settings found in $path"
+        }
+        return $null
+    }
+
+    $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
+    $githubFolder = Join-Path $baseFolder ".github"
+    $workflowName = $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+
+    # Start with default settings
+    $settings = GetDefaultSettings -repoName $repoName
 
     # Read settings from files and merge them into the settings object
 
