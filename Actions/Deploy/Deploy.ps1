@@ -18,9 +18,9 @@ function InstallOrUpgradeApps {
         [string] $installMode
     )
 
-    $schemaSyncMode = "Add"
+    $schemaSyncMode = 'Add'
     if ($installMode -eq 'ForceUpgrade') {
-        $schemaSyncMode = "Force"
+        $schemaSyncMode = 'Force'
         $installMode = 'upgrade'
     }
     $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
