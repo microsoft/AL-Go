@@ -4,7 +4,7 @@
 
 ### New Settings
 
-- `trustedSigning` is a structure defining `Account`, `EndPoint` and `CertificateProfile` if you want to use trusted signing. Your Azure Credentials secret still needs to provide access to your Azure Subscription using a managed identity or a Microsoft Entra ID App.
+- `trustedSigning` is a structure defining `Account`, `EndPoint` and `CertificateProfile` if you want to use trusted signing. Note that your Azure_Credentials secret (Microsoft Entra ID App or Managed identity) still needs to provide access to your azure subscription and be assigned the `Trusted Signing Certificate Profile Signer` role in the Trusted Signing Account.
 
 ### Support for Azure Trusted Signing
 
