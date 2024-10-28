@@ -661,6 +661,11 @@ function ReadSettings {
             "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
         "trustMicrosoftNuGetFeeds"                      = $true
+        "trustedSigning"                                = [ordered]@{
+            "Endpoint"                                  = ""
+            "Account"                                   = ""
+            "CertificateProfile"                        = ""
+        }
     }
 
     # Read settings from files and merge them into the settings object
