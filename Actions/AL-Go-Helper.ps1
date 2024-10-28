@@ -659,7 +659,7 @@ function ReadSettings {
         }
         "trustMicrosoftNuGetFeeds"                      = $true
         "trustedSigning"                                = [ordered]@{
-            "Endpoint"                                  = "https://weu.codesigning.azure.net"
+            "Endpoint"                                  = ""
             "Account"                                   = ""
             "CertificateProfile"                        = ""
         }
