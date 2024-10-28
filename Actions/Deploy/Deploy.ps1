@@ -10,6 +10,42 @@ Param(
     [string] $deploymentEnvironmentsJson
 )
 
+function CheckIfAppNeedsInstallOrUpgrade {
+    Param(
+        [PSCustomObject] $appJson,
+        $installedApp,
+        [string] $installMode
+    )
+
+    $needsInstall = $false
+    $needsUpgrade = $false
+    if ($installedApp) {
+        $newVersion = [version]::new($appJson.Version)
+        $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+        if ($newVersion -gt $installedVersion) {
+            $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion."
+            if ($installMode -eq 'upgrade') {
+                Write-Host "$msg Needs upgrade."
+                $needsUpgrade = $true
+            }
+            else {
+                Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
+            }
+        }
+        elseif ($newVersion -lt $installedVersion) {
+            Write-Host "::WARNING::Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion, used for this build. Please update your local copy of this dependency."
+        }
+        else {
+            Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion."
+        }
+    }
+    else {
+        Write-Host "Dependency app $($appJson.name) is not installed."
+        $needsInstall = $true
+    }
+    return $needsInstall, $needsUpgrade
+}
+
 function InstallOrUpgradeApps {
     Param(
         [hashtable] $bcAuthContext,
@@ -36,32 +72,7 @@ function InstallOrUpgradeApps {
             $appJson = Get-AppJsonFromAppFile -appFile $app
             $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
             $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
-            $needsUpgrade = $false
-            $needsInstall = $false
-            if ($installedApp) {
-                $newVersion = [version]::new($appJson.Version)
-                $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
-                if ($newVersion -gt $installedVersion) {
-                    $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion."
-                    if ($installMode -eq 'upgrade') {
-                        Write-Host "$msg Needs upgrade."
-                        $needsUpgrade = $true
-                    }
-                    else {
-                        Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
-                    }
-                }
-                elseif ($newVersion -lt $installedVersion) {
-                    Write-Host "::WARNING::Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion, used for this build. Please update your local copy of this dependency."
-                }
-                else {
-                    Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion."
-                }
-            }
-            else {
-                Write-Host "Dependency app $($appJson.name) is not installed."
-                $needsInstall = $true
-            }
+            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
             if ($needsUpgrade) {
                 if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
                     Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
