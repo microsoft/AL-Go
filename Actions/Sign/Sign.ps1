@@ -29,7 +29,7 @@ Write-Host "::endgroup::"
 $AzureCredentials = ConvertFrom-Json ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($AzureCredentialsJson)))
 $settings = $env:Settings | ConvertFrom-Json
 
-if ($settings.TrustedSigning.SigningEndpoint -and $settings.TrustedSigning.SigningAccount -and $settings.TrustedSigning.SigningCertificateProfile) {
+if ($settings.TrustedSigning.Endpoint -and $settings.TrustedSigning.Account -and $settings.TrustedSigning.CertificateProfile) {
     $SigningParams = @{
         "SigningEndpoint" = $settings.TrustedSigning.Endpoint
         "SigningAccount" = $settings.TrustedSigning.Account
