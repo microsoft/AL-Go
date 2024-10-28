@@ -46,7 +46,7 @@ else {
     else {
         throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
     }
-    
+
     $SigningParams = @{
         "ClientId" = $AzureCredentials.clientId
         "TenantId" = $AzureCredentials.tenantId

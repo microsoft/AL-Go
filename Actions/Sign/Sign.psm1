@@ -159,12 +159,4 @@ function Invoke-SigningTool() {
     }
 }
 
-
-sign code trusted-signing
- --trusted-signing-endpoint https://weu.codesigning.azure.net 
- --trusted-signing-account <signing-account-name> 
- --trusted-signing-certificate-profile <profile-name>
- 'c:/fullpath/to/my.app'
-
-
 Export-ModuleMember -Function Invoke-SigningTool
