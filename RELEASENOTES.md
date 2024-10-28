@@ -2,6 +2,14 @@
 
 - Issue 1241 Increment Version Number might produce wrong app.json
 
+### New Settings
+
+- `trustedSigning` is a structure defining `Account`, `EndPoint` and `CertificateProfile` if you want to use trusted signing. Your Azure Credentials secret still needs to provide access to your Azure Subscription using a managed identity or a Microsoft Entra ID App.
+
+### Support for Azure Trusted Signing
+
+Read https://learn.microsoft.com/en-us/azure/trusted-signing/ for more information about Trusted Signing and how to set it up. After setting up your trusted signing account and certificate profile, you need to create a setting called [trustedSigning](https://aka.ms/algosettings#trustedSigning) for AL-Go to sign your apps using Azure Trusted Signing.
+
 ## v6.0
 
 ### Issues
