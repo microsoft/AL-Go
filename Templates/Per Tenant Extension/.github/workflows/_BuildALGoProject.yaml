@@ -97,7 +97,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
-          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact
+          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,trustedSigning
 
       - name: Read secrets
         id: ReadSecrets
@@ -148,7 +148,7 @@ jobs:
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
       - name: Sign
-        if: inputs.signArtifacts && env.doNotSignApps == 'False' && env.keyVaultCodesignCertificateName != ''
+        if: inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != ''))
         id: sign
         uses: microsoft/AL-Go-Actions/Sign@main
         with:

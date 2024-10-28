@@ -28,23 +28,35 @@ Write-Host "::endgroup::"
 # Get parameters for signing
 $AzureCredentials = ConvertFrom-Json ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($AzureCredentialsJson)))
 $settings = $env:Settings | ConvertFrom-Json
-if ($settings.keyVaultName) {
-    $AzureKeyVaultName = $settings.keyVaultName
-}
-elseif ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
-    $AzureKeyVaultName = $AzureCredentials.keyVaultName
+
+if ($settings.TrustedSigning.Endpoint -and $settings.TrustedSigning.Account -and $settings.TrustedSigning.CertificateProfile) {
+    $SigningParams = @{
+        "SigningEndpoint" = $settings.TrustedSigning.Endpoint
+        "SigningAccount" = $settings.TrustedSigning.Account
+        "SigningCertificateProfile" = $settings.TrustedSigning.CertificateProfile
+    }
 }
 else {
-    throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
-}
+    if ($settings.keyVaultName) {
+        $AzureKeyVaultName = $settings.keyVaultName
+    }
+    elseif ($AzureCredentials.PSobject.Properties.name -eq "keyVaultName") {
+        $AzureKeyVaultName = $AzureCredentials.keyVaultName
+    }
+    else {
+        throw "KeyVaultName is not specified in AzureCredentials nor in settings. Please specify it in one of them."
+    }
 
-$AzureCredentialParams = @{
-    "ClientId" = $AzureCredentials.clientId
-    "TenantId" = $AzureCredentials.tenantId
-}
-if ($AzureCredentials.PSobject.Properties.name -eq "clientSecret") {
-    $AzureCredentialParams += @{
-        "ClientSecret" = $AzureCredentials.clientSecret
+    $SigningParams = @{
+        "ClientId" = $AzureCredentials.clientId
+        "TenantId" = $AzureCredentials.tenantId
+        "KeyVaultName" = $AzureKeyVaultName
+        "CertificateName" = $settings.keyVaultCodesignCertificateName
+    }
+    if ($AzureCredentials.PSobject.Properties.name -eq "clientSecret") {
+        $SigningParams += @{
+            "ClientSecret" = $AzureCredentials.clientSecret
+        }
     }
 }
 InstallAzModuleIfNeeded -name 'Az.Accounts'
@@ -54,8 +66,7 @@ $description = "Signed with AL-Go for GitHub"
 $descriptionUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
 
 Write-Host "::group::Signing files"
-Invoke-SigningTool @AzureCredentialParams -KeyVaultName $AzureKeyVaultName `
-    -CertificateName $settings.keyVaultCodesignCertificateName `
+Invoke-SigningTool @SigningParams  `
     -FilesToSign $PathToFiles `
     -Description $description `
     -DescriptionUrl $descriptionUrl `
