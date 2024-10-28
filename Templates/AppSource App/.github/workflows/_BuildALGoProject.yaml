@@ -235,18 +235,34 @@ jobs:
 
       - name: Publish artifacts - test results
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: (success() || failure()) && (hashFiles(format('{0}/TestResults.xml',inputs.project)) != '')
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/TestResults.xml',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestResultsArtifactsName }}
-          path: '${{ inputs.project }}/TestResults.xml'
+          path: '${{ inputs.project }}/.buildartifacts/TestResults.xml'
           if-no-files-found: ignore
 
       - name: Publish artifacts - bcpt test results
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: (success() || failure()) && (hashFiles(format('{0}/bcptTestResults.json',inputs.project)) != '')
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/bcptTestResults.json',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.BcptTestResultsArtifactsName }}
-          path: '${{ inputs.project }}/bcptTestResults.json'
+          path: '${{ inputs.project }}/.buildartifacts/bcptTestResults.json'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - page scripting test results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/PageScriptingTestResults.xml',inputs.project)) != '')
+        with:
+          name: ${{ steps.calculateArtifactsNames.outputs.PageScriptingTestResultsArtifactsName }}
+          path: '${{ inputs.project }}/.buildartifacts/PageScriptingTestResults.xml'
+          if-no-files-found: ignore
+
+      - name: Publish artifacts - page scripting test result details
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: (success() || failure())
+        with:
+          name: ${{ steps.calculateArtifactsNames.outputs.PageScriptingTestResultDetailsArtifactsName }}
+          path: '${{ inputs.project }}/.buildartifacts/PageScriptingTestResultDetails/'
           if-no-files-found: ignore
 
       - name: Analyze Test Results
