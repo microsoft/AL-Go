@@ -172,6 +172,7 @@ jobs:
       publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || startswith(github.ref_name, 'releases/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
       signArtifacts: true
       useArtifactCache: true
+      needsContext:  ${{ toJson(needs) }}
 
   BuildPP:
     needs: [ Initialization ]
