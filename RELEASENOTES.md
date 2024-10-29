@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1241 Increment Version Number might produce wrong app.json
+- `deployTo<environment>` now has an additional property called DependencyInstallMode, which determines how dependencies are deployed if GenerateDependencyArtifact is true. Default value is `install` to install dependencies if not already installed. Other values are `ignore` for ignoring dependencies, `upgrade` for upgrading dependencies if possible and `forceUpgrade` for force upgrading dependencies.
 
 ### New Project Settings
 
@@ -673,7 +674,7 @@ Setting the repo setting "runs-on" to "Ubuntu-Latest", followed by running Updat
 ### CI/CD and Publish To New Environment
 
 - Base functionality for selecting a specific GitHub runner for an environment
-- Include dependencies artifacts when deploying (if generateDependencyArtifacts is true)
+- Include dependencies artifacts when deploying (if generateDependencyArtifact is true)
 
 ### localDevEnv.ps1 and cloudDevEnv.ps1
 
