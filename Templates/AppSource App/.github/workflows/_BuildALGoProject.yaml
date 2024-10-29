@@ -68,9 +68,9 @@ on:
         type: boolean
         default: false
       needsContext:
-        description: JSON formated needs context
+        description: JSON formatted needs context
         type: string
-        default: false
+        default: '{}'
 
 permissions:
   actions: read
