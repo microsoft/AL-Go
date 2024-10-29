@@ -99,6 +99,7 @@ jobs:
       secrets: 'licenseFileUrl,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
       artifactsNameSuffix: 'PR${{ github.event.number }}'
+      needsContext:  ${{ toJson(needs) }}
 
   StatusCheck:
     needs: [ Initialization, Build ]
