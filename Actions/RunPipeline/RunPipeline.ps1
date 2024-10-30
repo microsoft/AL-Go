@@ -18,6 +18,7 @@ $projectPath = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
 
     if ($isWindows) {
@@ -255,6 +256,8 @@ try {
         $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
             Write-Host "Add override for $scriptName"
+            Trace-Information -Message "Using override for $scriptName"
+
             $runAlPipelineParams += @{
                 "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
             }
@@ -350,6 +353,7 @@ try {
     "doNotBuildTests",
     "doNotRunTests",
     "doNotRunBcptTests",
+    "doNotRunPageScriptingTests",
     "doNotPublishApps",
     "installTestRunner",
     "installTestFramework",
@@ -411,6 +415,8 @@ try {
         -appFolders $settings.appFolders `
         -testFolders $settings.testFolders `
         -bcptTestFolders $settings.bcptTestFolders `
+        -pageScriptingTests $settings.pageScriptingTests `
+        -restoreDatabases $settings.restoreDatabases `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
@@ -425,6 +431,8 @@ try {
         -additionalCountries $additionalCountries `
         -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `
+        -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
+        -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps

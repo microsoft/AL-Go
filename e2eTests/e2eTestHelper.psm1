@@ -613,12 +613,19 @@ function Test-LogContainsFromRun {
         [string] $runid,
         [string] $jobName,
         [string] $stepName,
-        [string] $expectedText
+        [string] $expectedText,
+        [switch] $isRegEx
     )
 
     DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
     $runPipelineLog = Get-Content -Path (Get-Item "logs/$jobName/*_$stepName.txt").FullName -encoding utf8 -raw
-    if ($runPipelineLog.contains($expectedText, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if ($isRegEx) {
+        $found = $runPipelineLog -match $expectedText
+    }
+    else {
+        $found = $runPipelineLog.contains($expectedText, [System.StringComparison]::OrdinalIgnoreCase)
+    }
+    if ($found) {
         Write-Host "'$expectedText' found in the log for $jobName/$stepName as expected"
     }
     else {
