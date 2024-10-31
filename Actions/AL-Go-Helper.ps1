@@ -848,9 +848,6 @@ function ResolveProjectFolders {
                     }
                 }
 
-
-                Write-Host "$aLProjectFolder istestapp=$istestapp isbcpttestapp=$isbcpttestapp"
-
                 # Folders are relative to the project folder
                 $appFolder = Resolve-Path -Path $aLProjectFolder.FullName -Relative
                 switch ($true) {
@@ -903,7 +900,6 @@ function AnalyzeRepo {
         [string[]] $includeOnlyAppIds
     )
 
-    $doNotIssueWarnings = $true
     $settings = $settings | Copy-HashTable
 
     if (!$runningLocal) {
@@ -967,10 +963,7 @@ function AnalyzeRepo {
             throw "Internal error"
         }
 
-        $folders | Out-Host
-
         $folders | ForEach-Object {
-            Write-Host "foldername $_"
             $folderName = $_
             $folder = Join-Path $projectPath $folderName
             $appJsonFile = Join-Path $folder "app.json"
@@ -990,14 +983,12 @@ function AnalyzeRepo {
                 $enumerate = $false
             }
             if ($enumerate) {
-                Write-Host "enumerate $foldername"
                 if ($dependencies.Contains($folderName)) {
                     throw "$descr $folderName, specified in $ALGoSettingsFile, is specified more than once."
                 }
                 $dependencies.Add($folderName, @())
                 try {
                     $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
-                    $appJson | ConvertTo-Json | Out-Host
                     if ($appIdFolders.Contains($appJson.Id)) {
                         throw "$descr $folderName contains a duplicate AppId ($($appIdFolders."$($appJson.Id)"))"
                     }
@@ -1017,7 +1008,6 @@ function AnalyzeRepo {
                             }
                             else {
                                 $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
-                                Write-Host "add $id to dependencies from $foldername"
                             }
                         }
                     }
