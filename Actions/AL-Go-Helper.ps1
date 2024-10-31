@@ -899,6 +899,7 @@ function AnalyzeRepo {
         [string[]] $includeOnlyAppIds
     )
 
+    $doNotIssueWarnings = $true
     $settings = $settings | Copy-HashTable
 
     if (!$runningLocal) {
@@ -962,7 +963,10 @@ function AnalyzeRepo {
             throw "Internal error"
         }
 
+        $folders | Out-Host
+
         $folders | ForEach-Object {
+            Write-Host "foldername $_"
             $folderName = $_
             $folder = Join-Path $projectPath $folderName
             $appJsonFile = Join-Path $folder "app.json"
@@ -982,6 +986,7 @@ function AnalyzeRepo {
                 $enumerate = $false
             }
             if ($enumerate) {
+                Write-Host "enumerate $foldername"
                 if ($dependencies.Contains($folderName)) {
                     throw "$descr $folderName, specified in $ALGoSettingsFile, is specified more than once."
                 }
@@ -1007,6 +1012,7 @@ function AnalyzeRepo {
                             }
                             else {
                                 $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
+                                Write-Host "add $foldername to dependencies"
                             }
                         }
                     }
