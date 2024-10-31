@@ -853,14 +853,10 @@ function ResolveProjectFolders {
 
                 # Folders are relative to the project folder
                 $appFolder = Resolve-Path -Path $aLProjectFolder.FullName -Relative
-                if ($isBcptTestApp) {
-                    $bcptTestFolders += @($appFolder)
-                }
-                elseif ($isTestApp) {
-                    $testFolders += @($appFolder)
-                }
-                else {
-                    $appFolders += @($appFolder)
+                switch ($true) {
+                    $isTestApp { $testFolders += @($appFolder); break }
+                    $isBcptTestApp { $bcptTestFolders += @($appFolder); break }
+                    Default { $appFolders += @($appFolder) }
                 }
             }
         }
