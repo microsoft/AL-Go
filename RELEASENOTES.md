@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1241 Increment Version Number might produce wrong app.json
+- When auto discovering appFolders, testFolders and bcptTestFolders - if a BCPT Test app has a dependency to a test framework app, it is added to testFolders as well as bcptTestFolders and will cause a failure.
 
 ### New Project Settings
 
