@@ -821,6 +821,7 @@ function ResolveProjectFolders {
         if (!$appFolders -and !$testFolders -and !$bcptTestFolders) {
             Get-ChildItem -Path $projectPath -Recurse | Where-Object { $_.PSIsContainer -and (Test-Path -Path (Join-Path $_.FullName "app.json")) } | ForEach-Object {
                 $aLProjectFolder = $_
+                Write-Host $aLProjectFolder
                 $appJson = Get-Content (Join-Path $aLProjectFolder.FullName "app.json") -Encoding UTF8 | ConvertFrom-Json
 
                 $isTestApp = $false
@@ -846,6 +847,9 @@ function ResolveProjectFolders {
                         }
                     }
                 }
+
+
+                Write-Host "$aLProjectFolder istestapp=$istestapp isbcpttestapp=$isbcpttestapp"
 
                 # Folders are relative to the project folder
                 $appFolder = Resolve-Path -Path $aLProjectFolder.FullName -Relative
@@ -993,6 +997,7 @@ function AnalyzeRepo {
                 $dependencies.Add($folderName, @())
                 try {
                     $appJson = Get-Content $appJsonFile -Encoding UTF8 | ConvertFrom-Json
+                    $appJson | ConvertTo-Json | Out-Host
                     if ($appIdFolders.Contains($appJson.Id)) {
                         throw "$descr $folderName contains a duplicate AppId ($($appIdFolders."$($appJson.Id)"))"
                     }
@@ -1012,7 +1017,7 @@ function AnalyzeRepo {
                             }
                             else {
                                 $dependencies."$folderName" += @( [ordered]@{ "id" = $id; "version" = $_.version } )
-                                Write-Host "add $foldername to dependencies"
+                                Write-Host "add $id to dependencies from $foldername"
                             }
                         }
                     }
