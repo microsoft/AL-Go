@@ -95,6 +95,7 @@ jobs:
         with:
           ref: ${{ inputs.checkoutRef }}
           lfs: true
+          submodules: recursive
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
