@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1241 Increment Version Number might produce wrong app.json
+- When auto discovering appFolders, testFolders and bcptTestFolders - if a BCPT Test app has a dependency to a test framework app, it is added to testFolders as well as bcptTestFolders and will cause a failure.
 
 ### New Project Settings
 
@@ -11,6 +12,7 @@
 ### New Repository Settings
 
 - `trustedSigning` is a structure defining `Account`, `EndPoint` and `CertificateProfile` if you want to use trusted signing. Note that your Azure_Credentials secret (Microsoft Entra ID App or Managed identity) still needs to provide access to your azure subscription and be assigned the `Trusted Signing Certificate Profile Signer` role in the Trusted Signing Account.
+- `deployTo<environment>` now has an additional property called DependencyInstallMode, which determines how dependencies are deployed if GenerateDependencyArtifact is true. Default value is `install` to install dependencies if not already installed. Other values are `ignore` for ignoring dependencies, `upgrade` for upgrading dependencies if possible and `forceUpgrade` for force upgrading dependencies.
 
 ### Support for Azure Trusted Signing
 
@@ -700,7 +702,7 @@ Setting the repo setting "runs-on" to "Ubuntu-Latest", followed by running Updat
 ### CI/CD and Publish To New Environment
 
 - Base functionality for selecting a specific GitHub runner for an environment
-- Include dependencies artifacts when deploying (if generateDependencyArtifacts is true)
+- Include dependencies artifacts when deploying (if generateDependencyArtifact is true)
 
 ### localDevEnv.ps1 and cloudDevEnv.ps1
 
