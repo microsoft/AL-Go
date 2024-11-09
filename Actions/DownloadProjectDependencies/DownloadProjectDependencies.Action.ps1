@@ -108,6 +108,7 @@ Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMo
 $downloadedDependencies = @()
 
 Write-Host "::group::Downloading project dependencies from current build"
+Write-Host $projectsDependenciesJson
 $projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
 $downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
