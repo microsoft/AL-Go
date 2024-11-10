@@ -27,6 +27,8 @@ function Get-ModifiedFiles {
         Write-Host "-------------------------------------------"
         git config --list | Out-Host
         Write-Host "-------------------------------------------"
+        git fetch origin | Out-Host
+        Write-Host "-------------------------------------------"
         git pull | Out-Host
         Write-Host "-------------------------------------------"
         $headSHA = git rev-parse HEAD
