@@ -27,7 +27,7 @@ function Get-ModifiedFiles {
         Write-Host "-------------------------------------------"
         git config --list | Out-Host
         Write-Host "-------------------------------------------"
-        git fetch origin | Out-Host
+        git fetch --unshallow | Out-Host
         Write-Host "-------------------------------------------"
         git pull | Out-Host
         Write-Host "-------------------------------------------"
