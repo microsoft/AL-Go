@@ -18,10 +18,16 @@ $settings = $env:Settings | ConvertFrom-Json
 
 $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
 if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
+    # Pull request
     $buildAllProjects = $settings.alwaysBuildAllProjects
     $branch = $env:GITHUB_BASE_REF
 }
+elseif ($ghEvent.PSObject.Properties.name -ne 'workflow_dispatch') {
+    # Manual workflow dispatch
+    $buildAllProjects = $true
+}
 else {
+    # Push
     $buildAllProjects = !$settings.partialBuilds.enabled
     $branch = $env:GITHUB_REF_NAME
 }
