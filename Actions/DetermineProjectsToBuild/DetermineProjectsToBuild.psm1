@@ -22,12 +22,7 @@ function Get-ModifiedFiles {
     }
 
     Push-Location $ENV:GITHUB_WORKSPACE
-    Write-Host "git diff --name-only $baselineSHA $($ghEvent.pull_request.head.sha)"
-    Write-Host "----------------------------------"
-    git status | Out-Host
-    Write-Host "----------------------------------"
     git pull | Out-Null
-    Write-Host "----------------------------------"
     $modifiedFiles = git diff --name-only $baselineSHA $ghEvent.pull_request.head.sha
     Pop-Location
     return $modifiedFiles
