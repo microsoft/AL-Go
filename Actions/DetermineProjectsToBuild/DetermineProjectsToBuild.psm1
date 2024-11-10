@@ -11,17 +11,25 @@ function Get-ModifiedFiles {
         [string] $baselineSHA
     )
 
+    Push-Location $ENV:GITHUB_WORKSPACE
     $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
-    if(-not ($ghEvent.PSObject.Properties.name -eq 'pull_request')) {
-        Write-Host "Not a pull request, returning empty list of changed files"
+    if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
+        if (-not $baselineSHA) {
+            $baselineSHA = $ghEvent.pull_request.base.sha
+        }
+        $headSHA = $ghEvent.pull_request.head.sha
+        git pull | Out-Null
+    }
+    elseif ($baselineSHA) {
+        Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD"
+        git pull | Out-Null
+        $headSHA = git rev-parse HEAD
+    }
+    else {
+        Write-Host "Not a pull request and no baseline specified, returning empty list of changed files"
         return @()
     }
-    if (-not $baselineSHA) {
-        $baselineSHA = $ghEvent.pull_request.base.sha
-    }
-    Push-Location $ENV:GITHUB_WORKSPACE
-    git pull | Out-Null
-    $modifiedFiles = git diff --name-only $baselineSHA $ghEvent.pull_request.head.sha
+    $modifiedFiles = git diff --name-only $baselineSHA $headSHA
     Pop-Location
     return $modifiedFiles
 }

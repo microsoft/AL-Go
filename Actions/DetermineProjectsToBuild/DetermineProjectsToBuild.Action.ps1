@@ -15,8 +15,14 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuil
 #endregion
 
 $settings = $env:Settings | ConvertFrom-Json
-$buildAllProjects = $settings.alwaysBuildAllProjects
 
+$ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
+if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
+    $buildAllProjects = $settings.alwaysBuildAllProjects
+}
+else {
+    $buildAllProjects = !$settings.partialBuilds.enabled
+}
 Write-Host "::group::Determine Baseline Workflow ID"
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''

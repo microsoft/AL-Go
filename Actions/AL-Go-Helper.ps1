@@ -633,6 +633,10 @@ function ReadSettings {
         "cacheImageName"                                = "my"
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
+        "partialBuilds"                                 = [ordered]@{
+            "enabled"                                   = $true
+            "retentionDays"                             = 30
+        }
         "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
         "partnerTelemetryConnectionString"              = ""
         "sendExtendedTelemetryToMicrosoft"              = $false

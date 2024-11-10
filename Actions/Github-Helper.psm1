@@ -953,7 +953,7 @@ function GetArtifacts {
     if($version -eq '*') {
         if(-not $baselineWorkflowID) {
             # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run
-            $baselineWorkflowID = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
+            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
         }
 
         if($baselineWorkflowID -eq '0') {
