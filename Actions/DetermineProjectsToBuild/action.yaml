@@ -24,8 +24,11 @@ outputs:
     description: A flag that indicates whether to build all projects or only the modified ones
     value: ${{ steps.determineProjectsToBuild.outputs.BuildAllProjects }}
   BaselineWorkflowRunId:
-    description: The ID of the workflow run from where to fetch artifacts in case when not all projects are built
+    description: The ID of the workflow run containing last known good build, if we are doing partial builds
     value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
+  BaselineWorkflowSHA:
+    description: The SHA of the last known good build, if we are doing partial builds
+    value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowSHA }}
 runs:
   using: composite
   steps:
