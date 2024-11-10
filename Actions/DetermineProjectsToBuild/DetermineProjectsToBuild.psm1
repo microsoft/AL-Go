@@ -16,41 +16,14 @@ function Get-ModifiedFiles {
         Write-Host "Not a pull request, returning empty list of changed files"
         return @()
     }
-
     if (-not $baselineSHA) {
         $baselineSHA = $ghEvent.pull_request.base.sha
     }
-
     Push-Location $ENV:GITHUB_WORKSPACE
     git pull | Out-Null
     $modifiedFiles = git diff --name-only $baselineSHA $ghEvent.pull_request.head.sha
     Pop-Location
     return $modifiedFiles
-
-#    if(!$env:GITHUB_EVENT_PATH) {
-#        Write-Host "GITHUB_EVENT_PATH not set, returning empty list of changed files"
-#        return @()
-#    }
-#
-#    $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
-#
-#    if(-not ($ghEvent.PSObject.Properties.name -eq 'pull_request')) {
-#        Write-Host "Not a pull request, returning empty list of changed files"
-#        return @()
-#    }
-#
-#    $url = "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ghEvent.pull_request.head.sha)"
-#
-#    $headers = @{
-#        "Authorization" = "token $token"
-#        "Accept" = "application/vnd.github.baptiste-preview+json"
-#    }
-#
-#    $response = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
-#
-#    $modifiedFiles = @($response.files | ForEach-Object { $_.filename })
-#
-#    return $modifiedFiles
 }
 
 <#
