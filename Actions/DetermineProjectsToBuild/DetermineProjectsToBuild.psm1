@@ -25,15 +25,18 @@ function Get-ModifiedFiles {
         Write-Host "-------------------------------------------"
         git status | Out-Host
         Write-Host "-------------------------------------------"
+        git config --list | Out-Host
+        Write-Host "-------------------------------------------"
         git pull | Out-Host
         Write-Host "-------------------------------------------"
         $headSHA = git rev-parse HEAD
-        Write-Host "'$headSHA'"
+        Write-Host "Current HEAD is $headSHA"
     }
     else {
         Write-Host "Not a pull request and no baseline specified, returning empty list of changed files"
         return @()
     }
+    Write-Host "git diff --name-only $baselineSHA $headSHA"
     $modifiedFiles = git diff --name-only $baselineSHA $headSHA
     Pop-Location
     return $modifiedFiles
