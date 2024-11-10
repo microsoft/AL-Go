@@ -41,6 +41,11 @@ on:
         required: false
         default: '0'
         type: string
+      baselineWorkflowSHA:
+        description: SHA of the baseline workflow run
+        required: false
+        default: ''
+        type: string
       secrets:
         description: A comma-separated string with the names of the secrets, required for the workflow.
         required: false

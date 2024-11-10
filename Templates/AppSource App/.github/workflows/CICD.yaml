@@ -161,6 +161,8 @@ jobs:
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
+      baselineWorkflowRunId: ${{ needs.Initialization.outputs.baselineWorkflowRunId }}
+      baselineWorkflowSHA: ${{ needs.Initialization.outputs.baselineWorkflowSHA }}
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       publishThisBuildArtifacts: ${{ needs.Initialization.outputs.workflowDepth > 1 }}
       publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || startswith(github.ref_name, 'releases/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}

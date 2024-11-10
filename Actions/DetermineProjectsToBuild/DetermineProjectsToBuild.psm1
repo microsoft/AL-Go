@@ -25,7 +25,7 @@ function Get-ModifiedFiles {
     elseif ($baselineSHA) {
         Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD"
         git fetch origin $baselineSHA | Out-Host
-        $headSHA = git rev-parse HEAD
+        $headSHA = git rev-parse HEADp
         Write-Host "Current HEAD is $headSHA"
     }
     else {
