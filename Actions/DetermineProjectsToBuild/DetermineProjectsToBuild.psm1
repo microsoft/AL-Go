@@ -14,17 +14,17 @@ function Get-ModifiedFiles {
     Push-Location $ENV:GITHUB_WORKSPACE
     $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
     if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
-        if (-not $baselineSHA) {
+        if ($baselineSHA) {
+            git fetch origin $baselineSHA | Out-Host
+        }
+        else {
             $baselineSHA = $ghEvent.pull_request.base.sha
         }
         $headSHA = $ghEvent.pull_request.head.sha
-        git pull | Out-Null
     }
     elseif ($baselineSHA) {
         Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD"
-        Write-Host "-------------------------------------------"
         git fetch origin $baselineSHA | Out-Host
-        Write-Host "-------------------------------------------"
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"
     }
