@@ -19,15 +19,17 @@ $settings = $env:Settings | ConvertFrom-Json
 $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
 if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
     $buildAllProjects = $settings.alwaysBuildAllProjects
+    $branch = $env:GITHUB_BASE_REF
 }
 else {
     $buildAllProjects = !$settings.partialBuilds.enabled
+    $branch = $env:GITHUB_REF_NAME
 }
-Write-Host "::group::Determine Baseline Workflow ID"
+Write-Host "::group::Determine Baseline Workflow ID $branch"
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
-    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository "$env:GITHUB_REPOSITORY" -branch "$env:GITHUB_BASE_REF" -token $token
+    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $branch -token $token
 }
 Write-Host "::endgroup::"
 
