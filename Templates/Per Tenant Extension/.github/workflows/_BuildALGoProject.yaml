@@ -152,6 +152,7 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+          baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
 
       - name: Sign
         if: inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != ''))

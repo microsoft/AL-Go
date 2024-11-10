@@ -10,7 +10,9 @@
     [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
     [string] $installAppsJson = '[]',
     [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]'
+    [string] $installTestAppsJson = '[]',
+    [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
+    [string] $baselineWorkflowSHA = ''
 )
 
 $containerBaseFolder = $null

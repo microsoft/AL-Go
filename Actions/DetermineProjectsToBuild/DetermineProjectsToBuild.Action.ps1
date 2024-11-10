@@ -21,16 +21,19 @@ if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
     # Pull request
     $buildAllProjects = $settings.alwaysBuildAllProjects
     $branch = $env:GITHUB_BASE_REF
+    Write-Host "Pull request on $branch"
 }
 elseif ($ghEvent.PSObject.Properties.name -ne 'workflow_dispatch') {
     # Manual workflow dispatch
     $buildAllProjects = $true
     $branch = $env:GITHUB_REF_NAME
+    Write-Host "Workflow dispatch on $branch"
 }
 else {
     # Push
     $buildAllProjects = !$settings.partialBuilds.enabled
     $branch = $env:GITHUB_REF_NAME
+    Write-Host "Push on $branch"
 }
 Write-Host "::group::Determine Baseline Workflow ID"
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
