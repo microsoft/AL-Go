@@ -23,7 +23,7 @@ if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
     $branch = $env:GITHUB_BASE_REF
     Write-Host "Pull request on $branch"
 }
-elseif ($ghEvent.PSObject.Properties.name -ne 'workflow_dispatch') {
+elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch') {
     # Manual workflow dispatch
     $buildAllProjects = $true
     $branch = $env:GITHUB_REF_NAME
