@@ -760,47 +760,31 @@ function Set-JsonContentLF {
 
 <#
     Checks if all build jobs in a workflow run completed successfully.
+    Authentication to GitHub CLI is required
 #>
 function CheckBuildJobsInWorkflowRun {
     Param(
-        [Parameter(Mandatory = $true)]
-        [string] $token,
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
         [string] $workflowRunId
     )
 
-    $headers = GetHeader -token $token
-    $per_page = 100
-    $page = 1
+    $workflowJobs = gh api /repos/$repository/actions/runs/$workflowRunId/jobs --paginate -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json
+    $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
 
     $allSuccessful = $true
     $anySuccessful = $false
-
-    while($true) {
-        $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
-        Write-Host "- $jobsURI"
-        $workflowJobs = (InvokeWebRequest -Headers $headers -Uri $jobsURI).Content | ConvertFrom-Json
-
-        if($workflowJobs.jobs.Count -eq 0) {
-            # No more jobs, breaking out of the loop
-            break
-        }
-
-        $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
-
-        if($buildJobs.conclusion -eq 'success') {
+    $allSuccessful = $true
+    $anySuccessful = $false
+    
+    foreach($buildJob in $buildJobs) {
+        if ($buildJob.conclusion -eq 'success') {
             $anySuccessful = $true
         }
-
-        if($buildJobs.conclusion -ne 'success') {
-            # If there is a build job that is not successful, there is not need to check further
+        if ($buildJob.conclusion -ne 'success' -and $buildJob.conclusion -ne 'Skipped') {
             $allSuccessful = $false
-            break
         }
-
-        $page += 1
     }
 
     return ($allSuccessful -and $anySuccessful)
@@ -818,63 +802,50 @@ function FindLatestSuccessfulCICDRun {
         [string] $repository,
         [Parameter(Mandatory = $true)]
         [string] $branch,
+        [Parameter(Mandatory = $false)]
+        [string] $retention = 90,
         [Parameter(Mandatory = $true)]
         [string] $token
     )
 
-    $headers = GetHeader -token $token
-    $lastSuccessfulCICDRun = 0
-    $per_page = 100
-    $page = 1
+    Write-Host "Authenticating with GitHub using token"
+    $token | invoke-gh auth login --with-token
 
-    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository"
-
-    # Get the latest CICD workflow run
-    while($true) {
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch"
-        Write-Host "- $runsURI"
-        $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
-
-        if($workflowRuns.workflow_runs.Count -eq 0) {
-            # No more workflow runs, breaking out of the loop
-            break
-        }
-
-        $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
+    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
+    $expired = [DateTime]::UtcNow.AddDays(-$retention).ToString('o')
+    $ghoutput = @(gh api -X GET -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" --paginate /repos/$repository/actions/workflows/CICD.yaml/runs -f exclude_pull_requests=true -f status=completed -f branch=$branch -f created=">$expired" --jq '.workflow_runs[]')
+    $lastSuccessfulCICDRun = $null
+    if ($ghoutput -and $ghoutput.Count -gt 0) {
+        $CICDRuns = $ghoutput | ConvertFrom-Json
 
         foreach($CICDRun in $CICDRuns) {
             if($CICDRun.conclusion -eq 'success') {
                 # CICD run is successful
-                $lastSuccessfulCICDRun = $CICDRun.id
+                $lastSuccessfulCICDRun = $CICDRun
                 break
             }
 
             # CICD run is considered successful if all build jobs were successful
-            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -token $token -repository $repository
-
-            if($areBuildJobsSuccessful) {
-                $lastSuccessfulCICDRun = $CICDRun.id
-                Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun), from $($CICDRun.created_at)"
+            if(CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -token $token -repository $repository) {
+                $lastSuccessfulCICDRun = $CICDRun
                 break
             }
 
             Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
+            if($lastSuccessfulCICDRun) {
+                Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun.id), from $($lastSuccessfulCICDRun.created_at)"
+                break
+            }
         }
-
-        if($lastSuccessfulCICDRun -ne 0) {
-            break
-        }
-
-        $page += 1
     }
 
-    if($lastSuccessfulCICDRun -ne 0) {
-        Write-Host "Last successful CICD run for branch $branch in repository $repository is $lastSuccessfulCICDRun"
+    if($lastSuccessfulCICDRun) {
+        Write-Host "Last successful CICD run for branch $branch in repository $repository is $($lastSuccessfulCICDRun.id)"
     } else {
-        Write-Host "No successful CICD run found for branch $branch in repository $repository"
+        Write-Host "No successful CICD run found for branch $branch in repository $repository, within the last $retention days"
     }
 
-    return $lastSuccessfulCICDRun
+    return $lastSuccessfulCICDRun.id, $lastSuccessfulCICDRun.head_sha
 }
 
 
