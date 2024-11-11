@@ -810,7 +810,9 @@ function FindLatestSuccessfulCICDRun {
 
     Write-Host "Authenticating with GitHub using token"
     $ENV:GITHUB_TOKEN = ''
-    $token | invoke-gh auth login --with-token
+@"
+$token
+"@ | invoke-gh auth login --with-token
     $ENV:GITHUB_TOKEN = $token
 
     Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
