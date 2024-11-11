@@ -128,7 +128,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Failed to fetch baseline SHA $baselineSHA" }
         Push-Location $baseFolder
         Write-Host "git diff --name-only $baselineWorkflowSHA $headSHA"
-        $modifiedFiles = git diff --name-only $baselineWorkflowSHA $headSHA
+        $modifiedFiles = @(git diff --name-only $baselineWorkflowSHA $headSHA)
         if ($LASTEXITCODE -ne 0) { throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
         Pop-Location
         Write-Host "$($modifiedFiles.Count) modified file(s)"
