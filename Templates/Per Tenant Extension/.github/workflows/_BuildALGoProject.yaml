@@ -112,6 +112,7 @@ jobs:
           $skippedProjects = $env:skippedProjectsJson | ConvertFrom-Json
           $buildIt = $skippedProjects -notcontains $env:project
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuiltIt=$builtIt"
+          Write-Host "BuiltIt=$builtIt"
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -119,6 +120,10 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,trustedSigning
+
+      - name: builtit
+        run: |
+          Write-Host '${{ steps.DetermineBuild.outputs.BuiltIt }}'
 
       - name: Read secrets
         id: ReadSecrets
