@@ -1,7 +1,7 @@
 ### Issues
 
 - Issue 1241 Increment Version Number might produce wrong app.json
-- `deployTo<environment>` now has an additional property called DependencyInstallMode, which determines how dependencies are deployed if GenerateDependencyArtifact is true. Default value is `install` to install dependencies if not already installed. Other values are `ignore` for ignoring dependencies, `upgrade` for upgrading dependencies if possible and `forceUpgrade` for force upgrading dependencies.
+- When auto discovering appFolders, testFolders and bcptTestFolders - if a BCPT Test app has a dependency to a test framework app, it is added to testFolders as well as bcptTestFolders and will cause a failure.
 
 ### New Project Settings
 
@@ -13,6 +13,7 @@
 
 - `trustedSigning` is a structure defining `Account`, `EndPoint` and `CertificateProfile` if you want to use trusted signing. Note that your Azure_Credentials secret (Microsoft Entra ID App or Managed identity) still needs to provide access to your azure subscription and be assigned the `Trusted Signing Certificate Profile Signer` role in the Trusted Signing Account.
 - `updateALGoSystemFilesSettings` - settings to use when running "Update AL-Go System Files" on a schedule.
+- `deployTo<environment>` now has an additional property called DependencyInstallMode, which determines how dependencies are deployed if GenerateDependencyArtifact is true. Default value is `install` to install dependencies if not already installed. Other values are `ignore` for ignoring dependencies, `upgrade` for upgrading dependencies if possible and `forceUpgrade` for force upgrading dependencies.
 
 ### Support for Azure Trusted Signing
 
@@ -30,6 +31,10 @@ Page Scripting tests are now supported as part of CI/CD. By specifying pageScrip
 When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `updateALGoSystemFilesSettings` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosecrets#updateALGoSystemFilesSettings.
 
 Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
+
+### Experimental support for Git submodule
+
+[Git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) is now supported as part of CI/CD on your project.
 
 ## v6.0
 
