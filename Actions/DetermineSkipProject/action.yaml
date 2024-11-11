@@ -30,7 +30,7 @@ runs:
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CalculateArtifactNames" -Action {
-          ${{ github.action_path }}/DetermineSkipProject.ps1 -skippedProjectsJson $_skippedProjectsJson -project $_project -baselineWorkflowRunId $_baselineWorkflowRunId
+          ${{ github.action_path }}/DetermineSkipProject.ps1 -skippedProjectsJson $env:_skippedProjectsJson -project $env:_project -baselineWorkflowRunId $env:_baselineWorkflowRunId
         }
 branding:
   icon: terminal
