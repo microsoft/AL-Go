@@ -103,16 +103,14 @@ jobs:
           lfs: true
           submodules: recursive
 
-      - name: Determine Build
-        id: DetermineBuild  
-        env:
+      - name: Determine Skip Project
+        id: DetermineSkipProject
+        uses: microsoft/AL-Go-Actions/DetermineSkipProject@main
+        with:
+          shell: ${{ inputs.shell }}
           skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
           project: ${{ inputs.project }}
-        run: |
-          $skippedProjects = $env:skippedProjectsJson | ConvertFrom-Json
-          $buildIt = $skippedProjects -notcontains $env:project
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildIt=$buildIt"
-          Write-Host "BuildIt=$buildIt"
+          baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main

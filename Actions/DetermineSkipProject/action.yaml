@@ -1,0 +1,37 @@
+name: Determine Skip Project
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  skippedProjectsJson:
+    description: Compressed JSON string containing the list of projects that should be skipped
+    required: true
+  project:
+    description: Name of the project to build
+    required: true
+  baselineWorkflowRunId:
+    description: Id of the baseline workflow run, from which to download artifacts if build is skipped
+    required: true
+outputs:
+  BuildIt:
+    description: Determines whether the project needs to be built
+    value: ${{ steps.determineSkipProject.outputs.BuildIt }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: determineSkipProject
+      env:
+        _skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
+        _project: ${{ inputs.project }}
+        _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CalculateArtifactNames" -Action {
+          ${{ github.action_path }}/DetermineSkipProject.ps1 -skippedProjectsJson $_skippedProjectsJson -project $_project -baselineWorkflowRunId $_baselineWorkflowRunId
+        }
+branding:
+  icon: terminal
+  color: blue
