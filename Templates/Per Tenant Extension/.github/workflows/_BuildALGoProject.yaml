@@ -235,7 +235,7 @@ jobs:
 
       - name: Publish artifacts - test apps
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: inputs.publishArtifacts
+        if: inputs.publishArtifacts && exists('${{ inputs.project }}/.buildartifacts/TestApps/')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestAppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/TestApps/'
