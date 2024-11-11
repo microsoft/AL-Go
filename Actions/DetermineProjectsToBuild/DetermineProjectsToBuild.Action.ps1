@@ -69,7 +69,7 @@ Write-Host "::endgroup::"
 #endregion
 
 #region Action: Output
-$skippedProjectsJson = ConvertTo-Json ($allProjects | Where-Object { $_ -notin $projectsToBuild }) -Depth 99 -Compress
+$skippedProjectsJson = ConvertTo-Json (@($allProjects | Where-Object { $_ -notin $projectsToBuild })) -Depth 99 -Compress
 if ($publishSkippedProjectArtifacts) {
     # If we are to publish artifacts for skipped projects, we include the full project list and in the build step, just avoid building the skipped projects
     $projectsToBuild = $allProjects
