@@ -1,6 +1,6 @@
-# Calculate Artifact Names
+# Determine whether to build project
 
-Calculate Artifact Names for AL-Go workflows
+Determine whether to build project
 
 ## INPUT
 

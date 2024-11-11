@@ -110,9 +110,9 @@ jobs:
           project: ${{ inputs.project }}
           get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,trustedSigning
 
-      - name: Determine Skip Project
-        id: DetermineSkipProject
-        uses: microsoft/AL-Go-Actions/DetermineSkipProject@main
+      - name: Determine whether to build project
+        id: DetermineBuildProject
+        uses: microsoft/AL-Go-Actions/DetermineBuildProject@main
         with:
           shell: ${{ inputs.shell }}
           skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
@@ -121,7 +121,7 @@ jobs:
 
       - name: Read secrets
         id: ReadSecrets
-        if: steps.DetermineBuild.outputs.BuildIt == 'True' && github.event_name != 'pull_request'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && github.event_name != 'pull_request'
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: ${{ inputs.shell }}
@@ -130,14 +130,14 @@ jobs:
 
       - name: Determine ArtifactUrl
         id: determineArtifactUrl
-        if: steps.DetermineBuild.outputs.BuildIt == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
 
       - name: Cache Business Central Artifacts
-        if: steps.DetermineBuild.outputs.BuildIt == 'True' && env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey
         uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: .artifactcache
@@ -145,7 +145,7 @@ jobs:
 
       - name: Download Project Dependencies
         id: DownloadProjectDependencies
-        if: steps.DetermineBuild.outputs.BuildIt == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         uses: microsoft/AL-Go-Actions/DownloadProjectDependencies@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -158,7 +158,7 @@ jobs:
 
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
-        if: steps.DetermineBuild.outputs.BuildIt == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
@@ -173,7 +173,7 @@ jobs:
 
       - name: Sign
         id: sign
-        if: steps.DetermineBuild.outputs.BuildIt == 'True' && inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != ''))
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != ''))
         uses: microsoft/AL-Go-Actions/Sign@main
         with:
           shell: ${{ inputs.shell }}

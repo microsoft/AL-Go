@@ -1,4 +1,4 @@
-name: Determine Skip Project
+name: Determine whether to Build Project
 author: Microsoft Corporation
 inputs:
   shell:
@@ -17,20 +17,20 @@ inputs:
 outputs:
   BuildIt:
     description: Determines whether the project needs to be built
-    value: ${{ steps.determineSkipProject.outputs.BuildIt }}
+    value: ${{ steps.determineBuildProject.outputs.BuildIt }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      id: determineSkipProject
+      id: determineBuildProject
       env:
         _skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
         _project: ${{ inputs.project }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CalculateArtifactNames" -Action {
-          ${{ github.action_path }}/DetermineSkipProject.ps1 -skippedProjectsJson $env:_skippedProjectsJson -project $env:_project -baselineWorkflowRunId $env:_baselineWorkflowRunId
+          ${{ github.action_path }}/DetermineBuildProject.ps1 -skippedProjectsJson $env:_skippedProjectsJson -project $env:_project -baselineWorkflowRunId $env:_baselineWorkflowRunId
         }
 branding:
   icon: terminal
