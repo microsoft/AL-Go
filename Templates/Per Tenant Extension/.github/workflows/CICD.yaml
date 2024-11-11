@@ -39,6 +39,7 @@ jobs:
       githubRunner: ${{ steps.ReadSettings.outputs.GitHubRunnerJson }}
       githubRunnerShell: ${{ steps.ReadSettings.outputs.GitHubRunnerShell }}
       projects: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
+      skippedProjects: ${{ steps.determineProjectsToBuild.outputs.SkippedProjectsJson }}
       projectDependenciesJson: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
       baselineWorkflowRunId: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
@@ -81,6 +82,7 @@ jobs:
         with:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
+          publishSkippedProjectArtifacts: 'true'
 
       - name: Determine PowerPlatform Solution Folder
         id: DeterminePowerPlatformSolutionFolder
@@ -160,6 +162,7 @@ jobs:
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
+      skippedProjectsJson: ${{ needs.Initialization.outputs.skippedProjects }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       baselineWorkflowRunId: ${{ needs.Initialization.outputs.baselineWorkflowRunId }}
       baselineWorkflowSHA: ${{ needs.Initialization.outputs.baselineWorkflowSHA }}

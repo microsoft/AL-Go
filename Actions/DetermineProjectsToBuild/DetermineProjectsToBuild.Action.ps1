@@ -3,6 +3,8 @@
     [string] $baseFolder,
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     [int] $maxBuildDepth = 0,
+    [Parameter(HelpMessage = "Specifies whether to publish artifacts for skipped projects", Mandatory = $false)]
+    [bool] $publishSkippedProjectArtifacts,
     [Parameter(HelpMessage = "The GitHub token to use to fetch the modified files", Mandatory = $true)]
     [string] $token
 )
@@ -21,12 +23,14 @@ if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
     # Pull request
     $buildAllProjects = $settings.alwaysBuildAllProjects
     $branch = $env:GITHUB_BASE_REF
+    $publishSkippedProjectArtifacts = $false
     Write-Host "Pull request on $branch"
 }
 elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch') {
     # Manual workflow dispatch
     $buildAllProjects = $true
     $branch = $env:GITHUB_REF_NAME
+    $publishSkippedProjectArtifacts = $false
     Write-Host "Workflow dispatch on $branch"
 }
 else {
@@ -65,11 +69,17 @@ Write-Host "::endgroup::"
 #endregion
 
 #region Action: Output
+$skippedProjectsJson = ConvertTo-Json ($allProjects | Where-Object { $_ -notin $projectsToBuild }) -Depth 99 -Compress
+if ($publishSkippedProjectArtifacts) {
+    # If we are to publish artifacts for skipped projects, we include the full project list and in the build step, just avoid building the skipped projects
+    $projectsToBuild = $allProjects
+}
 $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
 $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
 $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
 # Set output variables
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SkippedProjectsJson=$skippedProjectsJson"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectDependenciesJson=$projectDependenciesJson"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildOrderJson=$buildOrderJson"
@@ -77,7 +87,7 @@ Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BuildAllProjects=$([
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BaselineWorkflowRunId=$baselineWorkflowRunId"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "BaselineWorkflowSHA=$baselineWorkflowSHA"
 
-
+Write-Host "SkippedProjectsJson=$skippedProjectsJson"
 Write-Host "ProjectsJson=$projectsJson"
 Write-Host "ProjectDependenciesJson=$projectDependenciesJson"
 Write-Host "BuildOrderJson=$buildOrderJson"

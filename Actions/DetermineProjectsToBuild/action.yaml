@@ -10,10 +10,17 @@ inputs:
     description: Specifies the maximum build depth suppored by the workflow running the action
     required: false
     default: '0'
+  publishSkippedProjectArtifacts:
+    description: Specifies whether to publish artifacts for skipped projects
+    required: false
+    default: 'false'
 outputs:
   ProjectsJson:
     description: An array of AL-Go projects in compressed JSON format
     value: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
+  SkippedProjectsJson:
+    description: An array of Skipped AL-Go projects in compressed JSON format
+    value: ${{ steps.determineProjectsToBuild.outputs.SkippedProjectsJson }}
   ProjectDependenciesJson:
     description: An object that holds the project dependencies in compressed JSON format
     value: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
@@ -37,9 +44,10 @@ runs:
       id: determineProjectsToBuild
       env:
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
+        _publishSkippedProjectArtifacts: ${{ inputs.publishSkippedProjectArtifacts }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -maxBuildDepth $env:_maxBuildDepth -token ${{ github.token }}
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth -publishSkippedProjectArtifacts ($env:_publishSkippedProjectArtifacts -eq 'true')
         }
 branding:
   icon: terminal
