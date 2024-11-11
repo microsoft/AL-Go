@@ -18,7 +18,7 @@ if (!$buildIt) {
     # Set buildIt to true if the download isn't successful
     $allArtifacts = @()
     'Apps','TestApps','Dependencies','PowerPlatformSolution' | ForEach-Object {
-        $allArtifacts += @(GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $env:GITHUB_TOKEN -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $_ -projects $project
+        $allArtifacts += @(GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $env:GITHUB_TOKEN -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $_ -projects $project)
     }
     if ($allArtifacts) {
         $allArtifacts | Out-Host
