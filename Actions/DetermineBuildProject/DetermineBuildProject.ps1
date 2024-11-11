@@ -29,8 +29,11 @@ if (!$buildIt) {
             if ($artifact -is [Array]) {
                 throw "Multiple artifacts found with mask $mask for project $project"
             }
-            $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
-            if (DownloadArtifact -path $thisArtifactFolder -token $token -artifact $artifact -unpack) {
+            $file = DownloadArtifact -path $buildArtifactFolder -token $token -artifact $artifact
+            if ($file) {
+                $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+                Expand-Archive -Path $file -DestinationPath $thisArtifactFolder -Force
+                Remove-Item -Path $file -Force
                 $buildIt = $false
             }
         }
