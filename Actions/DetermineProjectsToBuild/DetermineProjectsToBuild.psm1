@@ -16,6 +16,7 @@ function Get-ModifiedFiles {
     if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
         if ($baselineSHA) {
             git fetch origin $baselineSHA | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "Failed to fetch baseline SHA $baselineSHA" }
         }
         else {
             $baselineSHA = $ghEvent.pull_request.base.sha
@@ -27,6 +28,7 @@ function Get-ModifiedFiles {
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"
         git fetch origin $baselineSHA | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "Failed to fetch baseline SHA $baselineSHA" }
     }
     else {
         Write-Host "Not a pull request and no baseline specified, returning empty list of changed files"
@@ -34,6 +36,7 @@ function Get-ModifiedFiles {
     }
     Write-Host "git diff --name-only $baselineSHA $headSHA"
     $modifiedFiles = git diff --name-only $baselineSHA $headSHA
+    if ($LASTEXITCODE -ne 0) { throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
     Pop-Location
     return $modifiedFiles
 }
