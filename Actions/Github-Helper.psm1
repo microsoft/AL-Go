@@ -809,9 +809,8 @@ function FindLatestSuccessfulCICDRun {
     )
 
     Write-Host "Authenticating with GitHub using token"
-    pwsh -command {
-        $args[0] | gh auth login --with-token
-    } -args $token
+    $ENV:GH_TOKEN = $token
+    invoke-gh auth login
 
     Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
     $expired = [DateTime]::UtcNow.AddDays(-$retention).ToString('o')
