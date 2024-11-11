@@ -12,21 +12,32 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
-
+$baseFolder = $ENV:GITHUB_WORKSPACE
+$projectPath = Join-Path $baseFolder $project
+$buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
 $skippedProjects = $skippedProjectsJson | ConvertFrom-Json
 $buildIt = $skippedProjects -notcontains $project
 if (!$buildIt) {
     # Download the artifacts from the baseline workflow run
     # Set buildIt to true if the download isn't successful
-    $allArtifacts = @()
+    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+    $buildIt = $true
     'Apps','TestApps','Dependencies','PowerPlatformSolution' | ForEach-Object {
-        $allArtifacts += @(GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $_ -projects $project)
+        $mask = $_
+        $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $project
+        if ($artifact) {
+            if ($artifact -is [Array]) {
+                throw "Multiple artifacts found with mask $mask for project $project"
+            }
+            $thisArtifactFolder = Join-Path $buildArtifactFolder $
+            if (DownloadArtifact -path $thisArtifactFolder -token $token -artifact $artifact -unpack) {
+                $buildIt = $false
+            }
+        }
     }
-    if ($allArtifacts) {
-        $allArtifacts | Out-Host
-    }
-    else {
-        $buildIt = $true
+    if ($buildIt) {
+        # No downloads succeeded - remove the build artifact folder and build the project
+        Remove-Item -Path $buildArtifactFolder -Recurse -Force
     }
 }
 
