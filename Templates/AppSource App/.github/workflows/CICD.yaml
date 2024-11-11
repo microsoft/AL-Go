@@ -9,6 +9,10 @@ on:
       - '!.github/workflows/CICD.yaml'
     branches: [ 'main', 'release/*', 'feature/*' ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: powershell
@@ -172,6 +176,20 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
 
+  BuildPP:
+    needs: [ Initialization ]
+    if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.powerPlatformSolutionFolder != ''
+    name: Build PowerPlatform Solution
+    uses: ./.github/workflows/_BuildPowerPlatformSolution.yaml
+    secrets: inherit
+    with:
+      shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+      runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+      parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+      project: ${{ needs.Initialization.outputs.powerPlatformSolutionFolder }}
+      projectName: ${{ needs.Initialization.outputs.powerPlatformSolutionFolder }}
+      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || startswith(github.ref_name, 'releases/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
+
   DeployALDoc:
     needs: [ Initialization, Build ]
     if: (!cancelled()) && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
@@ -220,8 +238,8 @@ jobs:
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
 
   Deploy:
-    needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.environmentCount > 0
+    needs: [ Initialization, Build, BuildPP ]
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped') && needs.Initialization.outputs.environmentCount > 0
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
@@ -285,8 +303,8 @@ jobs:
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   Deliver:
-    needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.deliveryTargetsJson != '[]'
+    needs: [ Initialization, Build, BuildPP ]
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped') && needs.Initialization.outputs.deliveryTargetsJson != '[]'
     strategy:
       matrix:
         deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargetsJson) }}
@@ -327,7 +345,7 @@ jobs:
           artifacts: '.artifacts'
 
   PostProcess:
-    needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc ]
+    needs: [ Initialization, Build, BuildPP, Deploy, Deliver, DeployALDoc ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     steps:
