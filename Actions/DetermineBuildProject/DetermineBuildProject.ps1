@@ -1,4 +1,6 @@
 ﻿Param(
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
+    [string] $token,
     [Parameter(HelpMessage = "Compressed JSON string containing the list of projects that should be skipped", Mandatory = $true)]
     [string] $skippedProjectsJson,
     [Parameter(HelpMessage = "Name of the project to build", Mandatory = $true)]
@@ -18,7 +20,7 @@ if (!$buildIt) {
     # Set buildIt to true if the download isn't successful
     $allArtifacts = @()
     'Apps','TestApps','Dependencies','PowerPlatformSolution' | ForEach-Object {
-        $allArtifacts += @(GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $env:GITHUB_TOKEN -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $_ -projects $project)
+        $allArtifacts += @(GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $_ -projects $project)
     }
     if ($allArtifacts) {
         $allArtifacts | Out-Host
