@@ -1044,6 +1044,89 @@ function GetArtifacts {
     $result
 }
 
+<#
+.Synopsis
+    Determines whether a full build is required.
+.Outputs
+    A boolean indicating whether a full build is required.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - The alwaysBuildAllProjects setting is set to true
+    - More than 250 files have been modified
+    - The modified files contain a file that matches one of the fullBuildPatterns
+#>
+function Get-BuildAllProjects {
+    param(
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [string[]] $modifiedFiles = @(),
+        [Parameter(HelpMessage = "Full build patterns", Mandatory = $false)]
+        [string[]] $fullBuildPatterns = $settings.fullBuildPatterns
+    )
+
+    $settings = $env:Settings | ConvertFrom-Json
+
+    if (!$modifiedFiles) {
+        Write-Host "No files modified, building all projects"
+        return $true
+    }
+
+    $fullBuildPatterns += @(Join-Path '.github' '*.json')
+
+    #Include the base folder in the modified files
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+
+    foreach($fullBuildFolder in $fullBuildPatterns) {
+        # The Join-Path is needed to make sure the path has the correct slashes
+        $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
+
+        if ($modifiedFiles -like $fullBuildFolder) {
+            Write-Host "Changes to $fullBuildFolder, building all projects"
+            return $true
+        }
+    }
+
+    Write-Host "No changes to fullBuildPatterns, building only modified projects"
+
+    return $false
+}
+
+<#
+.Synopsis
+    Determines whether all apps in a project should be built
+.Outputs
+    A boolean indicating whether a full build is required.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - Get-BuildAllProjects returns true
+    - The .AL-Go/settings.json file has been
+#>
+function Get-BuildAllApps {
+    param(
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The project", Mandatory = $false)]
+        [string] $project = '',
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [string[]] $modifiedFiles = @()
+    )
+
+    if ($project) {
+        $ALGoSettingsFile = @(Join-Path $project '.AL-Go/settings.json')
+    }
+    else {
+        $ALGoSettingsFile = @('.AL-Go/settings.json')
+    }
+    if (Get-BuildAllApps -baseFolder $baseFolder -project $modifiedFiles -fullBuildPatterns $settings.fullBuildPatterns+$ALGoSettingsFile) {
+        return $true
+    }
+
+    return $false
+}
+
 function DownloadArtifact {
     Param(
         [string] $token,

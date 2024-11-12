@@ -143,89 +143,92 @@ try {
                 Write-Host "- $modifiedFile"
             }
         }
-        $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
-            Write-Host "Checking $modifiedFiles against '$($_.SubString(2))/*'"
-            $modifiedFiles -like "$($_.SubString(2))/*"
-        })
-        Write-Host "$($modifiedFolders.Count) modified folder(s)"
-        if ($modifiedFolders.Count -gt 0) {
-            foreach($modifiedFolder in $modifiedFolders) {
-                Write-Host "- $modifiedFolder"
-            }
-        }
-
-        if ($settings.partialBuilds.mode -eq 'modifiedApps') {
-            $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_  })
-            $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
-            $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
-        }
-        elseif ($settings.partialBuilds.mode -eq 'modifiedAppsAndDependingApps') {
-            $skipFolders = @()
-            Sort-AppFoldersByDependencies -appFolders $settings.appFolders+$settings.testFolders+$settings.bcptTestFolders -baseFolder $ENV:GITHUB_WORKSPACE -skipApps ([ref] $skipFolders) -onlyTheseAppFoldersPlusDepending $modifiedFolders | Out-Null
-            $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
-            $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains $_  })
-            $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains $_  })
-        }
-        else {
-            throw "Unknown partial build mode $($settings.partialBuilds.mode)"
-        }
-        $settings.appFolders = @($settings.appFolders | Where-Object { $downloadAppFolders -notcontains $_  })
-        $settings.testFolders = @($settings.testFolders | Where-Object { $downloadTestFolders -notcontains $_ })
-        $settings.bcptTestFolders = @($settings.bcptTestFolders | Where-Object { $downloadBcptTestFolders -notcontains $_ })
-        if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
-        # Download missing apps - or add then to build folders if the artifact doesn't exist
-        $appsToDownload = @{
-            "appFolders" = @{
-                "Mask" = "Apps"
-                "Downloads" = $downloadAppFolders
-            }
-            "testFolders" = @{
-                "Mask" = "TestApps"
-                "Downloads" = $downloadTestFolders
-            }
-            "bcptTestFolders" = @{
-                "Mask" = "TestApps"
-                "Downloads" = $downloadBcptTestFolders
-            }
-        }
-        'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
-            $appType = $_
-            $mask = $appsToDownload."$appType".Mask
-            $downloads = $appsToDownload."$appType".Downloads
-            $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
-            if (!(Test-Path $thisArtifactFolder)) {
-                New-Item $thisArtifactFolder -ItemType Directory | Out-Null
-            }
-            if ($downloads) {
-                Write-Host "Downloading from $mask"
-                $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-                New-Item $tempFolder -ItemType Directory | Out-Null
-                $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
-                if ($runArtifact) {
-                    if ($runArtifact -is [Array]) {
-                        throw "Multiple artifacts found with mask $mask for project $projectName"
-                    }
-                    $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
-                    $artifactFolder = Join-Path $tempFolder $mask
-                    Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
-                    Remove-Item -Path $file -Force
-                    $downloads | ForEach-Object {
-                        $appJsonPath = Join-Path $projectPath "$_/app.json"
-                        $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
-                        $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
-                        $appPath = Join-Path $artifactFolder $appName
-                        if (Test-Path $appPath) {
-                            $item = Get-Item -Path $appPath
-                            Write-Host "Copy $($item.Name) to build folders"
-                            Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
-                        }
-                        else {
-                            Write-Host "No app found for $appName, building $_"
-                            $settings."$appType" += $_
-                        }
-                    }
+        $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        if (!$buildAll) {
+            $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
+                Write-Host "Checking $modifiedFiles against '$($_.SubString(2))/*'"
+                $modifiedFiles -like "$($_.SubString(2))/*"
+            })
+            Write-Host "$($modifiedFolders.Count) modified folder(s)"
+            if ($modifiedFolders.Count -gt 0) {
+                foreach($modifiedFolder in $modifiedFolders) {
+                    Write-Host "- $modifiedFolder"
                 }
-                Remove-Item -Path $tempFolder -Recurse -force
+            }
+
+            if ($settings.partialBuilds.mode -eq 'modifiedApps') {
+                $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_  })
+                $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
+                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
+            }
+            elseif ($settings.partialBuilds.mode -eq 'modifiedAppsAndDependingApps') {
+                $skipFolders = @()
+                Sort-AppFoldersByDependencies -appFolders $settings.appFolders+$settings.testFolders+$settings.bcptTestFolders -baseFolder $ENV:GITHUB_WORKSPACE -skipApps ([ref] $skipFolders) -onlyTheseAppFoldersPlusDepending $modifiedFolders | Out-Null
+                $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
+                $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains $_  })
+                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains $_  })
+            }
+            else {
+                throw "Unknown partial build mode $($settings.partialBuilds.mode)"
+            }
+            $settings.appFolders = @($settings.appFolders | Where-Object { $downloadAppFolders -notcontains $_  })
+            $settings.testFolders = @($settings.testFolders | Where-Object { $downloadTestFolders -notcontains $_ })
+            $settings.bcptTestFolders = @($settings.bcptTestFolders | Where-Object { $downloadBcptTestFolders -notcontains $_ })
+            if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
+            # Download missing apps - or add then to build folders if the artifact doesn't exist
+            $appsToDownload = @{
+                "appFolders" = @{
+                    "Mask" = "Apps"
+                    "Downloads" = $downloadAppFolders
+                }
+                "testFolders" = @{
+                    "Mask" = "TestApps"
+                    "Downloads" = $downloadTestFolders
+                }
+                "bcptTestFolders" = @{
+                    "Mask" = "TestApps"
+                    "Downloads" = $downloadBcptTestFolders
+                }
+            }
+            'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
+                $appType = $_
+                $mask = $appsToDownload."$appType".Mask
+                $downloads = $appsToDownload."$appType".Downloads
+                $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+                if (!(Test-Path $thisArtifactFolder)) {
+                    New-Item $thisArtifactFolder -ItemType Directory | Out-Null
+                }
+                if ($downloads) {
+                    Write-Host "Downloading from $mask"
+                    $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+                    New-Item $tempFolder -ItemType Directory | Out-Null
+                    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
+                    if ($runArtifact) {
+                        if ($runArtifact -is [Array]) {
+                            throw "Multiple artifacts found with mask $mask for project $projectName"
+                        }
+                        $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
+                        $artifactFolder = Join-Path $tempFolder $mask
+                        Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
+                        Remove-Item -Path $file -Force
+                        $downloads | ForEach-Object {
+                            $appJsonPath = Join-Path $projectPath "$_/app.json"
+                            $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
+                            $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
+                            $appPath = Join-Path $artifactFolder $appName
+                            if (Test-Path $appPath) {
+                                $item = Get-Item -Path $appPath
+                                Write-Host "Copy $($item.Name) to build folders"
+                                Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
+                            }
+                            else {
+                                Write-Host "No app found for $appName, building $_"
+                                $settings."$appType" += $_
+                            }
+                        }
+                    }
+                    Remove-Item -Path $tempFolder -Recurse -force
+                }
             }
         }
     }
