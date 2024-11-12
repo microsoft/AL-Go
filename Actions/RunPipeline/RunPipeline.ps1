@@ -137,7 +137,10 @@ try {
                 Write-Host "- $modifiedFile"
             }
         }
-        $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object { $modifiedFiles -like (Join-Path $ENV:GITHUB_WORKSPACE "$_/*") })
+        $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
+            Write-Host "Checking $modifiedFiles against $(Join-Path $ENV:GITHUB_WORKSPACE "$_/*")"
+            $modifiedFiles -like (Join-Path $ENV:GITHUB_WORKSPACE "$_/*")
+        })
         Write-Host "$($modifiedFolders.Count) modified folder(s)"
         if ($modifiedFolders.Count -gt 0) {
             foreach($modifiedFolder in $modifiedFolders) {
