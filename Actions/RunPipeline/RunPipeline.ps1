@@ -179,7 +179,7 @@ try {
             if ($appsToDownload."$mask") {
                 Write-Host "Downloading from $mask"
                 $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-                if ($project) { $projectName = $project } else { $projectName = $ENV:GITHUB_REPOSITORY }
+                if ($project) { $projectName = $project } else { $projectName = $ENV:GITHUB_REPOSITORY_NAME }
                 $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
                 if ($artifact) {
                     if ($artifact -is [Array]) {
