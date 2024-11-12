@@ -156,8 +156,8 @@ try {
 
         if ($settings.partialBuilds.mode -eq 'modifiedApps') {
             $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_  })
-            $downloadTestAppFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
-            $downloadBcptTestAppFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
+            $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
+            $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
         }
         elseif ($settings.partialBuilds.mode -eq 'modifiedAppsAndDepending') {
             $skipFolders = @()
