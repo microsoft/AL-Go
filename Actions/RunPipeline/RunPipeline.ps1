@@ -224,10 +224,6 @@ try {
                 Remove-Item -Path $tempFolder -Recurse -force
             }
         }
-        # Set the appFolders, testFolders and bcptTestFolders to the folders that should be built
-        $settings.appFolders = $buildAppFolders
-        $settings.testFolders = $buildTestFolders
-        $settings.bcptTestFolders = $buildBcptTestFolders
     }
 
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
