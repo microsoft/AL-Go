@@ -825,6 +825,9 @@ function FindLatestSuccessfulCICDRun {
                 $lastSuccessfulCICDRun = $CICDRun
                 break
             }
+            if ($CICDRun.conclusion -eq 'cancelled') {
+                continue
+            }
 
             # CICD run is considered successful if all build jobs were successful
             if(CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -repository $repository) {
