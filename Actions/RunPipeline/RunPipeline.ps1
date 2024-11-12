@@ -179,6 +179,7 @@ try {
             if ($appsToDownload."$mask") {
                 Write-Host "Downloading from $mask"
                 $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+                New-Item $tempFolder -ItemType Directory | Out-Null
                 if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
                 $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
                 if ($runArtifact) {
@@ -192,6 +193,7 @@ try {
                     Remove-Item -Path $file -Force
                     Get-ChildItem $folder | ForEach-Object { Write-Host "---- $($_.FullName)" }
                 }
+                Remove-Item -Path $tempFolder -Recurse -force
             }
         }
         # Set the appFolders, testFolders and bcptTestFolders to the folders that should be built
