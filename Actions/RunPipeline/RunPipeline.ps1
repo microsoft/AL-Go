@@ -159,7 +159,7 @@ try {
             $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
             $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
         }
-        elseif ($settings.partialBuilds.mode -eq 'modifiedAppsAndDepending') {
+        elseif ($settings.partialBuilds.mode -eq 'modifiedAppsAndDependingApps') {
             $skipFolders = @()
             Sort-AppFoldersByDependencies -appFolders $settings.appFolders+$settings.testFolders+$settings.bcptTestFolders -baseFolder $ENV:GITHUB_WORKSPACE -skipApps ([ref] $skipFolders) -onlyTheseAppFoldersPlusDepending $modifiedFolders | Out-Null
             $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
@@ -191,7 +191,7 @@ try {
         'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
             $appType = $_
             $mask = $appsToDownload."$appType".Mask
-            $downloads = $mask = $appsToDownload."$appType".Downloads
+            $downloads = $appsToDownload."$appType".Downloads
             if ($downloads) {
                 Write-Host "Downloading from $mask"
                 $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
