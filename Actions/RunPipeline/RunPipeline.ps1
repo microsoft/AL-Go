@@ -138,8 +138,8 @@ try {
             }
         }
         $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
-            Write-Host "Checking $modifiedFiles against '$_/*'"
-            $modifiedFiles -like "$_/*"
+            Write-Host "Checking $modifiedFiles against '$($_.SubString(2))/*'"
+            $modifiedFiles -like "$($_.SubString(2))/*"
         })
         Write-Host "$($modifiedFolders.Count) modified folder(s)"
         if ($modifiedFolders.Count -gt 0) {
