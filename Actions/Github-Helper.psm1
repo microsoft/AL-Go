@@ -1120,7 +1120,7 @@ function Get-BuildAllApps {
     else {
         $ALGoSettingsFile = @('.AL-Go/settings.json')
     }
-    if (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns $settings.fullBuildPatterns+$ALGoSettingsFile) {
+    if (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($settings.fullBuildPatterns+$ALGoSettingsFile)) {
         return $true
     }
 
