@@ -192,6 +192,10 @@ try {
             $appType = $_
             $mask = $appsToDownload."$appType".Mask
             $downloads = $appsToDownload."$appType".Downloads
+            $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+            if (!(Test-Path $thisArtifactFolder)) {
+                New-Item $thisArtifactFolder -ItemType Directory | Out-Null
+            }
             if ($downloads) {
                 Write-Host "Downloading from $mask"
                 $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -213,7 +217,7 @@ try {
                         if (Test-Path $appPath) {
                             $item = Get-Item -Path $appPath
                             Write-Host "Copy $($item.Name) to build folders"
-                            Copy-Item -Path $item.FullName -Destination $buildArtifactFolder -Force
+                            Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
                         }
                         else {
                             Write-Host "No app found for $appName, building $_"
