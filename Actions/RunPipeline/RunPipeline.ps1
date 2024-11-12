@@ -210,7 +210,7 @@ try {
                     Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
                     Remove-Item -Path $file -Force
                     $downloads | ForEach-Object {
-                        $appJsonPath = Join-Path $ENV:GITHUB_WORKSPACE "$_/app.json"
+                        $appJsonPath = Join-Path $projectPath "$_/app.json"
                         $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
                         $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
                         $appPath = Join-Path $artifactFolder $appName
