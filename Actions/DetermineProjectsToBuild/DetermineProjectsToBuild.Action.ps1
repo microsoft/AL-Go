@@ -49,17 +49,23 @@ Write-Host "::endgroup::"
 
 #region Action: Determine projects to build
 Write-Host "::group::Get Modified Files"
-$modifiedFiles = @(Get-ModifiedFiles -token $token -baselineSHA $baselineWorkflowSHA)
-Write-Host "$($modifiedFiles.Count) modified file(s)"
-if ($modifiedFiles.Count -gt 0) {
-    foreach($modifiedFile in $modifiedFiles) {
-        Write-Host "- $modifiedFile"
+try {
+    $modifiedFiles = @(Get-ModifiedFiles -token $token -baselineSHA $baselineWorkflowSHA)
+    Write-Host "$($modifiedFiles.Count) modified file(s)"
+    if ($modifiedFiles.Count -gt 0) {
+        foreach($modifiedFile in $modifiedFiles) {
+            Write-Host "- $modifiedFile"
+        }
     }
+}
+catch {
+    Write-Host "Failed to calculate modified files, building all projects"
+    $buildAllProjects = $true
 }
 Write-Host "::endgroup::"
 
 Write-Host "::group::Determine Partial Build"
-$buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+$buildAllProjects = $buildAllProjects -or (Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
 Write-Host "::endgroup::"
 
 

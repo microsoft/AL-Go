@@ -63,18 +63,8 @@ function Get-BuildAllProjects {
 
     $settings = $env:Settings | ConvertFrom-Json
 
-    if ($settings.alwaysBuildAllProjects) {
-        Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
-        return $true
-    }
-
     if (!$modifiedFiles) {
         Write-Host "No files modified, building all projects"
-        return $true
-    }
-
-    if ($modifiedFiles.Count -ge 250) {
-        Write-Host "More than 250 files modified, building all projects"
         return $true
     }
 

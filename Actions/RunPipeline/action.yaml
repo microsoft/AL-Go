@@ -29,6 +29,10 @@ inputs:
     description: A JSON-formatted list of test apps to install
     required: false
     default: '[]'
+  baselineWorkflowRunId:
+    description: RunId of the baseline workflow run
+    required: false
+    default: ''
   baselineWorkflowSHA:
     description: SHA of the baseline workflow run
     required: false
