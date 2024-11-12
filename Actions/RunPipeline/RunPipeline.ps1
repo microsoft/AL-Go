@@ -169,29 +169,57 @@ try {
         else {
             throw "Unknown partial build mode $($settings.partialBuilds.mode)"
         }
-        $buildAppFolders = @($settings.appFolders | Where-Object { $downloadAppFolders -notcontains $_  })
-        $buildTestFolders = @($settings.testFolders | Where-Object { $downloadTestFolders -notcontains $_ })
-        $buildBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $downloadBcptTestFolders -notcontains $_ })
+        $settings.appFolders = @($settings.appFolders | Where-Object { $downloadAppFolders -notcontains $_  })
+        $settings.testFolders = @($settings.testFolders | Where-Object { $downloadTestFolders -notcontains $_ })
+        $settings.bcptTestFolders = @($settings.bcptTestFolders | Where-Object { $downloadBcptTestFolders -notcontains $_ })
+        if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
         # Download missing apps - or add then to build folders if the artifact doesn't exist
-        $appsToDownload = @{"Apps" = @($downloadAppFolders); "TestApps" = @($downloadTestFolders+$downloadBcptTestFolders) }
-        'Apps','TestApps' | ForEach-Object {
-            $mask = $_
-            if ($appsToDownload."$mask") {
+        $appsToDownload = @{
+            "appFolders" = @{
+                "Mask" = "Apps"
+                "Downloads" = $downloadAppFolders
+            }
+            "testFolders" = @{
+                "Mask" = "TestApps"
+                "Downloads" = $downloadTestFolders
+            }
+            "bcptTestFolders" = @{
+                "Mask" = "TestApps"
+                "Downloads" = $downloadBcptTestFolders
+            }
+        }
+        'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
+            $appType = $_
+            $mask = $appsToDownload."$appType".Mask
+            $downloads = $mask = $appsToDownload."$appType".Downloads
+            if ($download) {
                 Write-Host "Downloading from $mask"
                 $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
                 New-Item $tempFolder -ItemType Directory | Out-Null
-                if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
                 $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
                 if ($runArtifact) {
                     if ($runArtifact -is [Array]) {
                         throw "Multiple artifacts found with mask $mask for project $projectName"
                     }
-                    Write-Host "'$runArtifact'"
                     $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
-                    $folder = Join-Path $tempFolder $mask
-                    Expand-Archive -Path $file -DestinationPath $folder -Force
+                    $artifactFolder = Join-Path $tempFolder $mask
+                    Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
                     Remove-Item -Path $file -Force
-                    Get-ChildItem $folder | ForEach-Object { Write-Host "---- $($_.FullName)" }
+                    $downloads | ForEach-Object {
+                        $appJsonPath = Join-Path $ENV:GITHUB_WORKSPACE "$_/app.json"
+                        $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
+                        $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
+                        $appPath = Join-Path $artifactFolder $appName
+                        if (Test-Path $appPath) {
+                            $item = Get-Item -Path $appPath
+                            Write-Host "Copy $($item.Name) to build folders"
+                            Copy-Item -Path $item.FullName -Destination $buildArtifactFolder -Force
+                        }
+                        else {
+                            Write-Host "No app found for $appName, building $_"
+                            $settings."$appType" += $_
+                        }
+                    }
                 }
                 Remove-Item -Path $tempFolder -Recurse -force
             }
