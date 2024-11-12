@@ -192,7 +192,7 @@ try {
             $appType = $_
             $mask = $appsToDownload."$appType".Mask
             $downloads = $mask = $appsToDownload."$appType".Downloads
-            if ($download) {
+            if ($downloads) {
                 Write-Host "Downloading from $mask"
                 $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
                 New-Item $tempFolder -ItemType Directory | Out-Null
