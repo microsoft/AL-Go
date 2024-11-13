@@ -145,10 +145,13 @@ try {
         }
         $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         if (!$buildAll) {
+            Push-Location $ENV:GITHUB_WORKSPACE
             $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
-                Write-Host "Checking $modifiedFiles against '$($_.SubString(2))/*'"
-                $modifiedFiles -like "$($_.SubString(2))/*"
+                $theFolder = Resolve-Path (Join-Path $baseFolder "$project/$_") -Resolve
+                Write-Host "Checking $modifiedFiles against '$($theFolder.SubString(2))/*'"
+                $modifiedFiles -like "$($theFolder.SubString(2))/*"
             })
+            Pop-Location
             Write-Host "$($modifiedFolders.Count) modified folder(s)"
             if ($modifiedFolders.Count -gt 0) {
                 foreach($modifiedFolder in $modifiedFolders) {
