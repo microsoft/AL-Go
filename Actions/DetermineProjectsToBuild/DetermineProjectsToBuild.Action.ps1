@@ -50,7 +50,7 @@ Write-Host "::endgroup::"
 #region Action: Determine projects to build
 Write-Host "::group::Get Modified Files"
 try {
-    $modifiedFiles = @(Get-ModifiedFiles -token $token -baselineSHA $baselineWorkflowSHA)
+    $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
     Write-Host "$($modifiedFiles.Count) modified file(s)"
     if ($modifiedFiles.Count -gt 0) {
         foreach($modifiedFile in $modifiedFiles) {

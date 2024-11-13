@@ -22,8 +22,7 @@ if (!$buildIt) {
     # Set buildIt to true if the download isn't successful
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
     $buildIt = $true
-    'Apps','TestApps','Dependencies','PowerPlatformSolution' | ForEach-Object {
-        $mask = $_
+    foreach($mask in @('Apps','TestApps','Dependencies','PowerPlatformSolution')) {
         $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $project
         if ($artifact) {
             if ($artifact -is [Array]) {

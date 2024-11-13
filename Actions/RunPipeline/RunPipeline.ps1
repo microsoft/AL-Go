@@ -174,9 +174,6 @@ try {
             else {
                 throw "Unknown partial build mode $($settings.partialBuilds.mode)"
             }
-            $settings.appFolders = @($settings.appFolders | Where-Object { $downloadAppFolders -notcontains $_  })
-            $settings.testFolders = @($settings.testFolders | Where-Object { $downloadTestFolders -notcontains $_ })
-            $settings.bcptTestFolders = @($settings.bcptTestFolders | Where-Object { $downloadBcptTestFolders -notcontains $_ })
             if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
             # Download missing apps - or add then to build folders if the artifact doesn't exist
             $appsToDownload = @{
