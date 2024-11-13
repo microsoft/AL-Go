@@ -95,10 +95,28 @@ function DownloadDependenciesFromCurrentBuild {
         Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowRunID"
 
         $dependency = GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ }
-        $downloadedDependencies += $dependency
+        if (!($downloadedDependencies | Where-Object { [System.IO.Path]::GetFileName($_) -eq [System.IO.Path]::GetFileName($dependency) })) {
+            $downloadedDependencies += $dependency
+        }
     }
 
     return $downloadedDependencies
+}
+
+function OutputDownloadedDependencies {
+    Param(
+        [string] $message,
+        [string[]] $downloadedDependencies
+    )
+    Write-Host $message
+    if (!$downloadedDependencies) {
+        Write-Host "- None"
+    }
+    else {
+        $downloadedDependencies | ForEach-Object {
+            Write-Host "- $_"
+        }
+    }
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -117,7 +135,7 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
-Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
+OutputDownloadedDependencies -message "Downloaded dependencies:" -downloadedDependencies $downloadedDependencies
 
 $downloadedApps = @()
 $downloadedTestApps = @()
@@ -133,8 +151,8 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-Write-Host "Downloaded dependencies apps: $($DownloadedApps -join ', ')"
-Write-Host "Downloaded dependencies test apps: $($DownloadedTestApps -join ', ')"
+OutputDownloadedDependencies -message "Downloaded dependencies apps:" -downloadedDependencies $downloadedApps
+OutputDownloadedDependencies -message "Downloaded dependencies test apps:" -downloadedDependencies $downloadedTestApps
 
 $DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
 $DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
