@@ -1,3 +1,7 @@
+### Support for partial builds
+
+AL-Go for GitHub now supports partial builds.
+
 ## v6.1
 
 ### Issues
@@ -26,10 +30,6 @@ Page Scripting tests are now supported as part of CI/CD. By specifying pageScrip
 
 - `PageScriptingTestResults` is a JUnit test results file with all results combined.
 - `PageScriptingTestResultDetails` are the detailed test results (including videos) when any of the page scripting tests have failures. If the page scripting tests succeed - the details are not published.
-
-### Support for partial builds
-
-AL-Go for GitHub now supports partial builds.
 
 ### Experimental support for Git submodule
 
