@@ -19,8 +19,6 @@ Determine whether to build project
 | project | Yes | Name of the project to build | |
 | baselineWorkflowRunId | Yes | Id of the baseline workflow run, from which to download artifacts if build is skipped | |
 
-
-
 ## OUTPUT
 
 ### ENV variables

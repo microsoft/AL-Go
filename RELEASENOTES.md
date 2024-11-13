@@ -27,7 +27,7 @@ Page Scripting tests are now supported as part of CI/CD. By specifying pageScrip
 
 ### Support for partial builds
 
-
+AL-Go for GitHub now supports partial builds.
 
 ### Experimental support for Git submodule
 

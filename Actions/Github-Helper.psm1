@@ -777,7 +777,7 @@ function CheckBuildJobsInWorkflowRun {
     $anySuccessful = $false
     $allSuccessful = $true
     $anySuccessful = $false
-    
+
     foreach($buildJob in $buildJobs) {
         if ($buildJob.conclusion -eq 'success') {
             $anySuccessful = $true
