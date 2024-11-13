@@ -94,8 +94,8 @@ function DownloadDependenciesFromCurrentBuild {
 
         Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowRunID"
         GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ } | ForEach-Object {
-            $dependencyFileName = [System.IO.Path]::GetFileName($_)
-            if ($downloadedDependencies | Where-Object { [System.IO.Path]::GetFileName($_) -eq $dependencyFileName }) {
+            $dependencyFileName = [System.IO.Path]::GetFileName($_.Trim('()'))
+            if ($downloadedDependencies | Where-Object { [System.IO.Path]::GetFileName($_.Trim('()')) -eq $dependencyFileName }) {
                 Write-Host "Dependency app '$dependencyFileName' already downloaded"
             }
             else {
