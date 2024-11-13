@@ -148,7 +148,6 @@ try {
             Push-Location $ENV:GITHUB_WORKSPACE
             $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
                 $theFolder = Resolve-Path (Join-Path $baseFolder "$project/$_") -Relative
-                Write-Host "Checking $modifiedFiles against '$($theFolder.SubString(2))$([System.IO.Path]::DirectorySeparatorChar)*'"
                 $modifiedFiles -like "$($theFolder.SubString(2))$([System.IO.Path]::DirectorySeparatorChar)*"
             })
             Pop-Location
