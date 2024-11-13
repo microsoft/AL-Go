@@ -23,13 +23,17 @@ if (!$buildIt) {
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
     $buildIt = $true
     foreach($mask in @('Apps','TestApps','Dependencies','PowerPlatformSolution')) {
+        Write-Host "test $mask"
+        Write-Host "GetArtifactsFromWorkflowRun -workflowRun '$baselineWorkflowRunId' -token '$token' -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask '$mask' -projects '$project'"
         $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $project
         if ($artifact) {
+            Write-Host "Artifact found for mask $mask"
             if ($artifact -is [Array]) {
                 throw "Multiple artifacts found with mask $mask for project $project"
             }
             $file = DownloadArtifact -path $buildArtifactFolder -token $token -artifact $artifact
             if ($file) {
+                Write-Host "Artifact downloaded for mask $mask"
                 $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
                 Expand-Archive -Path $file -DestinationPath $thisArtifactFolder -Force
                 Remove-Item -Path $file -Force
