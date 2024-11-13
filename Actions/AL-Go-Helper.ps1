@@ -393,7 +393,7 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
         # Read Repository Settings file (without applying organization variables, repository variables or project settings files)
         # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in repo settings file
         $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-        if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
+        if ($repoSettings.Keys -contains "BcContainerHelperVersion" -and $defaultBcContainerHelperVersion -notlike 'https://*') {
             $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
             Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
             if ($bcContainerHelperVersion -like "https://*") {
