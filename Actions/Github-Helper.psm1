@@ -144,11 +144,7 @@ function GetDependencies {
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
                     $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
-                    Write-Host "------------>$downloadName"
-                    Get-ChildItem -Path $saveToPath | Out-Host
-
                     if (Test-Path $downloadName -PathType Container) {
-                        Write-Host "folder exists"
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
                             Write-Host $_.FullName
