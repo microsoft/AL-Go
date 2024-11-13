@@ -1,3 +1,5 @@
+## v6.1
+
 ### Issues
 
 - Issue 1241 Increment Version Number might produce wrong app.json
