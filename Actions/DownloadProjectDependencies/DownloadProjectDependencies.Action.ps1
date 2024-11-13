@@ -93,10 +93,15 @@ function DownloadDependenciesFromCurrentBuild {
         $baselineWorkflowRunID = $probingPath.baselineWorkflowID
 
         Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowRunID"
-
-        $dependency = GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ }
-        if (!($downloadedDependencies | Where-Object { [System.IO.Path]::GetFileName($_) -eq [System.IO.Path]::GetFileName($dependency) })) {
-            $downloadedDependencies += $dependency
+        GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ } | ForEach-Object {
+            $dependencyFileName = [System.IO.Path]::GetFileName($_)
+            if ($downloadedDependencies | Where-Object { [System.IO.Path]::GetFileName($_) -eq $dependencyFileName }) {
+                Write-Host "Dependency app '$dependencyFileName' already downloaded"
+            }
+            else {
+                Write-Host "Dependency app '$dependencyFileName' downloaded"
+                $downloadedDependencies += $_
+            }
         }
     }
 
