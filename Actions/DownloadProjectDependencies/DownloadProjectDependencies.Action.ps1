@@ -52,7 +52,7 @@ function DownloadDependenciesFromCurrentBuild {
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
 
         $dependencyBuildMode = $buildMode
-        if (!($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
+        if ($dependencyBuildMode -ne 'Default' -and !($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
             # Download the default build mode if the specified build mode is not supported for the dependency project
             Write-Host "Build mode '$dependencyBuildMode' is not supported for project '$dependencyProject'. Using the default build mode."
             $dependencyBuildMode = 'Default';
