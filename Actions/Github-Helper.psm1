@@ -145,7 +145,7 @@ function GetDependencies {
 
                     $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
                     Write-Host "------------>$downloadName"
-                    Get-ChildItem -Path . | Out-Host
+                    Get-ChildItem -Path $saveToPath | Out-Host
 
                     if (Test-Path $downloadName -PathType Container) {
                         Write-Host "folder exists"
@@ -161,12 +161,12 @@ function GetDependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -notlike '*TestApps') {
+                    elseif ($mask -like '*Apps') {
                         Write-Host "$project not built, downloading from artifacts"
                         $missingProjects += @($project)
                     }
                 }
-                if ($missingProjects) {
+                if ($missingProjects -and $dependency.baselineWorkflowID) {
                     $dependency.release_status = 'latestBuild'
                     $dependency.branch = $dependency.baseBranch
                     $dependency.projects = $missingProjects -join ","
