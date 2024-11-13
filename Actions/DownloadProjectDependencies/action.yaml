@@ -29,6 +29,12 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Download artifacts from current build
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        path: ${{ github.workspace }}/.dependencies
+        pattern: thisBuild-*
+
     - name: Download project dependencies
       shell: ${{ inputs.shell }}
       id: DownloadDependencies
