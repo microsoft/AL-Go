@@ -1099,11 +1099,11 @@ function AnalyzeRepo {
         }
     }
     if (!$settings.doNotRunBcptTests -and -not $settings.bcptTestFolders) {
-        Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile"
+        if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+        if (!$doNotIssueWarnings -and !$settings.doNotBuildTests) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
         $settings.doNotRunTests = $true
     }
     if (-not $settings.appFolders) {
