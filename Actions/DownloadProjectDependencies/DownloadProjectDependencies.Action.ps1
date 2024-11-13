@@ -140,8 +140,6 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
-OutputDownloadedDependencies -message "Downloaded dependencies:" -downloadedDependencies $downloadedDependencies
-
 $downloadedApps = @()
 $downloadedTestApps = @()
 
@@ -156,8 +154,8 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-OutputDownloadedDependencies -message "Downloaded dependencies apps:" -downloadedDependencies $downloadedApps
-OutputDownloadedDependencies -message "Downloaded dependencies test apps:" -downloadedDependencies $downloadedTestApps
+OutputDownloadedDependencies -message "Downloaded dependencies (Apps):" -downloadedDependencies $downloadedApps
+OutputDownloadedDependencies -message "Downloaded dependencies (Test Apps):" -downloadedDependencies $downloadedTestApps
 
 $DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
 $DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
