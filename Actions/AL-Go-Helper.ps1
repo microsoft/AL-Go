@@ -2063,7 +2063,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        Write-Host "Folders containing apps are $($folders -join ',' )"
+        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -2452,3 +2452,20 @@ function ConnectAz {
         throw "Error trying to authenticate to Azure. Error was $($_.Exception.Message)"
     }
 }
+
+function OutputMessageAndArray {
+    Param(
+        [string] $message,
+        [string[]] $arrayOfStrings
+    )
+    Write-Host "$($message):"
+    if (!$arrayOfStrings) {
+        Write-Host "- None"
+    }
+    else {
+        $arrayOfStrings | ForEach-Object {
+            Write-Host "- $_"
+        }
+    }
+}
+

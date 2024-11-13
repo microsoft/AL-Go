@@ -108,22 +108,6 @@ function DownloadDependenciesFromCurrentBuild {
     return $downloadedDependencies
 }
 
-function OutputDownloadedDependencies {
-    Param(
-        [string] $message,
-        [string[]] $downloadedDependencies
-    )
-    Write-Host $message
-    if (!$downloadedDependencies) {
-        Write-Host "- None"
-    }
-    else {
-        $downloadedDependencies | ForEach-Object {
-            Write-Host "- $_"
-        }
-    }
-}
-
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
@@ -154,8 +138,8 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-OutputDownloadedDependencies -message "Downloaded dependencies (Apps):" -downloadedDependencies $downloadedApps
-OutputDownloadedDependencies -message "Downloaded dependencies (Test Apps):" -downloadedDependencies $downloadedTestApps
+OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
+OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
 
 $DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
 $DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
