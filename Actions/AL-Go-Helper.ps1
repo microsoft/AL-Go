@@ -633,7 +633,7 @@ function ReadSettings {
         "cacheImageName"                                = "my"
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
-        "partialBuilds"                                 = [ordered]@{
+        "incrementalBuilds"                             = [ordered]@{
             "enabled"                                   = $true
             "retentionDays"                             = 30
             "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps, modifiedAppsAndDependingApps

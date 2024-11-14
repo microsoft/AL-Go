@@ -126,7 +126,7 @@ try {
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
-    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.partialBuilds.enabled -and $settings.partialBuilds.mode -ne 'modifiedProjects') {
+    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.enabled -and $settings.incrementalBuilds.mode -ne 'modifiedProjects') {
         # Partial builds are enabled and we are only building modified apps
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"
@@ -158,12 +158,12 @@ try {
                 }
             }
 
-            if ($settings.partialBuilds.mode -eq 'modifiedApps') {
+            if ($settings.incrementalBuilds.mode -eq 'modifiedApps') {
                 $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_  })
                 $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
                 $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
             }
-            elseif ($settings.partialBuilds.mode -eq 'modifiedAppsAndDependingApps') {
+            elseif ($settings.incrementalBuilds.mode -eq 'modifiedAppsAndDependingApps') {
                 $skipFolders = @()
                 Sort-AppFoldersByDependencies -appFolders $settings.appFolders+$settings.testFolders+$settings.bcptTestFolders -baseFolder $ENV:GITHUB_WORKSPACE -skipApps ([ref] $skipFolders) -onlyTheseAppFoldersPlusDepending $modifiedFolders | Out-Null
                 $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
@@ -171,7 +171,7 @@ try {
                 $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains $_  })
             }
             else {
-                throw "Unknown partial build mode $($settings.partialBuilds.mode)"
+                throw "Unknown partial build mode $($settings.incrementalBuilds.mode)"
             }
             if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
             # Download missing apps - or add then to build folders if the artifact doesn't exist
