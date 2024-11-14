@@ -201,10 +201,16 @@ try {
                     Write-Host "Downloading from $mask"
                     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
                     New-Item $tempFolder -ItemType Directory | Out-Null
-                    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
+                    if ($buildMode -eq 'Default') {
+                        $artifactMask = $mask
+                    }
+                    else {
+                        $artifactMask = "$buildMode$mask"
+                    }
+                    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $artifactMask -projects $projectName
                     if ($runArtifact) {
                         if ($runArtifact -is [Array]) {
-                            throw "Multiple artifacts found with mask $mask for project $projectName"
+                            throw "Multiple artifacts found with mask $artifactMask for project $projectName"
                         }
                         $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
                         $artifactFolder = Join-Path $tempFolder $mask
