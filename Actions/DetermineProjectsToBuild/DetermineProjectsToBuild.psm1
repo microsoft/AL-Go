@@ -13,20 +13,19 @@ function Get-ModifiedFiles {
     Push-Location $ENV:GITHUB_WORKSPACE
     $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
     if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
-        $headSHA = git rev-parse HEAD
-        Write-Host "Current HEAD is $headSHA"
         $headSHA = $ghEvent.pull_request.head.sha
+        Write-Host "Using head SHA $headSHA from pull request"
         git fetch origin $headSHA | Out-Host
         if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch head SHA $headSHA" }
         if ($baselineSHA) {
-            git fetch origin $baselineSHA | Out-Host
-            if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
             Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
         }
         else {
             $baselineSHA = $ghEvent.pull_request.base.sha
-            Write-Host "This is a pull request, using baseline SHA $baselineSHA and head SHA $headSHA from pull request"
+            Write-Host "This is a pull request, using baseline SHA $baselineSHA from pull request"
         }
+        git fetch origin $baselineSHA | Out-Host
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
     }
     elseif ($baselineSHA) {
         $headSHA = git rev-parse HEAD
