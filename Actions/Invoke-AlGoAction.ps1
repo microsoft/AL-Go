@@ -19,6 +19,7 @@ try {
     if (-not $SkipTelemetry) {
         Trace-Information -ActionName $ActionName
     }
+    exit 0
 }
 catch {
     if (-not $SkipTelemetry) {
