@@ -61,6 +61,7 @@ try {
 catch {
     Write-Host "Failed to calculate modified files, building all projects"
     $buildAllProjects = $true
+    $modifiedFiles = @()
 }
 Write-Host "::endgroup::"
 
