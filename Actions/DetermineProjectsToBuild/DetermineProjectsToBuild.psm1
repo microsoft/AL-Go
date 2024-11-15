@@ -13,10 +13,14 @@ function Get-ModifiedFiles {
     Push-Location $ENV:GITHUB_WORKSPACE
     $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
     if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
+        $headSHA = git rev-parse HEAD
+        Write-Host "Current HEAD is $headSHA"
         $headSHA = $ghEvent.pull_request.head.sha
+        git fetch origin $headSHA | Out-Host
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch head SHA $headSHA" }
         if ($baselineSHA) {
             git fetch origin $baselineSHA | Out-Host
-            if ($LASTEXITCODE -ne 0) { throw "Failed to fetch baseline SHA $baselineSHA" }
+            if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
             Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
         }
         else {
@@ -28,7 +32,7 @@ function Get-ModifiedFiles {
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"
         git fetch origin $baselineSHA | Out-Host
-        if ($LASTEXITCODE -ne 0) { throw "Failed to fetch baseline SHA $baselineSHA" }
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
         Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
     }
     else {
@@ -37,7 +41,7 @@ function Get-ModifiedFiles {
     }
     Write-Host "git diff --name-only $baselineSHA $headSHA"
     $modifiedFiles = @(git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
-    if ($LASTEXITCODE -ne 0) { throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
+    if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
     Pop-Location
     return $modifiedFiles
 }

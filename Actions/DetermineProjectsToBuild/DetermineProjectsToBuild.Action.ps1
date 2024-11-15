@@ -60,7 +60,6 @@ try {
 }
 catch {
     Write-Host "Failed to calculate modified files, building all projects"
-    $host.SetShouldExit(0)
     $buildAllProjects = $true
     $modifiedFiles = @()
 }

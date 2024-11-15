@@ -2314,6 +2314,7 @@ function RetryCommand {
         try {
             Invoke-Command $Command -ArgumentList $argumentList
             if ($LASTEXITCODE -ne 0) {
+                $host.SetShouldExit(0); 
                 throw "Command failed with exit code $LASTEXITCODE"
             }
             break

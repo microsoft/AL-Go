@@ -131,11 +131,11 @@ try {
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"
         git fetch origin $baselineWorkflowSHA | Out-Host
-        if ($LASTEXITCODE -ne 0) { throw "Failed to fetch baseline SHA $baselineSHA" }
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
         Push-Location $ENV:GITHUB_WORKSPACE
         Write-Host "git diff --name-only $baselineWorkflowSHA $headSHA"
         $modifiedFiles = @(git diff --name-only $baselineWorkflowSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
-        if ($LASTEXITCODE -ne 0) { throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
         Pop-Location
         Write-Host "$($modifiedFiles.Count) modified file(s)"
         if ($modifiedFiles.Count -gt 0) {
