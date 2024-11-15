@@ -38,22 +38,6 @@ function SetTokenAndRepository {
     }
 }
 
-function Get-PlainText {
-    Param(
-        [parameter(ValueFromPipeline, Mandatory = $true)]
-        [System.Security.SecureString] $SecureString
-    )
-    Process {
-        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString);
-        try {
-            return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);
-        }
-        finally {
-            [Runtime.InteropServices.Marshal]::FreeBSTR($bstr);
-        }
-    }
-}
-
 function Add-PropertiesToJsonFile {
     Param(
         [string] $path,
