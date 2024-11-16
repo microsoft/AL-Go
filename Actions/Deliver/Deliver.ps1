@@ -252,7 +252,7 @@ foreach ($thisProject in $projectList) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                     $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
                     $packageId = Get-BcNuGetPackageId -publisher $appJson.publisher -name $appJson.name -id $appJson.id -version $appJson.version
-                    if (!Get-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageId -packageVersion $appJson.Version -select  -allowPrerelease) {
+                    if (!(Get-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageId -packageVersion $appJson.Version -select  -allowPrerelease)) {
                         $parameters = @{
                             "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
                             "preReleaseTag"    = $preReleaseTag
