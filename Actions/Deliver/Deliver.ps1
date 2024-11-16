@@ -251,8 +251,9 @@ foreach ($thisProject in $projectList) {
             elseif ($folder.Count -eq 1) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                     $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
-                    $packageId = Get-BcNuGetPackageId -publisher $appJson.publisher -name $appJson.name -id $appJson.id -version $appJson.version
-                    if (!(Get-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageId -version $appJson.Version -select Exact -allowPrerelease)) {
+                    $packageName = Get-BcNuGetPackageId -publisher $appJson.publisher -name $appJson.name -id $appJson.id -version $appJson.version
+                    $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $version -select Exact -allowPrerelease
+                    if (-not $feed) {
                         $parameters = @{
                             "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
                             "preReleaseTag"    = $preReleaseTag
