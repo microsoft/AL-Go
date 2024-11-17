@@ -102,7 +102,6 @@ try {
                 }
                 if ($json.Keys.Count) {
                     foreach($keyName in $json.Keys) {
-                        Write-Host $keyName
                         if ((IsPropertySecret -propertyName $keyName) -and ($json."$keyName" -isnot [boolean])) {
                             # Mask individual values if property is secret
                             MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
@@ -111,6 +110,7 @@ try {
                     if ($json.ContainsKey('GitHubAppClientId') -and $json.ContainsKey('PrivateKey')) {
                         # Authenticating as a GitHub App
                         try {
+                            Write-Host "Using GitHub App with ClientId $($json.GitHubAppClientId) for authentication"
                             $jwt = GenerateJwtForTokenRequest -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey
                             $headers = @{
                                 "Accept" = "application/vnd.github+json"
