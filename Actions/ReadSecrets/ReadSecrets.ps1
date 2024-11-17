@@ -121,7 +121,7 @@ try {
                             $secretValue = $tokenResponse.token
                             MaskValue -key "$secretName PAT" -value $secretValue
                         }
-                        else {
+                        catch {
                             throw "Unable to authenticate as GitHub App with Client ID $($json.GitHubAppClientId). Error was $($_.Exception.Message)"
                         }
                     }
