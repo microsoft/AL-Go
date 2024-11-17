@@ -108,25 +108,18 @@ try {
                             MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
-                    Write-Host "go"
                     if ($json.ContainsKey('GitHubAppClientId') -and $json.ContainsKey('PrivateKey')) {
                         # Authenticating as a GitHub App
                         try {
-                            Write-Host "1"
                             $jwt = GenerateJwtForTokenRequest -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey
-                            Write-Host "2"
                             $headers = @{
                                 "Accept" = "application/vnd.github+json"
                                 "Authorization" = "Bearer $jwt"
                                 "X-GitHub-Api-Version" = "2022-11-28"
                             }
-                            Write-Host "3"
                             $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$ENV:GITHUB_API_URL/repos/$ENV:GITHUB_REPOSITORY/installation"
-                            Write-Host "4"
                             $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Uri $appInfo.access_tokens_url
-                            Write-Host "5"
                             $secretValue = $tokenResponse.token
-                            Write-Host "6"
                             MaskValue -key "$secretName PAT" -value $secretValue
                         }
                         catch {
