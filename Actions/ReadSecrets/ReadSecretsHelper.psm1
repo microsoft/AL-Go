@@ -221,7 +221,7 @@ function GenerateJwtForTokenRequest {
 
     $payload = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
         iat = [System.DateTimeOffset]::UtcNow.AddSeconds(-10).ToUnixTimeSeconds()
-        exp = [System.DateTimeOffset]::UtcNow.AddMinutes($expirationMinutes).ToUnixTimeSeconds()
+        exp = [System.DateTimeOffset]::UtcNow.AddMinutes(10).ToUnixTimeSeconds()
         iss = $gitHubAppClientId
     }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     $signature = pwsh -command {
