@@ -20,6 +20,7 @@ function SetTokenAndRepository {
         [switch] $github
     )
 
+    MaskValue -key "token" -value $token
     $script:githubOwner = $githubOwner
     $script:token = GetRealToken -token $token -repository "$githubOwner/.github"
     $script:defaultRepository = $repository
