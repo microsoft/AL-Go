@@ -27,7 +27,14 @@ function DownloadTemplateRepository {
 
     if ($downloadLatest) {
         # Get latest commit SHA from the template repository
-        $templateSha.Value = GetLatestTemplateSha -headers $headers -apiUrl $apiUrl -templateUrl $templateUrl
+        try {
+            $templateSha.Value = GetLatestTemplateSha -headers $headers -apiUrl $apiUrl -templateUrl $templateUrl
+        }
+        catch {
+            # Try anonymous
+            $headers.Remove('Authorization')
+            $templateSha.Value = GetLatestTemplateSha -headers $headers -apiUrl $apiUrl -templateUrl $templateUrl
+        }
         Write-Host "Latest SHA for $($templateUrl): $($templateSha.Value)"
     }
     $archiveUrl = "$apiUrl/zipball/$($templateSha.Value)"
