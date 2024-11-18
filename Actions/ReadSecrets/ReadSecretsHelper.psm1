@@ -4,7 +4,6 @@ Param(
 )
 
 $script:gitHubSecrets = $_gitHubSecrets | ConvertFrom-Json
-$script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
@@ -24,36 +23,6 @@ function GetAzureCredentials {
         return $script:gitHubSecrets."$secretName"
     }
     return $null
-}
-
-function MaskValue {
-    Param(
-        [string] $key,
-        [string] $value
-    )
-
-    Write-Host "Masking value for $key"
-    $value.Split("`n") | ForEach-Object {
-        Write-Host "::add-mask::$_"
-    }
-
-    $val2 = ""
-    $value.ToCharArray() | ForEach-Object {
-        $chint = [int]$_
-        if ($chint -lt 32 -or $chint -gt 126 ) {
-            $val2 += $_
-        }
-        else {
-           $val2 += $script:escchars[$chint-32]
-        }
-    }
-
-    if ($val2 -ne $value) {
-        $val2.Split("`n") | ForEach-Object {
-            Write-Host "::add-mask::$_"
-        }
-    }
-    Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value)))"
 }
 
 function GetGithubSecret {
