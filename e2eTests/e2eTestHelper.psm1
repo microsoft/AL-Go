@@ -302,7 +302,7 @@ function SetRepositorySecret {
         $repository = $defaultRepository
     }
     Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
-    gh secret set $name -b $value --repo $repository -silent
+    gh secret set $name -b $value --repo $repository
     if ($LASTEXITCODE -ne 0) {
         $host.SetShouldExit(0)
         throw "Error setting secret $name in $repository"
