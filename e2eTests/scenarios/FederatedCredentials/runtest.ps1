@@ -58,7 +58,7 @@ $template = "https://github.com/$appSourceTemplate"
 $repository = 'microsoft/bcsamples-bingmaps.appsource'
 
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
-$headers = GetHeaders $token
+$headers = GetHeaders $token -repository "$githubOwner/.github"
 
 $existingBranch = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null | ConvertFrom-Json
 if ($existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {

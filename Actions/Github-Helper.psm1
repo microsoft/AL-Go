@@ -706,25 +706,6 @@ function DownloadRelease {
     }
 }
 
-function CheckRateLimit {
-    Param(
-        [string] $token = ''
-    )
-
-    $headers = GetHeaders -token $token
-    $rate = (InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json
-    $rate | ConvertTo-Json -Depth 99 | Out-Host
-    $rate = $rate.rate
-    $percent = [int]($rate.remaining*100/$rate.limit)
-    Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percent%)"
-    if ($percent -lt 10) {
-        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
-        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
-        Write-Host "Less than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
-    }
-}
-
 # Get Content of UTF8 encoded file as a string with LF line endings
 # No empty line at the end of the file
 function Get-ContentLF {

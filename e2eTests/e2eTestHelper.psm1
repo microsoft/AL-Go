@@ -301,7 +301,7 @@ function SetRepositorySecret {
         $repository = $defaultRepository
     }
     Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
-    invoke-gh secret set $name -b $value --repo $repository
+    invoke-gh secret set $name -b $value --repo $repository -silent
 }
 
 function CreateNewAppInFolder {
