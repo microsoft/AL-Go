@@ -1320,7 +1320,7 @@ function CloneIntoNewFolder {
 
     # Environment variables for hub commands
     $env:GITHUB_USER = $actor
-    $env:GITHUB_TOKEN = $token
+    $env:GITHUB_TOKEN = GetRealToken -token $token
 
     # Configure git
     invoke-git config --global user.email "$actor@users.noreply.github.com"
