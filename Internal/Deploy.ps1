@@ -37,7 +37,6 @@ function PushChanges
         }
         $branchName = "deploy/$BaseBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))"
 
-
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $branchName
@@ -45,6 +44,7 @@ function PushChanges
     }
 }
 
+$token = GetRealToken -token $token
 $oldPath = Get-Location
 try {
 
