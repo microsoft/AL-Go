@@ -577,8 +577,11 @@ function GetRealToken {
                 "Authorization" = "Bearer $jwt"
                 "X-GitHub-Api-Version" = "2022-11-28"
             }
+            Write-Host "Get App Info"
             $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$ENV:GITHUB_API_URL/repos/$ENV:GITHUB_REPOSITORY/installation"
+            Write-Host "Get Token Response"
             $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Uri $appInfo.access_tokens_url
+            Write-Host "return token"
             return $tokenResponse.token
         }
         catch {
