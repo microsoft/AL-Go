@@ -21,7 +21,7 @@ function SetTokenAndRepository {
     )
 
     $script:githubOwner = $githubOwner
-    $script:token = GetRealToken -token $token
+    $script:token = GetRealToken -token $token -repository "$($config.githubOwner)/.github"
     $script:defaultRepository = $repository
 
     if ($github) {
