@@ -21,7 +21,7 @@ function SetTokenAndRepository {
     )
 
     $script:githubOwner = $githubOwner
-    $script:token = $token
+    $script:token = GetRealToken -token $token
     $script:defaultRepository = $repository
 
     if ($github) {
@@ -32,9 +32,9 @@ function SetTokenAndRepository {
         $ENV:GITHUB_TOKEN = ''
     }
     Write-Host "Authenticating with GitHub using token"
-    $token | invoke-gh auth login --with-token
+    $script:token | invoke-gh auth login --with-token
     if ($github) {
-        $ENV:GITHUB_TOKEN = $token
+        $ENV:GITHUB_TOKEN = $script:token
     }
 }
 
