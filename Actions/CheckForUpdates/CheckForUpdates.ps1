@@ -32,10 +32,7 @@ if ($update -eq 'Y') {
 }
 
 # Use Authenticated API request to avoid the 60 API calls per hour limit
-$headers = @{
-    "Accept" = "application/vnd.github.baptiste-preview+json"
-    "Authorization" = "Bearer $token"
-}
+$headers = GetHeaders -token $token
 
 if (-not $templateUrl.Contains('@')) {
     $templateUrl += "@main"

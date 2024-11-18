@@ -501,7 +501,7 @@ function GetReleases {
     )
 
     Write-Host "Analyzing releases $api_url/repos/$repository/releases"
-    $releases = (InvokeWebRequest -Headers (GetHeader -token $token) -Uri "$api_url/repos/$repository/releases").Content | ConvertFrom-Json
+    $releases = (InvokeWebRequest -Headers (GetHeaders -token $token) -Uri "$api_url/repos/$repository/releases").Content | ConvertFrom-Json
     if ($releases.Count -gt 1) {
         # Sort by SemVer tag
         try {
@@ -556,7 +556,39 @@ function GetLatestRelease {
     $latestRelease
 }
 
-function GetHeader {
+function GetRealToken {
+    Param(
+        [string] $token
+    )
+
+    if (!($token.StartsWith("{"))) {
+        # not a json token
+        return $token
+    }
+    else {
+        try {
+            $json = $token | ConvertFrom-Json
+            $gitHubAppClientId = $json.GitHubAppClientId
+            $privateKey = $json.PrivateKey
+            Write-Host "Using GitHub App with ClientId $gitHubAppClientId for authentication"
+            $jwt = GenerateJwtForTokenRequest -gitHubAppClientId $gitHubAppClientId -privateKey $privateKey
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $jwt"
+                "X-GitHub-Api-Version" = "2022-11-28"
+            }
+            $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$ENV:GITHUB_API_URL/repos/$ENV:GITHUB_REPOSITORY/installation"
+            $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Uri $appInfo.access_tokens_url
+            return $tokenResponse.token
+        }
+        catch {
+            # Not a json token
+            return $token
+        }
+    }
+}
+
+function GetHeaders {
     param (
         [string] $token,
         [string] $accept = "application/vnd.github+json",
@@ -567,9 +599,9 @@ function GetHeader {
         "X-GitHub-Api-Version" = $apiVersion
     }
     if (![string]::IsNullOrEmpty($token)) {
-        $headers["Authorization"] = "token $token"
+        $realToken = GetRealToken -token $token
+        $headers["Authorization"] = "token $realToken"
     }
-
     return $headers
 }
 
@@ -616,7 +648,7 @@ function GetReleaseNotes {
         $postParams["target_commitish"] = $target_commitish
     }
 
-    InvokeWebRequest -Headers (GetHeader -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes"
+    InvokeWebRequest -Headers (GetHeaders -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes"
 }
 
 function DownloadRelease {
@@ -636,7 +668,7 @@ function DownloadRelease {
     if ([string]::IsNullOrEmpty($token)) {
         $token = invoke-gh -silent -returnValue auth token
     }
-    $headers = GetHeader -token $token -accept "application/octet-stream"
+    $headers = GetHeaders -token $token -accept "application/octet-stream"
     foreach($project in $projects.Split(',')) {
         # GitHub replaces series of special characters with a single dot when uploading release assets
         $project = [Uri]::EscapeDataString($project.Replace('\','_').Replace('/','_').Replace(' ','.')).Replace('%2A','*').Replace('%3F','?').Replace('%','')
@@ -674,7 +706,7 @@ function CheckRateLimit {
         [string] $token = ''
     )
 
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     $rate = (InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json
     $rate | ConvertTo-Json -Depth 99 | Out-Host
     $rate = $rate.rate
@@ -771,7 +803,7 @@ function CheckBuildJobsInWorkflowRun {
         [string] $workflowRunId
     )
 
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     $per_page = 100
     $page = 1
 
@@ -822,7 +854,7 @@ function FindLatestSuccessfulCICDRun {
         [string] $token
     )
 
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     $lastSuccessfulCICDRun = 0
     $per_page = 100
     $page = 1
@@ -899,7 +931,7 @@ function GetArtifactsFromWorkflowRun {
 
     Write-Host "Getting artifacts for workflow run $workflowRun, mask $mask, projects $projects and version $version"
 
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
 
     $foundArtifacts = @()
     $per_page = 100
@@ -975,7 +1007,7 @@ function GetArtifacts {
     )
 
     $refname = $branch.Replace('/','_')
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     if ($version -eq 'latest') { $version = '*' }
 
     # For latest version, use the artifacts from the last successful CICD run
@@ -1082,7 +1114,7 @@ function DownloadArtifact {
     if ([string]::IsNullOrEmpty($token)) {
         $token = invoke-gh -silent -returnValue auth token
     }
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     $foldername = Join-Path $path $artifact.Name
     $filename = "$foldername.zip"
     InvokeWebRequest -Headers $headers -Uri $artifact.archive_download_url -OutFile $filename
@@ -1097,4 +1129,30 @@ function DownloadArtifact {
     else {
         return $filename
     }
+}
+
+function GenerateJwtForTokenRequest {
+    Param(
+        [string] $gitHubAppClientId,
+        [string] $privateKey
+    )
+
+    $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+        alg = "RS256"
+        typ = "JWT"
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    $payload = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+        iat = [System.DateTimeOffset]::UtcNow.AddSeconds(-10).ToUnixTimeSeconds()
+        exp = [System.DateTimeOffset]::UtcNow.AddMinutes(10).ToUnixTimeSeconds()
+        iss = $gitHubAppClientId
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    $signature = pwsh -command {
+        $rsa = [System.Security.Cryptography.RSA]::Create()
+        $privateKey = "$($args[1])"
+        $rsa.ImportFromPem($privateKey)
+        $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes($args[0]), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+        Write-OutPut $signature
+    } -args "$header.$payload", $privateKey
+    return "$header.$payload.$signature"
 }

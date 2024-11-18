@@ -107,25 +107,6 @@ try {
                             MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
                         }
                     }
-                    if ($json.ContainsKey('GitHubAppClientId') -and $json.ContainsKey('PrivateKey')) {
-                        # Authenticating as a GitHub App
-                        try {
-                            Write-Host "Using GitHub App with ClientId $($json.GitHubAppClientId) for authentication"
-                            $jwt = GenerateJwtForTokenRequest -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey
-                            $headers = @{
-                                "Accept" = "application/vnd.github+json"
-                                "Authorization" = "Bearer $jwt"
-                                "X-GitHub-Api-Version" = "2022-11-28"
-                            }
-                            $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$ENV:GITHUB_API_URL/repos/$ENV:GITHUB_REPOSITORY/installation"
-                            $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Uri $appInfo.access_tokens_url
-                            $secretValue = $tokenResponse.token
-                            MaskValue -key "$secretName PAT" -value $secretValue
-                        }
-                        catch {
-                            throw "Unable to authenticate as GitHub App with Client ID $($json.GitHubAppClientId). Error was $($_.Exception.Message)"
-                        }
-                    }
                     if ($json.ContainsKey('clientID') -and !($json.ContainsKey('clientSecret') -or $json.ContainsKey('refreshToken'))) {
                         try {
                             Write-Host "Query federated token"

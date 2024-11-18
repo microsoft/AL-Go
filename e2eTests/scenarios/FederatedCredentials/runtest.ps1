@@ -58,11 +58,8 @@ $template = "https://github.com/$appSourceTemplate"
 $repository = 'microsoft/bcsamples-bingmaps.appsource'
 
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
-$headers = @{
-    "Authorization" = "token $token"
-    "X-GitHub-Api-Version" = "2022-11-28"
-    "Accept" = "application/vnd.github+json"
-}
+$headers = GetHeaders $token
+
 $existingBranch = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null | ConvertFrom-Json
 if ($existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
     Write-Host "Removing existing branch $branch"

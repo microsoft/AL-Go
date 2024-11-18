@@ -211,29 +211,3 @@ function GetSecret {
     }
     return $value
 }
-
-function GenerateJwtForTokenRequest {
-    Param(
-        [string] $gitHubAppClientId,
-        [string] $privateKey
-    )
-
-    $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
-        alg = "RS256"
-        typ = "JWT"
-    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-
-    $payload = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
-        iat = [System.DateTimeOffset]::UtcNow.AddSeconds(-10).ToUnixTimeSeconds()
-        exp = [System.DateTimeOffset]::UtcNow.AddMinutes(10).ToUnixTimeSeconds()
-        iss = $gitHubAppClientId
-    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-    $signature = pwsh -command {
-        $rsa = [System.Security.Cryptography.RSA]::Create()
-        $privateKey = "$($args[1])"
-        $rsa.ImportFromPem($privateKey)
-        $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes($args[0]), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
-        Write-OutPut $signature
-    } -args "$header.$payload", $privateKey
-    return "$header.$payload.$signature"
-}

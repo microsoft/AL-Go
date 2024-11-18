@@ -63,7 +63,7 @@ function Add-PropertiesToJsonFile {
     )
 
     if ($wait -and $commit) {
-        $headers = GetHeader -token $token
+        $headers = GetHeaders -token $token
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
@@ -145,7 +145,7 @@ function RunWorkflow {
         Write-Host ($parameters | ConvertTo-Json)
     }
 
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     WaitForRateLimit -headers $headers -displayStatus
 
     Write-Host "Get Workflows"
@@ -210,7 +210,7 @@ function DownloadWorkflowLog {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
     $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
@@ -266,7 +266,7 @@ function WaitWorkflow {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     $status = ""
     do {
         if ($delay) {
@@ -525,7 +525,7 @@ function MergePRandPull {
     }
 
     Write-Host "Get Previous runs"
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $token
     $url = "https://api.github.com/repos/$repository/actions/runs"
     $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
