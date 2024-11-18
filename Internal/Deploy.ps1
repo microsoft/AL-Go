@@ -44,7 +44,7 @@ function PushChanges
     }
 }
 
-$token = GetRealToken -token $token
+$token = GetRealToken -token $token -repository "$($config.githubOwner)/.github"
 $oldPath = Get-Location
 try {
 

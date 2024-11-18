@@ -558,7 +558,9 @@ function GetLatestRelease {
 
 function GetRealToken {
     Param(
-        [string] $token
+        [string] $token,
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [string] $repository = $ENV:GITHUB_REPOSITORY
     )
 
     if (!($token.StartsWith("{"))) {
@@ -578,7 +580,7 @@ function GetRealToken {
                 "X-GitHub-Api-Version" = "2022-11-28"
             }
             Write-Host "Get App Info"
-            $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$ENV:GITHUB_API_URL/repos/$ENV:GITHUB_REPOSITORY/installation"
+            $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$api_url/repos/$repository/installation"
             Write-Host "Get Token Response"
             $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Uri $appInfo.access_tokens_url
             Write-Host "return token"
