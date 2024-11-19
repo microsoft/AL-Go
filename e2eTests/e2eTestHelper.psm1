@@ -273,6 +273,7 @@ function WaitWorkflow {
     do {
         if ($count % 45 -eq 0) {
             $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+            $count++
         }
         if ($delay) {
             Start-Sleep -Seconds 60
