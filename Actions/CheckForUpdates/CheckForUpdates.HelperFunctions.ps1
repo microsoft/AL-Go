@@ -27,14 +27,7 @@ function DownloadTemplateRepository {
 
     if ($downloadLatest) {
         # Get latest commit SHA from the template repository
-        try {
-            $templateSha.Value = GetLatestTemplateSha -headers $headers -apiUrl $apiUrl -templateUrl $templateUrl
-        }
-        catch {
-            # Try anonymous
-            $headers.Remove('Authorization')
-            $templateSha.Value = GetLatestTemplateSha -headers $headers -apiUrl $apiUrl -templateUrl $templateUrl
-        }
+        $templateSha.Value = GetLatestTemplateSha -headers $headers -apiUrl $apiUrl -templateUrl $templateUrl
         Write-Host "Latest SHA for $($templateUrl): $($templateSha.Value)"
     }
     $archiveUrl = "$apiUrl/zipball/$($templateSha.Value)"
@@ -58,15 +51,22 @@ function GetLatestTemplateSha {
 
     try {
         $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
-        $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
     } catch {
         if ($_.Exception.Message -like "*401*") {
-            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-        } else {
+            try {
+                $headers.Remove('Authorization')
+                $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
+            }
+            catch {
+                throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            }
+        }
+        else {
             throw $_.Exception.Message
         }
     }
 
+    $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
     if (!$branchInfo) {
         throw "$templateUrl doesn't exist"
     }

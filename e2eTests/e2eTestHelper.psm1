@@ -267,9 +267,12 @@ function WaitWorkflow {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = GetHeaders -token $token -repository "$($script:githubOwner)/.github"
+    $count = 0
     $status = ""
     do {
+        if ($count % 45 -eq 0) {
+            $headers = GetHeaders -token $token -repository "$($script:githubOwner)/.github"
+        }
         if ($delay) {
             Start-Sleep -Seconds 60
         }
