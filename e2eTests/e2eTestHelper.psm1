@@ -306,7 +306,7 @@ function SetRepositorySecret {
     }
     Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
     $value = $value.Replace("`r", '').Replace("`n", '')
-    invoke-gh secret set $name -b $value --repo $repository -silent
+    gh secret set $name -b $value --repo $repository
 }
 
 function CreateNewAppInFolder {
