@@ -492,7 +492,8 @@ function CreateAlGoRepository {
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner -and $script:token) {
-        invoke-git remote set-url origin "https://$($githubOwner):$($script:token)@github.com/$repository.git"
+        $realToken = GetRealToken -token $script:token -repository "$githubOwner/.github"
+        invoke-git remote set-url origin "https://$($githubOwner):$($realtoken)@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
