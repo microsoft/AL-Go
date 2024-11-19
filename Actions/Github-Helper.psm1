@@ -629,14 +629,16 @@ function GetHeaders {
     param (
         [string] $token,
         [string] $accept = "application/vnd.github+json",
-        [string] $apiVersion = "2022-11-28"
+        [string] $apiVersion = "2022-11-28",
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [string] $repository = $ENV:GITHUB_REPOSITORY
     )
     $headers = @{
         "Accept" = $accept
         "X-GitHub-Api-Version" = $apiVersion
     }
     if (![string]::IsNullOrEmpty($token)) {
-        $realToken = GetRealToken -token $token
+        $realToken = GetRealToken -token $token -api_url $api_url -repository $repository
         $headers["Authorization"] = "token $realToken"
     }
     return $headers
