@@ -350,7 +350,11 @@ foreach ($thisProject in $projectList) {
             if (!$appSourceContext) {
                 throw "appSourceContext secret is missing"
             }
+            Write-Host "Create appsource context"
+            $appSourceContext | Out-Host
             $authContext = New-BcAuthContext @appSourceContext
+            Start-Sleep -Seconds (60*65) # Sleep for 65 minutes to ensure that the token is invalid
+            $authContext = ReNew-BcAuthContext @appSourceContext
 
             if ($projectSettings.deliverToAppSource.MainAppFolder) {
                 $AppSourceMainAppFolder = $projectSettings.deliverToAppSource.MainAppFolder
