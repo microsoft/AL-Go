@@ -353,6 +353,7 @@ foreach ($thisProject in $projectList) {
             Write-Host "Create appsource context"
             $appSourceContext | Out-Host
             $authContext = New-BcAuthContext @appSourceContext
+            $authContext = ReNew-BcAuthContext $authContext
             Start-Sleep -Seconds (60*65) # Sleep for 65 minutes to ensure that the token is invalid
             $authContext = ReNew-BcAuthContext $authContext
 
