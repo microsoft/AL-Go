@@ -87,7 +87,7 @@ try {
                 $settingsJson.$_ = @()
             }
         }
-        if (@($settingsJson.appFolders)+@($settingsJson.testFolders+@($settingsJson.bcptTestFolders)) {
+        if (@($settingsJson.appFolders)+@($settingsJson.testFolders)+@($settingsJson.bcptTestFolders)) {
             if ($type -eq "Performance Test App") {
                 if ($SettingsJson.bcptTestFolders -notcontains $foldername) {
                     $SettingsJson.bcptTestFolders += @($folderName)
