@@ -358,6 +358,8 @@ foreach ($thisProject in $projectList) {
             Write-Host "Token expires in $seconds seconds"
             Start-Sleep -Seconds ($seconds+300)
             $authContext = ReNew-BcAuthContext $authContext
+            $seconds = $bcAuthContext.UtcExpiresOn.Subtract([DateTime]::UtcNow).TotalSeconds
+            Write-Host "Token expires in $seconds seconds"
 
             if ($projectSettings.deliverToAppSource.MainAppFolder) {
                 $AppSourceMainAppFolder = $projectSettings.deliverToAppSource.MainAppFolder
