@@ -353,7 +353,7 @@ foreach ($thisProject in $projectList) {
             Write-Host "Create appsource context"
             $appSourceContext | Out-Host
             $authContext = New-BcAuthContext @appSourceContext
-            Start-Sleep -Seconds 600
+            Start-Sleep -Seconds 3600 # wait for 1 hour
             $authContext = ReNew-BcAuthContext $authContext
 
             if ($projectSettings.deliverToAppSource.MainAppFolder) {
