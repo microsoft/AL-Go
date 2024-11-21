@@ -354,7 +354,9 @@ foreach ($thisProject in $projectList) {
             $appSourceContext | Out-Host
             $authContext = New-BcAuthContext @appSourceContext
             $authContext = ReNew-BcAuthContext $authContext
-            Start-Sleep -Seconds (60*65) # Sleep for 65 minutes to ensure that the token is invalid
+            $seconds = $bcAuthContext.UtcExpiresOn.Subtract([DateTime]::UtcNow).TotalSeconds
+            Write-Host "Token expires in $seconds seconds"
+            Start-Sleep -Seconds ($seconds+300)
             $authContext = ReNew-BcAuthContext $authContext
 
             if ($projectSettings.deliverToAppSource.MainAppFolder) {
