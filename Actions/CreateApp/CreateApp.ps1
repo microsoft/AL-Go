@@ -83,7 +83,7 @@ try {
         $settingsJsonFile = Join-Path $projectFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
         'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
-            if ($settingsJson.PSObject.Properties.Name -ne $_) {
+            if (-not ($settingsJson.PSObject.Properties.Name -eq $_)) {
                 $SettingsJson | Add-Member -MemberType NoteProperty -Name $_ -Value @()
             }
         }
