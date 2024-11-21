@@ -84,7 +84,7 @@ try {
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
         'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
             if ($settingsJson.PSObject.Properties.Name -ne $_) {
-                $settingsJson.$_ = @()
+                $SettingsJson | Add-Member -MemberType NoteProperty -Name $_ -Value @()
             }
         }
         if (@($settingsJson.appFolders)+@($settingsJson.testFolders)+@($settingsJson.bcptTestFolders)) {
