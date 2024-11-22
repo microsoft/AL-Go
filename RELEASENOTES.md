@@ -1,4 +1,8 @@
-### Support for partial builds
+### Issues
+
+- Issue 1296 Make property "appFolders" optional
+
+### Support for incremental builds
 
 AL-Go for GitHub now supports incremental builds.
 
