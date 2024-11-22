@@ -24,6 +24,7 @@ Run pipeline in AL-Go repository
 | installTestAppsJson | | A JSON-formatted list of test apps to install | \[\] |
 | baselineWorkflowRunId | RunId of the baseline workflow run | |
 | baselineWorkflowSHA | SHA of the baseline workflow run | |
+
 ## OUTPUT
 
 ## ENV variables
