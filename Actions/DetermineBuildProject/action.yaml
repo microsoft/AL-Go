@@ -34,7 +34,7 @@ runs:
         _project: ${{ inputs.project }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CalculateArtifactNames" -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineBuildProject" -Action {
           ${{ github.action_path }}/DetermineBuildProject.ps1 -token $env:_token -skippedProjectsJson $env:_skippedProjectsJson -project $env:_project -baselineWorkflowRunId $env:_baselineWorkflowRunId
         }
 branding:

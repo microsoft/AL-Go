@@ -16,6 +16,7 @@ none
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | maxBuildDepth | | Specifies the maximum build depth suppored by the workflow running the action | 0 |
+| publishSkippedProjectArtifacts | Specifies whether to publish artifacts for skipped projects | false |
 
 ## OUTPUT
 
@@ -28,6 +29,7 @@ none
 | Name | Description |
 | :-- | :-- |
 | ProjectsJson | An array of AL-Go projects in compressed JSON format |
+| SkippedProjectsJson | An array of Skipped AL-Go projects in compressed JSON format|
 | ProjectDependenciesJson | An object that holds the project dependencies in compressed JSON format |
 | BuildOrderJson | An array of objects that determine that build order, including build dimensions |
 | BuildAllProjects | A flag that indicates whether to build all projects or only the modified ones |

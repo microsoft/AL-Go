@@ -15,6 +15,7 @@ Determine whether to build project
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| token | | The GitHub token running the action | github.token |
 | skippedProjectsJson | Yes | Compressed JSON string containing the list of projects that should be skipped | |
 | project | Yes | Name of the project to build | |
 | baselineWorkflowRunId | Yes | Id of the baseline workflow run, from which to download artifacts if build is skipped | |

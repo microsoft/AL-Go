@@ -1,6 +1,6 @@
 ### Support for partial builds
 
-AL-Go for GitHub now supports partial builds.
+AL-Go for GitHub now supports incremental builds.
 
 ## v6.1
 
