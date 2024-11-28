@@ -119,7 +119,7 @@ $repoPath = (Get-Location).Path
 Set-Location $repoPath1
 WaitWorkflow -repository $repository1 -runid $run1.id
 
-# Run a second time with wait
+# Run a second time with wait (due to GitHubPackages error with our organization?)
 $run1 = RunCICD -repository $repository1 -branch $branch -wait
 
 # test artifacts generated in repository1
@@ -129,7 +129,7 @@ Test-ArtifactsFromRun -runid $run1.id -folder 'artifacts' -expectedArtifacts @{"
 Set-Location $repoPath2
 $run2 = RunCICD -repository $repository2 -branch $branch -wait
 
-# Run twice with wait
+# Run a second time with wait (due to GitHubPackages error with our organization?)
 $run2 = RunCICD -repository $repository2 -branch $branch -wait
 
 # test artifacts generated in repository2
