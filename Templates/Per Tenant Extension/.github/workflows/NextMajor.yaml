@@ -69,7 +69,6 @@ jobs:
           submodules: ${{ env.useSubModules }}
           token: '${{ fromJson(steps.ReadSubModulesToken.outputs.Secrets).subModulesToken }}'
 
-
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
         run: |

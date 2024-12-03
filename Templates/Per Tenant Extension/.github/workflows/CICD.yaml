@@ -69,7 +69,7 @@ jobs:
 
       - name: Read subModules token
         id: ReadSubModulesToken
-        if: github.event_name != 'pull_request' && env.useSubModules != ''
+        if: env.useSubModules != ''
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: ${{ inputs.shell }}
