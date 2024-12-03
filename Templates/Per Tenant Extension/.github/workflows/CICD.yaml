@@ -135,10 +135,19 @@ jobs:
           shell: powershell
           get: templateUrl
 
+      - name: Read secrets
+        id: ReadSecrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        with:
+          shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'ghTokenWorkflow'
+
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         with:
           shell: powershell
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           templateUrl: ${{ env.templateUrl }}
           downloadLatest: true
 
@@ -164,6 +173,7 @@ jobs:
       publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || startswith(github.ref_name, 'releases/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
       signArtifacts: true
       useArtifactCache: true
+      needsContext:  ${{ toJson(needs) }}
 
   BuildPP:
     needs: [ Initialization ]
@@ -181,7 +191,7 @@ jobs:
 
   DeployALDoc:
     needs: [ Initialization, Build ]
-    if: (!cancelled()) && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
     runs-on: [ windows-latest ]
     name: Deploy Reference Documentation
     permissions:
