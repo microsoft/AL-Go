@@ -126,8 +126,7 @@ try {
                     Write-Host "Base64 encode secret"
                     $secretValue = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 }
-                Write-Host $secretValue.SubString(10)
-                $outSecrets += @{ "$secretsProperty" = $secretValue }
+                $outSecrets += @{ "$secretsPropertyName" = $secretValue }
                 Write-Host "$($secretsPropertyName) successfully read from secret $secretName"
                 $secretsCollection.Remove($secret)
             }
@@ -138,7 +137,8 @@ try {
         $unresolvedSecrets = ($secretsCollection | ForEach-Object {
             $secretSplit = @($_.Split('='))
             $secretsProperty = $secretSplit[0]
-            # Secret names preceded by an asterisk are returned encrypted (and base64 encoded)
+            # Secret names preceded by an asterisk are returned encrypted (and base64 encoded unless...)
+            # Secret names preceded by a minus are not base64 encoded
             $secretsPropertyName = $secretsProperty.TrimStart('-*')
             if ($secretSplit.Count -eq 1 -or ($secretSplit[1] -eq '')) {
                 $secretsPropertyName

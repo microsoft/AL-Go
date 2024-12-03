@@ -65,7 +65,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: type, powerPlatformSolutionFolder
+          get: type, powerPlatformSolutionFolder,useSubModules
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
