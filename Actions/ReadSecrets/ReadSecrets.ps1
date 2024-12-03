@@ -125,7 +125,7 @@ try {
                 if ($base64encoded) {
                     $secretValue = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
                 }
-                $outSecrets += @{ "$secretsProperty" = $base64value }
+                $outSecrets += @{ "$secretsProperty" = $secretValue }
                 Write-Host "$($secretsPropertyName) successfully read from secret $secretName"
                 $secretsCollection.Remove($secret)
             }
