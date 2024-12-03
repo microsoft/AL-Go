@@ -5,11 +5,11 @@
 
 ### New Repository Settings
 
-- `useSubModules` can be either `true` or `recursive` if you want to enable Git Submodules in your repository. If your Git submodules resides in a private repository, you need to create a secret called `subModulesToken` containing a PAT with access to the submodule repositories. Like with all other secrets, you can also create a setting called `subModulesTokenSecretName` and specify the name of another secret, with these permissions (f.ex. ghTokenWorkflow).
+- `useSubmodules` can be either `true` or `recursive` if you want to enable Git Submodules in your repository. If your Git submodules resides in a private repository, you need to create a secret called `submodulesToken` containing a PAT with access to the submodule repositories. Like with all other secrets, you can also create a setting called `submodulesTokenSecretName` and specify the name of another secret, with these permissions (f.ex. ghTokenWorkflow).
 
 ### Support for Git submodules
 
-In v6.1 we added experimental support for Git submodules - this did however only work if the submodules was in a public repository. In this version, you can use the `useSubModules` setting to control whether you want to use Git SubModules and the `subModulesToken` secret to allow permission to read these repositories.
+In v6.1 we added experimental support for Git submodules - this did however only work if the submodules was in a public repository. In this version, you can use the `useSubmodules` setting to control whether you want to use Git Submodules and the `submodulesToken` secret to allow permission to read these repositories.
 
 ## v6.1
 
