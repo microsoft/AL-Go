@@ -55,7 +55,9 @@ If your GitHub organization might have many organizational secrets, please only 
 
 # Secrets
 
-## <a id="Azure_Credentials"></a>**Azure_Credentials** -> Connect to Azure
+<a id="Azure_Credentials"></a>
+
+## **Azure_Credentials** -> Connect to Azure
 
 By creating a secret called Azure_Credentials you can give your GitHub repository access to an Azure Key Vault, from which you can read secrets and use for managed signing of your apps. You can use a managed identity or an app registration (service to service) for authentication.
 
@@ -87,7 +89,9 @@ Example: `{"keyVaultName":"MyKeyVault","clientId":"<clientId>","clientSecret":"<
 
 With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your Key Vault in order for AL-Go for GitHub to sign your apps.
 
-## <a id="AuthContext"></a>**AuthContext** -> Deploy to an environment
+<a id="AuthContext"></a>
+
+## **AuthContext** -> Deploy to an environment
 
 Whenever AL-Go for GitHub is doing to deploy to an environment, it will need an AuthContext secret. The AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
 
@@ -119,7 +123,9 @@ Under Certificates & Secrets in the app registration, you can create a Client Se
 
 Example: `{"tenantId":"<tenantId>","scopes":"https://api.businesscentral.dynamics.com/","clientId":"<clientId>","clientSecret":"<clientSecret>"}`
 
-## <a id="AppSourceContext"></a>**AppSourceContext** -> Deliver to AppSource
+<a id="AppSourceContext"></a>
+
+## **AppSourceContext** -> Deliver to AppSource
 
 Adding a secret called AppSourceContext to an AL-Go for GitHub repository from the AppSource template, enables automatic delivery to AppSource.
 
@@ -143,7 +149,9 @@ Under Certificates & Secrets in the app registration, you can create a Client Se
 
 Example: `{"tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","scopes":"https://api.partner.microsoft.com/.default","clientId":"<clientId>","clientSecret":"<clientSecret>"}`
 
-## <a id="StorageContext"></a>**StorageContext** -> Deliver to storage
+<a id="StorageContext"></a>
+
+## **StorageContext** -> Deliver to storage
 
 Adding a secret called StorageContext to an AL-Go for GitHub repository, enables automatic delivery to an Azure storage account.
 
@@ -179,14 +187,30 @@ Using storageAccount Name and Key is by far the most unsecure way of authenticat
 
 Example: `{"storageAccountName":"MyStorageName","storageAccountKey":"<storageAccountKey>","containerName":"{project}","blobName":"{version}/{project}-{type}.zip"} `
 
-## <a id="GitHubPackagesContext"></a>**GitHubPackagesContext** -> Deliver to GitHub Packages
+<a id="GitHubPackagesContext"></a>
+
+## **GitHubPackagesContext** -> Deliver to GitHub Packages
 
 If you create a secret called GitHubPackagesContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will also use this NuGet feed for dependency resolution when building apps, giving you automatic dependency resolution within all your repositories sharing this secret.
 
 Example: `{"token":"<gitHubToken>","serverUrl":"https://nuget.pkg.github.com/mygithuborg/index.json"}`
 
-## <a id="NuGetContext"></a>**NuGetContext** -> Deliver to NuGet
+<a id="NuGetContext"></a>
+
+## **NuGetContext** -> Deliver to NuGet
 
 If you create a secret called NuGetContext, then AL-Go for GitHub will automagically deliver apps to this NuGet feed after every successful build. AL-Go for GitHub will NOT use this NuGet feed for dependency resolution when building apps. If you want to use this feed for dependency resolution as well, you need to add this to the [trustedNuGetFeeds](https://aka.ms/algosettings#trustedNuGetFeeds) setting.
 
 Example: `{"token":"<nuGetToken>","serverUrl":"https://pkgs.dev.azure.com/myorg/apps/_packaging/myrepo/nuget/v3/index.json"}`
+
+<a id="GhTokenWorkflow"></a>
+
+## **GhTokenWorkflow** -> Update AL-Go System Files
+
+When running the Update AL-Go System Files workflow, you will need a secret called `GhTokenWorkflow`, which should be a personal access token with with permissions to modify Workflows. Read [this](UpdateAlGoSystemFiles.md) for more information.
+
+<a id="SubModulesToken"></a>
+
+## **SubModulesToken** -> Use Git SubModules from private repositories
+
+When using Git submodules from private repositories, the `subModulesToken` should be a personal access token with permissions to read these repositories. You can also define a setting called `subModulesTokenSecretName` with the name of a secret to use instead (f.ex. ghTokenWorkflow).
