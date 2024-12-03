@@ -667,7 +667,7 @@ function ReadSettings {
             "CertificateProfile"                        = ""
         }
         "useSubmodules"                                 = "false"
-        "subModulesTokenSecretName"                     = "subModulesToken"
+        "submodulesTokenSecretName"                     = "subModulesToken"
     }
 
     # Read settings from files and merge them into the settings object
