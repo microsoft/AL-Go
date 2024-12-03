@@ -666,7 +666,7 @@ function ReadSettings {
             "Account"                                   = ""
             "CertificateProfile"                        = ""
         }
-        "useSubModules"                                 = "false"
+        "useSubmodules"                                 = "false"
         "subModulesTokenSecretName"                     = "subModulesToken"
     }
 
