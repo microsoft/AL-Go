@@ -666,8 +666,8 @@ function ReadSettings {
             "Account"                                   = ""
             "CertificateProfile"                        = ""
         }
-        "useSubmodules"                                 = "false"
-        "submodulesTokenSecretName"                     = "submodulesToken"
+        "useGitSubmodules"                              = "false"
+        "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
     }
 
     # Read settings from files and merge them into the settings object

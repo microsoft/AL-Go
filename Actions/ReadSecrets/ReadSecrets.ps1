@@ -130,8 +130,8 @@ try {
                 Write-Host "$($secretsPropertyName) successfully read from secret $secretName"
                 $secretsCollection.Remove($secret)
             }
-            elseif ($secretsPropertyName -eq 'submodulesToken') {
-                Write-Host "Using GitHub token for submodulesToken"
+            elseif ($secretsPropertyName -eq 'gitSubmodulesToken') {
+                Write-Host "Using GitHub token for gitSubmodulesToken"
                 $outSecrets += @{ "$secretsPropertyName" = GetGithubSecret -SecretName 'github_token' }
             }
         }

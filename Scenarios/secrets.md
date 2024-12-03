@@ -209,8 +209,8 @@ Example: `{"token":"<nuGetToken>","serverUrl":"https://pkgs.dev.azure.com/myorg/
 
 When running the Update AL-Go System Files workflow, you will need a secret called `GhTokenWorkflow`, which should be a personal access token with with permissions to modify Workflows. Read [this](UpdateAlGoSystemFiles.md) for more information.
 
-<a id="SubmodulesToken"></a>
+<a id="gitSubmodulesToken"></a>
 
-## **SubmodulesToken** -> Use Git Submodules from private repositories
+## **gitSubmodulesToken** -> Use Git Submodules from private repositories
 
-When using Git submodules from private repositories, the `submodulesToken` should be a personal access token with permissions to read these repositories. You can also define a setting called `submodulesTokenSecretName` with the name of a secret to use instead (f.ex. ghTokenWorkflow).
+When using Git submodules from private repositories, the `gitSubmodulesToken` should be a personal access token with permissions to read these repositories. You can also define a setting called `gitSubmodulesTokenSecretName` with the name of a secret to use instead (f.ex. ghTokenWorkflow).
