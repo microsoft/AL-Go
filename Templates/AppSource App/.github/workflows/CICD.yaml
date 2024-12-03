@@ -53,7 +53,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-          submodules: recursive
 
       - name: Initialize the workflow
         id: init
@@ -66,7 +65,25 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: type, powerPlatformSolutionFolder
+          get: type,powerPlatformSolutionFolder,useSubModules
+
+      - name: Read subModules token
+        id: ReadSubModulesToken
+        if: github.event_name != 'pull_request' && env.useSubModules != ''
+        uses: microsoft/AL-Go-Actions/ReadSecrets@main
+        with:
+          shell: ${{ inputs.shell }}
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: '-subModulesToken'
+
+      - name: Checkout Submodules
+        if: env.useSubModules != ''
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.checkoutRef }}
+          lfs: true
+          submodules: ${{ env.useSubModules }}
+          token: '${{ fromJson(steps.ReadSubModulesToken.outputs.Secrets).subModulesToken }}'
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth

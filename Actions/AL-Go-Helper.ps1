@@ -666,8 +666,8 @@ function ReadSettings {
             "Account"                                   = ""
             "CertificateProfile"                        = ""
         }
-        "useSubModules"                                 = "recursive"
-        "subModulesTokenSecretName"                     = "ghTokenWorkflow"
+        "useSubModules"                                 = ""
+        "subModulesTokenSecretName"                     = "subModulesToken"
     }
 
     # Read settings from files and merge them into the settings object
