@@ -11,6 +11,10 @@
 
 In v6.1 we added experimental support for Git submodules - this did however only work if the submodules was in a public repository. In this version, you can use the `useGitSubmodules` setting to control whether you want to use Git Submodules and the `gitSubmodulesToken` secret to allow permission to read these repositories.
 
+### Support for incremental builds
+
+AL-Go for GitHub now supports incremental builds.
+
 ## v6.1
 
 ### Issues

@@ -1,0 +1,42 @@
+name: Determine whether to Build Project
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  skippedProjectsJson:
+    description: Compressed JSON string containing the list of projects that should be skipped
+    required: true
+  project:
+    description: Name of the project to build
+    required: true
+  baselineWorkflowRunId:
+    description: Id of the baseline workflow run, from which to download artifacts if build is skipped
+    required: true
+outputs:
+  BuildIt:
+    description: Determines whether the project needs to be built
+    value: ${{ steps.determineBuildProject.outputs.BuildIt }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: determineBuildProject
+      env:
+        _token: ${{ inputs.token }}
+        _skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
+        _project: ${{ inputs.project }}
+        _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineBuildProject" -Action {
+          ${{ github.action_path }}/DetermineBuildProject.ps1 -token $env:_token -skippedProjectsJson $env:_skippedProjectsJson -project $env:_project -baselineWorkflowRunId $env:_baselineWorkflowRunId
+        }
+branding:
+  icon: terminal
+  color: blue

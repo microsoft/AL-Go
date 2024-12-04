@@ -10,7 +10,11 @@
     [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
     [string] $installAppsJson = '[]',
     [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]'
+    [string] $installTestAppsJson = '[]',
+    [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
+    [string] $baselineWorkflowRunId = '0',
+    [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
+    [string] $baselineWorkflowSHA = ''
 )
 
 $containerBaseFolder = $null
@@ -117,6 +121,117 @@ try {
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
+    }
+
+    $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
+    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+
+    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.enabled -and $settings.incrementalBuilds.mode -ne 'modifiedProjects') {
+        # Partial builds are enabled and we are only building modified apps
+        $headSHA = git rev-parse HEAD
+        Write-Host "Current HEAD is $headSHA"
+        git fetch origin $baselineWorkflowSHA | Out-Host
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
+        Push-Location $ENV:GITHUB_WORKSPACE
+        Write-Host "git diff --name-only $baselineWorkflowSHA $headSHA"
+        $modifiedFiles = @(git diff --name-only $baselineWorkflowSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
+        Pop-Location
+        Write-Host "$($modifiedFiles.Count) modified file(s)"
+        if ($modifiedFiles.Count -gt 0) {
+            foreach($modifiedFile in $modifiedFiles) {
+                Write-Host "- $modifiedFile"
+            }
+        }
+        $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        if (!$buildAll) {
+            Push-Location $ENV:GITHUB_WORKSPACE
+            $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
+                $theFolder = Resolve-Path (Join-Path $baseFolder "$project/$_") -Relative
+                $modifiedFiles -like "$($theFolder.SubString(2))$([System.IO.Path]::DirectorySeparatorChar)*"
+            })
+            Pop-Location
+            Write-Host "$($modifiedFolders.Count) modified folder(s)"
+            if ($modifiedFolders.Count -gt 0) {
+                foreach($modifiedFolder in $modifiedFolders) {
+                    Write-Host "- $modifiedFolder"
+                }
+            }
+
+            if ($settings.incrementalBuilds.mode -eq 'modifiedApps') {
+                $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_  })
+                $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
+                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
+            }
+            elseif ($settings.incrementalBuilds.mode -eq 'modifiedAppsAndDependingApps') {
+                $skipFolders = @()
+                Sort-AppFoldersByDependencies -appFolders $settings.appFolders+$settings.testFolders+$settings.bcptTestFolders -baseFolder $ENV:GITHUB_WORKSPACE -skipApps ([ref] $skipFolders) -onlyTheseAppFoldersPlusDepending $modifiedFolders | Out-Null
+                $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
+                $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains $_  })
+                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains $_  })
+            }
+            else {
+                throw "Unknown partial build mode $($settings.incrementalBuilds.mode)"
+            }
+            if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
+            # Download missing apps - or add then to build folders if the artifact doesn't exist
+            $appsToDownload = @{
+                "appFolders" = @{
+                    "Mask" = "Apps"
+                    "Downloads" = $downloadAppFolders
+                }
+                "testFolders" = @{
+                    "Mask" = "TestApps"
+                    "Downloads" = $downloadTestFolders
+                }
+                "bcptTestFolders" = @{
+                    "Mask" = "TestApps"
+                    "Downloads" = $downloadBcptTestFolders
+                }
+            }
+            'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
+                $appType = $_
+                $mask = $appsToDownload."$appType".Mask
+                $downloads = $appsToDownload."$appType".Downloads
+                $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+                if (!(Test-Path $thisArtifactFolder)) {
+                    New-Item $thisArtifactFolder -ItemType Directory | Out-Null
+                }
+                if ($downloads) {
+                    Write-Host "Downloading from $mask"
+                    $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+                    New-Item $tempFolder -ItemType Directory | Out-Null
+                    if ($buildMode -eq 'Default') {
+                        $artifactMask = $mask
+                    }
+                    else {
+                        $artifactMask = "$buildMode$mask"
+                    }
+                    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $artifactMask -projects $projectName
+                    if ($runArtifact) {
+                        if ($runArtifact -is [Array]) {
+                            throw "Multiple artifacts found with mask $artifactMask for project $projectName"
+                        }
+                        $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
+                        $artifactFolder = Join-Path $tempFolder $mask
+                        Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
+                        Remove-Item -Path $file -Force
+                        $downloads | ForEach-Object {
+                            $appJsonPath = Join-Path $projectPath "$_/app.json"
+                            $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
+                            $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
+                            $appPath = Join-Path $artifactFolder $appName
+                            if (Test-Path $appPath) {
+                                $item = Get-Item -Path $appPath
+                                Write-Host "Copy $($item.Name) to build folders"
+                                Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
+                            }
+                        }
+                    }
+                    Remove-Item -Path $tempFolder -Recurse -force
+                }
+            }
+        }
     }
 
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
@@ -234,9 +349,6 @@ try {
             "appVersion" = $settings.repoVersion
         }
     }
-
-    $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
-    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
     $allTestResults = "testresults*.xml"
     $testResultsFile = Join-Path $projectPath "TestResults.xml"
