@@ -25,10 +25,7 @@ function Get-ModifiedFiles {
 
     $url = "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ghEvent.pull_request.head.sha)"
 
-    $headers = @{
-        "Authorization" = "token $token"
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-    }
+    $headers = GetHeaders -token $token
 
     $response = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
 
