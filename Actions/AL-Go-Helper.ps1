@@ -552,6 +552,12 @@ function ReadSettings {
     $settings = [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
+        "updateALGoSystemFilesSettings"                 = [ordered] @{
+            "includeBranches"                           = @( "main" )
+            "createPR"                                  = $true
+            "enableAutoMergeOnPR"                       = $false
+            "PRLabels"                                  = @()
+        }
         "projects"                                      = @()
         "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
@@ -1349,7 +1355,9 @@ function CommitFromNewFolder {
         [string] $serverUrl,
         [string] $commitMessage,
         [string] $body = $commitMessage,
-        [string] $branch
+        [string] $branch,
+        [bool] $enableAutoMerge = $false,
+        [string[]] $prLabels = @()
     )
 
     invoke-git add *
@@ -1377,7 +1385,22 @@ function CommitFromNewFolder {
         }
         invoke-git push -u $serverUrl $branch
         try {
-            invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body"
+            $params = @(
+                "--head '$branch'",
+                "--base '$ENV:GITHUB_REF_NAME'",
+                "--repo $env:GITHUB_REPOSITORY",
+                "--fill"
+                "--body '$body'"
+            )
+            foreach($label in $prLabels) {
+                $params += "--label '$label'"
+            }
+
+            invoke-gh pr create $($params -join ' ')
+
+            if ($enableAutoMerge) {
+                invoke-gh pr merge --auto --squash --delete-branch
+            }
         }
         catch {
             OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
