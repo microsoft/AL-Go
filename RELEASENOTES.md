@@ -6,6 +6,7 @@
 ### New Repository Settings
 
 - `useGitSubmodules` can be either `true` or `recursive` if you want to enable Git Submodules in your repository. If your Git submodules resides in a private repository, you need to create a secret called `gitSubmodulesToken` containing a PAT with access to the submodule repositories. Like with all other secrets, you can also create a setting called `gitSubmodulesTokenSecretName` and specify the name of another secret, with these permissions (f.ex. ghTokenWorkflow).
+- `commitMessageSuffix` - A string you want to append to the end of commits/pull requests created by AL-Go. This can be useful if you are using the Azure Boards integration (or similar integration) to link commits to workitems.
 
 ### Support for Git submodules
 
