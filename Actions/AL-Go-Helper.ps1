@@ -650,7 +650,7 @@ function ReadSettings {
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
         "incrementalBuilds"                             = [ordered]@{
-            "enabled"                                   = $true
+            "enabled"                                   = $false
             "retentionDays"                             = 30
             "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps, modifiedAppsAndDependingApps
         }
