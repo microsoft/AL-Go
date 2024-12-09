@@ -661,11 +661,10 @@ function ReadSettings {
             "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
         "trustMicrosoftNuGetFeeds"                      = $true
-        "commitMessageSuffix"                           = ""
         "commitOptions"                                 = [ordered]@{
-            "commitMessageSuffix"                       = ""
-            "commitAutoMerge"                           = $false
-            "commitPullRequestLabels"                   = @()
+            "messageSuffix"                             = ""
+            "autoMerge"                                 = $false
+            "pullRequestLabels"                         = @()
         }
         "trustedSigning"                                = [ordered]@{
             "Endpoint"                                  = ""
@@ -1365,9 +1364,9 @@ function CommitFromNewFolder {
 
         # Add commit message suffix if specified in settings
         $settings = ReadSettings
-        if ($settings.commitOptions.commitMessageSuffix) {
-            $commitMessage = "$commitMessage / $($settings.commitOptions.commitMessageSuffix)"
-            $body = "$body`n$($settings.commitOptions.commitMessageSuffix)"
+        if ($settings.commitOptions.messageSuffix) {
+            $commitMessage = "$commitMessage / $($settings.commitOptions.messageSuffix)"
+            $body = "$body`n$($settings.commitOptions.messageSuffix)"
         }
 
         if ($commitMessage.Length -gt 250) {
@@ -1398,15 +1397,15 @@ function CommitFromNewFolder {
         invoke-git push -u $serverUrl $branch
         try {
             $prCreateCmd = "invoke-gh pr create --fill --title ""$title"" --head ""$branch"" --repo ""$env:GITHUB_REPOSITORY"" --base ""$ENV:GITHUB_REF_NAME"" --body ""$body"""
-            if ($settings.commitOptions.commitPullRequestLabels) {
-                $labels = "$($settings.commitOptions.commitPullRequestLabels -join ",")"
+            if ($settings.commitOptions.pullRequestLabels) {
+                $labels = "$($settings.commitOptions.pullRequestLabels -join ",")"
                 Write-Host "Adding labels: $labels"
                 $prCreateCmd += " --label ""$labels"""
             }
 
             Invoke-Expression $prCreateCmd
 
-            if ($settings.commitOptions.commitAutoMerge) {
+            if ($settings.commitOptions.autoMerge) {
                 invoke-gh pr merge --auto --squash --delete-branch
             }
         }
