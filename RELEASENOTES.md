@@ -27,6 +27,7 @@ In v6.1 we added experimental support for Git submodules - this did however only
 ### New Repository Settings
 
 - `trustedSigning` is a structure defining `Account`, `EndPoint` and `CertificateProfile` if you want to use trusted signing. Note that your Azure_Credentials secret (Microsoft Entra ID App or Managed identity) still needs to provide access to your azure subscription and be assigned the `Trusted Signing Certificate Profile Signer` role in the Trusted Signing Account.
+- `updateALGoSystemFilesSettings` - settings to use when running "Update AL-Go System Files" on a schedule.
 - `deployTo<environment>` now has an additional property called DependencyInstallMode, which determines how dependencies are deployed if GenerateDependencyArtifact is true. Default value is `install` to install dependencies if not already installed. Other values are `ignore` for ignoring dependencies, `upgrade` for upgrading dependencies if possible and `forceUpgrade` for force upgrading dependencies.
 
 ### Support for Azure Trusted Signing
@@ -39,6 +40,12 @@ Page Scripting tests are now supported as part of CI/CD. By specifying pageScrip
 
 - `PageScriptingTestResults` is a JUnit test results file with all results combined.
 - `PageScriptingTestResultDetails` are the detailed test results (including videos) when any of the page scripting tests have failures. If the page scripting tests succeed - the details are not published.
+
+### Run "Update AL-Go System Files" on a schedule on multiple branches
+
+When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `updateALGoSystemFilesSettings` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosecrets#updateALGoSystemFilesSettings.
+
+Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
 
 ### Experimental support for Git submodule
 
@@ -120,6 +127,8 @@ AL-Go for GitHub now includes a new telemetry module. For detailed information o
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
   - **NumberOfSqlStmtsWarning** - a warning is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 5)
   - **NumberOfSqlStmtsError** - an error is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 10)
+
+- `updateALGoBranches` is an array of branches to run `Update AL-Go System Files` on. Wildcards are supported.
 
 > \[!NOTE\]
 > Duration thresholds are subject to varying results depending on the performance of the agent running the tests. Number of SQL statements executed by a test is often the most reliable indicator of performance degredation.
