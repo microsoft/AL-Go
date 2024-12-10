@@ -663,7 +663,7 @@ function ReadSettings {
         "trustMicrosoftNuGetFeeds"                      = $true
         "commitOptions"                                 = [ordered]@{
             "messageSuffix"                             = ""
-            "autoMerge"                                 = $false
+            "pullRequestAutoMerge"                                 = $false
             "pullRequestLabels"                         = @()
         }
         "trustedSigning"                                = [ordered]@{
@@ -1405,7 +1405,7 @@ function CommitFromNewFolder {
 
             Invoke-Expression $prCreateCmd
 
-            if ($settings.commitOptions.autoMerge) {
+            if ($settings.commitOptions.pullRequestAutoMerge) {
                 invoke-gh pr merge --auto --squash --delete-branch
             }
         }
