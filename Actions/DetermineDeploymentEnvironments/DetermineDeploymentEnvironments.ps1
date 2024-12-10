@@ -7,7 +7,7 @@
 )
 
 function IsGitHubPagesAvailable() {
-    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
@@ -20,7 +20,7 @@ function IsGitHubPagesAvailable() {
 }
 
 function GetGitHubEnvironments() {
-    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
     try {
         Write-Host "Requesting environments from GitHub"
@@ -36,7 +36,7 @@ function GetGitHubEnvironments() {
 function Get-BranchesFromPolicy($ghEnvironment) {
     if ($ghEnvironment) {
         # Environment is defined in GitHub - check protection rules
-        $headers = GetHeader -token $env:GITHUB_TOKEN
+        $headers = GetHeaders -token $env:GITHUB_TOKEN
         $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
         if ($branchPolicy) {
             if ($ghEnvironment.deployment_branch_policy.protected_branches) {

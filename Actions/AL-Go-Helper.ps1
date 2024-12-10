@@ -19,7 +19,7 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -1322,12 +1322,13 @@ function CloneIntoNewFolder {
     $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
     New-Item $baseFolder -ItemType Directory | Out-Null
     Set-Location $baseFolder
-    $serverUri = [Uri]::new($env:GITHUB_SERVER_URL)
-    $serverUrl = "$($serverUri.Scheme)://$($actor):$($token)@$($serverUri.Host)/$($env:GITHUB_REPOSITORY)"
 
     # Environment variables for hub commands
     $env:GITHUB_USER = $actor
-    $env:GITHUB_TOKEN = $token
+    $env:GITHUB_TOKEN = GetRealToken -token $token
+
+    $serverUri = [Uri]::new($env:GITHUB_SERVER_URL)
+    $serverUrl = "$($serverUri.Scheme)://$($env:GITHUB_USER):$($env:GITHUB_TOKEN)@$($serverUri.Host)/$($env:GITHUB_REPOSITORY)"
 
     # Configure git
     invoke-git config --global user.email "$actor@users.noreply.github.com"
