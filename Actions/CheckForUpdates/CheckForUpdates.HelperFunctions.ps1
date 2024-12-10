@@ -122,9 +122,9 @@ function ModifyRunsOnAndShell {
     )
 
     # The default for runs-on is windows-latest and the default for shell is powershell
-    # The default for GitHubRunner/GitHubRunnerShell is runs-on/shell (unless Ubuntu-latest are selected here, as build jobs cannot run on Ubuntu)
+    # The default for GitHubRunner/GitHubRunnerShell is runs-on/shell (unless ubuntu-24.04 are selected here, as build jobs cannot run on Ubuntu)
     # We do not change runs-on in Update AL-Go System Files and Pull Request Handler workflows
-    # These workflows will always run on windows-latest (or maybe Ubuntu-latest later) and not follow settings
+    # These workflows will always run on windows-latest (or maybe ubuntu-24.04 later) and not follow settings
     # Reasons:
     # - Update AL-Go System files is needed for changing runs-on - by having non-functioning runners, you might dead-lock yourself
     # - Pull Request Handler workflow for security reasons
@@ -135,8 +135,8 @@ function ModifyRunsOnAndShell {
     if ($repoSettings.shell -ne "powershell" -and $repoSettings.shell -ne "pwsh") {
         throw "The shell can only be set to powershell or pwsh"
     }
-    if ($repoSettings."runs-on" -eq "ubuntu-latest" -and $repoSettings.shell -eq "powershell") {
-        throw "The shell cannot be set to powershell when runs-on is ubuntu-latest. Use pwsh instead."
+    if ($repoSettings."runs-on" -eq "ubuntu-24.04" -and $repoSettings.shell -eq "powershell") {
+        throw "The shell cannot be set to powershell when runs-on is ubuntu-24.04. Use pwsh instead."
     }
     Write-Host "Setting shell to $($repoSettings.shell)"
     $yaml.ReplaceAll('shell: powershell', "shell: $($repoSettings.shell)")
@@ -313,7 +313,7 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
-    $allowedRunners = @('windows-latest', 'ubuntu-latest')
+    $allowedRunners = @('windows-latest', 'ubuntu-24.04')
     $modifyRunsOnAndShell = $true
 
     # Critical workflows may only run on allowed runners (must always be able to run)

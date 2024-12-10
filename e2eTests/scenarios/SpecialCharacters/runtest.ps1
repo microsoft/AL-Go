@@ -27,7 +27,7 @@ Write-Host -ForegroundColor Yellow @'
 #    - Set RepoName to Privé
 #  - Run the "CI/CD" workflow
 #  - Check artifacts generated
-#  - Set runs-on to ubuntu-latest (and use CompilerFolder)
+#  - Set runs-on to ubuntu-24.04 (and use CompilerFolder)
 #  - Run the "CI/CD" workflow again
 #  - Check artifacts generated
 #  - Cleanup repositories
@@ -82,8 +82,8 @@ Remove-Item -Path 'artifacts' -Recurse -Force
 
 Pull
 
-# Set GitHubRunner and runs-on to ubuntu-latest (and use CompilerFolder)
-Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-latest"; "gitHubRunner" = "ubuntu-latest"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
+# Set GitHubRunner and runs-on to ubuntu-24.04 (and use CompilerFolder)
+Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-24.04"; "gitHubRunner" = "ubuntu-24.04"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
 
 # Push
 CommitAndPush -commitMessage 'Shift to Linux'

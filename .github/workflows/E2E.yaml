@@ -43,7 +43,7 @@ defaults:
 
 jobs:
   Check:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     outputs:
       maxParallel: ${{ steps.check.outputs.maxParallel }}
       githubOwner: ${{ steps.check.outputs.githubOwner }}
@@ -85,7 +85,7 @@ jobs:
           Write-Host "githubOwner=$githubOwner"
 
   SetupRepositories:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ Check ]
     outputs:
       actionsRepo: ${{ steps.setup.outputs.actionsRepo }}
@@ -103,7 +103,7 @@ jobs:
           . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
 
   Analyze:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ Check ]
     outputs:
       publictestruns: ${{ steps.Analyze.outputs.publictestruns }}
@@ -244,7 +244,7 @@ jobs:
           }
 
   TestAlGoPublic:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ Check, SetupRepositories, Analyze ]
     if: github.event.inputs.runTestMatrix == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.publictestruns) }}
@@ -287,7 +287,7 @@ jobs:
           }
 
   TestAlGoPrivate:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ Check, SetupRepositories, Analyze ]
     if: github.event.inputs.runTestMatrix == 'true' && github.event.inputs.includePrivateRepos == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.privatetestruns) }}
@@ -331,7 +331,7 @@ jobs:
 
 
   TestAlGoUpgrade:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ Check, SetupRepositories, Analyze ]
     if: github.event.inputs.runUpgradeTests == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.releases) }}
@@ -372,7 +372,7 @@ jobs:
           }
 
   RemoveRepositories:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ Check, SetupRepositories, TestAlGoPublic, TestAlGoPrivate, TestAlGoUpgrade, ScenariosOnWindows, ScenariosOnLinux ]
     if: always() && (!Cancelled()) && (needs.SetupRepositories.result == 'Success') && (needs.TestAlGoPublic.result == 'Success' || needs.TestAlGoPublic.result == 'Skipped') && (needs.TestAlGoPrivate.result == 'Success' || needs.TestAlGoPrivate.result == 'Skipped') && (needs.TestAlGoUpgrade.result == 'Success' || needs.TestAlGoUpgrade.result == 'Skipped') && (needs.Scenario.result == 'Success' || needs.Scenario.result == 'Skipped')
     steps:

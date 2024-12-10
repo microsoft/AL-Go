@@ -456,7 +456,7 @@ function CreateAlGoRepository {
     $runson = "windows-latest"
     $shell = "powershell"
     if ($linux) {
-        $runson = "ubuntu-latest"
+        $runson = "ubuntu-24.04"
         $shell = "pwsh"
     }
 

@@ -43,7 +43,7 @@ defaults:
 
 jobs:
   Inputs:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     outputs:
       branch: ${{ steps.CreateInputs.outputs.branch }}
       copyToMain: ${{ steps.CreateInputs.outputs.copyToMain }}
@@ -69,7 +69,7 @@ jobs:
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "defaultBcContainerHelperVersion=$defaultBcContainerHelperVersion"
 
   CheckEndToEnd:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ Inputs ]
     steps:
       - name: Check successful end 2 end tests have run
@@ -98,7 +98,7 @@ jobs:
           }
 
   Deploy:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04 ]
     needs: [ CheckEndToEnd, Inputs ]
     environment: Production
     permissions:

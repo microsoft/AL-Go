@@ -105,8 +105,8 @@ $repoPath = (Get-Location).Path
         # Pull latest changes
         Pull
 
-        # Set GitHubRunner and runs-on to ubuntu-latest (and use CompilerFolder)
-        Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-latest"; "gitHubRunner" = "ubuntu-latest"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
+        # Set GitHubRunner and runs-on to ubuntu-24.04 (and use CompilerFolder)
+        Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "runs-on" = "ubuntu-24.04"; "gitHubRunner" = "ubuntu-24.04"; "UseCompilerFolder" = $true; "doNotPublishApps" = $true }
 
         # Push
         CommitAndPush -commitMessage 'Shift to Linux'

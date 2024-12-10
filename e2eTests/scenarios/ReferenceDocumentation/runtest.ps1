@@ -30,7 +30,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Change settings to use continuous deployment of ALDoc and modify the header
 #  - Run the "CI/CD" workflow
 #  - Check that the new header is used
-#  - Set runs-on to ubuntu-latest (and use CompilerFolder)
+#  - Set runs-on to ubuntu-24.04 (and use CompilerFolder)
 #  - Modify the header again
 #  - Run the "CI/CD" workflow again
 #  - Check that the new header is used

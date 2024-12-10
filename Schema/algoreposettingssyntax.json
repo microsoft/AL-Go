@@ -21,7 +21,7 @@
             "examples": [
                 "windows-latest",
                 "self-hosted",
-                "ubuntu-latest"
+                "ubuntu-24.04"
             ],
             "description": "Specifies which GitHub runner is used to run non-build jobs. See https://aka.ms/ALGoSettings#runs-on"
         },
