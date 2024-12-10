@@ -157,12 +157,12 @@ function GetDependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -notlike '*TestApps') {
+                    elseif ($mask -like '*Apps') {
                         Write-Host "$project not built, downloading from artifacts"
                         $missingProjects += @($project)
                     }
                 }
-                if ($missingProjects) {
+                if ($missingProjects -and $dependency.baselineWorkflowID) {
                     $dependency.release_status = 'latestBuild'
                     $dependency.branch = $dependency.baseBranch
                     $dependency.projects = $missingProjects -join ","
@@ -760,47 +760,31 @@ function Set-JsonContentLF {
 
 <#
     Checks if all build jobs in a workflow run completed successfully.
+    Authentication to GitHub CLI is required
 #>
 function CheckBuildJobsInWorkflowRun {
     Param(
-        [Parameter(Mandatory = $true)]
-        [string] $token,
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
         [string] $workflowRunId
     )
 
-    $headers = GetHeader -token $token
-    $per_page = 100
-    $page = 1
+    $workflowJobs = gh api /repos/$repository/actions/runs/$workflowRunId/jobs --paginate -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json
+    $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
 
     $allSuccessful = $true
     $anySuccessful = $false
+    $allSuccessful = $true
+    $anySuccessful = $false
 
-    while($true) {
-        $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
-        Write-Host "- $jobsURI"
-        $workflowJobs = (InvokeWebRequest -Headers $headers -Uri $jobsURI).Content | ConvertFrom-Json
-
-        if($workflowJobs.jobs.Count -eq 0) {
-            # No more jobs, breaking out of the loop
-            break
-        }
-
-        $buildJobs = @($workflowJobs.jobs | Where-Object { $_.name.StartsWith('Build ') })
-
-        if($buildJobs.conclusion -eq 'success') {
+    foreach($buildJob in $buildJobs) {
+        if ($buildJob.conclusion -eq 'success') {
             $anySuccessful = $true
         }
-
-        if($buildJobs.conclusion -ne 'success') {
-            # If there is a build job that is not successful, there is not need to check further
+        if ($buildJob.conclusion -ne 'success' -and $buildJob.conclusion -ne 'Skipped') {
             $allSuccessful = $false
-            break
         }
-
-        $page += 1
     }
 
     return ($allSuccessful -and $anySuccessful)
@@ -818,63 +802,54 @@ function FindLatestSuccessfulCICDRun {
         [string] $repository,
         [Parameter(Mandatory = $true)]
         [string] $branch,
+        [Parameter(Mandatory = $false)]
+        [string] $retention = 90,
         [Parameter(Mandatory = $true)]
         [string] $token
     )
 
-    $headers = GetHeader -token $token
-    $lastSuccessfulCICDRun = 0
-    $per_page = 100
-    $page = 1
+    Write-Host "Authenticating with GitHub using token"
+    $ENV:GH_TOKEN = $token
+    try { gh auth login } catch { Write-Host $_ }
 
-    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository"
-
-    # Get the latest CICD workflow run
-    while($true) {
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch"
-        Write-Host "- $runsURI"
-        $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
-
-        if($workflowRuns.workflow_runs.Count -eq 0) {
-            # No more workflow runs, breaking out of the loop
-            break
-        }
-
-        $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
+    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
+    $expired = [DateTime]::UtcNow.AddDays(-$retention).ToString('o')
+    $ghoutput = @(gh api -X GET -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" --paginate /repos/$repository/actions/workflows/CICD.yaml/runs -f exclude_pull_requests=true -f status=completed -f branch=$branch -f created=">$expired" --jq '.workflow_runs[]')
+    $lastSuccessfulCICDRun = $null
+    if ($ghoutput -and $ghoutput.Count -gt 0) {
+        $CICDRuns = $ghoutput | ConvertFrom-Json
 
         foreach($CICDRun in $CICDRuns) {
             if($CICDRun.conclusion -eq 'success') {
                 # CICD run is successful
-                $lastSuccessfulCICDRun = $CICDRun.id
+                $lastSuccessfulCICDRun = $CICDRun
                 break
+            }
+            if ($CICDRun.conclusion -eq 'cancelled') {
+                continue
             }
 
             # CICD run is considered successful if all build jobs were successful
-            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -token $token -repository $repository
-
-            if($areBuildJobsSuccessful) {
-                $lastSuccessfulCICDRun = $CICDRun.id
-                Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun), from $($CICDRun.created_at)"
+            if(CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -repository $repository) {
+                $lastSuccessfulCICDRun = $CICDRun
                 break
             }
 
             Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
+            if($lastSuccessfulCICDRun) {
+                Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun.id), from $($lastSuccessfulCICDRun.created_at)"
+                break
+            }
         }
-
-        if($lastSuccessfulCICDRun -ne 0) {
-            break
-        }
-
-        $page += 1
     }
 
-    if($lastSuccessfulCICDRun -ne 0) {
-        Write-Host "Last successful CICD run for branch $branch in repository $repository is $lastSuccessfulCICDRun"
+    if($lastSuccessfulCICDRun) {
+        Write-Host "Last successful CICD run for branch $branch in repository $repository is $($lastSuccessfulCICDRun.id)"
     } else {
-        Write-Host "No successful CICD run found for branch $branch in repository $repository"
+        Write-Host "No successful CICD run found for branch $branch in repository $repository, within the last $retention days"
     }
 
-    return $lastSuccessfulCICDRun
+    return $lastSuccessfulCICDRun.id, $lastSuccessfulCICDRun.head_sha
 }
 
 
@@ -982,7 +957,7 @@ function GetArtifacts {
     if($version -eq '*') {
         if(-not $baselineWorkflowID) {
             # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run
-            $baselineWorkflowID = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
+            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
         }
 
         if($baselineWorkflowID -eq '0') {
@@ -1067,6 +1042,89 @@ function GetArtifacts {
         Write-Host "- No matching artifacts found"
     }
     $result
+}
+
+<#
+.Synopsis
+    Determines whether a full build is required.
+.Outputs
+    A boolean indicating whether a full build is required.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - The alwaysBuildAllProjects setting is set to true
+    - More than 250 files have been modified
+    - The modified files contain a file that matches one of the fullBuildPatterns
+#>
+function Get-BuildAllProjects {
+    param(
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [string[]] $modifiedFiles = @(),
+        [Parameter(HelpMessage = "Full build patterns", Mandatory = $false)]
+        [string[]] $fullBuildPatterns = $settings.fullBuildPatterns
+    )
+
+    $settings = $env:Settings | ConvertFrom-Json
+
+    if (!$modifiedFiles) {
+        Write-Host "No files modified, building all projects"
+        return $true
+    }
+
+    $fullBuildPatterns += @(Join-Path '.github' '*.json')
+
+    #Include the base folder in the modified files
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+
+    foreach($fullBuildFolder in $fullBuildPatterns) {
+        # The Join-Path is needed to make sure the path has the correct slashes
+        $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
+
+        if ($modifiedFiles -like $fullBuildFolder) {
+            Write-Host "Changes to $fullBuildFolder, building all projects"
+            return $true
+        }
+    }
+
+    Write-Host "No changes to fullBuildPatterns, building only modified projects"
+
+    return $false
+}
+
+<#
+.Synopsis
+    Determines whether all apps in a project should be built
+.Outputs
+    A boolean indicating whether a full build is required.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - Get-BuildAllProjects returns true
+    - The .AL-Go/settings.json file has been
+#>
+function Get-BuildAllApps {
+    param(
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The project", Mandatory = $false)]
+        [string] $project = '',
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [string[]] $modifiedFiles = @()
+    )
+
+    if ($project) {
+        $ALGoSettingsFile = @(Join-Path $project '.AL-Go/settings.json')
+    }
+    else {
+        $ALGoSettingsFile = @('.AL-Go/settings.json')
+    }
+    if (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($settings.fullBuildPatterns+$ALGoSettingsFile)) {
+        return $true
+    }
+
+    return $false
 }
 
 function DownloadArtifact {

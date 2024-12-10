@@ -15,6 +15,10 @@
 
 In v6.1 we added experimental support for Git submodules - this did however only work if the submodules was in a public repository. In this version, you can use the `useGitSubmodules` setting to control whether you want to use Git Submodules and the `gitSubmodulesToken` secret to allow permission to read these repositories.
 
+### Support for incremental builds
+
+AL-Go for GitHub now supports incremental builds.
+
 ## v6.1
 
 ### Issues
@@ -104,7 +108,7 @@ In the summary after a Test Run, you now also have the result of performance tes
 ### Support Ubuntu runners for all AL-Go workflows
 
 Previously, the workflows "Update AL-Go System Files" and "TroubleShooting" were hardcoded to always run on `windows-latest` to prevent deadlocks and security issues.
-From now on, `ubuntu-lates` will also be allowed for these mission critical workflows, when changing the `runs-on` setting. Additionally, only the value `pwsh` for `shell` setting is allowed when using `ubuntu-latest` runners.
+From now on, `ubuntu-latest` will also be allowed for these mission critical workflows, when changing the `runs-on` setting. Additionally, only the value `pwsh` for `shell` setting is allowed when using `ubuntu-latest` runners.
 
 ### Updated AL-Go telemetry
 
@@ -597,7 +601,7 @@ In the latest version, we always use LF as line seperator, UTF8 without BOM and 
 ### Experimental Support
 
 Setting the repo setting "shell" to "pwsh", followed by running Update AL-Go System Files, will cause all PowerShell code to be run using PowerShell 7 instead of PowerShell 5. This functionality is experimental. Please report any issues at https://github.com/microsoft/AL-Go/issues
-Setting the repo setting "runs-on" to "Ubuntu-Latest", followed by running Update AL-Go System Files, will cause all non-build jobs to run using Linux. This functionality is experimental. Please report any issues at https://github.com/microsoft/AL-Go/issues
+Setting the repo setting "runs-on" to "Ubuntu-latest", followed by running Update AL-Go System Files, will cause all non-build jobs to run using Linux. This functionality is experimental. Please report any issues at https://github.com/microsoft/AL-Go/issues
 
 ## v2.2
 
