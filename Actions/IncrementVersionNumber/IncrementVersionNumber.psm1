@@ -67,9 +67,6 @@ function Set-VersionInSettingsFile {
         # Handle absolute version number
 
         $versionNumberFormat = '^\d+\.\d+(\.\d+)?$' # Major.Minor or Major.Minor.Build
-        if ($oldVersion.Build -ne -1) {
-            $versionNumberFormat = '^\d+\.\d+\.\d+$' # Major.Minor.Build
-        }
         if (-not ($newValue -match $versionNumberFormat)) {
             throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor[.build] (e.g. 1.0, 1.2 or 1.3.0)"
         }
