@@ -112,7 +112,7 @@ and clicking Releases will show the content of the releases:
 |-|
 
 > \[!NOTE\]
-> GitHub sorts the releases after the tag and sorting only works correctly if the tag is SemVer compatible (i.e. 3 digits). This is the reason why AL-Go for GitHub forces you to enter a SemVer compatible version number in the tag when creating a new release.
+> GitHub sorts the releases after the tag and sorting only works correctly if the tag is SemVer compatible (i.e. 3 segments). This is the reason why AL-Go for GitHub forces you to enter a SemVer compatible version number in the tag when creating a new release.
 
 OK, so that is clear, versioning and releasing, pretty smart - but what is this project concept?
 
