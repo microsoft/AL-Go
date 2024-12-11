@@ -66,7 +66,7 @@ function Set-VersionInSettingsFile {
     else {
         # Handle absolute version number
 
-        $versionNumberFormat = '^\d+\.\d+\.\d+(\.\d+)?$' # Major.Minor or Major.Minor.Build
+        $versionNumberFormat = '^\d+\.\d+(\.\d+)?$' # Major.Minor or Major.Minor.Build
         if ($oldVersion.Build -ne -1) {
             $versionNumberFormat = '^\d+\.\d+\.\d+$' # Major.Minor.Build
         }
