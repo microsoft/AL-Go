@@ -27,6 +27,10 @@ inputs:
     description: Set the branch to update
     required: false
     default: ${{ github.ref_name }}
+  updateDependencies:
+    description: Update dependency version numbers in app.json?
+    required: false
+    default: 'true'
   directCommit:
     description: Direct Commit?
     required: false
@@ -42,10 +46,11 @@ runs:
         _projects: ${{ inputs.projects }}
         _versionNumber: ${{ inputs.versionNumber }}
         _updateBranch: ${{ inputs.updateBranch }}
+        _updateDependencies: ${{ inputs.updateDependencies }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "IncrementVersionNumber" -Action {
-          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -projects $ENV:_projects -versionNumber $ENV:_versionNumber -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -projects $ENV:_projects -versionNumber $ENV:_versionNumber -updateBranch $ENV:_updateBranch -updateDependencies ($ENV:_updateDependencies -eq 'true') -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal

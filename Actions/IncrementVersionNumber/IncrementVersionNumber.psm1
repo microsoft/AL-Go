@@ -54,7 +54,7 @@ function Set-VersionInSettingsFile {
         # Handle incremental version number
 
         # Defensive check. Should never happen.
-        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+        $allowedIncrementalVersionNumbers = @('+1', '+0.1', '+0.0.1')
         if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
             throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
         }
@@ -66,9 +66,12 @@ function Set-VersionInSettingsFile {
     else {
         # Handle absolute version number
 
-        $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+        $versionNumberFormat = '^\d+\.\d+\.\d+(\.\d+)?$' # Major.Minor or Major.Minor.Build
+        if ($oldVersion.Build -ne -1) {
+            $versionNumberFormat = '^\d+\.\d+\.\d+$' # Major.Minor.Build
+        }
         if (-not ($newValue -match $versionNumberFormat)) {
-            throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+            throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor[.build] (e.g. 1.0, 1.2 or 1.3.0)"
         }
     }
     #endregion
@@ -80,25 +83,38 @@ function Set-VersionInSettingsFile {
             # Increment major version number
             $versionNumbers += $oldVersion.Major + 1
             $versionNumbers += 0
+            # Include build number if it exists in the old version number
+            if ($oldVersion.Build -ne -1) {
+                $versionNumbers += 0
+            }
         }
         '+0.1' {
             # Increment minor version number
             $versionNumbers += $oldVersion.Major
             $versionNumbers += $oldVersion.Minor + 1
-
+            # Include build number if it exists in the old version number
+            if ($oldVersion.Build -ne -1) {
+                $versionNumbers += 0
+            }
+        }
+        '+0.0.1' {
+            # Increment minor version number
+            $versionNumbers += $oldVersion.Major
+            $versionNumbers += $oldVersion.Minor
+            $versionNumbers += $oldVersion.Build + 1
         }
         default {
             # Absolute version number
             $versionNumbers += $newValue.Split('.')
+            if ($versionNumbers.Count -eq 2 -and $oldVersion.Build -ne -1) {
+                $versionNumbers += 0
+            }
         }
     }
 
-    # Include build and revision numbers if they exist in the old version number
-    if ($oldVersion -and ($oldVersion.Build -ne -1)) {
-        $versionNumbers += 0 # Always set the build number to 0
-        if ($oldVersion.Revision -ne -1) {
-            $versionNumbers += 0 # Always set the revision number to 0
-        }
+    # Include revision numbers if it exist in the old version number
+    if ($oldVersion -and ($oldVersion.Revision -ne -1)) {
+        $versionNumbers += 0 # Always set the revision number to 0
     }
 
     # Construct the new version number. Cast to System.Version to validate if the version number is valid.

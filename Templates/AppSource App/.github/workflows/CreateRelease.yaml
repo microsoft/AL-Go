@@ -33,9 +33,13 @@ on:
         type: string
         default: release/
       updateVersionNumber:
-        description: New Version Number in main branch. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
+        description: New Version Number in main branch. Use Major.Minor[.Build] for absolute change, use +Major.Minor[.Build] for incremental change.
         required: false
         default: ''
+      updateDependencies:
+        description: Update dependency version numbers in app.json?
+        type: boolean
+        default: true
       directCommit:
         description: Direct Commit?
         type: boolean
@@ -365,6 +369,7 @@ jobs:
           shell: powershell
           token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           versionNumber: ${{ github.event.inputs.updateVersionNumber }}
+          updateDependencies: ${{ github.event.inputs.updateDependencies }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
   PostProcess:

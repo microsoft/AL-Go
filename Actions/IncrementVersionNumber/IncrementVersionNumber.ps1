@@ -9,6 +9,8 @@
     [string] $versionNumber,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
+    [Parameter(HelpMessage = "Update dependencies", Mandatory = $false)]
+    [bool] $updateDependencies,
     [Parameter(HelpMessage = "Direct commit?", Mandatory = $false)]
     [bool] $directCommit
 )
@@ -24,6 +26,10 @@ $settings = $env:Settings | ConvertFrom-Json
 if ($versionNumber.StartsWith('+')) {
     # Handle incremental version number
     $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+    if ($settings.versioningStrategy -eq 3) {
+        # Allow increment build
+        $allowedIncrementalVersionNumbers += '+0.0.1'
+    }
     if (-not $allowedIncrementalVersionNumbers.Contains($versionNumber)) {
         throw "Incremental version number $versionNumber is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
     }
@@ -31,6 +37,9 @@ if ($versionNumber.StartsWith('+')) {
 else {
     # Handle absolute version number
     $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+    if ($settings.versioningStrategy -eq 3) {
+        $versionNumberFormat = '^\d+\.\d+\.\d+$' # Major.Minor.Build
+    }
     if (-not ($versionNumber -match $versionNumberFormat)) {
         throw "Version number $versionNumber is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
     }
@@ -87,13 +96,15 @@ if ($projectList.Count -gt 0) {
         $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
     }
 
-    # Set dependencies in app manifests
-    if ($allAppFolders.Count -eq 0) {
-        Write-Host "No App folders found for projects $projects"
-    }
-    else {
+    if ($updateDependencies) {
         # Set dependencies in app manifests
-        Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+        if ($allAppFolders.Count -eq 0) {
+            Write-Host "No App folders found for projects $projects"
+        }
+        else {
+            # Set dependencies in app manifests
+            Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+        }
     }
 }
 
