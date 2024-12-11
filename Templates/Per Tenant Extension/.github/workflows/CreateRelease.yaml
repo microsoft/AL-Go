@@ -16,14 +16,14 @@ on:
         description: Tag of this release (needs to be semantic version string https://semver.org, ex. 1.0.0)
         required: true
         default: ''
-      prerelease:
-        description: Prerelease?
-        type: boolean
-        default: false
-      draft:
-        description: Draft?
-        type: boolean
-        default: false
+      release:
+        description: Release, prerelease or draft?
+        type: choice
+        options:
+          - Release
+          - Prerelease
+          - Draft
+        default: Release
       createReleaseBranch:
         description: Create Release Branch?
         type: boolean
@@ -228,8 +228,8 @@ jobs:
               tag_name: '${{ github.event.inputs.tag }}',
               name: '${{ github.event.inputs.name }}',
               body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
-              draft: ${{ github.event.inputs.draft=='true' }},
-              prerelease: ${{ github.event.inputs.prerelease=='true' }},
+              draft: ${{ github.event.inputs.release=='Draft' }},
+              prerelease: ${{ github.event.inputs.release=='Prerelease' }},
               make_latest: 'legacy',
               target_commitish: '${{ steps.analyzeartifacts.outputs.commitish }}'
             });
