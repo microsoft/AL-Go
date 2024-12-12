@@ -2,6 +2,8 @@
 
 - Issue 1296 Make property "appFolders" optional
 - Issue 1344 Experimental feature "git submodules" seems to be a breaking change
+- Issue 1305 Extra telemetry Property RepositoryOwner and RepositoryName¨
+- Add RunnerEnvironment to Telemetry
 
 ### New Repository Settings
 
