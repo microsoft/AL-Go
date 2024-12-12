@@ -268,8 +268,50 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionInSettingsFile -newValue is set and build and revision are kept from the old value'{
-        $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.0.0'
+    It 'Set-VersionInSettingsFile -newValue +0.1 succeeds even if the new version string is less than the old version string' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.9.2'
+        $settingName = 'repoVersion'
+        $newValue = '+0.1'
+
+        Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "1.10.0"
+
+        # Check that the other setting are not changed
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionInSettingsFile -newValue +0.0.1 succeeds even if the new version string is less than the old version string' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.9.2'
+        $settingName = 'repoVersion'
+        $newValue = '+0.0.1'
+
+        Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "1.9.3"
+
+        # Check that the other setting are not changed
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionInSettingsFile -newValue +0.0.1 adds another segment if the version number only has 2 segments' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.9'
+        $settingName = 'repoVersion'
+        $newValue = '+0.0.1'
+
+        Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "1.9.1"
+
+        # Check that the other setting are not changed
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionInSettingsFile -newValue is set and build and revision are set to 0'{
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.1.2'
         $settingName = 'repoVersion'
         $newValue = '2.1'
 
@@ -282,8 +324,8 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionInSettingsFile -newValue +0.1 incremenFilents the minor version number and build and revision are kept from the old value' {
-        $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.0.0'
+    It 'Set-VersionInSettingsFile -newValue +0.1 incremenFilents the minor version number and build and revision are set to 0' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.3.4'
         $settingName = 'repoVersion'
         $newValue = '+0.1'
 
@@ -291,6 +333,20 @@ Describe "Set-VersionInSettingsFile tests" {
 
         $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
         $newSettingsContent.$settingName | Should -Be "1.3.0.0"
+
+        # Check that the other setting are not changed
+        $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
+    }
+
+    It 'Set-VersionInSettingsFile -newValue +0.0.1 incremenFilents the minor version number and revision is set to 0' {
+        $settingsFile = New-TestSettingsFilePath -repoVersion '1.2.3.4'
+        $settingName = 'repoVersion'
+        $newValue = '+0.0.1'
+
+        Set-VersionInSettingsFile -settingsFilePath $settingsFile -settingName $settingName -newValue $newValue
+
+        $newSettingsContent = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+        $newSettingsContent.$settingName | Should -Be "1.2.4.0"
 
         # Check that the other setting are not changed
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"

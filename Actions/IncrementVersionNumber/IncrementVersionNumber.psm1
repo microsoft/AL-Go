@@ -99,7 +99,7 @@ function Set-VersionInSettingsFile {
             # Increment minor version number
             $versionNumbers += $oldVersion.Major
             $versionNumbers += $oldVersion.Minor
-            $versionNumbers += $oldVersion.Build + 1
+            $versionNumbers += ($oldVersion.Build -eq -1 ? 1 : $oldVersion.Build + 1)
         }
         default {
             Write-Host "newValue: $newValue"
