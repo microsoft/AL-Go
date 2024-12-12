@@ -56,19 +56,20 @@ function Set-VersionInSettingsFile {
         # Defensive check. Should never happen.
         $allowedIncrementalVersionNumbers = @('+1', '+0.1', '+0.0.1')
         if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
-            throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+            throw "Unexpected error - incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
         }
         # Defensive check. Should never happen.
         if($null -eq $oldVersion) {
-            throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
+            throw "Unexpected error - the setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
         }
     }
     else {
         # Handle absolute version number
 
+        # Defensive check. Should never happen.
         $versionNumberFormat = '^\d+\.\d+(\.\d+)?$' # Major.Minor or Major.Minor.Build
         if (-not ($newValue -match $versionNumberFormat)) {
-            throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor[.build] (e.g. 1.0, 1.2 or 1.3.0)"
+            throw "Unexpected error - version number $newValue is not in the correct format. The version number must be in the format Major.Minor[.Build] (e.g. 1.0, 1.2 or 1.3.0)"
         }
     }
     #endregion

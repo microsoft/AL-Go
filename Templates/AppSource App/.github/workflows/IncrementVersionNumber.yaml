@@ -10,7 +10,7 @@ on:
         required: false
         default: '*'
       versionNumber:
-        description: New Version Number in main branch. Use Major.Minor[.Build] for absolute change, use +Major.Minor[.Build] for incremental change.
+        description: New Version Number in main branch. Use Major.Minor (and .Build for versioningstrategy 3) for absolute change, or +1, +0.1 (or +0.0.1 for versioningstrategy 3) incremental change.
         required: false
         default: ''
       updateDependencies:
