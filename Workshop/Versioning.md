@@ -10,7 +10,7 @@ Downloading the artifact and unpacking reveals the app inside. The app inside is
 
 Here, the app has the same version number as the artifact, but is it always like that?
 
-As you know, the build number consists of 4 segments: **major.minor.build.revision**.
+As you know, the version number consists of 4 segments: **major.minor.build.revision**.
 
 - The version number of the build artifact is 100% controlled by AL-Go for GitHub. The **major.minor** are taken from a setting called **RepoVersion** (default is 1.0) and the **build.revision** part is auto-calculated by AL-Go for GitHub.
 - The version number of the app (inside the build artifact) is controlled by **app.json** and **AL-Go for GitHub**. The **major.minor** part is taken from **app.json** and the **build.revision** part is auto-calculated by AL-Go for GitHub.

@@ -16,7 +16,7 @@ on:
         description: Tag of this release (needs to be semantic version string https://semver.org, ex. 1.0.0)
         required: true
         default: ''
-      release:
+      releaseType:
         description: Release, prerelease or draft?
         type: choice
         options:
@@ -33,7 +33,7 @@ on:
         type: string
         default: release/
       updateVersionNumber:
-        description: New Version Number in main branch. Use Major.Minor (and .Build for versioningstrategy 3) for absolute change, or +1, +0.1 (or +0.0.1 for versioningstrategy 3) incremental change.
+        description: New Version Number in main branch. Use Major.Minor (optionally add .Build for versioningstrategy 3) for absolute change, or +1, +0.1 (or +0.0.1 for versioningstrategy 3) incremental change.
         required: false
         default: ''
       SkipUpdatingDependencies:
@@ -228,8 +228,8 @@ jobs:
               tag_name: '${{ github.event.inputs.tag }}',
               name: '${{ github.event.inputs.name }}',
               body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
-              draft: ${{ github.event.inputs.release=='Draft' }},
-              prerelease: ${{ github.event.inputs.release=='Prerelease' }},
+              draft: ${{ github.event.inputs.releaseType=='Draft' }},
+              prerelease: ${{ github.event.inputs.releaseType=='Prerelease' }},
               make_latest: 'legacy',
               target_commitish: '${{ steps.analyzeartifacts.outputs.commitish }}'
             });
