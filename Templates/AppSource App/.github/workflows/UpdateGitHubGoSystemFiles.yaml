@@ -46,7 +46,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: updateALGoSystemFilesSettings
+          get: scheduleSettings
 
       - name: Get Supported Branches
         if: ${{ github.event_name == 'schedule' }}
@@ -54,14 +54,21 @@ jobs:
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ join(fromJson($env:updateALGoSystemFilesSettings).includeBranches, ',') }}
+          includeBranches: ${{ join(fromJson(env.scheduleSettings).includeBranches, ',') }}
 
       - name: Determine branches to update
         id: DetermineBranches
+        env:
+          supportedBranchesJson: ${{ steps.GetSupportedBranches.outputs.Branches }}
         run: |
+            $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
             if ('${{ github.event_name }}' -eq 'schedule') {
               Write-Host "Running 'Update AL-Go System Files' on a schedule."
-              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=${{ steps.GetSupportedBranches.outputs.Branches }}"
+
+              $supportedBranches = ConvertFrom-Json $env:supportedBranchesJson
+              Write-Host "Supported Branches: $($supportedBranches -join ', ')"
+              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$env:supportedBranchesJson"
             }
             else {
               Write-Host "Running Update AL-Go System Files on a manual trigger."
@@ -98,9 +105,10 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: templateUrl,updateALGoSystemFilesSettings
+          get: templateUrl,commitOptions
 
       - name: Read secrets
+        id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: powershell
@@ -124,17 +132,10 @@ jobs:
         env:
           directCommit: '${{ github.event.inputs.directCommit }}'
           downloadLatest: ${{ github.event.inputs.downloadLatest }}
-          eventName: ${{ github.event_name }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $directCommit = $ENV:directCommit
           $downloadLatest = $ENV:downloadLatest
-          Write-Host $ENV:eventName
-          if ($ENV:eventName -eq 'schedule') {
-            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit and DownloadLatest to true"
-            $directCommit = 'true'
-            $downloadLatest = 'true'
-          }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
 
@@ -143,8 +144,8 @@ jobs:
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-          $updateALGoSettings = $env:updateALGoSystemFilesSettings
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$(-not $updateALGoSettings.createPR)"
+          $commitOptions = $env:commitOptions | ConvertFrom-Json
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$(-not $commitOptions.createPullRequest)"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$true"
 
       - name: Update AL-Go system files
