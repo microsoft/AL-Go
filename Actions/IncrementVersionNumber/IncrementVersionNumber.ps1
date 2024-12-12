@@ -96,7 +96,7 @@ if ($projectList.Count -gt 0) {
         $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
     }
 
-    if (-not $skipUpdateDependencies) {
+    if (-not $skipUpdatingDependencies) {
         # Set dependencies in app manifests
         if ($allAppFolders.Count -eq 0) {
             Write-Host "No App folders found for projects $projects"
