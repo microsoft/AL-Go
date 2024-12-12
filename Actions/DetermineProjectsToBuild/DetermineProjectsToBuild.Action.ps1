@@ -35,7 +35,7 @@ elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch') {
 }
 else {
     # Push
-    $buildAllProjects = !$settings.incrementalBuilds.enabled
+    $buildAllProjects = !$settings.incrementalBuilds.enable
     $branch = $env:GITHUB_REF_NAME
     Write-Host "Push on $branch"
 }
