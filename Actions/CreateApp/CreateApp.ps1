@@ -82,7 +82,12 @@ try {
     try {
         $settingsJsonFile = Join-Path $projectFolder $ALGoSettingsFile
         $SettingsJson = Get-Content $settingsJsonFile -Encoding UTF8 | ConvertFrom-Json
-        if (@($settingsJson.appFolders)+@($settingsJson.testFolders)) {
+        'appFolders','testFolders','bcptTestFolders' | ForEach-Object {
+            if (-not ($settingsJson.PSObject.Properties.Name -eq $_)) {
+                $SettingsJson | Add-Member -MemberType NoteProperty -Name $_ -Value @()
+            }
+        }
+        if (@($settingsJson.appFolders)+@($settingsJson.testFolders)+@($settingsJson.bcptTestFolders)) {
             if ($type -eq "Performance Test App") {
                 if ($SettingsJson.bcptTestFolders -notcontains $foldername) {
                     $SettingsJson.bcptTestFolders += @($folderName)
