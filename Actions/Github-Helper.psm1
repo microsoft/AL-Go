@@ -1085,13 +1085,11 @@ function Get-BuildAllProjects {
 
     #Include the base folder in the modified files
     $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
-    $modifiedFiles | Out-Host
-
+ 
     foreach($fullBuildFolder in $fullBuildPatterns) {
         # The Join-Path is needed to make sure the path has the correct slashes
         $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
 
-        $fullBuildFolder | Out-Host
         if ($modifiedFiles -like $fullBuildFolder) {
             Write-Host "Changes to $fullBuildFolder, building all projects"
             return $true
