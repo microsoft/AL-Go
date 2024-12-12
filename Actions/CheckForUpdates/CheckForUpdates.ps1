@@ -258,10 +258,7 @@ else {
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
 
-        $enableAutoMerge = $repoSettings.updateALGoSystemFilesSettings.enableAutoMergeOnPR
-        $prLabels = $repoSettings.updateALGoSystemFilesSettings.PRLabels
-
-        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes -enableAutoMerge $enableAutoMerge -prLabels $prLabels)) {
+        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes)) {
             OutputWarning "No updates available for AL-Go for GitHub."
         }
     }

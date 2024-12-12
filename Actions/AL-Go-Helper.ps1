@@ -552,12 +552,6 @@ function ReadSettings {
     $settings = [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
-        "updateALGoSystemFilesSettings"                 = [ordered] @{
-            "includeBranches"                           = @( "main" )
-            "createPR"                                  = $true
-            "enableAutoMergeOnPR"                       = $false
-            "PRLabels"                                  = @()
-        }
         "projects"                                      = @()
         "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
@@ -671,6 +665,10 @@ function ReadSettings {
             "messageSuffix"                             = ""
             "pullRequestAutoMerge"                      = $false
             "pullRequestLabels"                         = @()
+            "createPullRequest"                         = $true
+        }
+        "scheduleSettings"                              = [ordered] @{
+            "includeBranches"                           = @( "main" )
         }
         "trustedSigning"                                = [ordered]@{
             "Endpoint"                                  = ""
@@ -1360,9 +1358,7 @@ function CommitFromNewFolder {
         [string] $serverUrl,
         [string] $commitMessage,
         [string] $body = $commitMessage,
-        [string] $branch,
-        [bool] $enableAutoMerge = $false,
-        [string[]] $prLabels = @()
+        [string] $branch
     )
 
     invoke-git add *

@@ -46,7 +46,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: updateALGoSystemFilesSettings
+          get: scheduleSettings
 
       - name: Get Supported Branches
         if: ${{ github.event_name == 'schedule' }}
@@ -54,7 +54,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ join(fromJson(env.updateALGoSystemFilesSettings).includeBranches, ',') }}
+          includeBranches: ${{ join(fromJson(env.scheduleSettings).includeBranches, ',') }}
 
       - name: Determine branches to update
         id: DetermineBranches
@@ -105,7 +105,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: templateUrl,updateALGoSystemFilesSettings
+          get: templateUrl,commitOptions
 
       - name: Read secrets
         id: ReadSecrets
@@ -145,8 +145,8 @@ jobs:
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-          $updateALGoSettings = $env:updateALGoSystemFilesSettings | ConvertFrom-Json
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$(-not $updateALGoSettings.createPR)"
+          $commitOptions = $env:commitOptions | ConvertFrom-Json
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$(-not $commitOptions.createPullRequest)"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$true"
 
       - name: Update AL-Go system files
