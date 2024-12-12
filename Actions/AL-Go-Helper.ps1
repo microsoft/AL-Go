@@ -185,6 +185,19 @@ function OutputWarning {
     }
 }
 
+function OutputNotice {
+    Param(
+        [string] $message
+    )
+
+    if ($runningLocal) {
+        Write-Host $message
+    }
+    else {
+        Write-Host "::Notice::$message"
+    }
+}
+
 function MaskValueInLog {
     Param(
         [string] $value
