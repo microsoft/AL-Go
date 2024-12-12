@@ -5,12 +5,12 @@
     [string] $token,
     [Parameter(HelpMessage = "List of project names if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
     [string] $projects = '*',
-    [Parameter(HelpMessage = "The version to update to. Use Major.Minor for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version", Mandatory = $true)]
+    [Parameter(HelpMessage = "The version to update to. Use Major.Minor[.Build] for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version or +0.0.1 to bump to the next build version", Mandatory = $true)]
     [string] $versionNumber,
+    [Parameter(HelpMessage = "Skip updating dependency version numbers in all apps", Mandatory = $false)]
+    [bool] $skipUpdatingDependencies,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
-    [Parameter(HelpMessage = "Update dependencies", Mandatory = $false)]
-    [bool] $updateDependencies,
     [Parameter(HelpMessage = "Direct commit?", Mandatory = $false)]
     [bool] $directCommit
 )
@@ -96,7 +96,7 @@ if ($projectList.Count -gt 0) {
         $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
     }
 
-    if ($updateDependencies) {
+    if (-not $skipUpdateDependencies) {
         # Set dependencies in app manifests
         if ($allAppFolders.Count -eq 0) {
             Write-Host "No App folders found for projects $projects"

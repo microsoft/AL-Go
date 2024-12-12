@@ -69,7 +69,7 @@ function Set-VersionInSettingsFile {
         # Defensive check. Should never happen.
         $versionNumberFormat = '^\d+\.\d+(\.\d+)?$' # Major.Minor or Major.Minor.Build
         if (-not ($newValue -match $versionNumberFormat)) {
-            throw "Unexpected error - version number $newValue is not in the correct format. The version number must be in the format Major.Minor[.Build] (e.g. 1.0, 1.2 or 1.3.0)"
+            throw "Unexpected error - version number $newValue is not in the correct format. The version number must be in the format Major.Minor or Major.Minor.Build (e.g. 1.0, 1.2 or 1.3.0)"
         }
     }
     #endregion
@@ -102,9 +102,11 @@ function Set-VersionInSettingsFile {
             $versionNumbers += $oldVersion.Build + 1
         }
         default {
+            Write-Host "newValue: $newValue"
+            Write-Host ($oldVersion -eq $null)
             # Absolute version number
             $versionNumbers += $newValue.Split('.')
-            if ($versionNumbers.Count -eq 2 -and $oldVersion.Build -ne -1) {
+            if ($versionNumbers.Count -eq 2 -and ($null -ne $oldVersion -and $oldVersion.Build -ne -1)) {
                 $versionNumbers += 0
             }
         }
