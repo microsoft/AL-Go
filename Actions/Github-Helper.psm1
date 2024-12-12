@@ -1063,10 +1063,15 @@ function Get-BuildAllProjects {
         [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
         [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "Full build patterns", Mandatory = $false)]
-        [string[]] $fullBuildPatterns = $settings.fullBuildPatterns
+        [string[]] $fullBuildPatterns = @()
     )
 
     $settings = $env:Settings | ConvertFrom-Json
+
+    if ($settings.alwaysBuildAllProjects) {
+        Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
+        return $true
+    }
 
     if (!$modifiedFiles) {
         Write-Host "No files modified, building all projects"
@@ -1074,14 +1079,19 @@ function Get-BuildAllProjects {
     }
 
     $fullBuildPatterns += @(Join-Path '.github' '*.json')
+    if($settings.fullBuildPatterns) {
+        $fullBuildPatterns += $settings.fullBuildPatterns
+    }
 
     #Include the base folder in the modified files
     $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+    $modifiedFiles | Out-Host
 
     foreach($fullBuildFolder in $fullBuildPatterns) {
         # The Join-Path is needed to make sure the path has the correct slashes
         $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
 
+        $fullBuildFolder | Out-Host
         if ($modifiedFiles -like $fullBuildFolder) {
             Write-Host "Changes to $fullBuildFolder, building all projects"
             return $true
@@ -1120,7 +1130,7 @@ function Get-BuildAllApps {
     else {
         $ALGoSettingsFile = @('.AL-Go/settings.json')
     }
-    if (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($settings.fullBuildPatterns+$ALGoSettingsFile)) {
+    if (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($ALGoSettingsFile)) {
         return $true
     }
 
