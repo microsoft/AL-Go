@@ -268,7 +268,7 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionInSettingsFile -newValue +0.1 succeeds even if the new version string is less than the old version string' {
+    It 'Set-VersionInSettingsFile -newValue +0.1 succeeds even if the new version contains 3 segments' {
         $settingsFile = New-TestSettingsFilePath -repoVersion '1.9.2'
         $settingName = 'repoVersion'
         $newValue = '+0.1'
@@ -282,7 +282,7 @@ Describe "Set-VersionInSettingsFile tests" {
         $newSettingsContent.otherSetting | Should -Be "otherSettingValue"
     }
 
-    It 'Set-VersionInSettingsFile -newValue +0.0.1 succeeds even if the new version string is less than the old version string' {
+    It 'Set-VersionInSettingsFile -newValue +0.0.1 succeeds when the version string has 3 segments' {
         $settingsFile = New-TestSettingsFilePath -repoVersion '1.9.2'
         $settingName = 'repoVersion'
         $newValue = '+0.0.1'
