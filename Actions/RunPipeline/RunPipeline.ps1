@@ -167,7 +167,8 @@ try {
                 $skipFolders = @()
                 $unknownDependencies = @()
                 $knownApps = @()
-                Sort-AppFoldersByDependencies -appFolders @($settings.appFolders+$settings.testFolders+$settings.bcptTestFolders) -baseFolder $ENV:GITHUB_WORKSPACE -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
+                $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
+                Sort-AppFoldersByDependencies -appFolders @($settings.appFolders+$settings.testFolders+$settings.bcptTestFolders) -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
                 $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
                 $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains $_  })
                 $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains $_  })
