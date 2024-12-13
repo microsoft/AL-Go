@@ -165,7 +165,8 @@ try {
             }
             elseif ($settings.incrementalBuilds.mode -eq 'modifiedAppsAndDependingApps') {
                 $skipFolders = @()
-                Sort-AppFoldersByDependencies -appFolders $settings.appFolders+$settings.testFolders+$settings.bcptTestFolders -baseFolder $ENV:GITHUB_WORKSPACE -skippedApps ([ref] $skipFolders) -selectSubordinates $modifiedFolders | Out-Null
+                $unknownDependencies = @()
+                Sort-AppFoldersByDependencies -appFolders $settings.appFolders+$settings.testFolders+$settings.bcptTestFolders -baseFolder $ENV:GITHUB_WORKSPACE -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -selectSubordinates $modifiedFolders | Out-Null
                 $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
                 $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains $_  })
                 $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains $_  })
