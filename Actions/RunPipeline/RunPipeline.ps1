@@ -145,33 +145,43 @@ try {
         }
         $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         if (!$buildAll) {
-            Push-Location $ENV:GITHUB_WORKSPACE
-            $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
-                $theFolder = Resolve-Path (Join-Path $baseFolder "$project/$_") -Relative
-                $modifiedFiles -like "$($theFolder.SubString(2))$([System.IO.Path]::DirectorySeparatorChar)*"
-            })
-            Pop-Location
-            Write-Host "$($modifiedFolders.Count) modified folder(s)"
-            if ($modifiedFolders.Count -gt 0) {
-                foreach($modifiedFolder in $modifiedFolders) {
-                    Write-Host "- $modifiedFolder"
-                }
-            }
-
             if ($settings.incrementalBuilds.mode -eq 'modifiedApps') {
-                $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_  })
-                $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_  })
-                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_  })
+                Push-Location $ENV:GITHUB_WORKSPACE
+                $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
+                    $theFolder = Resolve-Path (Join-Path $baseFolder "$project/$_") -Relative
+                    $modifiedFiles -like "$($theFolder.SubString(2))$([System.IO.Path]::DirectorySeparatorChar)*"
+                })
+                Pop-Location
+                Write-Host "$($modifiedFolders.Count) modified folder(s)"
+                if ($modifiedFolders.Count -gt 0) {
+                    foreach($modifiedFolder in $modifiedFolders) {
+                        Write-Host "- $modifiedFolder"
+                    }
+                }
+                $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_ })
+                $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_ })
+                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_ })
             }
             elseif ($settings.incrementalBuilds.mode -eq 'modifiedAppsAndDependingApps') {
                 $skipFolders = @()
                 $unknownDependencies = @()
                 $knownApps = @()
-                $baseFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
-                Sort-AppFoldersByDependencies -appFolders @($settings.appFolders+$settings.testFolders+$settings.bcptTestFolders) -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
-                $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains $_  })
-                $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains $_  })
-                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains $_  })
+                $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
+                Push-Location $ENV:GITHUB_WORKSPACE
+                $modifiedFolders = @($allFolders | Where-Object {
+                    $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
+                })
+                Pop-Location
+                Write-Host "$($modifiedFolders.Count) modified folder(s)"
+                if ($modifiedFolders.Count -gt 0) {
+                    foreach($modifiedFolder in $modifiedFolders) {
+                        Write-Host "- $modifiedFolder"
+                    }
+                }
+                Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
+                $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$_" })
+                $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$_" })
+                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$_" })
             }
             else {
                 throw "Unknown partial build mode $($settings.incrementalBuilds.mode)"

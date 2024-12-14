@@ -650,7 +650,7 @@ function ReadSettings {
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
         "incrementalBuilds"                             = [ordered]@{
-            "enable"                                    = $true
+            "enable"                                    = $false
             "retentionDays"                             = 30
             "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps, modifiedAppsAndDependingApps
         }
@@ -2416,6 +2416,22 @@ function GetProjectsFromRepository {
         }
     }
     return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
+}
+
+function GetFoldersFromAllProjects {
+    Param(
+        [string] $baseFolder
+    )
+
+    $settings = ReadSettings -baseFolder $baseFolder
+    $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
+    $folders = @()
+    foreach($project in $projects) {
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+        $folders += @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
+    }
+    return $folders
 }
 
 function GetPackageVersion($packageName) {
