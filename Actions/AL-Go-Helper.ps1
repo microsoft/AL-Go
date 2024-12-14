@@ -2429,7 +2429,7 @@ function GetFoldersFromAllProjects {
     foreach($project in $projects) {
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
-        $folders += @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
+        $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Join-Path $project "$_".Substring(2) } )
     }
     return $folders
 }
