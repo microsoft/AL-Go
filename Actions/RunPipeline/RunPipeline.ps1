@@ -179,7 +179,9 @@ try {
                     }
                 }
                 Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
-                $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$_" })
+                Write-Host "Skip folders:"
+                $skipFolders | ForEach-Object { Write-Host "- $_" }
+                $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "check '$project$([System.IO.Path]::DirectorySeparatorChar)$_'"; $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$_" })
                 $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$_" })
                 $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$_" })
             }
