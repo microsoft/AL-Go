@@ -72,7 +72,7 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 
 if ($linux) {
     $githubRunner = "ubuntu-latest"
-    $githubRunnerShell = "bash"
+    $githubRunnerShell = "pwsh"
 }
 else {
     $githubRunner = "windows-latest"
@@ -242,6 +242,5 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 }
 
 # Cleanup repositories
-
 Set-Location $prevLocation
 RemoveRepository -repository $repository -path $repoPath
