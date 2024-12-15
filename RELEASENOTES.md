@@ -10,6 +10,10 @@
   - `messageSuffix` : A string you want to append to the end of commits/pull requests created by AL-Go. This can be useful if you are using the Azure Boards integration (or similar integration) to link commits to workitems.
   - `pullRequestAutoMerge` : A boolean defining whether you want AL-Go pull requests to be set to auto-complete. This will auto-complete the pull requests once all checks are green and all required reviewers have approved.
   - `pullRequestLabels` : A list of labels to add to the pull request. The labels need to be created in the repository before they can be applied.
+- `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds (`enable` is true), AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt.
+  - `enable` - set this property to **true** in order to enable incremental builds. Default is **false**.
+  - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
+  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in all modified projects, **modifiedApps** if you only want to rebuild modified apps or **modifiedAppsAndDependingApps** if you want to rebuild modified apps and all apps with dependencies to this app.
 
 ### Support for Git submodules
 
@@ -17,7 +21,7 @@ In v6.1 we added experimental support for Git submodules - this did however only
 
 ### Support for incremental builds
 
-AL-Go for GitHub now supports incremental builds.
+AL-Go for GitHub now supports incremental builds, which means that unchanged projects or apps will be reused from the previous good build. Read [this](aka.ms/algosettings#incrementalBuilds) to learn more.
 
 ## v6.1
 

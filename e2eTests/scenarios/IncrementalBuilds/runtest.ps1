@@ -226,6 +226,23 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 
 # Turn off incremental builds
 Pull
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "mode" = "modifiedProjects" } }
+
+# Modify app3 in a commit and wait for CI/CD workflow to finish
+$run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait
+
+# Check artifacts generated - all apps in P1 should have a new version number. Apps in P2 should come from previous build
+Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
+    "P1-main-*.app" = 3
+    "P2-main-*.app" = ($x*3)
+    "P1-main-Apps-*_1.0.12.0.app" = 3
+    "P2-main-Apps-*_appx???-1_1.0.11.0.app" = $x
+    "P2-main-Apps-*_appx???-2_1.0.11.0.app" = $x
+    "P2-main-Apps-*_appx???-3_1.0.10.0.app" = $x
+}
+
+# Turn off incremental builds
+Pull
 $null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $false; "mode" = "modifiedApps" } }
 
 # Modify app3 in a commit and wait for CI/CD workflow to finish
@@ -235,8 +252,8 @@ $run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 3
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_1.0.12.0.app" = 3
-    "P2-main-Apps-*_1.0.12.0.app" = ($x*3)
+    "P1-main-Apps-*_1.0.13.0.app" = 3
+    "P2-main-Apps-*_1.0.13.0.app" = ($x*3)
 }
 
 # Cleanup repositories
