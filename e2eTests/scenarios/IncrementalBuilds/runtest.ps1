@@ -57,8 +57,6 @@ $prevLocation = Get-Location
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
-$linux = $true
-
 $repository = "$githubOwner/$repoName"
 $branch = "main"
 
