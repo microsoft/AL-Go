@@ -12,13 +12,13 @@ Param(
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  _____                                          _        _   _           _ _     _     
-# |_   _|                                        | |      | | | |         (_) |   | |    
-#   | |  _ __   ___ _ __ ___ _ __ ___   ___ _ __ | |_ __ _| | | |__  _   _ _| | __| |___ 
+#  _____                                          _        _   _           _ _     _
+# |_   _|                                        | |      | | | |         (_) |   | |
+#   | |  _ __   ___ _ __ ___ _ __ ___   ___ _ __ | |_ __ _| | | |__  _   _ _| | __| |___
 #   | | | '_ \ / __| '__/ _ \ '_ ` _ \ / _ \ '_ \| __/ _` | | | '_ \| | | | | |/ _` / __|
 #  _| |_| | | | (__| | |  __/ | | | | |  __/ | | | || (_| | | | |_) | |_| | | | (_| \__ \
 # |_____|_| |_|\___|_|  \___|_| |_| |_|\___|_| |_|\__\__,_|_| |_.__/ \__,_|_|_|\__,_|___/
-#                                                                                        
+#
 # This test tests the following scenario:
 #
 #  - Set x to 5
@@ -41,7 +41,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Check artifacts generated - app3 should have a new version number, all other apps should come from previous build
 #  - Change incremental builds mode to modifiedAppsAndDependingApps
 #  - Modify app2 in a commit and wait for CI/CD workflow to finish
-#  - Check artifacts generated - app2, app3 and all apps in project 2  should have a new version number 
+#  - Check artifacts generated - app2, app3 and all apps in project 2  should have a new version number
 #  - Modify x*2 apps in project 2 in a commit and wait for CI/CD workflow to finish
 #  - Check artifacts generated - the x*2 modified apps in project 2 should have a new version number - the rest should be from previous build
 #  - Turn off incremental builds
@@ -87,7 +87,7 @@ CreateAlGoRepository `
     -repository $repository `
     -branch $branch `
     -projects @('P1') `
-    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true; "UseProjectDependencies" = $true; "useApproximateVersion" = $true; "incrementalBuilds" = @{ "enable" = $true }; "githubRunner": $githubRunner; "githubRunnerShell" = $githubRunnerShell } `
+    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true; "UseProjectDependencies" = $true; "useApproximateVersion" = $true; "incrementalBuilds" = @{ "enable" = $true }; "githubRunner" = $githubRunner; "githubRunnerShell" = $githubRunnerShell } `
     -contentScript {
         Param([string] $path)
         Add-PropertiesToJsonFile -path (Join-Path $path 'P1\.AL-Go\settings.json') -properties @{ "country" = "w1" }
@@ -197,7 +197,7 @@ $null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties
 Pull
 $run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait
 
-# Check artifacts generated - app2, app3 and x*2 apps in project 2 should have a new version number 
+# Check artifacts generated - app2, app3 and x*2 apps in project 2 should have a new version number
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 3
     "P2-main-*.app" = ($x*3)
