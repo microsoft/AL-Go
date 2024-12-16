@@ -17,6 +17,7 @@
   - `enable` - set this property to **true** in order to enable incremental builds. Default is **false**.
   - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
   - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
+- `cicdConcurrency` - is a setting to control concurrency of workflows. Like with the `<workflow>Schedule` setting, this setting can also be defined for any of the AL-Go workflows. The allowed values are: **Allowed** for allowing concurrency, **Wait** for waiting for any instances of the workflow currently running, **WaitRef** for waiting for instances of the workflow currently running on the same GitHub ref, **Cancel** for cancelling any currently running instances and **CancelRef** for cancelling any currently running instances on the same GitHub ref. Default is **Allowed** (except for the CreateRelease workflow, which defaults to Wait).
 
 ### Support for Git submodules
 
@@ -25,6 +26,9 @@ In v6.1 we added experimental support for Git submodules - this did however only
 ### Support for incremental builds
 
 AL-Go for GitHub now supports incremental builds, which means that unchanged projects or apps will be reused from the previous good build. Read [this](aka.ms/algosettings#incrementalBuilds) to learn more.
+
+> [!NOTE]
+> When using incremental builds it is recommended to also set `cicdConcurrency` to **CancelRef**.
 
 ## v6.1
 
