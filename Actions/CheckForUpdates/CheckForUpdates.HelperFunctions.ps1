@@ -294,7 +294,7 @@ function GetWorkflowContentWithChangesFromSettings {
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
     $yaml = [Yaml]::Load($srcFile)
     $workflowScheduleKey = "$($baseName)Schedule"
-    $workflowCancelInProgressKey = "$($baseName)CancelInProgress"
+    $workflowConcurrencyKey = "$($baseName)Concurrency"
 
     # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have a RepoSetting called <workflowname>Schedule, which will be used to set the schedule for the workflow
     if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
@@ -303,9 +303,9 @@ function GetWorkflowContentWithChangesFromSettings {
             $yamlOn = $yaml.Get('on:/')
             $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
         }
-        $cancelInProgress = 'false'
-        if ($repoSettings.Keys -contains $workflowCancelInProgressKey) {
-            $cancelInProgress = $repoSettings."$workflowCancelInProgressKey"
+        $concurrency = 'allowed'
+        if ($repoSettings.Keys -contains $workflowConcurrencyKey) {
+            $concurrency = $repoSettings."$workflowConcurrencyKey"
         }
         $start = 0
         $count = 0
@@ -313,12 +313,27 @@ function GetWorkflowContentWithChangesFromSettings {
             Write-Host "$start $count"
             $yaml.Remove($start-1, $count+1)
         }
-        if ($cancelInProgress -ne 'false') {
+        if ($concurrency -ne 'allowed') {
             if ($start -eq 0) {
                 if (-not $yaml.Find('on:', [ref] $start, [ref] $count)) { throw "Internal error, cannot find the on: key in the workflow" }
-                $start--
             }
-            $yaml.Insert($start, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}", "  cancel-in-progress: $cancelInProgress"))
+            switch ($concurrency) {
+                'WaitRef' {
+                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}"))
+                }
+                'Wait' {
+                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}"))
+                }
+                'CancelRef' {
+                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}", "  cancel-in-progress: true"))
+                }
+                'Cancel' {
+                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}", "  cancel-in-progress: true"))
+                }
+                defult: {
+                    throw "Unknown concurrency setting: $concurrency"
+                }
+            }
         }
     }
 
