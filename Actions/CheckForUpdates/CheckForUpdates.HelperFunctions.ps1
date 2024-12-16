@@ -294,6 +294,7 @@ function GetWorkflowContentWithChangesFromSettings {
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
     $yaml = [Yaml]::Load($srcFile)
     $workflowScheduleKey = "$($baseName)Schedule"
+    $workflowCancelInProgressKey = "$($baseName)CancelInProgress"
 
     # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have a RepoSetting called <workflowname>Schedule, which will be used to set the schedule for the workflow
     if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
@@ -301,6 +302,19 @@ function GetWorkflowContentWithChangesFromSettings {
             # Read the section under the on: key and add the schedule section
             $yamlOn = $yaml.Get('on:/')
             $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
+        }
+        $cancelInProgress = 'false'
+        if ($repoSettings.Keys -contains $workflowCancelInProgressKey) {
+            $cancelInProgress = $repoSettings."$workflowCancelInProgressKey"
+        }
+        $start = 0
+        $count = 0
+        if ($yaml.Find('concurrency:/', [ref] $start, [ref] $count)) {
+            $yaml.Remove($start, $count)
+        }
+        if ($cancelInProgress -ne 'false') {
+            $yaml.Find('on:', [ref] $start, [ref] $count)
+            $yaml.Insert($start, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}", "  cancel-in-progress: $cancelInProgress"))
         }
     }
 

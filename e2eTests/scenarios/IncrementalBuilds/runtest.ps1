@@ -48,7 +48,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Modify one app in P2 in a commit and wait for CI/CD workflow to finish
 #  - Check artifacts generated - all apps in P1 should be from previous build. All apps in P2 should have a new version number
 #  - Modify app4 in P1 in a commit and wait for CI/CD workflow to finish
-#  - Check artifacts generated - all apps in P1 should have a new version number. All apps in P2 should come from previous build
+#  - Check artifacts generated - all apps should have a new version number (even though no apps are depending on app4)
 #  - Turn off incremental builds
 #  - Modify app3 in a commit and wait for CI/CD workflow to finish
 #  - Check artifacts generated - all apps should have a new version number
@@ -244,7 +244,7 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
     "P1-main-Apps-*_1.0.12.0.app" = 4
-    "P2-main-Apps-*_1.0.12.0.app" = $x
+    "P2-main-Apps-*_1.0.12.0.app" = ($x*3)
 }
 
 # Modify one app in P2 in a commit and wait for CI/CD workflow to finish
@@ -255,18 +255,18 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
     "P1-main-Apps-*_1.0.12.0.app" = 4
-    "P2-main-Apps-*_1.0.13.0.app" = $x
+    "P2-main-Apps-*_1.0.13.0.app" = ($x*3)
 }
 
 # Modify app4 in P1 in a commit and wait for CI/CD workflow to finish
 $run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 
-# Check artifacts generated - all apps in P1 should have a new version number. All apps in P2 should come from previous build
+# Check artifacts generated - all apps should have a new version number (even though no apps are depending on app4)
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
     "P1-main-Apps-*_1.0.14.0.app" = 4
-    "P2-main-Apps-*_1.0.13.0.app" = $x
+    "P2-main-Apps-*_1.0.14.0.app" = ($x*3)
 }
 
 # Turn off incremental builds
