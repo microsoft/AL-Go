@@ -288,7 +288,7 @@ if ($update -ne 'Y') {
         OutputWarning -message "There are updates for your AL-Go system, run 'Update AL-Go System Files' workflow to download the latest version of AL-Go."
     }
     else {
-        Write-Host "No updates available for AL-Go for GitHub."
+        OutputNotice -message "No updates available for AL-Go for GitHub."
     }
 }
 else {
@@ -352,7 +352,7 @@ else {
         Write-Host $releaseNotes
 
         if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes)) {
-            OutputWarning "No updates available for AL-Go for GitHub."
+            OutputNotice -message "No updates available for AL-Go for GitHub."
         }
     }
     catch {
