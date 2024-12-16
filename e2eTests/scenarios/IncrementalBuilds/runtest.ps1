@@ -90,7 +90,7 @@ CreateAlGoRepository `
     -repository $repository `
     -branch $branch `
     -projects @('P1') `
-    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true; "UseProjectDependencies" = $true; "useApproximateVersion" = $true; "incrementalBuilds" = @{ "enable" = $true }; "githubRunner" = $githubRunner; "githubRunnerShell" = $githubRunnerShell } `
+    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true; "UseProjectDependencies" = $true; "useApproximateVersion" = $true; "incrementalBuilds" = @{ "enable" = $true }; "cicdConcurrency" = "CancelRef"; "githubRunner" = $githubRunner; "githubRunnerShell" = $githubRunnerShell } `
     -contentScript {
         Param([string] $path)
         Add-PropertiesToJsonFile -path (Join-Path $path 'P1\.AL-Go\settings.json') -properties @{ "country" = "w1" }
