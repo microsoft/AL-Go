@@ -101,9 +101,14 @@ CreateAlGoRepository `
     }
 
 $repoPath = (Get-Location).Path
-$run = RunCICD -repository $repository -branch $branch
 
-# Wait for CI/CD workflow of repository1 to finish
+# Run Update AL-Go System Files with direct commit
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
+
+# Wait for CI/CD to complete
+Start-Sleep -Seconds 60
+$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id
 
 # Check artifacts generated all have the same version number
@@ -116,6 +121,7 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 }
 
 # Modify app1 in a commit and wait for CI/CD workflow to finish
+Pull
 $run = ModifyAppInFolder -folder 'P1/app1' -name 'app1' -commit -wait
 
 # Check artifacts generated - app4 should come from previous build, app1, app2 and app3 should have a new version number
@@ -176,11 +182,14 @@ $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
 $run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id
 
-# Check artifacts generated - all apps in the all projects should have a new version number (due to changes to .github/*.json)
+# Check artifacts generated - all apps in P2 should have a new version number - apps in P1 wasn't touched
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_1.0.7.0.app" = 4
+    "P1-main-Apps-*_app1_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app2_1.0.5.0.app" = 1
+    "P1-main-Apps-*_app3_1.0.5.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.5.0.app" = 1
     "P2-main-Apps-*_1.0.7.0.app" = ($x*3)
 }
 
@@ -192,8 +201,10 @@ $run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
+    "P1-main-Apps-*_app1_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app2_1.0.5.0.app" = 1
+    "P1-main-Apps-*_app3_1.0.5.0.app" = 1
     "P1-main-Apps-*_app4_1.0.8.0.app" = 1
-    "P1-main-Apps-*_1.0.7.0.app" = 3
     "P2-main-Apps-*_1.0.7.0.app" = ($x*3)
 }
 
@@ -205,9 +216,10 @@ $run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_app1_1.0.7.0.app" = 1
+    "P1-main-Apps-*_app1_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app2_1.0.9.0.app" = 1
+    "P1-main-Apps-*_app3_1.0.9.0.app" = 1
     "P1-main-Apps-*_app4_1.0.8.0.app" = 1
-    "P1-main-Apps-*_1.0.9.0.app" = 2
     "P2-main-Apps-*_1.0.7.0.app" = $x
     "P2-main-Apps-*_1.0.9.0.app" = ($x*2)
 }
@@ -224,9 +236,10 @@ $run = CommitAndPush -commitMessage "Modify $($x*2) apps in P2" -wait
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_app1_1.0.7.0.app" = 1
+    "P1-main-Apps-*_app1_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app2_1.0.9.0.app" = 1
+    "P1-main-Apps-*_app3_1.0.9.0.app" = 1
     "P1-main-Apps-*_app4_1.0.8.0.app" = 1
-    "P1-main-Apps-*_1.0.9.0.app" = 2
     "P2-main-Apps-*_appx???-1_1.0.10.0.app" = $x
     "P2-main-Apps-*_appx???-2_1.0.10.0.app" = $x
     "P2-main-Apps-*_appx???-3_1.0.9.0.app" = $x
