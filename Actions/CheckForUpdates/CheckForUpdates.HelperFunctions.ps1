@@ -310,15 +310,15 @@ function GetWorkflowContentWithChangesFromSettings {
         $start = 0
         $count = 0
         if ($yaml.Find('concurrency:/', [ref] $start, [ref] $count)) {
-            $yaml.Remove($start, $count)
+            Write-Host "$start $count"
+            $yaml.Remove($start-1, $count+1)
         }
         if ($cancelInProgress -ne 'false') {
-            if ($yaml.Find('on:', [ref] $start, [ref] $count)) {
-                $yaml.Insert($start, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}", "  cancel-in-progress: $cancelInProgress"))
+            if ($start -eq 0) {
+                if (-not $yaml.Find('on:', [ref] $start, [ref] $count)) { throw "Internal error, cannot find the on: key in the workflow" }
+                $start--
             }
-            else {
-                throw "Internal error, cannot find the on: key in the workflow"
-            }
+            $yaml.Insert($start, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}", "  cancel-in-progress: $cancelInProgress"))
         }
     }
 
