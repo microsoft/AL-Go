@@ -146,23 +146,6 @@ try {
         $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         if (!$buildAll) {
             if ($settings.incrementalBuilds.mode -eq 'modifiedApps') {
-                Push-Location $ENV:GITHUB_WORKSPACE
-                $modifiedFolders = @($settings.appfolders+$settings.testFolders+$settings.bcptTestFolders | Where-Object {
-                    $theFolder = Resolve-Path (Join-Path $baseFolder "$project/$_") -Relative
-                    $modifiedFiles -like "$($theFolder.SubString(2))$([System.IO.Path]::DirectorySeparatorChar)*"
-                })
-                Pop-Location
-                Write-Host "$($modifiedFolders.Count) modified folder(s)"
-                if ($modifiedFolders.Count -gt 0) {
-                    foreach($modifiedFolder in $modifiedFolders) {
-                        Write-Host "- $modifiedFolder"
-                    }
-                }
-                $downloadAppFolders = @($settings.appFolders | Where-Object { $modifiedFolders -notcontains $_ })
-                $downloadTestFolders = @($settings.testFolders | Where-Object { $modifiedFolders -notcontains $_ })
-                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $modifiedFolders -notcontains $_ })
-            }
-            elseif ($settings.incrementalBuilds.mode -eq 'modifiedAppsAndDependingApps') {
                 $skipFolders = @()
                 $unknownDependencies = @()
                 $knownApps = @()

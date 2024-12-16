@@ -22,28 +22,33 @@ Write-Host -ForegroundColor Yellow @'
 # This test tests the following scenario:
 #
 #  - Set x to 5
-#  - Create a new repository based on the PTE template with one project and 3 apps app3 being dependent on app2 and app2 being dependent on app1
+#  - Create a new repository based on the PTE template with one project and 4 apps. app4 doesn't have any dependencies, app3 is dependent on app2 and app2 is dependent on app1
 #  - Enable incremental builds, useCompilerFolder and doNotPublishApps in settings
 #  - Enable concurrency check in CI/CD
 #  - Run the "CI/CD" workflow
 #  - Check artifacts generated all have the same version number
 #  - Modify app1 in a commit and wait for CI/CD workflow to finish
-#  - Check artifacts generated - app2 and app3 should come from previous build, app1 should have a new version number
+#  - Check artifacts generated - app4 should come from previous build, app1, app2 and app3 should have a new version number
 #  - Modify app2 in a commit, wait 30 seconds for CI/CD workflow to start
-#  - Modify app3 in a commit and wait for CI/CD workflow to finish
+#  - Modify app4 in a commit and wait for CI/CD workflow to finish
 #  - Check that CI/CD started when modifying app2 was cancelled
-#  - Check that app2 and app3 were rebuilt in the latest CI/CD run and app1 was taken from the previous run
-#  - Check artifacts generated - app3 should come from first build, app1 and app2 should have a new version number
-#  - Create another project with x*3 apps, x with dependency on app1, x with dependency on app2 and x with dependencies on app3
+#  - Check that app2, app3 and app4 were rebuilt in the latest CI/CD run and app1 was taken from the previous run
+#  - Create another project with x*3 apps, x with dependency on app1, x with dependency on app2 and x with dependencies on app3. None with dependencies on app4.
 #  - Wait for CI/CD to complete
 #  - Check artifacts generated - all apps in the new project should have a new version number
-#  - Modify app3 in a commit and wait for CI/CD workflow to finish
-#  - Check artifacts generated - app3 should have a new version number, all other apps should come from previous build
-#  - Change incremental builds mode to modifiedAppsAndDependingApps
+#  - Modify app4 in a commit and wait for CI/CD workflow to finish
+#  - Check artifacts generated - app4 should have a new version number, all other apps should come from previous build
 #  - Modify app2 in a commit and wait for CI/CD workflow to finish
-#  - Check artifacts generated - app2, app3 and all apps in project 2  should have a new version number
-#  - Modify x*2 apps in project 2 in a commit and wait for CI/CD workflow to finish
-#  - Check artifacts generated - the x*2 modified apps in project 2 should have a new version number - the rest should be from previous build
+#  - Check artifacts generated - app2, app3 and x*2 apps in P2 should have a new version number. app4 should come from previous build, app1 and x apps in P2 should come from the build before that
+#  - Modify x*2 apps in P2 in a commit and wait for CI/CD workflow to finish
+#  - Check artifacts generated - the x*2 modified apps in P2 should have a new version number - the rest should be from previous builds
+#  - Set incremental builds mode to modifiedProjects
+#  - Modify app2 in a commit and wait for CI/CD workflow to finish
+#  - Check artifacts generated - all apps should have a new version number.
+#  - Modify one app in P2 in a commit and wait for CI/CD workflow to finish
+#  - Check artifacts generated - all apps in P1 should be from previous build. All apps in P2 should have a new version number
+#  - Modify app4 in P1 in a commit and wait for CI/CD workflow to finish
+#  - Check artifacts generated - all apps in P1 should have a new version number. All apps in P2 should come from previous build
 #  - Turn off incremental builds
 #  - Modify app3 in a commit and wait for CI/CD workflow to finish
 #  - Check artifacts generated - all apps should have a new version number
@@ -77,7 +82,7 @@ else {
     $githubRunnerShell = "powershell"
 }
 
-# Create repository1
+# Create a new repository based on the PTE template with one project and 4 apps. app4 doesn't have any dependencies, app3 is dependent on app2 and app2 is dependent on app1
 CreateAlGoRepository `
     -github:$github `
     -linux:$linux `
@@ -92,6 +97,7 @@ CreateAlGoRepository `
         $script:id1 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app1' -objID 50001
         $script:id2 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app2' -objID 50002 -dependencies @( @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
         $script:id3 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app3' -objID 50003 -dependencies @( @{ "id" = $script:id2; "name" = "app2"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
+        $script:id4 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app4' -objID 50004
     }
 
 $repoPath = (Get-Location).Path
@@ -102,29 +108,31 @@ WaitWorkflow -repository $repository -runid $run.id
 
 # Check artifacts generated all have the same version number
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P1-main-Apps-*_app1_1.0.2.0.app" = 1
     "P1-main-Apps-*_app2_1.0.2.0.app" = 1
     "P1-main-Apps-*_app3_1.0.2.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.2.0.app" = 1
 }
 
 # Modify app1 in a commit and wait for CI/CD workflow to finish
 $run = ModifyAppInFolder -folder 'P1/app1' -name 'app1' -commit -wait
 
-# Check artifacts generated - app2 and app3 should come from previous build, app1 should have a new version number
+# Check artifacts generated - app4 should come from previous build, app1, app2 and app3 should have a new version number
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P1-main-Apps-*_app1_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app2_1.0.2.0.app" = 1
-    "P1-main-Apps-*_app3_1.0.2.0.app" = 1
+    "P1-main-Apps-*_app2_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app3_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.2.0.app" = 1
 }
 
 # Modify app2 in a commit, wait 30 seconds for CI/CD workflow to start
 ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit
 Start-Sleep -Seconds 30
 
-# Modify app3 in a commit and wait for CI/CD workflow to finish
-$run = ModifyAppInFolder -folder 'P1/app3' -name 'app3' -commit -wait
+# Modify app4 in a commit and wait for CI/CD workflow to finish
+$run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 
 $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
 $workflowRuns = $runs.workflow_runs | Select-Object -First 2
@@ -139,15 +147,16 @@ if ($workflowRuns[1].status -ne 'completed' -and $workflowRuns[1].conclusion -ne
     throw "Expected second run to be cancelled"
 }
 
-# Check that app2 and app3 were rebuilt in the latest CI/CD run and app1 was taken from the previous run
+# Check that app2, app3 and app4 were rebuilt in the latest CI/CD run and app1 was taken from the previous run
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P1-main-Apps-*_app1_1.0.3.0.app" = 1
     "P1-main-Apps-*_app2_1.0.5.0.app" = 1
     "P1-main-Apps-*_app3_1.0.5.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.5.0.app" = 1
 }
 
-# Create another project with x*3 apps, x with dependency on app1, x with dependency on app2 and x with dependencies on app3
+# Create another project with x*3 apps, x with dependency on app1, x with dependency on app2 and x with dependencies on app3. None with dependencies on app4.
 Pull
 New-Item -Path (Join-Path $repoPath 'P2') -ItemType Directory | Out-Null
 Copy-Item -Path (Join-Path $repoPath 'P1/.AL-Go') -Destination (Join-Path $repoPath 'P2') -Recurse -Force
@@ -169,92 +178,113 @@ WaitWorkflow -repository $repository -runid $run.id
 
 # Check artifacts generated - all apps in the all projects should have a new version number (due to changes to .github/*.json)
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_1.0.7.0.app" = 3
+    "P1-main-Apps-*_1.0.7.0.app" = 4
     "P2-main-Apps-*_1.0.7.0.app" = ($x*3)
 }
 
-# Modify app3 in a commit and wait for CI/CD workflow to finish
+# Modify app4 in a commit and wait for CI/CD workflow to finish
 Pull
-$run = ModifyAppInFolder -folder 'P1/app3' -name 'app3' -commit -wait
+$run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 
 # Check artifacts generated - app3 should have a new version number, all other apps should come from previous build
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_app3_1.0.8.0.app" = 1
-    "P1-main-Apps-*_1.0.7.0.app" = 2
+    "P1-main-Apps-*_app4_1.0.8.0.app" = 1
+    "P1-main-Apps-*_1.0.7.0.app" = 3
     "P2-main-Apps-*_1.0.7.0.app" = ($x*3)
 }
-
-# Change incremental builds mode to modifiedAppsAndDependingApps
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $true; "mode" = "modifiedAppsAndDependingApps" } } -commit -wait
 
 # Modify app2 in a commit and wait for CI/CD workflow to finish
 Pull
 $run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait
 
-# Check artifacts generated - app2, app3 and x*2 apps in project 2 should have a new version number
+# Check artifacts generated - app2, app3 and x*2 apps in P2 should have a new version number. app4 should come from previous build, app1 and x apps in P2 should come from the build before that
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_app1_1.0.9.0.app" = 1
-    "P1-main-Apps-*_1.0.10.0.app" = 2
-    "P2-main-Apps-*_1.0.9.0.app" = $x
-    "P2-main-Apps-*_1.0.10.0.app" = ($x*2)
+    "P1-main-Apps-*_app1_1.0.7.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.8.0.app" = 1
+    "P1-main-Apps-*_1.0.9.0.app" = 2
+    "P2-main-Apps-*_1.0.7.0.app" = $x
+    "P2-main-Apps-*_1.0.9.0.app" = ($x*2)
 }
 
-# Modify x*2 apps in project 2 in a commit and wait for CI/CD workflow to finish
+# Modify x*2 apps in P2 in a commit and wait for CI/CD workflow to finish
 Pull
 1..$x | ForEach-Object {
     ModifyAppInFolder -folder ("P2/appx{0:D3}-1" -f $_) -name ("appx{0:D3}-1" -f $_)
     ModifyAppInFolder -folder ("P2/appx{0:D3}-2" -f $_) -name ("appx{0:D3}-2" -f $_)
 }
-$run = CommitAndPush -commitMessage "Modify $($x*2) apps in project 2" -wait
+$run = CommitAndPush -commitMessage "Modify $($x*2) apps in P2" -wait
 
-# Check artifacts generated - the $x*2 modified apps in project 2 should have a new version number - the rest should be from previous build
+# Check artifacts generated - the x*2 modified apps in P2 should have a new version number - the rest should be from previous builds
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_app1_1.0.9.0.app" = 1
-    "P1-main-Apps-*_1.0.10.0.app" = 2
-    "P2-main-Apps-*_appx???-1_1.0.11.0.app" = $x
-    "P2-main-Apps-*_appx???-2_1.0.11.0.app" = $x
-    "P2-main-Apps-*_appx???-3_1.0.10.0.app" = $x
+    "P1-main-Apps-*_app1_1.0.7.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.8.0.app" = 1
+    "P1-main-Apps-*_1.0.9.0.app" = 2
+    "P2-main-Apps-*_appx???-1_1.0.10.0.app" = $x
+    "P2-main-Apps-*_appx???-2_1.0.10.0.app" = $x
+    "P2-main-Apps-*_appx???-3_1.0.9.0.app" = $x
+}
+
+# Set incremental builds mode to modifiedProjects
+Pull
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $true; "mode" = "modifiedProjects" } } -commit -wait
+
+# Modify app2 in a commit and wait for CI/CD workflow to finish
+$run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -message "mode=modifiedProjects" -commit -wait
+
+# Check artifacts generated - all apps should have a new version number.
+Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
+    "P1-main-*.app" = 4
+    "P2-main-*.app" = ($x*3)
+    "P1-main-Apps-*_1.0.12.0.app" = 4
+    "P2-main-Apps-*_1.0.12.0.app" = $x
+}
+
+# Modify one app in P2 in a commit and wait for CI/CD workflow to finish
+$run = ModifyAppInFolder -folder 'P2/appx001-1' -name 'appx001-1' -commit -wait
+
+# Check artifacts generated - all apps in P1 should be from previous build. All apps in P2 should have a new version number
+Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
+    "P1-main-*.app" = 4
+    "P2-main-*.app" = ($x*3)
+    "P1-main-Apps-*_1.0.12.0.app" = 4
+    "P2-main-Apps-*_1.0.13.0.app" = $x
+}
+
+# Modify app4 in P1 in a commit and wait for CI/CD workflow to finish
+$run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
+
+# Check artifacts generated - all apps in P1 should have a new version number. All apps in P2 should come from previous build
+Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
+    "P1-main-*.app" = 4
+    "P2-main-*.app" = ($x*3)
+    "P1-main-Apps-*_1.0.14.0.app" = 4
+    "P2-main-Apps-*_1.0.13.0.app" = $x
 }
 
 # Turn off incremental builds
 Pull
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "mode" = "modifiedProjects" } }
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $false; "mode" = "modifiedApps" } } -commit -wait
 
 # Modify app3 in a commit and wait for CI/CD workflow to finish
-$run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait
-
-# Check artifacts generated - all apps in P1 should have a new version number. Apps in P2 should come from previous build
-Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
-    "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_1.0.12.0.app" = 3
-    "P2-main-Apps-*_appx???-1_1.0.11.0.app" = $x
-    "P2-main-Apps-*_appx???-2_1.0.11.0.app" = $x
-    "P2-main-Apps-*_appx???-3_1.0.10.0.app" = $x
-}
-
-# Turn off incremental builds
-Pull
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $false; "mode" = "modifiedApps" } }
-
-# Modify app3 in a commit and wait for CI/CD workflow to finish
-$run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait
+$run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait -message "incrementalBuilds=off"
 
 # Check artifacts generated - all apps should have a new version number
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-*.app" = 3
+    "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
-    "P1-main-Apps-*_1.0.13.0.app" = 3
-    "P2-main-Apps-*_1.0.13.0.app" = ($x*3)
+    "P1-main-Apps-*_1.0.16.0.app" = 4
+    "P2-main-Apps-*_1.0.16.0.app" = ($x*3)
 }
+
+Read-Host "Press Enter to cleanup repositories"
 
 # Cleanup repositories
 Set-Location $prevLocation

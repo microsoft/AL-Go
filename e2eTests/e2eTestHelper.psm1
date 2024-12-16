@@ -313,6 +313,7 @@ function ModifyAppInFolder {
     Param(
         [string] $folder,
         [string] $name,
+        [string] $message = "Modify $name",
         [switch] $commit,
         [switch] $wait
     )
@@ -321,7 +322,7 @@ function ModifyAppInFolder {
     # Add another ! to the end of the message and save
     ($al -join "`n").Replace("!');","!!');") | Set-ContentLF -Path (Join-Path $folder "$name.al")
     if ($commit) {
-        CommitAndPush -commitMessage "Modify $name" -wait:$wait
+        CommitAndPush -commitMessage $message -wait:$wait
     }
 }
 

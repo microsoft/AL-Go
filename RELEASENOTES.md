@@ -13,7 +13,7 @@
 - `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds (`enable` is true), AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt.
   - `enable` - set this property to **true** in order to enable incremental builds. Default is **false**.
   - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
-  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in all modified projects, **modifiedApps** if you only want to rebuild modified apps or **modifiedAppsAndDependingApps** if you want to rebuild modified apps and all apps with dependencies to this app.
+  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
 
 ### Support for Git submodules
 
