@@ -27,7 +27,7 @@ In v6.1 we added experimental support for Git submodules - this did however only
 
 AL-Go for GitHub now supports incremental builds, which means that unchanged projects or apps will be reused from the previous good build. Read [this](aka.ms/algosettings#incrementalBuilds) to learn more.
 
-> [!NOTE]
+> \[!NOTE\]
 > When using incremental builds it is recommended to also set `cicdConcurrency` to **CancelRef**.
 
 ## v6.1
