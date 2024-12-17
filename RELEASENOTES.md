@@ -15,7 +15,6 @@ Setting versioning strategy to 3 will allow 3 segments of the version number to 
 - Issue 1305 Extra telemetry Property RepositoryOwner and RepositoryName¨
 - Add RunnerEnvironment to Telemetry
 - Output a notice, not a warning, when there are no available updates for AL-Go for GitHub
-- It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
 
 ### New Repository Settings
 
