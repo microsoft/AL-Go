@@ -1,3 +1,5 @@
+## v6.2
+
 ### Issues
 
 - Issue 1296 Make property "appFolders" optional
