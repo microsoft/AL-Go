@@ -1,5 +1,15 @@
 ### Issues
 
+- It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
+
+### New Versioning Strategy
+
+Setting versioning strategy to 3 will allow 3 segments of the version number to be defined in app.json and repoVersion. Only the 4th segment (Revision) will be defined by the GitHub [run_number](https://go.microsoft.com/fwlink/?linkid=2217416&clcid=0x409) for the CI/CD workflow. Increment version number and Create Release now also supports the ability to set a third segment to the RepoVersion and appversion in app.json.
+
+## v6.2
+
+### Issues
+
 - Issue 1296 Make property "appFolders" optional
 - Issue 1344 Experimental feature "git submodules" seems to be a breaking change
 - Issue 1305 Extra telemetry Property RepositoryOwner and RepositoryName¨

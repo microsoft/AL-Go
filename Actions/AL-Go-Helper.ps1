@@ -1416,14 +1416,13 @@ function CommitFromNewFolder {
         }
         invoke-git push -u $serverUrl $branch
         try {
-            $prCreateCmd = "invoke-gh pr create --fill --title ""$title"" --head ""$branch"" --repo ""$env:GITHUB_REPOSITORY"" --base ""$ENV:GITHUB_REF_NAME"" --body ""$body"""
             if ($settings.commitOptions.pullRequestLabels) {
                 $labels = "$($settings.commitOptions.pullRequestLabels -join ",")"
                 Write-Host "Adding labels: $labels"
-                $prCreateCmd += " --label ""$labels"""
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body" --label $labels
+            } else {
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body"
             }
-
-            Invoke-Expression $prCreateCmd
 
             if ($settings.commitOptions.pullRequestAutoMerge) {
                 invoke-gh pr merge --auto --squash --delete-branch

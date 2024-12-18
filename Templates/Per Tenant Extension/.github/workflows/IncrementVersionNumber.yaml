@@ -10,8 +10,13 @@ on:
         required: false
         default: '*'
       versionNumber:
-        description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
-        required: true
+        description: New Version Number in main branch. Use Major.Minor (optionally add .Build for versioningstrategy 3) for absolute change, or +1, +0.1 (or +0.0.1 for versioningstrategy 3) incremental change.
+        required: false
+        default: ''
+      skipUpdatingDependencies:
+        description: Skip updating dependency version numbers in all apps.
+        type: boolean
+        default: false
       directCommit:
         description: Direct Commit?
         type: boolean
@@ -75,6 +80,7 @@ jobs:
           token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           projects: ${{ github.event.inputs.projects }}
           versionNumber: ${{ github.event.inputs.versionNumber }}
+          skipUpdatingDependencies: ${{ github.event.inputs.skipUpdatingDependencies }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
       - name: Finalize the workflow
