@@ -1,3 +1,7 @@
+### Issues
+
+- It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
+
 ### New Repository Settings
 
 - `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds (`enable` is true), AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt.
@@ -12,6 +16,10 @@ AL-Go for GitHub now supports incremental builds, which means that unchanged pro
 
 > \[!NOTE\]
 > When using incremental builds it is recommended to also set `cicdConcurrency` to **CancelRef**.
+
+### New Versioning Strategy
+
+Setting versioning strategy to 3 will allow 3 segments of the version number to be defined in app.json and repoVersion. Only the 4th segment (Revision) will be defined by the GitHub [run_number](https://go.microsoft.com/fwlink/?linkid=2217416&clcid=0x409) for the CI/CD workflow. Increment version number and Create Release now also supports the ability to set a third segment to the RepoVersion and appversion in app.json.
 
 ## v6.2
 

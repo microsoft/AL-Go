@@ -21,8 +21,12 @@ inputs:
     required: false
     default: '*'
   versionNumber:
-    description: The version to update to. Use Major.Minor for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version
+    description: The version to update to. Use Major.Minor[.Build] for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version or +0.0.1 to bump to the next build version
     required: true
+  skipUpdatingDependencies:
+    description: Skip updating dependency version numbers in all apps
+    required: false
+    default: 'false'
   updateBranch:
     description: Set the branch to update
     required: false
@@ -41,11 +45,12 @@ runs:
         _token: ${{ inputs.token }}
         _projects: ${{ inputs.projects }}
         _versionNumber: ${{ inputs.versionNumber }}
+        _skipUpdatingDependencies: ${{ inputs.skipUpdatingDependencies }}
         _updateBranch: ${{ inputs.updateBranch }}
         _directCommit: ${{ inputs.directCommit }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "IncrementVersionNumber" -Action {
-          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -projects $ENV:_projects -versionNumber $ENV:_versionNumber -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
+          ${{ github.action_path }}/IncrementVersionNumber.ps1 -actor $ENV:_actor -token $ENV:_token -projects $ENV:_projects -versionNumber $ENV:_versionNumber -skipUpdatingDependencies ($ENV:_skipUpdatingDependencies -eq 'true') -updateBranch $ENV:_updateBranch -directCommit ($ENV:_directCommit -eq 'true')
         }
 branding:
   icon: terminal
