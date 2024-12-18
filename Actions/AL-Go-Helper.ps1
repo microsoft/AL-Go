@@ -1422,7 +1422,6 @@ function CommitFromNewFolder {
             }
         }
         catch {
-            Write-Host $_.Exception.Message
             OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
         }
         return $true
