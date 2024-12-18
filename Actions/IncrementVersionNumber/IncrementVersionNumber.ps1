@@ -5,8 +5,10 @@
     [string] $token,
     [Parameter(HelpMessage = "List of project names if the repository is setup for multiple projects (* for all projects)", Mandatory = $false)]
     [string] $projects = '*',
-    [Parameter(HelpMessage = "The version to update to. Use Major.Minor for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version", Mandatory = $true)]
+    [Parameter(HelpMessage = "The version to update to. Use Major.Minor[.Build] for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version or +0.0.1 to bump to the next build version", Mandatory = $true)]
     [string] $versionNumber,
+    [Parameter(HelpMessage = "Skip updating dependency version numbers in all apps", Mandatory = $false)]
+    [bool] $skipUpdatingDependencies,
     [Parameter(HelpMessage = "Set the branch to update", Mandatory = $false)]
     [string] $updateBranch,
     [Parameter(HelpMessage = "Direct commit?", Mandatory = $false)]
@@ -24,6 +26,10 @@ $settings = $env:Settings | ConvertFrom-Json
 if ($versionNumber.StartsWith('+')) {
     # Handle incremental version number
     $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+    if ($settings.versioningStrategy -eq 3) {
+        # Allow increment build
+        $allowedIncrementalVersionNumbers += '+0.0.1'
+    }
     if (-not $allowedIncrementalVersionNumbers.Contains($versionNumber)) {
         throw "Incremental version number $versionNumber is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
     }
@@ -31,8 +37,13 @@ if ($versionNumber.StartsWith('+')) {
 else {
     # Handle absolute version number
     $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+    $correctFormatMsg = 'Major.Minor (e.g. 1.0 or 1.2)'
+    if ($settings.versioningStrategy -eq 3) {
+        $versionNumberFormat = '^\d+\.\d+\.\d+$' # Major.Minor.Build
+        $correctFormatMsg = 'Major.Minor.Build (e.g. 1.0, 1.2 or 1.2.3)'
+    }
     if (-not ($versionNumber -match $versionNumberFormat)) {
-        throw "Version number $versionNumber is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+        throw "Version number $versionNumber is not in the correct format. The version number must be in the format $correctFormatMsg"
     }
 }
 
@@ -87,13 +98,15 @@ if ($projectList.Count -gt 0) {
         $allAppFolders += $projectSettings.bcptTestFolders | ForEach-Object { Join-Path $projectPath $_ -Resolve }
     }
 
-    # Set dependencies in app manifests
-    if ($allAppFolders.Count -eq 0) {
-        Write-Host "No App folders found for projects $projects"
-    }
-    else {
+    if (-not $skipUpdatingDependencies) {
         # Set dependencies in app manifests
-        Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+        if ($allAppFolders.Count -eq 0) {
+            Write-Host "No App folders found for projects $projects"
+        }
+        else {
+            # Set dependencies in app manifests
+            Set-DependenciesVersionInAppManifests -appFolders $allAppFolders
+        }
     }
 }
 
