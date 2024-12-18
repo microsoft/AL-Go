@@ -97,6 +97,22 @@ function Copy-HashTable() {
     }
 }
 
+function Get-PlainText {
+    Param(
+        [parameter(ValueFromPipeline, Mandatory = $true)]
+        [System.Security.SecureString] $SecureString
+    )
+    Process {
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString);
+        try {
+            return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);
+        }
+        finally {
+            [Runtime.InteropServices.Marshal]::FreeBSTR($bstr);
+        }
+    }
+}
+
 function IsPropertySecret {
     param (
         [string] $propertyName
@@ -406,7 +422,7 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
         # Read Repository Settings file (without applying organization variables, repository variables or project settings files)
         # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in repo settings file
         $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-        if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
+        if ($repoSettings.Keys -contains "BcContainerHelperVersion" -and $defaultBcContainerHelperVersion -notlike 'https://*') {
             $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
             Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
             if ($bcContainerHelperVersion -like "https://*") {
@@ -646,6 +662,13 @@ function ReadSettings {
         "cacheImageName"                                = "my"
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
+        "incrementalBuilds"                             = [ordered]@{
+            "enable"                                    = $false
+            "retentionDays"                             = 30
+            "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps
+        }
+        "cicdConcurrency"                               = "Allowed"
+        "createReleaseConcurrency"                      = "Wait"
         "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
         "partnerTelemetryConnectionString"              = ""
         "sendExtendedTelemetryToMicrosoft"              = $false
@@ -920,11 +943,6 @@ function AnalyzeRepo {
     )
 
     $settings = $settings | Copy-HashTable
-
-    if (!$runningLocal) {
-        Write-Host "::group::Analyzing repository"
-    }
-
     $projectPath = Join-Path $baseFolder $project -Resolve
 
     # Check applicationDependency
@@ -1118,17 +1136,12 @@ function AnalyzeRepo {
             if ($performanceToolkitApps.Contains($dep.id)) { $settings.installPerformanceToolkit = $true }
         }
     }
-
-    if (!$runningLocal) {
-        Write-Host "::endgroup::"
-    }
-
     if (!$settings.doNotRunBcptTests -and -not $settings.bcptTestFolders) {
-        Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile"
+        if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+        if (!$doNotIssueWarnings -and !$settings.doNotBuildTests) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
         $settings.doNotRunTests = $true
     }
     if (-not $settings.appFolders) {
@@ -2112,7 +2125,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        Write-Host "Folders containing apps are $($folders -join ',' )"
+        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -2363,6 +2376,7 @@ function RetryCommand {
         try {
             Invoke-Command $Command -ArgumentList $argumentList
             if ($LASTEXITCODE -ne 0) {
+                $host.SetShouldExit(0);
                 throw "Command failed with exit code $LASTEXITCODE"
             }
             break
@@ -2416,6 +2430,22 @@ function GetProjectsFromRepository {
         }
     }
     return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
+}
+
+function GetFoldersFromAllProjects {
+    Param(
+        [string] $baseFolder
+    )
+
+    $settings = ReadSettings -baseFolder $baseFolder
+    $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
+    $folders = @()
+    foreach($project in $projects) {
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+        $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Join-Path $project "$_".Substring(2) } )
+    }
+    return $folders
 }
 
 function GetPackageVersion($packageName) {
@@ -2499,5 +2529,21 @@ function ConnectAz {
     }
     catch {
         throw "Error trying to authenticate to Azure. Error was $($_.Exception.Message)"
+    }
+}
+
+function OutputMessageAndArray {
+    Param(
+        [string] $message,
+        [string[]] $arrayOfStrings
+    )
+    Write-Host "$($message):"
+    if (!$arrayOfStrings) {
+        Write-Host "- None"
+    }
+    else {
+        $arrayOfStrings | ForEach-Object {
+            Write-Host "- $_"
+        }
     }
 }

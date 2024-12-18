@@ -716,20 +716,6 @@ Describe "Get-BuildAllProjects" {
         $buildAllProjects | Should -Be $true
     }
 
-    It ('returns true if the modified files are more than 250') {
-        # Add AL-Go settings
-        $alGoSettings = @{ alwaysBuildAllProjects = $false }
-        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
-
-        $modifiedFiles = @()
-        for ($i = 0; $i -lt 251; $i++) {
-            $modifiedFiles += "Project$i/.AL-Go/settings.json"
-        }
-
-        $buildAllProjects = Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles
-        $buildAllProjects | Should -Be $true
-    }
-
     It ('returns true if any of the modified files matches any of the patterns in fullBuildPatterns setting') {
         # Add AL-Go settings
         $alGoSettings = @{ alwaysBuildAllProjects = $false; fullBuildPatterns = @('Project1/*') }

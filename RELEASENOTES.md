@@ -2,6 +2,21 @@
 
 - It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
 
+### New Repository Settings
+
+- `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds (`enable` is true), AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt.
+  - `enable` - set this property to **true** in order to enable incremental builds. Default is **false**.
+  - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
+  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
+- `<workflow>Concurrency` - is a setting to control concurrency of workflows. Like with the `<workflow>Schedule` setting, this setting can also be defined for any of the AL-Go workflows. The allowed values are: **Allowed** for allowing concurrency, **Wait** for waiting for any instances of the workflow currently running, **WaitRef** for waiting for instances of the workflow currently running on the same GitHub ref, **Cancel** for cancelling any currently running instances and **CancelRef** for cancelling any currently running instances on the same GitHub ref. Default is **Allowed** (except for the CreateRelease workflow, which defaults to **Wait**). It is recommended to set `cicdConcurrency` to **CancelRef** when enabling incremental builds.
+
+### Support for incremental builds
+
+AL-Go for GitHub now supports incremental builds, which means that unchanged projects or apps will be reused from the previous good build. Read [this](aka.ms/algosettings#incrementalBuilds) to learn more.
+
+> \[!NOTE\]
+> When using incremental builds it is recommended to also set `cicdConcurrency` to **CancelRef**.
+
 ### New Versioning Strategy
 
 Setting versioning strategy to 3 will allow 3 segments of the version number to be defined in app.json and repoVersion. Only the 4th segment (Revision) will be defined by the GitHub [run_number](https://go.microsoft.com/fwlink/?linkid=2217416&clcid=0x409) for the CI/CD workflow. Increment version number and Create Release now also supports the ability to set a third segment to the RepoVersion and appversion in app.json.
@@ -117,7 +132,7 @@ In the summary after a Test Run, you now also have the result of performance tes
 ### Support Ubuntu runners for all AL-Go workflows
 
 Previously, the workflows "Update AL-Go System Files" and "TroubleShooting" were hardcoded to always run on `windows-latest` to prevent deadlocks and security issues.
-From now on, `ubuntu-lates` will also be allowed for these mission critical workflows, when changing the `runs-on` setting. Additionally, only the value `pwsh` for `shell` setting is allowed when using `ubuntu-latest` runners.
+From now on, `ubuntu-latest` will also be allowed for these mission critical workflows, when changing the `runs-on` setting. Additionally, only the value `pwsh` for `shell` setting is allowed when using `ubuntu-latest` runners.
 
 ### Updated AL-Go telemetry
 
@@ -610,7 +625,7 @@ In the latest version, we always use LF as line seperator, UTF8 without BOM and 
 ### Experimental Support
 
 Setting the repo setting "shell" to "pwsh", followed by running Update AL-Go System Files, will cause all PowerShell code to be run using PowerShell 7 instead of PowerShell 5. This functionality is experimental. Please report any issues at https://github.com/microsoft/AL-Go/issues
-Setting the repo setting "runs-on" to "Ubuntu-Latest", followed by running Update AL-Go System Files, will cause all non-build jobs to run using Linux. This functionality is experimental. Please report any issues at https://github.com/microsoft/AL-Go/issues
+Setting the repo setting "runs-on" to "Ubuntu-latest", followed by running Update AL-Go System Files, will cause all non-build jobs to run using Linux. This functionality is experimental. Please report any issues at https://github.com/microsoft/AL-Go/issues
 
 ## v2.2
 
