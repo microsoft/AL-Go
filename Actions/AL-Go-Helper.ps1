@@ -19,7 +19,7 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","EnvironmentName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -38,6 +38,8 @@ $runAlPipelineOverrides = @(
     "InstallMissingDependencies"
     "PreCompileApp"
     "PostCompileApp"
+    "PipelineInitialize"
+    "PipelineFinalize"
 )
 
 # Well known AppIds
@@ -476,6 +478,10 @@ function MergeCustomObjectIntoOrderedDictionary {
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
+            elseif ($dstProp -is [String] -and $srcProp -is [Object[]]) {
+                # For properties like "runs-on", which is a string, you can specify an array in settings, which gets joined with a comma
+                $dst."$prop" = $srcProp -join ', '
+            }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
                 # This is not seen as an error and will not throw an error
@@ -565,6 +571,7 @@ function ReadSettings {
     $settings = [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
+        "customALGoSystemFiles"                         = @()
         "projects"                                      = @()
         "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
