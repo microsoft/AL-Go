@@ -39,7 +39,7 @@ jobs:
 
   rerun:
     name: PSScriptAnalyzer-ReRun
-    if: failure()
+    if: ${{ failure() }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
