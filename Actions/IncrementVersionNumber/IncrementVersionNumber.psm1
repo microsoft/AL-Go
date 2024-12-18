@@ -9,7 +9,7 @@
     .Parameter settingName
         Name of the setting to change. The setting must be a version number.
     .Parameter newValue
-        New value of the setting. Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a version number in the format Major.Minor (e.g. 1.0 or 1.2
+        New value of the setting. Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), +0.0.1 (increment build version number) or a version number in the format Major.Minor (e.g. 1.0, 1.2 or (1.2.3)
     .Parameter Force
         If specified, the function will create the setting if it does not exist in the settings file.
 #>
@@ -96,7 +96,7 @@ function Set-VersionInSettingsFile {
             }
         }
         '+0.0.1' {
-            # Increment minor version number
+            # Increment build version number
             $versionNumbers += $oldVersion.Major
             $versionNumbers += $oldVersion.Minor
             if ($oldVersion.Build -eq -1) {
@@ -107,8 +107,6 @@ function Set-VersionInSettingsFile {
             }
         }
         default {
-            Write-Host "newValue: $newValue"
-            Write-Host ($oldVersion -eq $null)
             # Absolute version number
             $versionNumbers += $newValue.Split('.')
             if ($versionNumbers.Count -eq 2 -and ($null -ne $oldVersion -and $oldVersion.Build -ne -1)) {
@@ -117,7 +115,7 @@ function Set-VersionInSettingsFile {
         }
     }
 
-    # Include revision numbers if it exist in the old version number
+    # Include revision number if it exist in the old version number
     if ($oldVersion -and ($oldVersion.Revision -ne -1)) {
         $versionNumbers += 0 # Always set the revision number to 0
     }
