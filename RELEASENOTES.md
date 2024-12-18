@@ -30,11 +30,6 @@ AL-Go for GitHub now supports incremental builds, which means that unchanged pro
   - `messageSuffix` : A string you want to append to the end of commits/pull requests created by AL-Go. This can be useful if you are using the Azure Boards integration (or similar integration) to link commits to workitems.
   - `pullRequestAutoMerge` : A boolean defining whether you want AL-Go pull requests to be set to auto-complete. This will auto-complete the pull requests once all checks are green and all required reviewers have approved.
   - `pullRequestLabels` : A list of labels to add to the pull request. The labels need to be created in the repository before they can be applied.
-- `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds (`enable` is true), AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt.
-  - `enable` - set this property to **true** in order to enable incremental builds. Default is **false**.
-  - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
-  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
-- `<workflow>Concurrency` - is a setting to control concurrency of workflows. Like with the `<workflow>Schedule` setting, this setting can also be defined for any of the AL-Go workflows. The allowed values are: **Allowed** for allowing concurrency, **Wait** for waiting for any instances of the workflow currently running, **WaitRef** for waiting for instances of the workflow currently running on the same GitHub ref, **Cancel** for cancelling any currently running instances and **CancelRef** for cancelling any currently running instances on the same GitHub ref. Default is **Allowed** (except for the CreateRelease workflow, which defaults to **Wait**). It is recommended to set `cicdConcurrency` to **CancelRef** when enabling incremental builds.
 
 ### Support for Git submodules
 
