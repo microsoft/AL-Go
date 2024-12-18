@@ -37,11 +37,13 @@ if ($versionNumber.StartsWith('+')) {
 else {
     # Handle absolute version number
     $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+    $correctFormatMsg = 'Major.Minor (e.g. 1.0 or 1.2)'
     if ($settings.versioningStrategy -eq 3) {
         $versionNumberFormat = '^\d+\.\d+\.\d+$' # Major.Minor.Build
+        $correctFormatMsg = 'Major.Minor.Build (e.g. 1.0, 1.2 or 1.2.3)'
     }
     if (-not ($versionNumber -match $versionNumberFormat)) {
-        throw "Version number $versionNumber is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+        throw "Version number $versionNumber is not in the correct format. The version number must be in the format $correctFormatMsg"
     }
 }
 
