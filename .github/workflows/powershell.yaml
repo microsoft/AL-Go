@@ -5,6 +5,7 @@
 name: PSScriptAnalyzer
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
   pull_request:
@@ -17,6 +18,29 @@ permissions:
 jobs:
   build:
     name: PSScriptAnalyzer
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run PSScriptAnalyzer
+        uses: microsoft/psscriptanalyzer-action@6b2948b1944407914a58661c49941824d149734f # v1.1
+        with:
+          path: .\
+          recurse: true
+          excludeRule: '"PSAvoidUsingInvokeExpression", "PSUseShouldProcessForStateChangingFunctions", "PSAvoidUsingWriteHost", "PSAvoidUsingCmdletAliases", "PSUseSingularNouns"'
+          output: results.sarif
+
+      # Upload the SARIF file generated in the previous step
+      - name: Upload SARIF results file
+        uses: github/codeql-action/upload-sarif@df409f7d9260372bd5f19e5b04e83cb3c43714ae # v3.27.9
+        with:
+          sarif_file: results.sarif
+
+  rerun:
+    name: PSScriptAnalyzer-ReRun
+    if: failure()
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
