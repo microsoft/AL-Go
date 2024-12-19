@@ -49,7 +49,7 @@ jobs:
       - name: Read settings
         id: ReadSettings
         if: ${{ env._updateMultipleBranches }}
-        uses: microsoft/AL-Go-Actions/ReadSettings@update-al-go-multiple-branches
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
           get: scheduleSettings,templateUrl
@@ -57,7 +57,7 @@ jobs:
       - name: Get Supported Branches
         if: ${{ env._updateMultipleBranches }}
         id: GetSupportedBranches
-        uses: microsoft/AL-Go-Actions/GetGitBranches@update-al-go-multiple-branches
+        uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
           shell: powershell
           includeBranches: ${{ join(fromJson(env.scheduleSettings).includeBranches, ',') }}
@@ -97,7 +97,7 @@ jobs:
     runs-on: [ windows-latest ]
     strategy:
       matrix:
-        branch: ${{ fromJson(needs.Initialize:.outputs.SupportedBranches) }}
+        branch: ${{ fromJson(needs.Initialize.outputs.SupportedBranches) }}
       fail-fast: false
 
     steps:
@@ -161,7 +161,7 @@ jobs:
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: ${{ env.downloadLatest }}
           update: 'Y'
-          templateUrl: ${{ needs.Initialize:.outputs.templateUrl }}
+          templateUrl: ${{ needs.Initialize.outputs.templateUrl }}
           directCommit: ${{ env.directCommit }}
           updateBranch: ${{ matrix.branch }}
 
