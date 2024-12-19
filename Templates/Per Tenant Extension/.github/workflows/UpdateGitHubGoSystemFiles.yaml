@@ -15,6 +15,10 @@ on:
         description: Direct Commit?
         type: boolean
         default: false
+      updateBranches:
+        description: Do you want to update all branches, specified in `scheduleSettings.includeBranches` AL-Go setting? By default, only the current branch is updated.
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -28,30 +32,32 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+  _updateMultipleBranches: ${{ github.event.inputs.updateBranches == 'true' || github.event_name == 'schedule' }}
 
 jobs:
-  GetBranches:
+  Initialize:
     runs-on: windows-latest
-    name: Get Supported Branches
+    name: Determine Branches to update and template URL to use
     outputs:
       SupportedBranches: ${{ steps.DetermineBranches.outputs.Result }}
+      TemplateUrl: ${{ steps.DetermineTemplateUrl.outputs.TemplateUrl }}
     steps:
       - name: Checkout
-        if: ${{ github.event_name == 'schedule' }}
+        if: ${{ env._updateMultipleBranches }}
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Read settings
         id: ReadSettings
-        if: ${{ github.event_name == 'schedule' }}
-        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        if: ${{ env._updateMultipleBranches }}
+        uses: microsoft/AL-Go-Actions/ReadSettings@update-al-go-multiple-branches
         with:
           shell: powershell
-          get: scheduleSettings
+          get: scheduleSettings,templateUrl
 
       - name: Get Supported Branches
-        if: ${{ github.event_name == 'schedule' }}
+        if: ${{ env._updateMultipleBranches }}
         id: GetSupportedBranches
-        uses: microsoft/AL-Go-Actions/GetGitBranches@main
+        uses: microsoft/AL-Go-Actions/GetGitBranches@update-al-go-multiple-branches
         with:
           shell: powershell
           includeBranches: ${{ join(fromJson(env.scheduleSettings).includeBranches, ',') }}
@@ -63,25 +69,35 @@ jobs:
         run: |
             $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-            if ('${{ github.event_name }}' -eq 'schedule') {
-              Write-Host "Running 'Update AL-Go System Files' on a schedule."
-
-              $supportedBranches = ConvertFrom-Json $env:supportedBranchesJson
-              Write-Host "Supported Branches: $($supportedBranches -join ', ')"
-              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$env:supportedBranchesJson"
+            if ('${{ env._updateMultipleBranches }}' -eq 'true') {
+              $branchesToUpdate = ConvertFrom-Json $env:supportedBranchesJson
             }
             else {
-              Write-Host "Running Update AL-Go System Files on a manual trigger."
-              Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=['${{ github.ref_name }}']"
+              # Default to the current branch
+              $branchesToUpdate = @('${{ github.ref_name }}')
             }
+            Write-Host "Branches to update: $($branchesToUpdate -join ', ')"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$(ConvertTo-Json $branchesToUpdate)"
+
+      - name: Determine Template URL
+        id: DetermineTemplateUrl
+        run: |
+            $templateUrl = $env:templateUrl # Available from ReadSettings step
+            $templateUrlAsInput = '${{ github.event.inputs.templateUrl }}'
+            if ($templateUrlAsInput) {
+              $templateUrl = $templateUrlAsInput
+            }
+
+            Write-Host "Using template URL: $templateUrl"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TemplateUrl=$templateUrl"
 
   UpdateALGoSystemFiles:
     name: "[${{ matrix.branch }}] Update AL-Go System Files"
-    needs: [ GetBranches ]
+    needs: [ Initialize: ]
     runs-on: [ windows-latest ]
     strategy:
       matrix:
-        branch: ${{ fromJson(needs.GetBranches.outputs.SupportedBranches) }}
+        branch: ${{ fromJson(needs.Initialize:.outputs.SupportedBranches) }}
       fail-fast: false
 
     steps:
@@ -105,7 +121,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: templateUrl,commitOptions
+          get: commitOptions
 
       - name: Read secrets
         id: ReadSecrets
@@ -115,38 +131,28 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'ghTokenWorkflow'
 
-      - name: Override templateUrl
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        env:
-          templateUrl: ${{ github.event.inputs.templateUrl }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $templateUrl = $ENV:templateUrl
-          if ($templateUrl) {
-            Write-Host "Using Template Url: $templateUrl"
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
-          }
-
-      - name: Calculate Input (manual trigger)
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: Calculate Commit Options
         env:
           directCommit: '${{ github.event.inputs.directCommit }}'
-          downloadLatest: ${{ github.event.inputs.downloadLatest }}
+          downloadLatest: '${{ github.event.inputs.downloadLatest }}'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $directCommit = $ENV:directCommit
-          $downloadLatest = $ENV:downloadLatest
+
+          if('${{ github.event_name }}' == 'workflow_dispatch') {
+            Write-Host "Using inputs from workflow_dispatch event"
+
+            $directCommit = $env:directCommit
+            $downloadLatest = $env:downloadLatest
+          }
+          else {
+            Write-Host "Using inputs from commitOptions setting"
+            $commitOptions = $env:commitOptions | ConvertFrom-Json # Available from ReadSettings step
+
+            $directCommit=$(-not $commitOptions.createPullRequest)
+            $downloadLatest=$true
+          }
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
-
-      - name: Calculate Input (schedule trigger)
-        if: ${{ github.event_name == 'schedule' }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
-          $commitOptions = $env:commitOptions | ConvertFrom-Json
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$(-not $commitOptions.createPullRequest)"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$true"
 
       - name: Update AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
@@ -155,7 +161,7 @@ jobs:
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: ${{ env.downloadLatest }}
           update: 'Y'
-          templateUrl: ${{ env.templateUrl }}
+          templateUrl: ${{ needs.Initialize:.outputs.templateUrl }}
           directCommit: ${{ env.directCommit }}
           updateBranch: ${{ matrix.branch }}
 
