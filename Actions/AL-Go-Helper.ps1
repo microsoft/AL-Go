@@ -2120,14 +2120,14 @@ Function AnalyzeProjectDependencies {
         
         # If the project is using project dependencies, add the unknown dependencies to the list of dependencies
         # If not, the unknown dependencies are ignored
-        $appDependencies = @()
+        $dependenciesForProject = @()
         if ($projectSettings.useProjectDependencies -eq $true) {
-            $appDependencies = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
+            $dependenciesForProject = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
         }
         
         $appDependencies."$project" = @{
             "apps"         = $apps
-            "dependencies" = $appDependencies
+            "dependencies" = $dependenciesForProject
         }
     }
     # AppDependencies is a hashtable with the following structure
