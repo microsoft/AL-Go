@@ -1,3 +1,17 @@
+function GetCustomizationAnchors {
+    return @{
+        "_BuildALGoProject.yaml" = @{
+            "BuildALGoProject" = @(
+                @{ "Step" = 'Read settings'; "Before" = $false }
+                @{ "Step" = 'Read secrets'; "Before" = $false }
+                @{ "Step" = 'Build'; "Before" = $true }
+                @{ "Step" = 'Build'; "Before" = $false }
+                @{ "Step" = 'Cleanup'; "Before" = $true }
+            )
+        }
+    }
+}
+
 <#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
@@ -397,7 +411,7 @@ function IsDirectALGo {
 
 function GetSrcFolder {
     Param(
-        [hashtable] $repoSettings,
+        [string] $repoType,
         [string] $templateUrl,
         [string] $templateFolder,
         [string] $srcPath
@@ -409,7 +423,7 @@ function GetSrcFolder {
         return ''
     }
     if (IsDirectALGo -templateUrl $templateUrl) {
-        switch ($repoSettings.type) {
+        switch ($repoType) {
             "PTE" {
                 $typePath = "Per Tenant Extension"
             }
@@ -440,32 +454,153 @@ function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
         [hashtable] $updateSettings,
-        [hashtable] $additionalSettings = @{}
+        [hashtable] $indirectTemplateSettings = @{}
     )
 
+    $modified = $false
     # Update Repo Settings file with the template URL
     if (Test-Path $settingsFile) {
         $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
     }
     else {
         $settings = [PSCustomObject]@{}
+        $modified = $true
     }
     foreach($key in $updateSettings.Keys) {
         if ($settings.PSObject.Properties.Name -eq $key) {
-            $settings."$key" = $updateSettings."$key"
+            if ($settings."$key" -ne $updateSettings."$key") {
+                $settings."$key" = $updateSettings."$key"
+                $modified = $true
+            }
         }
         else {
             # Add the property if it doesn't exist
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
+            $modified = $true
         }
     }
-    # Grab settings from additionalSettings if they are not already in settings
-    foreach($key in $additionalSettings.Keys) {
+    # Grab settings from indirectTemplateSettings if they are not already in settings
+    foreach($key in $indirectTemplateSettings.Keys) {
+        # CustomALGoSystemFiles will not be copied from the indirect template settings - they will be applied to the indirect template
+        # UnusedALGoSystemFiles will not be copied from the indirect template settings - they will be used during the update process
+        if (@('customALGoSystemFiles','unusedALGoSystemFiles') -contains $key) {
+            continue
+        }
         if (!($settings.PSObject.Properties.Name -eq $key)) {
             # Add the property if it doesn't exist
-            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $additionalSettings."$key"
+            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $indirectTemplateSettings."$key"
+            $modified = $true
         }
     }
-    # Save the file with LF line endings and UTF8 encoding
-    $settings | Set-JsonContentLF -path $settingsFile
+
+    if ($modified) {
+        # Save the file with LF line endings and UTF8 encoding
+        $settings | Set-JsonContentLF -path $settingsFile
+    }
+    return $modified
+}
+
+function GetCustomALGoSystemFiles {
+    Param(
+        [string] $baseFolder,
+        [hashtable] $settings,
+        [string[]] $projects
+    )
+
+    function YieldItem{
+        Param(
+            [string] $baseFolder,
+            [string] $source,
+            [string] $destination,
+            [string[]] $projects
+        )
+
+        if ($destination -like ".AL-Go$([IO.Path]::DirectorySeparatorChar)*") {
+            $destinations = $projects | ForEach-Object { Join-Path $_ $destination }
+        }
+        else {
+            $destinations = @($destination)
+        }
+        $destinations | ForEach-Object {
+            Write-Host "- $_"
+            $content = Get-ContentLF -Path $source
+            $existingFile = Join-Path $baseFolder $_
+            $existingContent = ''
+            if (Test-Path -Path $existingFile) {
+                $existingContent = Get-ContentLF -Path $existingFile
+            }
+            if ($content -ne $existingContent) {
+                Write-Output @{ "DstFile" = $_; "content" = $content }
+            }
+        }
+    }
+
+    if ($settings.customALGoSystemFiles -isnot [Array]) {
+        throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
+    }
+    foreach($customspec in $settings.customALGoSystemFiles) {
+        if ($customspec -isnot [Hashtable]) {
+            throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+        if (!($customSpec.ContainsKey('Source') -and $customSpec.ContainsKey('Destination'))) {
+            throw "customALGoSystemFiles setting is wrongly formatted, Source and Destination must be specified. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+        $source = $customspec.Source
+        $destination = $customSpec.Destination.Replace('/',[IO.Path]::DirectorySeparatorChar).Replace('\',[IO.Path]::DirectorySeparatorChar)
+        if ($destination -isnot [string] -or $destination -eq '') {
+            throw "customALGoSystemFiles setting is wrongly formatted, Destination must be a string, which isn't blank. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+        if ($source -isnot [string] -or $source -notlike 'https://*' -or (-not [System.Uri]::IsWellFormedUriString($source,1))) {
+            throw "customALGoSystemFiles setting is wrongly formatted, Source must secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        New-Item -Path $tempFolder -ItemType Directory | Out-Null
+        $ext = [System.IO.Path]::GetExtension($source)
+        $zipName = "$tempFolder$ext"
+        try {
+            if ($ext -eq '.zip') {
+                Write-Host "$($destination):"
+                if ($customSpec.ContainsKey('FileSpec')) { $fileSpec = $customSpec.FileSpec } else { $fileSpec = '*' }
+                if ($customSpec.ContainsKey('Recurse')) { $recurse = $customSpec.Recurse } else { $recurse = $true }
+                if ($fileSpec -isnot [string] -or $recurse -isnot [boolean]) {
+                    throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string and Recurse must be boolean. See https://aka.ms/algosettings#customalgosystemfiles."
+                }
+                if (!($destination.EndsWith([IO.Path]::DirectorySeparatorChar))) {
+                    throw "customALGoSystemFiles setting is wrongly formatted, destination must be a folder (terminated with / or \). See https://aka.ms/algosettings#customalgosystemfiles."
+                }
+                Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $zipName
+                Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
+                $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
+                Push-Location -Path $subFolder
+                try {
+                    Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
+                        $destRelativeFileName = Resolve-Path $_.FullName -Relative
+                        $destFileName = Join-Path $destination $destRelativeFileName
+                        $destFileName = $destFileName.TrimStart('\/')
+                        YieldItem -baseFolder $baseFolder -source $_.FullName -destination $destFileName -projects $projects
+                    }
+                }
+                finally {
+                    Pop-Location
+                }
+            }
+            else {
+                if ($customSpec.ContainsKey('FileSpec') -or $customSpec.ContainsKey('Recurse')) {
+                    throw "customALGoSystemFiles setting is wrongly formatted, FileSpec and Recurse are only allowed with .zip files. See https://aka.ms/algosettings#customalgosystemfiles."
+                }
+                if ($destination.endsWith([IO.Path]::DirectorySeparatorChar)) {
+                    $destination = Join-Path $destination ([System.IO.Path]::GetFileName($source))
+                }
+                Write-Host "$($destination):"
+                $tempFilename = Join-Path $tempFolder ([System.IO.Path]::GetFileName($source))
+                Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $tempFilename
+                YieldItem -baseFolder $baseFolder -source $tempFilename -destination $destination -projects $projects
+            }
+        }
+        finally {
+            if (Test-Path -Path $zipName) { Remove-Item $zipName -Force }
+            Remove-Item -Path $tempFolder -Recurse -Force
+        }
+    }
 }
