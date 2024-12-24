@@ -20,9 +20,11 @@ function SetTokenAndRepository {
         [switch] $github
     )
 
+    MaskValue -key "token" -value $token
     $script:githubOwner = $githubOwner
     $script:token = $token
     $script:defaultRepository = $repository
+    $realToken = GetRealToken -token $script:token -repository "$githubOwner/.github"
 
     if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
@@ -32,9 +34,9 @@ function SetTokenAndRepository {
         $ENV:GITHUB_TOKEN = ''
     }
     Write-Host "Authenticating with GitHub using token"
-    $token | invoke-gh auth login --with-token
+    $realToken | invoke-gh auth login --with-token
     if ($github) {
-        $ENV:GITHUB_TOKEN = $token
+        $ENV:GITHUB_TOKEN = $realToken
     }
 }
 
@@ -63,7 +65,7 @@ function Add-PropertiesToJsonFile {
     )
 
     if ($wait -and $commit) {
-        $headers = GetHeader -token $token
+        $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
@@ -123,7 +125,7 @@ function Remove-PropertiesFromJsonFile {
 }
 
 function DisplayTokenAndRepository {
-    Write-Host "Token: $token"
+    Write-Host "Token: $($script:token)"
     Write-Host "Repo: $defaultRepository"
 }
 
@@ -145,7 +147,7 @@ function RunWorkflow {
         Write-Host ($parameters | ConvertTo-Json)
     }
 
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
     WaitForRateLimit -headers $headers -displayStatus
 
     Write-Host "Get Workflows"
@@ -210,7 +212,7 @@ function DownloadWorkflowLog {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
     $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
@@ -266,9 +268,13 @@ function WaitWorkflow {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = GetHeader -token $token
+    $count = 0
     $status = ""
     do {
+        if ($count % 45 -eq 0) {
+            $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+            $count++
+        }
         if ($delay) {
             Start-Sleep -Seconds 60
         }
@@ -301,7 +307,8 @@ function SetRepositorySecret {
         $repository = $defaultRepository
     }
     Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
-    invoke-gh secret set $name -b $value --repo $repository
+    $value = $value.Replace("`r", '').Replace("`n", '')
+    gh secret set $name -b $value --repo $repository
 }
 
 function CreateNewAppInFolder {
@@ -485,8 +492,9 @@ function CreateAlGoRepository {
     invoke-git add *
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
-    if ($githubOwner -and $token) {
-        invoke-git remote set-url origin "https://$($githubOwner):$token@github.com/$repository.git"
+    if ($githubOwner -and $script:token) {
+        $realToken = GetRealToken -token $script:token -repository "$githubOwner/.github"
+        invoke-git remote set-url origin "https://$($githubOwner):$($realtoken)@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
@@ -525,7 +533,7 @@ function MergePRandPull {
     }
 
     Write-Host "Get Previous runs"
-    $headers = GetHeader -token $token
+    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
     $url = "https://api.github.com/repos/$repository/actions/runs"
     $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
