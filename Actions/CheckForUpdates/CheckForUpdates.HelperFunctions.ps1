@@ -566,7 +566,7 @@ function GetCustomALGoSystemFiles {
                 if ($fileSpec -isnot [string] -or $recurse -isnot [boolean]) {
                     throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string and Recurse must be boolean. See https://aka.ms/algosettings#customalgosystemfiles."
                 }
-                if (!($destination.EndsWith([IO.Path]::DirectorySeparatorChar))) {
+                if (!($destination.EndsWith('/') -or $destination.EndsWith('\'))) {
                     throw "customALGoSystemFiles setting is wrongly formatted, destination must be a folder (terminated with / or \). See https://aka.ms/algosettings#customalgosystemfiles."
                 }
                 Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $zipName
