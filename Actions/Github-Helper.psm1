@@ -118,7 +118,8 @@ function GetDependencies {
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies"),
-        [string[]] $masks = @('Apps','Dependencies','TestApps')
+        [string[]] $masks = @('Apps','Dependencies','TestApps'),
+        [string] $artifactsNameSuffix = ''
     )
 
     if (!(Test-Path $saveToPath)) {
@@ -141,11 +142,11 @@ function GetDependencies {
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
                 foreach($project in $projects.Split(',')) {
+                    $branchName = $dependency.branch.Replace('\', '_').Replace('/', '_')
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
-                    $downloadName = Join-Path $saveToPath "$project-*-$($mask)-*"
+                    $downloadName = Join-Path $saveToPath "$project-$branchName-$mask-*"
 
-                    Write-Host 
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
