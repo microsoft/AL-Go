@@ -143,7 +143,7 @@ function GetDependencies {
                 foreach($project in $projects.Split(',')) {
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
-                    $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
+                    $downloadName = Join-Path $saveToPath "$project-*-$($mask)"
 
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
