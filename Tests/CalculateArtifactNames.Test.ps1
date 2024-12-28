@@ -155,9 +155,6 @@ Describe 'CalculateArtifactNames Action Tests' {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-            "ThisBuildAppsArtifactsName" = "Artifact name for apps being built in the current workflow run"
-            "ThisBuildDependenciesArtifactsName" = "Artifact name for dependencies of apps being built in the current workflow run"
-            "ThisBuildTestAppsArtifactsName" = "Artifact name for test apps being built in the current workflow run"
             "AppsArtifactsName" = "Artifacts name for Apps"
             "PowerPlatformSolutionArtifactsName" = "Artifacts name for PowerPlatform Solution"
             "DependenciesArtifactsName" = "Artifacts name for Dependencies"
