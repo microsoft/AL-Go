@@ -178,7 +178,7 @@ jobs:
       buildMode: ${{ matrix.buildMode }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
-      artifactsRetentionDays: ${{ needs.Initialization.outputs.artifactsRetentionDays }}
+      artifactsRetentionDays: needs.Initialization.outputs.artifactsRetentionDays
       signArtifacts: true
       useArtifactCache: true
 
