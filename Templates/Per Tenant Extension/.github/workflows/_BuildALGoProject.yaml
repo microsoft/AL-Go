@@ -174,7 +174,7 @@ jobs:
 
       - name: Publish artifacts - apps
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: inputs.artifactsRetentionDays > 0
+        if: inputs.artifactsRetentionDays >= 0
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Apps/'
@@ -183,7 +183,7 @@ jobs:
 
       - name: Publish artifacts - dependencies
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: inputs.artifactsRetentionDays > 0 && env.generateDependencyArtifact == 'True'
+        if: inputs.artifactsRetentionDays >= 0 && env.generateDependencyArtifact == 'True'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.DependenciesArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Dependencies/'
@@ -192,7 +192,7 @@ jobs:
 
       - name: Publish artifacts - test apps
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: inputs.artifactsRetentionDays > 0
+        if: inputs.artifactsRetentionDays >= 0
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestAppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/TestApps/'
