@@ -389,7 +389,7 @@ try {
         }
     }
 
-    $preprocessorSettingsName = "$($buldMode)ModePreprocessorSymbols"
+    $preprocessorSettingsName = "$($buildMode)ModePreprocessorSymbols"
     if ($settings.ContainsKey($preprocessorSettingsName)) {
         $preprocessorsymbols = $settings."$preprocessorSettingsName"
         Write-Host "Adding Preprocessor symbols from setting $preprocessorSettingsName : $preprocessorsymbols"
