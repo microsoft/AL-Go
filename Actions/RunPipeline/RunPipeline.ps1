@@ -368,20 +368,18 @@ try {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
+    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
+        $runAlPipelineParams["preprocessorsymbols"] = @()
+    }
+    if ($settings.ContainsKey('preprocessorSymbols')) {
+        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
+    }
+
     switch($buildMode){
         'Clean' {
-            $preprocessorsymbols = $settings.cleanModePreprocessorSymbols
-
-            if (!$preprocessorsymbols) {
+            if (-not $settings.ContainsKey('cleanModePreprocessorSymbols')) {
                 throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
             }
-
-            if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
-                $runAlPipelineParams["preprocessorsymbols"] = @()
-            }
-
-            Write-Host "Adding Preprocessor symbols: $preprocessorsymbols"
-            $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
         }
         'Translated' {
             if ($runAlPipelineParams.Keys -notcontains 'features') {
@@ -389,6 +387,13 @@ try {
             }
             $runAlPipelineParams["features"] += "translationfile"
         }
+    }
+
+    $preprocessorSettingsName = "$($buldMode)ModePreprocessorSymbols"
+    if ($settings.ContainsKey($preprocessorSettingsName)) {
+        $preprocessorsymbols = $settings."$preprocessorSettingsName"
+        Write-Host "Adding Preprocessor symbols from setting $preprocessorSettingsName : $preprocessorsymbols"
+        $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
     }
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
