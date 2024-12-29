@@ -368,13 +368,6 @@ try {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
-    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
-        $runAlPipelineParams["preprocessorsymbols"] = @()
-    }
-    if ($settings.ContainsKey('preprocessorSymbols')) {
-        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
-    }
-
     switch($buildMode){
         'Clean' {
             if (-not $settings.ContainsKey('cleanModePreprocessorSymbols')) {
@@ -389,11 +382,15 @@ try {
         }
     }
 
-    $preprocessorSettingsName = "$($buildMode)ModePreprocessorSymbols"
-    if ($settings.ContainsKey($preprocessorSettingsName)) {
-        $preprocessorsymbols = $settings."$preprocessorSettingsName"
-        Write-Host "Adding Preprocessor symbols from setting $preprocessorSettingsName : $($preprocessorsymbols -join ',')"
-        $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
+    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
+        $runAlPipelineParams["preprocessorsymbols"] = @()
+    }
+    foreach($preprocessorSymbolsSettingsName in @("preprocessorSymbols", "$($buildMode)ModePreprocessorSymbols")) {
+        if ($settings.ContainsKey($preprocessorSymbolsSettingsName)) {
+            $preprocessorsymbols = $settings."$preprocessorSymbolsSettingsName"
+            Write-Host "Adding Preprocessor symbols from setting $preprocessorSymbolsSettingsName : $($preprocessorsymbols -join ',')"
+            $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
+        }
     }
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
