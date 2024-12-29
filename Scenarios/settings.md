@@ -156,6 +156,7 @@ to your [project settings file](#where-are-the-settings-located) will ensure tha
 
 - **repositories** settings will be applied to repositories matching the patterns
 - **projects** settings will be applied to projects matching the patterns
+- **buildModes** settings will be applied when building with these buildModes
 - **branches** settings will be applied to branches matching the patterns
 - **workflows** settings will be applied to workflows matching the patterns
 - **users** settings will be applied for users matching the patterns

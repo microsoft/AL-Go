@@ -9,6 +9,10 @@ inputs:
     description: Project folder
     required: false
     default: '.'
+  buildMode:
+    description: Build mode
+    required: false
+    default: 'Default'
   get:
     description: Specifies which properties to get from the settings file, default is all
     required: false
@@ -28,10 +32,11 @@ runs:
       id: readsettings
       env:
         _project: ${{ inputs.project }}
+        _buildMode: ${{ inputs.buildMode }}
         _get: ${{ inputs.get }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadSettings" -Action {
-          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -get $ENV:_get
+          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -get $ENV:_get
         }
 branding:
   icon: terminal

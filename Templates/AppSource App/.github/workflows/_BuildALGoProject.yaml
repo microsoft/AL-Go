@@ -93,6 +93,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+          buildMode: ${{ inputs.buildMode }}
           get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules
 
       - name: Read secrets
