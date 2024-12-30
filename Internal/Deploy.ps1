@@ -37,7 +37,6 @@ function PushChanges
         }
         $branchName = "deploy/$BaseBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))"
 
-
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $branchName
@@ -45,6 +44,7 @@ function PushChanges
     }
 }
 
+$token = GetRealToken -token $token -repository "$($config.githubOwner)/.github"
 $oldPath = Get-Location
 try {
 
@@ -73,8 +73,8 @@ try {
     Set-Location $baseRepoPath
 
     # Whoami
-    $user = invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" user -silent -returnValue | ConvertFrom-Json
-    Write-Host "GitHub user: $($user.login)"
+    #$user = invoke-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" user -silent -returnValue | ConvertFrom-Json
+    #Write-Host "GitHub user: $($user.login)"
 
     # Dump configuration
     Write-Host "Configuration:"
@@ -162,7 +162,7 @@ try {
         Write-Host -ForegroundColor Yellow "Deploying to $repo"
 
         try {
-            $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
+            $serverUrl = "https://$($config.githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
             if (Test-Path $repo) {
                 Remove-Item $repo -Recurse -Force
             }

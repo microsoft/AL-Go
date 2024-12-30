@@ -81,6 +81,7 @@ WaitWorkflow -repository $repository -runid $run.id
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0;"github-pages"=1} -repoVersion '1.0' -appVersion '1.0'
 
 # Set GitHub Pages in repository to GitHub Actions
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 gh api --method POST /repos/$repository/pages -f build_type=workflow | Out-Null
 
 # Add setting to deploy to GitHub Pages
@@ -92,6 +93,7 @@ CommitAndPush -commitMessage 'DeployToGitHubPages'
 RunDeployReferenceDocumentation -repository $repository -wait | Out-Null
 
 # Get Pages URL and read the content
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 $pagesInfo = gh api /repos/$repository/pages | ConvertFrom-Json
 $html = (Invoke-WebRequest -Uri $pagesInfo.html_url -UseBasicParsing).Content
 $html | Should -belike "*Documentation for $repository*"
@@ -108,6 +110,7 @@ CommitAndPush -commitMessage 'Continuous Deployment of ALDoc'
 WaitAllWorkflows -repository $repository -noError
 
 # Get Pages URL and read the content
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 $pagesInfo = gh api /repos/$repository/pages | ConvertFrom-Json
 $html = (Invoke-WebRequest -Uri $pagesInfo.html_url -UseBasicParsing).Content
 $html | Should -belike "*Documentazione per $repository*"
