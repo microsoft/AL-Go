@@ -4,6 +4,8 @@ The behavior of AL-Go for GitHub is very much controlled by settings and secrets
 
 To learn more about the secrets used by AL-Go for GitHub, please navigate to [Secrets](secrets.md).
 
+<a id="settings"></a>
+
 ## Where are the settings located
 
 Settings can be defined in GitHub variables or in various settings file. An AL-Go repository can consist of a single project (with multiple apps) or multiple projects (each with multiple apps). Settings can be applied on the project level or on the repository level. Multiple projects in a single repository are comparable to multiple repositories; they are built, deployed, and tested separately. All apps in each project (single or multiple) are built together in the same pipeline, published and tested together. If a repository is multiple projects, each project is stored in a separate folder in the root of the repository.
@@ -23,6 +25,8 @@ When running a workflow or a local script, the settings are applied by reading s
 1. `.AL-Go/<workflow>.settings.json` is the **workflow-specific settings file** for a **specific project**.
 
 1. `.AL-Go/<username>.settings.json` is the **user-specific settings file**. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
+
+<a id="basic"></a>
 
 ## Basic Project settings
 
@@ -81,6 +85,8 @@ The repository settings are only read from the repository settings file (.github
 | <a id="useGitSubmodules"></a>useGitSubmodules | If your repository is using Git Submodules, you can set the `useGitSubmodules` setting to `"true"` or `"recursive"` in order to use these submodules during build workflows. If `useGitSubmodules` is not set, git submodules are not initialized. If the submodules reside in private repositories, you need to define a `gitSubmodulesToken` secret. Read [this](https://aka.ms/algosecrets#gitSubmodulesToken) for more information. |
 | <a id="commitOptions"></a>commitOptions | If you want more control over how AL-Go creates pull requests or commits changes to the repository you can define `commitOptions`. It is a structure defining how you want AL-Go to handle automated commits or pull requests coming from AL-Go (e.g. for Update AL-Go System Files). The structure contains the following properties:<br />`messageSuffix` : A string you want to append to the end of commits/pull requests created by AL-Go. This can be useful if you are using the Azure Boards integration (or similar integration) to link commits to work items. <br />`pullRequestAutoMerge` : A boolean defining whether you want AL-Go pull requests to be set to auto-complete. This will auto-complete the pull requests once all checks are green and all required reviewers have approved.<br /> `pullRequestLabels` : A list of labels to add to the pull request. The labels need to be created in the repository before they can be applied.<br />If you want different behavior in different AL-Go workflows you can add the `commitOptions` setting to your [workflow-specific settings files](https://github.com/microsoft/AL-Go/blob/main/Scenarios/settings.md#where-are-the-settings-located). |
 
+<a id="advanced"></a>
+
 ## Advanced settings
 
 | Name | Description | Default value |
@@ -131,6 +137,8 @@ The repository settings are only read from the repository settings file (.github
 | :-- | :-- | :-- |
 | <a id=""></a>appSourceContextSecretName | This setting specifies the name (**NOT the secret**) of a secret containing a json string with ClientID, TenantID and ClientSecret or RefreshToken. If this secret exists, AL-Go will can upload builds to AppSource validation. | AppSourceContext |
 | <a id=""></a>keyVaultCertificateUrlSecretName<br />keyVaultCertificatePasswordSecretName<br />keyVaultClientIdSecretName | If you want to enable KeyVault access for your AppSource App, you need to provide 3 secrets as GitHub Secrets or in the Azure KeyVault. The names of those secrets (**NOT the secrets**) should be specified in the settings file with these 3 settings. Default is to not have KeyVault access from your AppSource App. Read [this](EnableKeyVaultForAppSourceApp.md) for more information. | |
+
+<a id="conditional"></a>
 
 ## Conditional Settings
 
@@ -183,6 +191,14 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 > \[!NOTE\]
 > You can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
 
+<a id="expert"></a>
+
+# Expert level
+
+The settings and functionality in the expert section might require knowledge about GitHub Workflows/Actions, YAML, docker and PowerShell. Please only change these settings and use this functionality after careful consideration as these things might change in the future and will require you to modify the functionality you added based on this.
+
+Please read the release notes carefully when installing new versions of AL-Go for GitHub.
+
 ## Expert settings (rarely used)
 
 | Name | Description | Default value |
@@ -202,12 +218,13 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 | <a id="memoryLimit"></a>memoryLimit | Specifies the memory limit for the build container. By default, this is left to BcContainerHelper to handle and will currently be set to 8G | 8G |
 | <a id="BcContainerHelperVersion"></a>BcContainerHelperVersion | This setting can be set to a specific version (ex. 3.0.8) of BcContainerHelper to force AL-Go to use this version. **latest** means that AL-Go will use the latest released version. **preview** means that AL-Go will use the latest preview version. **dev** means that AL-Go will use the dev branch of containerhelper. | latest (or preview for AL-Go preview) |
 | <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | \[ \] |
+| <a id="customALGoSystemFiles"></a>customALGoSystemFiles | An array of objects, specifying custom AL-Go System Files. Each object must contain **Destination** and **Source** url and if the source url points to a .zip file, you can also add **FileSpec** and **Recurse**. See more [here](./CustomizingALGoForGitHub.md#customALGoSystemFiles) | \[ \] |
 
-# Expert level
+<a id="customdelivery"></a>
 
 ## Custom Delivery
 
-You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named DeliverTo\*.ps1 in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release.
+You can override existing AL-Go Delivery functionality or you can define your own custom delivery mechanism for AL-Go for GitHub, by specifying a PowerShell script named `DeliverTo<DeliveryTarget>.ps1` in the .github folder. The following example will spin up a delivery job to SharePoint on CI/CD and Release. Beside the script, you also need to create a secret called `<DeliveryTarget>Context`, formatted as compressed json, containing delivery information for your delivery target.
 
 ### DeliverToSharePoint.ps1
 
@@ -219,6 +236,7 @@ Param(
 Write-Host "Current project path: $($parameters.project)"
 Write-Host "Current project name: $($parameters.projectName)"
 Write-Host "Delivery Type (CD or Release): $($parameters.type)"
+Write-Host "Delivery Context: $($parameters.context)"
 Write-Host "Folder containing apps: $($parameters.appsFolder)"
 Write-Host "Folder containing test apps: $($parameters.testAppsFolder)"
 Write-Host "Folder containing dependencies (requires generateDependencyArtifact set to true): $($parameters.dependenciesFolder)"
@@ -245,6 +263,8 @@ Here are the parameters to use in your custom script:
 | `$parameters.appsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the non-test apps in the AL-Go project | AllProjects_MyProject-main-Apps-1.0.0.0, AllProjects_MyProject-main-CleanApps-1.0.0.0 |
 | `$parameters.testAppsFolders` | The folders that contain the build artifacts from all builds (from different build modes) of the test apps in the AL-Go project | AllProjects_MyProject-main-TestApps-1.0.0.0, AllProjects_MyProject-main-CleanTestApps-1.0.0.0 |
 | `$parameters.dependenciesFolders` | The folders that contain the dependencies of the AL-Go project for all builds (from different build modes) | AllProjects_MyProject-main-Dependencies-1.0.0.0, AllProjects_MyProject-main-CleanDependencies-1.0.0.0 |
+
+<a id="customdeployment"></a>
 
 ## Custom Deployment
 
@@ -296,14 +316,19 @@ Here are the parameters to use in your custom script:
 | `$parameters."runs-on"` | GitHub runner to be used to run the deployment script | windows-latest |
 | `$parameters."shell"` | Shell used to run the deployment script, pwsh or powershell | powershell |
 
+<a id="scriptoverrides"></a>
+
 ## Run-AlPipeline script override
 
 AL-Go for GitHub utilizes the Run-AlPipeline function from BcContainerHelper to perform the actual build (compile, publish, test etc). The Run-AlPipeline function supports overriding functions for creating containers, compiling apps and a lot of other things.
 
 This functionality is also available in AL-Go for GitHub, by adding a file to the .AL-Go folder, you automatically override the function.
 
+Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the future might break the usage of these overrides.
+
 | Override | Description |
 | :-- | :-- |
+| PipelineInitialize.ps1 | Initialize the pipeline |
 | DockerPull.ps1 | Pull the image specified by the parameter $imageName |
 | NewBcContainer.ps1 | Create the container using the parameters transferred in the $parameters hashtable |
 | ImportTestToolkitToBcContainer.ps1 | Import the test toolkit apps specified by the $parameters hashtable |
@@ -321,12 +346,15 @@ This functionality is also available in AL-Go for GitHub, by adding a file to th
 | BackupBcContainerDatabases | Backup Databases in container for subsequent restore(s) |
 | RestoreDatabasesInBcContainer | Restore Databases in container |
 | InstallMissingDependencies | Install missing dependencies |
+| PipelineFinalize.ps1 | Finalize the pipeline |
 
 ## BcContainerHelper settings
 
 The repo settings file (.github\\AL-Go-Settings.json) can contain BcContainerHelper settings. Some BcContainerHelper settings are machine specific (folders and like), and should not be set in the repo settings file.
 
 Settings, which might be relevant to set in the settings file includes
+
+Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the future might break the usage of these overrides.
 
 | Setting | Description | Default |
 | :-- | :-- | :-- |
@@ -338,12 +366,93 @@ Settings, which might be relevant to set in the settings file includes
 | TreatWarningsAsErrors | A list of AL warning codes, which should be treated as errors | \[ \] |
 | DefaultNewContainerParameters | A list of parameters to be added to all container creations in this repo | { } |
 
+<a id="customjobs"></a>
+
+## Custom jobs in AL-Go for GitHub workflows
+
+Adding a custom job to any AL-Go for GitHub workflow is done by adding a job with the name `CustomJob<something>` to the end of an AL-Go for GitHub workflow, like this:
+
+```
+  CustomJob-PrepareDeploy:
+    name: My Job
+    needs: [ Build ]
+    runs-on: [ ubuntu-latest ]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: This is my job
+        run: |
+          Write-Host "This is my job"
+```
+
+In the `needs` property, you specify which jobs should be complete before this job is run. If you require this job to run before other AL-Go for GitHub jobs are complete, you can add the name of this job in the `needs` property of that job, like:
+
+```
+  Deploy:
+    needs: [ Initialization, Build, CustomJob-PrepareDeploy ]
+    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
+    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
+```
+
+Custom jobs will be preserved when running Update AL-Go System Files.
+
+**Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
+
+<a id="customsteps"></a>
+
+## Custom steps in the \_BuildALGoProject workflow
+
+Adding a custom step is done by adding a step with the name `CustomStep<something>` to the \_BuildALGoProject.yaml workflow at one of these anchor points:
+
+- Before Read Settings
+- Before Read Secrets
+- Before or After Build
+- Before Cleanup
+
+Example, insert the following step before the Build step:
+
+```
+      - name: CustomStep that will run before the Build step
+        run: |
+          Write-Host "before build"
+
+      - name: Build
+        uses: ...
+```
+
+Custom steps will be preserved when running Update AL-Go System Files.
+
+**Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
+
+<a id="indirect"></a>
+
+## Indirect template repositories
+
+If you are utilizing script overrides, custom jobs, custom steps, custom delivery or like in many repositories, you might want to take advantage of the indirect template repository feature.
+
+An indirect template repository is an AL-Go for GitHub repository (without any apps), which is used as a template for the remaining AL-Go for GitHub repositories. As an example, if you are using a custom delivery script, which you want to have in all your repositories, you can create an empty AL-Go for GitHub repository, place the delivery script in the .github folder and use that repository as a template when running Update AL-Go system files in your other repositories.
+
+This would make sure that all repositories would have this script (and updated versions of the script) in the future.
+
+The items, which are currently supported from indirect template repositories are:
+
+- Repository script overrides in the .github folder
+- Project script overrides in the .AL-Go folder
+- Custom workflows in the .github/workflows folder
+- Custom jobs in any AL-Go for GitHub workflow
+- Custom steps in the \_BuildALGoProject workflow
+- New repository settings
+- New project settings
+
+**Note** that an AL-Go for GitHub indirect template repository can be private or public.
+
 ## Your own version of AL-Go for GitHub
 
 For experts only, following the description [here](Contribute.md) you can setup a local fork of **AL-Go for GitHub** and use that as your templates. You can fetch upstream changes from Microsoft regularly to incorporate these changes into your version and this way have your modified version of AL-Go for GitHub.
 
 > \[!NOTE\]
-> Our goal is to never break repositories, which are using AL-Go for GitHub as their template. We almost certainly will break you if you create local modifications to scripts and pipelines.
+> Our goal is to never break repositories, which are using standard AL-Go for GitHub as their template. We almost certainly will break you at some point in time if you create local modifications to scripts and pipelines.
 
 ______________________________________________________________________
 
