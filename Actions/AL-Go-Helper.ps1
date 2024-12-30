@@ -687,6 +687,8 @@ function ReadSettings {
         }
         "useGitSubmodules"                              = "false"
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
+        "shortLivedArtifactsRetentionDays"              = 1
+        "longLivedArtifactsRetentionDays"               = 0  # 0 means use GitHub default
     }
 
     # Read settings from files and merge them into the settings object

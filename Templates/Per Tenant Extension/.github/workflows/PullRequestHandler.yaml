@@ -40,7 +40,7 @@ jobs:
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
       baselineWorkflowRunId: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
       workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
-      artifactsRetentionDays: ${{ steps.DetermineArtifactsRetentionDays.outputs.ArtifactsRetentionDays }}
+      artifactsRetentionDays: ${{ steps.DetermineWorkflowDepth.outputs.ArtifactsRetentionDays }}
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - name: Dump Workflow Information
@@ -65,11 +65,13 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          get: shortLivedArtifactsRetentionDays
 
       - name: Determine Workflow Depth
         id: DetermineWorkflowDepth
         run: |
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactsRetentionDays=$($env:shortLivedArtifactsRetentionDays)"
 
       - name: Determine Projects To Build
         id: determineProjectsToBuild
@@ -77,14 +79,6 @@ jobs:
         with:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
-
-      - name: Determine Artifacts Retention Days
-        id: DetermineArtifactsRetentionDays
-        uses: microsoft/AL-Go-Actions/DetermineArtifactsRetentionDays@main
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          shell: powershell
 
   Build:
     needs: [ Initialization ]
