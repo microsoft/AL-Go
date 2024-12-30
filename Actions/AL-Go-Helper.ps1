@@ -678,6 +678,10 @@ function ReadSettings {
             "messageSuffix"                             = ""
             "pullRequestAutoMerge"                      = $false
             "pullRequestLabels"                         = @()
+            "createPullRequest"                         = $true
+        }
+        "scheduleSettings"                              = [ordered] @{
+            "includeBranches"                           = @( "main" )
         }
         "trustedSigning"                                = [ordered]@{
             "Endpoint"                                  = ""

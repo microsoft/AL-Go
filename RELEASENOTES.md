@@ -24,6 +24,12 @@ Setting versioning strategy to 3 will allow 3 segments of the version number to 
   - `pullRequestAutoMerge` : A boolean defining whether you want AL-Go pull requests to be set to auto-complete. This will auto-complete the pull requests once all checks are green and all required reviewers have approved.
   - `pullRequestLabels` : A list of labels to add to the pull request. The labels need to be created in the repository before they can be applied.
 
+### Run "Update AL-Go System Files" on a schedule on multiple branches
+
+When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `scheduleSettings` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosecrets#scheduleSettings.
+
+Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
+
 ### Support for Git submodules
 
 In v6.1 we added experimental support for Git submodules - this did however only work if the submodules was in a public repository. In this version, you can use the `useGitSubmodules` setting to control whether you want to use Git Submodules and the `gitSubmodulesToken` secret to allow permission to read these repositories.
@@ -137,6 +143,8 @@ AL-Go for GitHub now includes a new telemetry module. For detailed information o
   - **DurationError** - an error is issued if the duration of a bcpt test degrades more than this percentage (default 25)
   - **NumberOfSqlStmtsWarning** - a warning is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 5)
   - **NumberOfSqlStmtsError** - an error is issued if the number of SQL statements from a bcpt test increases more than this percentage (default 10)
+
+- `updateALGoBranches` is an array of branches to run `Update AL-Go System Files` on. Wildcards are supported.
 
 > \[!NOTE\]
 > Duration thresholds are subject to varying results depending on the performance of the agent running the tests. Number of SQL statements executed by a test is often the most reliable indicator of performance degredation.

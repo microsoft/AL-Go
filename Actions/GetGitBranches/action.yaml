@@ -1,0 +1,30 @@
+name: Get Git Branches
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  includeBranches:
+    description: Comma-separated value of branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported.
+    required: false
+    default: ''
+outputs:
+  Branches:
+    description: JSON-formatted array of branch names
+    value: ${{ steps.GetGitBranches.outputs.Branches }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: GetGitBranches
+      env:
+        _includeBranches: ${{ inputs.includeBranches }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetGitBranches" -Action {
+          ${{ github.action_path }}/GetGitBranches.ps1 -includeBranches $env:_includeBranches
+        }
+branding:
+  icon: terminal
+  color: blue
