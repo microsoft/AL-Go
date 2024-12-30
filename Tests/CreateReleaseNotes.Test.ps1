@@ -8,9 +8,6 @@ Describe 'CreateReleaseNotes Tests' {
     BeforeAll {
         . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1")
 
-        function TrackTrace {}
-        function TrackException {}
-
         $actionName = "CreateReleaseNotes"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"

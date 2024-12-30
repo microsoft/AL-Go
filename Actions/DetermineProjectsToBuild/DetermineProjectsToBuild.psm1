@@ -6,95 +6,43 @@
 #>
 function Get-ModifiedFiles {
     param(
-        [Parameter(HelpMessage = "The GitHub token to use to fetch the changed files", Mandatory = $true)]
-        [string] $token
+        [Parameter(HelpMessage = "The baseline SHA", Mandatory = $true)]
+        [string] $baselineSHA
     )
 
-
-    if(!$env:GITHUB_EVENT_PATH) {
-        Write-Host "GITHUB_EVENT_PATH not set, returning empty list of changed files"
-        return @()
-    }
-
+    Push-Location $ENV:GITHUB_WORKSPACE
     $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
-
-    if(-not ($ghEvent.PSObject.Properties.name -eq 'pull_request')) {
-        Write-Host "Not a pull request, returning empty list of changed files"
+    if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
+        $headSHA = $ghEvent.pull_request.head.sha
+        Write-Host "Using head SHA $headSHA from pull request"
+        git fetch origin $headSHA | Out-Host
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch head SHA $headSHA" }
+        if ($baselineSHA) {
+            Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
+        }
+        else {
+            $baselineSHA = $ghEvent.pull_request.base.sha
+            Write-Host "This is a pull request, using baseline SHA $baselineSHA from pull request"
+        }
+        git fetch origin $baselineSHA | Out-Host
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
+    }
+    elseif ($baselineSHA) {
+        $headSHA = git rev-parse HEAD
+        Write-Host "Current HEAD is $headSHA"
+        git fetch origin $baselineSHA | Out-Host
+        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
+        Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
+    }
+    else {
+        Write-Host "Not a pull request and no baseline specified, returning empty list of changed files"
         return @()
     }
-
-    $url = "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ghEvent.pull_request.head.sha)"
-
-    $headers = @{
-        "Authorization" = "token $token"
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-    }
-
-    $response = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
-
-    $modifiedFiles = @($response.files | ForEach-Object { $_.filename })
-
+    Write-Host "git diff --name-only $baselineSHA $headSHA"
+    $modifiedFiles = @(git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
+    if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
+    Pop-Location
     return $modifiedFiles
-}
-
-<#
-.Synopsis
-    Determines whether a full build is required.
-.Outputs
-    A boolean indicating whether a full build is required.
-.Description
-    Determines whether a full build is required.
-    A full build is required if:
-    - The alwaysBuildAllProjects setting is set to true
-    - More than 250 files have been modified
-    - The modified files contain a file that matches one of the fullBuildPatterns
-#>
-function Get-BuildAllProjects {
-    param(
-        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
-        [string] $baseFolder,
-        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
-        [string[]] $modifiedFiles = @()
-    )
-
-    $settings = $env:Settings | ConvertFrom-Json
-
-    if ($settings.alwaysBuildAllProjects) {
-        Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
-        return $true
-    }
-
-    if (!$modifiedFiles) {
-        Write-Host "No files modified, building all projects"
-        return $true
-    }
-
-    if ($modifiedFiles.Count -ge 250) {
-        Write-Host "More than 250 files modified, building all projects"
-        return $true
-    }
-
-    $fullBuildPatterns = @(Join-Path '.github' '*.json')
-    if($settings.fullBuildPatterns) {
-        $fullBuildPatterns += $settings.fullBuildPatterns
-    }
-
-    #Include the base folder in the modified files
-    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
-
-    foreach($fullBuildFolder in $fullBuildPatterns) {
-        # The Join-Path is needed to make sure the path has the correct slashes
-        $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
-
-        if ($modifiedFiles -like $fullBuildFolder) {
-            Write-Host "Changes to $fullBuildFolder, building all projects"
-            return $true
-        }
-    }
-
-    Write-Host "No changes to fullBuildPatterns, building only modified projects"
-
-    return $false
 }
 
 <#

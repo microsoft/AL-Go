@@ -1,6 +1,9 @@
 name: ' Create release'
 run-name: "Create release - Version ${{ inputs.tag }}"
 
+concurrency:
+  group: ${{ github.workflow }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -54,8 +57,6 @@ permissions:
   contents: write
   id-token: write
   pull-requests: write
-
-concurrency: release
 
 defaults:
   run:

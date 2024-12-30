@@ -47,6 +47,9 @@ function Test-ArtifactsFromRun {
 
     Write-Host -ForegroundColor Yellow "`nTest Artifacts from run $runid"
     Start-Sleep -Seconds 30
+    if (Test-Path $folder) {
+        Remove-Item -Path $folder -Recurse -Force
+    }
     Write-Host "Download build artifacts to $folder"
     invoke-gh run download $runid --dir $folder
     $err = $false
@@ -86,6 +89,9 @@ function Test-ArtifactsFromRun {
         }
         elseif ($type -eq 'github-pages') {
             $fileNamePattern = "github-pages?artifact.tar"
+        }
+        elseif ($type.Contains('*')) {
+            $fileNamePattern = $type
         }
         else {
             $fileNamePattern = "*-$type-$repoVersion.*.*?*$appVersion.*.*.app"
