@@ -36,8 +36,8 @@ env:
 
 jobs:
   Initialize:
-    runs-on: windows-latest
-    name: Determine Branches to update and template URL to use
+    runs-on: ubuntu-latest
+    name: Initialize
     outputs:
       SupportedBranches: ${{ steps.DetermineBranches.outputs.Result }}
       TemplateUrl: ${{ steps.DetermineTemplateUrl.outputs.TemplateUrl }}
@@ -51,7 +51,7 @@ jobs:
         if: ${{ env._updateMultipleBranches }}
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          shell: powershell
+          shell: pwsh
           get: scheduleSettings,templateUrl
 
       - name: Get Supported Branches
@@ -59,13 +59,14 @@ jobs:
         id: GetSupportedBranches
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
-          shell: powershell
+          shell: pwsh
           includeBranches: ${{ join(fromJson(env.scheduleSettings).includeBranches, ',') }}
 
       - name: Determine branches to update
         id: DetermineBranches
         env:
           supportedBranchesJson: ${{ steps.GetSupportedBranches.outputs.Branches }}
+        shell: pwsh
         run: |
             $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
@@ -81,6 +82,7 @@ jobs:
 
       - name: Determine Template URL
         id: DetermineTemplateUrl
+        shell: pwsh
         run: |
             $templateUrl = $env:templateUrl # Available from ReadSettings step
             $templateUrlAsInput = '${{ github.event.inputs.templateUrl }}'
