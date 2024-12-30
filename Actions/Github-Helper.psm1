@@ -118,8 +118,7 @@ function GetDependencies {
         $probingPathsJson,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies"),
-        [string[]] $masks = @('Apps','Dependencies','TestApps'),
-        [string] $artifactsNameSuffix = ''
+        [string[]] $masks = @('Apps','Dependencies','TestApps')
     )
 
     if (!(Test-Path $saveToPath)) {
