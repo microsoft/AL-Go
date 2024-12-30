@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       updateBranches:
-        description: Do you want to update all branches, specified in `scheduleSettings.includeBranches` AL-Go setting? By default, only the current branch is updated.
+        description: Do you want to update all branches, specified in scheduleSettings.includeBranches AL-Go setting? By default, only the current branch is updated.
         type: boolean
         default: false
 
@@ -77,7 +77,7 @@ jobs:
               $branchesToUpdate = @('${{ github.ref_name }}')
             }
             Write-Host "Branches to update: $($branchesToUpdate -join ', ')"
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$(ConvertTo-Json $branchesToUpdate)"
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$(ConvertTo-Json $branchesToUpdate -Compress)"
 
       - name: Determine Template URL
         id: DetermineTemplateUrl
@@ -93,7 +93,7 @@ jobs:
 
   UpdateALGoSystemFiles:
     name: "[${{ matrix.branch }}] Update AL-Go System Files"
-    needs: [ Initialize: ]
+    needs: [ Initialize ]
     runs-on: [ windows-latest ]
     strategy:
       matrix:
@@ -138,7 +138,7 @@ jobs:
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-          if('${{ github.event_name }}' == 'workflow_dispatch') {
+          if('${{ github.event_name }}' -eq 'workflow_dispatch') {
             Write-Host "Using inputs from workflow_dispatch event"
 
             $directCommit = $env:directCommit
