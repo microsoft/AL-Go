@@ -7,7 +7,7 @@
 - [`shortLivedArtifactsRetentionDays`](https://aka.ms/algosettings#shortLivedArtifactsRetentionDays) determines the number of days to keep short lived build artifacts (f.ex build artifacts from pull request builds, next minor or next major builds). 1 is default. 0 means use GitHub default.
 - [`longLivedArtifactsRetentionDays`](https://aka.ms/algosettings#longLivedArtifactsRetentionDays) determines the number of days to keep long lived build artifacts (f.ex build artifacts from CI/CD builds). 0 is the default and means use GitHub default.
 - [`preProcessorSymbols`](https://aka.ms/algosettings#preProcessorSymbols) is a list of preprocessor symbols to use when building the apps. This setting can be specified in workflow specific settings files or in conditional settings.
-- [`<buildMode>PreProcessorSymbols`](https://aka.ms/algosettings#cleanModePreProcessorSymbols) is a list of preprocessor symbols to be used when building apps in the \<buildMode\> build mode. CleanModePreProcessorSymbols is a variation of this.
+- [`<buildMode>PreProcessorSymbols`](https://aka.ms/algosettings#cleanModePreProcessorSymbols) is a list of preprocessor symbols to be used when building apps in the \<buildMode> build mode. CleanModePreProcessorSymbols is a variation of this.
 
 ### New Versioning Strategy
 
