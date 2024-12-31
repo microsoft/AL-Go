@@ -54,10 +54,3 @@ else {
     $value = "$($projectName)-$($branchName)-$buildMode$_-$suffix"
     Set-OutputVariable -name $name -value $value
 }
-
-# Set this build artifacts name
-'Apps', 'Dependencies', 'TestApps' | ForEach-Object {
-    $name = "ThisBuild$($_)ArtifactsName"
-    $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
-    Set-OutputVariable -name $name -value $value
-}
