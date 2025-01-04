@@ -22,6 +22,15 @@ After a few seconds, your new repository should be ready for you.
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/11d7f51d-f38c-4163-a929-a55f2360911d) |
 |-|
 
+Navigate to the repository, go to the Settings tab and select Actions from the sidebar.
+
+<img width="615" alt="image" src="https://github.com/user-attachments/assets/c31b601c-73e7-4908-98de-32b6529145fc" />
+
+Scroll to the Workflow permissions section and ensure "Read and write permissions" is selected. This allows workflows to create or modify pull requests.
+If necessary, enable the option "Allow GitHub Actions to create and approve pull requests".
+
+<img width="639" alt="image" src="https://github.com/user-attachments/assets/954430bb-3c84-4235-89b2-ee0128631c44" />
+
 Click **Actions**, and you should see that a CI/CD workflow has already been kicked off on our empty repository.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/e13fc12d-c36d-4014-bbe5-0f8003c90bb0) |
