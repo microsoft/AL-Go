@@ -238,18 +238,10 @@ function Get-ProjectsToBuild {
                 $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths })
             }
 
-            if($settings.useProjectDependencies) {
-                $buildAlso = @{}
-
-                # Calculate the full projects order
-                $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-
-                $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
-            }
-            else {
-                # Use a flatten build order (all projects on the same level)
-                $fullProjectsOrder = @(@{ 'projects' = $projectsToBuild; 'projectsCount' = $projectsToBuild.Count})
-            }
+            # Calculate the full projects order
+            $buildAlso = @{}
+            $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
+            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
 
             # Create a project order based on the projects to build
             foreach($depth in $fullProjectsOrder) {
