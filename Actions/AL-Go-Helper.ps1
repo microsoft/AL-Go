@@ -2124,14 +2124,6 @@ Function AnalyzeProjectDependencies {
         if ($projectSettings.useProjectDependencies -eq $true) {
             $dependenciesForProject = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
         }
-
-        # Check if the project has manually defined a dependency list in the settings file, if so, add them to the list of dependencies
-        if ($projectSettings.projectDependencies) {
-            $dependenciesForProject += $projectSettings.projectDependencies
-        }
-
-        # Print all dependencies for the project
-        Write-Host "Project $project has the following dependencies: $($dependenciesForProject -join ',')"
         
         $appDependencies."$project" = @{
             "apps"         = $apps
