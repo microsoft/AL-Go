@@ -177,7 +177,7 @@ jobs:
 
       - name: Upload thisbuild artifacts - apps
         if: inputs.publishThisBuildArtifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildAppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Apps/'
@@ -186,7 +186,7 @@ jobs:
 
       - name: Upload thisbuild artifacts - dependencies
         if: inputs.publishThisBuildArtifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildDependenciesArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Dependencies/'
@@ -195,7 +195,7 @@ jobs:
 
       - name: Upload thisbuild artifacts - test apps
         if: inputs.publishThisBuildArtifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildTestAppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/TestApps/'
@@ -203,7 +203,7 @@ jobs:
           retention-days: 1
 
       - name: Publish artifacts - apps
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: inputs.publishArtifacts
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
@@ -211,7 +211,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - dependencies
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: inputs.publishArtifacts && env.generateDependencyArtifact == 'True'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.DependenciesArtifactsName }}
@@ -219,7 +219,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - test apps
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: inputs.publishArtifacts
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestAppsArtifactsName }}
@@ -227,7 +227,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - build output
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: (success() || failure()) && (hashFiles(format('{0}/BuildOutput.txt',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.BuildOutputArtifactsName }}
@@ -235,7 +235,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - container event log
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: (failure()) && (hashFiles(format('{0}/ContainerEventLog.evtx',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ContainerEventLogArtifactsName }}
@@ -243,7 +243,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - test results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/TestResults.xml',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestResultsArtifactsName }}
@@ -251,7 +251,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - bcpt test results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/bcptTestResults.json',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.BcptTestResultsArtifactsName }}
@@ -259,7 +259,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - page scripting test results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/PageScriptingTestResults.xml',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.PageScriptingTestResultsArtifactsName }}
@@ -267,7 +267,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish artifacts - page scripting test result details
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: (success() || failure())
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.PageScriptingTestResultDetailsArtifactsName }}
