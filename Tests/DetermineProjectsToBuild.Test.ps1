@@ -666,7 +666,10 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'loads dependent projects correctly, if useProjectDependencies is set to false in a project setting' {
-        # Two dependent projects
+        # Add three dependent projects
+        # Project 1 
+        # Project 2 depends on Project 1 - useProjectDependencies is set to true fromthe repo settings
+        # Project 3 depends on Project 1, but has useProjectDependencies set to false in the project settings
         $dependecyAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $dependecyAppFile -Depth 10) -type File -Force
@@ -676,10 +679,10 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
         # Third project that also depends on the first project, but has useProjectDependencies set to false
-        $dependantAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd3'; name = 'Third App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
+        $dependantAppFile3 = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd3'; name = 'Third App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
         New-Item -Path "$baseFolder/Project3/.AL-Go/settings.json" -type File -Force
         @{ useProjectDependencies = $false } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "Project3/.AL-Go/settings.json")
-        New-Item -Path "$baseFolder/Project3/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
+        New-Item -Path "$baseFolder/Project3/app/app.json" -Value (ConvertTo-Json $dependantAppFile3 -Depth 10) -type File -Force
 
         #Add settings file
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
@@ -701,32 +704,45 @@ Describe "Get-ProjectsToBuild" {
 
         # Build order should have the following structure:
         #[
-        #  {
-        #    "projects":  [
-        #      "Project1"
+        #{
+        #    "buildDimensions": [
+        #    {
+        #        "projectName": "Project1",
+        #        "buildMode": "Default",
+        #        "project": "Project1",
+        #        "githubRunnerShell": "powershell",
+        #        "gitHubRunner": "\"windows-latest\""
+        #    },
+        #    {
+        #        "projectName": "Project3",
+        #        "buildMode": "Default",
+        #        "project": "Project3",
+        #        "githubRunnerShell": "powershell",
+        #        "gitHubRunner": "\"windows-latest\""
+        #    }
         #    ],
-        #    "projectsCount":  1,
-        #    "buildDimensions":  [
-        #       {
-        #         "buildMode": "Default",
-        #         "project": "Project1"
-        #       }
+        #    "projectsCount": 2,
+        #    "projects": [
+        #    "Project1",
+        #    "Project3"
         #    ]
-        #  },
-        #  {
-        #    "projects":  [
-        #      "Project2"
+        #},
+        #{
+        #    "buildDimensions": [
+        #    {
+        #        "projectName": "Project2",
+        #        "buildMode": "Default",
+        #        "project": "Project2",
+        #        "githubRunnerShell": "powershell",
+        #        "gitHubRunner": "\"windows-latest\""
+        #    }
         #    ],
-        #    "projectsCount":  1,
-        #    "buildDimensions":  [
-        #       {
-        #         "buildMode": "Default",
-        #         "project": "Project2"
-        #       }
+        #    "projectsCount": 1,
+        #    "projects": [
+        #    "Project2"
         #    ]
-        #  }
+        #}
         #]
-
         $buildOrder.Count | Should -BeExactly 2
         $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
         $buildOrder[0].projects | Should -BeExactly @("Project1", "Project3")
