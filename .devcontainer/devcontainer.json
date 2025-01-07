@@ -1,9 +1,9 @@
 {
   "image": "mcr.microsoft.com/devcontainers/universal:latest",
   "tasks": {
-    "build": "Write-Host 'Not Supported'",
+    "build": "",
     "test": "pwsh -File Tests/runtests.ps1",
-    "run": "Write-Host 'Not Supported'"
+    "run": ""
   },
   "features": {
     "ghcr.io/devcontainers/features/powershell:1": {
