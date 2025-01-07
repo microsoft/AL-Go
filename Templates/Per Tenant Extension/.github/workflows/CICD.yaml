@@ -66,7 +66,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: type,powerPlatformSolutionFolder,useGitSubmodules,longLivedArtifactsRetentionDays
+          get: type,powerPlatformSolutionFolder,useGitSubmodules
 
       - name: Read submodules token
         id: ReadSubmodulesToken
@@ -89,7 +89,7 @@ jobs:
         id: DetermineWorkflowDepth
         run: |
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactsRetentionDays=$($env:longLivedArtifactsRetentionDays)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactsRetentionDays=0"
 
       - name: Determine Projects To Build
         id: determineProjectsToBuild

@@ -368,29 +368,29 @@ try {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
-    switch($buildMode){
-        'Clean' {
-            if (-not $settings.ContainsKey('cleanModePreprocessorSymbols')) {
-                throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
-            }
+    if ($buildMode -eq 'Translated') {
+        if ($runAlPipelineParams.Keys -notcontains 'features') {
+            $runAlPipelineParams["features"] = @()
         }
-        'Translated' {
-            if ($runAlPipelineParams.Keys -notcontains 'features') {
-                $runAlPipelineParams["features"] = @()
-            }
-            $runAlPipelineParams["features"] += "translationfile"
-        }
+        Write-Host "Adding translatiopnfile feature"
+        $runAlPipelineParams["features"] += "translationfile"
     }
 
     if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
         $runAlPipelineParams["preprocessorsymbols"] = @()
     }
-    foreach($preprocessorSymbolsSettingsName in @("preprocessorSymbols", "$($buildMode)ModePreprocessorSymbols")) {
-        if ($settings.ContainsKey($preprocessorSymbolsSettingsName)) {
-            $preprocessorsymbols = $settings."$preprocessorSymbolsSettingsName"
-            Write-Host "Adding Preprocessor symbols from setting $preprocessorSymbolsSettingsName : $($preprocessorsymbols -join ',')"
-            $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
-        }
+
+    # REMOVE AFTER April 1st 2025 --->
+    if ($settings.ContainsKey('cleanModePreprocessorSymbols')) {
+        Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
+        $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
+        Write-Warning -message "cleanModePreprocessorSymbols is deprecated. Use Conditional Settings instead, specifying buildModes and the `preProcessorSymbols` setting."
+    }
+    # <--- REMOVE AFTER April 1st 2025
+
+    if ($settings.ContainsKey('preprocessorSymbols')) {
+        Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
+        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
