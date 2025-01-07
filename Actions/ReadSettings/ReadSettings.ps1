@@ -37,6 +37,10 @@ if ($settings.versioningstrategy -ne -1) {
             $settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
             $settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
         }
+        3 { # USE BUIlD from app.json and RUN_NUMBER
+            $settings.appBuild = -1
+            $settings.appRevision = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
+        }
         15 { # Use maxValue
             $settings.appBuild = [Int32]::MaxValue
             $settings.appRevision = 0

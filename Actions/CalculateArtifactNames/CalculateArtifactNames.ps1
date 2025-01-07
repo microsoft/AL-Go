@@ -38,8 +38,15 @@ if ($suffix) {
     $suffix = "$suffix-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
 }
 else {
-    # Default suffix is the build number
-    $suffix = "$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+    $repoVersion = [System.Version]$settings.repoVersion
+    $appBuild = $settings.appBuild
+    if ($appBuild -eq -1) {
+        $appBuild = $repoVersion.Build
+        if ($repoVersion.Build -eq -1) {
+            $appBuild = 0
+        }
+    }
+    $suffix = "$($repoVersion.Major).$($repoVersion.Minor).$($appBuild).$($settings.appRevision)"
 }
 
 'Apps', 'Dependencies', 'TestApps', 'TestResults', 'BcptTestResults', 'PageScriptingTestResults', 'PageScriptingTestResultDetails', 'BuildOutput', 'ContainerEventLog', 'PowerPlatformSolution' | ForEach-Object {

@@ -20,6 +20,7 @@ Increment version number in AL-Go repository
 | projects | | List of project names if the repository is setup for multiple projects (\* for all projects) | * |
 | versionNumber | Yes | The version to update to. Use Major.Minor for absolute change, use +1 to bump to the next major version, use +0.1 to bump to the next minor version | |
 | updateBranch | | Which branch should the app be added to | github.ref_name |
+| skipUpdatingDependencies | | Skip updating dependency version numbers in all apps | false |
 | directCommit | | true if the action should create a direct commit against the branch or false to create a Pull Request | false |
 
 ## OUTPUT

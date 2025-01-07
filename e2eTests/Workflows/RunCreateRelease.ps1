@@ -3,10 +3,11 @@
         [string] $appVersion,
         [string] $name,
         [string] $tag,
-        [switch] $prerelease,
-        [switch] $draft,
+        [ValidateSet('Release','Draft','Prerelease')]
+        [string] $releaseType = 'Release',
         [switch] $createReleaseBranch,
         [string] $updateVersionNumber = '',
+        [switch] $skipUpdatingDependencies,
         [switch] $directCommit,
         [switch] $useGhTokenWorkflow,
         [switch] $wait,
@@ -19,10 +20,10 @@
         "appVersion" = $appVersion
         "name" = $name
         "tag" = $tag
-        "prerelease" = @("true","false")[!$prerelease]
-        "draft" = @("true","false")[!$draft]
+        "releaseType" = $releaseType
         "createReleaseBranch" = @("true","false")[!$createReleaseBranch]
         "updateVersionNumber" = $updateVersionNumber
+        "skipUpdatingDependencies" = @("true","false")[!$skipUpdatingDependencies]
         "directCommit" = @("true","false")[!$directCommit]
         "useGhTokenWorkflow" = @("true","false")[!$useGhTokenWorkflow]
     }
