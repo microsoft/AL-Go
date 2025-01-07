@@ -41,6 +41,9 @@ defaults:
   run:
     shell: pwsh
 
+permissions:
+  contents: read
+
 jobs:
   Check:
     runs-on: [ ubuntu-latest ]
@@ -48,6 +51,11 @@ jobs:
       maxParallel: ${{ steps.check.outputs.maxParallel }}
       githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Check secrets
@@ -92,6 +100,11 @@ jobs:
       perTenantExtensionRepo: ${{ steps.setup.outputs.perTenantExtensionRepo }}
       appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
@@ -111,6 +124,11 @@ jobs:
       releases: ${{ steps.Analyze.outputs.releases }}
       scenarios: ${{ steps.Analyze.outputs.scenarios }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
@@ -187,6 +205,11 @@ jobs:
     if: github.event.inputs.runScenarios == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
@@ -218,6 +241,11 @@ jobs:
     if: github.event.inputs.runScenarios == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
@@ -249,6 +277,11 @@ jobs:
     if: github.event.inputs.runTestMatrix == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.publictestruns) }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
@@ -292,6 +325,11 @@ jobs:
     if: github.event.inputs.runTestMatrix == 'true' && github.event.inputs.includePrivateRepos == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.privatetestruns) }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
@@ -336,6 +374,11 @@ jobs:
     if: github.event.inputs.runUpgradeTests == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.releases) }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
@@ -376,6 +419,11 @@ jobs:
     needs: [ Check, SetupRepositories, TestAlGoPublic, TestAlGoPrivate, TestAlGoUpgrade, ScenariosOnWindows, ScenariosOnLinux ]
     if: always() && (!Cancelled()) && (needs.SetupRepositories.result == 'Success') && (needs.TestAlGoPublic.result == 'Success' || needs.TestAlGoPublic.result == 'Skipped') && (needs.TestAlGoPrivate.result == 'Success' || needs.TestAlGoPrivate.result == 'Skipped') && (needs.TestAlGoUpgrade.result == 'Success' || needs.TestAlGoUpgrade.result == 'Skipped') && (needs.Scenario.result == 'Success' || needs.Scenario.result == 'Skipped')
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.inputs.ref }}
