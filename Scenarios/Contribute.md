@@ -84,6 +84,12 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
 |$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
 
+## GitHub Codespaces
+
+AL-Go supports developing from GitHub Codespaces. You can create codespaces by going to: [https://github.com/codespaces/new](https://github.com/codespaces/new?skip_quickstart=true&repo=413794983&ref=main). From here you can create codespace either for microsoft/AL-Go or for your fork of AL-Go.
+
+Codespaces come pre-configured with Pre-Commit and with latest BCContainerHelper version installed.
+
 ______________________________________________________________________
 
 [back](../README.md)
