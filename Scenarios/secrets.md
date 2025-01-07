@@ -16,7 +16,7 @@ Secrets in GitHub can be defined on the Organizational level, on the repository 
 
 See also [https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#about-secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#about-secrets).
 
-> \[!NOTE\]
+> [!NOTE]
 > In AL-Go for GitHub you can also define your secrets in an Azure KeyVault, but you would still need to create one secret in GitHub called [Azure_Credentials](https://aka.ms/algosecrets#azure_credentials) to be able to access the Azure KeyVault.
 
 ## Important information about secrets (e.g. common mistakes...)
@@ -61,7 +61,7 @@ If your GitHub organization might have many organizational secrets, please only 
 
 By creating a secret called Azure_Credentials you can give your GitHub repository access to an Azure Key Vault, from which you can read secrets and use for managed signing of your apps. You can use a managed identity or an app registration (service to service) for authentication.
 
-> \[!NOTE\]
+> [!NOTE]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
 
 n Azure Key Vault can be set up for two different security models: Role Based Access Control (RBAC) (recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the Key Vault, the following roles/permissions need to be assigned to the app registration or Managed Identity, on which the authentication is performed:

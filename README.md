@@ -43,7 +43,7 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 A. [Migrate a repository from Azure DevOps to AL-Go for GitHub without history](Scenarios/MigrateFromAzureDevOpsWithoutHistory.md)<br />
 B. [Migrate a repository from Azure DevOps to AL-Go for GitHub with history](Scenarios/MigrateFromAzureDevOpsWithHistory.md)
 
-> \[!NOTE\]
+> [!NOTE]
 > Please refer to [this description](Scenarios/settings.md) to learn about the settings file and how you can modify default behaviors.
 
 # This project
@@ -58,7 +58,7 @@ This project in the main source repository for AL-Go for GitHub. This project is
 
 Please read [this document](Scenarios/Contribute.md) to understand how to contribute to AL-Go for GitHub.
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+This project welcomes contributions and suggestions. Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
 the rights to use your contribution. For details, visit [https://cla.opensource.microsoft.com](https://cla.opensource.microsoft.com).
 

@@ -80,7 +80,7 @@ ______________________________________________________________________
 | Free vs. Pro ($4) | Free vs. Team ($4) vs. Enterprise ($21) |
 | GitHub Actions execution minutes<br/>- 2000 vs. 3000 min/month | GitHub Actions execution minutes<br />- 2000 vs. 3000 vs. 50.000 min/month |
 
-> \[!NOTE\]
+> [!NOTE]
 > Windows OS consumes 2 minutes per minute
 
 [See more here](https://github.com/)
