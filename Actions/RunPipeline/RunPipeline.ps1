@@ -372,7 +372,7 @@ try {
         if ($runAlPipelineParams.Keys -notcontains 'features') {
             $runAlPipelineParams["features"] = @()
         }
-        Write-Host "Adding translatiopnfile feature"
+        Write-Host "Adding translationfile feature"
         $runAlPipelineParams["features"] += "translationfile"
     }
 
@@ -384,7 +384,7 @@ try {
     if ($settings.ContainsKey('cleanModePreprocessorSymbols')) {
         Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
         $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
-        Write-Warning -message "cleanModePreprocessorSymbols is deprecated. Use Conditional Settings instead, specifying buildModes and the `preProcessorSymbols` setting."
+        Write-Warning -message "cleanModePreprocessorSymbols is deprecated. See https://aka.ms/ALGoDeprecations#cleanModePreprocessorSymbols for more information."
     }
     # <--- REMOVE AFTER April 1st 2025
 
