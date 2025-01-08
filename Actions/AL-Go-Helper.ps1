@@ -1371,7 +1371,8 @@ function CommitFromNewFolder {
         [string] $serverUrl,
         [string] $commitMessage,
         [string] $body = $commitMessage,
-        [string] $branch
+        [string] $branch,
+        [string] $headBranch = $ENV:GITHUB_REF_NAME
     )
 
     invoke-git add *
@@ -1413,13 +1414,12 @@ function CommitFromNewFolder {
         }
         invoke-git push -u $serverUrl $branch
         try {
-            Write-Host "Creating Pull Request: $branch -> $activeBranch"
             if ($settings.commitOptions.pullRequestLabels) {
                 $labels = "$($settings.commitOptions.pullRequestLabels -join ",")"
                 Write-Host "Adding labels: $labels"
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $activeBranch --body "$body" --label $labels
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body" --label $labels
             } else {
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $activeBranch --body "$body"
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body"
             }
 
             if ($settings.commitOptions.pullRequestAutoMerge) {
@@ -1427,7 +1427,6 @@ function CommitFromNewFolder {
             }
         }
         catch {
-            Write-Host "Failed to create Pull Request: $_"
             OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
         }
         return $true
