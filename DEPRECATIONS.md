@@ -18,11 +18,11 @@ When handling support requests, we will request that you to use the latest versi
 [preprocessorSymbols](https://aka.ms/algosettings#preprocessorSymbols) are now supported as a global setting and can be applied to buildModes using [Conditional Settings](https://aka.ms/algosettings#conditional-settings). Example:
 ```
 "conditionalSettings": [  
-      {
-          "buildModes": [ "Clean" ],
-          "settings": {
-              "preprocessorSymbols": [ "CLEAN21", "CLEAN22" ]
-          }
-      }
-  ]
+    {
+        "buildModes": [ "Clean" ],
+        "settings": {
+            "preprocessorSymbols": [ "CLEAN21", "CLEAN22" ]
+        }
+    }
+]
 ```
