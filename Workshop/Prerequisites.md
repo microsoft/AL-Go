@@ -28,7 +28,7 @@ The combination of useCompilerFolder and doNotPublishApps, means that AL-Go will
 
 Later in the workshop, when we want to run tests, we will need to create a container and we will change the settings for that purpose.
 
-> \[!NOTE\]
+> [!NOTE]
 > We are working on making this piece much faster and utilize different ways to run tests in containers, ACIs, VMs or other environments.
 
 With this... - let's get started!

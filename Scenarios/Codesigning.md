@@ -4,7 +4,7 @@ On June 1st 2023 the industry standards for storing code signing certificates ch
 
 This guide will take you through how to set up your AL-Go project with an Azure Key Vault and how to use a certificate in the Key Vault to perform code signing. Before you get started, please make sure you've set up your AL-Go project with an Azure Key Vault by following [Scenario 7: Use Azure KeyVault for secrets with AL-Go](./UseAzureKeyVault.md).
 
-> \[!NOTE\]
+> [!NOTE]
 > If your code signing certificate was issued after June 1st 2023 you will most likely need to create a Premium SKU Key Vault. You can [learn more about the differences between Standard and Premium SKU here](https://azure.microsoft.com/en-us/pricing/details/key-vault/)
 
 ## Setting up your Azure Key Vault for code signing

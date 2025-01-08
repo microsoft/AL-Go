@@ -37,7 +37,7 @@ GitHub runners can be registered for an organization (accessible for all reposit
    - Microsoft .NET SDK (getbuildagent use `choco install dotnet-sdk -y`)
    - nuget.org added as dotnet nuget source (getbuildagent use `dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org`)
 
-> \[!NOTE\]
+> [!NOTE]
 > If the Deploy Reference Documentation job results in an error like [this](https://github.com/actions/upload-pages-artifact/issues/95), then you need to check your GIT installation as described in the issue.
 
 ## Allow your repository access to your runners

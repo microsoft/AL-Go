@@ -38,7 +38,7 @@ or
 
 ContainerName and BlobName can contain placeholders, like {project}, {version} and {type} which will be replaced by the real values when delivering.
 
-> \[!NOTE\]
+> [!NOTE]
 > You can use the **BcContainerHelper** function **New-ALGoStorageContext** to assist in the correct format of the secret.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/7287e068-b2d5-4fc2-b428-d0ddd4ffa0e3) |
