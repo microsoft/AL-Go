@@ -13,11 +13,13 @@ When handling support requests, we will request that you to use the latest versi
 ## Changes in effect after April 1st 2025
 
 <a id="cleanModePreprocessorSymbols"></a>
+
 ### Setting `cleanModePreprocessorSymbols` will no longer be supported
 
 [preprocessorSymbols](https://aka.ms/algosettings#preprocessorSymbols) are now supported as a global setting and can be applied to buildModes using [Conditional Settings](https://aka.ms/algosettings#conditional-settings). Example:
+
 ```
-"conditionalSettings": [  
+"conditionalSettings": [
     {
         "buildModes": [ "Clean" ],
         "settings": {
