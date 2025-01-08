@@ -23,6 +23,6 @@ When handling support requests, we will request that you to use the latest versi
           "settings": {
               "preprocessorSymbols": [ "CLEAN21", "CLEAN22" ]
           }
-      }  
+      }
   ]
 ```
