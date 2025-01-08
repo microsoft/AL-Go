@@ -1413,6 +1413,7 @@ function CommitFromNewFolder {
         }
         invoke-git push -u $serverUrl $branch
         try {
+            Write-Host "Creating Pull Request: $branch -> $activeBranch"
             if ($settings.commitOptions.pullRequestLabels) {
                 $labels = "$($settings.commitOptions.pullRequestLabels -join ",")"
                 Write-Host "Adding labels: $labels"
@@ -1426,6 +1427,7 @@ function CommitFromNewFolder {
             }
         }
         catch {
+            Write-Host "Failed to create Pull Request: $_"
             OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
         }
         return $true
