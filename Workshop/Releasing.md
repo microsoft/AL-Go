@@ -48,7 +48,7 @@ Inspecting the build from the Pull request, you will see that the artifacts are 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/22d28d32-b826-450f-af6c-77982235b57d) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > All subsequent builds from main will now be 2.x. You will also see that the annotation stating that **No previous release found** has now gone and all builds from main will use the latest release version for upgrade testing.
 
 Inspecting the **build** step in the workflow, reveals that AL-Go for GitHub was able to locate the previous release
@@ -71,7 +71,7 @@ Select **Actions** and see that a build was kicked off in the release branch.
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/5ae406bc-31e0-4433-ac5d-f9d3b12f7668) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > This build will use the latest released build, which has a version number lower than the one you are building as previous release and will use the version numbers from the release branch for versioning.
 > After the build is completed, you will need to release this new build in order for subsequent CI/CD builds from main to see the new bits as a release.
 
@@ -95,7 +95,7 @@ where the branch name main has been replaced by the release branch name and if y
 | Direct Commit | :black_square_button: |
 | Use GhTokenWorkflow | :black_square_button: |
 
-> \[!NOTE\]
+> [!NOTE]
 > You must select to use workflow from the release branch. Else the create release workflow cannot locate the build in the release branch.
 > In this case, we select to not create a new release branch. We can just create any future hotfixes from the existing release branch if needed. We can also always create a release branch from a release later.
 
@@ -111,7 +111,7 @@ and clicking Releases will show the content of the releases:
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/6e52727e-bff3-431c-88ac-264965ad911f) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > GitHub sorts the releases after the tag and sorting only works correctly if the tag is SemVer compatible (i.e. 3 segments). This is the reason why AL-Go for GitHub forces you to enter a SemVer compatible version number in the tag when creating a new release.
 
 OK, so that is clear, versioning and releasing, pretty smart - but what is this project concept?
