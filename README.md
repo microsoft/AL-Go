@@ -6,6 +6,10 @@ The goal is that people who have created their GitHub repositories based on the 
 
 The roadmap for AL-Go for GitHub can be found here: [https://aka.ms/ALGoRoadmap](https://aka.ms/ALGoRoadmap)
 
+Release notes for all versions of AL-Go for GitHub can be found [here](./RELEASENOTES.md).
+
+Deprecations for all versions of AL-Go for GitHub can be found [here](./DEPRECATIONS.md).
+
 The template repositories to use as starting point are:
 
 - [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [https://aka.ms/algopte](https://aka.ms/algopte) is the GitHub repository template for Per Tenant Extensions. When creating a Per Tenant Extensions, this is your starting point.
