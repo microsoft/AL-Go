@@ -13,11 +13,12 @@ Description
 
 ### Parameters
 
-| Name | Required | Description | Default value |
+| Name | Required | Description | .\ |
 | :-- | :-: | :-- | :-- |
-| Param1 | No  | desc | powershell |
-| Param2 | Yes | desc | |
-| Param3 | Yes | desc | |
+| path | Yes  | Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported. | powershell |
+| excludeRule | No | Omits the specified rules from the Script Analyzer test. Wildcard characters are supported. | |
+| recurse | No | Runs Script Analyzer on the files in the Path directory and all subdirectories recursively. | |
+| output | Yes | Specifies where the path for the sarif file | results.sarif |
 
 ## OUTPUT
 
@@ -29,11 +30,4 @@ none
 
 | Name | Description |
 | :-- | :-- |
-| ppEnvironmentUrl | Power Platform Environment URL |
-| ppUserName | Power Platform Username |
-| ppPassword | Power Platform Password |
-| ppApplicationId | Power Platform Application Id |
-| ppTenantId | Power Platform Tenant Id |
-| ppClientSecret | Power Platform Client Secret |
-| companyId | Business Central Company Id |
-| environmentName | Business Central Environment Name |
+| name | desc |
