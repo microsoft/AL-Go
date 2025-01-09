@@ -94,7 +94,7 @@ $runTestNextMajor = RunTestNextMajor -branch $branch
 
 # Wait for all workflows to finish
 WaitWorkflow -runid $run.id
-Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=6;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
+Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=6;"thisbuild"=0} -repoVersion '1.0' -appVersion '1.0'
 
 WaitWorkflow -runid $runTestCurrent.id -noDelay
 Test-ArtifactsFromRun -runid $runTestCurrent.id -folder 'currentartifacts' -expectedArtifacts @{"Apps"=0;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
