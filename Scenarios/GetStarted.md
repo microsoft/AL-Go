@@ -8,13 +8,13 @@
 1. Select **Actions** -> **Create a new app** -> **Run workflow**
    ![Run workflow](https://github.com/microsoft/AL-Go/assets/10775043/6c1ac9c3-14c2-4917-a31a-d94e5bb7bd66)
 1. Enter **Name**, **Publisher**, **ID range** and specify **Y** in **Direct Commit** and choose **Run workflow**.
-1. When the workflow is complete, select **\< > Code** in the top bar
+1. When the workflow is complete, select **< > Code** in the top bar
 1. Choose the **Code** button and copy the **https Clone Url** (in this picture: *https://github.com/freddydk/App1.git*)
    ![Clone](https://github.com/microsoft/AL-Go/assets/10775043/84b92edb-72b8-4444-908c-0c6f6bc2b7f7)
 1. Start **VS Code**, press **Ctrl+Shift+P** and select **Git Clone**, paste the clone URL and select a folder in which you want to clone the directory.
 1. **Open the cloned repository** and **open the workspace** when VS Code asks you (or do it manually)
 
-> \[!NOTE\]
+> [!NOTE]
 > You can rename the `al.code-workspace` file to `<anothername>.code-workspace` to be able to better distinguish the workspaces.
 
 1. In the **.AL-Go** folder, choose the **localDevEnv.ps1** script and Run the PowerShell script.

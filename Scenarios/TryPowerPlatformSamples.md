@@ -5,7 +5,7 @@ The easiest way to get started with Business Central and Power Apps is to find o
 - [Take Order](https://github.com/microsoft/bcsamples-takeorder)
 - [Warehouse helper](https://github.com/microsoft/bcsamples-warehousehelper)
 
-> **NOTE:** Other samples might be available here:  [https://github.com/topics/bcsamples](https://github.com/topics/bcsamples).
+> **NOTE:** Other samples might be available here: [https://github.com/topics/bcsamples](https://github.com/topics/bcsamples).
 > From the sample app repositories, you have two options:
 
 - [Manual installation](#manual-installation)
@@ -39,7 +39,7 @@ If you just want to try the apps and not the ALM functionality, follow these ste
 
 ## Fork the Repository
 
-This gives you access to all the source code for the Power Platform solution and AL extension and the ALM infrastructure. Follow the steps in the  [Power Platform repository setup guide](./SetupPowerPlatform.md) to get started. Once set up, you can easily publish the latest changes to your environment.
+This gives you access to all the source code for the Power Platform solution and AL extension and the ALM infrastructure. Follow the steps in the [Power Platform repository setup guide](./SetupPowerPlatform.md) to get started. Once set up, you can easily publish the latest changes to your environment.
 
 > **NOTE:** The first time you import the solution into your environment, you need to set up the Business Central connection reference authentication. See an example in the screen shot below
 > ![Screen shot from Power Apps showing how to set up a the Business Central connection reference](https://github.com/microsoft/AL-Go/assets/10775043/dd90b6ae-f54f-4851-8073-c32d7fa54c7a)

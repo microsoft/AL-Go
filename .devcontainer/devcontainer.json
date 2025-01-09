@@ -1,0 +1,29 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/universal:latest",
+  "tasks": {
+    "build": "",
+    "test": "pwsh -File Tests/runtests.ps1",
+    "run": ""
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/powershell:1": {
+      "modules": "BcContainerHelper,Pester"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "pip install pre-commit && pre-commit install --install-hooks --overwrite",
+  "customizations": {
+        "vscode": {
+            "extensions": [
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "GitHub.vscode-github-actions",
+                "GitHub.vscode-pull-request-github",
+                "ms-vscode.powershell"
+            ],
+            "settings": {
+              "terminal.integrated.defaultProfile.linux": "pwsh"
+            }
+        }
+    }
+}

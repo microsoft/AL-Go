@@ -56,14 +56,10 @@ on:
         required: false
         default: ''
         type: string
-      publishThisBuildArtifacts:
-        description: Flag indicating whether this build artifacts should be published
-        type: boolean
-        default: false
-      publishArtifacts:
-        description: Flag indicating whether the artifacts should be published
-        type: boolean
-        default: false
+      artifactsRetentionDays:
+        description: Number of days to keep the artifacts
+        type: number
+        default: 0
       artifactsNameSuffix:
         description: Suffix to add to the artifacts names
         required: false
@@ -107,6 +103,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+          buildMode: ${{ inputs.buildMode }}
           get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules
 
       - name: Determine whether to build project
@@ -199,56 +196,32 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           suffix: ${{ inputs.artifactsNameSuffix }}
 
-      - name: Upload thisbuild artifacts - apps
-        if: inputs.publishThisBuildArtifacts && (hashFiles(format('{0}/.buildartifacts/Apps/*',inputs.project)) != '')
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        with:
-          name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildAppsArtifactsName }}
-          path: '${{ inputs.project }}/.buildartifacts/Apps/'
-          if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Upload thisbuild artifacts - dependencies
-        if: inputs.publishThisBuildArtifacts && (hashFiles(format('{0}/.buildartifacts/Dependencies/*',inputs.project)) != '')
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        with:
-          name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildDependenciesArtifactsName }}
-          path: '${{ inputs.project }}/.buildartifacts/Dependencies/'
-          if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Upload thisbuild artifacts - test apps
-        if: inputs.publishThisBuildArtifacts && (hashFiles(format('{0}/.buildartifacts/TestApps/*',inputs.project)) != '')
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        with:
-          name: ${{ steps.calculateArtifactsNames.outputs.ThisBuildTestAppsArtifactsName }}
-          path: '${{ inputs.project }}/.buildartifacts/TestApps/'
-          if-no-files-found: ignore
-          retention-days: 1
-
       - name: Publish artifacts - apps
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: inputs.publishArtifacts && (hashFiles(format('{0}/.buildartifacts/Apps/*',inputs.project)) != '')
+        if: inputs.artifactsRetentionDays >= 0 && (hashFiles(format('{0}/.buildartifacts/Apps/*',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.AppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Apps/'
           if-no-files-found: ignore
+          retention-days: ${{ inputs.artifactsRetentionDays }}
 
       - name: Publish artifacts - dependencies
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: inputs.publishArtifacts && env.generateDependencyArtifact == 'True' && (hashFiles(format('{0}/.buildartifacts/Dependencies/*',inputs.project)) != '')
+        if: inputs.artifactsRetentionDays >= 0 && env.generateDependencyArtifact == 'True' && (hashFiles(format('{0}/.buildartifacts/Dependencies/*',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.DependenciesArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/Dependencies/'
           if-no-files-found: ignore
+          retention-days: ${{ inputs.artifactsRetentionDays }}
 
       - name: Publish artifacts - test apps
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: inputs.publishArtifacts && (hashFiles(format('{0}/.buildartifacts/TestApps/*',inputs.project)) != '')
+        if: inputs.artifactsRetentionDays >= 0 && (hashFiles(format('{0}/.buildartifacts/TestApps/*',inputs.project)) != '')
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.TestAppsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/TestApps/'
           if-no-files-found: ignore
+          retention-days: ${{ inputs.artifactsRetentionDays }}
 
       - name: Publish artifacts - build output
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0

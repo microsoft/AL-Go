@@ -85,7 +85,7 @@ function Test-ArtifactsFromRun {
         Write-Host "Type: $type, Expected: $expected"
         # Reason for the ? instead of \ is that the folder separator is \ on Windows and / on Linux
         if ($type -eq 'thisbuild') {
-            $fileNamePattern = "thisbuild-*-Apps?*$appVersion.*.*.app"
+            $fileNamePattern = "*-*-Apps-*-*?*$appVersion.*.*.app"
         }
         elseif ($type -eq 'github-pages') {
             $fileNamePattern = "github-pages?artifact.tar"
