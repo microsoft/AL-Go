@@ -1,0 +1,83 @@
+name: Run PSScriptAnalyzer
+author: Microsoft Corporation
+branding:
+  icon: "check"
+  color: "gray-dark"
+inputs:
+  path:
+    description: 'Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported.'
+    required: true
+    default: '.\'
+  customRulePath:
+    description: 'Uses only the custom rules defined in the specified paths to the analysis. To still use the built-in rules, add the -IncludeDefaultRules switch.'
+    required: false
+  recurseCustomRulePath:
+    description: 'Adds rules defined in subdirectories of the CustomRulePath location.'
+    required: false
+  excludeRule:
+    description: 'Omits the specified rules from the Script Analyzer test. Wildcard characters are supported.'
+    required: false
+  includeDefaultRules:
+    description: 'Invoke default rules along with Custom rules.'
+    required: false
+  includeRule:
+    description: 'Runs only the specified rules in the Script Analyzer test.'
+    required: false
+  severity:
+    description: 'After running Script Analyzer with all rules, this parameter selects rule violations with the specified severity.'
+    required: false
+  recurse:
+    description: 'Runs Script Analyzer on the files in the Path directory and all subdirectories recursively.'
+    required: false
+  suppressedOnly:
+    description: 'Returns rules that are suppressed, instead of analyzing the files in the path.'
+    required: false
+  fix:
+    description: 'Fixes certain warnings which contain a fix in their DiagnosticRecord.'
+    required: false
+  enableExit:
+    description: 'Exits PowerShell and returns an exit code equal to the number of error records.'
+    required: false
+  settings:
+    description: 'File path that contains user profile or hash table for ScriptAnalyzer.'
+    required: false
+  output:
+    description: 'Specifies where the path for the sarif file'
+    required: true
+    default: 'results.sarif'
+  ignorePattern:
+    description: 'Exclude specific files from the sarif results. Uses regex pattern.'
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Run PSScriptAnalyzer and ConvertToSARIF
+      shell: pwsh
+      run: |
+        $analyzerModule = Get-Module -ListAvailable -Name PSScriptAnalyzer
+        if ($null -eq $analyzerModule) {
+          Install-Module -Name PSScriptAnalyzer -Force
+        }
+
+        $sarifModule = Get-Module -ListAvailable -Name ConvertToSARIF
+        if ($null -eq $sarifModule) {
+          Install-Module -Name ConvertToSARIF -Force
+        }
+        Import-Module -Name ConvertToSARIF -Force
+
+        $htPSA = [ordered]@{ Path = '${{ inputs.path }}'; }
+        Write-Output "Modules installed, now running tests."
+        if(![string]::IsNullOrEmpty('${{ inputs.customRulePath }}')) { $htPSA.add('CustomRulePath', @(${{ inputs.customRulePath }})) }
+        if(![string]::IsNullOrEmpty('${{ inputs.recurseCustomRulePath }}')) { $htPSA.add('RecurseCustomRulePath', $true) }
+        if(![string]::IsNullOrEmpty('${{ inputs.excludeRule }}')) { $htPSA.add('ExcludeRule', @(${{ inputs.excludeRule }})) }
+        if(![string]::IsNullOrEmpty('${{ inputs.includeDefaultRules }}') -and '${{ inputs.includeDefaultRules }}' -ne 'false') { $htPSA.add('IncludeDefaultRules', $true) }
+        if(![string]::IsNullOrEmpty('${{ inputs.includeRule }}')) { $htPSA.add('IncludeRule', @(${{ inputs.includeRule }})) }
+        if(![string]::IsNullOrEmpty('${{ inputs.severity }}')) { $htPSA.add('Severity', @(${{ inputs.severity }})) }
+        if(![string]::IsNullOrEmpty('${{ inputs.recurse }}') -and '${{ inputs.includeDefaultRules }}' -ne 'false') { $htPSA.add('Recurse', $true) }
+        if(![string]::IsNullOrEmpty('${{ inputs.suppressedOnly }}')) { $htPSA.add('SuppressedOnly', $true) }
+        if(![string]::IsNullOrEmpty('${{ inputs.fix }}')) { $htPSA.add('Fix', $true) }
+        if(![string]::IsNullOrEmpty('${{ inputs.enableExit }}')) { $htPSA.add('EnableExit', $true) }
+        if(![string]::IsNullOrEmpty('${{ inputs.settings }}')) { $htPSA.add('Settings', '${{ inputs.settings }}') }
+        $htCTS = [ordered]@{ FilePath = '${{ inputs.output }}'; }
+        if(![string]::IsNullOrEmpty('${{ inputs.ignorePattern }}')) { $htCTS.add('IgnorePattern', '${{ inputs.ignorePattern }}') }
+        Invoke-ScriptAnalyzer @htPSA | ConvertTo-SARIF @htCTS
