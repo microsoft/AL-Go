@@ -14,6 +14,7 @@ none
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | project | | Project name if the repository is setup for multiple projects | . |
+| buildMode | | Build mode. Only set when called from \_BuildALGoProject | Default |
 | get | | Specifies which properties to get from the settings file, default is all | |
 
 ## OUTPUT

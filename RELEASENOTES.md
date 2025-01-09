@@ -1,10 +1,27 @@
+### Deprecations
+
+- `cleanModePreProcessorSymbols` will be removed after April 1st 2025. Use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) instead, specifying buildModes and the `preProcessorSymbols` setting. Read [this](./DEPRECATIONS.md) for more information.
+
 ### Issues
 
 - It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
 
+### New Repository Settings
+
+- [`shortLivedArtifactsRetentionDays`](https://aka.ms/algosettings#shortLivedArtifactsRetentionDays) determines the number of days to keep short lived build artifacts (f.ex build artifacts from pull request builds, next minor or next major builds). 1 is default. 0 means use GitHub default.
+- [`preProcessorSymbols`](https://aka.ms/algosettings#preProcessorSymbols) is a list of preprocessor symbols to use when building the apps. This setting can be specified in [workflow specific settings files](https://aka.ms/algosettings#where-are-the-settings-located) or in [conditional settings](https://aka.ms/algosettings#conditional-settings).
+
 ### New Versioning Strategy
 
 Setting versioning strategy to 3 will allow 3 segments of the version number to be defined in app.json and repoVersion. Only the 4th segment (Revision) will be defined by the GitHub [run_number](https://go.microsoft.com/fwlink/?linkid=2217416&clcid=0x409) for the CI/CD workflow. Increment version number and Create Release now also supports the ability to set a third segment to the RepoVersion and appversion in app.json.
+
+### Change in published artifacts
+
+When using `useProjectDependencies` in a multi-project repository, AL-Go for GitHub used to generate short lived build artifacts called `thisBuild-<projectnaame>-<type>-...`. This is no longer the case. Instead, normal build artifacts will be published and used by depending projects. The retention period for the short lived artifacts generated are controlled by a settings called [`shortLivedArtifactsRetentionDays`](https://aka.ms/algosettings#shortLivedArtifactsRetentionDays).
+
+### Preprocessor symbols
+
+It is now possible to define preprocessor symbols, which will be used when building your apps using the [`preProcessorSymbols`](https://aka.ms/algosettings#preProcessorSymbols) setting. This setting can be specified in workflow specific settings file or it can be used in conditional settings.
 
 ## v6.2
 
