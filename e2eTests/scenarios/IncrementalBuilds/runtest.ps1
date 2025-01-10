@@ -197,7 +197,7 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 Pull
 $run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 
-# Check artifacts generated - app3 should have a new version number, all other apps should come from previous build
+# Check artifacts generated - app4 should have a new version number, all other apps should come from previous build
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
     "P2-main-*.app" = ($x*3)
