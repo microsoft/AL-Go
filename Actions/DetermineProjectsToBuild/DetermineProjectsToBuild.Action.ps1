@@ -66,7 +66,7 @@ catch {
 }
 Write-Host "::endgroup::"
 
-Write-Host "::group::Determine Partial Build"
+Write-Host "::group::Determine Incremental Build"
 $buildAllProjects = $buildAllProjects -or (Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
 Write-Host "::endgroup::"
 

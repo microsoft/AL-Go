@@ -34,7 +34,7 @@ outputs:
     description: The ID of the workflow run containing last known good build, if we are doing incremental builds
     value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
   BaselineWorkflowSHA:
-    description: The SHA of the last known good build, if we are doing partial builds
+    description: The SHA of the last known good build, if we are doing incremental builds
     value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowSHA }}
 runs:
   using: composite

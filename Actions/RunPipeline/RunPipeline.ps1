@@ -127,7 +127,7 @@ try {
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.enable -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
-        # Partial builds are enabled and we are only building modified apps
+        # Incremental builds are enabled and we are only building modified apps
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"
         git fetch origin $baselineWorkflowSHA | Out-Host
@@ -169,7 +169,7 @@ try {
                 $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
             }
             else {
-                throw "Unknown partial build mode $($settings.incrementalBuilds.mode)"
+                throw "Unknown incremental build mode $($settings.incrementalBuilds.mode)"
             }
             if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
             # Download missing apps - or add then to build folders if the artifact doesn't exist
