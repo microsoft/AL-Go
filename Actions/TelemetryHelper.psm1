@@ -249,17 +249,22 @@ function Add-TelemetryProperty() {
     .PARAMETER Message
     The message to log to telemetry
 
+    .PARAMETER DeprecationTag
+    The tag to use to link to the deprecation documentation
+
     .EXAMPLE
-    Trace-DeprecationWarning -Message "This setting is deprecated. Use the new setting instead."
+    Trace-DeprecationWarning -Message "This setting is deprecated. Use the new setting instead." -DeprecationTag 'SettingName'
 #>
 function Trace-DeprecationWarning {
     param(
         [Parameter(Mandatory = $true)]
-        [String] $Message
+        [String] $Message,
+        [Parameter(Mandatory = $true)]
+        [String] $DeprecationTag
     )
 
     # Show deprecation warning in GitHub
-    OutputWarning -message $Message
+    OutputWarning -message "$Message. This warning will become an error in future versions. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
 
     # Log deprecation warning to telemetry
     Trace-Warning -Message "Deprecation Warning: $Message"
