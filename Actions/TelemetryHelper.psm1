@@ -140,6 +140,33 @@ function Trace-Information() {
 
 <#
     .SYNOPSIS
+    Logs a warning message to telemetry
+
+    .DESCRIPTION
+    Logs a warning message to telemetry
+
+    .PARAMETER Message
+    The message to log to telemetry
+
+    .PARAMETER Data
+    Additional data to log to telemetry
+
+    .EXAMPLE
+    Trace-Warning -Message "AL-Go warning: This is a warning message"
+#>
+function Trace-Warning() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [String] $Message,
+        [Parameter(Mandatory = $false)]
+        [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $Data = @{}
+    )
+
+    AddTelemetryEvent -Message $Message -Severity 'Warning' -Data $Data
+}
+
+<#
+    .SYNOPSIS
     Logs an exception message to telemetry
 
     .DESCRIPTION
@@ -212,4 +239,4 @@ function Add-TelemetryProperty() {
     }
 }
 
-Export-ModuleMember -Function Trace-Information, Trace-Exception, Add-TelemetryProperty
+Export-ModuleMember -Function Trace-Information, Trace-Warning, Trace-Exception, Add-TelemetryProperty

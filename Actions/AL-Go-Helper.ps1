@@ -196,7 +196,7 @@ function OutputDeprecationWarning {
     $telemetryModule = Join-Path $PSScriptRoot 'TelemetryHelper.psm1'
     if (Test-Path $telemetryModule) {
         Import-Module $telemetryModule
-        Trace-Information -Message "Deprecation warning: $message"
+        Trace-Warning -Message "Deprecation Warning: $message"
     }
 }
 
