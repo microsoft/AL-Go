@@ -185,21 +185,6 @@ function OutputWarning {
     }
 }
 
-function OutputDeprecationWarning {
-    Param(
-        [string] $message
-    )
-    # Show deprecation warning in GitHub
-    OutputWarning -message $message
-
-    # Log deprecation warning to telemetry
-    $telemetryModule = Join-Path $PSScriptRoot 'TelemetryHelper.psm1'
-    if (Test-Path $telemetryModule) {
-        Import-Module $telemetryModule
-        Trace-Warning -Message "Deprecation Warning: $message"
-    }
-}
-
 function OutputNotice {
     Param(
         [string] $message

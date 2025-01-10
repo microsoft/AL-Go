@@ -384,7 +384,7 @@ try {
     if ($buildMode -eq 'Clean' -and $settings.ContainsKey('cleanModePreprocessorSymbols')) {
         Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
         $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
-        OutputDeprecationWarning -message "cleanModePreprocessorSymbols is deprecated. See https://aka.ms/ALGoDeprecations#cleanModePreprocessorSymbols for more information."
+        Trace-DeprecationWarning -message "cleanModePreprocessorSymbols is deprecated. See https://aka.ms/ALGoDeprecations#cleanModePreprocessorSymbols for more information."
     }
     # <--- REMOVE AFTER April 1st 2025
 

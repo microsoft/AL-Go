@@ -239,4 +239,30 @@ function Add-TelemetryProperty() {
     }
 }
 
-Export-ModuleMember -Function Trace-Information, Trace-Warning, Trace-Exception, Add-TelemetryProperty
+<#
+    .SYNOPSIS
+    Writes a deprecation warning to telemetry and as a warning in the GitHub action
+
+    .DESCRIPTION
+    Writes a deprecation warning to telemetry and as a warning in the GitHub action
+
+    .PARAMETER Message
+    The message to log to telemetry
+
+    .EXAMPLE
+    Trace-DeprecationWarning -Message "This setting is deprecated. Use the new setting instead."
+#>
+function Trace-DeprecationWarning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [String] $Message
+    )
+
+    # Show deprecation warning in GitHub
+    OutputWarning -message $Message
+
+    # Log deprecation warning to telemetry
+    Trace-Warning -Message "Deprecation Warning: $Message"
+}
+
+Export-ModuleMember -Function Trace-Information, Trace-Warning, Trace-Exception, Add-TelemetryProperty, Trace-DeprecationWarning
