@@ -1,15 +1,12 @@
 # Read Power Platform Settings
 
-Description
+Run the PSScriptAnalyzer tool
 
 ## INPUT
 
 ### ENV variables
 
-| Name | Description |
-| :-- | :-- |
-| Name1 | Desc1 |
-| Name2 | Desc2 |
+none
 
 ### Parameters
 
@@ -28,6 +25,4 @@ none
 
 ### OUTPUT variables
 
-| Name | Description |
-| :-- | :-- |
-| name | desc |
+none
