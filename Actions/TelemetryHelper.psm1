@@ -148,7 +148,7 @@ function Trace-Information() {
     .PARAMETER Message
     The message to log to telemetry
 
-    .PARAMETER Data
+    .PARAMETER AdditionalData
     Additional data to log to telemetry
 
     .EXAMPLE
@@ -159,10 +159,10 @@ function Trace-Warning() {
         [Parameter(Mandatory = $true)]
         [String] $Message,
         [Parameter(Mandatory = $false)]
-        [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $Data = @{}
+        [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     )
 
-    AddTelemetryEvent -Message $Message -Severity 'Warning' -Data $Data
+    AddTelemetryEvent -Message $Message -Severity 'Warning' -Data $AdditionalData
 }
 
 <#
