@@ -97,6 +97,7 @@ function Copy-HashTable() {
     }
 }
 
+# Convert SecureString to plain text
 function Get-PlainText {
     Param(
         [parameter(ValueFromPipeline, Mandatory = $true)]
