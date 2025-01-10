@@ -297,8 +297,6 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P2-main-Apps-*_1.0.16.0.app" = ($x*3)
 }
 
-Read-Host "Press Enter to cleanup repositories"
-
 # Cleanup repositories
 Set-Location $prevLocation
 RemoveRepository -repository $repository -path $repoPath
