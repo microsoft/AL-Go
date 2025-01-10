@@ -38,6 +38,6 @@ runs:
         $htPSA = [ordered]@{ Path = '${{ inputs.path }}'; }
         Write-Output "Modules installed, now running tests."
         if(![string]::IsNullOrEmpty('${{ inputs.excludeRule }}')) { $htPSA.add('ExcludeRule', @(${{ inputs.excludeRule }})) }
-        if(![string]::IsNullOrEmpty('${{ inputs.recurse }}') -and '${{ inputs.includeDefaultRules }}' -ne 'false') { $htPSA.add('Recurse', $true) }
+        if(![string]::IsNullOrEmpty('${{ inputs.recurse }}')) { $htPSA.add('Recurse', $true) }
         $htCTS = [ordered]@{ FilePath = '${{ inputs.output }}'; }
         Invoke-ScriptAnalyzer @htPSA -Verbose | ConvertTo-SARIF @htCTS
