@@ -264,7 +264,7 @@ function Trace-DeprecationWarning {
     )
 
     # Show deprecation warning in GitHub
-    OutputWarning -message "$Message. This warning will become an error in future versions. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
+    OutputWarning -message "$Message. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
 
     # Log deprecation warning to telemetry
     Trace-Warning -Message "Deprecation Warning: $Message"
