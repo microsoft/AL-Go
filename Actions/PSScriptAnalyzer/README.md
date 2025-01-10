@@ -10,7 +10,7 @@ none
 
 ### Parameters
 
-| Name | Required | Description | .\ |
+| Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | path | Yes  | Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported. | powershell |
 | excludeRule | No | Omits the specified rules from the Script Analyzer test. Wildcard characters are supported. | |
