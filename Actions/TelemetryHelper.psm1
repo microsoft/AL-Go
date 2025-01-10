@@ -53,7 +53,7 @@ function AddTelemetryEvent()
         [Parameter(Mandatory = $false)]
         [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $Data = @{},
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Information", "Error")]
+        [ValidateSet("Information", "Warning", "Error")]
         [String] $Severity = 'Information'
     )
 
