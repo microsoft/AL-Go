@@ -126,7 +126,7 @@ try {
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
-    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.enable -and $settings.incrementalBuilds.mode -ne 'modifiedProjects') {
+    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.enable -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Partial builds are enabled and we are only building modified apps
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"

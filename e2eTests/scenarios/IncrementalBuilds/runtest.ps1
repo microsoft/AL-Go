@@ -248,6 +248,13 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 # Set incremental builds mode to modifiedProjects
 Pull
 $null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $true; "mode" = "modifiedProjects" } } -commit -wait
+# Check that all apps are rebuilt with a new version number
+Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
+    "P1-main-*.app" = 4
+    "P2-main-*.app" = ($x*3)
+    "P1-main-Apps-*_1.0.11.0.app" = 4
+    "P2-main-Apps-*_1.0.11.0.app" = ($x*3)
+}
 
 # Modify app2 in a commit and wait for CI/CD workflow to finish
 $run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -message "mode=modifiedProjects" -commit -wait
