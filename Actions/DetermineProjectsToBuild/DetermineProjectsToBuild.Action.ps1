@@ -36,10 +36,10 @@ elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch') {
 else {
     # Push
     $buildAllProjects = !$settings.incrementalBuilds.enable
-
     $branch = $env:GITHUB_REF_NAME
     Write-Host "Push on $branch"
 }
+
 Write-Host "::group::Determine Baseline Workflow ID"
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
@@ -69,7 +69,6 @@ Write-Host "::endgroup::"
 Write-Host "::group::Determine Incremental Build"
 $buildAllProjects = $buildAllProjects -or (Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
 Write-Host "::endgroup::"
-
 
 Write-Host "::group::Get Projects To Build"
 $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
