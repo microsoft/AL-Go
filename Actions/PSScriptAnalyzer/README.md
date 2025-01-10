@@ -1,5 +1,4 @@
-# Read Power Platform Settings
-
+# PowerShell Script Analyzer
 Run the PSScriptAnalyzer tool
 
 ## INPUT
