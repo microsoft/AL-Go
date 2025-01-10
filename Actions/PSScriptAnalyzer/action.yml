@@ -4,7 +4,7 @@ branding:
   icon: "check"
   color: "gray-dark"
 inputs:
-  path: 
+  path:
     description: 'Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported.'
     required: true
     default: '.\'
