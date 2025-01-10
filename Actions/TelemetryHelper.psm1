@@ -252,6 +252,9 @@ function Add-TelemetryProperty() {
     .PARAMETER DeprecationTag
     The tag to use to link to the deprecation documentation
 
+    .PARAMETER AdditionalData
+    Additional data to log to telemetry
+
     .EXAMPLE
     Trace-DeprecationWarning -Message "This setting is deprecated. Use the new setting instead." -DeprecationTag 'SettingName'
 #>
@@ -260,14 +263,17 @@ function Trace-DeprecationWarning {
         [Parameter(Mandatory = $true)]
         [String] $Message,
         [Parameter(Mandatory = $true)]
-        [String] $DeprecationTag
+        [String] $DeprecationTag,
+        [Parameter(Mandatory = $false)]
+        [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     )
 
     # Show deprecation warning in GitHub
     OutputWarning -message "$Message. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
 
     # Log deprecation warning to telemetry
-    Trace-Warning -Message "Deprecation Warning: $Message"
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'DeprecationTag' -Value $DeprecationTag
+    Trace-Warning -Message "Deprecation Warning: $Message" -AdditionalData $AdditionalData
 }
 
 Export-ModuleMember -Function Trace-Information, Trace-Warning, Trace-Exception, Add-TelemetryProperty, Trace-DeprecationWarning
