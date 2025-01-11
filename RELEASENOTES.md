@@ -6,10 +6,12 @@
 
 - It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
 
-### New Settings
+### New Repository Settings
 
 - [`shortLivedArtifactsRetentionDays`](https://aka.ms/algosettings#shortLivedArtifactsRetentionDays) determines the number of days to keep short lived build artifacts (f.ex build artifacts from pull request builds, next minor or next major builds). 1 is default. 0 means use GitHub default.
+
 - [`preProcessorSymbols`](https://aka.ms/algosettings#preProcessorSymbols) is a list of preprocessor symbols to use when building the apps. This setting can be specified in [workflow specific settings files](https://aka.ms/algosettings#where-are-the-settings-located) or in [conditional settings](https://aka.ms/algosettings#conditional-settings).
+
 - `customALGoSystemFiles` is an array of JSON objects, which holds information about custom AL-Go System Files, which will be applied during Update AL-Go System Files. Every object can hold these 4 properties:
 
   - **Destination** (mandatory) - Path in which the file should be placed (Can include the filename if the source doesn't point to a .zip file)
