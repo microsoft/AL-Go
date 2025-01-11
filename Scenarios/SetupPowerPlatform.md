@@ -38,7 +38,7 @@ New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext -ppUsername $ppUserN
 
 The AL-Go repository settings are used to define what resources you have in your repository and which GitHub environment you want to deploy to.
 
-The settings are located at:  `.github/AL-Go-Settings.json`
+The settings are located at: `.github/AL-Go-Settings.json`
 
 **Example of the AL-Go settings format:**
 

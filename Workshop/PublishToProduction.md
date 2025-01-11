@@ -7,7 +7,7 @@ If you follow the same process and setup an environment called PROD and add the 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/1008fcf4-ed2a-4cc1-a786-3b5cf6692266) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > You can add protection rules to environments in GitHub, like which branches can deploy to this environment and which users should review every deployment to this environment as well.
 
 By default, all environments will be picked up for **continuous deployment**, but production environments will be skipped unless you add the ContinuousDeployment setting from the previous chapter. The Deployment job will succeed, but looking into the step, you will see that the PROD environment is ignored:
@@ -35,7 +35,7 @@ Menually publishing to environments is done by running the **Publish To Environm
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/57f8441b-d414-4225-9cf4-dc2f7ce185a0) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > The default version is **current**. This will deploy the **current release**, which is the release tagged with *Latest* in your repository.
 >
 > ![image](https://github.com/microsoft/AL-Go/assets/10775043/5c653d70-106e-4d0a-9684-ae91275abb77)

@@ -381,27 +381,29 @@ try {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
-    switch($buildMode){
-        'Clean' {
-            $preprocessorsymbols = $settings.cleanModePreprocessorSymbols
-
-            if (!$preprocessorsymbols) {
-                throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
-            }
-
-            if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
-                $runAlPipelineParams["preprocessorsymbols"] = @()
-            }
-
-            Write-Host "Adding Preprocessor symbols: $preprocessorsymbols"
-            $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
+    if ($buildMode -eq 'Translated') {
+        if ($runAlPipelineParams.Keys -notcontains 'features') {
+            $runAlPipelineParams["features"] = @()
         }
-        'Translated' {
-            if ($runAlPipelineParams.Keys -notcontains 'features') {
-                $runAlPipelineParams["features"] = @()
-            }
-            $runAlPipelineParams["features"] += "translationfile"
-        }
+        Write-Host "Adding translationfile feature"
+        $runAlPipelineParams["features"] += "translationfile"
+    }
+
+    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
+        $runAlPipelineParams["preprocessorsymbols"] = @()
+    }
+
+    # REMOVE AFTER April 1st 2025 --->
+    if ($buildMode -eq 'Clean' -and $settings.ContainsKey('cleanModePreprocessorSymbols')) {
+        Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
+        $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
+        Write-Warning -message "cleanModePreprocessorSymbols is deprecated. See https://aka.ms/ALGoDeprecations#cleanModePreprocessorSymbols for more information."
+    }
+    # <--- REMOVE AFTER April 1st 2025
+
+    if ($settings.ContainsKey('preprocessorSymbols')) {
+        Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
+        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"

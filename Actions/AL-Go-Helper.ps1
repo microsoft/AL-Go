@@ -528,6 +528,7 @@ function ReadSettings {
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
         [string] $repoName = "$ENV:GITHUB_REPOSITORY",
         [string] $project = '.',
+        [string] $buildMode = "Default",
         [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
         [string] $userName = "$ENV:GITHUB_ACTOR",
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
@@ -693,6 +694,7 @@ function ReadSettings {
         }
         "useGitSubmodules"                              = "false"
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
+        "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
     }
 
     # Read settings from files and merge them into the settings object
@@ -737,6 +739,10 @@ function ReadSettings {
                     if ("$conditionalSetting" -ne "") {
                         $conditionMet = $true
                         $conditions = @()
+                        if ($conditionalSetting.PSObject.Properties.Name -eq "buildModes") {
+                            $conditionMet = $conditionMet -and ($conditionalSetting.buildModes | Where-Object { $buildMode -like $_ })
+                            $conditions += @("buildMode: $buildMode")
+                        }
                         if ($conditionalSetting.PSObject.Properties.Name -eq "branches") {
                             $conditionMet = $conditionMet -and ($conditionalSetting.branches | Where-Object { $branchName -like $_ })
                             $conditions += @("branchName: $branchName")
