@@ -14,7 +14,7 @@ Microsoft will continuously develop and maintain AL-Go for GitHub and ensure tha
 
 Keeping your repositories up-to-date can be done manually or on a schedule (like Windows update really). You will be notified when an update is available and we recommend that you keep your repositories up-to-date at all time. If you make modifications to the AL-Go System Files (scripts and workflows) in your repository, in other ways than described in this document, these changes will be removed with the next AL-Go update.
 
-> \[!TIP\]
+> [!TIP]
 > If for some reason the updated version of AL-Go for GitHub doesn't work for you, we recommend that you file an issue [here](https://github.com/microsoft/AL-Go/issues) with a detailed description of the problem and full logs of the failing workflows. You can then revert back to the prior version of AL-Go for GitHub until the issue is resolved.
 >
 > It is important to get back to the mainstream version of AL-Go for GitHub as soon as the issue is resolved.
@@ -25,7 +25,7 @@ There are three ways you can customize AL-Go for GitHub to fit your needs. You c
 1. create a customized repository and use this as your template repository (indirect template)
 1. fork the AL-Go for GitHub and create your "own" version (not recommended)
 
-> \[!CAUTION\]
+> [!CAUTION]
 > The more you customize AL-Go for GitHub, the more likely you are to be broken by future updates to AL-Go for GitHub, meaning that you will have to update your customizations to match the changes in AL-Go for GitHub.
 
 ## Customizing your repository
@@ -120,7 +120,7 @@ jobs:
 
 It is recommended to prefix your workflows with `my`, `our`, your name or your organization name in order to avoid that the workflow suddenly gets overridden by a new workflow in AL-Go for GitHub. The above workflow is a real example from [here](https://github.com/microsoft/BCApps/blob/main/.github/workflows/CreateBuildTag.yaml).
 
-> \[!CAUTION\]
+> [!CAUTION]
 > This workflow gets triggered when the CI/CD workflow has completed. Note that the name of the CI/CD workflow currently is prefixed with a space, this space will very likely be removed in the future, which is why we specify both names in this example. Obviously this workflow would break if we decide to rename the CI/CD workflow to something different.
 
 ### Adding custom scripts
@@ -138,7 +138,7 @@ $script = Join-Path $PSScriptRoot "../../../scripts/NewBcContainer.ps1" -Resolve
 
 Which basically launches a script located in the script folder in the repository for creating the build container needed for building and testing the System Application.
 
-> \[!CAUTION\]
+> [!CAUTION]
 > Script overrides will almost certainly be broken in the future. The current script overrides is very much tied to the current implementation of the `Run-AlPipeline` function in BcContainerHelper. In the future, we will move this functionality to GitHub actions and no longer depend on BcContainerHelper and Run-AlPipeline. At that time, these script overrides will have to be changed to follow the new implementation.
 
 <a id="customALGoSystemFiles"></a>
@@ -171,16 +171,16 @@ By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings
 | Property | Description | Mandatory | Default |
 | :-- | :-- | :-: | :-- |
 | Destination | Path in which the file should be placed. Can include the filename if the source doesn't point to a .zip file, must include a terminating / or \\ if a filename is not included. | Yes | |
-| Source | URL to a either a single file or a .zip file containing custom AL-Go System Files. Must be https.  | Yes | |
-| FileSpec | If the source URL points to a .zip file, this property can specify which files to include. The FileSpec can include a subfolder inside the .zip file, and must include a file name pattern.  | No | * |
+| Source | URL to a either a single file or a .zip file containing custom AL-Go System Files. Must be https. | Yes | |
+| FileSpec | If the source URL points to a .zip file, this property can specify which files to include. The FileSpec can include a subfolder inside the .zip file, and must include a file name pattern. | No | * |
 | Recurse | Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec) | No | true |
 
 This setting will cause AL-Go for GitHub to include these files during the next update.
 
-> \[!WARNING\]
+> [!WARNING]
 > You can override existing AL-Go for GitHub system files this way, please prefix files in your repository with `my` or your organization name (except for DeployTo and DeliverTo) in order to avoid overriding future workflows from AL-Go for GitHub.
 
-> \[!NOTE\]
+> [!NOTE]
 > If the destination is in the .AL-Go folder, the file(s) will be copied to all .AL-Go folders in multi-project repositories.
 
 ### Adding custom jobs
@@ -208,10 +208,10 @@ You can also add custom jobs to any of the existing AL-Go for GitHub workflows. 
 
 Adding a custom job like this, will cause this job to run simultaneously with the deploy and the deliver jobs.
 
-> \[!NOTE\]
+> [!NOTE]
 > All custom jobs will be moved to the tail of the yaml file when running Update AL-Go System Files, but dependencies to/from the custom jobs will be maintained.
 
-> \[!CAUTION\]
+> [!CAUTION]
 > Custom jobs might be broken if the customized AL-Go for GitHub workflow has been refactored and the referenced jobs have been renamed.
 
 ### Adding custom steps
@@ -239,10 +239,10 @@ The custom step needs to be named `CustomStep<something>` and if inserted in any
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$($settings.artifact)"
 ```
 
-> \[!TIP\]
+> [!TIP]
 > Create a feature request [here](https://github.com/microsoft/AL-Go/issues/new?assignees=&labels=enhancement&projects=&template=enhancement.yaml&title=%5BEnhancement%5D%3A+) with a description on where you would like additional anchor-points and what you want to use it for.
 
-> \[!CAUTION\]
+> [!CAUTION]
 > Please be aware that changes to AL-Go for GitHub might break with future versions of AL-Go for GitHub. We will of course try to keep these breaking changes to a minimum, but the only way you can be sure to NOT be broken is by NOT customizing AL-Go for GitHub.
 
 ### Modifying workflow permissions
@@ -255,45 +255,45 @@ If any of your custom steps require permissions, which exceeds the permissions a
 
 If you have have customizations you want to apply to multiple repositories, you might want to consider using an indirect template. An indirect template is really just an AL-Go repository (which can be customized), which you use as a template repository for your repositories. This way, you can control your scripts, jobs or steps in a central location, potentially for specific purposes.
 
-> \[!NOTE\]
+> [!NOTE]
 > Indirect templates can be public or private. If you are using a private indirect template, AL-Go for GitHub will use the GhTokenWorkflow secret for downloading the template during Update AL-Go System Files and check for updates.
 
 Repository and project settings from the indirect template will also be applied to the new repository during update AL-Go System Files, unless the setting already exists in the repository being updated. **UnusedALGoSystemFiles** and **CustomALGoSystemFiles** will NOT be copied from the indirect template, they will be applied during Update AL-Go System Files.
 
-> \[!TIP\]
+> [!TIP]
 > The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a **GhTokenWorkflow** secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.
 
-> \[!NOTE\]
+> [!NOTE]
 > If you use the indirect template as a GitHub template for creating the repository, by clicking use this template in your indirect template - then you need to re-specify the indirect Template the first time you run Update `AL-Go System Files` as the repository will be a copy of the template repository and by default point to the template repository of the indirect template as it's template repository.
 
 Repositories based on your indirect template will notify you that changes are available for your AL-Go System Files when you update the indirect template only. You will not be notified when new versions of AL-Go for GitHub is released in every repository - only in the indirect template repository.
 
-> \[!WARNING\]
+> [!WARNING]
 > You should ensure that your indirect template repository is kept up-to-date with the latest changes in AL-Go for GitHub.
 
-> \[!TIP\]
+> [!TIP]
 > You can setup the Update AL-Go System Files workflow to run on a schedule to uptake new releases of AL-Go for GitHub regularly.
 
 ## Forking AL-Go for GitHub and making your "own" **public** version
 
 Using a fork of AL-Go for GitHub to have your "own" public version of AL-Go for GitHub gives you the maximum customization capabilities. It does however also come with the most work.
 
-> \[!NOTE\]
+> [!NOTE]
 > When customizing AL-Go for GitHub using a fork, your customizations are public and will be visible to everyone. For more information, [read this](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-permissions-and-visibility-of-forks).
 
 There are two ways of forking AL-Go for GitHub. You can fork the main [AL-Go for GitHub](https://github.com/microsoft/AL-Go) repository or you can fork the template repositories [AL-Go PTE](https://github.com/microsoft/AL-Go-PTE) and/or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource).
 
 For simple changes to the templates, you can fork the template repositories and make the changes directly in your fork. Note that we do not accept any pull requests to the template repositories as they are deployed from the main AL-Go repository. We do not actually develop anything in the template repositories ourself. In the template repositories you will find a branch for every version of AL-Go we have shipped. The main branch is the latest version and the preview branch is the next version. You can customize the preview branch and/or the main branch and then use your fork as the template repository when running Update AL-Go System Files from your app repositories.
 
-> \[!NOTE\]
+> [!NOTE]
 > We do NOT accept pull requests to the template repositories. You need to follow the guidelines [here](Contribute.md) in order to contribute to AL-Go development.
 
-> \[!TIP\]
+> [!TIP]
 > When forking the template repositories, you should include all branches in order to be able to use either the latest version of AL-Go or the preview version of AL-Go.
 
 When forking the main [AL-Go for GitHub](https://github.com/microsoft/AL-Go) repository, you are basically developing AL-Go in the same way as we are doing in Microsoft. Please follow the guidelines [here](Contribute.md) on how to develop. This gives you maximum customization capabilities, but if your changes are not being contributed to AL-Go, then you will have to merge our changes all the time.
 
-> \[!CAUTION\]
+> [!CAUTION]
 > We strongly suggest that you keep your changes to a minimum and that you keep your fork up-to-date with the latest changes of AL-Go for GitHub at all time.
 
 ______________________________________________________________________
