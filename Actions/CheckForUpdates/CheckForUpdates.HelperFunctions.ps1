@@ -50,10 +50,13 @@ function GetLatestTemplateSha {
     $branch = $templateUrl.Split('@')[1]
 
     try {
+        Write-Host "Get latest SHA for $templateUrl"
         $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
     } catch {
-        if ($_.Exception.Message -like "*401*") {
+        Write-Host "Exception: $($_.Exception.Message)"
+        if ($_.Exception.Message -like "*Unauthorized*") {
             try {
+                Write-Host "retry without Authorization header"
                 $headers.Remove('Authorization')
                 $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
             }
