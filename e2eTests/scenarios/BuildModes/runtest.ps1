@@ -64,6 +64,7 @@ Start-Process $repoPath
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Test number of artifacts
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"CleanApps"=1;"TranslatedApps"=1;"CustomBuildModeApps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation

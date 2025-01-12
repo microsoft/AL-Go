@@ -95,6 +95,7 @@ $repoPath = (Get-Location).Path
     # P2 has 3 apps: app1,app2,app3
     # P3 has 3 apps: app1,app2,app4
     # P4 has 5 apps: app1,app2,app3,app4,app5
+    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
     Test-ArtifactsFromRun -runid $run.id -folder "artifacts$_" -expectedArtifacts @{"Apps"=(5+2+3+3+5);"thisbuild"=0} -repoVersion '1.0' -appVersion '1.0'
 
     WaitWorkflow -runid $runTestCurrent.id -noDelay

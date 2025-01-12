@@ -81,9 +81,11 @@ Start-Process $repoPath
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Test number of artifacts
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 # Check that no previous release was found
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText 'No previous release found'
 
 # Release version 1.0
@@ -92,15 +94,18 @@ $ver1 = 'v1.0'
 $releaseBranch1 = "release/1.0"
 $release1 = RunCreateRelease -repository $repository -branch $branch -appVersion 'latest' -name $ver1 -tag $tag1 -createReleaseBranch -updateVersionNumber '+1' -directCommit -wait
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $release1.id -jobName 'CreateRelease' -stepName 'Prepare release notes' -expectedText "releaseNotes=**Full Changelog**: https://github.com/$repository/commits/$tag1"
 
 # Run CI/CD workflow
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Test number of artifacts
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '2.0' -appVersion '2.0'
 
 # Check that $tag1 was used as previous release
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver1 (tag $tag1) as previous release"
 
 # Release version 2.0
@@ -109,6 +114,7 @@ $ver2 = 'v2.0'
 $releaseBranch2 = "release/2.0"
 $release2 = RunCreateRelease -repository $repository -branch $branch -appVersion 'latest' -name $ver2 -tag $tag2 -createReleaseBranch -updateVersionNumber '+0.1' -directCommit -wait
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $release2.id -jobName 'CreateRelease' -stepName 'Prepare release notes' -expectedText "releaseNotes=**Full Changelog**: https://github.com/$repository/compare/$tag1...$tag2"
 
 # Run CI/CD workflow
@@ -125,8 +131,10 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -r
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '2.1' -appVersion '2.1'
 
 # Check that $tag2 was used as previous release
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver2 (tag $tag2) as previous release"
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $runRelease1.id -folder 'artifacts1' -expectedArtifacts @{"Apps"=1} -repoVersion '1.0' -appVersion '1.0'
 $noOfReleaseArtifacts = @(get-childitem -path 'artifacts1' -filter '*-release_1.0-Apps-1.0.*').count
 if ($noOfReleaseArtifacts -ne 1) {
@@ -134,8 +142,10 @@ if ($noOfReleaseArtifacts -ne 1) {
 }
 
 # Check that $tag1 was used as previous release for builds in release branch 1.0
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver1 (tag $tag1) as previous release"
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $runRelease2.id -folder 'artifacts2' -expectedArtifacts @{"Apps"=1} -repoVersion '2.0' -appVersion '2.0'
 $noOfReleaseArtifacts = @(get-childitem -path 'artifacts2' -filter '*-release_2.0-Apps-2.0.*').count
 if ($noOfReleaseArtifacts -ne 1) {
@@ -143,6 +153,7 @@ if ($noOfReleaseArtifacts -ne 1) {
 }
 
 # Check that $tag2 was used as previous release for builds in release branch 2.0
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $runRelease2.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver2 (tag $tag2) as previous release"
 
 # Release hotfix from version 1.0
@@ -150,6 +161,7 @@ $hotTag1 = "1.0.$($runRelease1.run_number)"
 $hotVer1 = "v$hotTag1"
 $release1 = RunCreateRelease -repository $repository -branch $releaseBranch1 -appVersion "$hotTag1.0" -name $hotVer1 -tag $hotTag1 -directCommit -wait
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $release1.id -jobName 'CreateRelease' -stepName 'Prepare release notes' -expectedText "releaseNotes=**Full Changelog**: https://github.com/$repository/compare/$tag1...$hotTag1"
 
 # Release hotfix from version 2.0
@@ -157,6 +169,7 @@ $hotTag2 = "2.0.$($runRelease2.run_number)"
 $hotVer2 = "v$hotTag2"
 $release2 = RunCreateRelease -repository $repository -branch $releaseBranch2 -appVersion "$hotTag2.0" -name $hotVer2 -tag $hotTag2 -directCommit -wait
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -runid $release2.id -jobName 'CreateRelease' -stepName 'Prepare release notes' -expectedText "releaseNotes=**Full Changelog**: https://github.com/$repository/compare/$tag2...$hotTag2"
 
 # Run CI/CD workflow in release branch 1.0

@@ -117,6 +117,7 @@ foreach($sourceRepo in $repositories) {
     WaitWorkflow -repository $repository -runid $run.id
 
     # Test artifacts generated
+    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
     Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '*.*' -appVersion '*.*'
 
     # Test PowerPlatform solution artifact

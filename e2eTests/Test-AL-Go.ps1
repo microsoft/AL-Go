@@ -144,6 +144,7 @@ if ($useCompilerFolder) {
 else {
     $expectedNumberOfTests = 1
 }
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
@@ -202,6 +203,7 @@ $runs++
 # Merge and run CI/CD + Tests
 $run = MergePRandPull -branch $branch -wait
 $runs++
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 if ($multiProject) {
     Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts2' -repoVersion '2.1' -appVersion ''
 }
@@ -229,6 +231,7 @@ if (Test-Path "$($project1Folder).AL-Go\*.ps1") { throw "Local PowerShell script
 if (Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml") { throw "AddExistingAppOrTestApp.yaml should have been removed" }
 $run = RunCICD -wait -branch $branch
 $runs++
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=3;"TestApps"=2} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts3' -repoVersion '3.0' -appVersion '3.0'
 
 # Update AL-Go System Files

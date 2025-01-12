@@ -72,6 +72,7 @@ $run = RunCICD -repository $repository -branch $branch
 WaitWorkflow -repository $repository -runid $run.id
 
 # test artifacts generated in repository1
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 Push-Location "artifacts/$repoName-main-Apps-1.0*"
 Get-Item -Path "$($publisherName)_$($appName)_1.0*" | Should -Not -BeNullOrEmpty
@@ -94,6 +95,7 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWork
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # test artifacts generated in repository1
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 Push-Location "artifacts/$repoName-main-Apps-1.0*"
 Get-Item -Path "$($publisherName)_$($appName)_1.0*" | Should -Not -BeNullOrEmpty

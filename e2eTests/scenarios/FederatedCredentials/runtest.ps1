@@ -76,6 +76,7 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -repository 
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Check that workflow run uses federated credentials and signing was successful
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Connecting to Azure using clientId and federated token'
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Signing .* succeeded' -isRegEx
 

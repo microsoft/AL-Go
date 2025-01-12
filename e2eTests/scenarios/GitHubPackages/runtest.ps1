@@ -123,6 +123,7 @@ WaitWorkflow -repository $repository1 -runid $run1.id
 $run1 = RunCICD -repository $repository1 -branch $branch -wait
 
 # test artifacts generated in repository1
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run1.id -folder 'artifacts' -expectedArtifacts @{"Apps"=3;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 
 # Wait for CI/CD workflow of repository2 to finish
@@ -133,6 +134,7 @@ $run2 = RunCICD -repository $repository2 -branch $branch -wait
 $run2 = RunCICD -repository $repository2 -branch $branch -wait
 
 # test artifacts generated in repository2
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run2.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 
 # Wait for CI/CD workflow of main repo to finish
@@ -140,6 +142,7 @@ Set-Location $repoPath
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # test artifacts generated in main repo
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=4} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation

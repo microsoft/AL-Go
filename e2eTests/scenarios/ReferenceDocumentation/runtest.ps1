@@ -78,10 +78,10 @@ $run = RunCICD -repository $repository -branch $branch
 WaitWorkflow -repository $repository -runid $run.id
 
 # test artifacts generated in repository1
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0;"github-pages"=1} -repoVersion '1.0' -appVersion '1.0'
 
 # Set GitHub Pages in repository to GitHub Actions
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 gh api --method POST /repos/$repository/pages -f build_type=workflow | Out-Null
 
 # Add setting to deploy to GitHub Pages

@@ -83,13 +83,14 @@ $runs++
 
 # Run CI/CD and wait
 $run = RunCICD -wait -branch $branch
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Expected Run: CI/CD triggered on workflow_dispatch
 $runs++
 
 # Update AL-Go System Files
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value (GetRealToken -token $token -repository "$githubOwner/$repository")
 RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch
@@ -115,6 +116,7 @@ $run = RunCICD -wait -branch $branch
 
 # Expected Run: CICD run on workflow_dispatch
 $runs++
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0' -appVersion ''
 
 TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
