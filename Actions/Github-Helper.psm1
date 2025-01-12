@@ -13,6 +13,10 @@ function MaskValue {
         [string] $value
     )
 
+    if ([String]::IsNullOrEmpty($value)) {
+        return
+    }
+
     Write-Host "Masking value for $key"
     $value.Split("`n") | ForEach-Object {
         Write-Host "::add-mask::$_"
