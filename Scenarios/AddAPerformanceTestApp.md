@@ -36,7 +36,7 @@
 
    Where negative numbers in the diff fields indicates faster execution or lower number of SQL statements than the baseline.
 
-> \[!NOTE\]
+> [!NOTE]
 >
 > You can specify thresholds for performance testing in project settings (see [https://aka.ms/algosettings#bcptThresholds](https://aka.ms/algosettings#bcptThresholds)) or in a file called `bcptThresholds.json`, which should be located next to the `bcptBaseLine.json` file.
 

@@ -9,7 +9,7 @@ At the time when writing this, the Admin Center API does not yet support S2S, me
 
 *Getting the refreshtoken can be done using this command on a machine with BcContainerHelper installed:*
 
-`New-BcAuthContext -includeDeviceLogin | ConvertTo-GitHubGoCredentials | Set-Clipboard`
+`New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext | Set-Clipboard`
 
 *If you do NOT provide an **AdminCenterApiCredentials** secret, the workflow will initiate a device code flow and you can login using [https://aka.ms/devicelogin](https://aka.ms/devicelogin) using this code and have the workflow continue. In order to get the code, you will have to inspect the details of the workflow and open the job called **Check AdminCenterApiCredentials / Initiate Device Login (open to see code)***
 

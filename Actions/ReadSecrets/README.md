@@ -34,4 +34,4 @@ none
 | Name | Description |
 | :-- | :-- |
 | Secrets | A compressed json construct with all requested secrets base64 encoded. Secrets preceded by an asterisk (\*) are encrypted before base64 encoding. The secret value + the base64 value of the secret value are masked in the log |
-| TokenForPush | The token to use when workflows are pushing changes (either directly, or via pull requests). This is either the GITHUB_TOKEN or the GhTokenWorkflow secret (based on the env variable useGhTokenWorkflowForPush)  |
+| TokenForPush | The token to use when workflows are pushing changes (either directly, or via pull requests). This is either the GITHUB_TOKEN or the GhTokenWorkflow secret (based on the env variable useGhTokenWorkflowForPush) |

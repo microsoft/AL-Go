@@ -4,7 +4,7 @@
 
 *If you do not want to preserve the full commit history, you should use [Scenario A](MigrateFromAzureDevOpsWithoutHistory.md) or [Scenario 11](SetupCiCdForExistingAppSourceApp.md)*
 
-> \[!NOTE\]
+> [!NOTE]
 > This walkthrough will leave your existing Azure DevOps repository untouched and you can decide to keep working in that if you like.
 
 1. Start out by navigating to your **Azure DevOps** repository. Click the **Clone** button and click **Generate Git Credentials**.
