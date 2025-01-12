@@ -121,6 +121,7 @@ WaitWorkflow -runid $runRelease1.id -repository $repository -noDelay
 WaitWorkflow -runid $run.id -repository $repository -noDelay
 
 # Test number of artifacts
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '2.1' -appVersion '2.1'
 
 # Check that $tag2 was used as previous release
@@ -161,6 +162,7 @@ Test-LogContainsFromRun -runid $release2.id -jobName 'CreateRelease' -stepName '
 # Run CI/CD workflow in release branch 1.0
 $runRelease1 = RunCICD -repository $repository -branch $releaseBranch1 -wait
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $runRelease1.id -folder 'artifacts3' -expectedArtifacts @{"Apps"=1} -repoVersion '1.0' -appVersion '1.0'
 $noOfReleaseArtifacts = @(get-childitem -path 'artifacts3' -filter '*-release_1.0-Apps-1.0.*').count
 if ($noOfReleaseArtifacts -ne 1) {
