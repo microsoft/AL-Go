@@ -145,6 +145,7 @@ function GetDependencies {
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
                     $downloadName = Join-Path $saveToPath "$project-$branchName-$mask-*"
+
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
