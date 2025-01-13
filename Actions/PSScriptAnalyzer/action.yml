@@ -50,13 +50,13 @@ runs:
             Invoke-ScriptAnalyzer @htPSA -Verbose | ConvertTo-SARIF @htCTS
             $success = $true
           } Catch {
-            Write-Error $_
+            Write-Host "::Error:: $_"
             $retryCount++
             Write-Output "Retrying... ($retryCount/$maxRetries)"
           }
         }
 
         if (-not $success) {
-          Write-Error "Failed after $maxRetries attempts."
+          Write-Host "::Error:: Failed after $maxRetries attempts."
           exit 1
         }
