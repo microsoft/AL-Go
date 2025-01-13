@@ -9,7 +9,7 @@ inputs:
     required: true
     default: '.\'
   excludeRule:
-    description: 'Omits the specified rules from the Script Analyzer test. Wildcard characters are supported.'
+    description: 'Comma separated list of PSScriptAnalyzer rules to exclude. Wildcard characters are supported.'
     required: false
   recurse:
     description: 'Runs Script Analyzer on the files in the Path directory and all subdirectories recursively.'
