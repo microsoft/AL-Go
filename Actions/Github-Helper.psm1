@@ -145,11 +145,8 @@ function GetDependencies {
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
                     $downloadName = Join-Path $saveToPath "$project-$branchName-$mask-*"
-                    Write-Host "------- $downloadName"
-
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
-                        Write-Host "++++++ $folder"
                         Get-ChildItem -Path $folder | ForEach-Object {
                             if ($mask -like '*TestApps') {
                                 $downloadedList += @("($($_.FullName))")
