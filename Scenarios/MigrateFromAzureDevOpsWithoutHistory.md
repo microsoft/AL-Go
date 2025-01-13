@@ -4,7 +4,7 @@
 
 *This walkthrough is similar to [scenario 11](SetupCiCdForExistingAppSourceApp.md), but uses VS Code and File Explorer to move the files instead of uploading a .zip file.*
 
-> \[!NOTE\]
+> [!NOTE]
 > This walkthrough will leave your existing Azure DevOps repository untouched and you can decide to keep working in that if you like.
 
 1. Start out by navigating to your **Azure DevOps** repository. Click the **Clone** button.

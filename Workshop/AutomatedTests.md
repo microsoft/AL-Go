@@ -41,7 +41,7 @@ Now select **Actions** and locate the **Create a new test app** action and click
 
 When the workflow is complete, inspect and **merge** the pull request.
 
-> \[!NOTE\]
+> [!NOTE]
 > Completion of the merge pull request **will be much slower than before**, as the GitHub hosted runners needs to download the Business Central Generic image and the artifacts every single time.
 
 When the workflow is done, you should see that below the artifacts produced by the **CI/CD** workflow, there is a summary field with the test results.
@@ -51,7 +51,7 @@ When the workflow is done, you should see that below the artifacts produced by t
 
 As already mentioned, running complete builds with full tests does take more time than containerless compiling. We are working on improving this.
 
-> \[!NOTE\]
+> [!NOTE]
 > Our recommendation is that you run your full test suite during **CI/CD**, but it is possible with **AL-Go for GitHub**, to not run the tests during **CI/CD** and then postpone them to a nightly test run using a scheduled run of the **Test Current** workflow.
 
 So, let's see what it takes to setup scheduled runs for running the tests with **latest** or **future versions** of Business Central?

@@ -23,7 +23,7 @@ Write-Host -ForegroundColor Yellow @'
 # This test tests the following scenario:
 #
 #  - Create a new repository based on the PTE template with a single project HelloWorld app
-#    - add BuildModes and CleanModePreprocessorSymbols to the repo settings
+#    - add BuildModes and PreprocessorSymbols to the repo settings
 #  - Run the "CI/CD" workflow
 #  - Test artifacts generated, that there are 3 types of artifacts
 #  - Cleanup repositories
@@ -52,7 +52,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated", "CustomBuildMode" ); "cleanModePreprocessorSymbols" = @( "CLEAN" )} `
+    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated", "CustomBuildMode" ); "conditionalSettings" = @( @{ "buildModes" = @("Clean"); "settings" = @{ "preprocessorSymbols" = @( "CLEAN" ) } } ) } `
     -contentScript {
         Param([string] $path)
         CreateNewAppInFolder -folder $path -name "App" | Out-Null

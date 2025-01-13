@@ -45,7 +45,7 @@ Looking at the **Pull request** created by the **Update AL-Go System Files** wor
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/22328924-3c49-4295-bf5d-32cf3509241c) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > It isn't necessary to update AL-Go System files every time you change or add dependencies, but you will need to run the upgrade code every time you change the workflow dependency depth.
 
 Looking at the artifacts produced by the build, we can see
@@ -53,14 +53,14 @@ Looking at the artifacts produced by the build, we can see
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/97f24f75-7483-4ec6-a1d9-7fff2bacab80) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > The **thisbuild** artifacts are shortlived - they are only there so that **depending projects** can find build artifacts from other jobs in the same workflow.
 
 ## include
 
 The other mechanism is to *include* the dependency projects in the project we are building. This is done by using the project setting **appDependencyProbingPaths**, which specifies where to search for dependencies in general.
 
-> \[!NOTE\]
+> [!NOTE]
 > If you already set up **useProjectDependencies**, please remove this setting from **.github/AL-Go-Settings.json**. You don't need to run **Update AL-Go System Files** before building, but you will be notified to do so when building.
 
 Now, modify **DK/.AL-Go/settings.json** and **US/.AL-Go/settings.json** by adding this property
@@ -90,7 +90,7 @@ A look at the log reveals that it adds the **mysolution.w1** folder to the list 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/295a32fd-1048-44f1-975f-22a761040ba3) |
 |-|
 
-> \[!NOTE\]
+> [!NOTE]
 > This implies that **mysolution.w1** will be compiled three times, and each project will contain its own copy of that app. The apps will be the same, but they will have different package IDs.
 
 ______________________________________________________________________
