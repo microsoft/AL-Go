@@ -608,7 +608,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
         $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json")
-        
+
         # Add settings as environment variable to simulate we've run ReadSettings
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
@@ -667,7 +667,7 @@ Describe "Get-ProjectsToBuild" {
 
     It 'loads dependent projects correctly, if useProjectDependencies is set to false in a project setting' {
         # Add three dependent projects
-        # Project 1 
+        # Project 1
         # Project 2 depends on Project 1 - useProjectDependencies is set to true fromthe repo settings
         # Project 3 depends on Project 1, but has useProjectDependencies set to false in the project settings
         $dependecyAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
@@ -688,7 +688,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
         $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json")
-        
+
         # Add settings as environment variable to simulate we've run ReadSettings
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
@@ -775,7 +775,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ alwaysBuildAllProjects = $false; projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
         $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json")
-        
+
         # Add settings as environment variable to simulate we've run ReadSettings
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 

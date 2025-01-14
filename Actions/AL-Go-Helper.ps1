@@ -2123,14 +2123,14 @@ Function AnalyzeProjectDependencies {
         $unknownDependencies = @()
         $apps = @()
         Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps) | Out-Null
-        
+
         # If the project is using project dependencies, add the unknown dependencies to the list of dependencies
         # If not, the unknown dependencies are ignored
         $dependenciesForProject = @()
         if ($projectSettings.useProjectDependencies -eq $true) {
             $dependenciesForProject = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
         }
-        
+
         $appDependencies."$project" = @{
             "apps"         = $apps
             "dependencies" = $dependenciesForProject
