@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $token = ($Global:SecureToken | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -53,7 +54,7 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 # Create repo
 CreateAlGoRepository `
@@ -94,19 +95,15 @@ $runTestNextMajor = RunTestNextMajor -branch $branch
 
 # Wait for all workflows to finish
 WaitWorkflow -runid $run.id
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=6;"thisbuild"=0} -repoVersion '1.0' -appVersion '1.0'
 
 WaitWorkflow -runid $runTestCurrent.id -noDelay
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $runTestCurrent.id -folder 'currentartifacts' -expectedArtifacts @{"Apps"=0;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
 
 WaitWorkflow -runid $runTestNextMinor.id -noDelay
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $runTestNextMinor.id -folder 'nextminorartifacts' -expectedArtifacts @{"Apps"=0;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
 
 WaitWorkflow -runid $runTestNextMajor.id -noDelay
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $runTestNextMajor.id -folder 'nextmajorartifacts' -expectedArtifacts @{"Apps"=0;"thisbuild"=6} -repoVersion '1.0' -appVersion '1.0'
 
 Set-Location $prevLocation

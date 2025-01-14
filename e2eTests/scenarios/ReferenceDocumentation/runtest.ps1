@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $token = ($Global:SecureToken | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -50,7 +51,7 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 $appName = 'MyApp'
 $publisherName = 'Freddy'
@@ -78,7 +79,6 @@ $run = RunCICD -repository $repository -branch $branch
 WaitWorkflow -repository $repository -runid $run.id
 
 # test artifacts generated in repository1
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0;"github-pages"=1} -repoVersion '1.0' -appVersion '1.0'
 
 # Set GitHub Pages in repository to GitHub Actions
@@ -93,7 +93,6 @@ CommitAndPush -commitMessage 'DeployToGitHubPages'
 RunDeployReferenceDocumentation -repository $repository -wait | Out-Null
 
 # Get Pages URL and read the content
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 $pagesInfo = gh api /repos/$repository/pages | ConvertFrom-Json
 $html = (Invoke-WebRequest -Uri $pagesInfo.html_url -UseBasicParsing).Content
 $html | Should -belike "*Documentation for $repository*"
@@ -110,7 +109,6 @@ CommitAndPush -commitMessage 'Continuous Deployment of ALDoc'
 WaitAllWorkflows -repository $repository -noError
 
 # Get Pages URL and read the content
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 $pagesInfo = gh api /repos/$repository/pages | ConvertFrom-Json
 $html = (Invoke-WebRequest -Uri $pagesInfo.html_url -UseBasicParsing).Content
 $html | Should -belike "*Documentazione per $repository*"

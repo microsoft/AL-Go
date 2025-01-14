@@ -65,6 +65,7 @@ In your personal fork, you can now run the end to end tests, if the following pr
 
 - You need the following secrets:
   - E2EPAT needs to be a Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_
+  - ALGOAUTHAPP ...
   - AdminCenterApiCredentials needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
   - LicenseFileUrl needs to be a direct download URL to a developer .bclicense file
 - Beside the secrets, you need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)

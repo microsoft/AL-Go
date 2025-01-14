@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $token = ($Global:SecureToken | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -46,7 +47,7 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 $appName = 'Æøå-app'
 $publisherName = 'Süß'
@@ -72,7 +73,6 @@ $run = RunCICD -repository $repository -branch $branch
 WaitWorkflow -repository $repository -runid $run.id
 
 # test artifacts generated in repository1
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 Push-Location "artifacts/$repoName-main-Apps-1.0*"
 Get-Item -Path "$($publisherName)_$($appName)_1.0*" | Should -Not -BeNullOrEmpty
@@ -95,7 +95,6 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWork
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # test artifacts generated in repository1
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=0} -repoVersion '1.0' -appVersion '1.0'
 Push-Location "artifacts/$repoName-main-Apps-1.0*"
 Get-Item -Path "$($publisherName)_$($appName)_1.0*" | Should -Not -BeNullOrEmpty

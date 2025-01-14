@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $token = ($Global:SecureToken | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -57,8 +58,7 @@ $branch = "e2e"
 $template = "https://github.com/$appSourceTemplate"
 $repository = 'microsoft/bcsamples-bingmaps.appsource'
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
-$headers = GetHeaders $token -repository "$githubOwner/.github"
+$headers = GetHeaders $e2epat -repository "$githubOwner/.github"
 
 $existingBranch = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null | ConvertFrom-Json
 if ($existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
@@ -76,7 +76,6 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -repository 
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Check that workflow run uses federated credentials and signing was successful
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Connecting to Azure using clientId and federated token'
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Signing .* succeeded' -isRegEx
 

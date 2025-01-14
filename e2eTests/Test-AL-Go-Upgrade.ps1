@@ -3,7 +3,8 @@ Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $token = ($Global:SecureToken | Get-PlainText),
     [string] $contentPath = "pte",
     [string] $release = "v2.2",
     [string] $template = $global:pteTemplate,
@@ -57,7 +58,7 @@ else {
 $template = "https://github.com/$template"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 # Create repo
 CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
@@ -83,14 +84,16 @@ $runs++
 
 # Run CI/CD and wait
 $run = RunCICD -wait -branch $branch
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Expected Run: CI/CD triggered on workflow_dispatch
 $runs++
 
 # Update AL-Go System Files
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value (GetRealToken -token $token -repository "$githubOwner/$repository")
+# for Upgrade scenarios before version 6.3 we need to set the GHTOKENWORKFLOW secret to a PAT
+# for Upgrade scenarios 6.3 or after we can set the GHTOKENWORKFLOW secret to a GH APP
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $e2epat
+#SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch
@@ -116,7 +119,6 @@ $run = RunCICD -wait -branch $branch
 
 # Expected Run: CICD run on workflow_dispatch
 $runs++
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts2' -repoVersion '1.0' -appVersion ''
 
 TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
