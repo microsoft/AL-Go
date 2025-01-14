@@ -53,7 +53,7 @@ function AddTelemetryEvent()
         [Parameter(Mandatory = $false)]
         [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $Data = @{},
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Information", "Error")]
+        [ValidateSet("Information", "Warning", "Error")]
         [String] $Severity = 'Information'
     )
 
@@ -140,6 +140,33 @@ function Trace-Information() {
 
 <#
     .SYNOPSIS
+    Logs a warning message to telemetry
+
+    .DESCRIPTION
+    Logs a warning message to telemetry
+
+    .PARAMETER Message
+    The message to log to telemetry
+
+    .PARAMETER AdditionalData
+    Additional data to log to telemetry
+
+    .EXAMPLE
+    Trace-Warning -Message "AL-Go warning: This is a warning message"
+#>
+function Trace-Warning() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [String] $Message,
+        [Parameter(Mandatory = $false)]
+        [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
+    )
+
+    AddTelemetryEvent -Message $Message -Severity 'Warning' -Data $AdditionalData
+}
+
+<#
+    .SYNOPSIS
     Logs an exception message to telemetry
 
     .DESCRIPTION
@@ -212,4 +239,41 @@ function Add-TelemetryProperty() {
     }
 }
 
-Export-ModuleMember -Function Trace-Information, Trace-Exception, Add-TelemetryProperty
+<#
+    .SYNOPSIS
+    Writes a deprecation warning to telemetry and as a warning in the GitHub action
+
+    .DESCRIPTION
+    Writes a deprecation warning to telemetry and as a warning in the GitHub action
+
+    .PARAMETER Message
+    The message to log to telemetry
+
+    .PARAMETER DeprecationTag
+    The tag to use to link to the deprecation documentation
+
+    .PARAMETER AdditionalData
+    Additional data to log to telemetry
+
+    .EXAMPLE
+    Trace-DeprecationWarning -Message "This setting is deprecated. Use the new setting instead." -DeprecationTag 'SettingName'
+#>
+function Trace-DeprecationWarning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [String] $Message,
+        [Parameter(Mandatory = $true)]
+        [String] $DeprecationTag,
+        [Parameter(Mandatory = $false)]
+        [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
+    )
+
+    # Show deprecation warning in GitHub
+    OutputWarning -message "$Message. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
+
+    # Log deprecation warning to telemetry
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'DeprecationTag' -Value $DeprecationTag
+    Trace-Warning -Message "Deprecation Warning: $Message" -AdditionalData $AdditionalData
+}
+
+Export-ModuleMember -Function Trace-Information, Trace-Warning, Trace-Exception, Add-TelemetryProperty, Trace-DeprecationWarning
