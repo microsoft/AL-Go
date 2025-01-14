@@ -614,7 +614,7 @@ function GetRealToken {
     }
     elseif (!($token.StartsWith("{"))) {
         # not a json token
-        Write-Host "not a json token1 $($token.Substring(0,5))"
+        Write-Host "not a json token"
         return $token
     }
     else {
@@ -644,7 +644,7 @@ function GetRealToken {
         }
         catch {
             # Not a json token
-            Write-Host "not a json token2 $($token.Substring(0,5))"
+            Write-Host "not a json token."
             return $token
         }
     }
