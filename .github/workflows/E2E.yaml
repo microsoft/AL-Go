@@ -435,4 +435,4 @@ jobs:
       - name: Remove Repositories
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -e2epat '${{ Secrets.E2EPAT }}' -token '${{ Secrets.ALGOAUTHAPP }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
+          . (Join-Path "." "e2eTests/RemoveRepositories.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -e2epat '${{ Secrets.E2EPAT }}' -actionsRepo '${{ needs.SetupRepositories.outputs.actionsRepo }}' -perTenantExtensionRepo '${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceAppRepo '${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'

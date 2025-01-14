@@ -72,19 +72,11 @@ foreach($sourceRepo in $repositories) {
     $settings = Get-Content -Path '.github/AL-Go-Settings.json' -Raw | ConvertFrom-Json
     Write-Host "PowerPlatform Solution Folder: $($settings.powerPlatformSolutionFolder)"
 
-    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-
-    if ($settings.templateUrl -eq 'https://github.com/Microsoft/AL-Go-PTE@PPPreview') {
-        # Upgrade AL-Go System Files from PPPreview to main (PPPreview branch still uses Y/N prompt and doesn't support direct AL-Go development - i.e. freddydk/AL-Go@branch)
-        $parameters = @{
-            "templateUrl" = 'https://github.com/microsoft/AL-Go-PTE@main'
-            "directCommit" = 'Y'
-        }
-        RunWorkflow -name 'Update AL-Go System Files' -parameters $parameters -wait -branch $branch -repository $repository
-    }
-
     # Upgrade AL-Go System Files to test version
-    RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository | Out-Null
+    # TODO: Use e2epat until bcsamples powerplatform repositories have been updated to latest version
+    RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $e2epat -repository $repository | Out-Null
+
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 
     CancelAllWorkflows -repository $repository
 

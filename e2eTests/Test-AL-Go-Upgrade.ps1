@@ -93,7 +93,6 @@ $runs++
 # for Upgrade scenarios before version 6.3 we need to set the GHTOKENWORKFLOW secret to a PAT
 # for Upgrade scenarios 6.3 or after we can set the GHTOKENWORKFLOW secret to a GH APP
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $e2epat
-#SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
 RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch

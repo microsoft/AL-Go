@@ -72,8 +72,8 @@ jobs:
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
           $owner = '${{ needs.Check.outputs.githubowner }}'
-          $token = '${{ Secrets.E2EPAT }}'
-          SetTokenAndRepository -github -githubOwner $owner -token $token -repository ''
+          $e2epat = '${{ Secrets.E2EPAT }}'
+          SetTokenAndRepository -github -githubOwner $owner -e2epat $e2epat -repository ''
           @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
               Write-Host "https://github.com/$repo"
