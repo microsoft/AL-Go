@@ -64,7 +64,7 @@ $headers = GetHeaders -token $e2epat -repository "$githubOwner/.github"
 $existingBranchJson = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null
 Write-Host "EXISTING BRANCH JSON: $existingBranchJson"
 $existingBranch = $existingBranchJson | ConvertFrom-Json
-if ($existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
+if ($existingBranch -and $existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
     Write-Host "Removing existing branch $branch"
     Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
     Start-Sleep -Seconds 10
