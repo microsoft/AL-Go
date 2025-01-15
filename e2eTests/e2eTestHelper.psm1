@@ -32,11 +32,15 @@ function SetTokenAndRepository {
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf false
         $ENV:GITHUB_TOKEN = ''
+        $ENV:GH_TOKEN = ''
     }
     Write-Host "Authenticating with GitHub using token"
-    $realToken | invoke-gh auth login --with-token
     if ($github) {
         $ENV:GITHUB_TOKEN = $realToken
+        $ENV:GH_TOKEN = $realToken
+    }
+    else {
+        $realToken | invoke-gh auth login --with-token
     }
 }
 

@@ -58,6 +58,8 @@ $branch = "e2e"
 $template = "https://github.com/$appSourceTemplate"
 $repository = 'microsoft/bcsamples-bingmaps.appsource'
 
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+
 # Get the branches from https://github.com/microsoft/bcsamples-bingmaps.appsource
 # Use e2e PAT to get the branches - as token doesn't have access to the repository
 $headers = GetHeaders -token $e2epat -repository "$githubOwner/.github"
