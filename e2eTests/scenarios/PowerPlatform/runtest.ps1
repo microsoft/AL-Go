@@ -6,7 +6,7 @@ Param(
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $token = ($Global:SecureToken | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -76,7 +76,7 @@ foreach($sourceRepo in $repositories) {
     # TODO: Use e2epat until bcsamples powerplatform repositories have been updated to latest version
     RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $e2epat -repository $repository | Out-Null
 
-    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $algoauthapp
 
     CancelAllWorkflows -repository $repository
 

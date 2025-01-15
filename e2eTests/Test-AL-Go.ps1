@@ -1,10 +1,11 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $token = ($Global:SecureToken | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $template = $global:pteTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
     [switch] $multiProject,
@@ -123,7 +124,7 @@ if ($appSourceApp) {
     $runs++
 }
 
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $algoauthapp
 
 # Add Existing Test App
 RunAddExistingAppOrTestApp @project1Param -url $sampleTestApp1 -wait -branch $branch -useGhTokenWorkflow | Out-Null

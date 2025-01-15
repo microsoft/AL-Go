@@ -6,7 +6,7 @@ Param(
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $token = ($Global:SecureToken | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -90,7 +90,7 @@ Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "run
 CommitAndPush -commitMessage 'Shift to Linux'
 
 # Upgrade AL-Go System Files
-RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $algoauthapp -repository $repository | Out-Null
 
 $run = RunCICD -repository $repository -branch $branch -wait
 
