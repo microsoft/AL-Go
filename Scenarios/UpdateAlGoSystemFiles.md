@@ -22,7 +22,7 @@
 
    ![newPAT](https://github.com/microsoft/AL-Go/assets/10775043/1ab9978a-37e8-423a-8f8e-5c0203f7ae00)
 
-1. To create a **fine-grained** token, navigate to [New fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) in a browser. Name it, set the expiration date, select the **resource owner** (this needs to be the organization or user who is the owner of the repositories in which the token is used) and specify which **repositories to include**. You need to and assign **Read and Write** permissions to **Contents**, **Pull Requests** and **Workflows**. You also need to assign **Read-only** permissions to **Actions**.
+1. To create a **fine-grained** token, navigate to [New fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) in a browser. Name it, set the expiration date, select the **resource owner** (this needs to be the organization or user who is the owner of the repositories in which the token is used) and specify which **repositories to include**. You need and assign **Read and Write** permissions to **Contents**, **Pull Requests** and **Workflows**. You also need to assign **Read-only** permissions to **Actions**.
 
    ![newFineGrained](https://github.com/microsoft/AL-Go/assets/10775043/c4618a82-3f56-4423-9ab5-15b53b4b2e95)
 
