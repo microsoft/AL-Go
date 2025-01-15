@@ -14,15 +14,15 @@
 
    ![summary](https://github.com/microsoft/AL-Go/assets/10775043/8b87cf1e-5f39-487d-9b39-4ebf9a39706a)
 
-1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHTOKENWORKFLOW containing a Personal Access Token with permissions to modify workflows. Personal access tokens are either fine-grained personal access tokens or classic personal access tokens. AL-Go for GitHub works with both if you have enabled these tokens in organization settings:
+1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHTOKENWORKFLOW containing a Personal Access Token with permissions to modify workflows. Personal access tokens are either **fine-grained tokens** or **classic tokens**. AL-Go for GitHub works with both if you have enabled these tokens in organization settings:
 
    ![orgimage](https://github.com/microsoft/AL-Go/assets/10775043/f3a26b6c-ddf6-4ab6-9e7e-2a4ac04a0828)
 
-1. To create a **classic** personal access token, navigate to [New personal access token](https://github.com/settings/tokens/new) in a browser. Name it, set the expiration date and check the **workflow option** in the list of **scopes**. The classic tokens have access to all repositories, which you as a user have access to.
+1. To create a **classic** token, navigate to [New personal access token (classic)](https://github.com/settings/tokens/new) in a browser. Name it, set the expiration date and check the **workflow option** in the list of **scopes**. The classic tokens have access to all repositories, which you as a user have access to.
 
    ![newPAT](https://github.com/microsoft/AL-Go/assets/10775043/1ab9978a-37e8-423a-8f8e-5c0203f7ae00)
 
-1. To create a **fine-grained** personal access token, navigate to [New fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) in a browser. Name it, set the expiration date and specify which repositories to include. You need to and assign **Read and Write** permissions to **Contents**, **Pull Requests** and **Workflows**. You also need to assign **Read-only** permissions to **Actions**.
+1. To create a **fine-grained** token, navigate to [New fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) in a browser. Name it, set the expiration date, select the **resource owner** (this needs to be the organization or user who is the owner of the repositories in which the token is used) and specify which **repositories to include**. You need to and assign **Read and Write** permissions to **Contents**, **Pull Requests** and **Workflows**. You also need to assign **Read-only** permissions to **Actions**.
 
    ![newFineGrained](https://github.com/microsoft/AL-Go/assets/10775043/c4618a82-3f56-4423-9ab5-15b53b4b2e95)
 
