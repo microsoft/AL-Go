@@ -2093,7 +2093,7 @@ Function AnalyzeProjectDependencies {
         [string[]] $projects
     )
 
-    $buildAlso = @{}
+    $additionalProjectsToBuild = @{}
     $projectDependencies = @{}
     $appDependencies = @{}
     Write-Host "Analyzing projects in $baseFolder"
@@ -2195,15 +2195,15 @@ Function AnalyzeProjectDependencies {
             }
             if ($foundDependencies) {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
-                # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
+                # Add project to additionalProjectsToBuild for this dependency to ensure that this project also gets build when the dependency is built
                 foreach($dependency in $foundDependencies) {
-                    if ($buildAlso.Keys -contains $dependency) {
-                        if ($buildAlso."$dependency" -notcontains $project) {
-                            $buildAlso."$dependency" += @( $project )
+                    if ($additionalProjectsToBuild.Keys -contains $dependency) {
+                        if ($additionalProjectsToBuild."$dependency" -notcontains $project) {
+                            $additionalProjectsToBuild."$dependency" += @( $project )
                         }
                     }
                     else {
-                        $buildAlso."$dependency" = @( $project )
+                        $additionalProjectsToBuild."$dependency" = @( $project )
                     }
                 }
             }
@@ -2225,7 +2225,7 @@ Function AnalyzeProjectDependencies {
 
     return [PSCustomObject]@{
         FullProjectsOrder = $projectsOrder
-        BuildAlso = $buildAlso
+        AdditionalProjectsToBuild = $additionalProjectsToBuild
         ProjectDependencies = $projectDependencies
     }
 }
