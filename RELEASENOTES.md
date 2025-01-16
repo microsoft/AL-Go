@@ -6,6 +6,11 @@
 
 - It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
 
+
+### Use GitHub App Registration for authentication
+
+AL-Go for GitHub now supports using a GitHub App registration as the GhTokenWorkflow secret for a more secure way of allowing repositories to run Update AL-Go System Files and other workflows which are creating commits and pull requests. See [this description](https://github.com/microsoft/AL-Go/Scenarios/GhTokenWorkflow.md) to learn how to use GitHub App authentication.
+
 ### New Repository Settings
 
 - [`shortLivedArtifactsRetentionDays`](https://aka.ms/algosettings#shortLivedArtifactsRetentionDays) determines the number of days to keep short lived build artifacts (f.ex build artifacts from pull request builds, next minor or next major builds). 1 is default. 0 means use GitHub default.
