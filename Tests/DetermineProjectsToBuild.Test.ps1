@@ -668,7 +668,7 @@ Describe "Get-ProjectsToBuild" {
     It 'loads dependent projects correctly, if useProjectDependencies is set to false in a project setting' {
         # Add three dependent projects
         # Project 1
-        # Project 2 depends on Project 1 - useProjectDependencies is set to true fromthe repo settings
+        # Project 2 depends on Project 1 - useProjectDependencies is set to true from the repo settings
         # Project 3 depends on Project 1, but has useProjectDependencies set to false in the project settings
         $dependecyAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
