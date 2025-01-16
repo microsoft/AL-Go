@@ -23,7 +23,6 @@ if (!$buildIt) {
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
     $buildIt = $true
     foreach($mask in @('Apps','TestApps','Dependencies','PowerPlatformSolution')) {
-        Write-Host "test $mask"
         Write-Host "GetArtifactsFromWorkflowRun -workflowRun '$baselineWorkflowRunId' -token '$token' -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask '$mask' -projects '$project'"
         $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $project
         if ($artifact) {

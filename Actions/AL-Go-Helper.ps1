@@ -1148,7 +1148,7 @@ function AnalyzeRepo {
         $settings.doNotRunBcptTests = $true
     }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (!$doNotIssueWarnings -and !$settings.doNotBuildTests) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+        if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
         $settings.doNotRunTests = $true
     }
     if (-not $settings.appFolders) {

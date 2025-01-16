@@ -310,7 +310,6 @@ function GetWorkflowContentWithChangesFromSettings {
         $start = 0
         $count = 0
         if ($yaml.Find('concurrency:/', [ref] $start, [ref] $count)) {
-            Write-Host "$start $count"
             $yaml.Remove($start-1, $count+1)
         }
         if ($concurrency -ne 'allowed') {
