@@ -7,7 +7,7 @@ inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
-    default: powershell
+    default: pwsh
   path:
     description: 'Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported.'
     required: true
