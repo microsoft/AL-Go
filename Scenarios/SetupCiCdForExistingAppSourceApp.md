@@ -1,4 +1,4 @@
-# #11 Set up CI/CD for an existing AppSource App
+# Set up CI/CD for an existing AppSource App
 
 *Prerequisites: A GitHub account and experience from the other scenarios*
 

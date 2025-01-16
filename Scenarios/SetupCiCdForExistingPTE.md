@@ -1,4 +1,4 @@
-# #10 Set up CI/CD for an existing per-tenant extension (BingMaps)
+# Set up CI/CD for an existing per-tenant extension (BingMaps)
 
 \*Prerequisites: A GitHub account.
 We will use the BingMaps sample app, which can be found on GitHub in the [Business Central BingMaps.PTE repo](https://github.com/microsoft/bcsamples-bingmaps.pte). Copy the URL to the Apps artifact of the latest release to the clipboard (currently [https://github.com/microsoft/bcsamples-bingmaps.pte/releases/download/24.0.0/bcsamples-bingmaps.pte-main-Apps-24.0.169.0.zip](https://github.com/microsoft/bcsamples-bingmaps.pte/releases/download/24.0.0/bcsamples-bingmaps.pte-main-Apps-24.0.169.0.zip) – you can also download the .zip file and see the content of it.
