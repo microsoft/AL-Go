@@ -13,7 +13,7 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| path | Yes | Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported. | powershell |
+| path | Yes | Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported. | .\ |
 | excludeRule | No | Comma separated list of PSScriptAnalyzer rules to exclude. Wildcard characters are supported. | |
 | recurse | | Runs Script Analyzer on the files in the Path directory and all subdirectories recursively. | |
 | output | Yes | Specifies where the path for the sarif file | results.sarif |
