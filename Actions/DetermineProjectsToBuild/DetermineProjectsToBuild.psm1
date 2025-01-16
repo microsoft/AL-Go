@@ -222,7 +222,6 @@ function Get-ProjectsToBuild {
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
         $projectsToBuild = @()
-        $projectDependencies = @{}
         $projectsOrderToBuild = @()
 
         if ($projects) {
@@ -239,12 +238,12 @@ function Get-ProjectsToBuild {
             }
 
             # Calculate the full projects order
-            $buildAlso = @{}
-            $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
+            $projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects
+
+            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($projectBuildInfo.buildAlso.Keys -contains $_) { $projectBuildInfo.buildAlso."$_" } } | Select-Object -Unique)
 
             # Create a project order based on the projects to build
-            foreach($depth in $fullProjectsOrder) {
+            foreach($depth in $projectBuildInfo.FullProjectsOrder) {
                 $projectsOnDepth = @($depth.projects | Where-Object { $projectsToBuild -contains $_ })
 
                 if ($projectsOnDepth) {
@@ -273,7 +272,7 @@ function Get-ProjectsToBuild {
             throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows"
         }
 
-        return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild
+        return $projects, $projectsToBuild, $projectBuildInfo.projectDependencies, $projectsOrderToBuild
     }
     finally {
         Pop-Location
