@@ -24,7 +24,7 @@ inputs:
     default: 'results.sarif'
 runs:
   using: "composite"
-  steps:   
+  steps:
     - name: run
       shell: ${{ inputs.shell }}
       id: RunPSScriptAnalyzer
