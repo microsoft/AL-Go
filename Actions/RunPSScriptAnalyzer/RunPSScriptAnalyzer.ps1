@@ -1,7 +1,7 @@
 param (
     [string]$Path,
     [string[]]$ExcludeRule,
-    [string]$Recurse,
+    [switch]$Recurse,
     [string]$Output
 )
 
@@ -19,7 +19,7 @@ Import-Module -Name ConvertToSARIF -Force
 $htPSA = [ordered]@{ Path = $Path }
 Write-Output "Modules installed, now running tests."
 if (![string]::IsNullOrEmpty($ExcludeRule)) { $htPSA.add('ExcludeRule', $ExcludeRule) }
-if (![string]::IsNullOrEmpty($Recurse)) { $htPSA.add('Recurse', $true) }
+if ($Recurse) { $htPSA.add('Recurse', $true) }
 $htCTS = [ordered]@{ FilePath = $Output }
 
 $maxRetries = 3
