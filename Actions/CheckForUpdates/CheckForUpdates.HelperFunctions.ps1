@@ -293,46 +293,50 @@ function GetWorkflowContentWithChangesFromSettings {
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
     $yaml = [Yaml]::Load($srcFile)
-    $workflowScheduleKey = "$($baseName)Schedule"
-    $workflowConcurrencyKey = "$($baseName)Concurrency"
+    $yamlName = $yaml.get('name:')
+    if ($yamlName) {
+        $workflowName = $yamlName.content.SubString('name:'.Length).Trim().Trim('''"').Trim()
+    }
+    else {
+        $workflowName = $baseName
+    }
 
-    # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have a RepoSetting called <workflowname>Schedule, which will be used to set the schedule for the workflow
-    if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
+    $workflowScheduleKey = "WorkflowSchedule"
+    $workflowConcurrencyKey = "WorkflowConcurrency"
+    foreach($key in @($workflowScheduleKey,$workflowConcurrencyKey)) {
+        if ($repoSettings.Keys -contains $key -and ($repoSettings."$key")) {
+            throw "The $key setting is not allowed in the global repository settings. Please use the workflow specific settings file or conditional settings."
+        }
+    }
+
+    # Re-read settings and this time include workflow specific settings
+    $repoSettings = ReadSettings -project '' -workflowName $workflowName -userName '' -branchName '' | ConvertTo-HashTable -recurse
+
+    # Old Schedule key is deprecated, but still supported
+    $oldWorkflowScheduleKey = "$($baseName)Schedule"
+    if ($repoSettings.Keys -contains $oldWorkflowScheduleKey) {
+
+        # TODO: DEPRECATION WARNING
+
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
-            # Read the section under the on: key and add the schedule section
-            $yamlOn = $yaml.Get('on:/')
-            $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
+            OutputWarning "Both $oldWorkflowScheduleKey and $workflowScheduleKey are defined in the settings file. $oldWorkflowScheduleKey will be ignored."
         }
-        $concurrency = 'allowed'
+        else {
+            # Convert the old <workflow>Schedule setting to the new WorkflowSchedule setting
+            $repoSettings."$workflowScheduleKey" = @("cron: '$($repoSettings."$oldWorkflowScheduleKey")'")
+        }
+    }
+
+    # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have concurrency and schedule defined
+    if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
+        # Add Schedule and Concurrency settings to the workflow
+        if ($repoSettings.Keys -contains $workflowScheduleKey) {
+            # Replace or add the schedule part under the on: key
+            $yaml.ReplaceOrAdd('on:/', 'schedule:', $repoSettings."$workflowScheduleKey")
+        }
         if ($repoSettings.Keys -contains $workflowConcurrencyKey) {
-            $concurrency = $repoSettings."$workflowConcurrencyKey"
-        }
-        $start = 0
-        $count = 0
-        if ($yaml.Find('concurrency:/', [ref] $start, [ref] $count)) {
-            $yaml.Remove($start-1, $count+1)
-        }
-        if ($concurrency -ne 'allowed') {
-            if ($start -eq 0) {
-                if (-not $yaml.Find('on:', [ref] $start, [ref] $count)) { throw "Internal error, cannot find the on: key in the workflow" }
-            }
-            switch ($concurrency) {
-                'WaitRef' {
-                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}"))
-                }
-                'Wait' {
-                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}"))
-                }
-                'CancelRef' {
-                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}-`${{ github.ref }}", "  cancel-in-progress: true"))
-                }
-                'Cancel' {
-                    $yaml.Insert($start-1, @("concurrency:", "  group: `${{ github.workflow }}", "  cancel-in-progress: true"))
-                }
-                defult: {
-                    throw "Unknown concurrency setting: $concurrency"
-                }
-            }
+            # Replace or add the concurrency part
+            $yaml.ReplaceOrAdd('', 'concurrency:', $repoSettings."$workflowConcurrencyKey")
         }
     }
 
