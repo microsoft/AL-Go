@@ -206,7 +206,7 @@ else {
     try {
         # If a pull request already exists with the same REF, then exit
         $branchSHA = RunAndCheck git rev-list -n 1 $updateBranch
-        $commitMessage = "[$updateBranch] Update AL-Go System Files from $templateInfo - $templateSha | $branchSHA"
+        $commitMessage = "[$($updateBranch)@$($branchSHA.SubString(0,7))] Update AL-Go System Files from $templateInfo - $($templateSha.SubString(0,7))"
         $env:GH_TOKEN = $token
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
