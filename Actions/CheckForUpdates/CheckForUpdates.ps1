@@ -55,7 +55,7 @@ $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
 # Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
-$repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
+$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 $includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
