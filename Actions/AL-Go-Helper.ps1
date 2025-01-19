@@ -760,7 +760,7 @@ function ReadSettings {
                             $propName = $_.Key
                             $propValue = $_.Value
                             if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {
-                                $conditionMet = $propValue -and $conditionMet -and ($conditionalSetting.buildModes | Where-Object { $buildMode -like $_ })
+                                $conditionMet = $propValue -and $conditionMet -and ($conditionalSetting."$propName" | Where-Object { $propValue -like $_ })
                                 $conditions += @("$($propName): $propValue")
                             }
                         }
