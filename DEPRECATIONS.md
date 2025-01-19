@@ -12,6 +12,26 @@ When handling support requests, we will request that you to use the latest versi
 
 ## Changes in effect after April 1st 2025
 
+<a id="_workflow_Schedule"></a>
+
+### Setting `<workflow>Schedule` will no longer be supported
+
+The old setting, where the setting key was a combination of the workflow name and `Schedule` (dynamic setting key) is no longer supported. Instead you need to use a setting called [workflowSchedule](https://aka.ms/algosettings#workflowSchedule) and either use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) or place the setting in a workflow specific settings file. Example using conditional settings:
+
+```
+"conditionalSettings": [
+    {
+        "workflows": [ "Update AL-Go System Files" ],
+        "settings": {
+            "workflowSchedule": [ "cron: '30 0 * * 0'" ]
+        }
+    }
+]
+```
+
+> [!NOTE]
+> workflowSchedule is an array and it needs to be `cron: '<your crontab>'`
+
 <a id="cleanModePreprocessorSymbols"></a>
 
 ### Setting `cleanModePreprocessorSymbols` will no longer be supported

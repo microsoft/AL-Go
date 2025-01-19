@@ -315,13 +315,11 @@ function GetWorkflowContentWithChangesFromSettings {
     # Old Schedule key is deprecated, but still supported
     $oldWorkflowScheduleKey = "$($baseName)Schedule"
     if ($repoSettings.Keys -contains $oldWorkflowScheduleKey) {
-
-        # TODO: DEPRECATION WARNING
-
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
             OutputWarning "Both $oldWorkflowScheduleKey and $workflowScheduleKey are defined in the settings file. $oldWorkflowScheduleKey will be ignored."
         }
         else {
+            Trace-DeprecationWarning -Message "$oldWorkflowScheduleKey is deprecated" -DeprecationTag "workflowSchedule"
             # Convert the old <workflow>Schedule setting to the new WorkflowSchedule setting
             $repoSettings."$workflowScheduleKey" = @("cron: '$($repoSettings."$oldWorkflowScheduleKey")'")
         }
