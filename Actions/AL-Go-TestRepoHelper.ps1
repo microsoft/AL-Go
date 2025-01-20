@@ -43,6 +43,25 @@ function Test-Shell {
     }
 }
 
+function Test-Deprecations {
+    Param(
+        [HashTable] $json,
+        [string] $settingsDescription,
+        [ValidateSet('Repo','Project','Workflow','Variable')]
+        [string] $type
+    )
+
+    # cleanModePreprocessorSymbols is deprecated
+    if ($json.Keys -contains 'cleanModePreprocessorSymbols') {
+        OutputWarning -Message "cleanModePreprocessorSymbols in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#cleanModePreprocessorSymbols"
+    }
+
+    # <workflowName>Schedule is deprecated
+    ($json.Keys | Where-Object {$_ -like '*Schedule' -and $_ -ne 'WorkflowSchedule'}) | ForEach-Object {
+        OutputWarning -Message "$_ in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#workflowSchedule"
+    }
+}
+
 function Test-SettingsJson {
     Param(
         [hashtable] $json,
@@ -50,6 +69,8 @@ function Test-SettingsJson {
         [ValidateSet('Repo','Project','Workflow','Variable')]
         [string] $type
     )
+
+    Test-Deprecations -json $json -settingsDescription $settingsDescription -type $type
 
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'shell'
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'gitHubRunnerShell'
@@ -100,7 +121,7 @@ function Test-JsonStr {
 
     try {
         $json = $jsonStr | ConvertFrom-Json | ConvertTo-HashTable
-        Test-SettingsJson -json $json -settingsDescription $settingsDescription -type:$type
+        Test-SettingsJson -json $json -settingsDescription $settingsDescription -type $type
     }
     catch {
         OutputError "$($_.Exception.Message.Replace("`r",'').Replace("`n",' ')) in $settingsDescription"

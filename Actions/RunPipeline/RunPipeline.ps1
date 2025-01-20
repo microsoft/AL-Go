@@ -490,7 +490,7 @@ try {
         $runAlPipelineParams["preprocessorsymbols"] = @()
     }
 
-    # REMOVE AFTER April 1st 2025 --->
+    # DEPRECATION: REMOVE AFTER April 1st 2025 --->
     if ($buildMode -eq 'Clean' -and $settings.ContainsKey('cleanModePreprocessorSymbols')) {
         Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
         $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
