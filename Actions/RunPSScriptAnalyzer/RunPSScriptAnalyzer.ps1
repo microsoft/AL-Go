@@ -18,7 +18,7 @@ Import-Module -Name ConvertToSARIF -Force
 
 $htPSA = [ordered]@{ Path = $Path }
 Write-Output "Modules installed, now running tests."
-if (![string]::IsNullOrEmpty($ExcludeRule)) { $htPSA.add('ExcludeRule', $ExcludeRule) }
+if ($ExcludeRule) { $htPSA.add('ExcludeRule', $ExcludeRule) }
 if ($Recurse) { $htPSA.add('Recurse', $true) }
 $htCTS = [ordered]@{ FilePath = $Output }
 
