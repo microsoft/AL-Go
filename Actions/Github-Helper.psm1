@@ -600,7 +600,10 @@ function GetLatestRelease {
     $latestRelease
 }
 
-function GetRealToken {
+# This function will return the Access Token based on the given token
+# If the given token is a Personal Access Token, it will be returned unaltered
+# If the given token is a GitHub App token, it will be used to get an Access Token from GitHub
+function GetAccessToken {
     Param(
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
@@ -614,10 +617,10 @@ function GetRealToken {
     }
     elseif (!($token.StartsWith("{"))) {
         # not a json token
-        Write-Host "not a json token"
         return $token
     }
     else {
+        # GitHub App token format: {"GitHubAppClientId":"<client_id>","PrivateKey":"<private_key>"}
         try {
             $json = $token | ConvertFrom-Json
             $gitHubAppClientId = $json.GitHubAppClientId
@@ -643,9 +646,7 @@ function GetRealToken {
             return $tokenResponse.token
         }
         catch {
-            # Not a json token
-            Write-Host "not a json token."
-            return $token
+            throw "Invalid GitHub App token format"
         }
     }
 }
@@ -663,8 +664,8 @@ function GetHeaders {
         "X-GitHub-Api-Version" = $apiVersion
     }
     if (![string]::IsNullOrEmpty($token)) {
-        $realToken = GetRealToken -token $token -api_url $api_url -repository $repository
-        $headers["Authorization"] = "token $realToken"
+        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository
+        $headers["Authorization"] = "token $accessToken"
     }
     return $headers
 }

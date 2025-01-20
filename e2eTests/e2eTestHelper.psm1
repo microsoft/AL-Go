@@ -24,7 +24,7 @@ function SetTokenAndRepository {
     $script:githubOwner = $githubOwner
     $script:token = $token
     $script:defaultRepository = $repository
-    $realToken = GetRealToken -token $script:token -repository "$githubOwner/.github"
+    $realToken = GetAccessToken -token $script:token -repository "$githubOwner/.github"
 
     if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
@@ -497,7 +497,7 @@ function CreateAlGoRepository {
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner -and $script:token) {
-        $realToken = GetRealToken -token $script:token -repository "$githubOwner/.github"
+        $realToken = GetAccessToken -token $script:token -repository "$githubOwner/.github"
         invoke-git remote set-url origin "https://$($githubOwner):$($realtoken)@github.com/$repository.git"
     }
     invoke-git push --set-upstream origin $branch

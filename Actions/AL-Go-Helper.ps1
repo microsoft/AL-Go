@@ -1344,7 +1344,7 @@ function CloneIntoNewFolder {
 
     # Environment variables for hub commands
     $env:GITHUB_USER = $actor
-    $env:GITHUB_TOKEN = GetRealToken -token $token
+    $env:GITHUB_TOKEN = GetAccessToken -token $token
 
     $serverUri = [Uri]::new($env:GITHUB_SERVER_URL)
     $serverUrl = "$($serverUri.Scheme)://$($env:GITHUB_USER):$($env:GITHUB_TOKEN)@$($serverUri.Host)/$($env:GITHUB_REPOSITORY)"

@@ -24,7 +24,7 @@ Set-Location -Path $location
 
 # Environment variables for hub commands
 $env:GITHUB_USER = $actor
-$env:GITHUB_TOKEN = GetRealToken -token $token
+$env:GITHUB_TOKEN = GetAccessToken -token $token
 
 # Commit from the new folder
 Write-Host "Committing changes from the new folder $Location\$PowerPlatformSolutionName to branch $gitHubBranch"
