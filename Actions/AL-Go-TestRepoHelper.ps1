@@ -56,7 +56,7 @@ function Test-Deprecations {
 
     # <workflowName>Schedule is deprecated
     ($json.Keys | Where-Object {$_ -like '*Schedule' -and $_ -ne 'WorkflowSchedule'}) | ForEach-Object {
-        OutputWarning -Message "$_ in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#workflowSchedule"
+        OutputWarning -Message "$_ in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#_workflow_Schedule. This warning will become an error in the future."
     }
 }
 
