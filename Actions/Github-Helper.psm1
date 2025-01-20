@@ -612,7 +612,6 @@ function GetAccessToken {
 
     if (($script:realTokenCache.token -eq $token -or $script:realTokenCache.realToken -eq $token) -and $script:realTokenCache.repository -eq $repository -and $script:realTokenCache.expires -gt [datetime]::Now.AddMinutes(10)) {
         # Same token request or re-request with cached token - and cached token won't expire in 10 minutes
-        Write-Host "return cached token"
         return $script:realTokenCache.realToken
     }
     elseif (!($token.StartsWith("{"))) {
@@ -651,6 +650,7 @@ function GetAccessToken {
     }
 }
 
+# Get Headers for API requests
 function GetHeaders {
     param (
         [string] $token,
