@@ -130,7 +130,7 @@ The following settings are only allowed in workflow specific settings files or i
 
 | Name | Description |
 | :-- | :-- |
-| <a id="workflowSchedule"></a>workflowSchedule | The value should be an array of `cron: '<crontab>'`, where `<crontab>` is a CRON schedule for when the specified workflow should run. Default is no scheduled runs, only manual triggers. Build your CRON string here: [https://crontab.guru](https://crontab.guru). **Note:** You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
+| <a id="workflowSchedule"></a>workflowSchedule | The value should be a valid crontab, which is a CRON schedule for when the specified workflow should run. Default is no scheduled runs, only manual triggers. Build your crontab string here: [https://crontab.guru](https://crontab.guru). **Note:** You need to run the Update AL-Go System Files workflow for the schedule to take effect. |
 
 ## AppSource specific advanced settings
 

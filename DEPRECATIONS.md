@@ -23,14 +23,14 @@ The old setting, where the setting key was a combination of the workflow name an
     {
         "workflows": [ "Update AL-Go System Files" ],
         "settings": {
-            "workflowSchedule": [ "cron: '30 0 * * 0'" ]
+            "workflowSchedule": "30 0 * * 0"
         }
     }
 ]
 ```
 
 > [!NOTE]
-> workflowSchedule is an array and it needs to be `cron: '<your crontab>'`
+> workflowSchedule is a string and needs to hold a valid crontab (see [crontab guru](https://crontab.guru/) for assistance on creating one)
 
 <a id="cleanModePreprocessorSymbols"></a>
 

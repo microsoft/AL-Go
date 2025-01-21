@@ -152,10 +152,10 @@ class Yaml {
     }
 
     # Replace or add a key and content to the lines for the specified Yaml path, given by $line
-    [void] ReplaceOrAdd([string] $line, [string] $key, [string[]] $content) {
+    [void] ReplaceOrAdd([string] $line, [string] $key, [string[]]$content) {
         # Remove the key part under the line
         $this.Replace("$line$key",@())
-        $this.Add($line, @($key) + @($content | ForEach-Object { "  - $_" }))
+        $this.Add($line, @($key) + @($content | ForEach-Object { "  $_" }))
     }
 
     # Replace all occurrences of $from with $to throughout the Yaml content

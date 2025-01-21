@@ -322,7 +322,7 @@ function GetWorkflowContentWithChangesFromSettings {
         else {
             Trace-DeprecationWarning -Message "$oldWorkflowScheduleKey is deprecated" -DeprecationTag "_workflow_Schedule" -WillBecomeError
             # Convert the old <workflow>Schedule setting to the new WorkflowSchedule setting
-            $repoSettings."$workflowScheduleKey" = @("cron: '$($repoSettings."$oldWorkflowScheduleKey")'")
+            $repoSettings."$workflowScheduleKey" = $repoSettings."$oldWorkflowScheduleKey"
         }
         # <--- REPLACE WITH ERROR AFTER April 1st 2025
     }
@@ -332,7 +332,7 @@ function GetWorkflowContentWithChangesFromSettings {
         # Add Schedule and Concurrency settings to the workflow
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
             # Replace or add the schedule part under the on: key
-            $yaml.ReplaceOrAdd('on:/', 'schedule:', $repoSettings."$workflowScheduleKey")
+            $yaml.ReplaceOrAdd('on:/', 'schedule:', @("- cron: '$($repoSettings."$workflowScheduleKey")'"))
         }
         if ($repoSettings.Keys -contains $workflowConcurrencyKey) {
             # Replace or add the concurrency part
