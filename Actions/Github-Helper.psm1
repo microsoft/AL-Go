@@ -4,6 +4,7 @@ $script:realTokenCache = @{
     "token" = ''
     "repository" = ''
     "realToken" = ''
+    "permissions" = ''
     "expires" = [datetime]::Now
 }
 
@@ -215,10 +216,11 @@ function GetDependencies {
             $projects = $dependency.projects
             $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
             if ($dependency.release_status -eq "latestBuild") {
-                $artifacts = GetArtifacts -token $dependency.authTokenSecret -api_url $api_url -repository $repository -mask $mask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
+                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
+                $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
                 if ($artifacts) {
                     $artifacts | ForEach-Object {
-                        $download = DownloadArtifact -path $saveToPath -token $dependency.authTokenSecret -artifact $_
+                        $download = DownloadArtifact -path $saveToPath -token $token -artifact $_
                         if ($download) {
                             if ($mask -like '*TestApps') {
                                 $downloadedList += @("($download)")
@@ -237,7 +239,8 @@ function GetDependencies {
                 }
             }
             elseif ($dependency.release_status -ne "thisBuild" -and $dependency.release_status -ne "include") {
-                $releases = GetReleases -api_url $api_url -token $dependency.authTokenSecret -repository $repository
+                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
+                $releases = GetReleases -api_url $api_url -token $token -repository $repository
                 if ($dependency.version -ne "latest") {
                     $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
                 }
@@ -253,7 +256,7 @@ function GetDependencies {
                     throw "Could not find a release that matches the criteria."
                 }
 
-                $download = DownloadRelease -token $dependency.authTokenSecret -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
+                $download = DownloadRelease -token $token -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
                 if ($download) {
                     if ($mask -like '*TestApps') {
                         $downloadedList += @("($download)")
@@ -607,10 +610,15 @@ function GetAccessToken {
     Param(
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [string[]] $repositories = @($repository),
+        [hashtable] $permissions = @{}
     )
 
-    if (($script:realTokenCache.token -eq $token -or $script:realTokenCache.realToken -eq $token) -and $script:realTokenCache.repository -eq $repository -and $script:realTokenCache.expires -gt [datetime]::Now.AddMinutes(10)) {
+    if (($script:realTokenCache.token -eq $token -or $script:realTokenCache.realToken -eq $token) -and 
+        $script:realTokenCache.repository -eq $repository -and 
+        $script:realTokenCache.permissions -eq ($permissions | ConvertTo-Json -Compress) -and 
+        $script:realTokenCache.expires -gt [datetime]::Now.AddMinutes(10)) {
         # Same token request or re-request with cached token - and cached token won't expire in 10 minutes
         return $script:realTokenCache.realToken
     }
@@ -633,6 +641,16 @@ function GetAccessToken {
             }
             Write-Host "Get App Info $api_url/repos/$repository/installation"
             $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$api_url/repos/$repository/installation"
+            # Only ask for access to the repository needed
+            $body = @{}
+            # Limit access to selected repositories
+            if ($repositories) {
+                $body += @{ "repositories" = @($repositories | ForEach-Object { $_.SubString($_.LastIndexOf('/')+1) } ) }
+            }
+            # Only request neecessary permissions
+            if ($permissions) {
+                $body += @{ "permissions" = $permissions }
+            }
             Write-Host "Get Token Response $($appInfo.access_tokens_url)"
             $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Uri $appInfo.access_tokens_url
             Write-Host "return token"
@@ -640,6 +658,7 @@ function GetAccessToken {
                 "token" = $token
                 "repository" = $repository
                 "realToken" = $tokenResponse.token
+                "permissions" = $permissions | ConvertTo-Json -Compress
                 "expires" = [datetime]::Now.AddSeconds($tokenResponse.expires_in)
             }
             return $tokenResponse.token
@@ -664,7 +683,7 @@ function GetHeaders {
         "X-GitHub-Api-Version" = $apiVersion
     }
     if (![string]::IsNullOrEmpty($token)) {
-        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository
+        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository -permissions @{"contents"="read";"metadata"="read";"actions"="read"}
         $headers["Authorization"] = "token $accessToken"
     }
     return $headers
