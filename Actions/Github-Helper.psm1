@@ -615,9 +615,9 @@ function GetAccessToken {
         [hashtable] $permissions = @{}
     )
 
-    if (($script:realTokenCache.token -eq $token -or $script:realTokenCache.realToken -eq $token) -and 
-        $script:realTokenCache.repository -eq $repository -and 
-        $script:realTokenCache.permissions -eq ($permissions | ConvertTo-Json -Compress) -and 
+    if (($script:realTokenCache.token -eq $token -or $script:realTokenCache.realToken -eq $token) -and
+        $script:realTokenCache.repository -eq $repository -and
+        $script:realTokenCache.permissions -eq ($permissions | ConvertTo-Json -Compress) -and
         $script:realTokenCache.expires -gt [datetime]::Now.AddMinutes(10)) {
         # Same token request or re-request with cached token - and cached token won't expire in 10 minutes
         return $script:realTokenCache.realToken
