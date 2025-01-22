@@ -1,3 +1,5 @@
+## v6.3
+
 ### Deprecations
 
 - `cleanModePreprocessorSymbols` will be removed after April 1st 2025. Use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) instead, specifying buildModes and the `preprocessorSymbols` setting. Read [this](https://aka.ms/algodeprecations#cleanModePreprocessorSymbols) for more information.
