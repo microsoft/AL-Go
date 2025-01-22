@@ -17,13 +17,13 @@ if ($null -eq $sarifModule) {
 Import-Module -Name ConvertToSARIF -Force
 
 $htPSA = [ordered]@{ Path = $Path }
-if ($ExcludeRule) { 
+if ($ExcludeRule) {
     Write-Host "Excluding rules: $ExcludeRule"
-    $htPSA.add('ExcludeRule', $ExcludeRule) 
+    $htPSA.add('ExcludeRule', $ExcludeRule)
 }
-if ($Recurse) { 
+if ($Recurse) {
     Write-Host "Recurse: $Recurse"
-    $htPSA.add('Recurse', $true) 
+    $htPSA.add('Recurse', $true)
 }
 $htCTS = [ordered]@{ FilePath = $Output }
 
