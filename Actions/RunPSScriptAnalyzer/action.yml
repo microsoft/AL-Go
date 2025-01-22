@@ -35,5 +35,5 @@ runs:
         _output: ${{ inputs.output }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunPSScriptAnalyzer" -Action {
-          ${{ github.action_path }}/RunPSScriptAnalyzer.ps1 -path $ENV:_path -excludeRule @($ENV:_excludeRule -Split ',') -Recurse:$($ENV:_recurse -eq 'true') -output $ENV:_output
+          ${{ github.action_path }}/RunPSScriptAnalyzer.ps1 -path $ENV:_path -excludeRule @($ENV:_excludeRule -Replace ' ','' -Split ',') -Recurse:$($ENV:_recurse -eq 'true') -output $ENV:_output
         }
