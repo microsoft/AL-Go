@@ -212,7 +212,8 @@ else {
         $commitMessage = "[$updateBranch] Update AL-Go System Files from $templateInfo -  $templateSha"
 
         # Get Token with permissions to modify workflows in this repository
-        $env:GH_TOKEN = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
+        $writeToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
+        $env:GH_TOKEN = $writeToken
 
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
