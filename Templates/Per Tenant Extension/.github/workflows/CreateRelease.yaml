@@ -16,14 +16,14 @@ on:
         description: Tag of this release (needs to be semantic version string https://semver.org, ex. 1.0.0)
         required: true
         default: ''
-      prerelease:
-        description: Prerelease?
-        type: boolean
-        default: false
-      draft:
-        description: Draft?
-        type: boolean
-        default: false
+      releaseType:
+        description: Release, prerelease or draft?
+        type: choice
+        options:
+          - Release
+          - Prerelease
+          - Draft
+        default: Release
       createReleaseBranch:
         description: Create Release Branch?
         type: boolean
@@ -33,9 +33,13 @@ on:
         type: string
         default: release/
       updateVersionNumber:
-        description: New Version Number in main branch. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
+        description: New Version Number in main branch. Use Major.Minor (optionally add .Build for versioningstrategy 3) for absolute change, or +1, +0.1 (or +0.0.1 for versioningstrategy 3) incremental change.
         required: false
         default: ''
+      skipUpdatingDependencies:
+        description: Skip updating dependency version numbers in all apps.
+        type: boolean
+        default: false
       directCommit:
         description: Direct Commit?
         type: boolean
@@ -78,7 +82,7 @@ jobs:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Initialize the workflow
         id: init
@@ -224,8 +228,8 @@ jobs:
               tag_name: '${{ github.event.inputs.tag }}',
               name: '${{ github.event.inputs.name }}',
               body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
-              draft: ${{ github.event.inputs.draft=='true' }},
-              prerelease: ${{ github.event.inputs.prerelease=='true' }},
+              draft: ${{ github.event.inputs.releaseType=='Draft' }},
+              prerelease: ${{ github.event.inputs.releaseType=='Prerelease' }},
               make_latest: 'legacy',
               target_commitish: '${{ steps.analyzeartifacts.outputs.commitish }}'
             });
@@ -242,7 +246,7 @@ jobs:
       fail-fast: true
     steps:
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -320,7 +324,7 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: '${{ needs.createRelease.outputs.commitish }}'
 
@@ -343,7 +347,7 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
@@ -365,6 +369,7 @@ jobs:
           shell: powershell
           token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           versionNumber: ${{ github.event.inputs.updateVersionNumber }}
+          skipUpdatingDependencies: ${{ github.event.inputs.skipUpdatingDependencies }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
   PostProcess:
@@ -373,7 +378,7 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Finalize the workflow
         id: PostProcess

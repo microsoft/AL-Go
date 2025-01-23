@@ -18,6 +18,7 @@ $projectPath = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
 
     if ($isWindows) {
@@ -255,6 +256,8 @@ try {
         $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
             Write-Host "Add override for $scriptName"
+            Trace-Information -Message "Using override for $scriptName"
+
             $runAlPipelineParams += @{
                 "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
             }
@@ -350,6 +353,7 @@ try {
     "doNotBuildTests",
     "doNotRunTests",
     "doNotRunBcptTests",
+    "doNotRunPageScriptingTests",
     "doNotPublishApps",
     "installTestRunner",
     "installTestFramework",
@@ -364,27 +368,29 @@ try {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
-    switch($buildMode){
-        'Clean' {
-            $preprocessorsymbols = $settings.cleanModePreprocessorSymbols
-
-            if (!$preprocessorsymbols) {
-                throw "No cleanModePreprocessorSymbols defined in settings.json for this project. Please add the preprocessor symbols to use when building in clean mode or disable CLEAN mode."
-            }
-
-            if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
-                $runAlPipelineParams["preprocessorsymbols"] = @()
-            }
-
-            Write-Host "Adding Preprocessor symbols: $preprocessorsymbols"
-            $runAlPipelineParams["preprocessorsymbols"] += $preprocessorsymbols
+    if ($buildMode -eq 'Translated') {
+        if ($runAlPipelineParams.Keys -notcontains 'features') {
+            $runAlPipelineParams["features"] = @()
         }
-        'Translated' {
-            if ($runAlPipelineParams.Keys -notcontains 'features') {
-                $runAlPipelineParams["features"] = @()
-            }
-            $runAlPipelineParams["features"] += "translationfile"
-        }
+        Write-Host "Adding translationfile feature"
+        $runAlPipelineParams["features"] += "translationfile"
+    }
+
+    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
+        $runAlPipelineParams["preprocessorsymbols"] = @()
+    }
+
+    # REMOVE AFTER April 1st 2025 --->
+    if ($buildMode -eq 'Clean' -and $settings.ContainsKey('cleanModePreprocessorSymbols')) {
+        Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
+        $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
+        Trace-DeprecationWarning -Message "cleanModePreprocessorSymbols is deprecated" -DeprecationTag "cleanModePreprocessorSymbols"
+    }
+    # <--- REMOVE AFTER April 1st 2025
+
+    if ($settings.ContainsKey('preprocessorSymbols')) {
+        Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
+        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
@@ -411,6 +417,8 @@ try {
         -appFolders $settings.appFolders `
         -testFolders $settings.testFolders `
         -bcptTestFolders $settings.bcptTestFolders `
+        -pageScriptingTests $settings.pageScriptingTests `
+        -restoreDatabases $settings.restoreDatabases `
         -buildOutputFile $buildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
@@ -425,6 +433,8 @@ try {
         -additionalCountries $additionalCountries `
         -obsoleteTagMinAllowedMajorMinor $settings.obsoleteTagMinAllowedMajorMinor `
         -buildArtifactFolder $buildArtifactFolder `
+        -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
+        -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps

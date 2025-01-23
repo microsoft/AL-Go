@@ -29,15 +29,14 @@ none
 
 | Name | Description |
 | :-- | :-- |
-| ThisBuildAppsArtifactsName | Artifact name for apps being built in the current workflow run |
-| ThisBuildDependenciesArtifactsName | Artifact name for dependencies of apps being built in the current workflow run |
-| ThisBuildTestAppsArtifactsName | Artifact name for test apps being built in the current workflow run |
 | AppsArtifactsName | Artifacts name for Apps |
 | PowerPlatformSolutionArtifactsName | Artifacts name for PowerPlatform Solution |
 | DependenciesArtifactsName | Artifacts name for Dependencies |
 | TestAppsArtifactsName | Artifacts name for TestApps |
 | TestResultsArtifactsName | Artifacts name for TestResults |
 | BcptTestResultsArtifactsName | Artifacts name for BcptTestResults |
+| PageScriptingTestResultsArtifactsName | Artifacts name for PageScriptingTestResults |
+| PageScriptingTestResultDetailsArtifactsName | Artifacts name for PageScriptingTestResultDetails |
 | BuildOutputArtifactsName | Artifacts name for BuildOutput |
 | ContainerEventLogArtifactsName | Artifacts name for ContainerEventLog |
 | BuildMode | Build mode used when building the artifacts |

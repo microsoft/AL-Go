@@ -38,19 +38,19 @@ if ($suffix) {
     $suffix = "$suffix-$([DateTime]::UtcNow.ToString('yyyyMMdd'))"
 }
 else {
-    # Default suffix is the build number
-    $suffix = "$($settings.repoVersion).$($settings.appBuild).$($settings.appRevision)"
+    $repoVersion = [System.Version]$settings.repoVersion
+    $appBuild = $settings.appBuild
+    if ($appBuild -eq -1) {
+        $appBuild = $repoVersion.Build
+        if ($repoVersion.Build -eq -1) {
+            $appBuild = 0
+        }
+    }
+    $suffix = "$($repoVersion.Major).$($repoVersion.Minor).$($appBuild).$($settings.appRevision)"
 }
 
-'Apps', 'Dependencies', 'TestApps', 'TestResults', 'BcptTestResults', 'BuildOutput', 'ContainerEventLog', 'PowerPlatformSolution' | ForEach-Object {
+'Apps', 'Dependencies', 'TestApps', 'TestResults', 'BcptTestResults', 'PageScriptingTestResults', 'PageScriptingTestResultDetails', 'BuildOutput', 'ContainerEventLog', 'PowerPlatformSolution' | ForEach-Object {
     $name = "$($_)ArtifactsName"
     $value = "$($projectName)-$($branchName)-$buildMode$_-$suffix"
-    Set-OutputVariable -name $name -value $value
-}
-
-# Set this build artifacts name
-'Apps', 'Dependencies', 'TestApps' | ForEach-Object {
-    $name = "ThisBuild$($_)ArtifactsName"
-    $value = "thisbuild-$($projectName)-$($buildMode)$($_)"
     Set-OutputVariable -name $name -value $value
 }

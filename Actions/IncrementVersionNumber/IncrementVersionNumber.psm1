@@ -9,7 +9,7 @@
     .Parameter settingName
         Name of the setting to change. The setting must be a version number.
     .Parameter newValue
-        New value of the setting. Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), or a version number in the format Major.Minor (e.g. 1.0 or 1.2
+        New value of the setting. Allowed values are: +1 (increment major version number), +0.1 (increment minor version number), +0.0.1 (increment build version number) or a version number in the format Major.Minor (e.g. 1.0, 1.2 or (1.2.3)
     .Parameter Force
         If specified, the function will create the setting if it does not exist in the settings file.
 #>
@@ -54,21 +54,22 @@ function Set-VersionInSettingsFile {
         # Handle incremental version number
 
         # Defensive check. Should never happen.
-        $allowedIncrementalVersionNumbers = @('+1', '+0.1')
+        $allowedIncrementalVersionNumbers = @('+1', '+0.1', '+0.0.1')
         if (-not $allowedIncrementalVersionNumbers.Contains($newValue)) {
-            throw "Incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
+            throw "Unexpected error - incremental version number $newValue is not allowed. Allowed incremental version numbers are: $($allowedIncrementalVersionNumbers -join ', ')"
         }
         # Defensive check. Should never happen.
         if($null -eq $oldVersion) {
-            throw "The setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
+            throw "Unexpected error - the setting $settingName does not exist in the settings file. It must exist to be able to increment the version number."
         }
     }
     else {
         # Handle absolute version number
 
-        $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
+        # Defensive check. Should never happen.
+        $versionNumberFormat = '^\d+\.\d+(\.\d+)?$' # Major.Minor or Major.Minor.Build
         if (-not ($newValue -match $versionNumberFormat)) {
-            throw "Version number $newValue is not in the correct format. The version number must be in the format Major.Minor (e.g. 1.0 or 1.2)"
+            throw "Unexpected error - version number $newValue is not in the correct format. The version number must be in the format Major.Minor or Major.Minor.Build (e.g. 1.0, 1.2 or 1.3.0)"
         }
     }
     #endregion
@@ -80,25 +81,43 @@ function Set-VersionInSettingsFile {
             # Increment major version number
             $versionNumbers += $oldVersion.Major + 1
             $versionNumbers += 0
+            # Include build number if it exists in the old version number
+            if ($oldVersion.Build -ne -1) {
+                $versionNumbers += 0
+            }
         }
         '+0.1' {
             # Increment minor version number
             $versionNumbers += $oldVersion.Major
             $versionNumbers += $oldVersion.Minor + 1
-
+            # Include build number if it exists in the old version number
+            if ($oldVersion.Build -ne -1) {
+                $versionNumbers += 0
+            }
+        }
+        '+0.0.1' {
+            # Increment build version number
+            $versionNumbers += $oldVersion.Major
+            $versionNumbers += $oldVersion.Minor
+            if ($oldVersion.Build -eq -1) {
+                $versionNumbers += 1
+            }
+            else {
+                $versionNumbers += $oldVersion.Build + 1
+            }
         }
         default {
             # Absolute version number
             $versionNumbers += $newValue.Split('.')
+            if ($versionNumbers.Count -eq 2 -and ($null -ne $oldVersion -and $oldVersion.Build -ne -1)) {
+                $versionNumbers += 0
+            }
         }
     }
 
-    # Include build and revision numbers if they exist in the old version number
-    if ($oldVersion -and ($oldVersion.Build -ne -1)) {
-        $versionNumbers += 0 # Always set the build number to 0
-        if ($oldVersion.Revision -ne -1) {
-            $versionNumbers += 0 # Always set the revision number to 0
-        }
+    # Include revision number if it exist in the old version number
+    if ($oldVersion -and ($oldVersion.Revision -ne -1)) {
+        $versionNumbers += 0 # Always set the revision number to 0
     }
 
     # Construct the new version number. Cast to System.Version to validate if the version number is valid.
@@ -204,8 +223,11 @@ function Set-DependenciesVersionInAppManifests {
         [string[]] $appFolders
     )
 
+    # Get all distinct app folders
+    $distinctAppFolders = $appFolders | Sort-Object -Unique
+
     # Get all apps info: app ID and app version
-    $appsInfos = @($appFolders | ForEach-Object {
+    $appsInfos = @($distinctAppFolders | ForEach-Object {
         $appJson = Join-Path $_ "app.json"
         $app = Get-Content -Path $appJson -Encoding UTF8 -Raw | ConvertFrom-Json
         return [PSCustomObject]@{
@@ -224,7 +246,7 @@ function Set-DependenciesVersionInAppManifests {
 
         $dependencies | ForEach-Object {
             $dependency = $_
-            $appInfo = $appsInfos | Where-Object { $_.Id -eq $dependency.id }
+            $appInfo = $appsInfos | Where-Object { $_.Id -eq $dependency.id } | Select-Object -First 1
             if ($appInfo) {
                 Write-Host "Updating dependency app $($dependency.id) in $appJsonPath from $($dependency.version) to $($appInfo.Version)"
                 $dependency.version = $appInfo.Version

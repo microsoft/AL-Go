@@ -222,7 +222,6 @@ function Get-ProjectsToBuild {
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
         $projectsToBuild = @()
-        $projectDependencies = @{}
         $projectsOrderToBuild = @()
 
         if ($projects) {
@@ -238,21 +237,13 @@ function Get-ProjectsToBuild {
                 $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths })
             }
 
-            if($settings.useProjectDependencies) {
-                $buildAlso = @{}
+            # Calculate the full projects order
+            $projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects
 
-                # Calculate the full projects order
-                $fullProjectsOrder = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects -buildAlso ([ref]$buildAlso) -projectDependencies ([ref]$projectDependencies)
-
-                $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($buildAlso.Keys -contains $_) { $buildAlso."$_" } } | Select-Object -Unique)
-            }
-            else {
-                # Use a flatten build order (all projects on the same level)
-                $fullProjectsOrder = @(@{ 'projects' = $projectsToBuild; 'projectsCount' = $projectsToBuild.Count})
-            }
+            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } | Select-Object -Unique)
 
             # Create a project order based on the projects to build
-            foreach($depth in $fullProjectsOrder) {
+            foreach($depth in $projectBuildInfo.FullProjectsOrder) {
                 $projectsOnDepth = @($depth.projects | Where-Object { $projectsToBuild -contains $_ })
 
                 if ($projectsOnDepth) {
@@ -281,7 +272,7 @@ function Get-ProjectsToBuild {
             throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows"
         }
 
-        return $projects, $projectsToBuild, $projectDependencies, $projectsOrderToBuild
+        return $projects, $projectsToBuild, $projectBuildInfo.projectDependencies, $projectsOrderToBuild
     }
     finally {
         Pop-Location

@@ -16,15 +16,6 @@ inputs:
     required: false
     default: ''
 outputs:
-  ThisBuildAppsArtifactsName:
-    description: Artifact name for apps being built in the current workflow run
-    value: ${{ steps.calculateartifactnames.outputs.ThisBuildAppsArtifactsName }}
-  ThisBuildDependenciesArtifactsName:
-    description: Artifact name for dependencies of apps being built in the current workflow run
-    value: ${{ steps.calculateartifactnames.outputs.ThisBuildDependenciesArtifactsName }}
-  ThisBuildTestAppsArtifactsName:
-    description: Artifact name for test apps being built in the current workflow run
-    value: ${{ steps.calculateartifactnames.outputs.ThisBuildTestAppsArtifactsName }}
   AppsArtifactsName:
     description: Artifacts name for Apps
     value: ${{ steps.calculateartifactnames.outputs.AppsArtifactsName }}
@@ -43,6 +34,12 @@ outputs:
   BcptTestResultsArtifactsName:
     description: Artifacts name for BcptTestResults
     value: ${{ steps.calculateartifactnames.outputs.BcptTestResultsArtifactsName }}
+  PageScriptingTestResultsArtifactsName:
+    description: Artifacts name for PageScriptingTestResults
+    value: ${{ steps.calculateartifactnames.outputs.PageScriptingTestResultsArtifactsName }}
+  PageScriptingTestResultDetailsArtifactsName:
+    description: Artifacts name for PageScriptingTestResultDetails
+    value: ${{ steps.calculateartifactnames.outputs.PageScriptingTestResultDetailsArtifactsName }}
   BuildOutputArtifactsName:
     description: Artifacts name for BuildOutput
     value: ${{ steps.calculateartifactnames.outputs.BuildOutputArtifactsName }}

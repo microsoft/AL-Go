@@ -5,10 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  actor:
-    description: The GitHub actor running the action
-    required: false
-    default: ${{ github.actor }}
   token:
     description: The GitHub token running the action
     required: false
@@ -41,7 +37,6 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       env:
-        _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
         _projects: ${{ inputs.projects }}
         _deliveryTarget: ${{ inputs.deliveryTarget }}
@@ -51,7 +46,7 @@ runs:
         _goLive: ${{ inputs.goLive }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Deliver" -Action {
-          ${{ github.action_path }}/Deliver.ps1 -actor $ENV:_actor -token $ENV:_token -projects $ENV:_projects -deliveryTarget $ENV:_deliveryTarget -artifacts $ENV:_artifacts -type $ENV:_type -atypes $ENV:_atypes -goLive ($ENV:_goLive -eq 'true')
+          ${{ github.action_path }}/Deliver.ps1 -token $ENV:_token -projects $ENV:_projects -deliveryTarget $ENV:_deliveryTarget -artifacts $ENV:_artifacts -type $ENV:_type -atypes $ENV:_atypes -goLive ($ENV:_goLive -eq 'true')
         }
 branding:
   icon: terminal
