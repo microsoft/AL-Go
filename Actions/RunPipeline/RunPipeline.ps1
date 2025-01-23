@@ -329,7 +329,7 @@ try {
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
                     $publishParams = @{
                         "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
-                        "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"metadata"="read"} -repositories @()
+                        "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents":"read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
                     }
