@@ -14,6 +14,7 @@ function MaskValue {
         [string] $value
     )
 
+    $value = $value.Trim()
     if ([String]::IsNullOrEmpty($value)) {
         return
     }
@@ -652,7 +653,7 @@ function GetAccessToken {
                 $body += @{ "permissions" = $permissions }
             }
             Write-Host "Get Token Response $($appInfo.access_tokens_url) with $($body | ConvertTo-Json -Compress)"
-            $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Body $Body -Uri $appInfo.access_tokens_url
+            $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Body ($body | ConvertTo-Json -Compress) -Uri $appInfo.access_tokens_url -Verbose
             Write-Host "return token"
             $script:realTokenCache = @{
                 "token" = $token
