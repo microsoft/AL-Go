@@ -616,6 +616,10 @@ function GetAccessToken {
         [hashtable] $permissions = @{}
     )
 
+    if ([string]::IsNullOrEmpty($token)) {
+        return [string]::Empty
+    }
+
     if (($script:realTokenCache.token -eq $token -or $script:realTokenCache.realToken -eq $token) -and
         $script:realTokenCache.repository -eq $repository -and
         $script:realTokenCache.permissions -eq ($permissions | ConvertTo-Json -Compress) -and
