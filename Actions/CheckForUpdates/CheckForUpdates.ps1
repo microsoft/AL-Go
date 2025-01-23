@@ -33,7 +33,12 @@ $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 
 # TemplateUrl is now always a full url + @ and a branch name
 
-if ($token) {
+if ($update -eq 'Y') {
+    if (-not $token) {
+        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
+    }
+
+    # token comes from a secret, base 64 encoded
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 
     # Get token with read permissions for this and the template repository - if private and in the same organization
@@ -44,10 +49,8 @@ if ($token) {
     $readToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repositories $repositories
 }
 else {
-    if ($update -eq 'Y') {
-        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
-    }
-    $readToken = $null
+    # use token directly
+    $readToken = $token
 }
 
 # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
