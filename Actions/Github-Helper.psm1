@@ -646,8 +646,9 @@ function GetAccessToken {
     }
     else {
         # GitHub App token format: {"GitHubAppClientId":"<client_id>","PrivateKey":"<private_key>"}
-        $GitHubAuthHelperModuleName = "GitHub-AuthHelper"
+        $GitHubAuthHelperModuleName = "Github-AuthHelper"
         $GitHubAuthHelperModulePath = Join-Path $PSScriptRoot "$($GitHubAuthHelperModuleName).psm1"
+        Write-Host $GitHubAuthHelperModulePath
         if (-not (Get-Module $GitHubAuthHelperModuleName)) {
             if (-not (Test-Path $GitHubAuthHelperModulePath)) {
                 throw "Module $GitHubAuthHelperModuleName not present. GitHub App tokens can only be used inside GitHub workflows."
