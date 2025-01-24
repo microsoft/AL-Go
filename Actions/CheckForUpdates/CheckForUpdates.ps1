@@ -35,7 +35,7 @@ $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 
 if ($update -eq 'Y') {
     if (-not $token) {
-        throw "The GhTokenWorkflow secret is needed. Read https://github.com/microsoft/AL-Go/Scenarios/GhTokenWorkflow.md for more information."
+        throw "The GhTokenWorkflow secret is needed. Read https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md for more information."
     }
 
     # token comes from a secret, base 64 encoded
@@ -275,10 +275,10 @@ else {
     }
     catch {
         if ($directCommit) {
-            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. Read https://github.com/microsoft/AL-Go/Scenarios/GhTokenWorkflow.md for more information. (Error was $($_.Exception.Message))"
+            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. Read https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md for more information. (Error was $($_.Exception.Message))"
         }
         else {
-            throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. Read https://github.com/microsoft/AL-Go/Scenarios/GhTokenWorkflow.md for more information. (Error was $($_.Exception.Message))"
+            throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. Read https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md for more information. (Error was $($_.Exception.Message))"
         }
     }
 }

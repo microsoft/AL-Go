@@ -604,9 +604,22 @@ function GetLatestRelease {
     $latestRelease
 }
 
-# This function will return the Access Token based on the given token
-# If the given token is a Personal Access Token, it will be returned unaltered
-# If the given token is a GitHub App token, it will be used to get an Access Token from GitHub
+<#
+ .SYNOPSIS
+  This function will return the Access Token based on the given token
+  If the given token is a Personal Access Token, it will be returned unaltered
+  If the given token is a GitHub App token, it will be used to get an Access Token from GitHub
+ .PARAMETER token
+  The given token (PAT or GitHub App token)
+ .PARAMETER api_url
+  The GitHub API URL
+ .PARAMETER repository
+  The Current GitHub repository
+ .PARAMETER repositories
+  The repositories to request access to
+ .PARAMETER permissions
+  The permissions to request for the Access Token
+#>
 function GetAccessToken {
     Param(
         [string] $token,
@@ -633,40 +646,25 @@ function GetAccessToken {
     }
     else {
         # GitHub App token format: {"GitHubAppClientId":"<client_id>","PrivateKey":"<private_key>"}
+        $GitHubAuthHelperModuleName = "GitHub-AuthHelper"
+        $GitHubAuthHelperModulePath = Join-Path $PSScriptRoot "$($GitHubAuthHelperModuleName).psm1"
+        if (-not (Get-Module $GitHubAuthHelperModuleName)) {
+            if (-not (Test-Path $GitHubAuthHelperModulePath)) {
+                throw "Module $GitHubAuthHelperModuleName not present. GitHub App tokens can only be used inside GitHub workflows."
+            }
+            Import-Module $GitHubAuthHelperModulePath
+        }
         try {
             $json = $token | ConvertFrom-Json
-            $gitHubAppClientId = $json.GitHubAppClientId
-            $privateKey = $json.PrivateKey
-            Write-Host "Using GitHub App with ClientId $gitHubAppClientId for authentication"
-            $jwt = GenerateJwtForTokenRequest -gitHubAppClientId $gitHubAppClientId -privateKey $privateKey
-            $headers = @{
-                "Accept" = "application/vnd.github+json"
-                "Authorization" = "Bearer $jwt"
-                "X-GitHub-Api-Version" = "2022-11-28"
-            }
-            Write-Host "Get App Info $api_url/repos/$repository/installation"
-            $appinfo = Invoke-RestMethod -Method GET -UseBasicParsing -Headers $headers -Uri "$api_url/repos/$repository/installation"
-            # Only ask for access to the repository needed
-            $body = @{}
-            # Limit access to selected repositories
-            if ($repositories) {
-                $body += @{ "repositories" = @($repositories | ForEach-Object { $_.SubString($_.LastIndexOf('/')+1) } ) }
-            }
-            # Only request neecessary permissions
-            if ($permissions) {
-                $body += @{ "permissions" = $permissions }
-            }
-            Write-Host "Get Token Response $($appInfo.access_tokens_url) with $($body | ConvertTo-Json -Compress)"
-            $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Body ($body | ConvertTo-Json -Compress) -Uri $appInfo.access_tokens_url
-            Write-Host "return token"
+            $realToken, $expiresIn = GetGitHubAppAuthToken -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey -api_url $api_url -repository $repository -repositories $repositories -permissions $permissions
             $script:realTokenCache = @{
                 "token" = $token
                 "repository" = $repository
-                "realToken" = $tokenResponse.token
+                "realToken" = $realToken
                 "permissions" = $permissions | ConvertTo-Json -Compress
-                "expires" = [datetime]::Now.AddSeconds($tokenResponse.expires_in)
+                "expires" = [datetime]::Now.AddSeconds($expiresIn)
             }
-            return $tokenResponse.token
+            return $realToken
         }
         catch {
             throw "Invalid GitHub App token format"
