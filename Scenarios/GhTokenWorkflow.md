@@ -1,6 +1,6 @@
 # Creating a GhTokenWorkflow secret
 
-Many AL-Go for GitHub workflows will require a GhTokenWorkflow secret. The GhTokenWorkflow secret should contain either a Personal Access Token with a specific set of permissions or it should be a compressed json secret containing the GitHub App Client Id and a Private Key of an installed GitHub app, with the same permissions.
+Many AL-Go for GitHub workflows will require a GhTokenWorkflow secret. The GhTokenWorkflow secret should contain either a Personal Access Token with a specific set of permissions or it should be a compressed JSON containing the GitHub App Client Id and a Private Key of an installed GitHub app, with the same permissions.
 
 The Personal Access Token comes in two flavors as well: Classic or Fine-grained.
 
