@@ -50,8 +50,15 @@ function GetGitHubAppAuthToken {
     return $tokenResponse.token, $tokenResponse.expires_in
 }
 
-# Generate JWT for token request
-# As documented here: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-json-web-token-jwt-for-a-github-app
+<#
+ .SYNOPSIS
+  Generate JWT for token request
+  As documented here: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-json-web-token-jwt-for-a-github-app
+ .PARAMETER gitHubAppClientId
+  The GitHub App Client ID
+ .Parameter privateKey
+  The GitHub App Private Key
+#>
 function GenerateJwtForTokenRequest {
     Param(
         [string] $gitHubAppClientId,
