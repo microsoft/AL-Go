@@ -8,6 +8,9 @@ The Personal Access Token comes in two flavors as well: Classic or Fine-grained.
 > The permissions assigned to the GitHub App or PAT specified in the GhTokenWorkflow secret should not be confused with the repositories for which the GhTokenWorkflow secret is made available.
 > If the secret is available to a repository, for which the GitHub App or PAT haven't been given permissions, it will not work.
 
+> [!NOTE]
+> You can define the GhTokenWorkflow under an environment and set the `updateALGoSystemFilesEnvironment` to the environment name, in order to enable an approval workflow or set permissions on who is allowed to use the secret for Update AL-Go System Files.
+
 ## GitHub App Authentication (**recommended**)
 
 The most secure way of specifying the GhTokenWorkflow is to use a GitHub App. The GitHub App doesn't contain any code, it is just a specification of what indirect permissions are given to the workflows holding the Client Id and a Private Key. When creating a GitHub App, you also specify whether the app is intended for your organization only or it can be installed in other organizations, and during installation you specify which repositories the GitHub App should be installed in. For GitHub Apps, the Client Id and Private Key only works in repositories where the GitHub App is installed and can only be used inside GitHub workflows.
