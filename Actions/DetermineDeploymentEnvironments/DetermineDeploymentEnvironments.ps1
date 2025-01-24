@@ -85,7 +85,7 @@ $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')
-if ($settings.updateALGoSystemFilesEnvironment) {
+if ($settings.Keys -contains 'UpdateALGoSystemFilesEnvironment' -and $settings.updateALGoSystemFilesEnvironment) {
     $settings.excludeEnvironments += @($settings.updateALGoSystemFilesEnvironment)
 }
 $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
