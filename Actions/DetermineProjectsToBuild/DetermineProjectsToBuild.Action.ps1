@@ -4,7 +4,7 @@
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     [int] $maxBuildDepth = 0,
     [Parameter(HelpMessage = "Specifies whether to publish artifacts for skipped projects", Mandatory = $false)]
-    [bool] $publishSkippedProjectArtifacts,
+    [bool] $includeSkippedProjects,
     [Parameter(HelpMessage = "The GitHub token to use to fetch the modified files", Mandatory = $true)]
     [string] $token
 )
@@ -23,14 +23,14 @@ if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
     # Pull request
     $buildAllProjects = $settings.alwaysBuildAllProjects
     $branch = $env:GITHUB_BASE_REF
-    $publishSkippedProjectArtifacts = $false
+    $includeSkippedProjects = $false
     Write-Host "Pull request on $branch"
 }
 elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch') {
     # Manual workflow dispatch
     $buildAllProjects = $true
     $branch = $env:GITHUB_REF_NAME
-    $publishSkippedProjectArtifacts = $false
+    $includeSkippedProjects = $false
     Write-Host "Workflow dispatch on $branch"
 }
 else {
@@ -77,8 +77,8 @@ Write-Host "::endgroup::"
 
 #region Action: Output
 $skippedProjectsJson = ConvertTo-Json (@($allProjects | Where-Object { $_ -notin $projectsToBuild })) -Depth 99 -Compress
-if ($publishSkippedProjectArtifacts) {
-    # If we are to publish artifacts for skipped projects, we include the full project list and in the build step, just avoid building the skipped projects
+if ($includeSkippedProjects) {
+    # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 }
 $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress

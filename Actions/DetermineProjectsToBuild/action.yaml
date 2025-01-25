@@ -10,8 +10,8 @@ inputs:
     description: Specifies the maximum build depth suppored by the workflow running the action
     required: false
     default: '0'
-  publishSkippedProjectArtifacts:
-    description: Specifies whether to publish artifacts for skipped projects
+  includeSkippedProjects:
+    description: Specifies whether to include skipped projects
     required: false
     default: 'false'
 outputs:
@@ -44,10 +44,10 @@ runs:
       id: determineProjectsToBuild
       env:
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
-        _publishSkippedProjectArtifacts: ${{ inputs.publishSkippedProjectArtifacts }}
+        _includeSkippedProjects: ${{ inputs.includeSkippedProjects }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth -publishSkippedProjectArtifacts ($env:_publishSkippedProjectArtifacts -eq 'true')
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth -includeSkippedProjects ($env:_includeSkippedProjects -eq 'true')
         }
 branding:
   icon: terminal
