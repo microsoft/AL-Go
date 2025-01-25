@@ -638,10 +638,12 @@ function GetAccessToken {
         $script:realTokenCache.permissions -eq ($permissions | ConvertTo-Json -Compress) -and
         $script:realTokenCache.expires -gt [datetime]::Now.AddMinutes(10)) {
         # Same token request or re-request with cached token - and cached token won't expire in 10 minutes
+        Write-Host "return token (cached)"
         return $script:realTokenCache.realToken
     }
     elseif (!($token.StartsWith("{"))) {
         # not a json token
+        Write-Host "return token (original)"
         return $token
     }
     else {
