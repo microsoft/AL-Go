@@ -5,11 +5,11 @@
     [bool] $checkContextSecrets
 )
 
-function ContinuousDelivery([string] $deliveryTarget) {
+function ContinuousDelivery([string] $deliveryTarget, [string[]] $projects) {
     $settingsName = "DeliverTo$deliveryTarget"
     if ($deliveryTarget -eq 'AppSource' -and $settings.type -eq "AppSource App") {
         # For multi-project repositories, ContinuousDelivery can be set on the projects
-        foreach($project in ($projectsJson | ConvertFrom-Json)) {
+        foreach($project in $projects) {
             $projectSettings = ReadSettings -project $project
             if ($projectSettings.deliverToAppSource.ContinuousDelivery -or ($projectSettings.Contains('AppSourceContinuousDelivery') -and $projectSettings.AppSourceContinuousDelivery)) {
                 Write-Host "Project $project is setup for Continuous Delivery to AppSource"
@@ -38,7 +38,7 @@ function IncludeBranch([string] $deliveryTarget) {
     }
 }
 
-function IncludeDeliveryTarget([string] $deliveryTarget) {
+function IncludeDeliveryTarget([string] $deliveryTarget, [string[]] $projects) {
     Write-Host "DeliveryTarget $_"
     # DeliveryTarget Context Secret needs to be specified for a delivery target to be included
     $contextName = "$($_)Context"
@@ -47,7 +47,7 @@ function IncludeDeliveryTarget([string] $deliveryTarget) {
         Write-Host "- Secret '$contextName' not found"
         return $false
     }
-    return (IncludeBranch -deliveryTarget $deliveryTarget) -and (ContinuousDelivery -deliveryTarget $deliveryTarget)
+    return (IncludeBranch -deliveryTarget $deliveryTarget) -and (ContinuousDelivery -deliveryTarget $deliveryTarget -projects $projects)
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -66,7 +66,8 @@ Get-Item -Path (Join-Path $ENV:GITHUB_WORKSPACE ".github/$($namePrefix)*.ps1") |
 $deliveryTargets = @($deliveryTargets | Select-Object -unique)
 if ($checkContextSecrets) {
     # Check all delivery targets and include only the ones needed
-    $deliveryTargets = @($deliveryTargets | Where-Object { IncludeDeliveryTarget -deliveryTarget $_ })
+    $projects = $projectsJson | ConvertFrom-Json
+    $deliveryTargets = @($deliveryTargets | Where-Object { IncludeDeliveryTarget -deliveryTarget $_ -projects $projects })
 }
 $contextSecrets = @($deliveryTargets | ForEach-Object { "$($_)Context" })
 
