@@ -1,48 +1,3 @@
-$script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
-
-$script:realTokenCache = @{
-    "token" = ''
-    "repository" = ''
-    "realToken" = ''
-    "permissions" = ''
-    "expires" = [datetime]::Now
-}
-
-function MaskValue {
-    Param(
-        [string] $key,
-        [string] $value
-    )
-
-    $value = $value.Trim()
-    if ([String]::IsNullOrEmpty($value)) {
-        return
-    }
-
-    Write-Host "Masking value for $key"
-    $value.Split("`n") | ForEach-Object {
-        Write-Host "::add-mask::$_"
-    }
-
-    $val2 = ""
-    $value.ToCharArray() | ForEach-Object {
-        $chint = [int]$_
-        if ($chint -lt 32 -or $chint -gt 126 ) {
-            $val2 += $_
-        }
-        else {
-           $val2 += $script:escchars[$chint-32]
-        }
-    }
-
-    if ($val2 -ne $value) {
-        $val2.Split("`n") | ForEach-Object {
-            Write-Host "::add-mask::$_"
-        }
-    }
-    Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value)))"
-}
-
 function GetExtendedErrorMessage {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingEmptyCatchBlock", "", Justification="We want to ignore errors")]
     Param(
@@ -633,15 +588,7 @@ function GetAccessToken {
         return [string]::Empty
     }
 
-    if (($script:realTokenCache.token -eq $token -or $script:realTokenCache.realToken -eq $token) -and
-        $script:realTokenCache.repository -eq $repository -and
-        $script:realTokenCache.permissions -eq ($permissions | ConvertTo-Json -Compress) -and
-        $script:realTokenCache.expires -gt [datetime]::Now.AddMinutes(10)) {
-        # Same token request or re-request with cached token - and cached token won't expire in 10 minutes
-        Write-Host "return token (cached)"
-        return $script:realTokenCache.realToken
-    }
-    elseif (!($token.StartsWith("{"))) {
+    if (!($token.StartsWith("{"))) {
         # not a json token
         Write-Host "return token (original)"
         return $token
