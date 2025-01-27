@@ -26,7 +26,7 @@ if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
     $includeSkippedProjects = $false
     Write-Host "Pull request on $branch"
 }
-elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch') {
+elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch' -or $ghEvent.PSObject.Properties.name -eq 'schedule') {
     # Manual workflow dispatch
     $buildAllProjects = $true
     $branch = $env:GITHUB_REF_NAME
