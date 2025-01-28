@@ -10,7 +10,7 @@ inputs:
     required: false
     default: ''
 outputs:
-  Branches:
+  Result:
     description: JSON-formatted array of branch names
     value: ${{ steps.GetGitBranches.outputs.Result }}
 runs:
