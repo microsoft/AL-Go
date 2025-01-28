@@ -6,7 +6,7 @@
 $gitHubHelperPath = Join-Path $PSScriptRoot '../Github-Helper.psm1' -Resolve
 Import-Module $gitHubHelperPath -DisableNameChecking
 
-invoke-git fetch
+invoke-git fetch | Out-Null
 
 $allBranches = @(invoke-git -returnValue for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 $branches = @()
@@ -28,4 +28,6 @@ else {
 Write-Host "Found git branches: $($branches -join ', ')"
 
 # Add the branches to the output
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$(ConvertTo-Json @{ branches = $branches } -Depth 99 -Compress)"
+$ResultJSON = $(ConvertTo-Json @{ branches = $branches } -Depth 99 -Compress)
+Write-Host "Result=$ResultJSON"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$ResultJSON"
