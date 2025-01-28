@@ -257,7 +257,7 @@ jobs:
           testsToAnalyze: "default"
 
       - name: Analyze Test Results
-        id: analyzeTestResults
+        id: analyzeTestResultsBCPT
         if: (success() || failure()) && env.doNotRunTests == 'False'
         uses: microsoft/AL-Go-Actions/AnalyzeTests@main
         with:
@@ -266,7 +266,7 @@ jobs:
           testsToAnalyze: "bcpt"
 
       - name: Analyze Test Results
-        id: analyzeTestResults
+        id: analyzeTestResultsPageScripting
         if: (success() || failure()) && env.doNotRunTests == 'False'
         uses: microsoft/AL-Go-Actions/AnalyzeTests@main
         with:
