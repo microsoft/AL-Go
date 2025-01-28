@@ -2,8 +2,6 @@
 $statusWarning = " :warning:"
 $statusError = " :x:"
 $statusSkipped = " :question:"
-$statusPassed = ":white_check_mark:"
-$statusFailed = ":x:"
 
 # Build MarkDown of TestResults file
 # This function will not fail if the file does not exist or if any test errors are found
@@ -358,7 +356,7 @@ function GetPageScriptingTestResultSummaryMD {
                 $suiteFailed = $testsuite.failures
                 $suiteSkipped = $testsuite.skipped
                 $suitePassed = $suiteTests - $suiteFailed - $suiteSkipped
-                $summarySb.AppendLine("|$($testsuite.name)|$suiteTests|$statusPassed$suitePassed|$statusFailed$suiteFailed|$suiteSkipped|$suiteTime|") | Out-Null
+                $summarySb.AppendLine("|$($testsuite.name)|$suiteTests|$suitePassed$statusOk|$suiteFailed$statusError|$suiteSkipped$statusSkipped|$suiteTime|") | Out-Null
                 
                 #Write summary for each test suite
                 # $summarySb.AppendLine("### $($testsuite.name)") | Out-Null
@@ -368,12 +366,6 @@ function GetPageScriptingTestResultSummaryMD {
                 $failuresSb.Append("<details><summary><i>$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds</i></summary>") | Out-Null
                 foreach($testcase in $testsuite.testcase) {
                     $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
-                    $result = "$statusPassed Pass"
-                    if ($testcase.failure) {
-                        $result = "$statusFailed Fail"
-                    }
-                    $duration = $testcase.time
-                    # $summarySb.AppendLine("| $($testName) | $result | $duration |") | Out-Null
                     if ($testcase.failure) {
                         Write-Host "    - $($testName), Failure, $($testcase.time) seconds"
                         $failuresSb.Append("<details><summary><i>$($testName), Failure</i></summary>") | Out-Null
