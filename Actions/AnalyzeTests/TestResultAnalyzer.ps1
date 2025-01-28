@@ -2,6 +2,8 @@
 $statusWarning = " :warning:"
 $statusError = " :x:"
 $statusSkipped = " :question:"
+$statusPassed = ":white_check_mark:"
+$statusFailed = ":x:"
 
 # Build MarkDown of TestResults file
 # This function will not fail if the file does not exist or if any test errors are found
@@ -71,9 +73,9 @@ function GetTestResultSummaryMD {
                                     Write-Host "    - $($testcase.name), Failure, $($testcase.time) seconds"
                                     $failuresSb.Append("<details><summary><i>$($testcase.name), Failure</i></summary>") | Out-Null
                                     foreach($failure in $testcase.ChildNodes) {
-                                        Write-Host "      - Error: $($failure.message)"
-                                        Write-Host "        Stacktrace:"
-                                        Write-Host "        $($failure."#text".Trim().Replace("`n","`n        "))"
+                                        #Write-Host "      - Error: $($failure.message)"
+                                        #Write-Host "        Stacktrace:"
+                                        #Write-Host "        $($failure."#text".Trim().Replace("`n","`n        "))"
                                         $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($failure.message)</i><br/>") | Out-Null
                                         $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
                                         $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$($failure."#text".Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))</i><br/>") | Out-Null
@@ -321,4 +323,85 @@ function GetBcptSummaryMD {
     }
 
     $summarySb.ToString()
+}
+
+function GetPageScriptingTestResultSummaryMD {
+    Param(
+        [string] $testResultsFile
+    )
+
+    $summarySb = [System.Text.StringBuilder]::new()
+    $failuresSb = [System.Text.StringBuilder]::new()
+
+
+    if (Test-Path -Path $testResultsFile -PathType Leaf) {
+        $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)
+        $totalTests = 0
+        $totalTime = 0.0
+        $totalFailed = 0
+        $totalSkipped = 0
+
+        if ($testResults.testsuites) {
+            $totalTests = $testResults.testsuites.tests
+            $totalTime = $testResults.testsuites.time
+            $totalFailed = $testResults.testsuites.failures
+            $totalSkipped = $testResults.testsuites.skipped
+            $totalPassed = $totalTests - $totalFailed - $totalSkipped
+
+            #Write total summary for all test suites
+            Write-Host "$totalTests tests, $totalPassed passed, $totalFailed failed, $totalSkipped skipped, $totalTime seconds"
+            $summarySb.AppendLine('|Suite|Tests|Passed|Failed|Skipped|Time|') | Out-Null
+            $summarySb.AppendLine('|:---|---:|---:|---:|---:|---:|') | Out-Null
+            foreach($testsuite in $testResults.testsuites.testsuite) {
+                $suiteTests = $testsuite.tests
+                $suiteTime = $testsuite.time
+                $suiteFailed = $testsuite.failures
+                $suiteSkipped = $testsuite.skipped
+                $suitePassed = $suiteTests - $suiteFailed - $suiteSkipped
+                $summarySb.AppendLine("|$($testsuite.name)|$suiteTests|$statusPassed$suitePassed|$statusFailed$suiteFailed|$suiteSkipped|$suiteTime|") | Out-Null
+                
+                #Write summary for each test suite
+                # $summarySb.AppendLine("### $($testsuite.name)") | Out-Null
+                # $summarySb.AppendLine("| Test | Result | Duration |") | Out-Null
+                # $summarySb.AppendLine("| ---- | ------ | -------- |") | Out-Null
+
+                $failuresSb.Append("<details><summary><i>$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds</i></summary>") | Out-Null
+                foreach($testcase in $testsuite.testcase) {
+                    $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
+                    $result = "$statusPassed Pass"
+                    if ($testcase.failure) {
+                        $result = "$statusFailed Fail"
+                    }
+                    $duration = $testcase.time
+                    # $summarySb.AppendLine("| $($testName) | $result | $duration |") | Out-Null
+                    if ($testcase.failure) {
+                        Write-Host "    - $($testName), Failure, $($testcase.time) seconds"
+                        $failuresSb.Append("<details><summary><i>$($testName), Failure</i></summary>") | Out-Null
+                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($testcase.failure.message)</i><br/>") | Out-Null
+                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
+                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $($testcase.failure."#cdata-section")</i><br/>") | Out-Null
+                        $failuresSb.Append("</details>") | Out-Null
+                    }
+                }
+                $failuresSb.Append("</details>") | Out-Null
+            }
+        }
+        if ($totalFailed -gt 0) {
+            $failuresSummaryMD = "<i>$totalFailed failing tests, download test results to see details</i>"
+            $failuresSb.Insert(0,"<details><summary>$failuresSummaryMD</summary>") | Out-Null
+            $failuresSb.Append("</details>") | Out-Null
+        }
+        else {
+            $failuresSummaryMD = "<i>No test failures</i>"
+            $failuresSb.Append($failuresSummaryMD) | Out-Null
+        }
+    }
+    else {
+        $summarySb.Append("<i>No test results found</i>") | Out-Null
+        $failuresSummaryMD = ''
+    }
+
+    $summarySb.ToString()
+    $failuresSb.ToString()
+    $failuresSummaryMD
 }
