@@ -36,7 +36,7 @@ env:
 
 jobs:
   Initialize:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     name: Initialize
     outputs:
       SupportedBranches: ${{ steps.DetermineBranches.outputs.Result }}
@@ -139,7 +139,7 @@ jobs:
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
           $templateUrl = "${{ needs.Initialize.outputs.TemplateUrl }}" # Available from Initialize job
-          if ($initalTemplate -eq '') {
+          if ($templateUrl -eq '') {
             $templateUrl = $env:templateUrl # Available from ReadSettings step
           }
 
