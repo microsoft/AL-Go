@@ -51,7 +51,7 @@ jobs:
         if: ${{ env._updateMultipleBranches }}
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
-          shell: pwsh
+          shell: powershell
           get: scheduleSettings,templateUrl
 
       - name: Get Supported Branches
@@ -59,14 +59,14 @@ jobs:
         id: GetSupportedBranches
         uses: microsoft/AL-Go-Actions/GetGitBranches@main
         with:
-          shell: pwsh
+          shell: powershell
           includeBranches: ${{ join(fromJson(env.scheduleSettings).includeBranches, ',') }}
 
       - name: Determine branches to update
         id: DetermineBranches
         env:
           supportedBranchesJson: ${{ steps.GetSupportedBranches.outputs.Result }}
-        shell: pwsh
+        shell: powershell
         run: |
             $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
@@ -82,7 +82,7 @@ jobs:
 
       - name: Determine Template URL
         id: DetermineTemplateUrl
-        shell: pwsh
+        shell: powershell
         run: |
             $templateUrl = $env:templateUrl # Available from ReadSettings step
             $templateUrlAsInput = '${{ github.event.inputs.templateUrl }}'
