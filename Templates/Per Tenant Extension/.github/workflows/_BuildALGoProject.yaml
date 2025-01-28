@@ -254,6 +254,25 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+          testsToAnalyze: "default"
+
+      - name: Analyze Test Results
+        id: analyzeTestResults
+        if: (success() || failure()) && env.doNotRunTests == 'False'
+        uses: microsoft/AL-Go-Actions/AnalyzeTests@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          testsToAnalyze: "bcpt"
+
+      - name: Analyze Test Results
+        id: analyzeTestResults
+        if: (success() || failure()) && env.doNotRunTests == 'False'
+        uses: microsoft/AL-Go-Actions/AnalyzeTests@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          testsToAnalyze: "pageScripting"
 
       - name: Cleanup
         if: always()
