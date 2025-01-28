@@ -71,9 +71,9 @@ function GetTestResultSummaryMD {
                                     Write-Host "    - $($testcase.name), Failure, $($testcase.time) seconds"
                                     $failuresSb.Append("<details><summary><i>$($testcase.name), Failure</i></summary>") | Out-Null
                                     foreach($failure in $testcase.ChildNodes) {
-                                        #Write-Host "      - Error: $($failure.message)"
-                                        #Write-Host "        Stacktrace:"
-                                        #Write-Host "        $($failure."#text".Trim().Replace("`n","`n        "))"
+                                        Write-Host "      - Error: $($failure.message)"
+                                        Write-Host "        Stacktrace:"
+                                        Write-Host "        $($failure."#text".Trim().Replace("`n","`n        "))"
                                         $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($failure.message)</i><br/>") | Out-Null
                                         $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
                                         $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$($failure."#text".Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))</i><br/>") | Out-Null
@@ -362,7 +362,9 @@ function GetPageScriptingTestResultSummaryMD {
                     foreach($testcase in $testsuite.testcase) {
                         $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
                         if ($testcase.failure) {
-                            Write-Host "    - $($testName), Failure, $($testcase.time) seconds"
+                            Write-Host "      - Error: $($testcase.failure.message)"
+                            Write-Host "        Stacktrace:"
+                            Write-Host "        $($testcase.failure."#cdata-section".Trim().Replace("`n","`n        "))"
                             $failuresSb.Append("<details><summary><i>$($testName), Failure</i></summary>") | Out-Null
                             $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($testcase.failure.message)</i><br/>") | Out-Null
                             $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
