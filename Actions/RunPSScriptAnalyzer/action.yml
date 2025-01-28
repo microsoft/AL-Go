@@ -1,0 +1,39 @@
+name: Run PSScriptAnalyzer
+author: Microsoft Corporation
+branding:
+  icon: "check"
+  color: "gray-dark"
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: pwsh
+  path:
+    description: 'Specifies the path to the scripts or module to be analyzed. Wildcard characters are supported.'
+    required: true
+    default: '.\'
+  excludeRule:
+    description: 'Comma separated list of PSScriptAnalyzer rules to exclude. Wildcard characters are supported.'
+    required: false
+  recurse:
+    description: 'Runs Script Analyzer on the files in the Path directory and all subdirectories recursively.'
+    required: false
+  output:
+    description: 'Specifies where the path for the sarif file'
+    required: true
+    default: 'results.sarif'
+runs:
+  using: "composite"
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: RunPSScriptAnalyzer
+      env:
+        _path: ${{ inputs.path }}
+        _excludeRule: ${{ inputs.excludeRule }}
+        _recurse: ${{ inputs.recurse }}
+        _output: ${{ inputs.output }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunPSScriptAnalyzer" -Action {
+          ${{ github.action_path }}/RunPSScriptAnalyzer.ps1 -path $ENV:_path -excludeRule @($ENV:_excludeRule -Replace ' ','' -Split ',') -Recurse:$($ENV:_recurse -eq 'true') -output $ENV:_output
+        }

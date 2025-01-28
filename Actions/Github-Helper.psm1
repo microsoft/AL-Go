@@ -141,9 +141,10 @@ function GetDependencies {
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
                 foreach($project in $projects.Split(',')) {
+                    $branchName = $dependency.branch.Replace('\', '_').Replace('/', '_')
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
-                    $downloadName = Join-Path $saveToPath "thisbuild-$project-$($mask)"
+                    $downloadName = Join-Path $saveToPath "$project-$branchName-$mask-*"
 
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
@@ -157,7 +158,7 @@ function GetDependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -notlike '*TestApps') {
+                    elseif ($mask -like '*Apps') {
                         Write-Host "$project not built, downloading from artifacts"
                         $missingProjects += @($project)
                     }

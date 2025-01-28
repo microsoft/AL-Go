@@ -52,6 +52,11 @@ jobs:
       createRelease: ${{ steps.CreateInputs.outputs.createRelease }}
       defaultBcContainerHelperVersion: ${{ steps.CreateInputs.outputs.defaultBcContainerHelperVersion }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
       - name: Create inputs
         id: CreateInputs
         run: |
@@ -72,6 +77,11 @@ jobs:
     runs-on: [ ubuntu-latest ]
     needs: [ Inputs ]
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
       - name: Check successful end 2 end tests have run
         if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.requireEndToEndTests == 'true'
         env:
@@ -104,6 +114,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
       - name: Validate Deployment
         if: github.repository_owner == 'microsoft'
         env:

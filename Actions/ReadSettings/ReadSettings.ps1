@@ -1,13 +1,15 @@
 ﻿Param(
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
+    [Parameter(HelpMessage = "Build mode", Mandatory = $false)]
+    [string] $buildMode = "Default",
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
     [string] $get = ""
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$settings = ReadSettings -project $project
+$settings = ReadSettings -project $project -buildMode $buildMode
 if ($get) {
     $getSettings = $get.Split(',').Trim()
 }

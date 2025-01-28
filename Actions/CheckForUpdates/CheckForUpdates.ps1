@@ -49,7 +49,7 @@ $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 # TemplateUrl is now always a full url + @ and a branch name
 
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
-# CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on", "useProjectDependencies", etc.
+# CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on" etc.
 # if $update is set to Y, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
 # if $update is set to N, CheckForUpdates will only check for updates and output a warning if there are updates available
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
@@ -115,11 +115,10 @@ $updateFiles = @()
 # $removeFiles will hold an array of files, which needs to be removed
 $removeFiles = @()
 
-# If useProjectDependencies is true, we need to calculate the dependency depth for all projects
 # Dependency depth determines how many build jobs we need to run sequentially
 # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
 $depth = 1
-if ($repoSettings.useProjectDependencies -and $projects.Count -gt 1) {
+if ($projects.Count -gt 1) {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100
     $depth = $buildOrder.Count
