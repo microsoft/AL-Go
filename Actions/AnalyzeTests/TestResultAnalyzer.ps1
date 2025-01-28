@@ -165,7 +165,7 @@ function GetBcptSummaryMD {
 
     $bcpt = ReadBcptFile -bcptTestResultsFile $bcptTestResultsFile
     if (-not $bcpt) {
-        return ''
+        return '<i>No test results found</i>'
     }
     $baseLine = ReadBcptFile -bcptTestResultsFile $baseLinePath
     if ($baseLine) {
