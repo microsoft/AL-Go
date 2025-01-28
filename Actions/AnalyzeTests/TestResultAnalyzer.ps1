@@ -356,7 +356,7 @@ function GetPageScriptingTestResultSummaryMD {
                 $suiteSkipped = $testsuite.skipped
                 $suitePassed = $suiteTests - $suiteFailed - $suiteSkipped
                 $summarySb.AppendLine("|$($testsuite.name)|$suiteTests|$suitePassed$statusOk|$suiteFailed$statusError|$suiteSkipped$statusSkipped|$suiteTime|") | Out-Null
-                
+
                 if ($suiteFailed -gt 0 ) {
                     $failuresSb.Append("<details><summary><i>$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds</i></summary>") | Out-Null
                     foreach($testcase in $testsuite.testcase) {
@@ -371,7 +371,7 @@ function GetPageScriptingTestResultSummaryMD {
                         }
                     }
                     $failuresSb.Append("</details>") | Out-Null
-                }                
+                }
             }
         }
         if ($totalFailed -gt 0) {

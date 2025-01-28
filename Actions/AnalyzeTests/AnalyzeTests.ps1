@@ -16,7 +16,7 @@ if ($testsToAnalyze -eq 'app') {
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -testResultsFile $testResultsFile
     $testTitle = "Test results"
-} 
+}
 elseif ($testsToAnalyze -eq 'bcpt') {
     $settings = $env:Settings | ConvertFrom-Json
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
