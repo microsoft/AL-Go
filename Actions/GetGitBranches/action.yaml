@@ -12,7 +12,7 @@ inputs:
 outputs:
   Branches:
     description: JSON-formatted array of branch names
-    value: ${{ steps.GetGitBranches.outputs.Branches }}
+    value: ${{ steps.GetGitBranches.outputs.Result }}
 runs:
   using: composite
   steps:

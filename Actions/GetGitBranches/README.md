@@ -25,4 +25,4 @@ none
 
 | Name | Description |
 | :-- | :-- |
-| Branches | JSON-formatted array of branch names |
+| Result | JSON-formatted object with `branches` property: an array of branch names |
