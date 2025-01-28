@@ -14,6 +14,7 @@ none
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | project | Yes | Name of project to analyze or . if the repository is setup for single project | |
+| testsToAnalyze | No | Which set of tests to analyze. Should be one of ('app', 'bcpt', 'pageScripting') | app |
 
 ## OUTPUT
 

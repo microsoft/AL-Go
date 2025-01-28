@@ -2,7 +2,7 @@
     [Parameter(HelpMessage = "Project to analyze", Mandatory = $false)]
     [string] $project = '.',
     [Parameter(HelpMessage = "Tests to analyze", Mandatory = $false)]
-    [string] $testsToAnalyze = 'default'
+    [string] $testsToAnalyze = 'app'
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -12,7 +12,7 @@ $testResultsSummaryMD = ''
 $testResultsfailuresMD = ''
 $testResultsFailuresSummaryMD = ''
 
-if ($testsToAnalyze -eq 'default') {
+if ($testsToAnalyze -eq 'app') {
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -testResultsFile $testResultsFile
     $testTitle = "Test results"
@@ -36,6 +36,7 @@ elseif ($testsToAnalyze -eq 'pageScripting') {
 }
 else {
     Write-Host "::error:: Unknown test type: $testsToAnalyze"
+    return ''
 }
 
 # If summary fits, we will display it in the GitHub summary

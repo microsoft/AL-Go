@@ -12,7 +12,7 @@ inputs:
   testsToAnalyze:
     description: Tests to analyze
     required: false
-    default: ''
+    default: 'app'
 runs:
   using: composite
   steps:
