@@ -331,7 +331,6 @@ function GetPageScriptingTestResultSummaryMD {
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()
 
-
     if (Test-Path -Path $testResultsFile -PathType Leaf) {
         $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)
         $totalTests = 0
@@ -358,24 +357,21 @@ function GetPageScriptingTestResultSummaryMD {
                 $suitePassed = $suiteTests - $suiteFailed - $suiteSkipped
                 $summarySb.AppendLine("|$($testsuite.name)|$suiteTests|$suitePassed$statusOk|$suiteFailed$statusError|$suiteSkipped$statusSkipped|$suiteTime|") | Out-Null
                 
-                #Write summary for each test suite
-                # $summarySb.AppendLine("### $($testsuite.name)") | Out-Null
-                # $summarySb.AppendLine("| Test | Result | Duration |") | Out-Null
-                # $summarySb.AppendLine("| ---- | ------ | -------- |") | Out-Null
-
-                $failuresSb.Append("<details><summary><i>$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds</i></summary>") | Out-Null
-                foreach($testcase in $testsuite.testcase) {
-                    $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
-                    if ($testcase.failure) {
-                        Write-Host "    - $($testName), Failure, $($testcase.time) seconds"
-                        $failuresSb.Append("<details><summary><i>$($testName), Failure</i></summary>") | Out-Null
-                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($testcase.failure.message)</i><br/>") | Out-Null
-                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
-                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $($testcase.failure."#cdata-section")</i><br/>") | Out-Null
-                        $failuresSb.Append("</details>") | Out-Null
+                if ($suiteFailed -gt 0 ) {
+                    $failuresSb.Append("<details><summary><i>$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds</i></summary>") | Out-Null
+                    foreach($testcase in $testsuite.testcase) {
+                        $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
+                        if ($testcase.failure) {
+                            Write-Host "    - $($testName), Failure, $($testcase.time) seconds"
+                            $failuresSb.Append("<details><summary><i>$($testName), Failure</i></summary>") | Out-Null
+                            $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($testcase.failure.message)</i><br/>") | Out-Null
+                            $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
+                            $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $($testcase.failure."#cdata-section")</i><br/>") | Out-Null
+                            $failuresSb.Append("</details>") | Out-Null
+                        }
                     }
-                }
-                $failuresSb.Append("</details>") | Out-Null
+                    $failuresSb.Append("</details>") | Out-Null
+                }                
             }
         }
         if ($totalFailed -gt 0) {
