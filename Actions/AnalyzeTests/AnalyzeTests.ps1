@@ -6,9 +6,9 @@
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path -Path $PSScriptRoot 'TestResultAnalyzer.ps1')
 
 if ($testsToAnalyze -eq 'default') {
-    . (Join-Path -Path $PSScriptRoot 'TestResultAnalyzer.ps1')
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
     #$analyzerFunction = ${function:GetTestResultSummaryMD}
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -testResultsFile $testResultsFile
