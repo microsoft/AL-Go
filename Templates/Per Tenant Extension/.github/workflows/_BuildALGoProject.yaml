@@ -254,7 +254,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
-          testsToAnalyze: "default"
+          testsToAnalyze: "app"
 
       - name: Analyze BCPT Test Results
         id: analyzeTestResultsBCPT
