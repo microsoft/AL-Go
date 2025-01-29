@@ -254,7 +254,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
-          testsToAnalyze: "app"
+          testType: "normal"
 
       - name: Analyze BCPT Test Results
         id: analyzeTestResultsBCPT
@@ -263,7 +263,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
-          testsToAnalyze: "bcpt"
+          testType: "bcpt"
 
       - name: Analyze Page Scripting Test Results
         id: analyzeTestResultsPageScripting
@@ -272,7 +272,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
-          testsToAnalyze: "pageScripting"
+          testType: "pageScripting"
 
       - name: Cleanup
         if: always()

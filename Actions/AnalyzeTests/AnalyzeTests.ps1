@@ -2,7 +2,8 @@
     [Parameter(HelpMessage = "Project to analyze", Mandatory = $false)]
     [string] $project = '.',
     [Parameter(HelpMessage = "Tests to analyze", Mandatory = $false)]
-    [string] $testsToAnalyze = 'app'
+    [ValidateSet('normal', 'bcpt', 'pageScripting')]
+    [string] $testType = 'normal'
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -12,12 +13,12 @@ $testResultsSummaryMD = ''
 $testResultsfailuresMD = ''
 $testResultsFailuresSummaryMD = ''
 
-if ($testsToAnalyze -eq 'app') {
+if ($testType -eq 'normal') {
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -testResultsFile $testResultsFile
     $testTitle = "Test results"
 }
-elseif ($testsToAnalyze -eq 'bcpt') {
+elseif ($testType -eq 'bcpt') {
     $settings = $env:Settings | ConvertFrom-Json
     $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
     $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
@@ -29,7 +30,7 @@ elseif ($testsToAnalyze -eq 'bcpt') {
         -bcptThresholds ($settings.bcptThresholds | ConvertTo-HashTable)
     $testTitle = "Performance test results"
 }
-elseif ($testsToAnalyze -eq 'pageScripting') {
+elseif ($testType -eq 'pageScripting') {
     $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\PageScriptingTestResults.xml"
     $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile
     $testTitle = "Page Scripting test results"
