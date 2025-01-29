@@ -11,7 +11,7 @@ inputs:
     default: ''
 outputs:
   Result:
-    description: JSON-formatted array of branch names
+    description: JSON-formatted object with `branches` property, an array of branch names
     value: ${{ steps.GetGitBranches.outputs.Result }}
 runs:
   using: composite

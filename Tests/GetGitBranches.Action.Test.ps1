@@ -18,7 +18,7 @@ Describe "GetGitBranches Action Tests" {
         $permissions = [ordered]@{
         }
         $outputs = [ordered]@{
-            "Branches" = "JSON-formatted array of branch names"
+            "Result" = "JSON-formatted object with `branches` property, an array of branch names"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
