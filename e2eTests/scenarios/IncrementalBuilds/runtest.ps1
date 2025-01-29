@@ -247,7 +247,7 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 
 # Set incremental builds mode to modifiedProjects
 Pull
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "onPush" = $true; "mode" = "modifiedProjects" } } -commit -wait
+$run = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "onPush" = $true; "mode" = "modifiedProjects" } } -commit -wait
 # Check that all apps are rebuilt with a new version number
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
