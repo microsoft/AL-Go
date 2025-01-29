@@ -10,10 +10,6 @@ inputs:
     description: Specifies the maximum build depth suppored by the workflow running the action
     required: false
     default: '0'
-  includeSkippedProjects:
-    description: Specifies whether to include skipped projects
-    required: false
-    default: 'false'
 outputs:
   ProjectsJson:
     description: An array of AL-Go projects in compressed JSON format
@@ -44,10 +40,9 @@ runs:
       id: determineProjectsToBuild
       env:
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
-        _includeSkippedProjects: ${{ inputs.includeSkippedProjects }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth -includeSkippedProjects ($env:_includeSkippedProjects -eq 'true')
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth
         }
 branding:
   icon: terminal

@@ -3,8 +3,6 @@
     [string] $baseFolder,
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     [int] $maxBuildDepth = 0,
-    [Parameter(HelpMessage = "Specifies whether to publish artifacts for skipped projects", Mandatory = $false)]
-    [bool] $includeSkippedProjects,
     [Parameter(HelpMessage = "The GitHub token to use to fetch the modified files", Mandatory = $true)]
     [string] $token
 )
@@ -19,26 +17,30 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuil
 $settings = $env:Settings | ConvertFrom-Json
 
 $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
-if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
-    # Pull request
-    $buildAllProjects = $settings.alwaysBuildAllProjects
+$ghEventName = $ghEvent.PSObject.Properties.name
+$branch = $env:GITHUB_REF_NAME
+if ($ghEventName -eq 'pull_request') {
     $branch = $env:GITHUB_BASE_REF
-    $includeSkippedProjects = $false
-    Write-Host "Pull request on $branch"
-}
-elseif ($ghEvent.PSObject.Properties.name -eq 'workflow_dispatch' -or $ghEvent.PSObject.Properties.name -eq 'schedule') {
-    # Manual workflow dispatch
-    $buildAllProjects = $true
-    $branch = $env:GITHUB_REF_NAME
-    $includeSkippedProjects = $false
-    Write-Host "Workflow dispatch on $branch"
+    # DEPRECATION: REMOVE AFTER April 1st 2025 --->
+    if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects') {
+        $buildAllProjects = $settings.alwaysBuildAllProjects
+        Trace-DeprecationWarning -Message "alwaysBuildAllProjects is deprecated" -DeprecationTag "alwaysBuildAllProjects"
+    }
+    # <--- REMOVE AFTER April 1st 2025
+    else {
+        $buildAllProjects = !$settings.incrementalBuilds.onPullRequest
+    }
 }
 else {
-    # Push
-    $buildAllProjects = !$settings.incrementalBuilds.enable
-    $branch = $env:GITHUB_REF_NAME
-    Write-Host "Push on $branch"
+    # onPush, onSchedule or onWorkflow_Dispatch
+    if ($settings.incrementalBuilds.PSObject.Properties.Name -eq "on$GhEventName") {
+        $buildAllProjects = !$settings.incrementalBuilds."on$GhEventName"
+    }
+    else {
+        $buildAllProjects = $true
+    }
 }
+Write-Host "$ghEventName on $branch"
 
 Write-Host "::group::Determine Baseline Workflow ID"
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
@@ -76,11 +78,12 @@ Write-Host "::endgroup::"
 #endregion
 
 #region Action: Output
-$skippedProjectsJson = ConvertTo-Json (@($allProjects | Where-Object { $_ -notin $projectsToBuild })) -Depth 99 -Compress
-if ($includeSkippedProjects) {
+$skippedProjects = @($allProjects | Where-Object { $_ -notin $projectsToBuild })
+if ($skippedProjects) {
     # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 }
+$skippedProjectsJson = ConvertTo-Json -InputObject $skippedProjects -Depth 99 -Compress
 $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
 $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
 $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress

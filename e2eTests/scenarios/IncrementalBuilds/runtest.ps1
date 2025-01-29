@@ -49,7 +49,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Check artifacts generated - all apps in P1 should be from previous build. All apps in P2 should have a new version number
 #  - Modify app4 in P1 in a commit and wait for CI/CD workflow to finish
 #  - Check artifacts generated - all apps should have a new version number (even though no apps are depending on app4)
-#  - Turn off incremental builds
+#  - Disable incremental builds
 #  - Modify app3 in a commit and wait for CI/CD workflow to finish
 #  - Check artifacts generated - all apps should have a new version number
 #  - Cleanup repositories
@@ -90,7 +90,7 @@ CreateAlGoRepository `
     -repository $repository `
     -branch $branch `
     -projects @('P1') `
-    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true; "UseProjectDependencies" = $true; "useApproximateVersion" = $true; "incrementalBuilds" = @{ "enable" = $true }; "cicdConcurrency" = "CancelRef"; "githubRunner" = $githubRunner; "githubRunnerShell" = $githubRunnerShell } `
+    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true; "UseProjectDependencies" = $true; "useApproximateVersion" = $true; "incrementalBuilds" = @{ "onPush" = $true }; "conditionalSettings"=@(@{"workflows"=@("CI/CD");"settings"=@{"workflowConcurrency"=@('group: ${{ github.workflow }}-${{ github.ref }}', 'cancel-in-progress: true')}}); "githubRunner" = $githubRunner; "githubRunnerShell" = $githubRunnerShell } `
     -contentScript {
         Param([string] $path)
         Add-PropertiesToJsonFile -path (Join-Path $path 'P1\.AL-Go\settings.json') -properties @{ "country" = "w1" }
@@ -247,7 +247,7 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 
 # Set incremental builds mode to modifiedProjects
 Pull
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $true; "mode" = "modifiedProjects" } } -commit -wait
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "onPush" = $true; "mode" = "modifiedProjects" } } -commit -wait
 # Check that all apps are rebuilt with a new version number
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-*.app" = 4
@@ -291,7 +291,7 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
 
 # Turn off incremental builds
 Pull
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "enable" = $false; "mode" = "modifiedApps" } } -commit -wait
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "incrementalBuilds" = @{ "onPush" = $false; "mode" = "modifiedApps" } } -commit -wait
 
 # Modify app3 in a commit and wait for CI/CD workflow to finish
 $run = ModifyAppInFolder -folder 'P1/app2' -name 'app2' -commit -wait -message "incrementalBuilds=off"
