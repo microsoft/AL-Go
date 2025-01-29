@@ -2097,11 +2097,11 @@ function CheckAndCreateProjectFolder {
 Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
-        [string[]] $projects,
-        [ref] $buildAlso,
-        [ref] $projectDependencies
+        [string[]] $projects
     )
 
+    $additionalProjectsToBuild = @{}
+    $projectDependencies = @{}
     $appDependencies = @{}
     Write-Host "Analyzing projects in $baseFolder"
 
@@ -2130,9 +2130,17 @@ Function AnalyzeProjectDependencies {
         $unknownDependencies = @()
         $apps = @()
         Sort-AppFoldersByDependencies -appFolders $folders -baseFolder $baseFolder -WarningAction SilentlyContinue -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref]$apps) | Out-Null
+
+        # If the project is using project dependencies, add the unknown dependencies to the list of dependencies
+        # If not, the unknown dependencies are ignored
+        $dependenciesForProject = @()
+        if ($projectSettings.useProjectDependencies -eq $true) {
+            $dependenciesForProject = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
+        }
+
         $appDependencies."$project" = @{
             "apps"         = $apps
-            "dependencies" = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
+            "dependencies" = $dependenciesForProject
         }
     }
     # AppDependencies is a hashtable with the following structure
@@ -2167,42 +2175,42 @@ Function AnalyzeProjectDependencies {
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
                 foreach($depProject in $depProjects) {
                     $foundDependencies += $depProject
-                    if ($projectDependencies.Value.Keys -contains $depProject) {
-                        $foundDependencies += $projectDependencies.value."$depProject"
+                    if ($projectDependencies.Keys -contains $depProject) {
+                        $foundDependencies += $projectDependencies."$depProject"
                     }
                 }
             }
             $foundDependencies = @($foundDependencies | Select-Object -Unique)
             # foundDependencies now contains all projects that the current project has a dependency on
             # Update ref variable projectDependencies for this project
-            if ($projectDependencies.Value.Keys -notcontains $project) {
+            if ($projectDependencies.Keys -notcontains $project) {
                 # Loop through the list of projects for which we already built a dependency list
                 # Update the dependency list for that project if it contains the current project, which might lead to a changed dependency list
                 # This is needed because we are looping through the projects in a any order
-                $keys = @($projectDependencies.value.Keys)
+                $keys = @($projectDependencies.Keys)
                 foreach($key in $keys) {
-                    if ($projectDependencies.value."$key" -contains $project) {
-                        $projectDeps = @( $projectDependencies.value."$key" )
-                        $projectDependencies.value."$key" = @( @($projectDeps + $foundDependencies) | Select-Object -Unique )
-                        if (Compare-Object -ReferenceObject $projectDependencies.value."$key" -differenceObject $projectDeps) {
+                    if ($projectDependencies."$key" -contains $project) {
+                        $projectDeps = @( $projectDependencies."$key" )
+                        $projectDependencies."$key" = @( @($projectDeps + $foundDependencies) | Select-Object -Unique )
+                        if (Compare-Object -ReferenceObject $projectDependencies."$key" -differenceObject $projectDeps) {
                             Write-Host "Add ProjectDependencies $($foundDependencies -join ',') to $key"
                         }
                     }
                 }
                 Write-Host "Set ProjectDependencies for $project to $($foundDependencies -join ',')"
-                $projectDependencies.value."$project" = $foundDependencies
+                $projectDependencies."$project" = $foundDependencies
             }
             if ($foundDependencies) {
                 Write-Host "Found dependencies to projects: $($foundDependencies -join ", ")"
-                # Add project to buildAlso for this dependency to ensure that this project also gets build when the dependency is built
+                # Add project to additionalProjectsToBuild for this dependency to ensure that this project also gets build when the dependency is built
                 foreach($dependency in $foundDependencies) {
-                    if ($buildAlso.value.Keys -contains $dependency) {
-                        if ($buildAlso.value."$dependency" -notcontains $project) {
-                            $buildAlso.value."$dependency" += @( $project )
+                    if ($additionalProjectsToBuild.Keys -contains $dependency) {
+                        if ($additionalProjectsToBuild."$dependency" -notcontains $project) {
+                            $additionalProjectsToBuild."$dependency" += @( $project )
                         }
                     }
                     else {
-                        $buildAlso.value."$dependency" = @( $project )
+                        $additionalProjectsToBuild."$dependency" = @( $project )
                     }
                 }
             }
@@ -2222,7 +2230,11 @@ Function AnalyzeProjectDependencies {
         $no++
     }
 
-    return @($projectsOrder)
+    return [PSCustomObject]@{
+        FullProjectsOrder = $projectsOrder
+        AdditionalProjectsToBuild = $additionalProjectsToBuild
+        ProjectDependencies = $projectDependencies
+    }
 }
 
 function GetBaseFolder {
