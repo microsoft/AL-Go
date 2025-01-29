@@ -17,6 +17,7 @@ When handling support requests, we will request that you to use the latest versi
 ### Setting `alwaysBuildAllProjects` will no longer be supported
 
 The old setting would determine whether or not to build all project during the Pull Request workflow. With incremental Builds now supported, please set the `onPull_Request` property of the `incrementalBuilds` setting to false to force full builds in Pull Requests.
+
 ```
 "incrementalBuilds": {
     "onPull_Request": false
@@ -42,7 +43,6 @@ The old setting, where the setting key was a combination of the workflow name an
 
 > [!NOTE]
 > workflowSchedule is a string and needs to hold a valid crontab (see [crontab guru](https://crontab.guru/) for assistance on creating one)
-
 
 <a id="cleanModePreprocessorSymbols"></a>
 
