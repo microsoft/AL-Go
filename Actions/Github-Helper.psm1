@@ -710,17 +710,12 @@ function Set-ContentLF {
         [parameter(mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
         [parameter(mandatory = $true, ValueFromPipeline = $true)]
-        $content
+        [string] $content
     )
 
     Process {
         $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-        if ($content -is [array]) {
-            $content = $content -join "`n"
-        }
-        else {
-            $content = "$content".Replace("`r", "")
-        }
+        $content = "$content".Replace("`r", "").TrimEnd("`n")
         [System.IO.File]::WriteAllText($path, "$content`n")
     }
 }
