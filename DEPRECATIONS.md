@@ -10,7 +10,7 @@ Old versions of AL-Go for GitHub uses old and unsupported versions of GitHub act
 
 When handling support requests, we will request that you to use the latest version of AL-Go for GitHub and in general, fixes will only be made available in a preview version of AL-Go for GitHub and subsequently in the next version released.
 
-## Changes in effect after April 1st 2025
+## Changes in effect after October 1st 2025
 
 <a id="alwaysBuildAllProjects"></a>
 
@@ -43,6 +43,8 @@ The old setting, where the setting key was a combination of the workflow name an
 
 > [!NOTE]
 > workflowSchedule is a string and needs to hold a valid crontab (see [crontab guru](https://crontab.guru/) for assistance on creating one)
+
+## Changes in effect after April 1st 2025
 
 <a id="cleanModePreprocessorSymbols"></a>
 
