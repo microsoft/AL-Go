@@ -1,4 +1,4 @@
-﻿Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
+﻿. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 <#
     .Synopsis
@@ -15,8 +15,7 @@ function Get-ModifiedFiles {
     if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
         $headSHA = $ghEvent.pull_request.head.sha
         Write-Host "Using head SHA $headSHA from pull request"
-        git fetch origin $headSHA | Out-Host
-        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch head SHA $headSHA" }
+        RunAndCheck git fetch origin $headSHA | Out-Host
         if ($baselineSHA) {
             Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
         }
@@ -24,14 +23,12 @@ function Get-ModifiedFiles {
             $baselineSHA = $ghEvent.pull_request.base.sha
             Write-Host "This is a pull request, using baseline SHA $baselineSHA from pull request"
         }
-        git fetch origin $baselineSHA | Out-Host
-        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
+        RunAndCheck git fetch origin $baselineSHA | Out-Host
     }
     elseif ($baselineSHA) {
         $headSHA = git rev-parse HEAD
         Write-Host "Current HEAD is $headSHA"
-        git fetch origin $baselineSHA | Out-Host
-        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
+        RunAndCheck git fetch origin $baselineSHA | Out-Host
         Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
     }
     else {
@@ -39,8 +36,7 @@ function Get-ModifiedFiles {
         return @()
     }
     Write-Host "git diff --name-only $baselineSHA $headSHA"
-    $modifiedFiles = @(git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
-    if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
+    $modifiedFiles = @(RunAndCheck git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
     Pop-Location
     return $modifiedFiles
 }
