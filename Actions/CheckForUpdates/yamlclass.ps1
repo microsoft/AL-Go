@@ -275,10 +275,6 @@ class Yaml {
         $existingJobs = $this.GetNextLevel('jobs:/').Trim(':')
         Write-Host "Adding New Jobs"
         foreach($customJob in $customJobs) {
-            if ($existingJobs -contains $customJob.Name) {
-                Write-Host "Job $($customJob.Name) already exists"
-                continue
-            }
             Write-Host "$($customJob.Name) has dependencies from $($customJob.NeedsThis -join ',')"
             foreach($needsthis in $customJob.NeedsThis) {
                 if ($needsthis -eq 'Build') {
@@ -289,9 +285,13 @@ class Yaml {
                 }
                 elseif ($existingJobs -contains $needsthis) {
                     # Add dependency to job
-                    $needs = @(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) | Where-Object { $_ }) -join ', '
+                    $needs = @(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) | Where-Object { $_ } | Select-Object -Unique) -join ', '
                     $this.Replace("jobs:/$($needsthis):/needs:","needs: [ $needs ]")
                 }
+            }
+            if ($existingJobs -contains $customJob.Name) {
+                Write-Host "Job $($customJob.Name) already exists"
+                continue
             }
             $this.content += @('') + @($customJob.content | ForEach-Object { "  $_" })
         }
