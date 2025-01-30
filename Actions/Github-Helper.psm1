@@ -597,14 +597,7 @@ function GetAccessToken {
         # GitHub App token format: {"GitHubAppClientId":"<client_id>","PrivateKey":"<private_key>"}
         try {
             $json = $token | ConvertFrom-Json
-            $realToken, $expiresIn = GetGitHubAppAuthToken -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey -api_url $api_url -repository $repository -repositories $repositories -permissions $permissions
-            $script:realTokenCache = @{
-                "token" = $token
-                "repository" = $repository
-                "realToken" = $realToken
-                "permissions" = $permissions | ConvertTo-Json -Compress
-                "expires" = [datetime]::Now.AddSeconds($expiresIn)
-            }
+            $realToken = GetGitHubAppAuthToken -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey -api_url $api_url -repository $repository -repositories $repositories -permissions $permissions
             return $realToken
         }
         catch {
@@ -1188,8 +1181,7 @@ function GetGitHubAppAuthToken {
     }
     Write-Host "Get Token Response $($appInfo.access_tokens_url) with $($body | ConvertTo-Json -Compress)"
     $tokenResponse = Invoke-RestMethod -Method POST -UseBasicParsing -Headers $headers -Body ($body | ConvertTo-Json -Compress) -Uri $appInfo.access_tokens_url
-    Write-Host "return token"
-    return $tokenResponse.token, $tokenResponse.expires_in
+    return $tokenResponse.token
 }
 
 <#
@@ -1217,12 +1209,20 @@ function GenerateJwtForTokenRequest {
         exp = [System.DateTimeOffset]::UtcNow.AddMinutes(10).ToUnixTimeSeconds()
         iss = $gitHubAppClientId
     }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-    $signature = pwsh -command {
+
+    $command = {
         $rsa = [System.Security.Cryptography.RSA]::Create()
         $privateKey = "$($args[1])"
         $rsa.ImportFromPem($privateKey)
         $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes($args[0]), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
-        Write-OutPut $signature
-    } -args "$header.$payload", $privateKey
+        return $signature
+    }
+
+    if ($PSVersionTable.PSVersion.Major -lt 6) {
+        $signature = pwsh -noprofile -command $command -args "$header.$payload", $privateKey
+    }
+    else {
+        $signature = Invoke-Command -ScriptBlock $command -ArgumentList "$header.$payload", $privateKey
+    }
     return "$header.$payload.$signature"
 }
