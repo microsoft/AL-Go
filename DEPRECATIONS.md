@@ -28,7 +28,7 @@ The old setting would determine whether or not to build all project during the P
 
 ### Setting `<workflow>Schedule` will no longer be supported
 
-The old setting, where the setting key was a combination of the workflow name and `Schedule` (dynamic setting key) is no longer supported. Instead you need to use a setting called [workflowSchedule](https://aka.ms/algosettings#workflowSchedule) and either use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) or place the setting in a workflow specific settings file. Example using conditional settings:
+The old setting, where the setting key was a combination of the workflow name and `Schedule` (dynamic setting key name) is no longer supported. Instead you need to use a setting called [workflowSchedule](https://aka.ms/algosettings#workflowSchedule) and either use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) or place the setting in a workflow specific settings file. Example using conditional settings:
 
 ```
 "conditionalSettings": [

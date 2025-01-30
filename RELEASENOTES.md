@@ -1,3 +1,32 @@
+### Deprecations
+
+- `alwaysBuildAllProjects` will be removed after October 1st 2025. Please use the `onPull_Request` property of the `incrementalBuilds` setting to false to force full builds in Pull Requests.
+- `<workflow>Schedule` will be removed after October 1st 2025. The old setting, where the setting key was a combination of the workflow name and `Schedule` (dynamic setting key name) is deprecated. Instead you need to use a setting called [workflowSchedule](https://aka.ms/algosettings#workflowSchedule) and either use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) or place the setting in a workflow specific settings file.
+
+### New Workflow specific settings
+
+- `workflowSchedule` - can be a valid crontab, which is a CRON schedule for when the specified workflow should run. Default is no scheduled runs, only manual triggers. Build your crontab string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect.<br/>**Note:** If you configure a WorkflowSchedule for the CI/CD workflow, AL-Go will stop triggering CICDs on push unless you have also added CICDPushBranches to your settings.<br/>**Note also:** If you define a schedule for Update AL-Go System Files, it uses direct Commit instead of creating a PR.
+- `workflowConcurrency` - is used to control concurrency of workflows. Like with the `WorkflowSchedule` setting, this setting should be applied in workflow specific settings files or conditional settings. By default, all workflows allows for concurrency, except for the Create Release workflow. If you are using incremental builds in CI/CD it is also recommented to set WorkflowConcurrency to:<br/>`[ "group: ${{ github.workflow }}-${{ github.ref }}", "cancel-in-progress: true" ]`<br />in order to cancel prior incremental builds on the same branch.<br />Read more about workflow concurrency [here](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs).
+
+### New Repository Settings
+
+- `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds for a build, AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt. Properties in the structure includes:
+  - `onPush` - set this property to **true** in order to enable incremental builds in CI/CD triggered by a merge/push event. Default is **false**.
+  - `onPull_Request` - set this property to **false** in order to disable incremental builds in Pull Request workflows. Default is **true**.
+  - `onSchedule` - set this property to **true** in order to enable incremental builds in CI/CD when running on a schedule. Default is **false**.
+  - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
+  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
+
+> [!NOTE]
+> The projects mentioned here are AL-Go projects in a multi-project repository. A repository can contain multiple projects and a project can contain multiple apps.
+
+### Support for incremental builds
+
+AL-Go for GitHub now supports incremental builds, which means that unchanged projects or apps will be reused from the previous good build. Read [this](aka.ms/algosettings#incrementalBuilds) to learn more.
+
+> [!NOTE]
+> When using incremental builds it is recommended to also set `cicdConcurrency` to **CancelRef**.
+
 ## v6.3
 
 ### Deprecations
@@ -7,25 +36,6 @@
 ### Issues
 
 - It is now possible to skip the modification of dependency version numbers when running the Increment Version number workflow or the Create Release workflow
-
-### New Repository Settings
-
-- [`shortLivedArtifactsRetentionDays`](https://aka.ms/algosettings#shortLivedArtifactsRetentionDays) determines the number of days to keep short lived build artifacts (f.ex build artifacts from pull request builds, next minor or next major builds). 1 is default. 0 means use GitHub default.
-- [`preProcessorSymbols`](https://aka.ms/algosettings#preProcessorSymbols) is a list of preprocessor symbols to use when building the apps. This setting can be specified in [workflow specific settings files](https://aka.ms/algosettings#where-are-the-settings-located) or in [conditional settings](https://aka.ms/algosettings#conditional-settings).
-- `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds for a build, AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt.
-  - `onPush` - set this property to **true** in order to enable incremental builds in CI/CD triggered by a merge/push event. Default is **false**.
-  - `onPull_Request` - set this property to **false** in order to disable incremental builds in Pull Request workflows. Default is **true**.
-  - `onSchedule` - set this property to **true** in order to enable incremental builds in CI/CD when running on a schedule. Default is **false**.
-  - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
-  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
-- `<workflow>Concurrency` - is a setting to control concurrency of workflows. Like with the `<workflow>Schedule` setting, this setting can also be defined for any of the AL-Go workflows. The allowed values are: **Allowed** for allowing concurrency, **Wait** for waiting for any instances of the workflow currently running, **WaitRef** for waiting for instances of the workflow currently running on the same GitHub ref, **Cancel** for cancelling any currently running instances and **CancelRef** for cancelling any currently running instances on the same GitHub ref. Default is **Allowed** (except for the CreateRelease workflow, which defaults to **Wait**). It is recommended to set `cicdConcurrency` to **CancelRef** when enabling incremental builds.
-
-### Support for incremental builds
-
-AL-Go for GitHub now supports incremental builds, which means that unchanged projects or apps will be reused from the previous good build. Read [this](aka.ms/algosettings#incrementalBuilds) to learn more.
-
-> [!NOTE]
-> When using incremental builds it is recommended to also set `cicdConcurrency` to **CancelRef**.
 
 ### New Versioning Strategy
 
