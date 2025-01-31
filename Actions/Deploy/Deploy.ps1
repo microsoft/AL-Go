@@ -139,6 +139,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+        $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
             $dependencies += @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
         }
@@ -149,6 +150,14 @@ if (Test-Path $artifactsFolder -PathType Container) {
         }
         else {
             $apps += $projectApps
+        }
+        if (!($projectTestApps)) {
+            if ($project -ne '*') {
+                throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
+            }
+        }
+        else {
+            $apps += $projectTestApps
         }
     }
 }
