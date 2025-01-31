@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -71,7 +72,7 @@ $template = "https://github.com/$pteTemplate"
 $x = 5
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token e2epat -repository $repository
 
 if ($linux) {
     $githubRunner = "ubuntu-latest"
@@ -103,7 +104,7 @@ CreateAlGoRepository `
 $repoPath = (Get-Location).Path
 
 # Run Update AL-Go System Files with direct commit
-RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
 
 # Wait for CI/CD to complete
 Start-Sleep -Seconds 60
@@ -174,7 +175,7 @@ Copy-Item -Path (Join-Path $repoPath 'P1/.AL-Go') -Destination (Join-Path $repoP
 CommitAndPush -commitMessage "Add $($x*3) apps"
 
 # Run Update AL-Go System Files with direct commit
-RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
 
 # Wait for CI/CD to complete
 Start-Sleep -Seconds 60
