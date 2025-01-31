@@ -1,4 +1,4 @@
-# #2 Add a test app to an existing project
+# Add a test app to an existing project
 
 *Prerequisites: A completed [scenario 1](GetStarted.md)*
 

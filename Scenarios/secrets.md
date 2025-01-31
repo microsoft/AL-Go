@@ -195,6 +195,9 @@ If you create a secret called GitHubPackagesContext, then AL-Go for GitHub will 
 
 Example: `{"token":"<gitHubToken>","serverUrl":"https://nuget.pkg.github.com/mygithuborg/index.json"}`
 
+> [!NOTE]
+> GitHub App authentication currently doesn't support reading and writing packages to GitHub Packages, meaning that this token needs to be a Personal Access Token (Classic or Fine-Grained)
+
 <a id="NuGetContext"></a>
 
 ## **NuGetContext** -> Deliver to NuGet

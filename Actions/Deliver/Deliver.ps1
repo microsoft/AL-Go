@@ -234,7 +234,7 @@ foreach ($thisProject in $projectList) {
             }
             $nuGetServerUrl = $nuGetAccount.ServerUrl
             Write-Host $nuGetAccount.ServerUrl
-            $nuGetToken = $nuGetAccount.Token
+            $nuGetToken = GetAccessToken -token $nuGetAccount.Token -permissions @{"packages"="write";"contents"="read";"metadata"="read"}
             Write-Host "$($deliveryTarget)Context secret OK"
         }
         catch {

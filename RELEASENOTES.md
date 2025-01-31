@@ -27,6 +27,10 @@ AL-Go for GitHub now supports incremental builds, which means that unchanged pro
 > [!NOTE]
 > When using incremental builds it is recommended to also set `cicdConcurrency` to **CancelRef**.
 
+### Support for GitHub App authentication
+
+AL-Go for GitHub now supports using a GitHub App specification as the GhTokenWorkflow secret for a more secure way of allowing repositories to run Update AL-Go System Files and other workflows which are creating commits and pull requests. See [this description](https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md) to learn how to use GitHub App authentication.
+
 ## v6.3
 
 ### Deprecations

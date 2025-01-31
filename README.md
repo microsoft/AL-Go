@@ -26,6 +26,7 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 1. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/RegisterSandboxEnvironment.md)
 1. [Create a release of your application](Scenarios/CreateRelease.md)
 1. [Register a customer production environment for Manual Deployment](Scenarios/RegisterProductionEnvironment.md)
+1. [Create a GhTokenWorkflow secret](Scenarios/GhTokenWorkflow.md)
 1. [Update AL-Go system files](Scenarios/UpdateAlGoSystemFiles.md)
 1. [Use Azure KeyVault for secrets with AL-Go](Scenarios/UseAzureKeyVault.md)
 1. [Create Online Development Environment from VS Code](Scenarios/CreateOnlineDevEnv.md)
