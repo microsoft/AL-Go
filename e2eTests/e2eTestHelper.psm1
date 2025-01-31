@@ -504,7 +504,7 @@ function CommitAndPush {
     )
 
     if ($wait) {
-        $headers = GetHeader -token $token
+        $headers = GetHeaders -token $token
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
