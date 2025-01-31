@@ -72,7 +72,7 @@ $template = "https://github.com/$pteTemplate"
 $x = 5
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token e2epat -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 if ($linux) {
     $githubRunner = "ubuntu-latest"
