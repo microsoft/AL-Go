@@ -68,14 +68,12 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Remove Temp Repositories
-        env:
-          GH_TOKEN: ${{ Secrets.E2EPAT }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
           $owner = '${{ needs.Check.outputs.githubowner }}'
           $e2epat = '${{ Secrets.E2EPAT }}'
-          SetTokenAndRepository -github -githubOwner $owner -e2epat $e2epat -repository ''
+          SetTokenAndRepository -github -githubOwner $owner -token $e2epat -repository ''
           @(invoke-gh repo list $owner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$owner/tmp*" } | ForEach-Object {
               $repo = $_
               Write-Host "https://github.com/$repo"
