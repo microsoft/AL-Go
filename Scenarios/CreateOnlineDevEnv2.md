@@ -1,4 +1,4 @@
-# #9 Create Online Development Environment from GitHub
+# Create Online Development Environment from GitHub
 
 *Prerequisites: A completed [scenario 7](UseAzureKeyVault.md).*
 

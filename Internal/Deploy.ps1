@@ -37,7 +37,6 @@ function PushChanges
         }
         $branchName = "deploy/$BaseBranch/$((Get-Date).ToUniversalTime().ToString(`"yyMMddHHmmss`"))"
 
-
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $branchName
@@ -45,6 +44,7 @@ function PushChanges
     }
 }
 
+$token = GetAccessToken -token $token -repository "$($config.githubOwner)/.github"
 $oldPath = Get-Location
 try {
 
@@ -162,7 +162,7 @@ try {
         Write-Host -ForegroundColor Yellow "Deploying to $repo"
 
         try {
-            $serverUrl = "https://$($user.login):$token@github.com/$($config.githubOwner)/$repo.git"
+            $serverUrl = "https://$($config.githubOwner):$token@github.com/$($config.githubOwner)/$repo.git"
             if (Test-Path $repo) {
                 Remove-Item $repo -Recurse -Force
             }

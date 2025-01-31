@@ -22,21 +22,6 @@
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
-if ($update -eq 'Y') {
-    if (-not $token) {
-        throw "A personal access token with permissions to modify Workflows is needed. You must add a secret called GhTokenWorkflow containing a personal access token. You can Generate a new token from https://github.com/settings/tokens. Make sure that the workflow scope is checked."
-    }
-    else {
-        $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
-    }
-}
-
-# Use Authenticated API request to avoid the 60 API calls per hour limit
-$headers = @{
-    "Accept" = "application/vnd.github.baptiste-preview+json"
-    "Authorization" = "Bearer $token"
-}
-
 if (-not $templateUrl.Contains('@')) {
     $templateUrl += "@main"
 }
@@ -47,6 +32,29 @@ if ($templateUrl -notlike "https://*") {
 $templateUrl = $templateUrl -replace "^(https:\/\/)(www\.)(.*)$", '$1$3'
 
 # TemplateUrl is now always a full url + @ and a branch name
+
+if ($update -eq 'Y') {
+    if (-not $token) {
+        throw "The GhTokenWorkflow secret is needed. Read https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md for more information."
+    }
+
+    # token comes from a secret, base 64 encoded
+    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
+
+    # Get token with read permissions for this and the template repository - if private and in the same organization
+    $repositories = @($ENV:GITHUB_REPOSITORY)
+    if ($templateUrl -like "https://github.com/$($ENV:GITHUB_REPOSITORY_OWNER)/*") {
+        $repositories += $templateUrl.Split('@')[0]
+    }
+    $readToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repositories $repositories
+}
+else {
+    # use token directly
+    $readToken = $token
+}
+
+# Use Authenticated API request if possible to avoid the 60 API calls per hour limit
+$headers = GetHeaders -token $readToken
 
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
 # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on" etc.
@@ -205,7 +213,11 @@ else {
     try {
         # If a pull request already exists with the same REF, then exit
         $commitMessage = "[$updateBranch] Update AL-Go System Files from $templateInfo -  $templateSha"
-        $env:GH_TOKEN = $token
+
+        # Get Token with permissions to modify workflows in this repository
+        $writeToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
+        $env:GH_TOKEN = $writeToken
+
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
             OutputWarning "Pull request already exists for $($commitMessage): $($existingPullRequest.html_url)."
@@ -213,7 +225,7 @@ else {
         }
 
         # If $directCommit, then changes are made directly to the default branch
-        $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
+        $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $writeToken -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
 
         invoke-git status
 
@@ -263,10 +275,10 @@ else {
     }
     catch {
         if ($directCommit) {
-            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. Read https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md for more information. (Error was $($_.Exception.Message))"
         }
         else {
-            throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            throw "Failed to create a pull-request to AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. Read https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md for more information. (Error was $($_.Exception.Message))"
         }
     }
 }

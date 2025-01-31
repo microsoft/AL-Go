@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -51,7 +52,7 @@ foreach($sourceRepo in $repositories) {
     $repository = "$githubOwner/$repoName"
 
     # Login
-    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+    SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
     # Create repository1
     CreateAlGoRepository `
@@ -71,19 +72,11 @@ foreach($sourceRepo in $repositories) {
     $settings = Get-Content -Path '.github/AL-Go-Settings.json' -Raw | ConvertFrom-Json
     Write-Host "PowerPlatform Solution Folder: $($settings.powerPlatformSolutionFolder)"
 
-    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
-
-    if ($settings.templateUrl -eq 'https://github.com/Microsoft/AL-Go-PTE@PPPreview') {
-        # Upgrade AL-Go System Files from PPPreview to main (PPPreview branch still uses Y/N prompt and doesn't support direct AL-Go development - i.e. freddydk/AL-Go@branch)
-        $parameters = @{
-            "templateUrl" = 'https://github.com/microsoft/AL-Go-PTE@main'
-            "directCommit" = 'Y'
-        }
-        RunWorkflow -name 'Update AL-Go System Files' -parameters $parameters -wait -branch $branch -repository $repository
-    }
-
     # Upgrade AL-Go System Files to test version
-    RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository | Out-Null
+    # TODO: Use e2epat until bcsamples powerplatform repositories have been updated to latest version
+    RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $e2epat -repository $repository | Out-Null
+
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $algoauthapp
 
     CancelAllWorkflows -repository $repository
 

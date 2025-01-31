@@ -1,4 +1,4 @@
-# #13 Set up your own GitHub runner to increase build performance
+# Set up your own GitHub runner to increase build performance
 
 *Prerequisites: An AL-Go repository setup using one of the scenarios*
 
