@@ -841,10 +841,10 @@ function CheckBuildJobsInWorkflowRun {
 }
 
 <#
-    Gets the last successful CICD run ID for the specified repository and branch.
+    Gets the last successful CICD run ID and SHA for the specified repository and branch.
     Successful CICD runs are those that have a workflow run named ' CI/CD' and successfully built all the projects.
 
-    If no successful CICD run is found, 0 is returned.
+    If no successful CICD run is found, 0 and empty string is returned.
 #>
 function FindLatestSuccessfulCICDRun {
     Param(
@@ -859,7 +859,7 @@ function FindLatestSuccessfulCICDRun {
     )
 
     $headers = GetHeaders -token $token
-    $lastSuccessfulCICDRun = 0
+    $lastSuccessfulCICDRun = $null
     $per_page = 100
     $page = 1
 
@@ -882,7 +882,7 @@ function FindLatestSuccessfulCICDRun {
         foreach($CICDRun in $CICDRuns) {
             if($CICDRun.conclusion -eq 'success') {
                 # CICD run is successful
-                $lastSuccessfulCICDRun = $CICDRun.id
+                $lastSuccessfulCICDRun = $CICDRun
                 break
             }
             if ($CICDRun.conclusion -eq 'cancelled') {
@@ -893,28 +893,27 @@ function FindLatestSuccessfulCICDRun {
             $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository
 
             if($areBuildJobsSuccessful) {
-                $lastSuccessfulCICDRun = $CICDRun.id
-                Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun), from $($CICDRun.created_at)"
+                $lastSuccessfulCICDRun = $CICDRun
                 break
             }
 
             Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
         }
 
-        if($lastSuccessfulCICDRun -ne 0) {
+        if($lastSuccessfulCICDRun) {
             break
         }
 
         $page += 1
     }
 
-    if($lastSuccessfulCICDRun -ne 0) {
-        Write-Host "Last successful CICD run for branch $branch in repository $repository is $lastSuccessfulCICDRun"
+    if($lastSuccessfulCICDRun) {
+        Write-Host "Last successful CICD run for branch $branch in repository $repository is $($lastSuccessfulCICDRun.id) with SHA $($lastSuccessfulCICDRun.head_sha)"
+        return $lastSuccessfulCICDRun.id, $lastSuccessfulCICDRun.head_sha
     } else {
         Write-Host "No successful CICD run found for branch $branch in repository $repository"
+        return 0, ''
     }
-
-    return $lastSuccessfulCICDRun
 }
 
 <#

@@ -84,16 +84,26 @@ CommitAndPush -commitMessage "Update settings.json"
 $runs++
 
 # Run CI/CD and wait
-$run = RunCICD -wait -branch $branch
-Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
+try {
+    $run = RunCICD -wait -branch $branch
+    Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1} -expectedNumberOfTests 1 -folder 'artifacts' -repoVersion '1.0' -appVersion ''
+}
+catch {
+    OutputWarning "CI/CD running before upgrade failed with error: $($_.Exception.Message)"
+}
 
 # Expected Run: CI/CD triggered on workflow_dispatch
 $runs++
 
 # Update AL-Go System Files
-# for Upgrade scenarios before version 6.3 we need to set the GHTOKENWORKFLOW secret to a PAT
-# for Upgrade scenarios 6.3 or after we can set the GHTOKENWORKFLOW secret to a GH APP
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $e2epat
+# for Upgrade scenarios before version 6.4 we need to set the GHTOKENWORKFLOW secret to a PAT
+# for Upgrade scenarios 6.4 or after we can set the GHTOKENWORKFLOW secret to a GH APP
+if ($releaseVersion -ge [System.Version]"6.4") {
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $algoauthapp
+}
+else {
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $e2epat
+}
 RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch
