@@ -139,7 +139,9 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
-        $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
+        if (deploymentSettings.includeTestAppsInSandboxEnvironment) {
+            $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
+        } 
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
             $dependencies += @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
         }
@@ -237,6 +239,9 @@ else {
         if (!$sandboxEnvironment -and $type -eq 'CD' -and !($deploymentSettings.continuousDeployment)) {
             # Continuous deployment is undefined in settings - we will not deploy to production environments
             Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
+        }
+        elseif (!$sandboxEnvironment -and $deploymentSettings.includeTestAppsInSandboxEnvironment) {
+            Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment, as test apps can only be deployed to sandbox environments"
         }
         else {
             if ($dependencies) {
