@@ -827,7 +827,7 @@ function CheckBuildJobsInWorkflowRun {
             $anySuccessful = $true
         }
 
-        # Skipped workflows are considered successful as this is just projects, which are not built
+        # Skipped jobs are considered successful as this is just projects, which are not built
         if($buildJobs.conclusion -ne 'success' -and $buildJobs.conclusion -ne 'skipped') {
             # If there is a build job that is not successful, there is not need to check further
             $allSuccessful = $false
