@@ -134,6 +134,20 @@ $apps = @()
 $dependencies = @()
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
 if (Test-Path $artifactsFolder -PathType Container) {
+    #Get app ids
+    $basePath = @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { $_.FullName })
+    Write-Host "Basepath: $basePath"
+    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $tempPath | Out-Null
+    Copy-AppFilesToFolder -appFiles $basePath -folder $tempPath | Out-Null
+    $appFiles = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
+    $appNameToId = @{}
+    foreach ($app in $appFiles) {
+        $appJson = Get-AppJsonFromAppFile -appFile $app
+        Write-Host "App: $($appJson.name) id: $($appJson.id)"
+        $appNameToId[$appJson.name] = $appJson.id
+    }
+    #Get apps for deployment
     $deploymentSettings.Projects.Split(',') | ForEach-Object {
         $project = $_.Replace('\','_').Replace('/','_')
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
@@ -163,20 +177,6 @@ if (Test-Path $artifactsFolder -PathType Container) {
         else {
             $apps += $projectTestApps
         }
-    }
-    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
-    New-Item -ItemType Directory -Path $tempPath | Out-Null
-    Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
-    $apps2 = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
-    $appNameToId = @{}
-    foreach ($app in $apps2) {
-        $appJson = Get-AppJsonFromAppFile -appFile $app
-        Write-Host "App: $($appJson.name) Version: $($appJson.version)"
-        $appNameToId[$appJson.name] = $appJson.id
-    }
-    $apps | ForEach-Object {
-        Write-Host "App: $($_)"
-        Write-Host "AppId: $($appJson.id)"
     }
 }
 else {
