@@ -164,9 +164,18 @@ if (Test-Path $artifactsFolder -PathType Container) {
             $apps += $projectTestApps
         }
     }
+    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $tempPath | Out-Null
+    Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
+    $apps2 = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
+    $appNameToId = @{}
+    foreach ($app in $apps2) {
+        $appJson = Get-AppJsonFromAppFile -appFile $app
+        Write-Host "App: $($appJson.name) Version: $($appJson.version)"
+        $appNameToId[$appJson.name] = $appJson.id
+    }
     $apps | ForEach-Object {
         Write-Host "App: $($_)"
-        $appJson = Get-AppJsonFromAppFile -appFile $_
         Write-Host "AppId: $($appJson.id)"
     }
 }
