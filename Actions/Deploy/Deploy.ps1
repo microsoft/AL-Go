@@ -162,6 +162,11 @@ if (Test-Path $artifactsFolder -PathType Container) {
             $apps += $projectTestApps
         }
     }
+    $apps | ForEach-Object {
+        Write-Host "App: $($_)"
+        $appJson = Get-AppJsonFromAppFile -appFile $_
+        Write-Host "AppId: $($appJson.id)"
+    }
 }
 else {
     throw "Artifact $artifactsFolder was not found. Make sure that the artifact files exist and files are not corrupted."
