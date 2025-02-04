@@ -139,7 +139,9 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+        $projectTestApps = @()
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
+            Write-Host "Including test apps for deployment"
             $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
         } 
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
