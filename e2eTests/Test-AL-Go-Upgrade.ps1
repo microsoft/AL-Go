@@ -1,9 +1,11 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
 Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $contentPath = "pte",
     [string] $release = "v2.2",
     [string] $template = $global:pteTemplate,
@@ -57,7 +59,7 @@ else {
 $template = "https://github.com/$template"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 # Create repo
 CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
@@ -89,7 +91,9 @@ Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=1;"TestApps"=1}
 $runs++
 
 # Update AL-Go System Files
-SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $token
+# for Upgrade scenarios before version 6.3 we need to set the GHTOKENWORKFLOW secret to a PAT
+# for Upgrade scenarios 6.3 or after we can set the GHTOKENWORKFLOW secret to a GH APP
+SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $e2epat
 RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository -branch $branch | Out-Null
 
 # Expected Run: Update AL-Go System Files triggered on workflow_dispatch

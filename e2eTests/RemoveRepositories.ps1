@@ -1,7 +1,7 @@
 ﻿Param(
     [switch] $github,
     [string] $githubOwner,
-    [string] $token,
+    [string] $e2epat,
     [string] $actionsRepo,
     [string] $perTenantExtensionRepo,
     [string] $appSourceAppRepo
@@ -11,7 +11,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository ''
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -e2epat $e2epat -repository ''
 
 RemoveRepository -repository "$githubOwner/$actionsRepo"
 RemoveRepository -repository "$githubOwner/$perTenantExtensionRepo"

@@ -136,7 +136,8 @@ try {
                     OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
-                    $trustedNuGetFeed.Token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
+                    $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
+                    $trustedNuGetFeed.Token = GetAccessToken -token $authToken -repositories @() -permissions @{"packages"="read";"metadata"="read"}
                 }
             }
         }
@@ -328,7 +329,7 @@ try {
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
                     $publishParams = @{
                         "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
-                        "nuGetToken" = $gitHubPackagesCredential.token
+                        "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
                     }

@@ -50,16 +50,26 @@ function GetLatestTemplateSha {
     $branch = $templateUrl.Split('@')[1]
 
     try {
+        Write-Host "Get latest SHA for $templateUrl"
         $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
-        $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
     } catch {
-        if ($_.Exception.Message -like "*401*") {
-            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-        } else {
+        Write-Host "Exception: $($_.Exception.Message)"
+        if ($_.Exception.Message -like "*Unauthorized*") {
+            try {
+                Write-Host "retry without Authorization header"
+                $headers.Remove('Authorization')
+                $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
+            }
+            catch {
+                throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            }
+        }
+        else {
             throw $_.Exception.Message
         }
     }
 
+    $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
     if (!$branchInfo) {
         throw "$templateUrl doesn't exist"
     }
