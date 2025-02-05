@@ -80,16 +80,6 @@ jobs:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
 
-      - name: Determine Deployment Environments
-        id: DetermineDeploymentEnvironments
-        uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          shell: powershell
-          getEnvironments: 'PR_${{ github.event.pull_request.number }}'
-          type: 'CD'
-
   Build:
     needs: [ Initialization ]
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
