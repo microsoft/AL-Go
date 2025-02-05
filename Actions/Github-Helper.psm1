@@ -911,6 +911,76 @@ function FindLatestSuccessfulCICDRun {
     return $lastSuccessfulCICDRun
 }
 
+<#
+    Gets the last successful CICD run ID for the specified repository and branch.
+    Successful CICD runs are those that have a workflow run named ' CI/CD' and successfully built all the projects.
+
+    If no successful CICD run is found, 0 is returned.
+#>
+function FindLatestSuccessfulPRRun {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $branch,
+        [Parameter(Mandatory = $true)]
+        [string] $token
+    )
+
+    $headers = GetHeaders -token $token
+    $lastSuccessfulPRRun = 0
+    $per_page = 100
+    $page = 1
+
+    Write-Host "Finding latest successful PR run for branch $branch in repository $repository"
+
+    # Get the latest CICD workflow run
+    while($true) {
+        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&status=success&branch=$branch&event=pull_request_target"
+        Write-Host "- $runsURI"
+        $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
+
+        if($workflowRuns.workflow_runs.Count -eq 0) {
+            # No more workflow runs, breaking out of the loop
+            break
+        }
+
+        $PRRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq 'Pull Request Build' })
+
+        foreach($PRRun in $PRRuns) {
+            if($PRRun.conclusion -eq 'success') {
+                # CICD run is successful
+                $lastSuccessfulPRRun = $PRRun.id
+                break
+            }
+
+            # CICD run is considered successful if all build jobs were successful
+            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($PRRun.id) -token $token -repository $repository
+
+            if($areBuildJobsSuccessful) {
+                $lastSuccessfulPRRun = $PRRun.id
+                Write-Host "Found last successful CICD run: $($lastSuccessfulPRRun), from $($PRRun.created_at)"
+                break
+            }
+
+            Write-Host "CICD run $($PRRun.id) is not successful. Skipping."
+        }
+
+        if($lastSuccessfulPRRun -ne 0) {
+            break
+        }
+
+        $page += 1
+    }
+
+    if($lastSuccessfulPRRun -ne 0) {
+        Write-Host "Last successful CICD run for branch $branch in repository $repository is $lastSuccessfulPRRun"
+    } else {
+        Write-Host "No successful CICD run found for branch $branch in repository $repository"
+    }
+
+    return $lastSuccessfulPRRun
+}
 
 <#
     Gets the non-expired artifacts from the specified CICD run.
@@ -1225,4 +1295,29 @@ function GenerateJwtForTokenRequest {
         $signature = Invoke-Command -ScriptBlock $command -ArgumentList "$header.$payload", $privateKey
     }
     return "$header.$payload.$signature"
+}
+
+<#
+ .SYNOPSIS
+  Get the source branch of a PR
+ .PARAMETER prId
+  The PR Id
+#>
+function GetBranchFromPRId {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $prId,
+        [Parameter(Mandatory = $true)]
+        [string] $token
+    )
+
+    $headers = GetHeaders -token $token
+
+    $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
+    Write-Host "- $runsURI"
+    $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
+
+    return $workflowRuns.head.ref
 }
