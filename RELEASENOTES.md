@@ -1,16 +1,16 @@
-### Support for GitHub App authentication
-
-AL-Go for GitHub now supports using a GitHub App specification as the GhTokenWorkflow secret for a more secure way of allowing repositories to run Update AL-Go System Files and other workflows which are creating commits and pull requests. See [this description](https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md) to learn how to use GitHub App authentication.
-
 ### New Repository Settings
 
-- - [`updateALGoBranches`](https://aka.ms/algosettings#updateALGoBranches) is an array of branches to run `Update AL-Go System Files` on. Wildcards are supported.
+- [`workflowSchedule`](https://aka.ms/algosettings#updateALGoBranches) now can have a property `includeBranches` to specify which braches the workflow needs to run on when on schedule. Wildcards are supported.
 
 ### Run "Update AL-Go System Files" on a schedule on multiple branches
 
-When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `scheduleSettings` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosecrets#scheduleSettings.
+When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `includeBranches` in `workflowSchedule` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosecrets#workflowSchedule.
 
 Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
+
+### Support for GitHub App authentication
+
+AL-Go for GitHub now supports using a GitHub App specification as the GhTokenWorkflow secret for a more secure way of allowing repositories to run Update AL-Go System Files and other workflows which are creating commits and pull requests. See [this description](https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md) to learn how to use GitHub App authentication.
 
 ## v6.3
 
