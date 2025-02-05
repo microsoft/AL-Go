@@ -9,7 +9,7 @@ Import-Module $gitHubHelperPath -DisableNameChecking
 switch ($env:GITHUB_EVENT_NAME) {
     'schedule' {
       Write-Host "Event is schedule: getting branches from settings"
-      $branchPatterns = @($($(ConvertFrom_Json $env:settings).workflowSchedule.includeBranches))
+      $branchPatterns = @($($(ConvertFrom-Json $env:settings).workflowSchedule.includeBranches))
     }
     'workflow_dispatch' {
       Write-Host "Event is workflow_dispatch: getting branches from input"
@@ -18,14 +18,13 @@ switch ($env:GITHUB_EVENT_NAME) {
   }
 
 # Default to the current branch if no branch patterns are specified
-if ($branchPatterns.Count -eq 0) {
-    $currentBranch = invoke-git -returnValue rev-parse --abbrev-ref HEAD
-    $branchPatterns = @($currentBranch)
+if (-not $branchPatterns) {
+    $branchPatterns = @($env:GITHUB_REF_NAME)
 }
 
 Write-Host "Filtering branches by: $($branchPatterns -join ', ')"
 
-invoke-git -silent fetch
+invoke-git fetch --quiet
 $allBranches = @(invoke-git -returnValue for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 $branches = @()
 

@@ -682,7 +682,7 @@ function ReadSettings {
             "createPullRequest"                         = $true
         }
         "workflowSchedule"                              = [ordered] @{
-            "includeBranches"                           = @( "main" )
+            "includeBranches"                           = @()
         }
         "trustedSigning"                                = [ordered]@{
             "Endpoint"                                  = ""
