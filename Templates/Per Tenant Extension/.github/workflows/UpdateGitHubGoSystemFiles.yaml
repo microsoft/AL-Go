@@ -15,10 +15,10 @@ on:
         description: Direct Commit?
         type: boolean
         default: false
-      updateBranches:
-        description: Update all branches, specified in scheduleSettings AL-Go setting? By default, only the current branch is updated.
-        type: boolean
-        default: false
+      includeBranches:
+        description: Specify a comma-separated list of branches to update. Wildcards are supported. The AL-Go settings will be read for every branch. Leave empty to update the current branch only.
+        requires: false
+        default: ''
 
 permissions:
   actions: read
@@ -32,53 +32,31 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  _updateMultipleBranches: ${{ github.event.inputs.updateBranches == 'true' || github.event_name == 'schedule' }}
 
 jobs:
   Initialize:
     runs-on: windows-latest
     name: Initialize
     outputs:
-      SupportedBranches: ${{ steps.DetermineBranches.outputs.Result }}
+      UpdateBranches: ${{ steps.GetBranches.outputs.Result }}
       TemplateUrl: ${{ steps.DetermineTemplateUrl.outputs.TemplateUrl }}
     steps:
       - name: Checkout
-        if: ${{ env._updateMultipleBranches }}
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Read settings
         id: ReadSettings
-        if: ${{ env._updateMultipleBranches }}
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: scheduleSettings,templateUrl
+          get: templateUrl
 
-      - name: Get Supported Branches
-        if: ${{ env._updateMultipleBranches }}
-        id: GetSupportedBranches
-        uses: microsoft/AL-Go-Actions/GetGitBranches@main
+      - name: Get Workflow Multi-Run Branches
+        id: GetBranches
+        uses: microsoft/AL-Go-Actions/GetWorkflowMultiRunBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ join(fromJson(env.scheduleSettings).includeBranches, ',') }}
-
-      - name: Determine branches to update
-        id: DetermineBranches
-        env:
-          supportedBranchesJson: ${{ steps.GetSupportedBranches.outputs.Result }}
-        shell: powershell
-        run: |
-            $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
-            if ('${{ env._updateMultipleBranches }}' -eq 'true') {
-              $branchesToUpdate = $(ConvertFrom-Json $env:supportedBranchesJson).branches
-            }
-            else {
-              # Default to the current branch
-              $branchesToUpdate = @('${{ github.ref_name }}')
-            }
-            Write-Host "Branches to update: $($branchesToUpdate -join ', ')"
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "Result=$(ConvertTo-Json @{ branches = $branchesToUpdate } -Compress)"
+          includeBranches: ${{ github.event.inputs.includeBranches }}
 
       - name: Determine Template URL
         id: DetermineTemplateUrl
@@ -87,6 +65,7 @@ jobs:
             $templateUrl = $env:templateUrl # Available from ReadSettings step
             $templateUrlAsInput = '${{ github.event.inputs.templateUrl }}'
             if ($templateUrlAsInput) {
+              # Use the input value if it is provided
               $templateUrl = $templateUrlAsInput
             }
 
@@ -99,7 +78,7 @@ jobs:
     runs-on: [ windows-latest ]
     strategy:
       matrix:
-        branch: ${{ fromJson(needs.Initialize.outputs.SupportedBranches).branches }}
+        branch: ${{ fromJson(needs.Initialize.outputs.UpdateBranches).branches }}
       fail-fast: false
 
     steps:
@@ -133,19 +112,6 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'ghTokenWorkflow'
 
-      - name: Determine templateUrl to use for branch ${{ matrix.branch }}
-        id: DetermineBranchTemplateUrl
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
-          $templateUrl = "${{ needs.Initialize.outputs.TemplateUrl }}" # Available from Initialize job
-          if ($templateUrl -eq '') {
-            $templateUrl = $env:templateUrl # Available from ReadSettings step
-          }
-
-          Write-Host "Using template URL: $templateUrl"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TemplateUrl=$templateUrl"
-
       - name: Calculate Commit Options
         env:
           directCommit: '${{ github.event.inputs.directCommit }}'
@@ -176,7 +142,7 @@ jobs:
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: ${{ env.downloadLatest }}
           update: 'Y'
-          templateUrl: ${{ steps.DetermineBranchTemplateUrl.outputs.TemplateUrl }}
+          templateUrl: ${{ needs.Initialize.outputs.TemplateUrl }}
           directCommit: ${{ env.directCommit }}
           updateBranch: ${{ matrix.branch }}
 

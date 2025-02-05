@@ -1,4 +1,5 @@
-name: Get Git Branches
+name: Get Workflow Multi-Run Branches
+description: Get branches for the workflow to run on
 author: Microsoft Corporation
 inputs:
   shell:
@@ -6,7 +7,7 @@ inputs:
     required: false
     default: powershell
   includeBranches:
-    description: Comma-separated value of branch names to include if they exist. If not specified, only the default branch is returned. Wildcards are supported.
+    description: Comma-separated value of branch names patterns to include if they exist. If not specified, all remote branches are returned. Wildcards are supported.
     required: false
     default: ''
 outputs:
@@ -22,8 +23,8 @@ runs:
       env:
         _includeBranches: ${{ inputs.includeBranches }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetGitBranches" -Action {
-          ${{ github.action_path }}/GetGitBranches.ps1 -includeBranches $env:_includeBranches
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetWorkflowMultiRunBranches" -Action {
+          ${{ github.action_path }}/Action.ps1 -includeBranches $env:_includeBranches
         }
 branding:
   icon: terminal
