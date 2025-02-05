@@ -1,5 +1,4 @@
 name: Get Workflow Multi-Run Branches
-description: Get branches for the workflow to run on
 author: Microsoft Corporation
 inputs:
   shell:
@@ -12,19 +11,19 @@ inputs:
     default: ''
 outputs:
   Result:
-    description: JSON-formatted object with `branches` property, an array of branch names
-    value: ${{ steps.GetGitBranches.outputs.Result }}
+    description: JSON-formatted object with branches property, an array of branch names
+    value: ${{ steps.GetWorkflowMultiRunBranches.outputs.Result }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      id: GetGitBranches
+      id: GetWorkflowMultiRunBranches
       env:
         _includeBranches: ${{ inputs.includeBranches }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetWorkflowMultiRunBranches" -Action {
-          ${{ github.action_path }}/Action.ps1 -includeBranches $env:_includeBranches
+          ${{ github.action_path }}/GetWorkflowMultiRunBranches.ps1 -includeBranches $env:_includeBranches
         }
 branding:
   icon: terminal

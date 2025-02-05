@@ -6,11 +6,7 @@
 $gitHubHelperPath = Join-Path $PSScriptRoot '../Github-Helper.psm1' -Resolve
 Import-Module $gitHubHelperPath -DisableNameChecking
 
-# Read the GitHub event name
-$ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
-$ghEventName = $ghEvent.PSObject.Properties.name
-
-switch ($ghEventName) {
+switch ($env:GITHUB_EVENT_NAME) {
     'schedule' {
       Write-Host "Event is schedule: getting branches from settings"
       $branchPatterns = @($($(ConvertFrom_Json $env:settings).workflowSchedule.includeBranches))
