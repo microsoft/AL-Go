@@ -167,6 +167,12 @@ if (Test-Path $artifactsFolder -PathType Container) {
             }
         }
         else {
+            Write-Host "Writing contents of project apps folders"
+            foreach($p in $projectApps) {
+                Get-ChildItem -Path $p | ForEach-Object {
+                    Write-Host $_.FullName
+                }
+            }
             $apps += $projectApps
         }
         if (!($projectTestApps)) {
@@ -175,6 +181,12 @@ if (Test-Path $artifactsFolder -PathType Container) {
             }
         }
         else {
+            Write-Host "Writing contents of project test apps folders"
+            foreach($p in $projectApps) {
+                Get-ChildItem -Path $p | ForEach-Object {
+                    Write-Host $_.FullName
+                }
+            }
             $apps += $projectTestApps
         }
     }
