@@ -157,6 +157,9 @@ if (Test-Path $artifactsFolder -PathType Container) {
             Write-Host "Including test apps for deployment"
             $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
         } 
+        if ($deploymentSettings.excludeAppIds) {
+            Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds)"
+        }
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
             $dependencies += @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
         }
@@ -171,7 +174,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                 Get-ChildItem -Path $appFile | ForEach-Object {
                     Write-Host $_.FullName
                     $appId = $appNameToId[$_.Name]
-                    if ($appId -eq "7aca38fb-3df6-4b2a-a7c4-3b2a60ee0574") {
+                    if ($appId -notin $deploymentSettings.excludeAppIds) {
                         $apps += $_.FullName
                         Write-Host "App file $($_.FullName) with id $appId included in deployment"
                     }
@@ -193,7 +196,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                 Get-ChildItem -Path $appFile | ForEach-Object {
                     Write-Host $_.FullName
                     $appId = $appNameToId[$_.Name]
-                    if (!$appId -eq "7aca38fb-3df6-4b2a-a7c4-3b2a60ee0574") {
+                    if ($appId -notin $deploymentSettings.excludeAppIds) {
                         $apps += $_.FullName
                         Write-Host "Test App file $($_.FullName) with id $appId included in deployment"
                     }
