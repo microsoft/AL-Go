@@ -325,7 +325,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # Old Schedule key is deprecated, but still supported
     $oldWorkflowScheduleKey = "$($baseName)Schedule"
     if ($repoSettings.Keys -contains $oldWorkflowScheduleKey) {
-        # DEPRECATION: REPLACE WITH ERROR AFTER April 1st 2025 --->
+        # DEPRECATION: REPLACE WITH ERROR AFTER October 1st 2025 --->
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
             OutputWarning "Both $oldWorkflowScheduleKey and $workflowScheduleKey are defined in the settings file. $oldWorkflowScheduleKey will be ignored. This warning will become an error in the future"
         }
@@ -334,7 +334,7 @@ function GetWorkflowContentWithChangesFromSettings {
             # Convert the old <workflow>Schedule setting to the new WorkflowSchedule setting
             $repoSettings."$workflowScheduleKey" = $repoSettings."$oldWorkflowScheduleKey"
         }
-        # <--- REPLACE WITH ERROR AFTER April 1st 2025
+        # <--- REPLACE WITH ERROR AFTER October 1st 2025
     }
 
     # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have concurrency and schedule defined

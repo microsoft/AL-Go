@@ -24,6 +24,7 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -145,32 +146,28 @@ try {
         }
         $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         if (!$buildAll) {
-            if ($settings.incrementalBuilds.mode -eq 'modifiedApps') {
-                $skipFolders = @()
-                $unknownDependencies = @()
-                $knownApps = @()
-                $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
-                Push-Location $ENV:GITHUB_WORKSPACE
-                $modifiedFolders = @($allFolders | Where-Object {
-                    $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
-                })
-                Pop-Location
-                Write-Host "$($modifiedFolders.Count) modified folder(s)"
-                if ($modifiedFolders.Count -gt 0) {
-                    foreach($modifiedFolder in $modifiedFolders) {
-                        Write-Host "- $modifiedFolder"
-                    }
+            $skipFolders = @()
+            $unknownDependencies = @()
+            $knownApps = @()
+            $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
+            Push-Location $ENV:GITHUB_WORKSPACE
+            $modifiedFolders = @($allFolders | Where-Object {
+                $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
+            })
+            Pop-Location
+            Write-Host "$($modifiedFolders.Count) modified folder(s)"
+            if ($modifiedFolders.Count -gt 0) {
+                foreach($modifiedFolder in $modifiedFolders) {
+                    Write-Host "- $modifiedFolder"
                 }
-                Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
-                Write-Host "Skip folders:"
-                $skipFolders | ForEach-Object { Write-Host "- $_" }
-                $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "check '$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))'"; $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
-                $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
-                $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
             }
-            else {
-                throw "Unknown incremental build mode $($settings.incrementalBuilds.mode)"
-            }
+            Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
+            Write-Host "Skip folders:"
+            $skipFolders | ForEach-Object { Write-Host "- $_" }
+            $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "check '$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))'"; $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+            $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+            $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+
             if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
             # Download missing apps - or add then to build folders if the artifact doesn't exist
             $appsToDownload = @{

@@ -20,12 +20,12 @@ $ghEventName = $ENV:GITHUB_EVENT_NAME
 $branch = $env:GITHUB_REF_NAME
 if ($ghEventName -eq 'pull_request') {
     $branch = $env:GITHUB_BASE_REF
-    # DEPRECATION: REMOVE AFTER April 1st 2025 --->
+    # DEPRECATION: REMOVE AFTER October 1st 2025 --->
     if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects') {
         $buildAllProjects = $settings.alwaysBuildAllProjects
         Trace-DeprecationWarning -Message "alwaysBuildAllProjects is deprecated" -DeprecationTag "alwaysBuildAllProjects"
     }
-    # <--- REMOVE AFTER April 1st 2025
+    # <--- REMOVE AFTER October 1st 2025
     else {
         $buildAllProjects = !$settings.incrementalBuilds.onPullRequest
     }
@@ -45,7 +45,7 @@ $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run I
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
     Write-Host "::group::Determine Baseline Workflow ID"
-    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $branch -token $token
+    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $branch -token $token -retention $settings.incrementalBuilds.retentionDays
     Write-Host "::endgroup::"
 }
 
@@ -76,12 +76,13 @@ $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-Projects
 Write-Host "::endgroup::"
 #endregion
 
-#region Action: Output
 $skippedProjects = @($allProjects | Where-Object { $_ -notin $projectsToBuild })
 if ($skippedProjects) {
     # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 }
+
+#region Action: Output
 $skippedProjectsJson = ConvertTo-Json -InputObject $skippedProjects -Depth 99 -Compress
 $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
 $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
