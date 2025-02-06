@@ -341,8 +341,11 @@ function GetWorkflowContentWithChangesFromSettings {
     if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
         # Add Schedule and Concurrency settings to the workflow
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
+            if ($repoSettings."$workflowScheduleKey" -isnot [hashtable] -or $repoSettings."$workflowScheduleKey".Keys -notcontains 'cron' -or $repoSettings."$workflowScheduleKey".cron -isnot [string]) {
+                throw "The $workflowScheduleKey setting must be a structure containing a cron property"
+            }
             # Replace or add the schedule part under the on: key
-            $yaml.ReplaceOrAdd('on:/', 'schedule:', @("- cron: '$($repoSettings."$workflowScheduleKey")'"))
+            $yaml.ReplaceOrAdd('on:/', 'schedule:', @("- cron: '$($repoSettings."$workflowScheduleKey".cron)'"))
         }
         if ($repoSettings.Keys -contains $workflowConcurrencyKey) {
             # Replace or add the concurrency part

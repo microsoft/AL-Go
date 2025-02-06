@@ -35,14 +35,16 @@ The old setting, where the setting key was a combination of the workflow name an
     {
         "workflows": [ "Update AL-Go System Files" ],
         "settings": {
-            "workflowSchedule": "30 0 * * 0"
+            "workflowSchedule": {
+                "cron": "30 0 * * 0"
+            }
         }
     }
 ]
 ```
 
 > [!NOTE]
-> workflowSchedule is a string and needs to hold a valid crontab (see [crontab guru](https://crontab.guru/) for assistance on creating one)
+> workflowSchedule is a structure with a property called `cron` which is a string that needs to hold a valid crontab (see [crontab guru](https://crontab.guru/) for assistance on creating one)
 
 ## Changes in effect after April 1st 2025
 
