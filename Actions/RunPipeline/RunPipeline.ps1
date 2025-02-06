@@ -162,13 +162,13 @@ try {
         $install."$list" = @($install."$list" | ForEach-Object { 
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
             if ($_ -match $pattern) {
-                $_.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2]))"))
+                $_.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2]))")))
             }
             else {
                 $_
             }
-        }
-    })
+        })
+    }
 
     # Analyze app.json version dependencies before launching pipeline
 
