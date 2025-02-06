@@ -152,11 +152,23 @@ try {
         })
     }
 
-    $installApps = $settings.installApps
-    $installTestApps = $settings.installTestApps
+    $install = @{
+        "apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
+        "testApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+    }
 
-    $installApps += $installAppsJson | ConvertFrom-Json
-    $installTestApps += $installTestAppsJson | ConvertFrom-Json
+    # Replace secret names in install.apps and install.testApps
+    foreach($list in @('apps','testApps')) {
+        $install."$list" = @($install."$list" | ForEach-Object { 
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            if ($_ -match $pattern) {
+                $_.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2]))"))
+            }
+            else {
+                $_
+            }
+        }
+    })
 
     # Analyze app.json version dependencies before launching pipeline
 
@@ -409,8 +421,8 @@ try {
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
-        -installApps $installApps `
-        -installTestApps $installTestApps `
+        -installApps $install.apps `
+        -installTestApps $install.testApps `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
