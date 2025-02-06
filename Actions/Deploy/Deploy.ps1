@@ -171,7 +171,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                 Get-ChildItem -Path $appFile | ForEach-Object {
                     Write-Host $_.FullName
                     $appId = $appNameToId[$_.Name]
-                    if (!$appId -eq "7aca38fb-3df6-4b2a-a7c4-3b2a60ee0574") {
+                    if ($appId -eq "7aca38fb-3df6-4b2a-a7c4-3b2a60ee0574") {
                         $apps += $_.FullName
                         Write-Host "App file $($_.FullName) with id $appId included in deployment"
                     }
