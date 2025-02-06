@@ -159,7 +159,7 @@ try {
 
     # Replace secret names in install.apps and install.testApps
     foreach($list in @('apps','testApps')) {
-        $install."$list" = @($install."$list" | ForEach-Object { 
+        $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
             if ($_ -match $pattern) {
                 $_.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
