@@ -229,7 +229,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                         $testLibraryDependencyFound = $false
                         # Check if Test-TestLibraries is a dependency for the app - if so skip it since we can't install that dependency
                         foreach ($unknownDependency in $unknownDependenciesForApp) {
-                            if ($unknownDependency -like "*Test-TestLibraries*") {
+                            if ($unknownDependency -like "*Tests-TestLibraries*") {
                                 $testLibraryDependencyFound = $true
                                 break
                             }
