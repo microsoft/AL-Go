@@ -111,6 +111,10 @@ function InstallOrUpgradeApps {
                 #The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
                 $appId, $appName = $app.Split(':')
                 $appVersion = ""
+                if ($appName -like "*Tests-TestLibraries*") {
+                    Write-Host "::WARNING::Tests-TestLibraries can't be installed"
+                    break
+                }
                 if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
                     $appVersion = $matches.1
                 } else {
