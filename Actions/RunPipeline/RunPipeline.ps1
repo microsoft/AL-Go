@@ -162,14 +162,15 @@ try {
         $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
             if ($_ -match $pattern) {
-                $_.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+                $finalUrl = $_.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
             }
             else {
-                $_
+                $finalUrl = $_
             }
             # Check validity of URL
             try {
-                Invoke-WebRequest -Method Head -UseBasicParsing -Uri $_ | Out-Null
+                Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                return $finalUrl
             }
             catch {
                 throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
