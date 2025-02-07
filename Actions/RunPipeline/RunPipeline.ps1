@@ -153,12 +153,12 @@ try {
     }
 
     $install = @{
-        "apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
-        "testApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
+        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
     }
 
     # Replace secret names in install.apps and install.testApps
-    foreach($list in @('apps','testApps')) {
+    foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
             if ($_ -match $pattern) {
@@ -166,6 +166,13 @@ try {
             }
             else {
                 $_
+            }
+            # Check validity of URL
+            try {
+                Invoke-WebRequest -Method Head -UseBasicParsing -Uri $_ | Out-Null
+            }
+            catch {
+                throw "install$($list) setting contains an inaccessible URL: $_. Error was: $($_.Exception.Message)"
             }
         })
     }
