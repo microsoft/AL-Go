@@ -139,20 +139,22 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
         #Get app ids
-        $projectArtifactFolders = @((Get-ChildItem -Path $artifactsFolder -Filter "$project") | ForEach-Object { $_.FullName })
-        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
-        New-Item -ItemType Directory -Path $tempPath | Out-Null
-        Copy-AppFilesToFolder -appFiles $projectArtifactFolders -folder $tempPath | Out-Null
-        $appFiles = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
-        $appNameToId = @{}
-        foreach ($app in $appFiles) {
-            $appJson = Get-AppJsonFromAppFile -appFile $app
-            Write-Host "App: $($appJson.name) id: $($appJson.id) fileName: $($app | Split-Path -Leaf)"
-            $appNameToId[$($app | Split-Path -Leaf)] = $appJson.id
-        }
+        # $projectArtifactFolders = @((Get-ChildItem -Path $artifactsFolder -Filter "$project") | ForEach-Object { $_.FullName })
+        # $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+        # New-Item -ItemType Directory -Path $tempPath | Out-Null
+        # Copy-AppFilesToFolder -appFiles $projectArtifactFolders -folder $tempPath | Out-Null
+        # $appFiles = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
+        # $appNameToId = @{}
+        # foreach ($app in $appFiles) {
+        #     $appJson = Get-AppJsonFromAppFile -appFile $app
+        #     Write-Host "App: $($appJson.name) id: $($appJson.id) fileName: $($app | Split-Path -Leaf)"
+        #     $appNameToId[$($app | Split-Path -Leaf)] = $appJson.id
+        # }
 
+        $allApps = @()
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
         $projectTestApps = @()
+        $unknownDependencies = @()
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
             Write-Host "Including test apps for deployment"
             $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
@@ -169,21 +171,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
             }
         }
         else {
-            Write-Host "Writing contents of project apps folders"
-            foreach($appFile in $projectApps) {
-                Get-ChildItem -Path $appFile | ForEach-Object {
-                    Write-Host $_.FullName
-                    $appId = $appNameToId[$_.Name]
-                    if ($appId -notin $deploymentSettings.excludeAppIds) {
-                        $apps += $_.FullName
-                        Write-Host "App file $($_.FullName) with id $appId included in deployment"
-                    }
-                    else {
-                        Write-Host "App file $($_.FullName) with id $appId excluded from deployment"
-                    }
-                }
-            }
-            #$apps += $projectApps
+            $allApps += $projectApps
         }
         if (!($projectTestApps)) {
             if ($project -ne '*') {
@@ -191,22 +179,31 @@ if (Test-Path $artifactsFolder -PathType Container) {
             }
         }
         else {
-            Write-Host "Writing contents of project test apps folders"
-            foreach($appFile in $projectTestApps) {
-                Get-ChildItem -Path $appFile | ForEach-Object {
+            $allApps += $projectTestApps
+        }
+        #Filter out any apps listed in excludeAppIds
+        if ($allApps) {
+            foreach($appFolder in $allProjectApps) {
+                Get-ChildItem -Path $appFolder | ForEach-Object {
                     Write-Host $_.FullName
-                    $appId = $appNameToId[$_.Name]
-                    if ($appId -notin $deploymentSettings.excludeAppIds) {
-                        $apps += $_.FullName
-                        Write-Host "Test App file $($_.FullName) with id $appId included in deployment"
-                    }
+                    if ($_.Name -like "*.app") {
+                        $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
+                        if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
+                            $apps += $_.FullName
+                            Write-Host "App file $($_.FullName) with id $appId included in deployment"
+                        }
+                        else {
+                            Write-Host "App file $($_.FullName) with id $appId excluded from deployment"
+                        }
+                    } 
                     else {
-                        Write-Host "Test App file $($_.FullName) with id $appId excluded from deployment"
-                    }
+                        $apps += $_.FullName
+                    }                  
                 }
             }
-            #$apps += $projectTestApps
         }
+        Sort-AppFilesByDependencies -appFiles ($apps | Where-Object {$_ -like "*.app"}) -unknownDependencies ([ref]$unknownDependencies) | Out-Null
+        Write-Host "Unknown dependencies: $unknownDependencies"
     }
 }
 else {
