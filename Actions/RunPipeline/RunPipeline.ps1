@@ -172,7 +172,7 @@ try {
                 Invoke-WebRequest -Method Head -UseBasicParsing -Uri $_ | Out-Null
             }
             catch {
-                throw "install$($list) setting contains an inaccessible URL: $_. Error was: $($_.Exception.Message)"
+                throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
             }
         })
     }
