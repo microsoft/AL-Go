@@ -113,7 +113,6 @@ function InstallOrUpgradeApps {
                 $appVersion = ""
                 if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
                     $appVersion = $matches.1
-                    Write-Output $appVersion
                 } else {
                     throw "Version not found for unknown dependency $app"
                 }
@@ -123,7 +122,7 @@ function InstallOrUpgradeApps {
                     "id" = $appId
                     "Version" = $appVersion
                 }
-                Write-Host "fake appJson: $appJson"
+                Write-Host "fake appJson: $($appJson | ConvertTo-Json)"
                 $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
                 $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
                 if ($needsUpgrade) {
@@ -235,10 +234,10 @@ if (Test-Path $artifactsFolder -PathType Container) {
                         $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
                         if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
                             $apps += $_.FullName
-                            Write-Host "App file $($_.FullName) with id $appJson.id included in deployment"
+                            Write-Host "App file $($_.FullName) with id $($appJson.id) included in deployment"
                         }
                         else {
-                            Write-Host "App file $($_.FullName) with id $appJson.id excluded from deployment"
+                            Write-Host "App file $($_.FullName) with id $($appJson.id) excluded from deployment"
                         }
                     } 
                     else {
