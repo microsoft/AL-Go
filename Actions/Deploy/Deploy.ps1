@@ -103,6 +103,7 @@ function InstallOrUpgradeApps {
         }
     }
     else {
+        Write-Host "Unknown dependencies: $($apps -join ', ')"
         try {
             Write-Host "Installaing unknown dependencies"
             $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
@@ -186,18 +187,6 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $project = $_.Replace('\','_').Replace('/','_')
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
-        #Get app ids
-        # $projectArtifactFolders = @((Get-ChildItem -Path $artifactsFolder -Filter "$project") | ForEach-Object { $_.FullName })
-        # $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
-        # New-Item -ItemType Directory -Path $tempPath | Out-Null
-        # Copy-AppFilesToFolder -appFiles $projectArtifactFolders -folder $tempPath | Out-Null
-        # $appFiles = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
-        # $appNameToId = @{}
-        # foreach ($app in $appFiles) {
-        #     $appJson = Get-AppJsonFromAppFile -appFile $app
-        #     Write-Host "App: $($appJson.name) id: $($appJson.id) fileName: $($app | Split-Path -Leaf)"
-        #     $appNameToId[$($app | Split-Path -Leaf)] = $appJson.id
-        # }
 
         $allApps = @()
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
