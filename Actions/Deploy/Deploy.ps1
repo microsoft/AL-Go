@@ -190,10 +190,10 @@ if (Test-Path $artifactsFolder -PathType Container) {
                         $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
                         if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
                             $apps += $_.FullName
-                            Write-Host "App file $($_.FullName) with id $appId included in deployment"
+                            Write-Host "App file $($_.FullName) with id $appJson.id included in deployment"
                         }
                         else {
-                            Write-Host "App file $($_.FullName) with id $appId excluded from deployment"
+                            Write-Host "App file $($_.FullName) with id $appJson.id excluded from deployment"
                         }
                     } 
                     else {
