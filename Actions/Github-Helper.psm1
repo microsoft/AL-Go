@@ -842,7 +842,7 @@ function CheckBuildJobsInWorkflowRun {
 
 <#
     Gets the last successful CICD run ID and SHA for the specified repository and branch.
-    Successful CICD runs are those that have a workflow run named ' CI/CD' and successfully built all the projects.
+    Successful CICD runs are those that have a workflow run named ' CI/CD', wasn't cancelled and successfully built all the projects within the last $retention days.
 
     If no successful CICD run is found, 0 and empty string is returned.
 #>
