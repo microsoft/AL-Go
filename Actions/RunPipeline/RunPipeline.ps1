@@ -161,11 +161,12 @@ try {
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-            if ($_ -match $pattern) {
-                $finalUrl = $_.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            $url = $_
+            if ($url -match $pattern) {
+                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
             }
             else {
-                $finalUrl = $_
+                $finalUrl = $url
             }
             # Check validity of URL
             try {
@@ -173,7 +174,7 @@ try {
                 return $finalUrl
             }
             catch {
-                throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
+                throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
             }
         })
     }
