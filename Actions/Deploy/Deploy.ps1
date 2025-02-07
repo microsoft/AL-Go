@@ -114,7 +114,7 @@ function InstallOrUpgradeApps {
                 $appVersion = ""
                 if ($appName -like "*Tests-TestLibraries*") {
                     Write-Host "::WARNING::Tests-TestLibraries can't be installed"
-                    break
+                    continue
                 }
                 if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
                     $appVersion = $matches.1
