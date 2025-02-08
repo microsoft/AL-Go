@@ -18,6 +18,7 @@ $settings = $env:Settings | ConvertFrom-Json
 
 $ghEventName = $ENV:GITHUB_EVENT_NAME
 $branch = $env:GITHUB_REF_NAME
+$publishSkippedProjects = $true
 if ($ghEventName -eq 'pull_request') {
     $branch = $env:GITHUB_BASE_REF
     # DEPRECATION: REMOVE AFTER October 1st 2025 --->
@@ -29,6 +30,7 @@ if ($ghEventName -eq 'pull_request') {
     else {
         $buildAllProjects = !$settings.incrementalBuilds.onPullRequest
     }
+    $publishSkippedProjects = $false
 }
 else {
     # onPush, onSchedule or onWorkflow_Dispatch
@@ -77,7 +79,7 @@ Write-Host "::endgroup::"
 #endregion
 
 $skippedProjects = @($allProjects | Where-Object { $_ -notin $projectsToBuild })
-if ($skippedProjects) {
+if ($skippedProjects -and $publishSkippedProjects) {
     # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
     $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 }
