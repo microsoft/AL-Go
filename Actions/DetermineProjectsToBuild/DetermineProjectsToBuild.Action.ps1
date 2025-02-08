@@ -92,7 +92,7 @@ $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
 # Add annotation for last known good build
 if ($baselineWorkflowRunId) {
-    Write-Host "::notice runId=$baselineWorkflowRunId::Last known good build"
+    Write-Host "::notice::$baselineWorkflowRunId is the last known good build"
 }
 
 # Set output variables
