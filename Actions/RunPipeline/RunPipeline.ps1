@@ -279,13 +279,15 @@ try {
                 $finalUrl = $url
             }
             # Check validity of URL
-            try {
-                Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
-                return $finalUrl
+            if ($finalUrl -like 'http*://*') {
+                try {
+                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                }
+                catch {
+                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
+                }
             }
-            catch {
-                throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
-            }
+            return $finalUrl
         })
     }
 
