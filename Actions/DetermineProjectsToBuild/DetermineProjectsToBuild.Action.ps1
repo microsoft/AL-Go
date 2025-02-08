@@ -28,7 +28,7 @@ if ($ghEventName -eq 'pull_request' -or $ghEventName -eq 'pull_request_target') 
     }
     # <--- REMOVE AFTER October 1st 2025
     else {
-        $buildAllProjects = !$settings.incrementalBuilds.onPullRequest
+        $buildAllProjects = !$settings.incrementalBuilds.onPull_Request
     }
     $publishSkippedProjects = $false
 }
