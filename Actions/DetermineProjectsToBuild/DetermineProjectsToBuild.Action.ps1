@@ -90,6 +90,11 @@ $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
 $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
 $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
+# Add annotation for last known good build
+if ($baselineWorkflowRunId) {
+    Write-Host "::notice runId=$baselineWorkflowRunId::Last known good build"
+}
+
 # Set output variables
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SkippedProjectsJson=$skippedProjectsJson"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ProjectsJson=$projectsJson"
