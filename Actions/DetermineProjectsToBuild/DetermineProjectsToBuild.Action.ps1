@@ -92,7 +92,7 @@ $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
 # Add annotation for last known good build
 if ($baselineWorkflowRunId) {
-    Write-Host "::notice::https://github.com/BusinessCentralApps/buildorder/actions/runs/$baselineWorkflowRunId was the last known good build"
+    Write-Host "::notice::Last known good build: https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$baselineWorkflowRunId"
 }
 
 # Set output variables
