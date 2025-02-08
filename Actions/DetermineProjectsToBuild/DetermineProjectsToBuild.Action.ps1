@@ -19,7 +19,7 @@ $settings = $env:Settings | ConvertFrom-Json
 $ghEventName = $ENV:GITHUB_EVENT_NAME
 $branch = $env:GITHUB_REF_NAME
 $publishSkippedProjects = $true
-if ($ghEventName -eq 'pull_request') {
+if ($ghEventName -eq 'pull_request' -or $ghEventName -eq 'pull_request_target') {
     $branch = $env:GITHUB_BASE_REF
     # DEPRECATION: REMOVE AFTER October 1st 2025 --->
     if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects') {
