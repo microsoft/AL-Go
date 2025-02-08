@@ -172,9 +172,9 @@ foreach ($thisProject in $projectList) {
     }
 
     # Check if there is a custom script to run for the delivery target
-    $customScript = Join-Path $baseFolder ".github/DeliverTo$deliveryTarget.ps1"
-
-    if (Test-Path $customScript -PathType Leaf) {
+    # Use Get-ChildItem to support Linux (case sensitive filenames) as well as Windows
+    $customScript = Get-ChildItem -Path (Join-Path $baseFolder '.github') | Where-Object { $_.Name -eq "DeliverTo$deliveryTarget.ps1" } | ForEach-Object { $_.FullName }
+    if ($customScript) {
         Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
 
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
