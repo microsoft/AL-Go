@@ -152,11 +152,32 @@ try {
         })
     }
 
-    $installApps = $settings.installApps
-    $installTestApps = $settings.installTestApps
+    $install = @{
+        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
+        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+    }
 
-    $installApps += $installAppsJson | ConvertFrom-Json
-    $installTestApps += $installTestAppsJson | ConvertFrom-Json
+    # Replace secret names in install.apps and install.testApps
+    foreach($list in @('Apps','TestApps')) {
+        $install."$list" = @($install."$list" | ForEach-Object {
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            $url = $_
+            if ($url -match $pattern) {
+                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            }
+            else {
+                $finalUrl = $url
+            }
+            # Check validity of URL
+            try {
+                Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                return $finalUrl
+            }
+            catch {
+                throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
+            }
+        })
+    }
 
     # Analyze app.json version dependencies before launching pipeline
 
@@ -409,8 +430,8 @@ try {
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
-        -installApps $installApps `
-        -installTestApps $installTestApps `
+        -installApps $install.apps `
+        -installTestApps $install.testApps `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
