@@ -228,13 +228,13 @@ if (Test-Path $artifactsFolder -PathType Container) {
         Write-Host "Finding apps to include"
         if ($allApps) {
             foreach($appFolder in $allApps) {
-                Get-ChildItem -Path $appFolder | ForEach-Object {
-                    Write-Host "Processing app: $($_.Name)"
-                    if ($_.Name -like "*.app") {
+                foreach($app in (Get-ChildItem -Path $appFolder)) {
+                    Write-Host "Processing app: $($app.Name)"
+                    if ($app.Name -like "*.app") {
                         $unknownDependenciesForApp = @()
-                        Sort-AppFilesByDependencies -appFiles @($_.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
-                        $testLibraryDependencyFound = $false
+                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null              
                         # Check if Test-TestLibraries is a dependency for the app - if so skip it since we can't install that dependency
+                        $testLibraryDependencyFound = $false
                         foreach ($unknownDependency in $unknownDependenciesForApp) {
                             if ($unknownDependency -like "*Tests-TestLibraries*") {
                                 $testLibraryDependencyFound = $true
@@ -242,26 +242,26 @@ if (Test-Path $artifactsFolder -PathType Container) {
                             }
                         }
                         if ($testLibraryDependencyFound) {
-                            Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($_.Name)"
+                            Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
                             continue
                         }
                         #Exclude apps based on id
-                        $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
+                        $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
                         if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
-                            $apps += $_.FullName
+                            $apps += $app.FullName
                             $unknownDependenciesForApp | ForEach-Object {
                                 if ($unknownDependencies -notcontains $_) {
                                     $unknownDependencies += $_
                                 }
                             }
-                            Write-Host "App file $($_.Name) with id $($appJson.id) included in deployment"
+                            Write-Host "App file $($app.Name) with id $($appJson.id) included in deployment"
                         }
                         else {
-                            Write-Host "App file $($_.Name) with id $($appJson.id) excluded from deployment"
+                            Write-Host "App file $($app.Name) with id $($appJson.id) excluded from deployment"
                         }
                     } 
                     else {
-                        $apps += $_.FullName
+                        $apps += $app.FullName
                     }                  
                 }
             }
