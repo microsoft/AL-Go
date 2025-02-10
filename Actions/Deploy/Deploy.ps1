@@ -195,7 +195,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
             Write-Host "Including test apps for deployment"
             $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
-        } 
+        }
         if ($deploymentSettings.excludeAppIds) {
             Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
         }
@@ -225,7 +225,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                     Write-Host "Processing app: $($app.Name)"
                     if ($app.Name -like "*.app") {
                         $unknownDependenciesForApp = @()
-                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null              
+                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
                         # Check if Test-TestLibraries is a dependency for the app - if so skip it since we can't install that dependency
                         $testLibraryDependencyFound = $false
                         foreach ($unknownDependency in $unknownDependenciesForApp) {
@@ -252,10 +252,10 @@ if (Test-Path $artifactsFolder -PathType Container) {
                         else {
                             Write-Host "App file $($app.Name) with id $($appJson.id) excluded from deployment"
                         }
-                    } 
+                    }
                     else {
                         $apps += $app.FullName
-                    }                  
+                    }
                 }
             }
         }
