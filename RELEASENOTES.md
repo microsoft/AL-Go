@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1440 Create Release fails due to recent changes to the AL-Go
+
 ### Support for GitHub App authentication
 
 AL-Go for GitHub now supports using a GitHub App specification as the GhTokenWorkflow secret for a more secure way of allowing repositories to run Update AL-Go System Files and other workflows which are creating commits and pull requests. See [this description](https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md) to learn how to use GitHub App authentication.
