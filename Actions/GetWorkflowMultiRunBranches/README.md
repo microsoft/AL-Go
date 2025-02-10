@@ -17,7 +17,7 @@ If the workflow is run on a schedule, the branches are determined a the `workflo
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | false | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| includeBranches | false | Comma-separated value of branch names patterns to include if they exist. If not specified, all remote branches are returned. Wildcards are supported. |''|
+| includeBranches | false | Comma-separated value of branch names patterns to include if they exist. If not specified, only the current branch is returned. Wildcards are supported. |''|
 
 ## OUTPUT
 
