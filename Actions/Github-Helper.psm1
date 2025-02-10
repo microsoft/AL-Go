@@ -912,10 +912,10 @@ function FindLatestSuccessfulCICDRun {
 }
 
 <#
-    Gets the last successful CICD run ID for the specified repository and branch.
-    Successful CICD runs are those that have a workflow run named ' CI/CD' and successfully built all the projects.
+    Gets the last successful PR run ID for the specified repository and branch.
+    Successful PR runs are those that have a workflow run named 'Pull Request Build' and successfully built all the projects.
 
-    If no successful CICD run is found, 0 is returned.
+    If no successful PR run is found, 0 is returned.
 #>
 function FindLatestSuccessfulPRRun {
     Param(
@@ -959,7 +959,7 @@ function FindLatestSuccessfulPRRun {
 
             if($areBuildJobsSuccessful) {
                 $lastSuccessfulPRRun = $PRRun.id
-                Write-Host "Found last successful CICD run: $($lastSuccessfulPRRun), from $($PRRun.created_at)"
+                Write-Host "Found last successful PR run: $($lastSuccessfulPRRun), from $($PRRun.created_at)"
                 break
             }
 
@@ -1300,8 +1300,12 @@ function GenerateJwtForTokenRequest {
 <#
  .SYNOPSIS
   Get the source branch of a PR
+ .PARAMETER repository
+  Repository to search in
  .PARAMETER prId
   The PR Id
+ .PARAMETER token
+  Auth token
 #>
 function GetBranchFromPRId {
     Param(

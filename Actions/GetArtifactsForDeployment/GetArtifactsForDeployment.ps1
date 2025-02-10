@@ -54,11 +54,17 @@ if ($artifactsVersion -eq "current" -or $artifactsVersion -eq "prerelease" -or $
 }
 elseif ($artifactsVersion -like "PR_*") {
     $prId = $artifactsVersion -replace "PR_", ""
-    Write-Host "head_ref: $ENV:GITHUB_HEAD_REF"
+    if (!($prId -as [int])) {
+        throw "Invalid PR id: $prId"
+    }
     $prBranch = GetBranchFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token
-    Write-Host "Found branch: $prBranch"
+    if (!($prBranch)) {
+        throw "Unable to locate branch for PR $prId"
+    }
     $latestSuccessfulPRRun = FindLatestSuccessfulPRRun -repository $ENV:GITHUB_REPOSITORY -branch $prBranch -token $token
-    Write-Host "Found latest successful PR run: $latestSuccessfulPRRun"
+    if ($latestSuccessfulPRRun -eq 0) {
+        throw "Unable to locate latest successful run for PR $prId"
+    }
 
     $artifactsToDownload | ForEach-Object {
         GetArtifactsFromWorkflowRun -workflowRun $latestSuccessfulPRRun -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects
