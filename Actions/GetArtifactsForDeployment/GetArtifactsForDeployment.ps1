@@ -59,7 +59,7 @@ elseif ($artifactsVersion -like "PR_*") {
     Write-Host "Found branch: $prBranch"
     $latestSuccessfulPRRun = FindLatestSuccessfulPRRun -repository $ENV:GITHUB_REPOSITORY -branch $prBranch -token $token
     Write-Host "Found latest successful PR run: $latestSuccessfulPRRun"
-    
+
     $artifactsToDownload | ForEach-Object {
         GetArtifactsFromWorkflowRun -workflowRun $latestSuccessfulPRRun -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects
     }
