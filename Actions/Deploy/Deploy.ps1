@@ -219,7 +219,12 @@ if (Test-Path $artifactsFolder -PathType Container) {
             $allApps += $projectTestApps
         }
         #Filter out any apps listed in excludeAppIds
-        Write-Host "$projectTestApps"
+        Write-Host "All test apps:"
+        $projectTestApps | ForEach-Object {
+            Get-ChildItem -Path $_ | ForEach-Object {
+                Write-Host $_.FullName
+            }
+        }
         if ($allApps) {
             foreach($appFolder in $allApps) {
                 Get-ChildItem -Path $appFolder | ForEach-Object {
