@@ -220,15 +220,16 @@ if (Test-Path $artifactsFolder -PathType Container) {
         }
         #Filter out any apps listed in excludeAppIds
         Write-Host "All test apps:"
-        $projectTestApps | ForEach-Object {
+        $allApps | ForEach-Object {
             Get-ChildItem -Path $_ | ForEach-Object {
-                Write-Host $_.FullName
+                Write-Host $_.Name
             }
         }
+        Write-Host "Finding apps to include"
         if ($allApps) {
             foreach($appFolder in $allApps) {
                 Get-ChildItem -Path $appFolder | ForEach-Object {
-                    Write-Host $_.FullName
+                    Write-Host "Processing app: $($_.Name)"
                     if ($_.Name -like "*.app") {
                         $unknownDependenciesForApp = @()
                         Sort-AppFilesByDependencies -appFiles @($_.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
