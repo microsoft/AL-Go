@@ -1,10 +1,12 @@
 ### New Repository Settings
 
-- [`workflowSchedule`](https://aka.ms/algosettings#updateALGoBranches) now can have a property `includeBranches` to specify which branches the workflow needs to run on when on schedule. Wildcards are supported.
+- [`workflowSchedule`](https://aka.ms/algosettings#workflowSchedule) now can have a property `includeBranches` to specify which branches the workflow needs to run on when on schedule. Wildcards are supported.
+
+The new property is currently only supported for **Update AL-Go System Files** workflow.
 
 ### Run "Update AL-Go System Files" on a schedule on multiple branches
 
-When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `includeBranches` in `workflowSchedule` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosecrets#workflowSchedule.
+When run on a schedule, _Update AL-Go System Files_ normally only runs on the _main_ branch. By setting `includeBranches` in `workflowSchedule` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosettings#workflowSchedule.
 
 Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
 
