@@ -20,7 +20,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @(".")
         $projectsToBuild | Should -BeExactly @(".")
@@ -60,7 +60,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -103,7 +103,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ buildModes = @("Default", "Clean") } | ConvertTo-Json ) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ buildModes = @("Translated") } | ConvertTo-Json ) -type File -Force
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -157,7 +157,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1")
@@ -198,7 +198,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -246,7 +246,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project1/app/app.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1")
@@ -288,7 +288,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
 
         $modifiedFiles = @()
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $true
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $true
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -340,7 +340,7 @@ Describe "Get-ProjectsToBuild" {
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1")
@@ -370,7 +370,7 @@ Describe "Get-ProjectsToBuild" {
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $modifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -399,7 +399,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -449,7 +449,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -504,7 +504,7 @@ Describe "Get-ProjectsToBuild" {
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -563,7 +563,7 @@ Describe "Get-ProjectsToBuild" {
         # Add settings as environment variable to simulate we've run ReadSettings
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
@@ -643,7 +643,7 @@ Describe "Get-ProjectsToBuild" {
         # Add settings as environment variable to simulate we've run ReadSettings
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2", "Project3")
         $projectsToBuild | Should -BeExactly @('Project1', 'Project2', 'Project3')

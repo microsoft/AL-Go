@@ -44,16 +44,17 @@ Write-Host "::group::Determine Incremental Build"
 $buildAllProjects = $buildAllProjects -or (Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
 Write-Host "::endgroup::"
 
+# If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
 Write-Host "::group::Get Projects To Build"
-$allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $publishSkippedProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+if ($buildAllProjects) {
+    $skippedProjects = @()
+}
+else {
+    $skippedProjects = @($allProjects | Where-Object { $_ -notin $modifiedProjects })
+}
 Write-Host "::endgroup::"
 #endregion
-
-$skippedProjects = @($allProjects | Where-Object { $_ -notin $projectsToBuild })
-if ($skippedProjects -and $publishSkippedProjects) {
-    # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
-}
 
 #region Action: Output
 $skippedProjectsJson = ConvertTo-Json -InputObject $skippedProjects -Depth 99 -Compress

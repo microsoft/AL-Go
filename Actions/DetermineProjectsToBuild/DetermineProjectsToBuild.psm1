@@ -134,6 +134,7 @@ function CreateBuildDimensions {
 .Outputs
     The function returns the following values:
     - projects: An array of all projects found in the folder
+    - modifiedProjects: An array of projects that have been modified
     - projectsToBuild: An array of projects that need to be built
     - projectDependencies: A hashtable with the project dependencies
     - projectsOrderToBuild: An array of build dimensions, each build dimension contains the following properties:
@@ -165,26 +166,33 @@ function Get-ProjectsToBuild {
         $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
+        $modifiedProjects = @()
         $projectsToBuild = @()
         $projectsOrderToBuild = @()
 
         if ($projects) {
-            if($buildAllProjects) {
-                Write-Host "Full build required, building all projects"
-                $projectsToBuild = @($projects)
-            }
-            else {
-                Write-Host "Full build not required, filtering projects to build based on the modified files"
-
-                #Include the base folder in the modified files
-                $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
-                $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths })
-            }
-
             # Calculate the full projects order
             $projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects
 
-            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } | Select-Object -Unique)
+            if ($modifiedFiles) {
+                Write-Host "Calculating modified projects based on the modified files"
+
+                #Include the base folder in the modified files
+                $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+                $modifiedProjects = @($projects |
+                                        Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths } |
+                                        ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } |
+                                        Select-Object -Unique)
+            }
+
+            if($buildAllProjects) {
+                Write-Host "Calculating full build matrix"
+                $projectsToBuild = @($projects)
+            }
+            else {
+                Write-Host "Calculating incremental build matrix"
+                $projectsToBuild = @($modifiedProjects)
+            }
 
             # Create a project order based on the projects to build
             foreach($depth in $projectBuildInfo.FullProjectsOrder) {
@@ -216,7 +224,7 @@ function Get-ProjectsToBuild {
             throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows"
         }
 
-        return $projects, $projectsToBuild, $projectBuildInfo.projectDependencies, $projectsOrderToBuild
+        return $projects, $modifiedProjects, $projectsToBuild, $projectBuildInfo.projectDependencies, $projectsOrderToBuild
     }
     finally {
         Pop-Location

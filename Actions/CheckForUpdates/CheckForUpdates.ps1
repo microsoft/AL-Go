@@ -129,7 +129,7 @@ $removeFiles = @()
 $depth = 1
 if ($projects.Count -gt 1) {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100
+    $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100
     $depth = $buildOrder.Count
     Write-Host "Calculated dependency depth to be $depth"
 }
