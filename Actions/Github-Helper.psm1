@@ -854,8 +854,8 @@ function FindLatestSuccessfulCICDRun {
         [string] $branch,
         [Parameter(Mandatory = $true)]
         [string] $token,
-        [Parameter(Mandatory = $false)]
-        [string] $retention = 90
+        [Parameter(Mandatory = $true)]
+        [int] $retention
     )
 
     $headers = GetHeaders -token $token
@@ -1019,8 +1019,8 @@ function GetArtifacts {
     # For latest version, use the artifacts from the last successful CICD run
     if($version -eq '*') {
         if(-not $baselineWorkflowID) {
-            # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run
-            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
+            # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run (within the last 90 days, which is the maximum number of days GitHub Actions keeps artifacts)
+            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token -retention 90
         }
 
         if($baselineWorkflowID -eq '0') {

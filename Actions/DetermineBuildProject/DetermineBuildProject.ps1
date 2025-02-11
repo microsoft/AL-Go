@@ -23,7 +23,6 @@ if (!$buildIt) {
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
     $buildIt = $true
     foreach($mask in @('Apps','TestApps','Dependencies','PowerPlatformSolution')) {
-        Write-Host "GetArtifactsFromWorkflowRun -workflowRun '$baselineWorkflowRunId' -token '$token' -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask '$mask' -projects '$project'"
         $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $project
         if ($artifact) {
             Write-Host "Artifact found for mask $mask"
@@ -41,7 +40,7 @@ if (!$buildIt) {
         }
     }
     if ($buildIt) {
-        # No downloads succeeded - remove the build artifact folder and build the project
+        # No artifacts available/downloaded - remove the build artifact folder and build the project
         Remove-Item -Path $buildArtifactFolder -Recurse -Force
     }
 }
