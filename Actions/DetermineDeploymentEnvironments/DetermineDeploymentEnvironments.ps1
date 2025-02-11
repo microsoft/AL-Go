@@ -60,7 +60,7 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
-$includeGitHubPages = $getEnvironments.Split(',') | Where-Object { 'github-pages' -like $_ }
+$includeGitHubPages = 'github-pages' -like $getEnvironments
 $generateALDocArtifact = ($includeGitHubPages) -and (($type -eq 'Publish') -or $settings.alDoc.continuousDeployment)
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
@@ -88,7 +88,7 @@ $settings.excludeEnvironments += @('github-pages')
 if ($settings.Keys -contains 'UpdateALGoSystemFilesEnvironment' -and $settings.updateALGoSystemFilesEnvironment) {
     $settings.excludeEnvironments += @($settings.updateALGoSystemFilesEnvironment)
 }
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments.Split(' ')[0] }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
@@ -107,6 +107,7 @@ if (!($environments)) {
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
+                "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
                 "SyncMode" = $null
                 "Scope" = $null
                 "buildMode" = $null
