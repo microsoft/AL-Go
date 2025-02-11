@@ -18,7 +18,7 @@ $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
-$defaultBcContainerHelperVersion = "https://github.com/microsoft/navcontainerhelper/archive/refs/heads/freddydk/comparefiles.zip" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
+$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId")
 
 $runAlPipelineOverrides = @(
@@ -671,8 +671,6 @@ function ReadSettings {
             "retentionDays"                             = 30
             "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps
         }
-        "cicdConcurrency"                               = "Allowed"
-        "createReleaseConcurrency"                      = "Wait"
         "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
         "partnerTelemetryConnectionString"              = ""
         "sendExtendedTelemetryToMicrosoft"              = $false

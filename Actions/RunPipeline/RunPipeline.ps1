@@ -138,12 +138,7 @@ try {
         $modifiedFiles = @(git diff --name-only $baselineWorkflowSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
         if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
         Pop-Location
-        Write-Host "$($modifiedFiles.Count) modified file(s)"
-        if ($modifiedFiles.Count -gt 0) {
-            foreach($modifiedFile in $modifiedFiles) {
-                Write-Host "- $modifiedFile"
-            }
-        }
+        OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
         $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         if (!$buildAll) {
             $skipFolders = @()
