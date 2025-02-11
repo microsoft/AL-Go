@@ -29,7 +29,7 @@ function DownloadDependenciesFromCurrentBuild {
     param(
         $baseFolder,
         $project,
-        $projectsDependencies,
+        $projectDependencies,
         $buildMode,
         $baselineWorkflowRunID,
         $destinationPath,
@@ -39,8 +39,8 @@ function DownloadDependenciesFromCurrentBuild {
     Write-Host "Downloading dependencies for project '$project'"
 
     $dependencyProjects = @()
-    if ($projectsDependencies.Keys -contains $project) {
-        $dependencyProjects = @($projectsDependencies."$project")
+    if ($projectDependencies.Keys -contains $project) {
+        $dependencyProjects = @($projectDependencies."$project")
     }
 
     Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
@@ -116,7 +116,7 @@ $downloadedDependencies = @()
 
 Write-Host "::group::Downloading project dependencies from current build"
 $projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
+$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectDependencies $projectDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading project dependencies from probing paths"
