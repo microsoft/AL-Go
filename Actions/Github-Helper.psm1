@@ -590,7 +590,6 @@ function GetAccessToken {
 
     if (!($token.StartsWith("{"))) {
         # not a json token
-        Write-Host "return token (original)"
         return $token
     }
     else {
