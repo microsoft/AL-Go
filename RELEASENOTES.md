@@ -1,6 +1,6 @@
 ### Deprecations
 
-- `alwaysBuildAllProjects` will be removed after October 1st 2025. Please use the `onPull_Request` property of the `incrementalBuilds` setting to false to force full builds in Pull Requests.
+- `alwaysBuildAllProjects` will be removed after October 1st 2025. Please set the `onPull_Request` property of the `incrementalBuilds` setting to false to force full builds in Pull Requests.
 - `<workflow>Schedule` will be removed after October 1st 2025. The old setting, where the setting key was a combination of the workflow name and `Schedule` (dynamic setting key name) is deprecated. Instead you need to use a setting called [workflowSchedule](https://aka.ms/algosettings#workflowSchedule) and either use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) or place the setting in a workflow specific settings file.
 
 ### New Workflow specific settings
