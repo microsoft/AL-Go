@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1433 Publish to Environment - DependencyInstallMode not found
+- Issue 1440 Create Release fails due to recent changes to the AL-Go
 
 ### Support for GitHub App authentication
 
