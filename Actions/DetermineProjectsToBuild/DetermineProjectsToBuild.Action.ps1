@@ -16,38 +16,14 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuil
 
 $settings = $env:Settings | ConvertFrom-Json
 
-$ghEventName = $ENV:GITHUB_EVENT_NAME
-$branch = $env:GITHUB_REF_NAME
-$publishSkippedProjects = $true
-if ($ghEventName -eq 'pull_request' -or $ghEventName -eq 'pull_request_target') {
-    $branch = $env:GITHUB_BASE_REF
-    # DEPRECATION: REMOVE AFTER October 1st 2025 --->
-    if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects' -and $settings.alwaysBuildAllProjects) {
-        $buildAllProjects = $settings.alwaysBuildAllProjects
-        Trace-DeprecationWarning -Message "alwaysBuildAllProjects is deprecated" -DeprecationTag "alwaysBuildAllProjects"
-    }
-    # <--- REMOVE AFTER October 1st 2025
-    else {
-        $buildAllProjects = !$settings.incrementalBuilds.onPull_Request
-    }
-    $publishSkippedProjects = $false
-}
-else {
-    # onPush, onSchedule or onWorkflow_Dispatch
-    if ($settings.incrementalBuilds.PSObject.Properties.Name -eq "on$GhEventName") {
-        $buildAllProjects = !$settings.incrementalBuilds."on$GhEventName"
-    }
-    else {
-        $buildAllProjects = $true
-    }
-}
-Write-Host "$ghEventName on $branch"
+Write-Host "$($ENV:GITHUB_EVENT_NAME) on $($env:GITHUB_REF_NAME)"
+$buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
 
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
     Write-Host "::group::Determine Baseline Workflow ID"
-    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $branch -token $token -retention $settings.incrementalBuilds.retentionDays
+    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $env:GITHUB_REF_NAME -token $token -retention $settings.incrementalBuilds.retentionDays
     Write-Host "::endgroup::"
 }
 

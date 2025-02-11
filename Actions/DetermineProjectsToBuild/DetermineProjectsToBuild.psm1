@@ -225,6 +225,49 @@ function Get-ProjectsToBuild {
 
 <#
 .Synopsis
+    Determines whether a full build is required and whether to publish artifacts from skipped projects based on the event and settings.
+.Outputs
+    A boolean indicating whether a full build is required and a boolean indicating whether to publish artifacts from skipped projects.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - Deprecated setting alwaysBuildAllProjects is set to true
+    - property incrementalBuilds.onPull_Request is set to false for pull_request and pull_request_target events
+    - property incrementalBuilds.onPush is set to false for push events
+    - property incrementalBuilds.onSchedule is set to false for schedule events
+    Skipped projects are published if:
+    - The event is not a pull_request or pull_request_target event
+#>
+function Get-BuildAllProjectsBasedOnEventAndSettings {
+    Param(
+        [string] $ghEventName,
+        [PSCustomObject] $settings
+    )
+    $buildAllProjects = $true
+    $publishSkippedProjects = $true
+    if ($ghEventName -eq 'pull_request' -or $ghEventName -eq 'pull_request_target') {
+        # DEPRECATION: REMOVE AFTER October 1st 2025 --->
+        if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects' -and $settings.alwaysBuildAllProjects) {
+            $buildAllProjects = $settings.alwaysBuildAllProjects
+            Trace-DeprecationWarning -Message "alwaysBuildAllProjects is deprecated" -DeprecationTag "alwaysBuildAllProjects"
+        }
+        # <--- REMOVE AFTER October 1st 2025
+        else {
+            $buildAllProjects = !$settings.incrementalBuilds.onPull_Request
+        }
+        $publishSkippedProjects = $false
+    }
+    else {
+        # onPush, onSchedule or onWorkflow_Dispatch
+        if ($settings.incrementalBuilds.PSObject.Properties.Name -eq "on$GhEventName") {
+            $buildAllProjects = !$settings.incrementalBuilds."on$GhEventName"
+        }
+    }
+    return $buildAllProjects, $publishSkippedProjects
+}
+
+<#
+.Synopsis
     Determines whether a full build is required.
 .Outputs
     A boolean indicating whether a full build is required.

@@ -3,7 +3,7 @@
     [string] $project,
     [string] $baseFolder,
     [string] $buildMode = 'Default',
-    [string] $projectsDependenciesJson,
+    [string] $projectDependenciesJson,
     [string] $baselineWorkflowRunID = '0',
     [string] $destinationPath,
     [string] $token
@@ -115,7 +115,7 @@ Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMo
 $downloadedDependencies = @()
 
 Write-Host "::group::Downloading project dependencies from current build"
-$projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+$projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
 $downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
