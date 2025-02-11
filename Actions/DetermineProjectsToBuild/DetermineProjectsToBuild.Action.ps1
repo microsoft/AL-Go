@@ -55,12 +55,7 @@ if(-not $buildAllProjects) {
 Write-Host "::group::Get Modified Files"
 try {
     $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
-    Write-Host "$($modifiedFiles.Count) modified file(s)"
-    if ($modifiedFiles.Count -gt 0) {
-        foreach($modifiedFile in $modifiedFiles) {
-            Write-Host "- $modifiedFile"
-        }
-    }
+    OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
 }
 catch {
     Write-Host "Failed to calculate modified files, building all projects"
