@@ -150,15 +150,9 @@ try {
                 $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
             })
             Pop-Location
-            Write-Host "$($modifiedFolders.Count) modified folder(s)"
-            if ($modifiedFolders.Count -gt 0) {
-                foreach($modifiedFolder in $modifiedFolders) {
-                    Write-Host "- $modifiedFolder"
-                }
-            }
+            OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
             Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
-            Write-Host "Skip folders:"
-            $skipFolders | ForEach-Object { Write-Host "- $_" }
+            OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
             $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "check '$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))'"; $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
             $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
             $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
