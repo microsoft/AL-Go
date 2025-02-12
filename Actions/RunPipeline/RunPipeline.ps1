@@ -367,12 +367,14 @@ try {
                     }
                     else {
                         if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
-                            $platformApp = $parameters.installedApps | Where-Object { $_.Id -eq $platformAppId }
-                            if ($platformApp) {
-                                $publishParams += @{
-                                    "installedApps" = $parameters.installedApps
-                                    "installedPlatform" = ([System.Version]$platformApp.Version)
-                                    "installedCountry" = $parameters.installedCountry
+                            foreach($installedApp in $parameters.installedApps) {
+                                if ($installedApp.Id -eq $platformAppId) {
+                                    $publishParams += @{
+                                        "installedApps" = $parameters.installedApps
+                                        "installedPlatform" = ([System.Version]$installedApp.Version)
+                                        "installedCountry" = $parameters.installedCountry
+                                    }
+                                    break
                                 }
                             }
                         }
