@@ -365,6 +365,8 @@ try {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
+                        Write-Host "Enumerate symbols folder"
+                        Get-ChildItem -path $parameters.appSymbolsFolder | ForEach-Object { Write-Host "- $($_.FullName)" }
                         Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
                 }
