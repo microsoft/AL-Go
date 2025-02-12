@@ -282,7 +282,7 @@ function Get-BuildAllProjectsBasedOnEventAndSettings {
 .Description
     Determines whether a full build is required.
     A full build is required if:
-    - No files where modified
+    - No files were modified
     - The modified files contain a file that matches one of the fullBuildPatterns
 #>
 function Get-BuildAllProjects {
