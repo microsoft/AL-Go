@@ -355,6 +355,7 @@ try {
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
+                        "select" = "LatestMatching"
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
@@ -378,7 +379,7 @@ try {
                                 }
                             }
                         }
-                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams  | Out-Null
+                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
                 }
             }
