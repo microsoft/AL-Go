@@ -363,15 +363,12 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
                         if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
                             $platformApp = $parameters.installedApps | Where-Object { $_.Id -eq $platformAppId }
                             if ($platformApp) {
-                                Write-Host "Add installedPlatform and installedCountry to publishParams"
-                                Write-Host "Installed platform app: $($platformApp.Version)"
-                                Write-Host "Installed country: $($parameters.installedCountry)"
                                 $publishParams += @{
                                     "installedApps" = $parameters.installedApps
                                     "installedPlatform" = ([System.Version]$platformApp.Version)
