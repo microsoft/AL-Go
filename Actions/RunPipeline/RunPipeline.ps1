@@ -366,7 +366,7 @@ try {
                     }
                     else {
                         if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
-                            $platformApp = $parameters.installedApps | Where-Object { $_.AppId -eq $platformAppId }
+                            $platformApp = $parameters.installedApps | Where-Object { $_.Id -eq $platformAppId }
                             if ($platformApp) {
                                 Write-Host "Add installedPlatform and installedCountry to publishParams"
                                 Write-Host "Installed platform app: $($platformApp.Version)"
