@@ -365,9 +365,17 @@ try {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
-                        Write-Host "Enumerate symbols folder"
-                        Get-ChildItem -path $parameters.appSymbolsFolder | ForEach-Object { Write-Host "- $($_.FullName)" }
-                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
+                        if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
+                            $platformApp = $installedApps | Where-Object { $_.AppId -eq $platformAppId }
+                            if ($platformApp) {
+                                $publishParams += @{
+                                    "installedApps" = $parameters.installedApps
+                                    "installedPlatform" = ([System.Version]$platformApp.Version)
+                                    "installedCountry" = $parameters.installedCountry
+                                }
+                            }
+                        }
+                        Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams  | Out-Null
                     }
                 }
             }
