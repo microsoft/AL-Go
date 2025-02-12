@@ -363,7 +363,7 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
+                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
                     }
                     else {
                         if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
