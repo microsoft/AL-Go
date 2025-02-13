@@ -7,6 +7,136 @@ $statusSkipped = " :question:"
 # This function will not fail if the file does not exist or if any test errors are found
 # TestResults is in JUnit format
 # Returns both a summary part and a failures part
+
+#Helper function to build a markdown table. Example output below where whitespace is kept for readability.
+# |TestName|Total|Passed             |Failed|
+# |:---    |---: |---:               | ---: |
+# |Name1   |3    |3:heavy_check_mark:|      | Notice that 0 failed tests results in an empty cell 
+# |Name2   |3    |2:heavy_check_mark:|1:x:  | Emojis are only included if the value is larger than 0
+function BuildMarkdownTable {
+    param(
+        #Array of arrays. First array/row is headers, remaining arrays/rows are data.
+        [System.Collections.ArrayList] $data,
+        #Hashtable with column index as key and emoji as value
+        [hashtable] $resultEmojis
+    )
+
+    if ($data.count -lt 2) {
+        Write-Host "::error::Not enough data to build table"
+        return ''
+    }
+
+    $mdTable = [System.Text.StringBuilder]::new()
+    $headerData = $data[0]
+    $columnCount = $headerData.count
+
+    #Build header row
+    foreach($header in $headerData) {
+        $mdTable.Append("|$header") | Out-Null
+    }
+    $mdTable.Append("|\n") | Out-Null
+
+    #Build row delimiter
+    for ($i=0; $i -lt $columnCount; $i++) {
+        if ($i -eq 0) {
+            $mdTable.Append("|:---") | Out-Null
+        }
+        else {
+            $mdTable.Append("|---:") | Out-Null
+        }
+    }
+    $mdTable.Append("|\n") | Out-Null
+
+    #Build rows
+    for ($i=1; $i -lt $data.count; $i++) {
+        $rowData = $data[$i]
+
+        if ($rowData.count -ne $columnCount) {
+            Write-Host "::error::Row $i has a different number of columns ($($rowData.count)) than the header ($($columnCount))"
+            return ''
+        }
+
+        for ($j=0; $j -lt $rowData.count; $j++) {
+            $cellData = $rowData[$j]
+            #If an emoji exist for this index and the value is larger than 0 we should display both number an emoji.
+            if ($resultEmojis -and $resultEmojis.ContainsKey($j) -and $cellData -gt 0) {
+                $cell = "$cellData$($resultEmojis[$j])"
+            }
+            #For a cleaner look, values of 0 should be displayed as empty.
+            elseif ($cellData -eq 0) {
+                $cell = ''
+            }
+            else {
+                $cell = $cellData
+            }
+            $mdTable.Append("|$cell") | Out-Null
+        }
+        $mdTable.Append("|\n") | Out-Null
+    }
+
+    return $mdTable.ToString()
+}
+
+class FailureNode {
+    [string]$errorMessage
+    [string]$errorStackTrace
+    [bool]$isLeaf
+    [System.Collections.ArrayList]$childSummaries
+    [string]$summaryDetails
+
+    FailureNode([bool]$isLeaf = $false) {
+        $this.errorMessage = ''
+        $this.errorStackTrace = ''
+        $this.isLeaf = $isLeaf
+        $this.childSummaries = @()
+        $this.summaryDetails = ''
+    }
+}
+
+function BuildHTMLFailureSummary {
+    Param(
+        [psobject]$failureStructure
+    )
+
+    $htmlFailureSb = [System.Text.StringBuilder]::new()
+    $stack = [System.Collections.Stack]::new()
+    $stack.push(@{ Node = $failureStructure; level = 0 })
+    $currentLevel = 0
+
+    while($stack.Count -gt 0) {
+        $currentObject = $stack.pop()
+        $node = $currentObject.Node
+        $level = $currentObject.level
+
+        while($currentLevel -gt $level) {
+            $htmlFailureSb.Append("</details>") | Out-Null
+            $currentLevel--
+        }
+        $currentLevel = $level
+
+        #If we are at a leaf, insert the error message and stack trace
+        if ($node.isLeaf) {
+            $htmlFailureSb.Append("<i>Error: $($node.errorMessage)</i><br/>") | Out-Null
+            $htmlFailureSb.Append("<i>StackTrace: $($node.errorStackTrace)</i><br/>") | Out-Null
+        }
+        #If we are not at a leaf, insert the summary details and push the children to the stack
+        else {
+            $htmlFailureSb.Append("<details><summary><i>$($node.summaryDetails)</i></summary>\n") | Out-Null
+
+            for($i=$node.childSummaries.Count-1; $i -ge 0; $i--) {
+                $stack.push(@{ Node = $node.childSummaries[$i]; Level = $level+1 })
+            }
+        }
+    }
+
+    while ($currentLevel -gt 0) {
+        $htmlOutput += "</details>"
+        $currentLevel--
+    }
+
+    return $htmlFailureSb.ToString()
+}
+
 function GetTestResultSummaryMD {
     Param(
         [string] $testResultsFile
@@ -61,30 +191,43 @@ function GetTestResultSummaryMD {
                 }
                 $summarySb.Append("|$($appTime)s|\n") | Out-Null
                 if ($appFailed -gt 0) {
-                    $failuresSb.Append("<details><summary><i>$appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds</i></summary>\n") | Out-Null
+                    $rootFailureNode = [FailureNode]::new($false)
+                    $rootFailureNode.summaryDetails = "$appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds"
+                    # $failuresSb.Append("<details><summary><i>$appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds</i></summary>\n") | Out-Null
                     foreach($suite in $suites) {
                         Write-Host "  - $($suite.name), $($suite.tests) tests, $($suite.failures) failed, $($suite.skipped) skipped, $($suite.time) seconds"
                         if ($suite.failures -gt 0 -and $failuresSb.Length -lt 32000) {
-                            $failuresSb.Append("<details><summary><i>$($suite.name), $($suite.tests) tests, $($suite.failures) failed, $($suite.skipped) skipped, $($suite.time) seconds</i></summary>") | Out-Null
+                            $suiteFailureNode = [FailureNode]::new($false)
+                            $suiteFailureNode.summaryDetails = "$($suite.name), $($suite.tests) tests, $($suite.failures) failed, $($suite.skipped) skipped, $($suite.time) seconds"
+                            # $failuresSb.Append("<details><summary><i>$($suite.name), $($suite.tests) tests, $($suite.failures) failed, $($suite.skipped) skipped, $($suite.time) seconds</i></summary>") | Out-Null
                             foreach($testcase in $suite.testcase) {
                                 if ($testcase.ChildNodes.Count -gt 0) {
                                     Write-Host "    - $($testcase.name), Failure, $($testcase.time) seconds"
-                                    $failuresSb.Append("<details><summary><i>$($testcase.name), Failure</i></summary>") | Out-Null
+                                    $testCaseFailureNode = [FailureNode]::new($false)
+                                    $testCaseFailureNode.summaryDetails = "$($testcase.name), Failure"
+                                    # $failuresSb.Append("<details><summary><i>$($testcase.name), Failure</i></summary>") | Out-Null
                                     foreach($failure in $testcase.ChildNodes) {
                                         Write-Host "      - Error: $($failure.message)"
                                         Write-Host "        Stacktrace:"
                                         Write-Host "        $($failure."#text".Trim().Replace("`n","`n        "))"
-                                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($failure.message)</i><br/>") | Out-Null
-                                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
-                                        $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$($failure."#text".Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))</i><br/>") | Out-Null
+                                        $testFailureNode = [FailureNode]::new($true)
+                                        $testFailureNode.errorMessage = $failure.message
+                                        $testFailureNode.errorStackTrace = $($failure."#text".Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))
+                                        $testCaseFailureNode.childSummaries.Add($testFailureNode)
+                                        # $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($failure.message)</i><br/>") | Out-Null
+                                        # $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
+                                        # $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$($failure."#text".Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))</i><br/>") | Out-Null
                                     }
-                                    $failuresSb.Append("</details>") | Out-Null
+                                    $suiteFailureNode.childSummaries.Add($testCaseFailureNode)
+                                    # $failuresSb.Append("</details>") | Out-Null
                                 }
                             }
-                            $failuresSb.Append("</details>") | Out-Null
+                            $rootFailureNode.childSummaries.Add($suiteFailureNode)
+                            # $failuresSb.Append("</details>") | Out-Null
                         }
                     }
-                    $failuresSb.Append("</details>") | Out-Null
+                    $failuresSB = BuildHTMLFailureSummary -failureStructure $rootFailureNode
+                    # $failuresSb.Append("</details>") | Out-Null
                 }
             }
         }
@@ -347,17 +490,30 @@ function GetPageScriptingTestResultSummaryMD {
 
             #Write total summary for all test suites
             Write-Host "$totalTests tests, $totalPassed passed, $totalFailed failed, $totalSkipped skipped, $totalTime seconds"
-            $summarySb.AppendLine('|Suite|Tests|Passed|Failed|Skipped|Time|') | Out-Null
-            $summarySb.AppendLine('|:---|---:|---:|---:|---:|---:|') | Out-Null
+            $mdTableHeaders = @("Suite", "Tests", "Passed", "Failed", "Skipped", "Time")
+            $mdTableEmojis = @{
+                2 = $statusOK
+                3 = $statusError
+                4 = $statusSkipped
+            }
+            $mdTableData = [System.Collections.ArrayList]@($mdTableHeaders)
+            #$summarySb.AppendLine('|Suite|Tests|Passed|Failed|Skipped|Time|') | Out-Null
+            #$summarySb.AppendLine('|:---|---:|---:|---:|---:|---:|') | Out-Null
+            
+            $rootFailureNode = [FailureNode]::new($false)
             foreach($testsuite in $testResults.testsuites.testsuite) {
                 $suiteTests = $testsuite.tests
                 $suiteTime = $testsuite.time
                 $suiteFailed = $testsuite.failures
                 $suiteSkipped = $testsuite.skipped
                 $suitePassed = $suiteTests - $suiteFailed - $suiteSkipped
-                $summarySb.AppendLine("|$($testsuite.name)|$suiteTests|$suitePassed$statusOk|$suiteFailed$statusError|$suiteSkipped$statusSkipped|$suiteTime|") | Out-Null
+                $mdTableRow = @($testsuite.name, $suiteTests, $suitePassed, $suiteFailed, $suiteSkipped, $suiteTime)
+                $mdTableData.Add($mdTableRow) | Out-Null
+                #$summarySb.AppendLine("|$($testsuite.name)|$suiteTests|$suitePassed$statusOk|$suiteFailed$statusError|$suiteSkipped$statusSkipped|$suiteTime|") | Out-Null
 
                 if ($suiteFailed -gt 0 ) {
+                    $suiteFailureNode = [FailureNode]::new($false)
+                    $suiteFailureNode.summaryDetails = "$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds"
                     $failuresSb.Append("<details><summary><i>$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds</i></summary>") | Out-Null
                     foreach($testcase in $testsuite.testcase) {
                         $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
@@ -370,11 +526,20 @@ function GetPageScriptingTestResultSummaryMD {
                             $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace</i><br/>") | Out-Null
                             $failuresSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $($testcase.failure."#cdata-section")</i><br/>") | Out-Null
                             $failuresSb.Append("</details>") | Out-Null
+                            $testCaseSummaryNode = [FailureNode]::new($false)
+                            $testCaseSummaryNode.summaryDetails = "$($testName), Failure"
+                            $testCaseFailureNode = [FailureNode]::new($true)
+                            $testCaseFailureNode.errorMessage = $testcase.failure.message
+                            $testCaseFailureNode.errorStackTrace = $testcase.failure."#cdata-section"
+                            $testCaseSummaryNode.childSummaries.Add($testCaseFailureNode)
+                            $suiteFailureNode.childSummaries.Add($testCaseSummaryNode)
                         }
                     }
+                    $rootFailureNode.childSummaries.Add($suiteFailureNode)
                     $failuresSb.Append("</details>") | Out-Null
                 }
             }
+            $summarySb = BuildMarkdownTable -data $mdTableData -resultEmojis $mdTableEmojis
         }
         if ($totalFailed -gt 0) {
             $failuresSummaryMD = "<i>$totalFailed failing tests, download test results to see details</i>"
