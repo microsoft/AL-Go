@@ -283,8 +283,9 @@ if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
 
 Set-Location $ENV:GITHUB_WORKSPACE
 
-$customScript = Join-Path $ENV:GITHUB_WORKSPACE ".github/DeployTo$($deploymentSettings.EnvironmentType).ps1"
-if (Test-Path $customScript) {
+# Use Get-ChildItem to support Linux (case sensitive filenames) as well as Windows
+$customScript = Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE '.github') | Where-Object { $_.Name -eq "DeployTo$($deploymentSettings.EnvironmentType).ps1" } | ForEach-Object { $_.FullName }
+if ($customScript) {
     Write-Host "Executing custom deployment script $customScript"
     $parameters = @{
         "type" = $type

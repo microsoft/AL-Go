@@ -3,7 +3,7 @@ Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1' -Resolve)
 
 #region Loading telemetry helper
 function DownloadNugetPackage($PackageName, $PackageVersion) {
-    $nugetPackagePath = Join-Path "$ENV:GITHUB_WORKSPACE" "/.nuget/packages/$PackageName/$PackageVersion/"
+    $nugetPackagePath = Join-Path "$ENV:RUNNER_TEMP" "/.nuget/packages/$PackageName/$PackageVersion/"
 
     if (-not (Test-Path -Path $nugetPackagePath)) {
         $url = "https://www.nuget.org/api/v2/package/$PackageName/$PackageVersion"
