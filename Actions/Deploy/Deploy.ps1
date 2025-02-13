@@ -51,8 +51,7 @@ function InstallOrUpgradeApps {
         [hashtable] $bcAuthContext,
         [string] $environment,
         [string[]] $apps,
-        [string] $installMode,
-        [switch] $isUnknownDependencies = $false
+        [string] $installMode
     )
 
     $schemaSyncMode = 'Add'
@@ -60,92 +59,97 @@ function InstallOrUpgradeApps {
         $schemaSyncMode = 'Force'
         $installMode = 'upgrade'
     }
-    #If regular dependencies we have the app files, otherwise in case of unknown dependencies we have the app ids
-    if (!$isUnknownDependencies) {
-        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
-        New-Item -ItemType Directory -Path $tempPath | Out-Null
-        try {
-            Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
-            $apps = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
-            $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-            $PTEsToInstall = @()
-            # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
-            foreach($app in $apps) {
-                # Get AppJson (works for full .app files, symbol files and also runtime packages)
-                $appJson = Get-AppJsonFromAppFile -appFile $app
-                $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
-                $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
-                $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
-                if ($needsUpgrade) {
-                    if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
-                        Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
-                        $needsUpgrade = $false
-                    }
-                }
-                if ($needsUpgrade -or $needsInstall) {
-                    if ($isPTE) {
-                        $PTEsToInstall += $app
-                    }
-                    else {
-                        Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
-                        # Update installed apps list as dependencies may have changed / been installed
-                        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-                    }
+
+    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $tempPath | Out-Null
+    try {
+        Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
+        $apps = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
+        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+        $PTEsToInstall = @()
+        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
+        foreach($app in $apps) {
+            # Get AppJson (works for full .app files, symbol files and also runtime packages)
+            $appJson = Get-AppJsonFromAppFile -appFile $app
+            $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
+            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
+            if ($needsUpgrade) {
+                if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
+                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    $needsUpgrade = $false
                 }
             }
-            if ($PTEsToInstall) {
-                # Install or upgrade PTEs
-                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode $schemaSyncMode
-            }
-        }
-        finally {
-            Remove-Item -Path $tempPath -Force -Recurse
-        }
-    }
-    else {
-        Write-Host "Unknown dependencies: $($apps -join ', ')"
-        try {
-            Write-Host "Installaing unknown dependencies"
-            $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-            # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
-            foreach($app in $apps) {
-                #The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
-                $appId, $appName = $app.Split(':')
-                $appVersion = ""
-                if ($appName -like "*Tests-TestLibraries*") {
-                    Write-Host "::WARNING::Tests-TestLibraries can't be installed"
-                    continue
+            if ($needsUpgrade -or $needsInstall) {
+                if ($isPTE) {
+                    $PTEsToInstall += $app
                 }
-                if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
-                    $appVersion = $matches.1
-                } else {
-                    throw "Version not found for unknown dependency $app"
-                }
-                #Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
-                $appJson = @{
-                    "name" = $appName
-                    "id" = $appId
-                    "Version" = $appVersion
-                }
-                Write-Host "fake appJson: $($appJson | ConvertTo-Json)"
-                $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
-                $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
-                if ($needsUpgrade) {
-                    if ($installedApp.publishedAs.Trim() -eq 'Dev') {
-                        Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
-                        $needsUpgrade = $false
-                    }
-                }
-                if ($needsUpgrade -or $needsInstall) {
+                else {
                     Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
                     # Update installed apps list as dependencies may have changed / been installed
                     $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
                 }
             }
         }
-        finally {
-            Write-Host "Unknown dependencies installed or upgraded"
+        if ($PTEsToInstall) {
+            # Install or upgrade PTEs
+            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode $schemaSyncMode
         }
+    }
+    finally {
+        Remove-Item -Path $tempPath -Force -Recurse
+    }
+}
+
+function InstallUnknownDependencies {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        [string[]] $apps,
+        [string] $installMode
+    )
+
+    Write-Host "Installing unknown dependencies: $($apps -join ', ')"
+    try {
+        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
+        foreach($app in $apps) {
+            #The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
+            $appId, $appName = $app.Split(':')
+            $appVersion = ""
+            if ($appName -like "*Tests-TestLibraries*") {
+                Write-Host "::WARNING::Tests-TestLibraries can't be installed"
+                continue
+            }
+            if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
+                $appVersion = $matches.1
+            } else {
+                throw "Version not found for unknown dependency $app"
+            }
+            #Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
+            $appJson = @{
+                "name" = $appName
+                "id" = $appId
+                "Version" = $appVersion
+            }
+
+            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
+            if ($needsUpgrade) {
+                if ($installedApp.publishedAs.Trim() -eq 'Dev') {
+                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    $needsUpgrade = $false
+                }
+            }
+            if ($needsUpgrade -or $needsInstall) {
+                Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
+                # Update installed apps list as dependencies may have changed / been installed
+                $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+            }
+        }
+    }
+    finally {
+        Write-Host "Unknown dependencies installed or upgraded"
     }
 }
 
@@ -224,33 +228,28 @@ if (Test-Path $artifactsFolder -PathType Container) {
                 foreach($app in (Get-ChildItem -Path $appFolder)) {
                     Write-Host "Processing app: $($app.Name)"
                     if ($app.Name -like "*.app") {
-                        $unknownDependenciesForApp = @()
-                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
-                        # Check if Test-TestLibraries is a dependency for the app - if so skip it since we can't install that dependency
-                        $testLibraryDependencyFound = $false
-                        foreach ($unknownDependency in $unknownDependenciesForApp) {
-                            if ($unknownDependency -like "*Tests-TestLibraries*") {
-                                $testLibraryDependencyFound = $true
-                                break
-                            }
-                        }
-                        if ($testLibraryDependencyFound) {
-                            Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
-                            continue
-                        }
-                        #Exclude apps based on id
                         $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
                         if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
+                            #If app should be included, verify that it does not depend on Tests-TestLibraries
+                            $unknownDependenciesForApp = @()
+                            Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
+                            $unknownDependenciesForApp | ForEach-Object {
+                                if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
+                                    Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
+                                    continue
+                                }
+                            }
+                        
                             $apps += $app.FullName
                             $unknownDependenciesForApp | ForEach-Object {
                                 if ($unknownDependencies -notcontains $_) {
                                     $unknownDependencies += $_
                                 }
                             }
-                            Write-Host "App file $($app.Name) with id $($appJson.id) included in deployment"
+                            Write-Host "App $($app.Name) with id $($appJson.id) included in deployment"
                         }
                         else {
-                            Write-Host "App file $($app.Name) with id $($appJson.id) excluded from deployment"
+                            Write-Host "App $($app.Name) with id $($appJson.id) excluded from deployment"
                         }
                     }
                     else {
