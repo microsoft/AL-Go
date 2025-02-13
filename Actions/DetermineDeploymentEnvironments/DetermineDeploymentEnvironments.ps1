@@ -187,10 +187,6 @@ else {
             if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
                 throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
             }
-            if ($deploymentSettings."includeTestAppsInSandboxEnvironment" -and ($environmentName -like '* (PROD)' -or $environmentName -like '* (Production)' -or $environmentName -like '* (FAT)' -or $environmentName -like '* (Final Acceptance Test)')) {
-                $deploymentSettings."includeTestAppsInSandboxEnvironment" = $false
-                Write-Host "::WARNING::Test apps can only be installed in sandbox environments."
-            }
         }
 
         # Get Branch policies on GitHub Environment
