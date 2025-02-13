@@ -239,7 +239,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                                     continue
                                 }
                             }
-                        
+
                             $apps += $app.FullName
                             $unknownDependenciesForApp | ForEach-Object {
                                 if ($unknownDependencies -notcontains $_) {
