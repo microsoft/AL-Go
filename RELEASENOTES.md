@@ -3,6 +3,11 @@
 - Issue 1433 Publish to Environment - DependencyInstallMode not found
 - Issue 1440 Create Release fails due to recent changes to the AL-Go
 
+### New Repository Settings
+- `deployTo<environment>` now has two additional properties:
+  - `includeTestAppsInSandboxEnvironment`, which deploys test apps and their dependencies to the specified sandbox environment if set to `true`. Deployment will fail if used on a Prod environment or if the test app has a dependency on Tests-TestLibraries. Default value is `false`.
+  - `excludeAppIds`, which is an array of app ids which will be excluded from deployment. Default value is `[]`
+
 ### Support for GitHub App authentication
 
 AL-Go for GitHub now supports using a GitHub App specification as the GhTokenWorkflow secret for a more secure way of allowing repositories to run Update AL-Go System Files and other workflows which are creating commits and pull requests. See [this description](https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md) to learn how to use GitHub App authentication.
