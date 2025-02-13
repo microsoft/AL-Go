@@ -41,6 +41,7 @@ $runAlPipelineOverrides = @(
 )
 
 # Well known AppIds
+$platformAppId = "8874ed3a-0643-4247-9ced-7a7002f7135d"
 $systemAppId = "63ca2fa4-4f03-4f2b-a480-172fef340d3f"
 $baseAppId = "437dbf0e-84ff-417a-965d-ed2bb9650972"
 $applicationAppId = "c1335042-3002-4257-bf8a-75c898ccb1b8"
