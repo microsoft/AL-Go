@@ -13,31 +13,33 @@ $testResultsSummaryMD = ''
 $testResultsfailuresMD = ''
 $testResultsFailuresSummaryMD = ''
 
-if ($testType -eq 'normal') {
-    $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
-    $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -testResultsFile $testResultsFile
-    $testTitle = "Test results"
-}
-elseif ($testType -eq 'bcpt') {
-    $settings = $env:Settings | ConvertFrom-Json
-    $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
-    $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
-    $bcptThresholdsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptThresholds.json"
-    $testResultsSummaryMD = GetBcptSummaryMD `
-        -bcptTestResultsFile $bcptTestResultsFile `
-        -baseLinePath $bcptBaseLineFile `
-        -thresholdsPath $bcptThresholdsFile `
-        -bcptThresholds ($settings.bcptThresholds | ConvertTo-HashTable)
-    $testTitle = "Performance test results"
-}
-elseif ($testType -eq 'pageScripting') {
-    $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\PageScriptingTestResults.xml"
-    $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile
-    $testTitle = "Page Scripting test results"
-}
-else {
-    Write-Host "::error:: Unknown test type: $testsToAnalyze"
-    return ''
+switch ($testType) {
+    'normal' {
+        $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\TestResults.xml"
+        $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetTestResultSummaryMD -testResultsFile $testResultsFile
+        $testTitle = "Test results"
+    }
+    'bcpt' {
+        $settings = $env:Settings | ConvertFrom-Json
+        $bcptTestResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptTestResults.json"
+        $bcptBaseLineFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptBaseLine.json"
+        $bcptThresholdsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\bcptThresholds.json"
+        $testResultsSummaryMD = GetBcptSummaryMD `
+            -bcptTestResultsFile $bcptTestResultsFile `
+            -baseLinePath $bcptBaseLineFile `
+            -thresholdsPath $bcptThresholdsFile `
+            -bcptThresholds ($settings.bcptThresholds | ConvertTo-HashTable)
+        $testTitle = "Performance test results"
+    }
+    'pageScripting' {
+        $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\PageScriptingTestResults.xml"
+        $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile
+        $testTitle = "Page Scripting test results"
+    }
+    default {
+        Write-Host "::error:: Unknown test type: $testType"
+        return ''
+    }
 }
 
 # If summary fits, we will display it in the GitHub summary
