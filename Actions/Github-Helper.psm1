@@ -912,12 +912,12 @@ function FindLatestSuccessfulCICDRun {
 }
 
 <#
-    Gets the last successful PR run ID for the specified repository and branch.
+    Gets the last PR build run ID for the specified repository and branch.
     Successful PR runs are those that have a workflow run named 'Pull Request Build' and successfully built all the projects.
 
-    If no successful PR run is found, 0 is returned.
+    If the latest PR build is not completed or successful, 0 is returned.
 #>
-function FindLatestSuccessfulPRRun {
+function FindLatestPRRun {
     Param(
         [Parameter(Mandatory = $true)]
         [string] $repository,
@@ -932,11 +932,11 @@ function FindLatestSuccessfulPRRun {
     $per_page = 100
     $page = 1
 
-    Write-Host "Finding latest successful PR run for branch $branch in repository $repository"
+    Write-Host "Finding latest PR build run for branch $branch in repository $repository"
 
-    # Get the latest CICD workflow run
     while($true) {
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&status=success&branch=$branch&event=pull_request_target"
+        #Get all workflow runs for the given branch
+        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&branch=$branch"
         Write-Host "- $runsURI"
         $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
 
@@ -945,16 +945,21 @@ function FindLatestSuccessfulPRRun {
             break
         }
 
-        $PRRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq 'Pull Request Build' })
+        #Filter to only PR builds
+        $PRRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq 'Pull Request Build' -and $_.event -in @('pull_request', 'pull_request_target') })
 
-        foreach($PRRun in $PRRuns) {
-            if($PRRun.conclusion -eq 'success') {
-                # CICD run is successful
-                $lastSuccessfulPRRun = $PRRun.id
+        if ($PRRuns.Count -gt 0) {
+            $latestPrRun = $PRRuns[0]
+            if ($latestPrRun.status -ne 'completed') {
+                Write-Host "Latest PR build run is not completed."
                 break
             }
 
-            # CICD run is considered successful if all build jobs were successful
+            if ($latestPrRun.conclusion -eq 'success') {
+                $lastSuccessfulPRRun = $latestPrRun.id
+                break
+            }
+            # PR run is considered successful if all build jobs were successful
             $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($PRRun.id) -token $token -repository $repository
 
             if($areBuildJobsSuccessful) {
@@ -962,8 +967,8 @@ function FindLatestSuccessfulPRRun {
                 Write-Host "Found last successful PR run: $($lastSuccessfulPRRun), from $($PRRun.created_at)"
                 break
             }
-
-            Write-Host "CICD run $($PRRun.id) is not successful. Skipping."
+            #We only care about the latest PR build. If it is not completed or not successful, we return 0
+            break
         }
 
         if($lastSuccessfulPRRun -ne 0) {
@@ -974,9 +979,9 @@ function FindLatestSuccessfulPRRun {
     }
 
     if($lastSuccessfulPRRun -ne 0) {
-        Write-Host "Last successful CICD run for branch $branch in repository $repository is $lastSuccessfulPRRun"
+        Write-Host "Lastest PR build ($lastSuccessfulPRRun) was successful for branch $branch in repository $repository"
     } else {
-        Write-Host "No successful CICD run found for branch $branch in repository $repository"
+        Write-Host "Lastest PR build ($lastSuccessfulPRRun) was not successful for branch $branch in repository $repository"
     }
 
     return $lastSuccessfulPRRun
