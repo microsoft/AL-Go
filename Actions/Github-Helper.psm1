@@ -1326,7 +1326,7 @@ function GetBranchFromPRId {
 
     $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
     Write-Host "- $runsURI"
-    $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
+    $pr = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
 
-    return $workflowRuns.head.ref
+    return $pr.head.ref
 }
