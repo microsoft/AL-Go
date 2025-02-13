@@ -346,7 +346,7 @@ else {
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode
             }
             if ($unknownDependencies) {
-                InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $unknownDependencies -installMode $deploymentSettings.DependencyInstallMode -isUnknownDependencies
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $unknownDependencies -installMode $deploymentSettings.DependencyInstallMode
             }
             if ($scope -eq 'Dev') {
                 if (!$sandboxEnvironment) {
