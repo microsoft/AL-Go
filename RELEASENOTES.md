@@ -4,6 +4,7 @@
 - Issue 1440 Create Release fails due to recent changes to the AL-Go
 
 ### New Repository Settings
+
 - `deployTo<environment>` now has two additional properties:
   - `includeTestAppsInSandboxEnvironment`, which deploys test apps and their dependencies to the specified sandbox environment if set to `true`. Deployment will fail if used on a Prod environment or if the test app has a dependency on Tests-TestLibraries. Default value is `false`.
   - `excludeAppIds`, which is an array of app ids which will be excluded from deployment. Default value is `[]`
