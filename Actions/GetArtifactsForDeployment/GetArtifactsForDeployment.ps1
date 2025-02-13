@@ -61,13 +61,13 @@ elseif ($artifactsVersion -like "PR_*") {
     if (!($prBranch)) {
         throw "Unable to locate branch for PR $prId"
     }
-    $latestSuccessfulPRRun = FindLatestSuccessfulPRRun -repository $ENV:GITHUB_REPOSITORY -branch $prBranch -token $token
-    if ($latestSuccessfulPRRun -eq 0) {
-        throw "Unable to locate latest successful run for PR $prId"
+    $latestPRRun = FindLatestPRRun -repository $ENV:GITHUB_REPOSITORY -branch $prBranch -token $token
+    if ($latestPRRun -eq 0) {
+        throw "Latest PR build for PR $prId not found, not completed or not successful"
     }
 
     $artifactsToDownload | ForEach-Object {
-        GetArtifactsFromWorkflowRun -workflowRun $latestSuccessfulPRRun -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects
+        GetArtifactsFromWorkflowRun -workflowRun $latestPRRun -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects
     }
 }
 else {
