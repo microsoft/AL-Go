@@ -7,6 +7,8 @@
 
 - Issue 1433 Publish to Environment - DependencyInstallMode not found
 - Issue 1440 Create Release fails due to recent changes to the AL-Go
+- Issue 1330 CompilerFolder doesn't transfer installed Apps to NuGet resolution
+- Issue 1268 Do not throw an un-understandable error during nuGet download
 
 ### New Workflow specific settings
 

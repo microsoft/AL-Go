@@ -449,6 +449,7 @@ try {
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
+                        "select" = "LatestMatching"
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
@@ -459,6 +460,18 @@ try {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
+                        if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
+                            foreach($installedApp in $parameters.installedApps) {
+                                if ($installedApp.Id -eq $platformAppId) {
+                                    $publishParams += @{
+                                        "installedApps" = $parameters.installedApps
+                                        "installedPlatform" = ([System.Version]$installedApp.Version)
+                                        "installedCountry" = $parameters.installedCountry
+                                    }
+                                    break
+                                }
+                            }
+                        }
                         Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
                 }
