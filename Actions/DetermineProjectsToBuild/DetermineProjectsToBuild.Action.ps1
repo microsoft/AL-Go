@@ -16,14 +16,19 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuil
 
 $settings = $env:Settings | ConvertFrom-Json
 
-Write-Host "$($ENV:GITHUB_EVENT_NAME) on $($env:GITHUB_REF_NAME)"
+$targetBranch = $env:GITHUB_REF_NAME
+if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
+    $targetBranch = $env:GITHUB_BASE_REF_NAME
+}
+
+Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
 $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
 
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
     Write-Host "::group::Determine Baseline Workflow ID"
-    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $env:GITHUB_REF_NAME -token $token -retention $settings.incrementalBuilds.retentionDays
+    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $targetBranch -token $token -retention $settings.incrementalBuilds.retentionDays
     Write-Host "::endgroup::"
 }
 
