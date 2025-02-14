@@ -101,7 +101,7 @@ class FailureNode {
 # </details>
 function BuildHTMLFailureSummary {
     Param(
-        [psobject]$rootFailureNode
+        [FailureNode]$rootFailureNode
     )
 
     $htmlFailureSb = [System.Text.StringBuilder]::new()
