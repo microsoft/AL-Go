@@ -20,7 +20,7 @@
   - `onPull_Request` - set this property to **false** in order to disable incremental builds in Pull Request workflows. Default is **true**.
   - `onSchedule` - set this property to **true** in order to enable incremental builds in CI/CD when running on a schedule. Default is **false**.
   - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
-  - `mode` - defines the mode for incremental builds. Currently, three values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
+  - `mode` - defines the mode for incremental builds. Currently, two values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
 
 > [!NOTE]
 > The projects mentioned here are AL-Go projects in a multi-project repository. A repository can contain multiple projects and a project can contain multiple apps.
