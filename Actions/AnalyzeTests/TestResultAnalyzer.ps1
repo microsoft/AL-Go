@@ -11,7 +11,7 @@ $statusSkipped = " :question:"
 #Helper function to build a markdown table. Example output below where whitespace is kept for readability.
 # |TestName|Total|Passed             |Failed|
 # |:---    |---: |---:               | ---: |
-# |Name1   |3    |3:heavy_check_mark:|      | Notice that 0 failed tests results in an empty cell 
+# |Name1   |3    |3:heavy_check_mark:|      | Notice that 0 failed tests results in an empty cell
 # |Name2   |3    |2:heavy_check_mark:|1:x:  | Emojis are only included if the value is larger than 0
 function BuildMarkdownTable {
     param(
@@ -97,7 +97,7 @@ class FailureNode {
 #     <... more nested <details> ...>
 #         <i>Error: some error</i><br/> 6x&nbsp; not included for readability
 #         <i>Stack trace:</i><br/>
-#         <i>some stack trace</i><br/>   
+#         <i>some stack trace</i><br/>
 # </details>
 function BuildHTMLFailureSummary {
     Param(
@@ -238,7 +238,7 @@ function GetTestResultSummaryMD {
     else {
         $summarySb.Append("<i>No test results found</i>") | Out-Null
         $failuresSummaryMD = ''
-    }   
+    }
     $summarySb.ToString()
     $failuresSb.ToString()
     $failuresSummaryMD
@@ -491,7 +491,7 @@ function GetPageScriptingTestResultSummaryMD {
                 4 = $statusSkipped
             }
             $mdTableData = [System.Collections.ArrayList]@(,$mdTableHeaders)
-            
+
             $rootFailureNode = [FailureNode]::new($false)
             foreach($testsuite in $testResults.testsuites.testsuite) {
                 $suiteTests = $testsuite.tests
