@@ -101,12 +101,12 @@ class FailureNode {
 # </details>
 function BuildHTMLFailureSummary {
     Param(
-        [psobject]$failureStructure
+        [psobject]$rootFailureNode
     )
 
     $htmlFailureSb = [System.Text.StringBuilder]::new()
     $stack = [System.Collections.Stack]::new()
-    $stack.push(@{ Node = $failureStructure; level = 0 })
+    $stack.push(@{ Node = $rootFailureNode; level = 0 })
     $currentLevel = 0
 
     while($stack.Count -gt 0) {
