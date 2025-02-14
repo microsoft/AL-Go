@@ -129,17 +129,14 @@ try {
 
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
-        $headSHA = git rev-parse HEAD
-        Write-Host "Current HEAD is $headSHA"
-        git fetch origin $baselineWorkflowSHA | Out-Host
-        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to fetch baseline SHA $baselineSHA" }
-        Push-Location $ENV:GITHUB_WORKSPACE
-        Write-Host "git diff --name-only $baselineWorkflowSHA $headSHA"
-        $modifiedFiles = @(git diff --name-only $baselineWorkflowSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
-        if ($LASTEXITCODE -ne 0) { $host.SetShouldExit(0); throw "Failed to diff baseline SHA $baselineSHA with current HEAD $headSHA" }
-        Pop-Location
-        OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
-        $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        try {
+            $modifiedFiles = Get-ModifiedFiles baselineSHA $baselineWorkflowSHA
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        }
+        catch {
+            $buildAll = $true
+        }
         if (!$buildAll) {
             $skipFolders = @()
             $unknownDependencies = @()
@@ -153,6 +150,7 @@ try {
             OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
             Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
             OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
+            # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
             $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "check '$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))'"; $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
             $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
             $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })

@@ -11,34 +11,34 @@ function Get-ModifiedFiles {
     )
 
     Push-Location $ENV:GITHUB_WORKSPACE
-    $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
-    if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
-        $headSHA = $ghEvent.pull_request.head.sha
-        Write-Host "Using head SHA $headSHA from pull request"
-        RunAndCheck git fetch origin $headSHA | Out-Host
-        if ($baselineSHA) {
-            Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
+    try {
+        $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
+        if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
+            $headSHA = $ghEvent.pull_request.head.sha
+            Write-Host "Using head SHA $headSHA from pull request"
+            RunAndCheck git fetch origin $headSHA | Out-Host
+            if ($baselineSHA) {
+                Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
+            }
+            else {
+                $baselineSHA = $ghEvent.pull_request.base.sha
+                Write-Host "This is a pull request, using baseline SHA $baselineSHA from pull request"
+            }
+            RunAndCheck git fetch origin $baselineSHA | Out-Host
         }
         else {
-            $baselineSHA = $ghEvent.pull_request.base.sha
-            Write-Host "This is a pull request, using baseline SHA $baselineSHA from pull request"
+            $headSHA = git rev-parse HEAD
+            Write-Host "Current HEAD is $headSHA"
+            RunAndCheck git fetch origin $baselineSHA | Out-Host
+            Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
         }
-        RunAndCheck git fetch origin $baselineSHA | Out-Host
+        Write-Host "git diff --name-only $baselineSHA $headSHA"
+        $modifiedFiles = @(RunAndCheck git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
+        return $modifiedFiles
     }
-    elseif ($baselineSHA) {
-        $headSHA = git rev-parse HEAD
-        Write-Host "Current HEAD is $headSHA"
-        RunAndCheck git fetch origin $baselineSHA | Out-Host
-        Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
+    finally {
+        Pop-Location
     }
-    else {
-        Write-Host "Not a pull request and no baseline specified, returning empty list of changed files"
-        return @()
-    }
-    Write-Host "git diff --name-only $baselineSHA $headSHA"
-    $modifiedFiles = @(RunAndCheck git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
-    Pop-Location
-    return $modifiedFiles
 }
 
 <#
