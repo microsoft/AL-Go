@@ -160,6 +160,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @("Project1")
         $projectsToBuild | Should -BeExactly @("Project1")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -201,6 +202,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -249,6 +251,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @("Project1")
         $projectsToBuild | Should -BeExactly @("Project1")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -291,6 +294,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $true
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @()
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -343,6 +347,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @("Project1")
         $projectsToBuild | Should -BeExactly @("Project1")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -373,6 +378,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @("Project1")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -402,6 +408,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @()
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -507,6 +514,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @()
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
@@ -566,6 +574,7 @@ Describe "Get-ProjectsToBuild" {
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @()
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
 
         $projectDependencies | Should -BeOfType System.Collections.Hashtable
