@@ -74,7 +74,7 @@ function BuildMarkdownTable {
         $mdTable.Append("|\n") | Out-Null
     }
 
-    return $mdTable.ToString()
+    return $mdTable
 }
 
 class FailureNode {
@@ -121,7 +121,7 @@ function BuildHTMLFailureSummary {
         }
         #If we are not at a leaf, insert the summary details and push the children to the stack
         else {
-            $htmlFailureSb.Append("<details><summary><i>$($node.summaryDetails)</i></summary>\n") | Out-Null
+            $htmlFailureSb.Append("<details><summary><i>$($node.summaryDetails)</i></summary>") | Out-Null
 
             for($i=$node.childSummaries.Count-1; $i -ge 0; $i--) {
                 $stack.push(@{ Node = $node.childSummaries[$i]; Level = $level+1 })
@@ -130,11 +130,11 @@ function BuildHTMLFailureSummary {
     }
 
     while ($currentLevel -gt 0) {
-        $htmlOutput += "</details>"
+        $htmlFailureSb.Append("</details>") | Out-Null
         $currentLevel--
     }
 
-    return $htmlFailureSb.ToString()
+    return $htmlFailureSb
 }
 
 function GetTestResultSummaryMD {
