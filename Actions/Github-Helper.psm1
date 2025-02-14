@@ -959,14 +959,6 @@ function FindLatestPRRun {
                 $lastSuccessfulPRRun = $latestPrRun.id
                 break
             }
-            # PR run is considered successful if all build jobs were successful
-            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($PRRun.id) -token $token -repository $repository
-
-            if($areBuildJobsSuccessful) {
-                $lastSuccessfulPRRun = $PRRun.id
-                Write-Host "Found last successful PR run: $($lastSuccessfulPRRun), from $($PRRun.created_at)"
-                break
-            }
             #We only care about the latest PR build. If it is not completed or not successful, we return 0
             break
         }
