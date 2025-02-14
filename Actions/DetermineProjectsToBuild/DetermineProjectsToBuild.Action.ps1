@@ -18,7 +18,7 @@ $settings = $env:Settings | ConvertFrom-Json
 
 $targetBranch = $env:GITHUB_REF_NAME
 if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
-    $targetBranch = $env:GITHUB_BASE_REF_NAME
+    $targetBranch = $env:GITHUB_BASE_REF
 }
 
 Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
