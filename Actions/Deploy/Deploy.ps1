@@ -117,14 +117,11 @@ function InstallUnknownDependencies {
             #The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
             $appId, $appName = $app.Split(':')
             $appVersion = ""
-            if ($appName -like "*Tests-TestLibraries*") {
-                Write-Host "::WARNING::Tests-TestLibraries can't be installed"
-                continue
-            }
             if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
                 $appVersion = $matches.1
             } else {
-                throw "Version not found for unknown dependency $app"
+                Write-Host "Version not found or incorrect format for unknown dependency $app"
+                continue
             }
             #Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
             $appJson = @{
@@ -216,7 +213,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
         }
         if (!($projectTestApps)) {
             if ($project -ne '*') {
-                throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
+                Write-Host "::warning::There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
             }
         }
         else {
@@ -224,36 +221,31 @@ if (Test-Path $artifactsFolder -PathType Container) {
         }
         #Go through all .app files and exclude any with ids in the excludeAppIds list
         if ($allApps) {
-            foreach($appFolder in $allApps) {
-                foreach($app in (Get-ChildItem -Path $appFolder)) {
+            foreach($folder in $allApps) {
+                foreach($app in (Get-ChildItem -Path $folder -Filter "*.app")) {
                     Write-Host "Processing app: $($app.Name)"
-                    if ($app.Name -like "*.app") {
-                        $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
-                        if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
-                            #If app should be included, verify that it does not depend on Tests-TestLibraries
-                            $unknownDependenciesForApp = @()
-                            Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
-                            $unknownDependenciesForApp | ForEach-Object {
-                                if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
-                                    Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
-                                    continue
-                                }
+                    $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
+                    if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
+                        #If app should be included, verify that it does not depend on Tests-TestLibraries
+                        $unknownDependenciesForApp = @()
+                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
+                        $unknownDependenciesForApp | ForEach-Object {
+                            if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
+                                Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
+                                continue
                             }
+                        }
 
-                            $apps += $app.FullName
-                            $unknownDependenciesForApp | ForEach-Object {
-                                if ($unknownDependencies -notcontains $_) {
-                                    $unknownDependencies += $_
-                                }
+                        $apps += $app.FullName
+                        $unknownDependenciesForApp | ForEach-Object {
+                            if ($unknownDependencies -notcontains $_) {
+                                $unknownDependencies += $_
                             }
-                            Write-Host "App $($app.Name) with id $($appJson.id) included in deployment"
                         }
-                        else {
-                            Write-Host "App $($app.Name) with id $($appJson.id) excluded from deployment"
-                        }
+                        Write-Host "App $($app.Name) with id $($appJson.id) included in deployment"
                     }
                     else {
-                        $apps += $app.FullName
+                        Write-Host "App $($app.Name) with id $($appJson.id) excluded from deployment"
                     }
                 }
             }
