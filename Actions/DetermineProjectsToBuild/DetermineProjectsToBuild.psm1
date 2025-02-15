@@ -16,7 +16,7 @@ function Get-ModifiedFiles {
         if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
             $headSHA = $ghEvent.pull_request.head.sha
             Write-Host "Using head SHA $headSHA from pull request"
-            RunAndCheck git fetch origin $headSHA | Out-Host
+            Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $headSHA | Out-Host }
             if ($baselineSHA) {
                 Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
             }
@@ -24,12 +24,12 @@ function Get-ModifiedFiles {
                 $baselineSHA = $ghEvent.pull_request.base.sha
                 Write-Host "This is a pull request, using baseline SHA $baselineSHA from pull request"
             }
-            RunAndCheck git fetch origin $baselineSHA | Out-Host
+            Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $baselineSHA | Out-Host }
         }
         else {
             $headSHA = git rev-parse HEAD
             Write-Host "Current HEAD is $headSHA"
-            RunAndCheck git fetch origin $baselineSHA | Out-Host
+            Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $baselineSHA | Out-Host }
             Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
         }
         Write-Host "git diff --name-only $baselineSHA $headSHA"
