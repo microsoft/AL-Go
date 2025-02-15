@@ -1,6 +1,21 @@
+### Issues
+
+- Issue 1433 Publish to Environment - DependencyInstallMode not found
+- Issue 1440 Create Release fails due to recent changes to the AL-Go
+- Issue 1330 CompilerFolder doesn't transfer installed Apps to NuGet resolution
+- Issue 1268 Do not throw an un-understandable error during nuGet download
+
 ### Support for GitHub App authentication
 
 AL-Go for GitHub now supports using a GitHub App specification as the GhTokenWorkflow secret for a more secure way of allowing repositories to run Update AL-Go System Files and other workflows which are creating commits and pull requests. See [this description](https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md) to learn how to use GitHub App authentication.
+
+### Support for embedded secrets in installApps and installTestApps settings
+
+If your installApps or installTestApps are secure URL, containing a secret token, you can now use a GitHub secret specification as part of or as the full URL of apps to install. An example could be:
+
+`"installApps": [ "https://www.dropbox.com/${{SECRETNAME}}&dl=1" ]`
+
+Which would hide the secret part of your URL instead of exposing it in clear text.
 
 ## v6.3
 
