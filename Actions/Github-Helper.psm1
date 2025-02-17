@@ -922,7 +922,7 @@ function FindLatestPRRun {
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
-        [string] $branch,
+        [string] $commitSha,
         [Parameter(Mandatory = $true)]
         [string] $token
     )
@@ -932,11 +932,11 @@ function FindLatestPRRun {
     $per_page = 100
     $page = 1
 
-    Write-Host "Finding latest PR build run for branch $branch in repository $repository"
+    Write-Host "Finding latest PR build run for commit sha $commitSha in repository $repository"
 
     while($true) {
-        #Get all workflow runs for the given branch
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&branch=$branch"
+        #Get all workflow runs for the given commit sha
+        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&head_sha=$commitSha"
         Write-Host "- $runsURI"
         $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
 
@@ -951,15 +951,16 @@ function FindLatestPRRun {
         if ($PRRuns.Count -gt 0) {
             $latestPrRun = $PRRuns[0]
             if ($latestPrRun.status -ne 'completed') {
-                Write-Host "Latest PR build run is not completed."
+                Write-Host "::error::Latest PR build run is not completed. ($($latestPrRun.html_url))"
                 break
             }
 
-            if ($latestPrRun.conclusion -eq 'success') {
-                $lastSuccessfulPRRun = $latestPrRun.id
+            if ($latestPrRun.conclusion -ne 'success') {
+                Write-Host "::error::Latest PR build run is not successful. ($($latestPrRun.html_url))"
                 break
             }
             #We only care about the latest PR build. If it is not completed or not successful, we return 0
+            $lastSuccessfulPRRun = $latestPrRun.id
             break
         }
 
@@ -995,7 +996,9 @@ function GetArtifactsFromWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $mask,
         [Parameter(Mandatory = $true)]
-        [string] $projects
+        [string] $projects,
+        [Parameter(Mandatory = $false)]
+        [ref] $expiredArtifacts = $false
     )
 
     Write-Host "Getting artifacts for workflow run $workflowRun, mask $mask, projects $projects and version $version"
@@ -1034,6 +1037,9 @@ function GetArtifactsFromWorkflowRun {
 
                 if($artifact.expired) {
                     Write-Host "Artifact $($artifact.name) (ID: $($artifact.id)) expired on $($artifact.expired_at)"
+                    if ($expiredArtifacts) {
+                        $expiredArtifacts.value += $artifact
+                    }
                     continue
                 }
 
@@ -1296,7 +1302,7 @@ function GenerateJwtForTokenRequest {
 
 <#
  .SYNOPSIS
-  Get the source branch of a PR
+  Get the latest commit sha from a PR
  .PARAMETER repository
   Repository to search in
  .PARAMETER prId
@@ -1304,7 +1310,7 @@ function GenerateJwtForTokenRequest {
  .PARAMETER token
   Auth token
 #>
-function GetBranchFromPRId {
+function GetLatestCommitShaFromPRId {
     Param(
         [Parameter(Mandatory = $true)]
         [string] $repository,
@@ -1317,8 +1323,8 @@ function GetBranchFromPRId {
     $headers = GetHeaders -token $token
 
     $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
-    Write-Host "- $runsURI"
+    Write-Host "- $pullsURI"
     $pr = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
 
-    return $pr.head.ref
+    return $pr.head.sha
 }
