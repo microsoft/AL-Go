@@ -130,7 +130,7 @@ try {
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
-            $modifiedFiles = Get-ModifiedFiles baselineSHA $baselineWorkflowSHA
+            $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
             OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
             $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         }
