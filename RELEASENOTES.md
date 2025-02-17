@@ -9,6 +9,7 @@
 - Issue 1440 Create Release fails due to recent changes to the AL-Go
 - Issue 1330 CompilerFolder doesn't transfer installed Apps to NuGet resolution
 - Issue 1268 Do not throw an un-understandable error during nuGet download
+- Performance test sample code in 25.4 contains objects with ID 149201 and 149202, which are not renumbered
 
 ### New Workflow specific settings
 
