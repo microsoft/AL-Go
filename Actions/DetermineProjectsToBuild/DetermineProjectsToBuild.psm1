@@ -384,7 +384,7 @@ function Get-UnmodifiedArtifactsFromLastKnownGoodBuild {
         [Parameter(HelpMessage = "The project path", Mandatory = $true)]
         [string] $projectPath
     )
-        
+
     $skipFolders = @()
     $unknownDependencies = @()
     $knownApps = @()
