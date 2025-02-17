@@ -63,7 +63,7 @@ elseif ($artifactsVersion -like "PR_*") {
     if (!($prLatestCommitSha)) {
         throw "Unable to locate commit sha for PR $prId"
     }
-    $latestPRBuildId = FindLatestPRRun -repository $ENV:GITHUB_REPOSITORY -branch $prLatestCommitSha -token $token
+    $latestPRBuildId = FindLatestPRRun -repository $ENV:GITHUB_REPOSITORY -commitSha $prLatestCommitSha -token $token
     if ($latestPRBuildId -eq 0) {
         $prLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/pull/$prId"
         throw "Latest PR build for PR $prId not found, not completed or not successful - Please re-run this workflow when you have a successful build on PR_$prId ($prLink)"
