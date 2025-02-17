@@ -138,7 +138,7 @@ try {
             $buildAll = $true
         }
         if (!$buildAll) {
-            Get-UnmodifiedArtifactsFromLastKnownGoodBuild `
+            Get-UnmodifiedAppsFromLastKnownGoodBuild `
                 -token $token `
                 -settings $settings `
                 -baseFolder $baseFolder `

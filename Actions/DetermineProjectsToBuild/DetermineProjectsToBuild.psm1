@@ -363,7 +363,7 @@ function Get-BuildAllApps {
     - Downloads the artifacts (apps, testapps and bcpttestapps) for the specified project and build mode from the last known good build.
     - Copies the downloaded artifacts to the build artifact folder.
 #>
-function Get-UnmodifiedArtifactsFromLastKnownGoodBuild {
+function Get-UnmodifiedAppsFromLastKnownGoodBuild {
     Param(
         [Parameter(HelpMessage = "The GitHub token to use for downloading artifacts", Mandatory = $true)]
         [String] $token,
