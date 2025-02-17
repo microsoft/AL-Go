@@ -152,11 +152,34 @@ try {
         })
     }
 
-    $installApps = $settings.installApps
-    $installTestApps = $settings.installTestApps
+    $install = @{
+        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
+        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+    }
 
-    $installApps += $installAppsJson | ConvertFrom-Json
-    $installTestApps += $installTestAppsJson | ConvertFrom-Json
+    # Replace secret names in install.apps and install.testApps
+    foreach($list in @('Apps','TestApps')) {
+        $install."$list" = @($install."$list" | ForEach-Object {
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            $url = $_
+            if ($url -match $pattern) {
+                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            }
+            else {
+                $finalUrl = $url
+            }
+            # Check validity of URL
+            if ($finalUrl -like 'http*://*') {
+                try {
+                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                }
+                catch {
+                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
+                }
+            }
+            return $finalUrl
+        })
+    }
 
     # Analyze app.json version dependencies before launching pipeline
 
@@ -332,6 +355,7 @@ try {
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
+                        "select" = "LatestMatching"
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
@@ -342,6 +366,18 @@ try {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
+                        if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
+                            foreach($installedApp in $parameters.installedApps) {
+                                if ($installedApp.Id -eq $platformAppId) {
+                                    $publishParams += @{
+                                        "installedApps" = $parameters.installedApps
+                                        "installedPlatform" = ([System.Version]$installedApp.Version)
+                                        "installedCountry" = $parameters.installedCountry
+                                    }
+                                    break
+                                }
+                            }
+                        }
                         Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
                 }
@@ -409,8 +445,8 @@ try {
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
-        -installApps $installApps `
-        -installTestApps $installTestApps `
+        -installApps $install.apps `
+        -installTestApps $install.testApps `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
