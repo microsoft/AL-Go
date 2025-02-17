@@ -355,4 +355,111 @@ function Get-BuildAllApps {
     return (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($ALGoSettingsFile))
 }
 
+<#
+.Synopsis
+    Downloads unmodified artifacts from the last known good build.
+.Description
+    Downloads unmodified artifacts from the last known good build.
+    - Downloads the artifacts (apps, testapps and bcpttestapps) for the specified project and build mode from the last known good build.
+    - Copies the downloaded artifacts to the build artifact folder.
+#>
+function Get-UnmodifiedArtifactsFromLastKnownGoodBuild {
+    Param(
+        [Parameter(HelpMessage = "The GitHub token to use for downloading artifacts", Mandatory = $true)]
+        [String] $token,
+        [Parameter(HelpMessage = "The resolved AL-Go Project Settings", Mandatory = $true)]
+        [hashtable] $settings,
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The current project", Mandatory = $false)]
+        [string] $project = '',
+        [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $true)]
+        [string] $baselineWorkflowRunId,
+        [Parameter(HelpMessage = "Array of modified files in the repository (all projects)", Mandatory = $true)]
+        [string[]] $modifiedFiles,
+        [Parameter(HelpMessage = "The build artifact folder", Mandatory = $true)]
+        [string] $buildArtifactFolder,
+        [Parameter(HelpMessage = "The build mode", Mandatory = $true)]
+        [string] $buildMode,
+        [Parameter(HelpMessage = "The project path", Mandatory = $true)]
+        [string] $projectPath
+    )
+        
+    $skipFolders = @()
+    $unknownDependencies = @()
+    $knownApps = @()
+    $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
+    Push-Location $ENV:GITHUB_WORKSPACE
+    $modifiedFolders = @($allFolders | Where-Object {
+        $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
+    })
+    Pop-Location
+    OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
+    Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
+    OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
+    # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
+    $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+    $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+    $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+
+    if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
+    # Download missing apps - or add then to build folders if the artifact doesn't exist
+    $appsToDownload = [ordered]@{
+        "appFolders" = @{
+            "Mask" = "Apps"
+            "Downloads" = $downloadAppFolders
+        }
+        "testFolders" = @{
+            "Mask" = "TestApps"
+            "Downloads" = $downloadTestFolders
+        }
+        "bcptTestFolders" = @{
+            "Mask" = "TestApps"
+            "Downloads" = $downloadBcptTestFolders
+        }
+    }
+    $appsToDownload.Keys | ForEach-Object {
+        $appType = $_
+        $mask = $appsToDownload."$appType".Mask
+        $downloads = $appsToDownload."$appType".Downloads
+        $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+        if (!(Test-Path $thisArtifactFolder)) {
+            New-Item $thisArtifactFolder -ItemType Directory | Out-Null
+        }
+        if ($downloads) {
+            Write-Host "Downloading from $mask"
+            $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            New-Item $tempFolder -ItemType Directory | Out-Null
+            if ($buildMode -eq 'Default') {
+                $artifactMask = $mask
+            }
+            else {
+                $artifactMask = "$buildMode$mask"
+            }
+            $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $artifactMask -projects $projectName
+            if ($runArtifact) {
+                if ($runArtifact -is [Array]) {
+                    throw "Multiple artifacts found with mask $artifactMask for project $projectName"
+                }
+                $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
+                $artifactFolder = Join-Path $tempFolder $mask
+                Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
+                Remove-Item -Path $file -Force
+                $downloads | ForEach-Object {
+                    $appJsonPath = Join-Path $projectPath "$_/app.json"
+                    $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
+                    $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
+                    $appPath = Join-Path $artifactFolder $appName
+                    if (Test-Path $appPath) {
+                        $item = Get-Item -Path $appPath
+                        Write-Host "Copy $($item.Name) to build folders"
+                        Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
+                    }
+                }
+            }
+            Remove-Item -Path $tempFolder -Recurse -force
+        }
+    }
+}
+
 Export-ModuleMember *-*
