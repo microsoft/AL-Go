@@ -545,7 +545,8 @@ function ReadSettings {
         [string] $userName = "$ENV:GITHUB_ACTOR",
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
-        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
+        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [switch] $silent
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -560,7 +561,7 @@ function ReadSettings {
 
         if (Test-Path $path) {
             try {
-                Write-Host "Applying settings from $path"
+                if (!$silent.IsPresent) { Write-Host "Applying settings from $path" }
                 $settings = Get-Content $path -Encoding UTF8 | ConvertFrom-Json
                 if ($settings) {
                     return $settings
@@ -571,7 +572,7 @@ function ReadSettings {
             }
         }
         else {
-            Write-Host "No settings found in $path"
+            if (!$silent.IsPresent) { Write-Host "No settings found in $path" }
         }
         return $null
     }
@@ -766,7 +767,7 @@ function ReadSettings {
                             }
                         }
                         if ($conditionMet) {
-                            Write-Host "Applying conditional settings for $($conditions -join ", ")"
+                            if (!$silent.IsPresent) { Write-Host "Applying conditional settings for $($conditions -join ", ")" }
                             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
                         }
                     }
@@ -2446,7 +2447,7 @@ function GetFoldersFromAllProjects {
     $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
     $folders = @()
     foreach($project in $projects) {
-        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
         $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Join-Path $project "$_".Substring(2) } )
     }
