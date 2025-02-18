@@ -67,13 +67,13 @@ $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
 $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
 $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
-$additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]] @{
-    "Mode" = $settings.incrementalBuilds.Mode
-    "Event" = $ENV:GITHUB_EVENT_NAME
-    "Projects" = $allProjects.Count
-    "ModifiedProjects" = $modifiedProjects.Count
-    "ProjectsToBuild" = $projectsToBuild.Count
-}
+$additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+$additionalDataForTelemetry.Add("Mode", $settings.incrementalBuilds.Mode)
+$additionalDataForTelemetry.Add("Event", $ENV:GITHUB_EVENT_NAME)
+$additionalDataForTelemetry.Add("Projects", $allProjects.Count)
+$additionalDataForTelemetry.Add("ModifiedProjects", $modifiedProjects.Count)
+$additionalDataForTelemetry.Add("ProjectsToBuild", $projectsToBuild.Count)
+
 Trace-Information -Message "Incremental builds (projects)" -AdditionalData $additionalDataForTelemetry
 
 # Temp for testing
