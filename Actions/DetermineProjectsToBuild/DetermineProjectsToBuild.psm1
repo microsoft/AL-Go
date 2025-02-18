@@ -357,13 +357,13 @@ function Get-BuildAllApps {
 
 <#
 .Synopsis
-    Downloads unmodified artifacts from the last known good build.
+    Downloads unmodified artifacts from the baseline workflow run
 .Description
-    Downloads unmodified artifacts from the last known good build.
+    Downloads unmodified artifacts from the baseline workflow run
     - Downloads the artifacts (apps, testapps and bcpttestapps) for the specified project and build mode from the last known good build.
     - Copies the downloaded artifacts to the build artifact folder.
 #>
-function Get-UnmodifiedAppsFromLastKnownGoodBuild {
+function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     Param(
         [Parameter(HelpMessage = "The GitHub token to use for downloading artifacts", Mandatory = $true)]
         [String] $token,

@@ -138,7 +138,7 @@ try {
             $buildAll = $true
         }
         if (!$buildAll) {
-            Get-UnmodifiedAppsFromLastKnownGoodBuild `
+            Get-UnmodifiedAppsFromBaselineWorkflowRun `
                 -token $token `
                 -settings $settings `
                 -baseFolder $baseFolder `
