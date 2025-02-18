@@ -464,8 +464,8 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
             }
             Remove-Item -Path $tempFolder -Recurse -force
         }
-        $additionalDataForTelemetry.Add("$($mask)ToDownload", $appsToDownload."$appType".Downloads.Count)
-        $additionalDataForTelemetry.Add("$($mask)Downloaded", $appsToDownload."$appType".Downloaded)
+        $additionalDataForTelemetry.Add("$($appType)ToDownload", $appsToDownload."$appType".Downloads.Count)
+        $additionalDataForTelemetry.Add("$($appType)Downloaded", $appsToDownload."$appType".Downloaded)
     }
     Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
 }
