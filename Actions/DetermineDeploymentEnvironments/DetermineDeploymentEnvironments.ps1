@@ -116,6 +116,8 @@ if (!($environments)) {
                 "shell" = $settings."shell"
                 "companyId" = ''
                 "ppEnvironmentUrl" = ''
+                "includeTestAppsInSandboxEnvironment" = $false
+                "excludeAppIds" = @()
             }
         }
         $unknownEnvironment = 1
@@ -157,6 +159,8 @@ else {
             "shell" = $settings."shell"
             "companyId" = ''
             "ppEnvironmentUrl" = ''
+            "includeTestAppsInSandboxEnvironment" = $false
+            "excludeAppIds" = @()
         }
 
         # Check DeployTo<environmentName> setting
