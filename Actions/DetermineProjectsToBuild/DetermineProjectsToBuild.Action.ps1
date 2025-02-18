@@ -75,6 +75,15 @@ Trace-Information -Message "Incremental builds (projects)" -AdditionalData @{
     "ProjectsToBuild" = $projectsToBuild.Count
 }
 
+# Temp for testing
+@{
+    "Mode" = $settings.incrementalBuilds.Mode
+    "Event" = $ENV:GITHUB_EVENT_NAME
+    "Projects" = $allProjects.Count
+    "ModifiedProjects" = $modifiedProjects.Count
+    "ProjectsToBuild" = $projectsToBuild.Count
+} | ConvertTo-Json | Out-Host
+
 # Add annotation for last known good build
 if ($baselineWorkflowRunId) {
     Write-Host "::notice::Last known good build: https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$baselineWorkflowRunId"

@@ -467,6 +467,9 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         $additionalDataForTelemetry += @{ "$($appType)ToDownload" = $appsToDownload."$appType".Downloads.Count; "$($appType)Downloaded" = $appsToDownload."$appType".Downloaded }
     }
     Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
+
+    # Temp for testing
+    $additionalDataForTelemetry | ConvertTo-Json | Out-Host
 }
 
 Export-ModuleMember *-*
