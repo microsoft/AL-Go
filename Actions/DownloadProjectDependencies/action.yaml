@@ -12,7 +12,7 @@ inputs:
   buildMode:
     description: Build mode used when building the artifacts
     required: true
-  projectsDependenciesJson:
+  projectDependenciesJson:
     description: A JSON object that matches eash project with its dependency projects
     required: true
   baselineWorkflowRunId:
@@ -30,7 +30,7 @@ runs:
   using: composite
   steps:
     - name: Download artifacts from current build
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         path: ${{ github.workspace }}/.dependencies
 
@@ -40,14 +40,14 @@ runs:
       env:
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
-        _projectsDependenciesJson: ${{ inputs.projectsDependenciesJson }}
+        _projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
         _baseFolder: ${{ github.workspace }}
         _destinationPath: ${{ github.workspace }}/.dependencies
         _gitHubToken: ${{ github.token }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DownloadProjectDependencies" -Action {
-          ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectsDependenciesJson $ENV:_projectsDependenciesJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
+          ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectDependenciesJson $ENV:_projectDependenciesJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
         }
 branding:
   icon: terminal

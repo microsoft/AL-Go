@@ -10,7 +10,11 @@
     [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
     [string] $installAppsJson = '[]',
     [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]'
+    [string] $installTestAppsJson = '[]',
+    [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
+    [string] $baselineWorkflowRunId = '0',
+    [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
+    [string] $baselineWorkflowSHA = ''
 )
 
 $containerBaseFolder = $null
@@ -20,6 +24,7 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -117,6 +122,35 @@ try {
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
         Write-Host "Repository is empty, exiting"
         exit
+    }
+
+    $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
+    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+
+    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
+        # Incremental builds are enabled and we are only building modified apps
+        try {
+            $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        }
+        catch {
+            OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
+            $buildAll = $true
+        }
+        if (!$buildAll) {
+            Write-Host "Get unmodified apps from baseline workflow run"
+            Get-UnmodifiedAppsFromBaselineWorkflowRun `
+                -token $token `
+                -settings $settings `
+                -baseFolder $baseFolder `
+                -project $project `
+                -baselineWorkflowRunId $baselineWorkflowRunId `
+                -modifiedFiles $modifiedFiles `
+                -buildArtifactFolder $buildArtifactFolder `
+                -buildMode $buildMode `
+                -projectPath $projectPath
+        }
     }
 
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
@@ -258,9 +292,6 @@ try {
             "appVersion" = $settings.repoVersion
         }
     }
-
-    $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
-    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
     $allTestResults = "testresults*.xml"
     $testResultsFile = Join-Path $projectPath "TestResults.xml"
@@ -417,7 +448,7 @@ try {
         $runAlPipelineParams["preprocessorsymbols"] = @()
     }
 
-    # REMOVE AFTER April 1st 2025 --->
+    # DEPRECATION: REMOVE AFTER April 1st 2025 --->
     if ($buildMode -eq 'Clean' -and $settings.ContainsKey('cleanModePreprocessorSymbols')) {
         Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
         $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols

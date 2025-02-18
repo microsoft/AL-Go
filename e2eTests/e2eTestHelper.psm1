@@ -43,22 +43,6 @@ function SetTokenAndRepository {
     }
 }
 
-function Get-PlainText {
-    Param(
-        [parameter(ValueFromPipeline, Mandatory = $true)]
-        [System.Security.SecureString] $SecureString
-    )
-    Process {
-        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString);
-        try {
-            return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);
-        }
-        finally {
-            [Runtime.InteropServices.Marshal]::FreeBSTR($bstr);
-        }
-    }
-}
-
 function Add-PropertiesToJsonFile {
     Param(
         [string] $path,
@@ -67,18 +51,6 @@ function Add-PropertiesToJsonFile {
         [switch] $wait
     )
 
-    if ($wait -and $commit) {
-        $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
-        Write-Host "Get Previous runs"
-        $url = "https://api.github.com/repos/$repository/actions/runs"
-        $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
-        if ($previousrunids) {
-            Write-Host "Previous runs: $($previousrunids -join ', ')"
-        }
-        else {
-            Write-Host "No previous runs found"
-        }
-    }
     Write-Host -ForegroundColor Yellow "`nAdd Properties to $([System.IO.Path]::GetFileName($path))"
     Write-Host "Properties"
     $properties | Out-Host
@@ -90,26 +62,16 @@ function Add-PropertiesToJsonFile {
     $json | Set-JsonContentLF -path $path
 
     if ($commit) {
-        CommitAndPush -commitMessage "Add properties to $([System.IO.Path]::GetFileName($path))"
-        if ($wait) {
-            while ($true) {
-                Start-Sleep -Seconds 10
-                $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
-                if ($run) {
-                    break
-                }
-                Write-Host "Run not started, waiting..."
-            }
-            WaitWorkflow -repository $repository -runid $run.id
-            $run
-        }
+        CommitAndPush -commitMessage "Add properties to $([System.IO.Path]::GetFileName($path))" -wait:$wait
     }
 }
 
 function Remove-PropertiesFromJsonFile {
     Param(
         [string] $path,
-        [string[]] $properties
+        [string[]] $properties,
+        [switch] $commit,
+        [switch] $wait
     )
 
     Write-Host -ForegroundColor Yellow "`nRemove Properties from $([System.IO.Path]::GetFileName($path))"
@@ -125,6 +87,10 @@ function Remove-PropertiesFromJsonFile {
         }
     }
     $json | Set-JsonContentLF -path $path
+
+    if ($commit) {
+        CommitAndPush -commitMessage "Remove properties from $([System.IO.Path]::GetFileName($path))" -wait:$wait
+    }
 }
 
 function DisplayTokenAndRepository {
@@ -353,6 +319,23 @@ function CreateNewAppInFolder {
     $id
 }
 
+function ModifyAppInFolder {
+    Param(
+        [string] $folder,
+        [string] $name,
+        [string] $message = "Modify $name",
+        [switch] $commit,
+        [switch] $wait
+    )
+    $alFile = Join-Path $folder "$name.al"
+    $al = Get-Content -Encoding utf8 -Path $alFile
+    # Add another ! to the end of the message and save
+    ($al -join "`n").Replace("!');","!!');") | Set-ContentLF -Path (Join-Path $folder "$name.al")
+    if ($commit) {
+        CommitAndPush -commitMessage $message -wait:$wait
+    }
+}
+
 function CreateAlGoRepository {
     Param(
         [switch] $github,
@@ -516,12 +499,37 @@ function Pull {
 
 function CommitAndPush {
     Param(
-        [string] $commitMessage = "commitmessage"
+        [string] $commitMessage = "commitmessage",
+        [switch] $wait
     )
 
+    if ($wait) {
+        $headers = GetHeaders -token $token
+        Write-Host "Get Previous runs"
+        $url = "https://api.github.com/repos/$repository/actions/runs"
+        $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+        if ($previousrunids) {
+            Write-Host "Previous runs: $($previousrunids -join ', ')"
+        }
+        else {
+            Write-Host "No previous runs found"
+        }
+    }
     invoke-git add *
     invoke-git commit --allow-empty -m "'$commitMessage'"
     invoke-git push
+    if ($wait) {
+        while ($true) {
+            Start-Sleep -Seconds 10
+            $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Where-Object { $previousrunids -notcontains $_.id }
+            if ($run) {
+                break
+            }
+            Write-Host "Run not started, waiting..."
+        }
+        WaitWorkflow -repository $repository -runid $run.id
+        $run
+    }
 }
 
 function MergePRandPull {
