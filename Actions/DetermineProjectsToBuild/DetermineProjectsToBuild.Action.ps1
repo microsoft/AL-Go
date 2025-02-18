@@ -67,22 +67,17 @@ $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
 $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
 $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
-Trace-Information -Message "Incremental builds (projects)" -AdditionalData @{
+$additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]] @{
     "Mode" = $settings.incrementalBuilds.Mode
     "Event" = $ENV:GITHUB_EVENT_NAME
     "Projects" = $allProjects.Count
     "ModifiedProjects" = $modifiedProjects.Count
     "ProjectsToBuild" = $projectsToBuild.Count
 }
+Trace-Information -Message "Incremental builds (projects)" -AdditionalData $additionalDataForTelemetry
 
 # Temp for testing
-@{
-    "Mode" = $settings.incrementalBuilds.Mode
-    "Event" = $ENV:GITHUB_EVENT_NAME
-    "Projects" = $allProjects.Count
-    "ModifiedProjects" = $modifiedProjects.Count
-    "ProjectsToBuild" = $projectsToBuild.Count
-} | ConvertTo-Json | Out-Host
+$additionalDataForTelemetry | ConvertTo-Json | Out-Host
 
 # Add annotation for last known good build
 if ($baselineWorkflowRunId) {

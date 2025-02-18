@@ -421,7 +421,7 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
             "Downloaded" = 0
         }
     }
-    $additionalDataForTelemetry = @{}
+    $additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]] @{}
     $appsToDownload.Keys | ForEach-Object {
         $appType = $_
         $mask = $appsToDownload."$appType".Mask
