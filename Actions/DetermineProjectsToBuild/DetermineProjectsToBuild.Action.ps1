@@ -67,6 +67,14 @@ $projectsJson = ConvertTo-Json $projectsToBuild -Depth 99 -Compress
 $projectDependenciesJson = ConvertTo-Json $projectDependencies -Depth 99 -Compress
 $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
+Trace-Information -Message "Incremental builds (projects)" -AdditionalData @{
+    "Mode" = $settings.incrementalBuilds.Mode
+    "Event" = $ENV:GITHUB_EVENT_NAME
+    "Projects" = $allProjects.Count
+    "ModifiedProjects" = $modifiedProjects.Count
+    "ProjectsToBuild" = $projectsToBuild.Count
+}
+
 # Add annotation for last known good build
 if ($baselineWorkflowRunId) {
     Write-Host "::notice::Last known good build: https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$baselineWorkflowRunId"

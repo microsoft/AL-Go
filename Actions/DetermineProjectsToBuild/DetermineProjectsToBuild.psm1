@@ -408,16 +408,20 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         "appFolders" = @{
             "Mask" = "Apps"
             "Downloads" = $downloadAppFolders
+            "Downloaded" = 0
         }
         "testFolders" = @{
             "Mask" = "TestApps"
             "Downloads" = $downloadTestFolders
+            "Downloaded" = 0
         }
         "bcptTestFolders" = @{
             "Mask" = "TestApps"
             "Downloads" = $downloadBcptTestFolders
+            "Downloaded" = 0
         }
     }
+    $additionalDataForTelemetry = @{}
     $appsToDownload.Keys | ForEach-Object {
         $appType = $_
         $mask = $appsToDownload."$appType".Mask
@@ -454,12 +458,15 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
                         $item = Get-Item -Path $appPath
                         Write-Host "Copy $($item.Name) to build folders"
                         Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
+                        $appsToDownload."$appType".Downloaded++
                     }
                 }
             }
             Remove-Item -Path $tempFolder -Recurse -force
         }
+        $additionalDataForTelemetry += @{ "$($appType)ToDownload" = $appsToDownload."$appType".Downloads.Count; "$($appType)Downloaded" = $appsToDownload."$appType".Downloaded }
     }
+    Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
 }
 
 Export-ModuleMember *-*
