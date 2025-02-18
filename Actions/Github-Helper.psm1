@@ -911,6 +911,74 @@ function FindLatestSuccessfulCICDRun {
     return $lastSuccessfulCICDRun
 }
 
+<#
+    Gets the last PR build run ID for the specified repository and branch.
+    Successful PR runs are those that have a workflow run named 'Pull Request Build' and successfully built all the projects.
+
+    If the latest PR build is not completed or successful, 0 is returned.
+#>
+function FindLatestPRRun {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $commitSha,
+        [Parameter(Mandatory = $true)]
+        [string] $token
+    )
+
+    $headers = GetHeaders -token $token
+    $lastSuccessfulPRRun = 0
+    $per_page = 100
+    $page = 1
+
+    Write-Host "Finding latest PR build run for commit sha $commitSha in repository $repository"
+
+    while($true) {
+        #Get all workflow runs for the given commit sha
+        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&head_sha=$commitSha"
+        Write-Host "- $runsURI"
+        $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
+
+        if($workflowRuns.workflow_runs.Count -eq 0) {
+            # No more workflow runs, breaking out of the loop
+            break
+        }
+
+        #Filter to only PR builds
+        $PRRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq 'Pull Request Build' -and $_.event -in @('pull_request', 'pull_request_target') })
+
+        if ($PRRuns.Count -gt 0) {
+            $latestPrRun = $PRRuns[0]
+            if ($latestPrRun.status -ne 'completed') {
+                Write-Host "::error::Latest PR build run is not completed. ($($latestPrRun.html_url))"
+                break
+            }
+
+            if ($latestPrRun.conclusion -ne 'success') {
+                Write-Host "::error::Latest PR build run is not successful. ($($latestPrRun.html_url))"
+                break
+            }
+            #We only care about the latest PR build. If it is not completed or not successful, we return 0
+            $lastSuccessfulPRRun = $latestPrRun.id
+            break
+        }
+
+        if($lastSuccessfulPRRun -ne 0) {
+            break
+        }
+
+        $page += 1
+    }
+
+    if($lastSuccessfulPRRun -ne 0) {
+        Write-Host "Lastest PR build ($lastSuccessfulPRRun) was successful for branch $branch in repository $repository"
+    } else {
+        Write-Host "Lastest PR build ($lastSuccessfulPRRun) was not successful for branch $branch in repository $repository"
+    }
+
+    return $lastSuccessfulPRRun
+}
 
 <#
     Gets the non-expired artifacts from the specified CICD run.
@@ -928,7 +996,9 @@ function GetArtifactsFromWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $mask,
         [Parameter(Mandatory = $true)]
-        [string] $projects
+        [string] $projects,
+        [Parameter(Mandatory = $false)]
+        [ref] $expiredArtifacts = $false
     )
 
     Write-Host "Getting artifacts for workflow run $workflowRun, mask $mask, projects $projects and version $version"
@@ -967,6 +1037,9 @@ function GetArtifactsFromWorkflowRun {
 
                 if($artifact.expired) {
                     Write-Host "Artifact $($artifact.name) (ID: $($artifact.id)) expired on $($artifact.expired_at)"
+                    if ($expiredArtifacts) {
+                        $expiredArtifacts.value += $artifact
+                    }
                     continue
                 }
 
@@ -1225,4 +1298,33 @@ function GenerateJwtForTokenRequest {
         $signature = Invoke-Command -ScriptBlock $command -ArgumentList "$header.$payload", $privateKey
     }
     return "$header.$payload.$signature"
+}
+
+<#
+ .SYNOPSIS
+  Get the latest commit sha from a PR
+ .PARAMETER repository
+  Repository to search in
+ .PARAMETER prId
+  The PR Id
+ .PARAMETER token
+  Auth token
+#>
+function GetLatestCommitShaFromPRId {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $prId,
+        [Parameter(Mandatory = $true)]
+        [string] $token
+    )
+
+    $headers = GetHeaders -token $token
+
+    $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
+    Write-Host "- $pullsURI"
+    $pr = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
+
+    return $pr.head.sha
 }
