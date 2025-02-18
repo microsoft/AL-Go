@@ -8,72 +8,41 @@ $statusSkipped = " :question:"
 # TestResults is in JUnit format
 # Returns both a summary part and a failures part
 
-#Helper function to build a markdown table. Example output below where whitespace is kept for readability.
-# |TestName|Total|Passed             |Failed|
-# |:---    |---: |---:               | ---: |
-# |Name1   |3    |3:heavy_check_mark:|      | Notice that 0 failed tests results in an empty cell
-# |Name2   |3    |2:heavy_check_mark:|1:x:  | Emojis are only included if the value is larger than 0
-function BuildMarkdownTable {
+#Helper function to build a markdown table.
+#Headers are an array of strings with format "label;location" where location is 'left', 'right' or 'center'
+#Rows is a 2D array of data.
+#ResultEmojis is a hashtable with column index as key and emoji as value. This is needed because we display an emoji with any result > 0, and an empty cell if the result is 0
+function BuildTestMarkdownTable {
     param(
-        #Array of arrays. First array/row is headers, remaining arrays/rows are data.
-        [System.Collections.ArrayList] $data,
-        #Hashtable with column index as key and emoji as value
+        [Parameter(Mandatory = $true)]
+        [string[]] $Headers,
+        [Parameter(Mandatory = $true)]
+        [object[][]] $Rows,
         [hashtable] $resultEmojis
     )
 
-    if ($data.count -lt 2) {
-        Write-Host "::error::Not enough data to build table"
-        return ''
-    }
+    $mdTableSB = [System.Text.StringBuilder]::new()
 
-    $mdTable = [System.Text.StringBuilder]::new()
-    $headerData = $data[0]
-    $columnCount = $headerData.count
-
-    #Build header row
-    foreach($header in $headerData) {
-        $mdTable.Append("|$header") | Out-Null
-    }
-    $mdTable.Append("|\n") | Out-Null
-
-    #Build row delimiter
-    for ($i=0; $i -lt $columnCount; $i++) {
-        if ($i -eq 0) {
-            $mdTable.Append("|:---") | Out-Null
-        }
-        else {
-            $mdTable.Append("|---:") | Out-Null
-        }
-    }
-    $mdTable.Append("|\n") | Out-Null
-
-    #Build rows
-    for ($i=1; $i -lt $data.count; $i++) {
-        $rowData = $data[$i]
-        if ($rowData.count -ne $columnCount) {
-            Write-Host "::error::Row $i has a different number of columns ($($rowData.count)) than the header ($($columnCount))"
-            return ''
-        }
-
-        for ($j=0; $j -lt $rowData.count; $j++) {
-            $cellData = $rowData[$j]
-            #If an emoji exist for this index and the value is larger than 0 we should display both number an emoji.
-            if ($resultEmojis -and $resultEmojis.ContainsKey($j) -and $cellData -gt 0) {
-                $cell = "$cellData$($resultEmojis[$j])"
+    foreach($row in $Rows) {
+        Write-Host $row
+        for($i=0; $i -lt $row.Length; $i++) {
+            #If resultEmojis has a key for this column, we want to display an emoji for values > 0 and an empty cell for 0
+            if ($resultEmojis.ContainsKey($i)) {
+                if ($row[$i] -gt 0) {
+                    $row[$i] = "$($row[$i])$($resultEmojis[$i])"
+                }
+                else {
+                    $row[$i] = $null
+                }
             }
-            #For a cleaner look, values of 0 should be displayed as empty.
-            elseif ($cellData -eq 0) {
-                $cell = ''
-            }
-            else {
-                $cell = $cellData
-            }
-            $mdTable.Append("|$cell") | Out-Null
         }
-        $mdTable.Append("|\n") | Out-Null
+        Write-Host $row
     }
 
-    return $mdTable
+    $mdTable = BuildMarkdownTable -Headers $Headers -Rows $Rows
+    $mdTableSB.Append($mdTable) | Out-Null
+
+    return $mdTableSB
 }
 
 class FailureNode {
