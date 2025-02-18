@@ -332,7 +332,7 @@ function GetWorkflowContentWithChangesFromSettings {
         else {
             Trace-DeprecationWarning -Message "$oldWorkflowScheduleKey is deprecated" -DeprecationTag "_workflow_Schedule" -WillBecomeError
             # Convert the old <workflow>Schedule setting to the new WorkflowSchedule setting
-            $repoSettings."$workflowScheduleKey" = $repoSettings."$oldWorkflowScheduleKey"
+            $repoSettings."$workflowScheduleKey" = @{ "cron" = $repoSettings."$oldWorkflowScheduleKey" }
         }
         # <--- REPLACE WITH ERROR AFTER October 1st 2025
     }
