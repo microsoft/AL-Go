@@ -76,9 +76,6 @@ $additionalDataForTelemetry.Add("ProjectsToBuild", $projectsToBuild.Count)
 
 Trace-Information -Message "Incremental builds (projects)" -AdditionalData $additionalDataForTelemetry
 
-# Temp for testing
-$additionalDataForTelemetry | ConvertTo-Json | Out-Host
-
 # Add annotation for last known good build
 if ($baselineWorkflowRunId) {
     Write-Host "::notice::Last known good build: https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$baselineWorkflowRunId"
