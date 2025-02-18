@@ -135,6 +135,7 @@ try {
             $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         }
         catch {
+            OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
             $buildAll = $true
         }
         if (!$buildAll) {
