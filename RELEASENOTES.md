@@ -18,6 +18,9 @@
 
 ### New Repository Settings
 
+- `deployTo<environment>` now has two additional properties:
+  - `includeTestAppsInSandboxEnvironment`, which deploys test apps and their dependencies to the specified sandbox environment if set to `true`. Deployment will fail if used on a Prod environment or if the test app has a dependency on Tests-TestLibraries. Default value is `false`.
+  - `excludeAppIds`, which is an array of app ids which will be excluded from deployment. Default value is `[]`
 - `incrementalBuilds` - is a structure defining how you want AL-Go to handle incremental builds. When using incremental builds for a build, AL-Go will look for the latest successful build, newer than the defined `retentionDays` and only rebuild projects or apps (based on `mode`) which needs to be rebuilt. Properties in the structure includes:
   - `onPush` - set this property to **true** in order to enable incremental builds in CI/CD triggered by a merge/push event. Default is **false**.
   - `onPull_Request` - set this property to **false** in order to disable incremental builds in Pull Request workflows. Default is **true**.

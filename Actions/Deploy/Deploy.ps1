@@ -59,6 +59,7 @@ function InstallOrUpgradeApps {
         $schemaSyncMode = 'Force'
         $installMode = 'upgrade'
     }
+
     $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
     New-Item -ItemType Directory -Path $tempPath | Out-Null
     try {
@@ -100,6 +101,55 @@ function InstallOrUpgradeApps {
     }
 }
 
+function InstallUnknownDependencies {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        [string[]] $apps,
+        [string] $installMode
+    )
+
+    Write-Host "Installing unknown dependencies: $($apps -join ', ')"
+    try {
+        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
+        foreach($app in $apps) {
+            #The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
+            $appId, $appName = $app.Split(':')
+            $appVersion = ""
+            if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
+                $appVersion = $matches.1
+            } else {
+                Write-Host "Version not found or incorrect format for unknown dependency $app"
+                continue
+            }
+            #Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
+            $appJson = @{
+                "name" = $appName
+                "id" = $appId
+                "Version" = $appVersion
+            }
+
+            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
+            if ($needsUpgrade) {
+                if ($installedApp.publishedAs.Trim() -eq 'Dev') {
+                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    $needsUpgrade = $false
+                }
+            }
+            if ($needsUpgrade -or $needsInstall) {
+                Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
+                # Update installed apps list as dependencies may have changed / been installed
+                $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+            }
+        }
+    }
+    finally {
+        Write-Host "Unknown dependencies installed or upgraded"
+    }
+}
+
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
@@ -138,7 +188,18 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $project = $_.Replace('\','_').Replace('/','_')
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
         Write-Host "project '$project'"
+
+        $allApps = @()
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+        $projectTestApps = @()
+        $unknownDependencies = @()
+        if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
+            Write-Host "Including test apps for deployment"
+            $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
+        }
+        if ($deploymentSettings.excludeAppIds) {
+            Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
+        }
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
             $dependencies += @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Dependencies-*.*.*.*") | ForEach-Object { $_.FullName })
         }
@@ -148,7 +209,46 @@ if (Test-Path $artifactsFolder -PathType Container) {
             }
         }
         else {
-            $apps += $projectApps
+            $allApps += $projectApps
+        }
+        if (!($projectTestApps)) {
+            if ($project -ne '*') {
+                Write-Host "::warning::There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
+            }
+        }
+        else {
+            $allApps += $projectTestApps
+        }
+        #Go through all .app files and exclude any with ids in the excludeAppIds list
+        if ($allApps) {
+            foreach($folder in $allApps) {
+                foreach($app in (Get-ChildItem -Path $folder -Filter "*.app")) {
+                    Write-Host "Processing app: $($app.Name)"
+                    $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
+                    if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
+                        #If app should be included, verify that it does not depend on Tests-TestLibraries
+                        $unknownDependenciesForApp = @()
+                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
+                        $unknownDependenciesForApp | ForEach-Object {
+                            if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
+                                Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
+                                continue
+                            }
+                        }
+
+                        $apps += $app.FullName
+                        $unknownDependenciesForApp | ForEach-Object {
+                            if ($unknownDependencies -notcontains $_) {
+                                $unknownDependencies += $_
+                            }
+                        }
+                        Write-Host "App $($app.Name) with id $($appJson.id) included in deployment"
+                    }
+                    else {
+                        Write-Host "App $($app.Name) with id $($appJson.id) excluded from deployment"
+                    }
+                }
+            }
         }
     }
 }
@@ -230,9 +330,15 @@ else {
             # Continuous deployment is undefined in settings - we will not deploy to production environments
             Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment"
         }
+        elseif (!$sandboxEnvironment -and $deploymentSettings.includeTestAppsInSandboxEnvironment) {
+            Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment, as test apps can only be deployed to sandbox environments"
+        }
         else {
             if ($dependencies) {
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode
+            }
+            if ($unknownDependencies) {
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $unknownDependencies -installMode $deploymentSettings.DependencyInstallMode
             }
             if ($scope -eq 'Dev') {
                 if (!$sandboxEnvironment) {
