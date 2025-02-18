@@ -138,6 +138,7 @@ try {
             $buildAll = $true
         }
         if (!$buildAll) {
+            Write-Host "Get unmodified apps from baseline workflow run"
             Get-UnmodifiedAppsFromBaselineWorkflowRun `
                 -token $token `
                 -settings $settings `
