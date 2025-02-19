@@ -307,6 +307,10 @@ function FindMismatchedHashtableValue($Prefix, $ActualValue, $ExpectedValue) {
     }
 }
 
+<#
+.SYNOPSIS
+Get the root of the repository
+#>
 function GetRepoRoot {
     return (git rev-parse --show-toplevel)
 }
