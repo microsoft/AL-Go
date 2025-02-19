@@ -17,7 +17,7 @@ function BuildTestMarkdownTable {
         [Parameter(Mandatory = $true)]
         [string[]] $Headers,
         [Parameter(Mandatory = $true)]
-        [object[][]] $Rows,
+        [System.Collection.ArrayList] $Rows,
         [hashtable] $resultEmojis
     )
 
@@ -138,13 +138,13 @@ function GetTestResultSummaryMD {
                 $totalSkipped += $testsuite.skipped
             }
             Write-Host "$($appNames.Count) TestApps, $totalTests tests, $totalFailed failed, $totalSkipped skipped, $totalTime seconds"
-            $mdTableHeaders = @("Test app", "Tests", "Passed", "Failed", "Skipped", "Time")
+            $mdTableHeaders = @("Test app;left", "Tests;right", "Passed;right", "Failed;right", "Skipped;right", "Time;right")
             $mdTableEmojis = @{
                 2 = $statusOK
                 3 = $statusError
                 4 = $statusSkipped
             }
-            $mdTableData = [System.Collections.ArrayList]@(,$mdTableHeaders)
+            $mdTableRows = [System.Collections.ArrayList]@()
             foreach($appName in $appNames) {
                 $appTests = 0
                 $appTime = 0.0
@@ -160,7 +160,7 @@ function GetTestResultSummaryMD {
                 $appPassed = $appTests-$appFailed-$appSkipped
                 Write-Host "- $appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds"
                 $mdTableRow = @( $appName, $appTests, $appPassed, $appFailed, $appSkipped, $appTime )
-                $mdTableData.Add($mdTableRow) | Out-Null
+                $mdTableRows.Add($mdTableRow) | Out-Null
                 if ($appFailed -gt 0) {
                     $rootFailureNode = [FailureNode]::new($false)
                     $rootFailureNode.summaryDetails = "$appName, $appTests tests, $appPassed passed, $appFailed failed, $appSkipped skipped, $appTime seconds"
@@ -191,7 +191,7 @@ function GetTestResultSummaryMD {
                     }
                     $failuresSB = BuildHTMLFailureSummary -failureStructure $rootFailureNode
                 }
-                $summarySb = BuildMarkdownTable -data $mdTableData -resultEmojis $mdTableEmojis
+                $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
             }
         }
         if ($totalFailed -gt 0) {
@@ -294,13 +294,18 @@ function GetBcptSummaryMD {
     }
 
     $summarySb = [System.Text.StringBuilder]::new()
+    $mdTableHeaders = @()
+    $mdTableEmojis = @{}
+    $mdTableRows = [System.Collections.ArrayList]@()
     if ($baseLine) {
-        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration (ms)|Duration base (ms)|Duration diff (ms)|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
-        $summarySb.Append("|:---------|:----------|:------------|:--------|:----:|------------:|-----------------:|-----------------:|------------:|--------:|-------------:|-------------:|-------------:|\n") | Out-Null
+        $mdTableHeaders = @("BCPT Suite;l", "Codeunit ID;l", "Codeunit Name;l", "Operation;l", "Status;c", "Duration (ms);r", "Duration base (ms);r", "Duration diff (ms);r", "Duration diff;r", "SQL Stmts;r", "SQL Stmts base;r", "SQL Stmts diff;r", "SQL Stmts diff;r")
+        # $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration (ms)|Duration base (ms)|Duration diff (ms)|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
+        # $summarySb.Append("|:---------|:----------|:------------|:--------|:----:|------------:|-----------------:|-----------------:|------------:|--------:|-------------:|-------------:|-------------:|\n") | Out-Null
     }
     else {
-        $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Duration (ms)|SQL Stmts|\n") | Out-Null
-        $summarySb.Append("|:---------|:----------|:------------|:--------|------------:|--------:|\n") | Out-Null
+        $mdTableHeaders = @("BCPT Suite;l", "Codeunit ID;l", "Codeunit Name;l", "Operation;l", "Duration (ms);r", "SQL Stmts;r")
+        # $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Duration (ms)|SQL Stmts|\n") | Out-Null
+        # $summarySb.Append("|:---------|:----------|:------------|:--------|------------:|--------:|\n") | Out-Null
     }
 
     $lastSuiteName = ''
@@ -342,36 +347,47 @@ function GetBcptSummaryMD {
                 }
 
                 $pctDurationMin = ($durationMin-$baseDurationMin)*100/$baseDurationMin
-                $durationMinStr = "$($durationMin.ToString("#"))|"
-                $baseDurationMinStr = "$($baseDurationMin.ToString("#"))|"
-                $diffDurationMinStr = "$($diffDurationMin.ToString("+#;-#;0"))|$($pctDurationMin.ToString('+#;-#;0'))%|"
+                # $durationMinStr = "$($durationMin.ToString("#"))|"
+                # $baseDurationMinStr = "$($baseDurationMin.ToString("#"))|"
+                # $diffDurationMinStr = "$($diffDurationMin.ToString("+#;-#;0"))|$($pctDurationMin.ToString('+#;-#;0'))%|"
+                $durationMinStr = "$($durationMin.ToString("#"))"
+                $baseDurationMinStr = "$($baseDurationMin.ToString("#"))"
+                $diffDurationMinStr = "$($diffDurationMin.ToString("+#;-#;0"))"
+                $diffDurationMinPctStr = "$($pctDurationMin.ToString('+#;-#;0'))%"
 
                 $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseNumberOfSQLStmts)*100/$baseNumberOfSQLStmts
-                $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("#"))|"
-                $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("#"))|"
-                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("+#;-#;0"))|$($pctNumberOfSQLStmts.ToString('+#;-#;0'))%|"
+                # $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("#"))|"
+                # $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("#"))|"
+                # $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("+#;-#;0"))|$($pctNumberOfSQLStmts.ToString('+#;-#;0'))%|"
+                $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("#"))"
+                $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("#"))"
+                $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("+#;-#;0"))"
+                $diffNumberOfSQLStmtsPctStr = "$($pctNumberOfSQLStmts.ToString('+#;-#;0'))%"
 
                 $thisOperationName = ''; if ($operationName -ne $lastOperationName) { $thisOperationName = $operationName }
                 $thisCodeunitName = ''; if ($codeunitName -ne $lastCodeunitName) { $thisCodeunitName = $codeunitName; $thisOperationName = $operationName }
                 $thisCodeunitID = ''; if ($codeunitID -ne $lastCodeunitID) { $thisCodeunitID = $codeunitID; $thisOperationName = $operationName }
                 $thisSuiteName = ''; if ($suiteName -ne $lastSuiteName) { $thisSuiteName = $suiteName; $thisOperationName = $operationName }
 
+                $mdTableRow = @()
                 if (!$baseLine) {
                     # No baseline provided
-                    $statusStr = ''
-                    $baseDurationMinStr = ''
-                    $diffDurationMinStr = ''
-                    $baseNumberOfSQLStmtsStr = ''
-                    $diffNumberOfSQLStmtsStr = ''
+                    $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $durationMinStr, $numberOfSQLStmtsStr)
+                    # $statusStr = ''
+                    # $baseDurationMinStr = ''
+                    # $diffDurationMinStr = ''
+                    # $baseNumberOfSQLStmtsStr = ''
+                    # $diffNumberOfSQLStmtsStr = ''
                 }
                 else {
                     if (!$baseLineFound) {
                         # Baseline provided, but not found for this operation
                         $statusStr = $statusSkipped
-                        $baseDurationMinStr = 'N/A|'
-                        $diffDurationMinStr = '||'
-                        $baseNumberOfSQLStmtsStr = 'N/A|'
-                        $diffNumberOfSQLStmtsStr = '||'
+                        $baseDurationMinStr = 'N/A'#'N/A|'
+                        $diffDurationMinStr = ''#'||'
+                        $baseNumberOfSQLStmtsStr = 'N/A'#'N/A|'
+                        $diffNumberOfSQLStmtsStr = ''#'||'
+                        $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $null, $null, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $null, $null)
                     }
                     else {
                         $statusStr = $statusOK
@@ -405,11 +421,12 @@ function GetBcptSummaryMD {
                                 }
                             }
                         }
+                        $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $diffDurationMinStr, $diffDurationMinPctStr, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $diffNumberOfSQLStmtsStr. $diffNumberOfSQLStmtsPctStr)
                     }
-                    $statusStr += '|'
+                    # $statusStr += '|'
                 }
-
-                $summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseDurationMinStr$diffDurationMinStr$numberOfSQLStmtsStr$baseNumberOfSQLStmtsStr$diffNumberOfSQLStmtsStr\n") | Out-Null
+                $mdTableRows.Add($mdTableRow) | Out-Null
+                #$summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseDurationMinStr$diffDurationMinStr$numberOfSQLStmtsStr$baseNumberOfSQLStmtsStr$diffNumberOfSQLStmtsStr\n") | Out-Null
 
                 $lastSuiteName = $suiteName
                 $lastCodeunitID = $codeUnitID
@@ -419,6 +436,7 @@ function GetBcptSummaryMD {
         }
     }
 
+    $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
     if ($baseLine) {
         $summarySb.Append("\n<i>Used baseline provided in $([System.IO.Path]::GetFileName($baseLinePath)).</i>") | Out-Null
     }
@@ -453,13 +471,13 @@ function GetPageScriptingTestResultSummaryMD {
 
             #Write total summary for all test suites
             Write-Host "$totalTests tests, $totalPassed passed, $totalFailed failed, $totalSkipped skipped, $totalTime seconds"
-            $mdTableHeaders = @("Suite", "Tests", "Passed", "Failed", "Skipped", "Time")
+            $mdTableHeaders = @("Suite;left", "Tests;right", "Passed;right", "Failed;right", "Skipped;right", "Time;right")
             $mdTableEmojis = @{
                 2 = $statusOK
                 3 = $statusError
                 4 = $statusSkipped
             }
-            $mdTableData = [System.Collections.ArrayList]@(,$mdTableHeaders)
+            $mdTableRows = [System.Collections.ArrayList]@()
 
             $rootFailureNode = [FailureNode]::new($false)
             foreach($testsuite in $testResults.testsuites.testsuite) {
@@ -469,7 +487,7 @@ function GetPageScriptingTestResultSummaryMD {
                 $suiteSkipped = $testsuite.skipped
                 $suitePassed = $suiteTests - $suiteFailed - $suiteSkipped
                 $mdTableRow = @($testsuite.name, $suiteTests, $suitePassed, $suiteFailed, $suiteSkipped, $suiteTime)
-                $mdTableData.Add($mdTableRow) | Out-Null
+                $mdTableRows.Add($mdTableRow) | Out-Null
 
                 if ($suiteFailed -gt 0 ) {
                     $suiteFailureNode = [FailureNode]::new($false)
@@ -493,7 +511,7 @@ function GetPageScriptingTestResultSummaryMD {
                 }
             }
             $failuresSb = BuildHTMLFailureSummary -failureStructure $rootFailureNode
-            $summarySb = BuildMarkdownTable -data $mdTableData -resultEmojis $mdTableEmojis
+            $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
         }
         if ($totalFailed -gt 0) {
             $failuresSummaryMD = "<i>$totalFailed failing tests, download test results to see details</i>"
