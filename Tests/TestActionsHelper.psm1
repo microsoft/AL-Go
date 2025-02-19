@@ -307,6 +307,10 @@ function FindMismatchedHashtableValue($Prefix, $ActualValue, $ExpectedValue) {
     }
 }
 
+function GetRepoRoot {
+    return (git rev-parse --show-toplevel)
+}
+
 Add-AssertionOperator -Name MatchHashtable -Test $function:PesterMatchHashtable
 
 Export-ModuleMember -Function GetActionScript
@@ -314,3 +318,4 @@ Export-ModuleMember -Function YamlTest
 Export-ModuleMember -Function GetWorkflowsInPath
 Export-ModuleMember -Function TestActionsReferences
 Export-ModuleMember -Function TestWorkflowReferences
+Export-ModuleMember -Function GetRepoRoot
