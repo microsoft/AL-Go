@@ -1,5 +1,5 @@
 ﻿param(
-    [Parameter(Mandatory = $false, HelpMessage = "Comma-separated value of branch names patterns to include if they exist. If not specified, all remote branches are returned. Wildcards are supported.")]
+    [Parameter(Mandatory = $false, HelpMessage = "Comma-separated value of branch names patterns to include if they exist. If not specified, only the current branch is returned. Wildcards are supported.")]
     [string] $includeBranches
 )
 
