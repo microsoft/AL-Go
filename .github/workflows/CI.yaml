@@ -25,22 +25,16 @@ jobs:
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Run Tests
+      - name: Run AL-Go Actions Tests
         run: |
-          . (Join-Path "." "Tests/runtests.ps1")
+          . (Join-Path "." "Tests/runtests.ps1") -Path "Tests"
 
       - name: Test AL-Go Workflows
         if: github.repository_owner == 'microsoft'
         run: |
-          try {
-            $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-            $result = Invoke-Pester @(Get-ChildItem -Path (Join-Path "." "Tests/WorkflowSanitation/*.Test.ps1")) -passthru
-            if ($result.FailedCount -gt 0) {
-              Write-Host "::Error::$($result.FailedCount) tests are failing"
-              $host.SetShouldExit(1)
-            }
-          }
-          catch {
-            Write-Host "::Error::Error when running tests. The Error was $($_.Exception.Message)"
-            $host.SetShouldExit(1)
-          }
+          . (Join-Path "." "Tests/runtests.ps1") -Path "Tests/WorkflowSanitation"
+
+      - name: Test aka.ms links in markdown files
+        if: github.repository_owner == 'microsoft'
+        run: |
+          . (Join-Path "." "Tests/runtests.ps1") -Path "Tests/MarkdownLinks"
