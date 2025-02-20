@@ -3,6 +3,10 @@ name: Deploy
 run-name: "Deploy from [${{ github.ref_name }}] to [${{ inputs.branch }}]"
 
 on:
+  workflow_run:
+    workflows: [ "End to end tests" ]
+    types: [ completed ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       branch:
@@ -34,8 +38,12 @@ on:
         default: 'latest'
 
 permissions:
-  contents: read
+  contents: write
   actions: read
+
+concurrency:
+  group: 'deploy'
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -60,12 +68,21 @@ jobs:
       - name: Create inputs
         id: CreateInputs
         run: |
-          $branch = '${{ github.event.inputs.branch }}'
-          $copyToMain = '${{ github.event.inputs.copyToMain }}'
-          $directCommit = '${{ github.event.inputs.directCommit }}'
-          $requireEndToEndTests = '${{ github.event.inputs.requireEndToEndTests }}'
-          $createRelease = '${{ github.event.inputs.createRelease }}'
-          $defaultBcContainerHelperVersion = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
+            $branch = 'preview'
+            $copyToMain = 'false'
+            $directCommit = 'false'
+            $requireEndToEndTests = 'true'
+            $createRelease = 'false'
+            $defaultBcContainerHelperVersion = 'preview'
+          } else {
+            $branch = '${{ github.event.inputs.branch }}'
+            $copyToMain = '${{ github.event.inputs.copyToMain }}'
+            $directCommit = '${{ github.event.inputs.directCommit }}'
+            $requireEndToEndTests = '${{ github.event.inputs.requireEndToEndTests }}'
+            $createRelease = '${{ github.event.inputs.createRelease }}'
+            $defaultBcContainerHelperVersion = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
+          }
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "branch=$branch"
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "copyToMain=$copyToMain"
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "directCommit=$directCommit"
