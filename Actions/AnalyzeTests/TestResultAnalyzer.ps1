@@ -17,7 +17,7 @@ function BuildTestMarkdownTable {
         [Parameter(Mandatory = $true)]
         [string[]] $Headers,
         [Parameter(Mandatory = $true)]
-        [System.Collection.ArrayList] $Rows,
+        [System.Collections.ArrayList] $Rows,
         [hashtable] $resultEmojis
     )
 
