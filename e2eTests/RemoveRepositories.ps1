@@ -11,7 +11,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -e2epat $e2epat -repository ''
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository ''
 
 RemoveRepository -repository "$githubOwner/$actionsRepo"
 RemoveRepository -repository "$githubOwner/$perTenantExtensionRepo"

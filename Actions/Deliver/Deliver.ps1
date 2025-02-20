@@ -172,9 +172,9 @@ foreach ($thisProject in $projectList) {
     }
 
     # Check if there is a custom script to run for the delivery target
-    $customScript = Join-Path $baseFolder ".github/DeliverTo$deliveryTarget.ps1"
-
-    if (Test-Path $customScript -PathType Leaf) {
+    # Use Get-ChildItem to support Linux (case sensitive filenames) as well as Windows
+    $customScript = Get-ChildItem -Path (Join-Path $baseFolder '.github') | Where-Object { $_.Name -eq "DeliverTo$deliveryTarget.ps1" } | ForEach-Object { $_.FullName }
+    if ($customScript) {
         Write-Host "Found custom script $customScript for delivery target $deliveryTarget"
 
         $projectSettings = ReadSettings -baseFolder $baseFolder -project $thisProject
@@ -248,13 +248,18 @@ foreach ($thisProject in $projectList) {
             }
             elseif ($folder.Count -eq 1) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
-                    $parameters = @{
-                        "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-                        "preReleaseTag"    = $preReleaseTag
-                        "appFile"          = $_.FullName
+                    $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
+                    $packageName = Get-BcNuGetPackageId -publisher $appJson.publisher -name $appJson.name -id $appJson.id -version $appJson.version
+                    $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $appJson.version -select Exact -allowPrerelease
+                    if (-not $feed) {
+                        $parameters = @{
+                            "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                            "preReleaseTag"    = $preReleaseTag
+                            "appFile"          = $_.FullName
+                        }
+                        $package = New-BcNuGetPackage @parameters
+                        Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
                     }
-                    $package = New-BcNuGetPackage @parameters
-                    Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
                 }
             }
         }

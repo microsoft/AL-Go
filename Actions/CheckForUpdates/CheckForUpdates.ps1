@@ -16,6 +16,7 @@
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\TelemetryHelper.psm1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
 
@@ -63,7 +64,7 @@ $headers = GetHeaders -token $readToken
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
 # Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
-$repoSettings = ReadSettings -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
+$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 $unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
 $includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
@@ -128,7 +129,7 @@ $removeFiles = @()
 $depth = 1
 if ($projects.Count -gt 1) {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
-    $allProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100
+    $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100
     $depth = $buildOrder.Count
     Write-Host "Calculated dependency depth to be $depth"
 }
@@ -212,7 +213,8 @@ else {
     # $update set, update the files
     try {
         # If a pull request already exists with the same REF, then exit
-        $commitMessage = "[$updateBranch] Update AL-Go System Files from $templateInfo -  $templateSha"
+        $branchSHA = RunAndCheck git rev-list -n 1 $updateBranch
+        $commitMessage = "[$($updateBranch)@$($branchSHA.SubString(0,7))] Update AL-Go System Files from $templateInfo - $($templateSha.SubString(0,7))"
 
         # Get Token with permissions to modify workflows in this repository
         $writeToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
