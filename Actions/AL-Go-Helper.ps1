@@ -845,7 +845,8 @@ function ResolveProjectFolders {
         [ref] $projectSettings
     )
     $projectPath = Join-Path $baseFolder $project -Resolve
-
+    Write-Host "PROJECTPATH: $projectPath"
+    
     Push-Location $projectPath
 
     try {
@@ -2452,6 +2453,7 @@ function GetFoldersFromAllProjects {
         Write-Host $baseFolder
         Write-Host $projectSettings.appFolders
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+        Write-Host $projectSettings.appFolders
         $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Join-Path $project "$_".Substring(2) } )
     }
     return $folders
