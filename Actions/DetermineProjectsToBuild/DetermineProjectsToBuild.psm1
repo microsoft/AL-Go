@@ -394,7 +394,11 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
     })
     Pop-Location
+    OutputMessageAndArray -message "All folders" -arrayOfStrings $allFolders
     OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
+
+    Write-Host $baseFolder
+
     Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
     OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
     # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
