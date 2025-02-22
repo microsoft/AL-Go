@@ -389,7 +389,7 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     $unknownDependencies = @()
     $knownApps = @()
     Push-Location $ENV:GITHUB_WORKSPACE
-    $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
+    $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } ) | Select-Object -Unique
     $modifiedFolders = @($allFolders | Where-Object {
         $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
     })
