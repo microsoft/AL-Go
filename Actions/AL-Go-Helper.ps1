@@ -845,7 +845,6 @@ function ResolveProjectFolders {
         [ref] $projectSettings
     )
     $projectPath = Join-Path $baseFolder $project -Resolve
-    Write-Host "PROJECTPATH: $projectPath"
 
     Push-Location $projectPath
 
