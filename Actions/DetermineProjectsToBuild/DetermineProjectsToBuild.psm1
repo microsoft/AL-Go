@@ -388,14 +388,10 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     $skipFolders = @()
     $unknownDependencies = @()
     $knownApps = @()
-    Push-Location $ENV:GITHUB_WORKSPACE
-    Write-Host "--------------------- $baseFolder"
-    Write-Host $ENV:GITHUB_WORKSPACE
     $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
     $modifiedFolders = @($allFolders | Where-Object {
         $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
     })
-    Pop-Location
     OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
     Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
     OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
