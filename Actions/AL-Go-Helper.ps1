@@ -2443,7 +2443,7 @@ function GetFoldersFromAllProjects {
         [string] $baseFolder
     )
 
-    Push-Location $ENV:GITHUB_WORKSPACE
+    Push-Location $baseFolder
     try {
         $settings = ReadSettings -baseFolder $baseFolder
         $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
