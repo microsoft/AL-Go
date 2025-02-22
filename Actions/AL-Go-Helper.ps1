@@ -2456,7 +2456,7 @@ function GetFoldersFromAllProjects {
             return $relativePath.Substring(2)
         } )
     }
-    return $folders
+    return $folders | Select-Object -Unique
 }
 
 function GetPackageVersion($packageName) {
