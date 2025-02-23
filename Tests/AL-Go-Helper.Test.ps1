@@ -324,4 +324,61 @@
         Pop-Location
         Remove-Item -Path $tempName -Recurse -Force
     }
+
+    It 'GetFoldersFromAllProjects' {
+        # Mock Write-Host { }
+        # Mock Out-Host { }
+
+        $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        $githubFolder = Join-Path $tempName ".github"
+        $projects = [ordered]@{
+            "A" = @(
+                "app1",
+                "app2",
+                "app1.test"
+            )
+            "projects/B" = @(
+                "../../src/app3"
+                "../../src/app4"
+            )
+            "projects/C" = @(
+                "../../src/app3"
+                "../../A/app1"
+            )
+        }
+        foreach($project in $projects.Keys) {
+            $projectFolder = Join-Path $tempName $project
+            Write-Host $projectFolder
+            New-Item $projectFolder -ItemType Directory | Out-Null
+            $projectSettings = @{
+                "appFolders" = @($projects[$project] | Where-Object { $_ -notlike '*.test' })
+                "testFolders" = @($projects[$project] | Where-Object { $_ -like '*.test' })
+            }
+            $algoFolder = Join-Path $projectFolder $ALGoFolderName
+            New-Item $algoFolder -ItemType Directory | Out-Null
+            Set-Content -Path (Join-Path $algoFolder "settings.json") -value (ConvertTo-Json -InputObject $projectSettings)
+            foreach($folder in $projects[$project]) {
+                $folderPath = Join-Path $projectFolder $folder
+                if (!(Test-Path $folderPath)) {
+                    New-Item $folderPath -ItemType Directory | Out-Null
+                    Set-Content -Path (Join-Path $folderPath "app.json") -Value '{"id": "123"}'
+                }
+            }
+        }
+
+        $repoSettings = @{
+            "type" = "PTE"
+        }
+        New-Item $githubFolder -ItemType Directory | Out-Null
+        Set-Content -Path (Join-Path $githubFolder "AL-Go-settings.json") -value (ConvertTo-Json -InputObject $repoSettings)
+
+        $folders = GetFoldersFromAllProjects -baseFolder $tempName | Sort-Object
+        $folders | Should -be @(
+            "A$([System.IO.Path]::DirectorySeparatorChar)app1"
+            "A$([System.IO.Path]::DirectorySeparatorChar)app1.test"
+            "A$([System.IO.Path]::DirectorySeparatorChar)app2"
+            "src$([System.IO.Path]::DirectorySeparatorChar)app3"
+            "src$([System.IO.Path]::DirectorySeparatorChar)app4"
+        )
+    }
 }
