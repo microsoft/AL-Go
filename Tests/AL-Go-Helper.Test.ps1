@@ -326,8 +326,8 @@
     }
 
     It 'GetFoldersFromAllProjects' {
-        # Mock Write-Host { }
-        # Mock Out-Host { }
+        Mock Write-Host { }
+        Mock Out-Host { }
 
         $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         $githubFolder = Join-Path $tempName ".github"
