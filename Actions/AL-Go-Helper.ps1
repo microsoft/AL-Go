@@ -2443,15 +2443,27 @@ function GetFoldersFromAllProjects {
         [string] $baseFolder
     )
 
-    $settings = ReadSettings -baseFolder $baseFolder
-    $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
-    $folders = @()
-    foreach($project in $projects) {
-        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
-        ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
-        $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object { Join-Path $project "$_".Substring(2) } )
+    Push-Location $baseFolder
+    try {
+        $settings = ReadSettings -baseFolder $baseFolder
+        $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
+        $folders = @()
+        foreach($project in $projects) {
+            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
+            ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+            $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
+                $fullPath = Join-Path $baseFolder "$project/$_" -Resolve
+                $relativePath = Resolve-Path -Path $fullPath -Relative
+                # Remove the leading .\ from the relative path
+                return $relativePath.Substring(2)
+            } )
+        }
     }
-    return $folders
+    finally {
+        Pop-Location
+    }
+    return $folders | Select-Object -Unique
+
 }
 
 function GetPackageVersion($packageName) {
