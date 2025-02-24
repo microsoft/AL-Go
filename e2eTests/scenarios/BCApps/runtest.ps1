@@ -85,22 +85,23 @@ $testAppCount | Should -BeGreaterThan 0
 
 # Modify a file in the repository and create a Pull Request
 $branch = "e2etest"
+$title = "End 2 end test"
 invoke-git checkout -b $branch
 
 $fileToChange = Join-Path $repoPath "src/Tools/Performance Toolkit/App/src/BCPTTestSuite.Codeunit.al"
 $fileContent = Get-Content -Path $fileToChange -Encoding UTF8
-$fileContent[0] = $fileContent[0] + "// Test"
+$fileContent[0] = $fileContent[0] + "// $title"
 Set-Content -Path $fileToChange -Value $fileContent -Encoding UTF8
 
 invoke-git add $fileToChange
-invoke-git commit -m "End 2 end test"
+invoke-git commit -m $title
 invoke-git push --set-upstream origin $branch
 
-invoke-gh pr create --fill --head $branch --repo $repository --base main --body "End 2 End test"
+invoke-gh pr create --fill --head $branch --repo $repository --base main --body $title
 
 Start-Sleep -Seconds 60
 
-$prs = @(invoke-gh -returnValue pr list --repo $repository)
+$prs = @(invoke-gh -returnValue pr list --repo $repository | Where-Object { $_.Contains($title) })
 if ($prs.Count -eq 0) {
     throw "No Pull Request was created"
 }
