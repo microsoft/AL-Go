@@ -40,7 +40,7 @@ function Test-ArtifactsFromRun {
         [string] $runid,
         [string] $folder,
         [hashtable] $expectedArtifacts = @{},
-        [string] $expectedNumberOfTests = 0,
+        [int] $expectedNumberOfTests = 0,
         [string] $repoVersion = "",
         [string] $appVersion = ""
     )
