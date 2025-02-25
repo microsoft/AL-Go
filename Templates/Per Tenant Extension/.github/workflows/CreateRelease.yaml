@@ -220,6 +220,7 @@ jobs:
         env:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
         with:
+          github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
             var bodyMD = process.env.bodyMD
             const createReleaseResponse = await github.rest.repos.createRelease({
@@ -278,6 +279,7 @@ jobs:
         env:
           releaseId: ${{ needs.createrelease.outputs.releaseId }}
         with:
+          github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
             const releaseId = process.env.releaseId
             const assetPath = '${{ matrix.name }}.zip'
