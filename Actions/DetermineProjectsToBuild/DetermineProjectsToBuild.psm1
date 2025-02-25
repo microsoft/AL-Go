@@ -1,4 +1,4 @@
-﻿Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 <#
     .Synopsis
@@ -6,95 +6,39 @@
 #>
 function Get-ModifiedFiles {
     param(
-        [Parameter(HelpMessage = "The GitHub token to use to fetch the changed files", Mandatory = $true)]
-        [string] $token
+        [Parameter(HelpMessage = "The baseline SHA", Mandatory = $true)]
+        [string] $baselineSHA
     )
 
-
-    if(!$env:GITHUB_EVENT_PATH) {
-        Write-Host "GITHUB_EVENT_PATH not set, returning empty list of changed files"
-        return @()
-    }
-
-    $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
-
-    if(-not ($ghEvent.PSObject.Properties.name -eq 'pull_request')) {
-        Write-Host "Not a pull request, returning empty list of changed files"
-        return @()
-    }
-
-    $url = "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)/compare/$($ghEvent.pull_request.base.sha)...$($ghEvent.pull_request.head.sha)"
-
-    $headers = @{
-        "Authorization" = "token $token"
-        "Accept" = "application/vnd.github.baptiste-preview+json"
-    }
-
-    $response = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
-
-    $modifiedFiles = @($response.files | ForEach-Object { $_.filename })
-
-    return $modifiedFiles
-}
-
-<#
-.Synopsis
-    Determines whether a full build is required.
-.Outputs
-    A boolean indicating whether a full build is required.
-.Description
-    Determines whether a full build is required.
-    A full build is required if:
-    - The alwaysBuildAllProjects setting is set to true
-    - More than 250 files have been modified
-    - The modified files contain a file that matches one of the fullBuildPatterns
-#>
-function Get-BuildAllProjects {
-    param(
-        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
-        [string] $baseFolder,
-        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
-        [string[]] $modifiedFiles = @()
-    )
-
-    $settings = $env:Settings | ConvertFrom-Json
-
-    if ($settings.alwaysBuildAllProjects) {
-        Write-Host "Building all projects because alwaysBuildAllProjects is set to true"
-        return $true
-    }
-
-    if (!$modifiedFiles) {
-        Write-Host "No files modified, building all projects"
-        return $true
-    }
-
-    if ($modifiedFiles.Count -ge 250) {
-        Write-Host "More than 250 files modified, building all projects"
-        return $true
-    }
-
-    $fullBuildPatterns = @(Join-Path '.github' '*.json')
-    if($settings.fullBuildPatterns) {
-        $fullBuildPatterns += $settings.fullBuildPatterns
-    }
-
-    #Include the base folder in the modified files
-    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
-
-    foreach($fullBuildFolder in $fullBuildPatterns) {
-        # The Join-Path is needed to make sure the path has the correct slashes
-        $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
-
-        if ($modifiedFiles -like $fullBuildFolder) {
-            Write-Host "Changes to $fullBuildFolder, building all projects"
-            return $true
+    Push-Location $ENV:GITHUB_WORKSPACE
+    try {
+        $ghEvent = Get-Content $env:GITHUB_EVENT_PATH -Encoding UTF8 | ConvertFrom-Json
+        if ($ghEvent.PSObject.Properties.name -eq 'pull_request') {
+            $headSHA = $ghEvent.pull_request.head.sha
+            Write-Host "Using head SHA $headSHA from pull request"
+            Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $headSHA | Out-Host }
+            if ($baselineSHA) {
+                Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
+            }
+            else {
+                $baselineSHA = $ghEvent.pull_request.base.sha
+                Write-Host "This is a pull request, using baseline SHA $baselineSHA from pull request"
+            }
+            Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $baselineSHA | Out-Host }
         }
+        else {
+            $headSHA = git rev-parse HEAD
+            Write-Host "Current HEAD is $headSHA"
+            Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $baselineSHA | Out-Host }
+            Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
+        }
+        Write-Host "git diff --name-only $baselineSHA $headSHA"
+        $modifiedFiles = @(RunAndCheck git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
+        return $modifiedFiles
     }
-
-    Write-Host "No changes to fullBuildPatterns, building only modified projects"
-
-    return $false
+    finally {
+        Pop-Location
+    }
 }
 
 <#
@@ -190,6 +134,7 @@ function CreateBuildDimensions {
 .Outputs
     The function returns the following values:
     - projects: An array of all projects found in the folder
+    - modifiedProjects: An array of projects that have been modified
     - projectsToBuild: An array of projects that need to be built
     - projectDependencies: A hashtable with the project dependencies
     - projectsOrderToBuild: An array of build dimensions, each build dimension contains the following properties:
@@ -221,26 +166,33 @@ function Get-ProjectsToBuild {
         $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
+        $modifiedProjects = @()
         $projectsToBuild = @()
         $projectsOrderToBuild = @()
 
         if ($projects) {
-            if($buildAllProjects) {
-                Write-Host "Full build required, building all projects"
-                $projectsToBuild = @($projects)
-            }
-            else {
-                Write-Host "Full build not required, filtering projects to build based on the modified files"
-
-                #Include the base folder in the modified files
-                $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
-                $projectsToBuild = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths })
-            }
-
             # Calculate the full projects order
             $projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects
 
-            $projectsToBuild = @($projectsToBuild | ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } | Select-Object -Unique)
+            if ($modifiedFiles) {
+                Write-Host "Calculating modified projects based on the modified files"
+
+                #Include the base folder in the modified files
+                $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+                $modifiedProjects = @($projects |
+                                        Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths } |
+                                        ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } |
+                                        Select-Object -Unique)
+            }
+
+            if($buildAllProjects) {
+                Write-Host "Calculating full build matrix"
+                $projectsToBuild = @($projects)
+            }
+            else {
+                Write-Host "Calculating incremental build matrix"
+                $projectsToBuild = @($modifiedProjects)
+            }
 
             # Create a project order based on the projects to build
             foreach($depth in $projectBuildInfo.FullProjectsOrder) {
@@ -272,11 +224,248 @@ function Get-ProjectsToBuild {
             throw "The build depth is too deep, the maximum build depth is $maxBuildDepth. You need to run 'Update AL-Go System Files' to update the workflows"
         }
 
-        return $projects, $projectsToBuild, $projectBuildInfo.projectDependencies, $projectsOrderToBuild
+        return $projects, $modifiedProjects, $projectsToBuild, $projectBuildInfo.projectDependencies, $projectsOrderToBuild
     }
     finally {
         Pop-Location
     }
+}
+
+<#
+.Synopsis
+    Determines whether a full build is required and whether to publish artifacts from skipped projects based on the event and settings.
+.Outputs
+    A boolean indicating whether a full build is required and a boolean indicating whether to publish artifacts from skipped projects.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - Deprecated setting alwaysBuildAllProjects is set to true
+    - property incrementalBuilds.onPull_Request is set to false for pull_request and pull_request_target events
+    - property incrementalBuilds.onPush is set to false for push events
+    - property incrementalBuilds.onSchedule is set to false for schedule events
+    Skipped projects are published if:
+    - The event is not a pull_request or pull_request_target event
+#>
+function Get-BuildAllProjectsBasedOnEventAndSettings {
+    Param(
+        [string] $ghEventName,
+        [PSCustomObject] $settings
+    )
+    $buildAllProjects = $true
+    $publishSkippedProjects = $true
+    if ($ghEventName -eq 'pull_request' -or $ghEventName -eq 'pull_request_target') {
+        # DEPRECATION: REMOVE AFTER October 1st 2025 --->
+        if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects' -and $settings.alwaysBuildAllProjects) {
+            $buildAllProjects = $settings.alwaysBuildAllProjects
+            Trace-DeprecationWarning -Message "alwaysBuildAllProjects is deprecated" -DeprecationTag "alwaysBuildAllProjects"
+        }
+        # <--- REMOVE AFTER October 1st 2025
+        else {
+            $buildAllProjects = !$settings.incrementalBuilds.onPull_Request
+        }
+        $publishSkippedProjects = $false
+    }
+    else {
+        # onPush, onSchedule or onWorkflow_Dispatch
+        if ($settings.incrementalBuilds.PSObject.Properties.Name -eq "on$GhEventName") {
+            $buildAllProjects = !$settings.incrementalBuilds."on$GhEventName"
+        }
+    }
+    return $buildAllProjects, $publishSkippedProjects
+}
+
+<#
+.Synopsis
+    Determines whether a full build is required.
+.Outputs
+    A boolean indicating whether a full build is required.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - No files were modified
+    - The modified files contain a file that matches one of the fullBuildPatterns
+#>
+function Get-BuildAllProjects {
+    param(
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [string[]] $modifiedFiles = @(),
+        [Parameter(HelpMessage = "Full build patterns", Mandatory = $false)]
+        [string[]] $fullBuildPatterns = @()
+    )
+
+    $settings = $env:Settings | ConvertFrom-Json
+
+    if (!$modifiedFiles) {
+        Write-Host "No files modified, building everything"
+        return $true
+    }
+
+    $fullBuildPatterns += @(Join-Path '.github' '*.json')
+    if($settings.fullBuildPatterns) {
+        $fullBuildPatterns += $settings.fullBuildPatterns
+    }
+
+    #Include the base folder in the modified files
+    $modifiedFiles = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+
+    foreach($fullBuildFolder in $fullBuildPatterns) {
+        # The Join-Path is needed to make sure the path has the correct slashes
+        $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
+
+        if ($modifiedFiles -like $fullBuildFolder) {
+            Write-Host "Changes to $fullBuildFolder, building everything"
+            return $true
+        }
+    }
+
+    Write-Host "No changes to fullBuildPatterns, not building everything"
+
+    return $false
+}
+
+<#
+.Synopsis
+    Determines whether all apps in a project should be built
+.Outputs
+    A boolean indicating whether a full build is required.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - Get-BuildAllProjects returns true
+    - The .AL-Go/settings.json file has been modified
+#>
+function Get-BuildAllApps {
+    param(
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The project", Mandatory = $false)]
+        [string] $project = '',
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [string[]] $modifiedFiles = @()
+    )
+
+    if ($project) {
+        $ALGoSettingsFile = @(Join-Path $project '.AL-Go/settings.json')
+    }
+    else {
+        $ALGoSettingsFile = @('.AL-Go/settings.json')
+    }
+    return (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($ALGoSettingsFile))
+}
+
+<#
+.Synopsis
+    Downloads unmodified artifacts from the baseline workflow run
+.Description
+    Downloads unmodified artifacts from the baseline workflow run
+    - Downloads the artifacts (apps, testapps and bcpttestapps) for the specified project and build mode from the last known good build.
+    - Copies the downloaded artifacts to the build artifact folder.
+#>
+function Get-UnmodifiedAppsFromBaselineWorkflowRun {
+    Param(
+        [Parameter(HelpMessage = "The GitHub token to use for downloading artifacts", Mandatory = $true)]
+        [String] $token,
+        [Parameter(HelpMessage = "The resolved AL-Go Project Settings", Mandatory = $true)]
+        [hashtable] $settings,
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The current project", Mandatory = $false)]
+        [string] $project = '',
+        [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $true)]
+        [string] $baselineWorkflowRunId,
+        [Parameter(HelpMessage = "Array of modified files in the repository (all projects)", Mandatory = $true)]
+        [string[]] $modifiedFiles,
+        [Parameter(HelpMessage = "The build artifact folder", Mandatory = $true)]
+        [string] $buildArtifactFolder,
+        [Parameter(HelpMessage = "The build mode", Mandatory = $true)]
+        [string] $buildMode,
+        [Parameter(HelpMessage = "The project path", Mandatory = $true)]
+        [string] $projectPath
+    )
+
+    $skipFolders = @()
+    $unknownDependencies = @()
+    $knownApps = @()
+    $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
+    $modifiedFolders = @($allFolders | Where-Object {
+        $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
+    })
+    OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
+    Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
+    OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
+    # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
+    $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+    $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+    $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+
+    if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
+    # Download missing apps - or add then to build folders if the artifact doesn't exist
+    $appsToDownload = [ordered]@{
+        "appFolders" = @{
+            "Mask" = "Apps"
+            "Downloads" = $downloadAppFolders
+            "Downloaded" = 0
+        }
+        "testFolders" = @{
+            "Mask" = "TestApps"
+            "Downloads" = $downloadTestFolders
+            "Downloaded" = 0
+        }
+        "bcptTestFolders" = @{
+            "Mask" = "TestApps"
+            "Downloads" = $downloadBcptTestFolders
+            "Downloaded" = 0
+        }
+    }
+    $additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+    $appsToDownload.Keys | ForEach-Object {
+        $appType = $_
+        $mask = $appsToDownload."$appType".Mask
+        $downloads = $appsToDownload."$appType".Downloads
+        $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+        if (!(Test-Path $thisArtifactFolder)) {
+            New-Item $thisArtifactFolder -ItemType Directory | Out-Null
+        }
+        if ($downloads) {
+            Write-Host "Downloading from $mask"
+            $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            New-Item $tempFolder -ItemType Directory | Out-Null
+            if ($buildMode -eq 'Default') {
+                $artifactMask = $mask
+            }
+            else {
+                $artifactMask = "$buildMode$mask"
+            }
+            $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $artifactMask -projects $projectName
+            if ($runArtifact) {
+                if ($runArtifact -is [Array]) {
+                    throw "Multiple artifacts found with mask $artifactMask for project $projectName"
+                }
+                $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
+                $artifactFolder = Join-Path $tempFolder $mask
+                Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
+                Remove-Item -Path $file -Force
+                $downloads | ForEach-Object {
+                    $appJsonPath = Join-Path $projectPath "$_/app.json"
+                    $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
+                    $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
+                    $appPath = Join-Path $artifactFolder $appName
+                    if (Test-Path $appPath) {
+                        $item = Get-Item -Path $appPath
+                        Write-Host "Copy $($item.Name) to build folders"
+                        Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
+                        $appsToDownload."$appType".Downloaded++
+                    }
+                }
+            }
+            Remove-Item -Path $tempFolder -Recurse -force
+        }
+        $additionalDataForTelemetry.Add("$($appType)ToDownload", $appsToDownload."$appType".Downloads.Count)
+        $additionalDataForTelemetry.Add("$($appType)Downloaded", $appsToDownload."$appType".Downloaded)
+    }
+    Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
 }
 
 Export-ModuleMember *-*

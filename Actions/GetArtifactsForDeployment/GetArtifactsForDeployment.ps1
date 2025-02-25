@@ -12,6 +12,7 @@ DownloadAndImportBcContainerHelper
 
 # Get artifacts for all projects
 $projects = "*"
+$artifactsToDownload = @("Apps", "TestApps", "Dependencies", "PowerPlatformSolution")
 
 Write-Host "Get artifacts for version: '$artifactsVersion' for these projects: '$projects' to folder: '$artifactsFolder'"
 
@@ -36,7 +37,7 @@ if ($artifactsVersion -eq "current" -or $artifactsVersion -eq "prerelease" -or $
         if (!($release)) {
             throw "Unable to locate $artifactsVersion release"
         }
-        'Apps','Dependencies','PowerPlatformSolution' | ForEach-Object {
+        $artifactsToDownload | ForEach-Object {
             DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask $_ -unpack
         }
     }
@@ -57,7 +58,7 @@ else {
 
 if ($searchArtifacts) {
     $allArtifacts = @()
-    'Apps','Dependencies','PowerPlatformSolution' | ForEach-Object {
+    $artifactsToDownload | ForEach-Object {
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -version $artifactsVersion -branch $ENV:GITHUB_REF_NAME)
     }
 

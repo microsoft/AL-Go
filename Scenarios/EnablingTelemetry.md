@@ -1,4 +1,4 @@
-# 15. Enabling telemetry
+# Enabling telemetry
 
 If you want to enable partner telemetry add your Application Insights connection string to the AL-Go settings file. Simply add the following setting to your settings file:
 

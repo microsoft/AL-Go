@@ -63,6 +63,7 @@ In your personal fork, you can now run the end to end tests, if the following pr
 
 - You need the following secrets:
   - E2EPAT needs to be a Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_
+  - ALGOAUTHAPP needs to be a JSON-formatted secret containing GitHubAppClientId and PrivateKey for a GitHub App with the following repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_.
   - AdminCenterApiCredentials needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
   - LicenseFileUrl needs to be a direct download URL to a developer .bclicense file
 - Beside the secrets, you need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)
@@ -76,7 +77,8 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |Variable|Type|Description|
 |---|---|---|
 |$global:E2EgitHubOwner| String | The GitHub owner of the test repositories (like `freddydk` or `microsoft`) |
-|$global:SecureE2EPAT| SecureString | A personal access token with workflow permissions |
+|$global:SecureE2EPAT| SecureString | A Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_ |
+|$global:SecureALGOAUTHAPP | SecureString | A json secret containing GitHubAppClientId and PrivateKey for a GitHub App with these repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_ |
 |$global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
 |$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
 |$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |

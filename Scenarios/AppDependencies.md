@@ -1,4 +1,4 @@
-# 14. Introducing a dependency to an app on GitHub
+# Introducing a dependency to an app on GitHub
 
 If your app has a dependency to another application on a different GitHub repository, the foreign repository can be added to the dependency probing paths (appDependencyProbingPaths) in the AL-Go settings file. The dependency must also be added to the `app.json` file as a dependency. During a build all the apps mentioned in the probing paths will be downloaded and installed on the tenant.
 

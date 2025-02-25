@@ -7,7 +7,7 @@
 )
 
 function IsGitHubPagesAvailable() {
-    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
@@ -20,7 +20,7 @@ function IsGitHubPagesAvailable() {
 }
 
 function GetGitHubEnvironments() {
-    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
     try {
         Write-Host "Requesting environments from GitHub"
@@ -36,7 +36,7 @@ function GetGitHubEnvironments() {
 function Get-BranchesFromPolicy($ghEnvironment) {
     if ($ghEnvironment) {
         # Environment is defined in GitHub - check protection rules
-        $headers = GetHeader -token $env:GITHUB_TOKEN
+        $headers = GetHeaders -token $env:GITHUB_TOKEN
         $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
         if ($branchPolicy) {
             if ($ghEnvironment.deployment_branch_policy.protected_branches) {
@@ -60,7 +60,7 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
-$includeGitHubPages = $getEnvironments.Split(',') | Where-Object { 'github-pages' -like $_ }
+$includeGitHubPages = 'github-pages' -like $getEnvironments
 $generateALDocArtifact = ($includeGitHubPages) -and (($type -eq 'Publish') -or $settings.alDoc.continuousDeployment)
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
@@ -85,7 +85,10 @@ $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
+if ($settings.Keys -contains 'UpdateALGoSystemFilesEnvironment' -and $settings.updateALGoSystemFilesEnvironment) {
+    $settings.excludeEnvironments += @($settings.updateALGoSystemFilesEnvironment)
+}
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments.Split(' ')[0] }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
@@ -104,6 +107,7 @@ if (!($environments)) {
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
+                "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
                 "SyncMode" = $null
                 "Scope" = $null
                 "buildMode" = $null
@@ -112,6 +116,8 @@ if (!($environments)) {
                 "shell" = $settings."shell"
                 "companyId" = ''
                 "ppEnvironmentUrl" = ''
+                "includeTestAppsInSandboxEnvironment" = $false
+                "excludeAppIds" = @()
             }
         }
         $unknownEnvironment = 1
@@ -153,6 +159,8 @@ else {
             "shell" = $settings."shell"
             "companyId" = ''
             "ppEnvironmentUrl" = ''
+            "includeTestAppsInSandboxEnvironment" = $false
+            "excludeAppIds" = @()
         }
 
         # Check DeployTo<environmentName> setting
