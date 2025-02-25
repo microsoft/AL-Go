@@ -219,8 +219,8 @@ jobs:
         id: createrelease
         env:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
+          GITHUB_TOKEN: ${{ steps.ReadSecrets.outputs.TokenForPush }} 
         with:
-          github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
             var bodyMD = process.env.bodyMD
             const createReleaseResponse = await github.rest.repos.createRelease({
