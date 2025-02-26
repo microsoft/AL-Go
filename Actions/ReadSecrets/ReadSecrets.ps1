@@ -179,6 +179,7 @@ try {
         if ($useGhTokenWorkflowForPush -eq 'true' -and $outSecrets.ghTokenWorkflow) {
             Write-Host "Use ghTokenWorkflow for Push"
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
+            $ghToken = GetAccessToken -token $ghToken -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"metadata"="read";"workflows"="write"}
         }
         else {
             Write-Host "Use github_token for Push"
