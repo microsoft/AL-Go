@@ -98,6 +98,23 @@ function Copy-HashTable() {
     }
 }
 
+# Convert SecureString to plain text
+function Get-PlainText {
+    Param(
+        [parameter(ValueFromPipeline, Mandatory = $true)]
+        [System.Security.SecureString] $SecureString
+    )
+    Process {
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString);
+        try {
+            return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);
+        }
+        finally {
+            [Runtime.InteropServices.Marshal]::FreeBSTR($bstr);
+        }
+    }
+}
+
 function IsPropertySecret {
     param (
         [string] $propertyName
@@ -407,7 +424,7 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
         # Read Repository Settings file (without applying organization variables, repository variables or project settings files)
         # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in repo settings file
         $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
-        if ($repoSettings.Keys -contains "BcContainerHelperVersion") {
+        if ($repoSettings.Keys -contains "BcContainerHelperVersion" -and $defaultBcContainerHelperVersion -notlike 'https://*') {
             $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion
             Write-Host "Using BcContainerHelper $bcContainerHelperVersion version"
             if ($bcContainerHelperVersion -like "https://*") {
@@ -528,7 +545,8 @@ function ReadSettings {
         [string] $userName = "$ENV:GITHUB_ACTOR",
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
-        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
+        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [switch] $silent
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -543,7 +561,7 @@ function ReadSettings {
 
         if (Test-Path $path) {
             try {
-                Write-Host "Applying settings from $path"
+                if (!$silent.IsPresent) { Write-Host "Applying settings from $path" }
                 $settings = Get-Content $path -Encoding UTF8 | ConvertFrom-Json
                 if ($settings) {
                     return $settings
@@ -554,7 +572,7 @@ function ReadSettings {
             }
         }
         else {
-            Write-Host "No settings found in $path"
+            if (!$silent.IsPresent) { Write-Host "No settings found in $path" }
         }
         return $null
     }
@@ -648,6 +666,13 @@ function ReadSettings {
         "cacheImageName"                                = "my"
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
+        "incrementalBuilds"                             = [ordered]@{
+            "onPush"                                    = $false
+            "onPull_Request"                            = $true
+            "onSchedule"                                = $false
+            "retentionDays"                             = 30
+            "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps
+        }
         "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
         "partnerTelemetryConnectionString"              = ""
         "sendExtendedTelemetryToMicrosoft"              = $false
@@ -733,32 +758,16 @@ function ReadSettings {
                     if ("$conditionalSetting" -ne "") {
                         $conditionMet = $true
                         $conditions = @()
-                        if ($conditionalSetting.PSObject.Properties.Name -eq "buildModes") {
-                            $conditionMet = $conditionMet -and ($conditionalSetting.buildModes | Where-Object { $buildMode -like $_ })
-                            $conditions += @("buildMode: $buildMode")
-                        }
-                        if ($conditionalSetting.PSObject.Properties.Name -eq "branches") {
-                            $conditionMet = $conditionMet -and ($conditionalSetting.branches | Where-Object { $branchName -like $_ })
-                            $conditions += @("branchName: $branchName")
-                        }
-                        if ($conditionalSetting.PSObject.Properties.Name -eq "repositories") {
-                            $conditionMet = $conditionMet -and ($conditionalSetting.repositories | Where-Object { $repoName -like $_ })
-                            $conditions += @("repoName: $repoName")
-                        }
-                        if ($project -and $conditionalSetting.PSObject.Properties.Name -eq "projects") {
-                            $conditionMet = $conditionMet -and ($conditionalSetting.projects | Where-Object { $project -like $_ })
-                            $conditions += @("project: $project")
-                        }
-                        if ($workflowName -and $conditionalSetting.PSObject.Properties.Name -eq "workflows") {
-                            $conditionMet = $conditionMet -and ($conditionalSetting.workflows | Where-Object { $workflowName -like $_ })
-                            $conditions += @("workflowName: $workflowName")
-                        }
-                        if ($userName -and $conditionalSetting.PSObject.Properties.Name -eq "users") {
-                            $conditionMet = $conditionMet -and ($conditionalSetting.users | Where-Object { $userName -like $_ })
-                            $conditions += @("userName: $userName")
+                        @{"buildModes" = $buildMode; "branches" = $branchName; "repositories" = $repoName; "projects" = $project; "workflows" = $workflowName; "users" = $userName}.GetEnumerator() | ForEach-Object {
+                            $propName = $_.Key
+                            $propValue = $_.Value
+                            if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {
+                                $conditionMet = $propValue -and $conditionMet -and ($conditionalSetting."$propName" | Where-Object { $propValue -like $_ })
+                                $conditions += @("$($propName): $propValue")
+                            }
                         }
                         if ($conditionMet) {
-                            Write-Host "Applying conditional settings for $($conditions -join ", ")"
+                            if (!$silent.IsPresent) { Write-Host "Applying conditional settings for $($conditions -join ", ")" }
                             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
                         }
                     }
@@ -927,11 +936,6 @@ function AnalyzeRepo {
     )
 
     $settings = $settings | Copy-HashTable
-
-    if (!$runningLocal) {
-        Write-Host "::group::Analyzing repository"
-    }
-
     $projectPath = Join-Path $baseFolder $project -Resolve
 
     # Check applicationDependency
@@ -1125,17 +1129,12 @@ function AnalyzeRepo {
             if ($performanceToolkitApps.Contains($dep.id)) { $settings.installPerformanceToolkit = $true }
         }
     }
-
-    if (!$runningLocal) {
-        Write-Host "::endgroup::"
-    }
-
     if (!$settings.doNotRunBcptTests -and -not $settings.bcptTestFolders) {
-        Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile"
+        if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+        if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
         $settings.doNotRunTests = $true
     }
     if (-not $settings.appFolders) {
@@ -2120,7 +2119,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        Write-Host "Folders containing apps are $($folders -join ',' )"
+        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -2383,6 +2382,7 @@ function RetryCommand {
         try {
             Invoke-Command $Command -ArgumentList $argumentList
             if ($LASTEXITCODE -ne 0) {
+                $host.SetShouldExit(0);
                 throw "Command failed with exit code $LASTEXITCODE"
             }
             break
@@ -2436,6 +2436,34 @@ function GetProjectsFromRepository {
         }
     }
     return @(GetMatchingProjects -projects $projects -selectProjects $selectProjects)
+}
+
+function GetFoldersFromAllProjects {
+    Param(
+        [string] $baseFolder
+    )
+
+    Push-Location $baseFolder
+    try {
+        $settings = ReadSettings -baseFolder $baseFolder
+        $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
+        $folders = @()
+        foreach($project in $projects) {
+            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
+            ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
+            $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
+                $fullPath = Join-Path $baseFolder "$project/$_" -Resolve
+                $relativePath = Resolve-Path -Path $fullPath -Relative
+                # Remove the leading .\ from the relative path
+                return $relativePath.Substring(2)
+            } )
+        }
+    }
+    finally {
+        Pop-Location
+    }
+    return $folders | Select-Object -Unique
+
 }
 
 function GetPackageVersion($packageName) {
@@ -2519,5 +2547,38 @@ function ConnectAz {
     }
     catch {
         throw "Error trying to authenticate to Azure. Error was $($_.Exception.Message)"
+    }
+}
+
+function OutputMessageAndArray {
+    Param(
+        [string] $message,
+        [string[]] $arrayOfStrings
+    )
+    Write-Host "$($message):"
+    if (!$arrayOfStrings) {
+        Write-Host "- None"
+    }
+    else {
+        $arrayOfStrings | ForEach-Object {
+            Write-Host "- $_"
+        }
+    }
+}
+
+<#
+.SYNOPSIS
+Run an executable and check the exit code
+.EXAMPLE
+RunAndCheck git checkout -b xxx
+#>
+function RunAndCheck {
+    $ErrorActionPreference = 'SilentlyContinue'
+    $rest = if ($args.Count -gt 1) { $args[1..($args.Count - 1)] } else { $null }
+    & $args[0] $rest
+    $ErrorActionPreference = 'STOP'
+    if ($LASTEXITCODE -ne 0) {
+        $host.SetShouldExit(0)
+        throw "$($args[0]) $($rest | ForEach-Object { $_ }) failed with exit code $LASTEXITCODE"
     }
 }

@@ -14,6 +14,9 @@ outputs:
   ProjectsJson:
     description: An array of AL-Go projects in compressed JSON format
     value: ${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}
+  SkippedProjectsJson:
+    description: An array of Skipped AL-Go projects in compressed JSON format
+    value: ${{ steps.determineProjectsToBuild.outputs.SkippedProjectsJson }}
   ProjectDependenciesJson:
     description: An object that holds the project dependencies in compressed JSON format
     value: ${{ steps.determineProjectsToBuild.outputs.ProjectDependenciesJson }}
@@ -24,8 +27,11 @@ outputs:
     description: A flag that indicates whether to build all projects or only the modified ones
     value: ${{ steps.determineProjectsToBuild.outputs.BuildAllProjects }}
   BaselineWorkflowRunId:
-    description: The ID of the workflow run from where to fetch artifacts in case when not all projects are built
+    description: The ID of the workflow run containing last known good build, if we are doing incremental builds
     value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
+  BaselineWorkflowSHA:
+    description: The SHA of the last known good build, if we are doing incremental builds
+    value: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowSHA }}
 runs:
   using: composite
   steps:
@@ -36,7 +42,7 @@ runs:
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -maxBuildDepth $env:_maxBuildDepth -token ${{ github.token }}
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth
         }
 branding:
   icon: terminal

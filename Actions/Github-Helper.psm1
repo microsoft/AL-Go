@@ -163,7 +163,7 @@ function GetDependencies {
                         $missingProjects += @($project)
                     }
                 }
-                if ($missingProjects) {
+                if ($missingProjects -and $dependency.baselineWorkflowID) {
                     $dependency.release_status = 'latestBuild'
                     $dependency.branch = $dependency.baseBranch
                     $dependency.projects = $missingProjects -join ","
@@ -590,7 +590,6 @@ function GetAccessToken {
 
     if (!($token.StartsWith("{"))) {
         # not a json token
-        Write-Host "return token (original)"
         return $token
     }
     else {
@@ -798,14 +797,13 @@ function Set-JsonContentLF {
 function CheckBuildJobsInWorkflowRun {
     Param(
         [Parameter(Mandatory = $true)]
-        [string] $token,
+        [hashtable] $headers,
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
         [string] $workflowRunId
     )
 
-    $headers = GetHeaders -token $token
     $per_page = 100
     $page = 1
 
@@ -828,7 +826,8 @@ function CheckBuildJobsInWorkflowRun {
             $anySuccessful = $true
         }
 
-        if($buildJobs.conclusion -ne 'success') {
+        # Skipped jobs are considered successful as this is just projects, which are not built
+        if($buildJobs.conclusion -ne 'success' -and $buildJobs.conclusion -ne 'skipped') {
             # If there is a build job that is not successful, there is not need to check further
             $allSuccessful = $false
             break
@@ -841,10 +840,10 @@ function CheckBuildJobsInWorkflowRun {
 }
 
 <#
-    Gets the last successful CICD run ID for the specified repository and branch.
-    Successful CICD runs are those that have a workflow run named ' CI/CD' and successfully built all the projects.
+    Gets the last successful CICD run ID and SHA for the specified repository and branch.
+    Successful CICD runs are those that have a workflow run named ' CI/CD', wasn't cancelled and successfully built all the projects within the last $retention days.
 
-    If no successful CICD run is found, 0 is returned.
+    If no successful CICD run is found, 0 and empty string is returned.
 #>
 function FindLatestSuccessfulCICDRun {
     Param(
@@ -853,19 +852,22 @@ function FindLatestSuccessfulCICDRun {
         [Parameter(Mandatory = $true)]
         [string] $branch,
         [Parameter(Mandatory = $true)]
-        [string] $token
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [int] $retention
     )
 
     $headers = GetHeaders -token $token
-    $lastSuccessfulCICDRun = 0
+    $lastSuccessfulCICDRun = $null
     $per_page = 100
     $page = 1
 
-    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository"
+    Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
+    $expired = [DateTime]::UtcNow.AddDays(-$retention).ToString('o')
 
     # Get the latest CICD workflow run
     while($true) {
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch"
+        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch&created=>$expired"
         Write-Host "- $runsURI"
         $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
 
@@ -879,38 +881,39 @@ function FindLatestSuccessfulCICDRun {
         foreach($CICDRun in $CICDRuns) {
             if($CICDRun.conclusion -eq 'success') {
                 # CICD run is successful
-                $lastSuccessfulCICDRun = $CICDRun.id
+                $lastSuccessfulCICDRun = $CICDRun
                 break
+            }
+            if ($CICDRun.conclusion -eq 'cancelled') {
+                continue
             }
 
             # CICD run is considered successful if all build jobs were successful
-            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -token $token -repository $repository
+            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository
 
             if($areBuildJobsSuccessful) {
-                $lastSuccessfulCICDRun = $CICDRun.id
-                Write-Host "Found last successful CICD run: $($lastSuccessfulCICDRun), from $($CICDRun.created_at)"
+                $lastSuccessfulCICDRun = $CICDRun
                 break
             }
 
             Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
         }
 
-        if($lastSuccessfulCICDRun -ne 0) {
+        if($lastSuccessfulCICDRun) {
             break
         }
 
         $page += 1
     }
 
-    if($lastSuccessfulCICDRun -ne 0) {
-        Write-Host "Last successful CICD run for branch $branch in repository $repository is $lastSuccessfulCICDRun"
+    if($lastSuccessfulCICDRun) {
+        Write-Host "Last successful CICD run for branch $branch in repository $repository is $($lastSuccessfulCICDRun.id) with SHA $($lastSuccessfulCICDRun.head_sha)"
+        return $lastSuccessfulCICDRun.id, $lastSuccessfulCICDRun.head_sha
     } else {
         Write-Host "No successful CICD run found for branch $branch in repository $repository"
+        return 0, ''
     }
-
-    return $lastSuccessfulCICDRun
 }
-
 <#
     Gets the last PR build run ID for the specified repository and branch.
     Successful PR runs are those that have a workflow run named 'Pull Request Build' and successfully built all the projects.
@@ -1088,8 +1091,8 @@ function GetArtifacts {
     # For latest version, use the artifacts from the last successful CICD run
     if($version -eq '*') {
         if(-not $baselineWorkflowID) {
-            # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run
-            $baselineWorkflowID = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token
+            # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run (within the last 90 days, which is the maximum number of days GitHub Actions keeps artifacts)
+            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token -retention 90
         }
 
         if($baselineWorkflowID -eq '0') {
@@ -1298,6 +1301,74 @@ function GenerateJwtForTokenRequest {
         $signature = Invoke-Command -ScriptBlock $command -ArgumentList "$header.$payload", $privateKey
     }
     return "$header.$payload.$signature"
+}
+
+<#
+.SYNOPSIS
+    Invokes a command with retry logic.
+.DESCRIPTION
+    This function will invoke a command and retry it up to a specified number of times if it fails.
+    The function will sleep for an increasing amount of time between each retry.
+    The function will stop retrying if the maximum wait time is reached.
+.PARAMETER ScriptBlock
+    The script block to invoke.
+.PARAMETER RetryCount
+    The number of times to retry the command.
+.PARAMETER MaxWaitTimeBeforeLastAttempt
+    The maximum time in seconds to wait before
+.PARAMETER FirstDelay
+    The time in seconds to wait before the first retry.
+.PARAMETER MaxWaitBetweenRetries
+    The maximum time in seconds to wait between retries.
+#>
+function Invoke-CommandWithRetry {
+    [CmdletBinding()]
+    param (
+        [parameter(Mandatory = $true)]
+        [System.Management.Automation.ScriptBlock] $ScriptBlock,
+        [parameter(Mandatory = $false)]
+        [int] $RetryCount = 3,
+        [parameter(Mandatory = $false)]
+        [int] $MaxWaitTimeBeforeLastAttempt = 2 * 60 * 60,
+        [parameter(Mandatory = $false)]
+        [int] $FirstDelay = 60,
+        [parameter(Mandatory = $false)]
+        [ValidateRange(0, 60 * 60)]
+        [int] $MaxWaitBetweenRetries = 60 * 60
+    )
+    # Initialize the variables that will tell us when we should stop trying
+    $startTime = Get-Date
+    $retryNo = 0
+    # Start trying...
+    $nextSleepTime = $FirstDelay
+    while ($true) {
+        $retryNo++
+        try {
+            Invoke-Command -ScriptBlock $ScriptBlock -OutVariable output | Out-Null
+            return $output # Success!
+        }
+        catch [System.Exception] {
+            $exceptionMessage = $_.Exception.Message
+            $secondsSinceStart = ((Get-Date) - $startTime).TotalSeconds
+            # Determine if we should keep trying
+            $tryAgain = $retryNo -lt $RetryCount -and $secondsSinceStart -lt $MaxWaitTimeBeforeLastAttempt
+            # Try again, or stop?
+            if ($tryAgain) {
+                # Sleep
+                $sleepTime = [System.Math]::Min($nextSleepTime, $MaxWaitTimeBeforeLastAttempt - $secondsSinceStart) # don't sleep beyond the max time
+                $sleepTime = [System.Math]::Min($sleepTime, $MaxWaitBetweenRetries) # don't sleep for more than one hour (and don't go above what Start-Sleep can handle (2147483))
+                Write-Warning "Command failed with error '$exceptionMessage' in attempt no $retryNo after $secondsSinceStart seconds. Will retry up to $RetryCount times. Sleeping for $sleepTime seconds before trying again..."
+                Start-Sleep -Seconds $sleepTime
+                $nextSleepTime = 2 * $nextSleepTime # Next time sleep for longer
+                # Now try again
+            }
+            else {
+                # Failed!
+                $output | Write-Host
+                throw
+            }
+        }
+    }
 }
 
 <#

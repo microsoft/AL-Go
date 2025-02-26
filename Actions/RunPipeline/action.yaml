@@ -29,6 +29,14 @@ inputs:
     description: A JSON-formatted list of test apps to install
     required: false
     default: '[]'
+  baselineWorkflowRunId:
+    description: RunId of the baseline workflow run
+    required: false
+    default: ''
+  baselineWorkflowSHA:
+    description: SHA of the baseline workflow run
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -41,9 +49,11 @@ runs:
         _buildMode: ${{ inputs.buildMode }}
         _installAppsJson: ${{ inputs.installAppsJson }}
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
+        _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+        _baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunPipeline" -Action {
-          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson
+          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
         }
 branding:
   icon: terminal
