@@ -195,6 +195,10 @@ else {
             if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
                 throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
             }
+            if ($deploymentSettings."runs-on" -like "*ubuntu-*" -and $deploymentSettings."shell" -eq "powershell") {
+                Write-Host "Switching deployment shell to pwsh for ubuntu"
+                $deploymentSettings."shell" = "pwsh"
+            }
         }
 
         # Get Branch policies on GitHub Environment
