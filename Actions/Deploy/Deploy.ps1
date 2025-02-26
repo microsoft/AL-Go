@@ -179,6 +179,7 @@ if (-not $authContext) {
     elseif ($type -eq 'CD' -and (-not $deploymentSettings.continuousDeployment)) {
         # Continuous Deployment is undefined in settings - we will not ignore the environment if no AuthContext is provided
         OutputNotice -message $msg
+        exit
     }
     else {
         throw $msg
