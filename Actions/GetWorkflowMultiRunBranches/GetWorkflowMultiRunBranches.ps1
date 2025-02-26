@@ -9,7 +9,15 @@ Import-Module $gitHubHelperPath -DisableNameChecking
 switch ($env:GITHUB_EVENT_NAME) {
     'schedule' {
       Write-Host "Event is schedule: getting branches from settings"
-      $branchPatterns = @($($(ConvertFrom-Json $env:settings).workflowSchedule.includeBranches))
+      $settings = ConvertFrom-Json $env:settings
+
+      # Add defensive check to handle if wporkflowSchedule.includeBranches is not defined in settings
+      if (-not $($settings.workflowSchedule.includeBranches)) {
+        Write-Host "No branch patterns defined in settings"
+        $branchPatterns = @()
+      } else {
+        $branchPatterns = @($($settings.workflowSchedule.includeBranches))
+      }
     }
     'workflow_dispatch' {
       Write-Host "Event is workflow_dispatch: getting branches from input"
