@@ -171,12 +171,17 @@ foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","Auth
     }
 }
 if (-not $authContext) {
+    $msg = "No Authentication Context found for environment ($environmentName). You must create an environment secret called AUTHCONTEXT or a repository secret called $($envName)_AUTHCONTEXT in order to deploy to this environment."
     # No AuthContext secret provided, if deviceCode is present, use it - else give an error
     if ($env:deviceCode) {
         $authContext = "{""deviceCode"":""$($env:deviceCode)""}"
     }
+    elseif ($type -eq 'CD' -and (-not $deploymentSettings.continuousDeployment)) {
+        # Continuous Deployment is undefined in settings - we will not ignore the environment if no AuthContext is provided
+        OutputNotice -message $msg
+    }
     else {
-        throw "No Authentication Context found for environment ($environmentName). You must create an environment secret called AUTHCONTEXT or a repository secret called $($envName)_AUTHCONTEXT."
+        throw $msg
     }
 }
 
