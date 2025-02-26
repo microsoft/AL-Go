@@ -534,6 +534,7 @@ function MergeCustomObjectIntoOrderedDictionary {
 # - <project>/.AL-Go/settings.json                    = Project settings file
 # - .github/<workflowName>.settings.json              = Workflow settings file
 # - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
+# - ALGoEnvSettings (github Variable)                 = Environment settings variable
 # - <project>/.AL-Go/<userName>.settings.json         = User settings file
 function ReadSettings {
     Param(
@@ -544,8 +545,10 @@ function ReadSettings {
         [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
         [string] $userName = "$ENV:GITHUB_ACTOR",
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
+        [string] $environment = "$ENV:ALGoEnvName",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [string] $envSettingsVariableValue = "$ENV:ALGoEnvSettings",
         [switch] $silent
     )
 
@@ -750,6 +753,11 @@ function ReadSettings {
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
     }
+    # Read settings from environment settings variable (parameter)
+    if ($envSettingsVariableValue) {
+        $envSettingsVariableObject = $envSettingsVariableValue | ConvertFrom-Json
+        $settingsObjects += @($envSettingsVariableObject)
+    }
     foreach($settingsJson in $settingsObjects) {
         if ($settingsJson) {
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
@@ -758,7 +766,7 @@ function ReadSettings {
                     if ("$conditionalSetting" -ne "") {
                         $conditionMet = $true
                         $conditions = @()
-                        @{"buildModes" = $buildMode; "branches" = $branchName; "repositories" = $repoName; "projects" = $project; "workflows" = $workflowName; "users" = $userName}.GetEnumerator() | ForEach-Object {
+                        @{"buildModes" = $buildMode; "branches" = $branchName; "repositories" = $repoName; "projects" = $project; "workflows" = $workflowName; "users" = $userName; "environments" = $environment}.GetEnumerator() | ForEach-Object {
                             $propName = $_.Key
                             $propValue = $_.Value
                             if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {

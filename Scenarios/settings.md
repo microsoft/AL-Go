@@ -166,6 +166,7 @@ to your [project settings file](#where-are-the-settings-located) will ensure tha
 - **branches** settings will be applied to branches matching the patterns
 - **workflows** settings will be applied to workflows matching the patterns
 - **users** settings will be applied for users matching the patterns
+- **environments** settings will be applied when deploying to environments matching the patterns
 
 You could imagine that you could have and organizational settings variable containing:
 
