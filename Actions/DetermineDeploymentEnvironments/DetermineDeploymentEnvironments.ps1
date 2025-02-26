@@ -173,6 +173,8 @@ else {
             foreach($key in $keys) {
                 if ($deploymentSettings.ContainsKey($key)) {
                     if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
+                        Write-Host "'$key'"
+                        Write-Host $deployTo."$key".GetType().Name
                         if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
                             # Support setting runs-on as an array in settings to not break old settings
                             # See https://github.com/microsoft/AL-Go/issues/1182
