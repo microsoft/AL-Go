@@ -63,7 +63,7 @@ $settings.Keys | ForEach-Object {
     }
     $outSettings += @{ "$setting" = $settingValue }
     if ($getSettings -contains $setting) {
-        if ($settingValue -is [System.Collections.Specialized.OrderedDictionary] -or $settingValue -is [hashtable] -or $settingValue -is [array]) {
+        if ($settingValue -is [System.Collections.Specialized.OrderedDictionary] -or $settingValue -is [hashtable]) {
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$(ConvertTo-Json $settingValue -Depth 99 -Compress)"
         }
         else {
