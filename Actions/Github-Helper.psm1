@@ -1001,7 +1001,7 @@ function GetArtifactsFromWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $projects,
         [Parameter(Mandatory = $false)]
-        [ref] $expiredArtifacts = $false
+        [ref] $expiredArtifacts
     )
 
     Write-Host "Getting artifacts for workflow run $workflowRun, mask $mask, projects $projects and version $version"
