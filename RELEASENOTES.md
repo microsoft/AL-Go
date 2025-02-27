@@ -52,6 +52,10 @@ If your installApps or installTestApps are secure URL, containing a secret token
 
 Which would hide the secret part of your URL instead of exposing it in clear text.
 
+### Support for deploying from PRs
+
+AL-Go for GitHub now supports deploying from a PR. When using the 'Publish To Environment' workflow, it is now possible to input 'PR_X' as the App version, where 'X' is the PR Id. This will deploy the artifacts from the latest PR build to the chosen environment, if that build is completed and successful.
+
 ## v6.3
 
 ### Deprecations
