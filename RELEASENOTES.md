@@ -10,6 +10,8 @@
 - Issue 1330 CompilerFolder doesn't transfer installed Apps to NuGet resolution
 - Issue 1268 Do not throw an un-understandable error during nuGet download
 - Performance test sample code in 25.4 contains objects with ID 149201 and 149202, which are not renumbered
+- Issue 798 Publish To Environment breaks CI/CD pipelines
+- Issue 1182 Runs-on setting type is ambiguous - string or array
 
 ### New Workflow specific settings
 

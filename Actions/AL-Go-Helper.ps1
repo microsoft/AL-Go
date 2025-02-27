@@ -795,7 +795,7 @@ function ReadSettings {
     # At some point in the future (likely version 3.0), we will switch to Ubuntu (Linux) as default for "runs-on"
     #
     if ($settings.shell -eq "") {
-        if ($settings."runs-on" -like "ubuntu-*") {
+        if ($settings."runs-on" -like "*ubuntu-*") {
             $settings.shell = "pwsh"
         }
         else {
@@ -803,7 +803,7 @@ function ReadSettings {
         }
     }
     if ($settings.githubRunner -eq "") {
-        if ($settings."runs-on" -like "ubuntu-*") {
+        if ($settings."runs-on" -like "*ubuntu-*") {
             $settings.githubRunner = "windows-latest"
         }
         else {
@@ -820,7 +820,7 @@ function ReadSettings {
     if ($settings.shell -ne "powershell" -and $settings.shell -ne "pwsh") {
         throw "Invalid value for setting: shell: $($settings.githubRunnerShell)"
     }
-    if (($settings.githubRunner -like "ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
+    if (($settings.githubRunner -like "*ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
         Write-Host "Switching shell to pwsh for ubuntu"
         $settings.githubRunnerShell = "pwsh"
     }
