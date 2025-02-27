@@ -197,6 +197,9 @@ if (Test-Path $artifactsFolder -PathType Container) {
 
         $allApps = @()
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+        if (!($projectApps)) {
+            $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-PR*-*") | ForEach-Object { $_.FullName })
+        }
         $projectTestApps = @()
         $unknownDependencies = @()
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
