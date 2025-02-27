@@ -198,8 +198,12 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $allApps = @()
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
         if (!($projectApps)) {
+            Write-Host "Did not get regular artifacts - trying PR artifacts ($project-$refname-$($buildMode)Apps-PR*-*)"
             $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-PR*-*") | ForEach-Object { $_.FullName })
+            Write-Host "$projectApps"
         }
+        Write-Host "Debug all artifacts"
+        @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { Write-Host "= $_.FullName" })
         $projectTestApps = @()
         $unknownDependencies = @()
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
