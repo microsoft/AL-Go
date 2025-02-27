@@ -1,4 +1,6 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
+    [string] $token,
     [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
     [string] $environmentName,
     [Parameter(HelpMessage = "Path to the downloaded artifacts to deploy", Mandatory = $true)]
@@ -7,7 +9,9 @@ Param(
     [ValidateSet('CD','Publish')]
     [string] $type = "CD",
     [Parameter(HelpMessage = "The settings for all Deployment Environments", Mandatory = $true)]
-    [string] $deploymentEnvironmentsJson
+    [string] $deploymentEnvironmentsJson,
+    [Parameter(HelpMessage = "Artifacts version. Used to check if this is a deployment from a PR", Mandatory = $false)]
+    [string]$artifactsVersion = ''
 )
 
 function CheckIfAppNeedsInstallOrUpgrade {
@@ -192,18 +196,18 @@ $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
 if (Test-Path $artifactsFolder -PathType Container) {
     $deploymentSettings.Projects.Split(',') | ForEach-Object {
         $project = $_.Replace('\','_').Replace('/','_')
+        $artifactVersionFilter = '*.*.*.*'
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
+        if ($artifactsVersion -like "PR_*") {
+            $prId = $artifactsVersion -replace "PR_", ""
+            $artifactVersionFilter = "PR$prId-*"
+            $refname = GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token
+            Write-Host "Debug: $artifactVersionFilter, $refname"
+        }
         Write-Host "project '$project'"
 
         $allApps = @()
-        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
-        if (!($projectApps)) {
-            Write-Host "Did not get regular artifacts - trying PR artifacts ($project-$refname-$($buildMode)Apps-PR*-*)"
-            $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-PR*-*") | ForEach-Object { $_.FullName })
-            Write-Host "$projectApps"
-        }
-        Write-Host "Debug all artifacts"
-        @((Get-ChildItem -Path $artifactsFolder) | ForEach-Object { Write-Host "= $_.FullName" })
+        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
         $projectTestApps = @()
         $unknownDependencies = @()
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
