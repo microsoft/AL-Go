@@ -395,10 +395,16 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
     Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
     OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
+
+    $projectWithSeperator = ''
+    if ($project) {
+        $projectWithSeperator = "$project$([System.IO.Path]::DirectorySeparatorChar)"
+    }
+
     # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
-    $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "Project: '$project'"; Write-Host "AppFolder: '$_'"; Write-Host "Str $project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))"; $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
-    $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
-    $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+    $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "Project: '$project'"; Write-Host "AppFolder: '$_'"; Write-Host "Str $projectWithSeperator$($_.SubString(2))"; $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
+    $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
+    $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
     
     OutputMessageAndArray -message "Download appFolders" -arrayOfStrings $downloadAppFolders
     OutputMessageAndArray -message "Download testFolders" -arrayOfStrings $downloadTestFolders
