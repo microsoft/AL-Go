@@ -402,7 +402,7 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     }
 
     # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
-    $downloadAppFolders = @($settings.appFolders | Where-Object { Write-Host "Project: '$project'"; Write-Host "AppFolder: '$_'"; Write-Host "Str $projectWithSeperator$($_.SubString(2))"; $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
+    $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
     $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
     $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
     
