@@ -39,6 +39,11 @@ Write-Host -ForegroundColor Yellow @'
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+if ($linux) {
+    Write-Host 'This test is forking BCApps and should only run once, using the settings in BCApps.'
+    exit
+}
+
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
@@ -57,7 +62,6 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -
 # Create repository1
 CreateAlGoRepository `
     -github:$github `
-    -linux:$linux `
     -template "https://github.com/$sourceRepo" `
     -repository $repository `
     -branch $branch
