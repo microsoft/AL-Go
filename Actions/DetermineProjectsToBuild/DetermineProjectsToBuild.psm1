@@ -405,7 +405,7 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
     $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
     $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
-    
+
     OutputMessageAndArray -message "Download appFolders" -arrayOfStrings $downloadAppFolders
     OutputMessageAndArray -message "Download testFolders" -arrayOfStrings $downloadTestFolders
     OutputMessageAndArray -message "Download bcptTestFolders" -arrayOfStrings $downloadBcptTestFolders
