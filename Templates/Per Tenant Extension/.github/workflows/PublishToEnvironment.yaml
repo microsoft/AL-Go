@@ -172,6 +172,7 @@ jobs:
           artifactsFolder: '.artifacts'
           type: 'Publish'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+          appVersion: ${{ github.event.inputs.appVersion }}
 
       - name: Deploy to Power Platform
         if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
