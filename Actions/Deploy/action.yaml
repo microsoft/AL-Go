@@ -23,7 +23,7 @@ inputs:
     description: The settings for all Deployment Environments
     required: true
   artifactsVersion:
-    description: Artifacts version from 'Publish to Environment' inputs
+    description: Artifacts version. Used to check if this is a deployment from a PR
     required: false
     default: ''
 outputs:
