@@ -399,6 +399,10 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
     $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
     $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$project$([System.IO.Path]::DirectorySeparatorChar)$($_.SubString(2))" })
+    
+    OutputMessageAndArray -message "Download appFolders" -arrayOfStrings $downloadAppFolders
+    OutputMessageAndArray -message "Download testFolders" -arrayOfStrings $downloadTestFolders
+    OutputMessageAndArray -message "Download bcptTestFolders" -arrayOfStrings $downloadBcptTestFolders
 
     if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
     # Download missing apps - or add then to build folders if the artifact doesn't exist
