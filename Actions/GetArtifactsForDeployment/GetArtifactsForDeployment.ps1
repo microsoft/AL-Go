@@ -71,6 +71,9 @@ elseif ($artifactsVersion -like "PR_*") {
     if ($lastKnownGoodBuildId -ne 0) {
         Write-Host "Last known good build id: $lastKnownGoodBuildId"
     }
+    else {
+        Write-Host "No last known good build found: $lastKnownGoodBuildId"
+    }
 
     $expiredArtifacts = @()
     $artifactsToDownload | ForEach-Object {

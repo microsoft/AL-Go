@@ -964,7 +964,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
     if($annotationMessage.split('/')[-1] -as [int]) {
         $lastKnownGoodBuildId = $annotationMessage.split('/')[-1]
     }
-
+    Write-Host "Debug - Last known good build id: $lastKnownGoodBuildId"
     return $lastKnownGoodBuildId
 }
 <#
@@ -1034,7 +1034,7 @@ function FindLatestPRRun {
     } else {
         Write-Host "Lastest PR build ($lastSuccessfulPRRun) was not successful for branch $branch in repository $repository"
     }
-
+    Write-Host "Debug - lastSuccessfulPRRun: $lastSuccessfulPRRun, lastKnownGoodBuildId: $lastKnownGoodBuildId"
     return $lastSuccessfulPRRun, $lastKnownGoodBuildId
 }
 
