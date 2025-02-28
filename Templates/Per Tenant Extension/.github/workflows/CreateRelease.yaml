@@ -118,6 +118,7 @@ jobs:
         with:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).TokenForPush }}
           downloadLatest: true
 
       - name: Analyze Artifacts

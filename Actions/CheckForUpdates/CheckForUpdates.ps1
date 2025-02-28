@@ -38,7 +38,10 @@ if ($update -eq 'Y') {
     if (-not $token) {
         throw "The GhTokenWorkflow secret is needed. Read https://github.com/microsoft/AL-Go/blob/main/Scenarios/GhTokenWorkflow.md for more information."
     }
+}
 
+$readToken = $token
+if ($token) {
     # token comes from a secret, base 64 encoded
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 
@@ -48,10 +51,6 @@ if ($update -eq 'Y') {
         $repositories += $templateUrl.Split('@')[0]
     }
     $readToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repositories $repositories
-}
-else {
-    # use token directly
-    $readToken = $token
 }
 
 # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
