@@ -44,9 +44,9 @@ Describe "GetWorkflowMultiRunBranches Action" {
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1")
 
-            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT -Raw) -split '='
+            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
-            $($outputValue | ConvertFrom-Json).branches | Should -Be @("main")
+            $outputValue | Should -Be "{`"branches`":[`"main`"]}"
         }
 
         It 'Action sets the input branch as result when a branch pattern is specified' {
@@ -59,9 +59,9 @@ Describe "GetWorkflowMultiRunBranches Action" {
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1") -includeBranches "test-branch"
 
-            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT -Raw) -split '='
+            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
-            $($outputValue | ConvertFrom-Json).branches | Should -Be @("test-branch")
+            $outputValue | Should -Be "{`"branches`":[`"test-branch`"]}"
         }
 
         It 'Action sets the input branch as result when a branch pattern with wild card is specified' {
@@ -74,10 +74,9 @@ Describe "GetWorkflowMultiRunBranches Action" {
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1") -includeBranches "*branch*"
 
-            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT -Raw) -split '='
+            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
-            $($outputValue | ConvertFrom-Json).branches.Count | Should -Be 2
-            $($outputValue | ConvertFrom-Json).branches | Should -Be @("test-branch", "some-other-branch")
+            $outputValue | Should -Be "{`"branches`":[`"test-branch`",`"some-other-branch`"]}"
         }
     }
 
@@ -92,9 +91,9 @@ Describe "GetWorkflowMultiRunBranches Action" {
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1")
 
-            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT -Raw) -split '='
+            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
-            $($outputValue | ConvertFrom-Json).branches | Should -Be @("default-branch")
+            $outputValue | Should -Be "{`"branches`":[`"default-branch`"]}"
         }
 
         It 'Action sets the input branch as result when a branch pattern is specified' {
@@ -107,9 +106,9 @@ Describe "GetWorkflowMultiRunBranches Action" {
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1") -includeBranches "some-random-branch" # This should be ignored
 
-            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT -Raw) -split '='
+            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
-            $($outputValue | ConvertFrom-Json).branches | Should -Be @("test-branch")
+            $outputValue | Should -Be "{`"branches`":[`"test-branch`"]}"
         }
 
         It 'Action sets the input branch as result when a branch pattern with wild card is specified' {
@@ -122,10 +121,9 @@ Describe "GetWorkflowMultiRunBranches Action" {
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1")
 
-            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT -Raw) -split '='
+            $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
-            $($outputValue | ConvertFrom-Json).branches.Count | Should -Be 2
-            $($outputValue | ConvertFrom-Json).branches | Should -Be @("test-branch", "some-other-branch")
+            $outputValue | Should -Be "{`"branches`":[`"test-branch`",`"some-other-branch`"]}"
         }
     }
 }

@@ -40,7 +40,7 @@ foreach ($branchPattern in $branchPatterns) {
     $branches += $allBranches | Where-Object { $_ -like $branchPattern }
 }
 
-$branches = $branches | Select-Object -Unique
+$branches = @($branches | Select-Object -Unique)
 Write-Host "Found git branches: $($branches -join ', ')"
 
 # Add the branches to the output
