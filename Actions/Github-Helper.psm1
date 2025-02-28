@@ -1298,6 +1298,9 @@ function DownloadPRArtifacts {
 
     #Get the artifacts from the last known good build, referenced in the PR
     $tempPath = Join-Path $path "temp"
+    if (!(Test-Path $tempPath)) {
+        New-Item $tempPath -ItemType Directory | Out-Null
+    }
     foreach($artifact in $lastKnownGoodBuildArtifacts) {
         $foldername = Join-Path $tempPath $artifact.Name
         $filename = "$foldername.zip"
