@@ -936,7 +936,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
 
     #Use the check-suits api to get all the annotations for a build
     $annotationsURI = ''
-    if($checkRuns && $checkRuns.total_count -gt 0) {
+    if($checkRuns -and $checkRuns.total_count -gt 0) {
         $initializationCheckRun = $checkRuns.check_runs | Where-Object { $_.name -eq 'Initialization' }
 
         if($initializationCheckRun) {
@@ -950,7 +950,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
     if($annotationsURI) {
         Write-Host "- $annotationsURI"
         $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
-        if($annotations && $annotations.count -gt 0) {
+        if($annotations -and $annotations.count -gt 0) {
             foreach($annotation in $annotations) {
                 if($annotation.message -like "Last known good build: https://github.com/$repository/actions/runs/*") {
                     Write-Host "Found PR run annotation message for incremental builds in repository $repository"
