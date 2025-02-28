@@ -76,15 +76,24 @@ elseif ($artifactsVersion -like "PR_*") {
     }
 
     $expiredArtifacts = @()
+    $lastKnownGoodBuildArtifacts = @()
+    #Get PR artifacts
     $artifactsToDownload | ForEach-Object {
         $allArtifacts += GetArtifactsFromWorkflowRun -workflowRun $latestPRBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
+    }
+    #Get last known good build artifacts referenced from PR
+    $artifactsToDownload | ForEach-Object {
+        $lastKnownGoodBuildArtifacts += GetArtifactsFromWorkflowRun -workflowRun $lastKnownGoodBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
     }
     if ($expiredArtifacts) {
         $prBuildLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/actions/runs/$latestPRBuildId"
         $shortLivedRetentionSettingLink = "https://aka.ms/algosettings#shortLivedArtifactsRetentionDays"
         throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink) - Hint: you can control the retention days of short-lived artifacts in the AL-Go settings ($shortLivedRetentionSettingLink)"
     }
-    $downloadArtifacts = $true
+    #$downloadArtifacts = $true
+    Write-Host "Debug - last known good build artifacts:"
+    $lastKnownGoodBuildArtifacts | ForEach-Object { Write-Host "- $($_.name)" }
+    DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $allArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts 
 }
 else {
     $searchArtifacts = $true
