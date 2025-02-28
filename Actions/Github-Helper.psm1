@@ -1315,10 +1315,16 @@ function DownloadPRArtifacts {
         (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
             Write-Host "Debug - artifact child from last known good build: $($_.FullName)"
             $appName = $_.Name.Split('_')[1]
-            if (!$appToFolderMap.ContainsKey($appName)) {
+            #Debug force this to return true
+            if ($true -or !$appToFolderMap.ContainsKey($appName)) {
+                Write-Host "App $appName not found in PR artifacts, copying from last known good build"
                 Copy-Item -Path $_ -Destination $appToFolderMap[$appName] 
             }
         }
+    }
+    #Cleanup temp folder
+    if (Test-Path $tempPath) {
+        Remove-Item $tempPath -Recurse -Force
     }
 }
 
