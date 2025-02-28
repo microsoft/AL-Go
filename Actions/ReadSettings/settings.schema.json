@@ -39,8 +39,7 @@
             "minLength": 1
         },
         "repoName": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
         },
         "versioningStrategy": {
             "type": "number"

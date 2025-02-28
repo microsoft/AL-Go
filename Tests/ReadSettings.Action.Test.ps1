@@ -43,14 +43,14 @@ Describe "ReadSettings Schema" {
     It 'Default settings match schema' {
         . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-        $defaultSettings = GetDefaultSettings -repoName 'ReadSettings'
+        $defaultSettings = GetDefaultSettings
         Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
     }
 
     It 'Shell setting can only be pwsh or powershell' {
         . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-        $defaultSettings = GetDefaultSettings -repoName 'ReadSettings'
+        $defaultSettings = GetDefaultSettings
         $defaultSettings.shell = 42
         try {
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema

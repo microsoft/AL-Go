@@ -528,7 +528,6 @@ function MergeCustomObjectIntoOrderedDictionary {
 
 function GetDefaultSettings
 (
-    [Parameter(Mandatory = $true)]
     [string] $repoName
 )
 {
@@ -541,7 +540,7 @@ function GetDefaultSettings
         "artifact"                                      = ""
         "companyName"                                   = ""
         "repoVersion"                                   = "1.0"
-        "repoName"                                      = $repoName
+        "repoName"                                      = "$repoName"
         "versioningStrategy"                            = 0
         "runNumberOffset"                               = 0
         "appBuild"                                      = 0
