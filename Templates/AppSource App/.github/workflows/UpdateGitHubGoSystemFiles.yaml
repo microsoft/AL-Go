@@ -17,7 +17,7 @@ on:
         default: false
       includeBranches:
         description: Specify a comma-separated list of branches to update. Wildcards are supported. The AL-Go settings will be read for every branch. Leave empty to update the current branch only.
-        requires: false
+        required: false
         default: ''
 
 permissions:

@@ -11,7 +11,7 @@ switch ($env:GITHUB_EVENT_NAME) {
       Write-Host "Event is schedule: getting branches from settings"
       $settings = ConvertFrom-Json $env:settings
 
-      # Add defensive check to handle if wporkflowSchedule.includeBranches is not defined in settings
+      # Add defensive check to handle if workflowSchedule.includeBranches is not defined in settings
       if (-not $($settings.workflowSchedule.includeBranches)) {
         Write-Host "No branch patterns defined in settings"
         $branchPatterns = @()
