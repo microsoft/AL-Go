@@ -914,6 +914,59 @@ function FindLatestSuccessfulCICDRun {
         return 0, ''
     }
 }
+function FindPRRunAnnotationForIncrementalBuilds {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$repository,
+        [Parameter(Mandatory = $true)]
+        [string]$checkSuiteId,
+        [Parameter(Mandatory = $true)]
+        [string] $token
+    )
+
+    $headers = GetHeaders -token $token
+    $lastKnownGoodBuildId = 0
+
+    Write-Host "Finding PR run annotation for incremental builds in repository $repository"
+
+    $checkRunsURI = "https://api.github.com/repos/$repository/check-suites/$checkSuiteId/check-runs"
+    Write-Host "- $checkRunsURI"
+
+    $checkRuns = (InvokeWebRequest -Headers $headers -Uri $checkRunsURI).Content | ConvertFrom-Json
+
+    #Use the check-suits api to get all the annotations for a build
+    $annotationsURI = ''
+    if($checkRuns && $checkRuns.total_count -gt 0) {
+        $initializationCheckRun = $checkRuns.check_runs | Where-Object { $_.name -eq 'Initialization' }
+
+        if($initializationCheckRun) {
+            Write-Host "Found PR run annotation for incremental builds in repository $repository"
+            $annotationsURI = $initializationCheckRun.output.annotations_url
+        }
+    }
+
+    #If the initialization annotation exist, check if a message pointing to last good build exist.
+    $annotationMessage = ''
+    if($annotationsURI) {
+        Write-Host "- $annotationsURI"
+        $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
+        if($annotations && $annotations.count -gt 0) {
+            foreach($annotation in $annotations) {
+                if($annotation.message -like "Last known good build: https://github.com/$repository/actions/runs/*") {
+                    Write-Host "Found PR run annotation message for incremental builds in repository $repository"
+                    $annotationMessage = $annotation.message
+                    break
+                }
+            }
+        }
+    }
+
+    if($annotationMessage.split('/')[-1] -as [int]) {
+        $lastKnownGoodBuildId = $annotationMessage.split('/')[-1]
+    }
+
+    return $lastKnownGoodBuildId
+}
 <#
     Gets the last PR build run ID for the specified repository and branch.
     Successful PR runs are those that have a workflow run named 'Pull Request Build' and successfully built all the projects.
@@ -932,6 +985,7 @@ function FindLatestPRRun {
 
     $headers = GetHeaders -token $token
     $lastSuccessfulPRRun = 0
+    $lastKnownGoodBuildId = 0
     $per_page = 100
     $page = 1
 
@@ -964,6 +1018,7 @@ function FindLatestPRRun {
             }
             #We only care about the latest PR build. If it is not completed or not successful, we return 0
             $lastSuccessfulPRRun = $latestPrRun.id
+            $lastKnownGoodBuildId = FindPRRunAnnotationForIncrementalBuilds -repository $repository -checkSuiteId $latestPrRun.check_suite_id -token $token
             break
         }
 
@@ -980,7 +1035,7 @@ function FindLatestPRRun {
         Write-Host "Lastest PR build ($lastSuccessfulPRRun) was not successful for branch $branch in repository $repository"
     }
 
-    return $lastSuccessfulPRRun
+    return $lastSuccessfulPRRun, $lastKnownGoodBuildId
 }
 
 <#
