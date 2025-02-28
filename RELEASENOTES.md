@@ -33,11 +33,13 @@
 > [!NOTE]
 > The projects mentioned here are AL-Go projects in a multi-project repository. A repository can contain multiple projects and a project can contain multiple apps.
 
-### Run "Update AL-Go System Files" on a schedule on multiple branches
+### Run "Update AL-Go System Files" on multiple branches
 
-When run on a schedule, _Update AL-Go System Files_ only runs on the _main_ branch. By setting `includeBranches` in `workflowSchedule` setting, you can now run the workflow on a schedule on multiple branches. Read more at https://aka.ms/algosettings#workflowSchedule.
+_Update AL-Go System Files_ has a new input to specify a list of branches to be updated in a single workflow run.
+When running the workflow on a schedule, you can now also specify `includeBranches` in `workflowSchedule` setting, which allows you to update the specified branches. Read more at https://aka.ms/algosettings#workflowSchedule.
 
-Dispatching the workflow manually still runs the workflow only on the branch it was dispatched on.
+> [!NOTE]
+> When running "Update AL-Go System Files" on multiple branches, the template repository URL will be determined based on the branch the workflow runs on and it will be used for all of the specified branches.
 
 ### Support for incremental builds
 
