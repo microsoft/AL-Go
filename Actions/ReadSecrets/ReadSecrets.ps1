@@ -77,6 +77,21 @@ try {
                 }
             }
         }
+        # Look through installApps and installTestApps for secrets and add them to the collection of secrets to get
+        foreach($installSettingsKey in @('installApps','installTestApps')) {
+            if ($settings.Keys -contains $installSettingsKey) {
+                $settings."$installSettingsKey" | ForEach-Object {
+                    # If any of the installApps URLs contains '${{SECRETNAME}}' we need to get the secret
+                    $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+                    if ($_ -match $pattern) {
+                        $secretName = $matches[2]
+                        if ($secretsCollection -notcontains $secretName) {
+                            $secretsCollection += $secretName
+                        }
+                    }
+                }
+            }
+        }
     }
 
     # Loop through secrets (use @() to allow us to remove items from the collection while looping)
@@ -164,6 +179,7 @@ try {
         if ($useGhTokenWorkflowForPush -eq 'true' -and $outSecrets.ghTokenWorkflow) {
             Write-Host "Use ghTokenWorkflow for Push"
             $ghToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($outSecrets.ghTokenWorkflow))
+            $ghToken = GetAccessToken -token $ghToken -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"metadata"="read";"workflows"="write"}
         }
         else {
             Write-Host "Use github_token for Push"

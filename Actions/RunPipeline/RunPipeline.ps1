@@ -10,7 +10,11 @@
     [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
     [string] $installAppsJson = '[]',
     [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]'
+    [string] $installTestAppsJson = '[]',
+    [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
+    [string] $baselineWorkflowRunId = '0',
+    [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
+    [string] $baselineWorkflowSHA = ''
 )
 
 $containerBaseFolder = $null
@@ -20,6 +24,7 @@ try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -119,6 +124,35 @@ try {
         exit
     }
 
+    $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
+    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+
+    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
+        # Incremental builds are enabled and we are only building modified apps
+        try {
+            $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        }
+        catch {
+            OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
+            $buildAll = $true
+        }
+        if (!$buildAll) {
+            Write-Host "Get unmodified apps from baseline workflow run"
+            Get-UnmodifiedAppsFromBaselineWorkflowRun `
+                -token $token `
+                -settings $settings `
+                -baseFolder $baseFolder `
+                -project $project `
+                -baselineWorkflowRunId $baselineWorkflowRunId `
+                -modifiedFiles $modifiedFiles `
+                -buildArtifactFolder $buildArtifactFolder `
+                -buildMode $buildMode `
+                -projectPath $projectPath
+        }
+    }
+
     if ($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds')) {
         Write-Host "Reading TrustedNuGetFeeds"
         foreach($trustedNuGetFeed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
@@ -136,7 +170,8 @@ try {
                     OutputWarning -message "Secret $authTokenSecret needed for trusted NuGetFeeds cannot be found"
                 }
                 else {
-                    $trustedNuGetFeed.Token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
+                    $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$authTokenSecret"))
+                    $trustedNuGetFeed.Token = GetAccessToken -token $authToken -repositories @() -permissions @{"packages"="read";"metadata"="read"}
                 }
             }
         }
@@ -151,11 +186,34 @@ try {
         })
     }
 
-    $installApps = $settings.installApps
-    $installTestApps = $settings.installTestApps
+    $install = @{
+        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
+        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+    }
 
-    $installApps += $installAppsJson | ConvertFrom-Json
-    $installTestApps += $installTestAppsJson | ConvertFrom-Json
+    # Replace secret names in install.apps and install.testApps
+    foreach($list in @('Apps','TestApps')) {
+        $install."$list" = @($install."$list" | ForEach-Object {
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            $url = $_
+            if ($url -match $pattern) {
+                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            }
+            else {
+                $finalUrl = $url
+            }
+            # Check validity of URL
+            if ($finalUrl -like 'http*://*') {
+                try {
+                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                }
+                catch {
+                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
+                }
+            }
+            return $finalUrl
+        })
+    }
 
     # Analyze app.json version dependencies before launching pipeline
 
@@ -234,9 +292,6 @@ try {
             "appVersion" = $settings.repoVersion
         }
     }
-
-    $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
-    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
     $allTestResults = "testresults*.xml"
     $testResultsFile = Join-Path $projectPath "TestResults.xml"
@@ -328,9 +383,10 @@ try {
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
                     $publishParams = @{
                         "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
-                        "nuGetToken" = $gitHubPackagesCredential.token
+                        "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
+                        "select" = "LatestMatching"
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
@@ -341,6 +397,18 @@ try {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
+                        if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
+                            foreach($installedApp in $parameters.installedApps) {
+                                if ($installedApp.Id -eq $platformAppId) {
+                                    $publishParams += @{
+                                        "installedApps" = $parameters.installedApps
+                                        "installedPlatform" = ([System.Version]$installedApp.Version)
+                                        "installedCountry" = $parameters.installedCountry
+                                    }
+                                    break
+                                }
+                            }
+                        }
                         Download-BcNuGetPackageToFolder -folder $parameters.appSymbolsFolder @publishParams | Out-Null
                     }
                 }
@@ -380,7 +448,7 @@ try {
         $runAlPipelineParams["preprocessorsymbols"] = @()
     }
 
-    # REMOVE AFTER April 1st 2025 --->
+    # DEPRECATION: REMOVE AFTER April 1st 2025 --->
     if ($buildMode -eq 'Clean' -and $settings.ContainsKey('cleanModePreprocessorSymbols')) {
         Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
         $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
@@ -408,8 +476,8 @@ try {
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
-        -installApps $installApps `
-        -installTestApps $installTestApps `
+        -installApps $install.apps `
+        -installTestApps $install.testApps `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `

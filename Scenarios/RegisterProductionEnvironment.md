@@ -1,4 +1,4 @@
-# #5 Register a customer production environment for Manual Deployment
+# Register a customer production environment for Manual Deployment
 
 *Prerequisites: A completed [scenario 4](CreateRelease.md), an online production environment setup for S2S as specified in task 2 here [Using Service to Service Authentication - Business Central | Microsoft Docs](https://go.microsoft.com/fwlink/?linkid=2217415&clcid=0x409), using the same Microsoft Entra application registration as scenario 3*
 

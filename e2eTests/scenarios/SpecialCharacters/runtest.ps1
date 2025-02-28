@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -46,7 +47,7 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 $appName = 'Æøå-app'
 $publisherName = 'Süß'
@@ -89,7 +90,7 @@ Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "run
 CommitAndPush -commitMessage 'Shift to Linux'
 
 # Upgrade AL-Go System Files
-RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $token -repository $repository | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $algoauthapp -repository $repository | Out-Null
 
 $run = RunCICD -repository $repository -branch $branch -wait
 

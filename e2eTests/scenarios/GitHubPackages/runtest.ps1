@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -57,13 +58,13 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
 
 $repository1 = "$repository.1"
 $repository2 = "$repository.2"
 $githubPackagesContext = @{
     "serverUrl"="https://nuget.pkg.github.com/$($githubOwner.ToLowerInvariant())/index.json"
-    "token"=$token
+    "token"=$e2epat
 }
 $githubPackagesContextJson = ($githubPackagesContext | ConvertTo-Json -Compress)
 

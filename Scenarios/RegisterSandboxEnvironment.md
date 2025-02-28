@@ -1,4 +1,4 @@
-# #3 Register a customer sandbox environment for Continuous Deployment using S2S
+# Register a customer sandbox environment for Continuous Deployment using S2S
 
 \*Prerequisites: A completed [scenario 2](AddATestApp.md), an Microsoft Entra application registration, and an online sandbox environment called QA with the setup for S2S as specified in task 1 and 2 [here](https://go.microsoft.com/fwlink/?linkid=2217415&clcid=0x409) completed.
 

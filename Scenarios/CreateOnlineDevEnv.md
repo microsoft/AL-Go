@@ -1,4 +1,4 @@
-# #8 Create Online Development Environment from VS Code
+# Create Online Development Environment from VS Code
 
 *Prerequisites: A completed [scenario 7](UseAzureKeyVault.md)*
 

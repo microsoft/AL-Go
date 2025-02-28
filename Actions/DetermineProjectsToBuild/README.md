@@ -28,7 +28,9 @@ none
 | Name | Description |
 | :-- | :-- |
 | ProjectsJson | An array of AL-Go projects in compressed JSON format |
+| SkippedProjectsJson | An array of skipped AL-Go projects in compressed JSON format |
 | ProjectDependenciesJson | An object that holds the project dependencies in compressed JSON format |
 | BuildOrderJson | An array of objects that determine that build order, including build dimensions |
 | BuildAllProjects | A flag that indicates whether to build all projects or only the modified ones |
-| BaselineWorkflowRunId | The ID of the workflow run from where to fetch artifacts in case when not all projects are built |
+| BaselineWorkflowRunId | The ID of the workflow run containing last known good build, if we are doing incremental builds |
+| BaselineWorkflowSHA | The SHA of the last known good build, if we are doing incremental builds |

@@ -175,14 +175,15 @@ function NewSamplePerformanceTestApp
 
     UpdateManifest -sourceFolder $appSourceFolder -appJsonFile "$($destinationPath)\app.json" -name $name -publisher $publisher -idrange $idrange -version $version
 
+    $sampleRange = @{ "fromId" = 149100; "toId" = 149999 }
     if ($sampleCode) {
         Get-ChildItem -Path "$appSourceFolder\src" -Recurse -Filter "*.al" | ForEach-Object {
             Write-Host $_.Name
-            UpdateALFile -sourceFolder $_.DirectoryName -destinationFolder "$($destinationPath)\src" -alFileName $_.name -fromId 149100 -toId 149200 -startId $idrange[0]
+            UpdateALFile -sourceFolder $_.DirectoryName -destinationFolder "$($destinationPath)\src" -alFileName $_.name -fromId $sampleRange.fromId -toId $sampleRange.toId -startId $idrange[0]
         }
     }
     if ($sampleSuite) {
-        UpdateALFile -sourceFolder $alTemplatePath -destinationFolder $destinationPath -alFileName bcptSuite.json -fromId 149100 -toId 149200 -startId $idrange[0]
+        UpdateALFile -sourceFolder $alTemplatePath -destinationFolder $destinationPath -alFileName bcptSuite.json -fromId $sampleRange.fromId -toId $sampleRange.toId -startId $idrange[0]
     }
 }
 

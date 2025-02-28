@@ -1,4 +1,4 @@
-# #1 Create a new per-tenant extension (like AL:Go in VS Code) and start developing in VS Code
+# Create a new per-tenant extension (like AL:Go in VS Code) and start developing in VS Code
 
 *Prerequisites: A GitHub account, VS-Code (with AL and PowerShell extensions installed), and Docker installed locally*
 
