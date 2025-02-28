@@ -961,7 +961,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         }
     }
 
-    if($annotationMessage.split('/')[-1] -as [int]) {
+    if($annotationMessage.split('/')[-1] -match '^\d+$') {
         $lastKnownGoodBuildId = $annotationMessage.split('/')[-1]
     }
     Write-Host "Debug - Last known good build id: $lastKnownGoodBuildId"
