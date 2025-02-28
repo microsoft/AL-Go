@@ -1318,7 +1318,8 @@ function DownloadPRArtifacts {
             #Debug force this to return true
             if ($true -or !$appToFolderMap.ContainsKey($appName)) {
                 Write-Host "App $appName not found in PR artifacts, copying from last known good build"
-                Copy-Item -Path $_ -Destination $appToFolderMap[$appName] 
+                Write-Host "Debug - Copying $($_.FullName) to $($appToFolderMap[$appName])"
+                Copy-Item -Path $_.FullName -Destination $appToFolderMap[$appName] 
             }
         }
     }
