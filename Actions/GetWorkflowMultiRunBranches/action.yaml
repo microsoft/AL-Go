@@ -1,0 +1,30 @@
+name: Get Workflow Multi-Run Branches
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  includeBranches:
+    description: Comma-separated value of branch name patterns to include if they exist. If not specified, only the current branch is returned. Wildcards are supported.
+    required: false
+    default: ''
+outputs:
+  Result:
+    description: JSON-formatted object with branches property, an array of branch names
+    value: ${{ steps.GetWorkflowMultiRunBranches.outputs.Result }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: GetWorkflowMultiRunBranches
+      env:
+        _includeBranches: ${{ inputs.includeBranches }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetWorkflowMultiRunBranches" -Action {
+          ${{ github.action_path }}/GetWorkflowMultiRunBranches.ps1 -includeBranches $env:_includeBranches
+        }
+branding:
+  icon: terminal
+  color: blue
