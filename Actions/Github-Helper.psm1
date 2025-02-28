@@ -1289,7 +1289,7 @@ function DownloadPRArtifacts {
         Expand-Archive -Path $filename -DestinationPath $foldername
         Remove-Item $filename -Force
 
-        (Get-ChildItems -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
+        (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
             Write-Host "Debug - artifact child from PR: $($_.FullName)"
             $appName = $_.Name.Split('_')[1]
             $appToFolderMap[$appName] = $foldername
@@ -1309,7 +1309,7 @@ function DownloadPRArtifacts {
         Remove-Item $filename -Force
 
         #Go through each artifact in the last known good build and copy the files to the PR artifact folder, if it is not already included.
-        (Get-ChildItems -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
+        (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
             Write-Host "Debug - artifact child from last known good build: $($_.FullName)"
             $appName = $_.Name.Split('_')[1]
             if (!$appToFolderMap.ContainsKey($appName)) {
