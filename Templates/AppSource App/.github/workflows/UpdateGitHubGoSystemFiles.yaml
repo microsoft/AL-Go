@@ -102,7 +102,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: commitOptions,templateUrl
+          get: commitOptions
 
       - name: Read secrets
         id: ReadSecrets
