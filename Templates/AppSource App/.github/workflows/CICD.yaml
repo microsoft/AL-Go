@@ -168,6 +168,7 @@ jobs:
           shell: powershell
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           templateUrl: ${{ env.templateUrl }}
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: true
 
   Build:
