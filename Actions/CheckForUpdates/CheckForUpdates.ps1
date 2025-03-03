@@ -3,8 +3,6 @@
     [string] $actor,
     [Parameter(HelpMessage = "Base64 encoded GhTokenWorkflow secret", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $githubToken,
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $true)]
