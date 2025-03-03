@@ -508,7 +508,7 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
-    #If any apps were downloaded as part of incremental builds, we should remove them again after the build
+    # If any apps were downloaded as part of incremental builds, we should remove them again after the build
     $downloadedAppsByType | ForEach-Object {
         if ($_.downloadedApps) {
             $mask = $_.mask
@@ -521,7 +521,7 @@ try {
                     Remove-Item $thisApp
                 }
             }
-        }   
+        }
     }
 
     if ($containerBaseFolder) {
