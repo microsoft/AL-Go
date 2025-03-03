@@ -141,7 +141,7 @@ try {
         }
         if (!$buildAll) {
             Write-Host "Get unmodified apps from baseline workflow run"
-            $downloadAppFolders, $downloadTestFolders, $downloadBcptTestFolders = Get-UnmodifiedAppsFromBaselineWorkflowRun `
+            $downloadedAppsByType = Get-UnmodifiedAppsFromBaselineWorkflowRun `
                 -token $token `
                 -settings $settings `
                 -baseFolder $baseFolder `
@@ -508,12 +508,16 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
-    $downloadAppFolders, $downloadTestFolders, $downloadBcptTestFolders | ForEach-Object {
-        Write-Host "Debug: removing apps from $_"
-        foreach($downloadedApp in $_) {
-            if (Test-Path $downloadedApp) {
-                Write-Host "Debug: Removing downloaded app $downloadedApp"
-                Remove-Item $downloadedApp
+    $downloadedAppsByType | ForEach-Object {
+        $type = $_.type
+        $mask = $_.mask
+        $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+        Write-Host "Debug: removing $type apps with mask: $mask from $thisArtifactFolder"
+        foreach($downloadedApp in $_.downloadedApps) {
+            $thisApp = Join-Path $thisArtifactFolder $downloadedApp
+            Write-Host "Debug: app: $thisApp"
+            if (Test-Path $thisApp) {
+                Remove-Item $thisApp
             }
         }
     }

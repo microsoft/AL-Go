@@ -430,9 +430,15 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         }
     }
     $additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+    $downloadedAppsByType = @()
     $appsToDownload.Keys | ForEach-Object {
         $appType = $_
         $mask = $appsToDownload."$appType".Mask
+        $thisDownloadedAppsType = @{
+            "type" = $appType
+            "mask" = $mask
+            "downloadedApps" = @()
+        }
         $downloads = $appsToDownload."$appType".Downloads
         $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
         if (!(Test-Path $thisArtifactFolder)) {
@@ -467,6 +473,7 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
                         Write-Host "Copy $($item.Name) to build folders"
                         Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
                         $appsToDownload."$appType".Downloaded++
+                        $thisDownloadedAppsType.downloadedApps += $item.Name
                     }
                 }
             }
@@ -474,10 +481,11 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         }
         $additionalDataForTelemetry.Add("$($appType)ToDownload", $appsToDownload."$appType".Downloads.Count)
         $additionalDataForTelemetry.Add("$($appType)Downloaded", $appsToDownload."$appType".Downloaded)
+        $downloadedAppsByType += $thisDownloadedAppsType
     }
     Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
 
-    return $downloadAppFolders, $downloadTestFolders, $downloadBcptTestFolders
+    return $downloadedAppsByType
 }
 
 Export-ModuleMember *-*
