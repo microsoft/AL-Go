@@ -182,7 +182,7 @@ function DownloadPRArtifacts {
         Write-Host "Downloading artifact $($artifact.Name)"
         Write-Host "Debug: project: $project, artifactType: $artifactType"
         if ($prArtifactSuffix -eq '') {
-            $prArtifactSuffix = "PR$($typeIdDate[1])-$($typeIdDate[2])"
+            $prArtifactSuffix = "$($typeIdDate[1])-$($typeIdDate[2])"
             Write-Host "Debug: prArtifactSuffix: $prArtifactSuffix"
         }
 
@@ -194,7 +194,7 @@ function DownloadPRArtifacts {
         (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
             Write-Host "Debug - artifact child from PR: $($_.FullName)"
             $appName = $_.Name.Split('_')[1]
-            $appsBuiltInPr.Add("$project|$appName")
+            $appsBuiltInPr.Add("$project|$appName") | Out-Null
             $projectArtifactTypeToFolderMap["$project|$artifactType"] = $foldername
         }
     }
@@ -206,8 +206,10 @@ function DownloadPRArtifacts {
     }
     foreach($artifact in $lastKnownGoodBuildArtifacts) {
         #PR artifacts are named project-branch-type-version, but since both branch and project can contain '-' in the name, we can't split using dash.
-        $project = $artifact.Name.Split("-$lastKnownGoodBuildHeadRef-")[0] 
-        $artifactType = $artifact.Name.Split("-$lastKnownGoodBuildHeadRef-")[1].split('-')[0]
+        $projectSuffix = $artifact.Name -split "-$lastKnownGoodBuildHeadRef-"
+        $typeVersion = $projectSuffix[1] -split '-'
+        $project = $projectSuffix[0] 
+        $artifactType = $typeVersion[0]
         Write-Host "Downloading artifact $($artifact.Name)"
         Write-Host "Debug: project: $project, artifactType: $artifactType"
 
