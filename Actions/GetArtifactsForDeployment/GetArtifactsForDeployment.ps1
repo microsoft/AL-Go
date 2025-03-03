@@ -99,7 +99,7 @@ elseif ($artifactsVersion -like "PR_*") {
     #$downloadArtifacts = $true
     OutputMessageAndArray "Artifacts from pr build:" $prArtifacts
     OutputMessageAndArray "Artifacts from last known good build:" $lastKnownGoodBuildArtifacts
-    DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $prArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts 
+    DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $prArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts -prRunId $latestPRBuildId -lastKnownGoodRunId $lastKnownGoodBuildRunId
 }
 else {
     $searchArtifacts = $true
