@@ -29,7 +29,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         $initializationCheckRun = $checkRuns.check_runs | Where-Object { $_.name -eq 'Initialization' }
 
         if($initializationCheckRun) {
-            Write-Host "Found PR run annotation for incremental builds in repository $repository"
+            Write-Host "Found PR run annotation"
             $annotationsURI = $initializationCheckRun.output.annotations_url
         }
     }
@@ -42,7 +42,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         if($annotations -and $annotations.count -gt 0) {
             foreach($annotation in $annotations) {
                 if($annotation.message -like "Last known good build: https://github.com/$repository/actions/runs/*") {
-                    Write-Host "Found PR run annotation message for incremental builds in repository $repository"
+                    Write-Host "Found PR run annotation message: $($annotation.message)"
                     $annotationMessage = $annotation.message
                     break
                 }
@@ -53,7 +53,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
     if($annotationMessage.split('/')[-1] -match '^\d+$') {
         $lastKnownGoodBuildId = $annotationMessage.split('/')[-1]
     }
-    Write-Host "Debug - Last known good build id: $lastKnownGoodBuildId"
+
     return $lastKnownGoodBuildId
 }
 <#
@@ -123,7 +123,7 @@ function FindLatestPRRun {
     } else {
         Write-Host "Lastest PR build ($lastSuccessfulPRRun) was not successful for branch $branch in repository $repository"
     }
-    Write-Host "Debug - lastSuccessfulPRRun: $lastSuccessfulPRRun, lastKnownGoodBuildId: $lastKnownGoodBuildId"
+
     return $lastSuccessfulPRRun, $lastKnownGoodBuildId
 }
 function DownloadAndUnpackArtifact {
@@ -175,15 +175,13 @@ function DownloadPRArtifacts {
     # Get the artifacts from the PR
     foreach($artifact in $prArtifacts) {
         #PR artifacts are named project-branch-type-PRxx-date, but since both branch and project can contain '-' in the name, we can't split using dash.
-        $projectSuffix = $artifact.Name -split "-$prHeadRef-"
-        $typeIdDate = $projectSuffix[1] -split '-'
+        $projectSuffix = $artifact.Name -split "-$prHeadRef-" # (project, type-PRxx-date)
+        $typeIdDate = $projectSuffix[1] -split '-' # (type, PRxx, date)
         $project = $projectSuffix[0]
         $artifactType = $typeIdDate[0]
         Write-Host "Downloading artifact $($artifact.Name)"
-        Write-Host "Debug: project: $project, artifactType: $artifactType"
         if ($prArtifactSuffix -eq '') {
             $prArtifactSuffix = "$($typeIdDate[1])-$($typeIdDate[2])"
-            Write-Host "Debug: prArtifactSuffix: $prArtifactSuffix"
         }
 
         # Download and unpack the artifact
@@ -192,7 +190,6 @@ function DownloadPRArtifacts {
 
         # For each app in the artifact, save the name in a hashset so we know not to copy it from the last known good build
         (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
-            Write-Host "Debug - artifact child from PR: $($_.FullName)"
             $appName = $_.Name.Split('_')[1]
             $appsBuiltInPr.Add("$project|$appName") | Out-Null
             $projectArtifactTypeToFolderMap["$project|$artifactType"] = $foldername
@@ -206,12 +203,11 @@ function DownloadPRArtifacts {
     }
     foreach($artifact in $lastKnownGoodBuildArtifacts) {
         #PR artifacts are named project-branch-type-version, but since both branch and project can contain '-' in the name, we can't split using dash.
-        $projectSuffix = $artifact.Name -split "-$lastKnownGoodBuildHeadRef-"
-        $typeVersion = $projectSuffix[1] -split '-'
+        $projectSuffix = $artifact.Name -split "-$lastKnownGoodBuildHeadRef-" # (project, type-version)
+        $typeVersion = $projectSuffix[1] -split '-' # (type, version)
         $project = $projectSuffix[0]
         $artifactType = $typeVersion[0]
         Write-Host "Downloading artifact $($artifact.Name)"
-        Write-Host "Debug: project: $project, artifactType: $artifactType"
 
         # Download and unpack the artifact
         $foldername = Join-Path $tempPath $artifact.Name
@@ -229,12 +225,10 @@ function DownloadPRArtifacts {
 
         # Go through each artifact in the last known good build and copy the files to the PR artifact folder, if it is not already included.
         (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
-            Write-Host "Debug - artifact child from last known good build: $($_.FullName)"
             $appName = $_.Name.Split('_')[1]
             # If the app was not built in the PR, we need to copy it from the last known good build
             if (!$appsBuiltInPr.Contains("$project|$appName")) {
                 Write-Host "App $appName not found in PR artifacts, copying from last known good build"
-                Write-Host "Debug - Copying $($_.FullName) to $($appToFolderMap[$appName])"
                 Copy-Item -Path $_.FullName -Destination $projectArtifactTypeToFolderMap["$project|$artifactType"]
             }
         }
@@ -282,6 +276,6 @@ function GetHeadRefFromRunId {
     Write-Host "- $runsURI"
 
     $run = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
-    Write-Host "Debug - head branch: $($run.head_branch)"
+
     return $run.head_branch
 }
