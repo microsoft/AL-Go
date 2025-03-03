@@ -160,9 +160,9 @@ function DownloadPRArtifacts {
         [Parameter(Mandatory = $false)]
         $lastKnownGoodBuildArtifacts,
         [Parameter(Mandatory = $true)]
-        [int]$prRunId,
+        [string]$prRunId,
         [Parameter(Mandatory = $false)]
-        [int]$lastKnownGoodBuildRunId
+        [string]$lastKnownGoodBuildRunId
     )
 
     $prHeadRef = GetHeadRefFromRunId -repository $ENV:GITHUB_REPOSITORY -runId $prRunId -token $token
