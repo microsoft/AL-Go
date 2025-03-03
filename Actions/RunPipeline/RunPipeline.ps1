@@ -508,18 +508,20 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
+    #If any apps were downloaded as part of incremental builds, we should remove them again after the build
     $downloadedAppsByType | ForEach-Object {
-        $type = $_.type
-        $mask = $_.mask
-        $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
-        Write-Host "Debug: removing $type apps with mask: $mask from $thisArtifactFolder"
-        foreach($downloadedApp in $_.downloadedApps) {
-            $thisApp = Join-Path $thisArtifactFolder $downloadedApp
-            Write-Host "Debug: app: $thisApp"
-            if (Test-Path $thisApp) {
-                Remove-Item $thisApp
+        if ($_.downloadedApps) {
+            $mask = $_.mask
+            $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+            Write-Host "Removing downloaded apps from $thisArtifactFolder"
+            foreach($downloadedApp in $_.downloadedApps) {
+                $thisApp = Join-Path $thisArtifactFolder $downloadedApp
+                Write-Host "Removing: $thisApp"
+                if (Test-Path $thisApp) {
+                    Remove-Item $thisApp
+                }
             }
-        }
+        }   
     }
 
     if ($containerBaseFolder) {
