@@ -175,8 +175,8 @@ function DownloadPRArtifacts {
     # Get the artifacts from the PR
     foreach($artifact in $prArtifacts) {
         #PR artifacts are named project-branch-type-PRxx-date, but since both branch and project can contain '-' in the name, we can't split using dash.
-        $projectSuffix = $artifact.Name.Split("-$prHeadRef-")
-        $typeIdDate = $projectSuffix[1].split('-')
+        $projectSuffix = $artifact.Name -split "-$prHeadRef-"
+        $typeIdDate = $projectSuffix[1] -split '-'
         $project = $projectSuffix[0] 
         $artifactType = $typeIdDate[0]
         Write-Host "Downloading artifact $($artifact.Name)"
@@ -280,6 +280,6 @@ function GetHeadRefFromRunId {
     Write-Host "- $runsURI"
 
     $run = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
-
+    Write-Host "Debug - head branch: $($run.head_branch)"
     return $run.head_branch
 }
