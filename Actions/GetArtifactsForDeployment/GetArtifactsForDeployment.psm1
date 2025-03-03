@@ -177,7 +177,7 @@ function DownloadPRArtifacts {
         #PR artifacts are named project-branch-type-PRxx-date, but since both branch and project can contain '-' in the name, we can't split using dash.
         $projectSuffix = $artifact.Name -split "-$prHeadRef-"
         $typeIdDate = $projectSuffix[1] -split '-'
-        $project = $projectSuffix[0] 
+        $project = $projectSuffix[0]
         $artifactType = $typeIdDate[0]
         Write-Host "Downloading artifact $($artifact.Name)"
         Write-Host "Debug: project: $project, artifactType: $artifactType"
@@ -190,7 +190,7 @@ function DownloadPRArtifacts {
         $foldername = Join-Path $path $artifact.Name
         DownloadAndUnpackArtifact -token $token -folder $foldername -artifact $artifact
 
-        # For each app in the artifact, save the name in a hashset so we know not to copy it from the last known good build      
+        # For each app in the artifact, save the name in a hashset so we know not to copy it from the last known good build
         (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
             Write-Host "Debug - artifact child from PR: $($_.FullName)"
             $appName = $_.Name.Split('_')[1]
@@ -208,7 +208,7 @@ function DownloadPRArtifacts {
         #PR artifacts are named project-branch-type-version, but since both branch and project can contain '-' in the name, we can't split using dash.
         $projectSuffix = $artifact.Name -split "-$lastKnownGoodBuildHeadRef-"
         $typeVersion = $projectSuffix[1] -split '-'
-        $project = $projectSuffix[0] 
+        $project = $projectSuffix[0]
         $artifactType = $typeVersion[0]
         Write-Host "Downloading artifact $($artifact.Name)"
         Write-Host "Debug: project: $project, artifactType: $artifactType"
@@ -219,7 +219,7 @@ function DownloadPRArtifacts {
 
         # The deploy action will search for an artifact with the PR style artifact name, so we need to create a folder with that pattern.
         if (!($projectArtifactTypeToFolderMap.ContainsKey("$project|$artifactType"))) {
-            $newFolderName = Join-Path $path "$project-$prHeadRef-$artifactType-$prArtifactSuffix" 
+            $newFolderName = Join-Path $path "$project-$prHeadRef-$artifactType-$prArtifactSuffix"
             if (!(Test-Path $newFolderName)) {
                 New-Item $newFolderName -ItemType Directory | Out-Null
             }
@@ -235,7 +235,7 @@ function DownloadPRArtifacts {
             if (!$appsBuiltInPr.Contains("$project|$appName")) {
                 Write-Host "App $appName not found in PR artifacts, copying from last known good build"
                 Write-Host "Debug - Copying $($_.FullName) to $($appToFolderMap[$appName])"
-                Copy-Item -Path $_.FullName -Destination $projectArtifactTypeToFolderMap["$project|$artifactType"] 
+                Copy-Item -Path $_.FullName -Destination $projectArtifactTypeToFolderMap["$project|$artifactType"]
             }
         }
     }
