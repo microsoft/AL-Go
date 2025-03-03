@@ -7,6 +7,10 @@ Param(
     [string] $artifactsFolder
 )
 
+$getArtifactsHelper = Join-Path -Path $PSScriptRoot -ChildPath "GetArtifactsForDepoyment.psm1"
+if (Test-Path $getArtifactsHelper) {
+    Import-Module $getArtifactsHelper
+}
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
@@ -72,16 +76,17 @@ elseif ($artifactsVersion -like "PR_*") {
         Write-Host "Last known good build id: $lastKnownGoodBuildId"
     }
     else {
-        Write-Host "No last known good build found: $lastKnownGoodBuildId"
+        Write-Host "No last known good build found."
     }
 
+    $prArtifacts = @()
     $expiredArtifacts = @()
     $lastKnownGoodBuildArtifacts = @()
-    #Get PR artifacts
+    # Get PR artifacts
     $artifactsToDownload | ForEach-Object {
-        $allArtifacts += GetArtifactsFromWorkflowRun -workflowRun $latestPRBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
+        $prArtifacts += GetArtifactsFromWorkflowRun -workflowRun $latestPRBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
     }
-    #Get last known good build artifacts referenced from PR
+    # Get last known good build artifacts referenced from PR
     $artifactsToDownload | ForEach-Object {
         $lastKnownGoodBuildArtifacts += GetArtifactsFromWorkflowRun -workflowRun $lastKnownGoodBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
     }
@@ -91,9 +96,9 @@ elseif ($artifactsVersion -like "PR_*") {
         throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink) - Hint: you can control the retention days of short-lived artifacts in the AL-Go settings ($shortLivedRetentionSettingLink)"
     }
     #$downloadArtifacts = $true
-    Write-Host "Debug - last known good build artifacts:"
-    $lastKnownGoodBuildArtifacts | ForEach-Object { Write-Host "- $($_.name)" }
-    DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $allArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts 
+    OutputMessageAndArray "Artifacts from pr build:" $prArtifacts
+    OutputMessageAndArray "Artifacts from last known good build:" $lastKnownGoodBuildArtifacts
+    DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $prArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts 
 }
 else {
     $searchArtifacts = $true
