@@ -127,6 +127,7 @@ try {
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
+    $downloadAppFolders, $downloadTestFolders, $downloadBcptTestFolders = @(), @(), @()
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
@@ -140,7 +141,7 @@ try {
         }
         if (!$buildAll) {
             Write-Host "Get unmodified apps from baseline workflow run"
-            Get-UnmodifiedAppsFromBaselineWorkflowRun `
+            $downloadAppFolders, $downloadTestFolders, $downloadBcptTestFolders = Get-UnmodifiedAppsFromBaselineWorkflowRun `
                 -token $token `
                 -settings $settings `
                 -baseFolder $baseFolder `
@@ -506,6 +507,16 @@ try {
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
+
+    $downloadAppFolders, $downloadTestFolders, $downloadBcptTestFolders | ForEach-Object {
+        Write-Host "Debug: removing apps from $_"
+        foreach($downloadedApp in $_) {
+            if (Test-Path $downloadedApp) {
+                Write-Host "Debug: Removing downloaded app $downloadedApp"
+                Remove-Item $downloadedApp
+            }
+        }
+    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
