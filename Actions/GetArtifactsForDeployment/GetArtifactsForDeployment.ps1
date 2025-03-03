@@ -7,7 +7,7 @@ Param(
     [string] $artifactsFolder
 )
 
-$getArtifactsHelper = Join-Path -Path $PSScriptRoot "GetArtifactsForDepoyment.psm1"
+$getArtifactsHelper = Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1"
 if (Test-Path $getArtifactsHelper) {
     Write-Host "Debug: get helper module"
     Import-Module $getArtifactsHelper
