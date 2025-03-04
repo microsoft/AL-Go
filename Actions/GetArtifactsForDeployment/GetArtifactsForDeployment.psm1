@@ -42,13 +42,14 @@ function FindPRRunAnnotationForIncrementalBuilds {
             foreach($annotation in $annotations) {
                 if($annotation.message -match "https://github.com/$repository/actions/runs/([0-9]{1,10})") {
                     Write-Host "Found PR run annotation message: $($annotation.message)"
-                    return $matches[1]
+                    $lastKnownGoodBuildId = $matches[1]
+                    break
                 }
             }
         }
     }
 
-    return 0
+    return $lastKnownGoodBuildId
 }
 <#
     Gets the last PR build run ID for the specified repository and branch.

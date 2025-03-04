@@ -26,7 +26,6 @@ if (!(Test-Path $artifactsFolder)) {
     New-Item $artifactsFolder -ItemType Directory | Out-Null
 }
 $searchArtifacts = $false
-$downloadArtifacts = $false
 if ($artifactsVersion -eq "current" -or $artifactsVersion -eq "prerelease" -or $artifactsVersion -eq "draft") {
     Write-Host "Getting $artifactsVersion release artifacts"
     $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
