@@ -90,13 +90,13 @@ elseif ($artifactsVersion -like "PR_*") {
     else {
         Write-Host "No last known good build found."
     }
-    
+
     if ($expiredArtifacts) {
         $prBuildLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/actions/runs/$latestPRBuildId"
         $shortLivedRetentionSettingLink = "https://aka.ms/algosettings#shortLivedArtifactsRetentionDays"
         throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink) - Hint: you can control the retention days of short-lived artifacts in the AL-Go settings ($shortLivedRetentionSettingLink)"
     }
-    
+
     OutputMessageAndArray "Artifacts from pr build:" $prArtifacts
     OutputMessageAndArray "Artifacts from last known good build:" $lastKnownGoodBuildArtifacts
     DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $prArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts -prRunId $latestPRBuildId -lastKnownGoodBuildRunId $lastKnownGoodBuildId
