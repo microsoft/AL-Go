@@ -524,7 +524,7 @@ try {
                 }
             }
         }
-    } 
+    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
