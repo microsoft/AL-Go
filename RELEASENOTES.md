@@ -56,6 +56,8 @@ Which would hide the secret part of your URL instead of exposing it in clear tex
 
 AL-Go for GitHub now supports deploying from a PR. When using the 'Publish To Environment' workflow, it is now possible to input 'PR_X' as the App version, where 'X' is the PR Id. This will deploy the artifacts from the latest PR build to the chosen environment, if that build is completed and successful.
 
+All apps, which were not built by the PR build will be deployed from the last known good build. You can find a notification on the PR build explaining which build is used as the last known good build.
+
 ## v6.3
 
 ### Deprecations
