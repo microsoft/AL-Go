@@ -33,6 +33,14 @@
 > [!NOTE]
 > The projects mentioned here are AL-Go projects in a multi-project repository. A repository can contain multiple projects and a project can contain multiple apps.
 
+### Run "Update AL-Go System Files" on multiple branches
+
+_Update AL-Go System Files_ has a new input to specify a list of branches to be updated in a single workflow run.
+When running the workflow on a schedule, you can now also specify `includeBranches` in `workflowSchedule` setting, which allows you to update the specified branches. Read more at https://aka.ms/algosettings#workflowSchedule.
+
+> [!NOTE]
+> When running "Update AL-Go System Files" on multiple branches, the template repository URL will be determined based on the branch the workflow runs on and it will be used for all of the specified branches.
+
 ### Support for incremental builds
 
 AL-Go for GitHub now supports incremental builds, which means that unchanged projects or apps will be reused from the previous good build. Read [this](https://aka.ms/algosettings#incrementalBuilds) to learn more.

@@ -355,7 +355,7 @@ else {
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
 
-        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes)) {
+        if (!(CommitFromNewFolder -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $releaseNotes -headBranch $updateBranch)) {
             OutputNotice -message "No updates available for AL-Go for GitHub."
         }
     }
