@@ -509,21 +509,25 @@ try {
         -uninstallRemovedApps
 
     # If any apps were downloaded as part of incremental builds in a pr, we should remove them again after the build
-    if ($ENV:GITHUB_EVENT_NAME -like 'pull_request*' -and $downloadedAppsByType) {
-        $downloadedAppsByType | ForEach-Object {
-            if ($_.downloadedApps) {
-                $mask = $_.mask
-                $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
-                Write-Host "Removing downloaded apps from $thisArtifactFolder"
-                foreach($downloadedApp in $_.downloadedApps) {
-                    $thisApp = Join-Path $thisArtifactFolder $downloadedApp
-                    Write-Host "Removing: $thisApp"
-                    if (Test-Path $thisApp) {
-                        Remove-Item $thisApp
+    try {
+        if ($ENV:GITHUB_EVENT_NAME -like 'pull_request*' -and $downloadedAppsByType) {
+            $downloadedAppsByType | ForEach-Object {
+                if ($_.downloadedApps) {
+                    $mask = $_.mask
+                    $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+                    Write-Host "Removing downloaded apps from $thisArtifactFolder"
+                    foreach($downloadedApp in $_.downloadedApps) {
+                        $thisApp = Join-Path $thisArtifactFolder $downloadedApp
+                        Write-Host "Removing: $thisApp"
+                        if (Test-Path $thisApp) {
+                            Remove-Item $thisApp
+                        }
                     }
                 }
             }
         }
+    } catch {
+        Write-Host "Error removing downloaded apps."
     }
 
     if ($containerBaseFolder) {
