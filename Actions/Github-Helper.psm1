@@ -914,7 +914,6 @@ function FindLatestSuccessfulCICDRun {
         return 0, ''
     }
 }
-
 <#
     Gets the non-expired artifacts from the specified CICD run.
 #>
@@ -931,7 +930,9 @@ function GetArtifactsFromWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $mask,
         [Parameter(Mandatory = $true)]
-        [string] $projects
+        [string] $projects,
+        [Parameter(Mandatory = $false)]
+        [ref] $expiredArtifacts
     )
 
     Write-Host "Getting artifacts for workflow run $workflowRun, mask $mask, projects $projects and version $version"
@@ -970,6 +971,9 @@ function GetArtifactsFromWorkflowRun {
 
                 if($artifact.expired) {
                     Write-Host "Artifact $($artifact.name) (ID: $($artifact.id)) expired on $($artifact.expired_at)"
+                    if ($expiredArtifacts) {
+                        $expiredArtifacts.value += $artifact
+                    }
                     continue
                 }
 
@@ -1135,7 +1139,6 @@ function DownloadArtifact {
         return $filename
     }
 }
-
 <#
  .SYNOPSIS
   This function will return the Access Token based on the gitHubAppClientId and privateKey
@@ -1296,4 +1299,33 @@ function Invoke-CommandWithRetry {
             }
         }
     }
+}
+
+<#
+ .SYNOPSIS
+  Get the head ref from a PR
+ .PARAMETER repository
+  Repository to search in
+ .PARAMETER prId
+  The PR Id
+ .PARAMETER token
+  Auth token
+#>
+function GetHeadRefFromPRId {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $prId,
+        [Parameter(Mandatory = $true)]
+        [string] $token
+    )
+
+    $headers = GetHeaders -token $token
+
+    $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
+    Write-Host "- $pullsURI"
+    $pr = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
+
+    return $pr.head.ref
 }
