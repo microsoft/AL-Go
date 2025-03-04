@@ -35,26 +35,20 @@ function FindPRRunAnnotationForIncrementalBuilds {
     }
 
     #If the initialization annotation exist, check if a message pointing to last good build exist.
-    $annotationMessage = ''
     if($annotationsURI) {
         Write-Host "- $annotationsURI"
         $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
         if($annotations -and $annotations.count -gt 0) {
             foreach($annotation in $annotations) {
-                if($annotation.message -like "Last known good build: https://github.com/$repository/actions/runs/*") {
+                if($annotation.message -match "https://github.com/$repository/actions/runs/([0-9]{1,10})") {
                     Write-Host "Found PR run annotation message: $($annotation.message)"
-                    $annotationMessage = $annotation.message
-                    break
+                    return $matches[1]
                 }
             }
         }
     }
 
-    if($annotationMessage.split('/')[-1] -match '^\d+$') {
-        $lastKnownGoodBuildId = $annotationMessage.split('/')[-1]
-    }
-
-    return $lastKnownGoodBuildId
+    return 0
 }
 <#
     Gets the last PR build run ID for the specified repository and branch.
@@ -190,7 +184,8 @@ function DownloadPRArtifacts {
 
         # For each app in the artifact, save the name in a hashset so we know not to copy it from the last known good build
         (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
-            $appName = $_.Name.Split('_')[1]
+            $versionAndFileEnding = $_.Name.Split('_')[-1]
+            $appName = $_.Name.Replace("_$versionAndFileEnding", "")
             $appsBuiltInPr.Add("$project|$appName") | Out-Null
             $projectArtifactTypeToFolderMap["$project|$artifactType"] = $foldername
         }
@@ -225,7 +220,8 @@ function DownloadPRArtifacts {
 
         # Go through each artifact in the last known good build and copy the files to the PR artifact folder, if it is not already included.
         (Get-ChildItem -Path $foldername -Filter "*_*_*.*.*.*.app") | ForEach-Object {
-            $appName = $_.Name.Split('_')[1]
+            $versionAndFileEnding = $_.Name.Split('_')[-1]
+            $appName = $_.Name.Replace("_$versionAndFileEnding", "")
             # If the app was not built in the PR, we need to copy it from the last known good build
             if (!$appsBuiltInPr.Contains("$project|$appName")) {
                 Write-Host "App $appName not found in PR artifacts, copying from last known good build"

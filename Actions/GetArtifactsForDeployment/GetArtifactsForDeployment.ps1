@@ -27,7 +27,6 @@ if (!(Test-Path $artifactsFolder)) {
 }
 $searchArtifacts = $false
 $downloadArtifacts = $false
-$allArtifacts = @()
 if ($artifactsVersion -eq "current" -or $artifactsVersion -eq "prerelease" -or $artifactsVersion -eq "draft") {
     Write-Host "Getting $artifactsVersion release artifacts"
     $releases = GetReleases -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY
@@ -73,12 +72,6 @@ elseif ($artifactsVersion -like "PR_*") {
         $prLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/pull/$prId"
         throw "Latest PR build for PR $prId not found, not completed or not successful - Please re-run this workflow when you have a successful build on PR_$prId ($prLink)"
     }
-    if ($lastKnownGoodBuildId -ne 0) {
-        Write-Host "Last known good build id: $lastKnownGoodBuildId"
-    }
-    else {
-        Write-Host "No last known good build found."
-    }
 
     $prArtifacts = @()
     $expiredArtifacts = @()
@@ -88,15 +81,22 @@ elseif ($artifactsVersion -like "PR_*") {
         $prArtifacts += GetArtifactsFromWorkflowRun -workflowRun $latestPRBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
     }
     # Get last known good build artifacts referenced from PR
-    $artifactsToDownload | ForEach-Object {
-        $lastKnownGoodBuildArtifacts += GetArtifactsFromWorkflowRun -workflowRun $lastKnownGoodBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
+    if ($lastKnownGoodBuildId -ne 0) {
+        Write-Host "Last known good build id: $lastKnownGoodBuildId"
+        $artifactsToDownload | ForEach-Object {
+            $lastKnownGoodBuildArtifacts += GetArtifactsFromWorkflowRun -workflowRun $lastKnownGoodBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
+        }
     }
+    else {
+        Write-Host "No last known good build found."
+    }
+    
     if ($expiredArtifacts) {
         $prBuildLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/actions/runs/$latestPRBuildId"
         $shortLivedRetentionSettingLink = "https://aka.ms/algosettings#shortLivedArtifactsRetentionDays"
         throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink) - Hint: you can control the retention days of short-lived artifacts in the AL-Go settings ($shortLivedRetentionSettingLink)"
     }
-    #$downloadArtifacts = $true
+    
     OutputMessageAndArray "Artifacts from pr build:" $prArtifacts
     OutputMessageAndArray "Artifacts from last known good build:" $lastKnownGoodBuildArtifacts
     DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $prArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts -prRunId $latestPRBuildId -lastKnownGoodBuildRunId $lastKnownGoodBuildId
@@ -106,13 +106,10 @@ else {
 }
 
 if ($searchArtifacts) {
+    $allArtifacts = @()
     $artifactsToDownload | ForEach-Object {
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -version $artifactsVersion -branch $ENV:GITHUB_REF_NAME)
     }
-    $downloadArtifacts = $true
-}
-
-if ($downloadArtifacts) {
     if ($allArtifacts) {
         $allArtifacts | ForEach-Object {
             $folder = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
