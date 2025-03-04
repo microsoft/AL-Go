@@ -127,6 +127,7 @@ try {
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
+    $downloadedAppsByType = @{}
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
@@ -140,7 +141,7 @@ try {
         }
         if (!$buildAll) {
             Write-Host "Get unmodified apps from baseline workflow run"
-            Get-UnmodifiedAppsFromBaselineWorkflowRun `
+            $downloadedAppsByType = Get-UnmodifiedAppsFromBaselineWorkflowRun `
                 -token $token `
                 -settings $settings `
                 -baseFolder $baseFolder `
@@ -506,6 +507,28 @@ try {
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
+
+    # If any apps were downloaded as part of incremental builds in a pr, we should remove them again after the build
+    try {
+        if ($ENV:GITHUB_EVENT_NAME -like 'pull_request*' -and $downloadedAppsByType) {
+            $downloadedAppsByType | ForEach-Object {
+                if ($_.downloadedApps) {
+                    $mask = $_.mask
+                    $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+                    Write-Host "Removing downloaded apps from $thisArtifactFolder"
+                    foreach($downloadedApp in $_.downloadedApps) {
+                        $thisApp = Join-Path $thisArtifactFolder $downloadedApp
+                        Write-Host "Removing: $thisApp"
+                        if (Test-Path $thisApp) {
+                            Remove-Item $thisApp
+                        }
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-Host "Error removing downloaded apps."
+    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
