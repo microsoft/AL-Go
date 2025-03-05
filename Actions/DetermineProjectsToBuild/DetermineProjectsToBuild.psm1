@@ -358,6 +358,8 @@ function Get-BuildAllApps {
 <#
 .Synopsis
     Downloads unmodified artifacts from the baseline workflow run
+.Outputs
+    An array of objects containing the type, mask and a list of downloaded app file names.
 .Description
     Downloads unmodified artifacts from the baseline workflow run
     - Downloads the artifacts (apps, testapps and bcpttestapps) for the specified project and build mode from the last known good build.
