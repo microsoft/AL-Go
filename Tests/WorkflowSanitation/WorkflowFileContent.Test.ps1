@@ -33,3 +33,29 @@ Describe "PreGateCheck in PullRequestHandler should use runs-on: windows-latest"
         }
     }
 }
+
+Describe "GitHub event payload should not be used in code" {
+    It 'Check for GitHub event payload in code' {
+        Push-Location (Join-Path $PSScriptRoot "..\..")
+        try {
+            $fail = $false
+            foreach($file in (Get-ChildItem -Filter '*.yaml' -Recurse)) {
+                $yamlFile = $file.FullName
+                $lines = Get-Content -Encoding UTF8 -Path $yamlFile
+                for($idx = 0; $idx -lt $lines.Count; $idx++) {
+                    if ($lines[$idx] -match '^\s*([a-zA-Z_-]*:).*\$\{\{\s*github\.event\..*$') {
+                        # OK to use github event payload in environment variables etc
+                    }
+                    elseif ($lines[$idx] -match '^.*\$\{\{\s*github\.event\..*$') {
+                        Write-Host "Event Payload used in code. File: $(Resolve-Path -Path $yamlFile -Relative), Line: $idx, Content: $($lines[$idx].Trim())"
+                        $fail = $true
+                    }
+                }
+            }
+            $fail | Should -Be $false -Because "GitHub event payload should not be used in code"
+        }
+        finally {
+            Pop-Location
+        }
+    }
+}
