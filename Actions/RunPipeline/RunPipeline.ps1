@@ -141,6 +141,7 @@ try {
         }
         if (!$buildAll) {
             Write-Host "Get unmodified apps from baseline workflow run"
+            # Downloaded apps are placed in the build artifacts folder, which is detected by Run-AlPipeline, meaning only non-downloaded apps are built
             $downloadedAppsByType = Get-UnmodifiedAppsFromBaselineWorkflowRun `
                 -token $token `
                 -settings $settings `
@@ -508,26 +509,26 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
-    # If any apps were downloaded as part of incremental builds in a pr, we should remove them again after the build
-    try {
-        if ($ENV:GITHUB_EVENT_NAME -like 'pull_request*' -and $downloadedAppsByType) {
-            $downloadedAppsByType | ForEach-Object {
-                if ($_.downloadedApps) {
-                    $mask = $_.mask
-                    $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
-                    Write-Host "Removing downloaded apps from $thisArtifactFolder"
-                    foreach($downloadedApp in $_.downloadedApps) {
-                        $thisApp = Join-Path $thisArtifactFolder $downloadedApp
-                        Write-Host "Removing: $thisApp"
+    # If any apps were downloaded as part of incremental builds in a pr, we should remove them again after the build to prevent them from being included in artifacts
+    if ($ENV:GITHUB_EVENT_NAME -like 'pull_request*' -and $downloadedAppsByType) {
+        $downloadedAppsByType | ForEach-Object {
+            if ($_.downloadedApps) {
+                $mask = $_.mask
+                $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+                Write-Host "Removing downloaded apps from $thisArtifactFolder"
+                foreach($downloadedApp in $_.downloadedApps) {
+                    $thisApp = Join-Path $thisArtifactFolder $downloadedApp
+                    try {             
                         if (Test-Path $thisApp) {
                             Remove-Item $thisApp
                         }
-                    }
+                        Write-Host "Removed app: $thisApp"
+                    } catch {
+                        Write-Host "::warning::Failed to remove app: $thisApp"
+                    }              
                 }
             }
         }
-    } catch {
-        Write-Host "Error removing downloaded apps."
     }
 
     if ($containerBaseFolder) {
