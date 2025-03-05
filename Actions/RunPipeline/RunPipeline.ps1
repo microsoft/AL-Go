@@ -518,14 +518,14 @@ try {
                 Write-Host "Removing downloaded apps from $thisArtifactFolder"
                 foreach($downloadedApp in $_.downloadedApps) {
                     $thisApp = Join-Path $thisArtifactFolder $downloadedApp
-                    try {             
+                    try {
                         if (Test-Path $thisApp) {
                             Remove-Item $thisApp
                         }
                         Write-Host "Removed app: $thisApp"
                     } catch {
                         Write-Host "::warning::Failed to remove app: $thisApp"
-                    }              
+                    }
                 }
             }
         }
