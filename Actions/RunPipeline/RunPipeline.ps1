@@ -515,16 +515,16 @@ try {
             if ($_.downloadedApps) {
                 $mask = $_.mask
                 $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
-                Write-Host "Removing downloaded apps from $thisArtifactFolder"
+                Write-Host "Removing pre-built apps from $thisArtifactFolder"
                 foreach($downloadedApp in $_.downloadedApps) {
                     $thisApp = Join-Path $thisArtifactFolder $downloadedApp
                     try {
                         if (Test-Path $thisApp) {
                             Remove-Item $thisApp
                         }
-                        Write-Host "Removed app: $thisApp"
+                        Write-Host "Removed pre-built app: $thisApp"
                     } catch {
-                        Write-Host "::warning::Failed to remove app: $thisApp"
+                        Write-Host "Failed to remove pre-built app: $thisApp"
                     }
                 }
             }
