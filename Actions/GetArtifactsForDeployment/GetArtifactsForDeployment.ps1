@@ -7,7 +7,7 @@ Param(
     [string] $artifactsFolder
 )
 
-Import-Module Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1"
+Import-Module (Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
