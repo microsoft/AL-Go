@@ -59,13 +59,20 @@ jobs:
 
       - name: Create inputs
         id: CreateInputs
+        env:
+          _branch: ${{ github.event.inputs.branch }}
+          _copyToMain: ${{ github.event.inputs.copyToMain }}
+          _directCommit: ${{ github.event.inputs.directCommit }}
+          _requireEndToEndTests: ${{ github.event.inputs.requireEndToEndTests }}
+          _createRelease: ${{ github.event.inputs.createRelease }}
+          _defaultBcContainerHelperVersion: ${{ github.event.inputs.defaultBcContainerHelperVersion }}
         run: |
-          $branch = '${{ github.event.inputs.branch }}'
-          $copyToMain = '${{ github.event.inputs.copyToMain }}'
-          $directCommit = '${{ github.event.inputs.directCommit }}'
-          $requireEndToEndTests = '${{ github.event.inputs.requireEndToEndTests }}'
-          $createRelease = '${{ github.event.inputs.createRelease }}'
-          $defaultBcContainerHelperVersion = '${{ github.event.inputs.defaultBcContainerHelperVersion }}'
+          $branch = $ENV:_branch
+          $copyToMain = $ENV:_copyToMain
+          $directCommit = $ENV:_directCommit
+          $requireEndToEndTests = $ENV:_requireEndToEndTests
+          $createRelease = $ENV:_createRelease
+          $defaultBcContainerHelperVersion = $ENV:_defaultBcContainerHelperVersion
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "branch=$branch"
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "copyToMain=$copyToMain"
           Add-Content -encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "directCommit=$directCommit"

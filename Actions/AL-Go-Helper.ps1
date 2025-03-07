@@ -705,6 +705,7 @@ function ReadSettings {
             "messageSuffix"                             = ""
             "pullRequestAutoMerge"                      = $false
             "pullRequestLabels"                         = @()
+            "createPullRequest"                         = $true
         }
         "trustedSigning"                                = [ordered]@{
             "Endpoint"                                  = ""
@@ -1374,7 +1375,8 @@ function CommitFromNewFolder {
         [string] $serverUrl,
         [string] $commitMessage,
         [string] $body = $commitMessage,
-        [string] $branch
+        [string] $branch,
+        [string] $headBranch = $ENV:GITHUB_REF_NAME
     )
 
     invoke-git add *
@@ -1419,9 +1421,9 @@ function CommitFromNewFolder {
             if ($settings.commitOptions.pullRequestLabels) {
                 $labels = "$($settings.commitOptions.pullRequestLabels -join ",")"
                 Write-Host "Adding labels: $labels"
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body" --label $labels
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body" --label $labels
             } else {
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body"
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body"
             }
 
             if ($settings.commitOptions.pullRequestAutoMerge) {

@@ -115,9 +115,11 @@ jobs:
 
       - name: Setup Repositories
         id: setup
+        env:
+          _bcContainerHelperVersion: ${{ github.event.inputs.bcContainerHelperVersion }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -e2epat '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion '${{ github.event.inputs.bcContainerHelperVersion }}'
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -e2epat '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
 
   Analyze:
     runs-on: [ ubuntu-latest ]
