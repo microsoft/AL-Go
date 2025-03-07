@@ -23,7 +23,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
 
     $checkRuns = (InvokeWebRequest -Headers $headers -Uri $checkRunsURI).Content | ConvertFrom-Json
 
-    #Use the check-suits api to get all the annotations for a build
+    # Use the check-suits api to get all the annotations for a build
     $annotationsURI = ''
     if($checkRuns -and $checkRuns.total_count -gt 0) {
         $initializationCheckRun = $checkRuns.check_runs | Where-Object { $_.name -eq 'Initialization' }
@@ -34,7 +34,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         }
     }
 
-    #If the initialization annotation exist, check if a message pointing to last good build exist.
+    # If the initialization annotation exist, check if a message pointing to last good build exist.
     if($annotationsURI) {
         Write-Host "- $annotationsURI"
         $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
@@ -76,7 +76,7 @@ function FindLatestPRRun {
     Write-Host "Finding latest PR build run for commit sha $commitSha in repository $repository"
 
     while($true) {
-        #Get all workflow runs for the given commit sha
+        # Get all workflow runs for the given commit sha
         $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&head_sha=$commitSha"
         Write-Host "- $runsURI"
         $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
@@ -86,7 +86,7 @@ function FindLatestPRRun {
             break
         }
 
-        #Filter to only PR builds
+        # Filter to only PR builds
         $PRRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq 'Pull Request Build' -and $_.event -in @('pull_request', 'pull_request_target') })
 
         if ($PRRuns.Count -gt 0) {
@@ -100,7 +100,7 @@ function FindLatestPRRun {
                 Write-Host "::error::Latest PR build run is not successful. ($($latestPrRun.html_url))"
                 break
             }
-            #We only care about the latest PR build. If it is not completed or not successful, we return 0
+            # We only care about the latest PR build. If it is not completed or not successful, we return 0
             $lastSuccessfulPRRun = $latestPrRun.id
             $lastKnownGoodBuildId = FindPRRunAnnotationForIncrementalBuilds -repository $repository -checkSuiteId $latestPrRun.check_suite_id -token $token
             break
@@ -169,7 +169,7 @@ function DownloadPRArtifacts {
     $appsBuiltInPr = [System.Collections.Generic.HashSet[string]]::new()
     # Get the artifacts from the PR
     foreach($artifact in $prArtifacts) {
-        #PR artifacts are named project-branch-type-PRxx-date, but since both branch and project can contain '-' in the name, we can't split using dash.
+        # PR artifacts are named project-branch-type-PRxx-date, but since both branch and project can contain '-' in the name, we can't split using dash.
         $projectSuffix = $artifact.Name -split "-$prHeadRef-" # (project, type-PRxx-date)
         $typeIdDate = $projectSuffix[1] -split '-' # (type, PRxx, date)
         $project = $projectSuffix[0]
@@ -198,7 +198,7 @@ function DownloadPRArtifacts {
         New-Item $tempPath -ItemType Directory | Out-Null
     }
     foreach($artifact in $lastKnownGoodBuildArtifacts) {
-        #PR artifacts are named project-branch-type-version, but since both branch and project can contain '-' in the name, we can't split using dash.
+        # PR artifacts are named project-branch-type-version, but since both branch and project can contain '-' in the name, we can't split using dash.
         $projectSuffix = $artifact.Name -split "-$lastKnownGoodBuildHeadRef-" # (project, type-version)
         $typeVersion = $projectSuffix[1] -split '-' # (type, version)
         $project = $projectSuffix[0]

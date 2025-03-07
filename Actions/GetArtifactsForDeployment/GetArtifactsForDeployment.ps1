@@ -7,11 +7,7 @@ Param(
     [string] $artifactsFolder
 )
 
-$getArtifactsHelper = Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1"
-if (Test-Path $getArtifactsHelper) {
-    Write-Host "Debug: get helper module"
-    Import-Module $getArtifactsHelper
-}
+Import-Module Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1"
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
@@ -58,7 +54,7 @@ if ($artifactsVersion -eq "current" -or $artifactsVersion -eq "prerelease" -or $
     }
 }
 elseif ($artifactsVersion -like "PR_*") {
-    $prId = $artifactsVersion -replace "PR_", ""
+    $prId = $artifactsVersion.Substring(3)
     if (!($prId -as [int])) {
         throw "Invalid PR id: $prId"
     }
@@ -93,7 +89,7 @@ elseif ($artifactsVersion -like "PR_*") {
     if ($expiredArtifacts) {
         $prBuildLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/actions/runs/$latestPRBuildId"
         $shortLivedRetentionSettingLink = "https://aka.ms/algosettings#shortLivedArtifactsRetentionDays"
-        throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink) - Hint: you can control the retention days of short-lived artifacts in the AL-Go settings ($shortLivedRetentionSettingLink)"
+        throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink). Note that you can control the retention days of short-lived artifacts using the AL-Go setting ShortLivedArtifactsRetentionDays. See $shortLivedRetentionSettingLink"
     }
 
     OutputMessageAndArray "Artifacts from pr build:" $prArtifacts

@@ -914,6 +914,7 @@ function FindLatestSuccessfulCICDRun {
         return 0, ''
     }
 }
+
 <#
     Gets the non-expired artifacts from the specified CICD run.
 #>
@@ -1139,6 +1140,7 @@ function DownloadArtifact {
         return $filename
     }
 }
+
 <#
  .SYNOPSIS
   This function will return the Access Token based on the gitHubAppClientId and privateKey
