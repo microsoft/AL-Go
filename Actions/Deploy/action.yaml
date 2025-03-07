@@ -5,6 +5,10 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -18,6 +22,10 @@ inputs:
   deploymentEnvironmentsJson:
     description: The settings for all Deployment Environments
     required: true
+  artifactsVersion:
+    description: Artifacts version. Used to check if this is a deployment from a PR
+    required: false
+    default: ''
 outputs:
   environmentUrl:
     description: The URL of the deployed environment
@@ -29,13 +37,15 @@ runs:
       shell: ${{ inputs.shell }}
       id: Deploy
       env:
+        _token: ${{ inputs.token }}
         _environmentName: ${{ inputs.environmentName }}
         _artifactsFolder: ${{ inputs.artifactsFolder }}
         _type: ${{ inputs.type }}
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
+        _artifactsVersion: ${{ inputs.artifactsVersion }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Deploy" -Action {
-          ${{ github.action_path }}/Deploy.ps1 -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson
+          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -artifactsVersion $ENV:_artifactsVersion
         }
 branding:
   icon: terminal
