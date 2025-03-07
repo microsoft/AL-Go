@@ -51,6 +51,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
 
     return $lastKnownGoodBuildId
 }
+
 <#
     Gets the last PR build run ID for the specified repository and branch.
     Successful PR runs are those that have a workflow run named 'Pull Request Build' and successfully built all the projects.
@@ -121,6 +122,10 @@ function FindLatestPRRun {
 
     return $lastSuccessfulPRRun, $lastKnownGoodBuildId
 }
+
+<#
+    Downloads an artifact from a workflow run and unpacks it.
+#>
 function DownloadAndUnpackArtifact {
     Param(
         [string]$token,
@@ -141,9 +146,14 @@ function DownloadAndUnpackArtifact {
     Expand-Archive -Path $filename -DestinationPath $folder
     Remove-Item $filename -Force
 }
+
 <#
     Downloads artifacts from a PR build and related last known good build.
     Iterates through the last known good build, and only copies any apps not found in the PR build.
+    
+    Any apps copied from the last known good build, are copied to the related PR artifact folder, based on project and artifact type.
+    In case a PR artifact folder does not exist for a specific app, it is created.
+    This is necessary, since the deploy action expects artifacts to follow the PR naming convention when deploying from a PR.
 #>
 function DownloadPRArtifacts {
     Param(
@@ -235,6 +245,7 @@ function DownloadPRArtifacts {
         Remove-Item $tempPath -Recurse -Force
     }
 }
+
 <#
     Gets the latest commit sha for the specified PR id in the specified repository.
 #>
@@ -257,6 +268,9 @@ function GetLatestCommitShaFromPRId {
     return $pr.head.sha
 }
 
+<#
+    Gets the head ref for the specified run id in the specified repository.
+#>
 function GetHeadRefFromRunId {
     Param(
         [Parameter(Mandatory = $true)]
