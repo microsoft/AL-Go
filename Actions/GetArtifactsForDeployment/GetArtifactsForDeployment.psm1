@@ -150,7 +150,7 @@ function DownloadAndUnpackArtifact {
 <#
     Downloads artifacts from a PR build and related last known good build.
     Iterates through the last known good build, and only copies any apps not found in the PR build.
-    
+
     Any apps copied from the last known good build, are copied to the related PR artifact folder, based on project and artifact type.
     In case a PR artifact folder does not exist for a specific app, it is created.
     This is necessary, since the deploy action expects artifacts to follow the PR naming convention when deploying from a PR.
