@@ -40,7 +40,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
         if($annotations -and $annotations.count -gt 0) {
             foreach($annotation in $annotations) {
-                if($annotation.message -match "https://github.com/$repository/actions/runs/([0-9]{1,10})") {
+                if($annotation.message -match "https://github.com/$repository/actions/runs/([0-9]{1,11})") {
                     Write-Host "Found PR run annotation message: $($annotation.message)"
                     $lastKnownGoodBuildId = $matches[1]
                     break
