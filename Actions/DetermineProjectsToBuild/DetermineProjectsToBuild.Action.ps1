@@ -40,8 +40,7 @@ try {
 }
 catch {
     # Output the error
-    Write-Host $_.Exception.Message
-
+    Write-Host "Get-ModifiedFiles failed with error: $($_.Exception.Message)"
     Write-Host "Failed to calculate modified files, building all projects"
     $buildAllProjects = $true
     $modifiedFiles = @()
@@ -56,7 +55,7 @@ Write-Host "::endgroup::"
 Write-Host "::group::Get Projects To Build"
 Write-Host "buildAllProjects - $buildAllProjects"
 Write-Host "publishSkippedProjects - $publishSkippedProjects"
-$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $publishSkippedProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 if ($buildAllProjects) {
     $skippedProjects = @()
 }
