@@ -53,8 +53,6 @@ Write-Host "::endgroup::"
 
 # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
 Write-Host "::group::Get Projects To Build"
-Write-Host "buildAllProjects - $buildAllProjects"
-Write-Host "publishSkippedProjects - $publishSkippedProjects"
 $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 if ($buildAllProjects) {
     $skippedProjects = @()
