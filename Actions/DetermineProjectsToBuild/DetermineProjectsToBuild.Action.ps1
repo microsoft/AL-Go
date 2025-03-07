@@ -39,6 +39,8 @@ try {
     OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
 }
 catch {
+    # Output the error
+    Write-Host "Get-ModifiedFiles failed with error: $($_.Exception.Message)"
     Write-Host "Failed to calculate modified files, building all projects"
     $buildAllProjects = $true
     $modifiedFiles = @()
@@ -51,7 +53,7 @@ Write-Host "::endgroup::"
 
 # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
 Write-Host "::group::Get Projects To Build"
-$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $publishSkippedProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $buildAllProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 if ($buildAllProjects) {
     $skippedProjects = @()
 }
