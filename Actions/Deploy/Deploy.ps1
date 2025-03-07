@@ -154,6 +154,7 @@ function InstallUnknownDependencies {
     }
 }
 
+Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
