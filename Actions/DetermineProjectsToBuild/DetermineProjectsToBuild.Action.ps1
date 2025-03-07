@@ -39,7 +39,7 @@ try {
     OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
 }
 catch {
-    Write-Host "Failed to calculate modified files, building all projects"
+    OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all projects"
     $buildAllProjects = $true
     $modifiedFiles = @()
 }

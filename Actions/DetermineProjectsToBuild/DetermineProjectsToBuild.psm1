@@ -298,7 +298,7 @@ function Get-BuildAllProjects {
     $settings = $env:Settings | ConvertFrom-Json
 
     if (!$modifiedFiles) {
-        Write-Host "No files modified, building everything"
+        Write-Host "::notice::No files modified, building everything"
         return $true
     }
 
@@ -315,7 +315,7 @@ function Get-BuildAllProjects {
         $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
 
         if ($modifiedFiles -like $fullBuildFolder) {
-            Write-Host "Changes to $fullBuildFolder, building everything"
+            Write-Host "::notice::Changes to $fullBuildFolder detected, building everything"
             return $true
         }
     }
