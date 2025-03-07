@@ -1,7 +1,14 @@
 <#
+    .SYNOPSIS
     Incremental builds adds an annotation to PR builds, pointing to a last known good build.
     This function checks if this annotation exists on a given PR build,
     and returns the id of the last known good build if it does.
+    .PARAMETER repository
+    Repository to search in
+    .PARAMETER checkSuiteId
+    The check suite id of the PR build
+    .PARAMETER token
+    Auth token
 #>
 function FindPRRunAnnotationForIncrementalBuilds {
     Param(
@@ -53,10 +60,17 @@ function FindPRRunAnnotationForIncrementalBuilds {
 }
 
 <#
+    .SYNOPSIS
     Gets the last PR build run ID for the specified repository and branch.
     Successful PR runs are those that have a workflow run named 'Pull Request Build' and successfully built all the projects.
 
     If the latest PR build is not completed or successful, 0 is returned.
+    .PARAMETER repository
+    Repository to search in
+    .PARAMETER commitSha
+    The commit sha of the PR. Finds runs related to that sha
+    .PARAMETER token
+    Auth token
 #>
 function FindLatestPRRun {
     Param(
@@ -124,7 +138,14 @@ function FindLatestPRRun {
 }
 
 <#
+    .SYNOPSIS
     Downloads an artifact from a workflow run and unpacks it.
+    .PARAMETER token
+    Auth token
+    .PARAMETER folder
+    Folder to download the artifact to
+    .PARAMETER artifact
+    The artifact to download
 #>
 function DownloadAndUnpackArtifact {
     Param(
@@ -148,12 +169,25 @@ function DownloadAndUnpackArtifact {
 }
 
 <#
+    .SYNOPSIS
     Downloads artifacts from a PR build and related last known good build.
     Iterates through the last known good build, and only copies any apps not found in the PR build.
 
     Any apps copied from the last known good build, are copied to the related PR artifact folder, based on project and artifact type.
     In case a PR artifact folder does not exist for a specific app, it is created.
     This is necessary, since the deploy action expects artifacts to follow the PR naming convention when deploying from a PR.
+    .PARAMETER token
+    Auth token
+    .PARAMETER path
+    Path to the build artifacts folder
+    .PARAMETER prArtifacts
+    List of artifacts published by the PR build
+    .PARAMETER lastKnownGoodBuildArtifacts
+    List of artifacts published by the last known good build, linked from the PR build
+    .PARAMETER prRunId
+    Run id of the PR build
+    .PARAMETER lastKnownGoodBuildRunId
+    Run id of the last known good build
 #>
 function DownloadPRArtifacts {
     Param(
@@ -247,7 +281,14 @@ function DownloadPRArtifacts {
 }
 
 <#
+    .SYNOPSIS
     Gets the latest commit sha for the specified PR id in the specified repository.
+    .PARAMETER repository
+    Repository to search in
+    .PARAMETER prId
+    The run id
+    .PARAMETER token
+    Auth token
 #>
 function GetLatestCommitShaFromPRId {
     Param(
@@ -269,7 +310,14 @@ function GetLatestCommitShaFromPRId {
 }
 
 <#
-    Gets the head ref for the specified run id in the specified repository.
+ .SYNOPSIS
+  Gets the head ref for the specified run id in the specified repository.
+ .PARAMETER repository
+  Repository to search in
+ .PARAMETER prId
+  The run id
+ .PARAMETER token
+  Auth token
 #>
 function GetHeadRefFromRunId {
     Param(
