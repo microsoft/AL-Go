@@ -346,7 +346,7 @@ function Get-BuildAllProjects {
         [string[]] $modifiedFiles = @()
     )
 
-    return (IsFullBuildRequired -baseFolder $baseFolder -modifiedFiles $modifiedFiles -noticeMessage "building all projects")
+    return (IsFullBuildRequired -baseFolder $baseFolder -modifiedFiles $modifiedFiles -noticeMessage "building everything")
 }
 
 <#
