@@ -26,15 +26,18 @@ function Get-ModifiedFiles {
             }
             Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $baselineSHA | Out-Host }
         }
-        else {
+        elseif ($baselineSHA) {
             $headSHA = git rev-parse HEAD
             Write-Host "Current HEAD is $headSHA"
             Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $baselineSHA | Out-Host }
             Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
         }
+        else {
+            return $true, @()
+        }
         Write-Host "git diff --name-only $baselineSHA $headSHA"
         $modifiedFiles = @(RunAndCheck git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
-        return $modifiedFiles
+        return $false, $modifiedFiles
     }
     finally {
         Pop-Location

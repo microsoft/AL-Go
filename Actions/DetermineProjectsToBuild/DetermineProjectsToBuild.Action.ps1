@@ -35,7 +35,7 @@ if(-not $buildAllProjects) {
 
     Write-Host "::group::Get Modified Files"
     try {
-        $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+        $buildAllProjects, $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
         OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
     }
     catch {
