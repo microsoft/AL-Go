@@ -298,8 +298,8 @@ function Get-BuildAllProjects {
     $settings = $env:Settings | ConvertFrom-Json
 
     if (!$modifiedFiles) {
-        Write-Host "::notice::No files modified, building everything"
-        return $true
+        Write-Host "No files modified!"
+        return $false
     }
 
     $fullBuildPatterns += @(Join-Path '.github' '*.json')
