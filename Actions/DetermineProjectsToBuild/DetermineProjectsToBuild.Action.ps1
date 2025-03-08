@@ -21,37 +21,39 @@ if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
     $targetBranch = $env:GITHUB_BASE_REF
 }
 
+#region Action: Determine projects to build
 Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
 $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
 
+$modifiedFiles = @()
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
     Write-Host "::group::Determine Baseline Workflow ID"
     $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $targetBranch -token $token -retention $settings.incrementalBuilds.retentionDays
     Write-Host "::endgroup::"
+
+    Write-Host "::group::Get Modified Files"
+    try {
+        $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+        OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+    }
+    catch {
+        OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all projects"
+        $buildAllProjects = $true
+    }
+    Write-Host "::endgroup::"
 }
 
-#region Action: Determine projects to build
-Write-Host "::group::Get Modified Files"
-try {
-    $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
-    OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+if (-not $buildAllProjects) {
+    Write-Host "::group::Determine Incremental Build"
+    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    Write-Host "::endgroup::"
 }
-catch {
-    OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all projects"
-    $buildAllProjects = $true
-    $modifiedFiles = @()
-}
-Write-Host "::endgroup::"
-
-Write-Host "::group::Determine Incremental Build"
-$buildAllProjects = $buildAllProjects -or (Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
-Write-Host "::endgroup::"
 
 # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
 Write-Host "::group::Get Projects To Build"
-$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $publishSkippedProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects ($buildAllProjects -or $publishSkippedProjects) -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 if ($buildAllProjects) {
     $skippedProjects = @()
 }
