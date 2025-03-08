@@ -52,6 +52,8 @@ if (-not $buildAllProjects) {
 }
 
 # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
+# buildAllProjects is set to true if we are to build all projects
+# publishSkippedProjects is set to true if we are to publish artifacts for skipped projects (meaning we are still going through the build process for all projects, just not building)
 Write-Host "::group::Get Projects To Build"
 $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects ($buildAllProjects -or $publishSkippedProjects) -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 if ($buildAllProjects) {
