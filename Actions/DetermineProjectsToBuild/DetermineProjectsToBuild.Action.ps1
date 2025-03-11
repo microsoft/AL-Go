@@ -21,37 +21,47 @@ if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
     $targetBranch = $env:GITHUB_BASE_REF
 }
 
+#region Action: Determine projects to build
 Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
 $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
 
+$modifiedFiles = @()
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
     Write-Host "::group::Determine Baseline Workflow ID"
     $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $targetBranch -token $token -retention $settings.incrementalBuilds.retentionDays
     Write-Host "::endgroup::"
+
+    if (-not ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0')) {
+        OutputNotice -message "Unable to locate a successful CI/CD run for branch $targetBranch, newer than $($settings.incrementalBuilds.retentionDays) days, building all projects"
+        $buildAllProjects = $true
+    }
+    else {
+        Write-Host "::group::Get Modified Files"
+        try {
+            $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+        }
+        catch {
+            OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, the Error was $($_.Exception.Message). Building all projects"
+            $buildAllProjects = $true
+        }
+        Write-Host "::endgroup::"
+    }
 }
 
-#region Action: Determine projects to build
-Write-Host "::group::Get Modified Files"
-try {
-    $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
-    OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+if (-not $buildAllProjects) {
+    Write-Host "::group::Determine Incremental Build"
+    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    Write-Host "::endgroup::"
 }
-catch {
-    Write-Host "Failed to calculate modified files, building all projects"
-    $buildAllProjects = $true
-    $modifiedFiles = @()
-}
-Write-Host "::endgroup::"
-
-Write-Host "::group::Determine Incremental Build"
-$buildAllProjects = $buildAllProjects -or (Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder)
-Write-Host "::endgroup::"
 
 # If we are to publish artifacts for skipped projects later, we include the full project list and in the build step, just avoid building the skipped projects
+# buildAllProjects is set to true if we are to build all projects
+# publishSkippedProjects is set to true if we are to publish artifacts for skipped projects (meaning we are still going through the build process for all projects, just not building)
 Write-Host "::group::Get Projects To Build"
-$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $publishSkippedProjects -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects ($buildAllProjects -or $publishSkippedProjects) -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
 if ($buildAllProjects) {
     $skippedProjects = @()
 }
