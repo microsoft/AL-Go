@@ -762,7 +762,7 @@ Describe "Get-BuildAllProjects" {
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
     }
 
-    It ('returns false if there are no modified filed') {
+    It ('returns false if there are no modified files') {
         # Add AL-Go settings
         $alGoSettings = @{ fullBuildPatterns = @() }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
