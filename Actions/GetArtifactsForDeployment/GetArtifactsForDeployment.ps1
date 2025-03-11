@@ -92,8 +92,12 @@ elseif ($artifactsVersion -like "PR_*") {
         throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink). Note that you can control the retention days of short-lived artifacts using the AL-Go setting ShortLivedArtifactsRetentionDays. See $shortLivedRetentionSettingLink"
     }
 
-    OutputMessageAndArray "Artifacts from pr build:" $prArtifacts
-    OutputMessageAndArray "Artifacts from last known good build:" $lastKnownGoodBuildArtifacts
+    if ($prArtifacts) {
+        OutputMessageAndArray "Artifacts from pr build" $prArtifacts.Name
+    }
+    if ($lastKnownGoodBuildArtifacts) {
+        OutputMessageAndArray "Artifacts from last known good build" $lastKnownGoodBuildArtifacts.Name
+    }
     DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $prArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts -prRunId $latestPRBuildId -lastKnownGoodBuildRunId $lastKnownGoodBuildId
 }
 else {
