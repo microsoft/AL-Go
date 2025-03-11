@@ -33,16 +33,22 @@ if(-not $buildAllProjects) {
     $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $targetBranch -token $token -retention $settings.incrementalBuilds.retentionDays
     Write-Host "::endgroup::"
 
-    Write-Host "::group::Get Modified Files"
-    try {
-        $buildAllProjects, $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
-        OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
-    }
-    catch {
-        OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all projects"
+    if (-not ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0')) {
+        OutputNotice -message "Unable to locate a successful CI/CD run for branch $targetBranch, newer than $($settings.incrementalBuilds.retentionDays) days, building all projects"
         $buildAllProjects = $true
     }
-    Write-Host "::endgroup::"
+    else {
+        Write-Host "::group::Get Modified Files"
+        try {
+            $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+        }
+        catch {
+            OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, the Error was $($_.Exception.Message). Building all projects"
+            $buildAllProjects = $true
+        }
+        Write-Host "::endgroup::"
+    }
 }
 
 if (-not $buildAllProjects) {
