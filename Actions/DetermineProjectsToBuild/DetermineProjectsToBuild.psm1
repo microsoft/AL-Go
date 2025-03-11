@@ -353,10 +353,10 @@ function Get-BuildAllProjects {
 .Synopsis
     Determines whether all apps in a project should be built
 .Outputs
-    A boolean indicating whether a full build is required.
+    A boolean indicating whether all apps in a project should be built.
 .Description
-    Determines whether a full build is required.
-    A full build is required if:
+    Determines whether all apps in a project should be built.
+    All apps should be built if:
     - The modified files contain a file that matches one of the fullBuildPatterns
     - The .AL-Go/settings.json file has been modified
 #>
