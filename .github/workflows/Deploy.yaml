@@ -97,7 +97,7 @@ jobs:
           $errorActionPreference = "Stop"
           $end2endRuns = (gh api "/repos/$($env:GITHUB_REPOSITORY)/actions/workflows/E2E.yaml/runs?per_page=100&branch=main" | ConvertFrom-Json).workflow_runs
           $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
-          $latestRun = $end2endruns | Where-Object { $_.Name -eq "End to end tests - $latestSha" } | select-object -first 1
+          $latestRun = $end2endRuns | Where-Object { $_.Name -eq "End to end tests - $latestSha" } | select-object -first 1
 
           if (!$latestRun) {
             throw "No End to end tests run found for the latest commit on main (sha: $latestSha)"
