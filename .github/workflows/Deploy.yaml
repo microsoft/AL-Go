@@ -98,9 +98,12 @@ jobs:
           $end2endRuns = (gh api "/repos/$($env:GITHUB_REPOSITORY)/actions/workflows/E2E.yaml/runs?per_page=100&branch=main" | ConvertFrom-Json).workflow_runs
           $latestSha = (gh api /repos/$($env:GITHUB_REPOSITORY)/commits/main | ConvertFrom-Json).sha
           $latestRun = $end2endruns | Where-Object { $_.Name -eq "End to end tests - $latestSha" } | select-object -first 1
+
           if (!$latestRun) {
-            throw "No End to end tests run found for the latest commit on main"
+            throw "No End to end tests run found for the latest commit on main (sha: $latestSha)"
           }
+
+          Write-Host "Latest E2E test run on main (sha: $latestSha): $($latestRun.html_url)"
           if ($latestRun.status -ne 'completed') {
             throw "End to end tests run for the latest commit on main is not completed - see $($latestRun.html_url)"
           }
@@ -108,8 +111,14 @@ jobs:
             throw "End to end tests run for the latest commit on main did not succeed - see $($latestRun.html_url)"
           }
           $allJobs = (gh api --paginate /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
+
+          $nonCriticalJobs = @("RemoveRepositories")
           foreach($job in $allJobs) {
             if ($job.conclusion -ne 'success') {
+              if($nonCriticalJobs -contains $job.name) {
+                Write-Host "Job $($job.name) was not successful, but it is not critical"
+                continue
+              }
               throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
             }
           }
