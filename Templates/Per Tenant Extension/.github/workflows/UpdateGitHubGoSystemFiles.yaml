@@ -60,15 +60,14 @@ jobs:
 
       - name: Determine Template URL
         id: DetermineTemplateUrl
-        shell: powershell
+        env:
+          TemplateUrlAsInput: '${{ github.event.inputs.templateUrl }}'
         run: |
             $templateUrl = $env:templateUrl # Available from ReadSettings step
-            $templateUrlAsInput = '${{ github.event.inputs.templateUrl }}'
-            if ($templateUrlAsInput) {
+            if ($ENV:TemplateUrlAsInput) {
               # Use the input value if it is provided
-              $templateUrl = $templateUrlAsInput
+              $templateUrl = $ENV:TemplateUrlAsInput
             }
-
             Write-Host "Using template URL: $templateUrl"
             Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "TemplateUrl=$templateUrl"
 
@@ -126,7 +125,6 @@ jobs:
           else {
             Write-Host "Using inputs from commitOptions setting"
             $commitOptions = $env:commitOptions | ConvertFrom-Json # Available from ReadSettings step
-
             $directCommit=$(-not $commitOptions.createPullRequest)
             $downloadLatest=$true
           }

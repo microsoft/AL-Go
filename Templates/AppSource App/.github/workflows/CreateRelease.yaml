@@ -104,7 +104,7 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'TokenForPush,GhTokenWorkflow'
+          getSecrets: 'TokenForPush,ghTokenWorkflow'
           useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Determine Projects
@@ -118,7 +118,7 @@ jobs:
         with:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).TokenForPush }}
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: true
 
       - name: Analyze Artifacts

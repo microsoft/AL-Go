@@ -127,6 +127,7 @@ try {
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 
+    $downloadedAppsByType = @()
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
@@ -135,12 +136,13 @@ try {
             $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
         }
         catch {
-            OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
+            OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
             $buildAll = $true
         }
         if (!$buildAll) {
             Write-Host "Get unmodified apps from baseline workflow run"
-            Get-UnmodifiedAppsFromBaselineWorkflowRun `
+            # Downloaded apps are placed in the build artifacts folder, which is detected by Run-AlPipeline, meaning only non-downloaded apps are built
+            $downloadedAppsByType = Get-UnmodifiedAppsFromBaselineWorkflowRun `
                 -token $token `
                 -settings $settings `
                 -baseFolder $baseFolder `
@@ -519,6 +521,28 @@ try {
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
+
+    # If any apps were downloaded as part of incremental builds in a pr, we should remove them again after the build to prevent them from being included in artifacts
+    if ($ENV:GITHUB_EVENT_NAME -like 'pull_request*' -and $downloadedAppsByType) {
+        $downloadedAppsByType | ForEach-Object {
+            if ($_.downloadedApps) {
+                $mask = $_.mask
+                $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+                Write-Host "Removing pre-built apps from $thisArtifactFolder"
+                foreach($downloadedApp in $_.downloadedApps) {
+                    $thisApp = Join-Path $thisArtifactFolder $downloadedApp
+                    try {
+                        if (Test-Path $thisApp) {
+                            Remove-Item $thisApp
+                        }
+                        Write-Host "Removed pre-built app: $thisApp"
+                    } catch {
+                        Write-Host "Failed to remove pre-built app: $thisApp"
+                    }
+                }
+            }
+        }
+    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"

@@ -285,7 +285,7 @@ jobs:
           project: ${{ inputs.project }}
 
       - name: Cleanup
-        if: always()
+        if: always() && steps.DetermineBuildProject.outputs.BuildIt == 'True'
         uses: microsoft/AL-Go-Actions/PipelineCleanup@main
         with:
           shell: ${{ inputs.shell }}
