@@ -12,6 +12,7 @@
 - Performance test sample code in 25.4 contains objects with ID 149201 and 149202, which are not renumbered
 - Issue 798 Publish To Environment breaks CI/CD pipelines
 - Issue 1182 Runs-on setting type is ambiguous - string or array
+- Issue 1502 NuGet dependency version is always LatestMatching
 
 ### New Workflow specific settings
 
