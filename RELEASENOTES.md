@@ -20,6 +20,7 @@
 
 ### New Repository Settings
 
+- `nuGetFeedSelectMode` determines the select mode when finding Business Central app packages from NuGet feeds, based on the dependency version specified in app.json. Options are: `Earliest` for earliest version of the package, `EarliestMatching` for earliest version of the package also compatible with the Business Central version used, `Exact` for the exact version of the package, `Latest` for the latest version of the package, `LatestMatching` for the latest version of the package also compatible with the Business Central version used.
 - `deployTo<environment>` now has two additional properties:
   - `includeTestAppsInSandboxEnvironment`, which deploys test apps and their dependencies to the specified sandbox environment if set to `true`. Deployment will fail if used on a Prod environment or if the test app has a dependency on Tests-TestLibraries. Default value is `false`.
   - `excludeAppIds`, which is an array of app ids which will be excluded from deployment. Default value is `[]`
@@ -29,7 +30,6 @@
   - `onSchedule` - set this property to **true** in order to enable incremental builds in CI/CD when running on a schedule. Default is **false**.
   - `retentionDays` - number of days a successful build is good (and can be used for incremental builds). Default is **30**.
   - `mode` - defines the mode for incremental builds. Currently, two values are supported. Use **modifiedProjects** when you want to rebuild all apps in modified projects and depending projects or **modifiedApps** if you only want to rebuild modified apps and depending apps.
-
 > [!NOTE]
 > The projects mentioned here are AL-Go projects in a multi-project repository. A repository can contain multiple projects and a project can contain multiple apps.
 

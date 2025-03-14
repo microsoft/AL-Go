@@ -388,7 +388,7 @@ try {
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
-                        "select" = $settings.nuGetSelectMode
+                        "select" = $settings.nuGetFeedSelectMode
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
