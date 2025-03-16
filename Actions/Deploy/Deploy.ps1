@@ -206,7 +206,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
             Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
         }
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
-            $dependencies += @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildMode)Dependencies-*.*.*.*/*.app") | ForEach-Object { $_.FullName } )
+            $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildMode)Dependencies-*.*.*.*/*.app")) | ForEach-Object { $_.FullName } )
         }
         if (!($projectApps)) {
             if ($project -ne '*') {
