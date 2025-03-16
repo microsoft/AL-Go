@@ -225,16 +225,16 @@ if (Test-Path $artifactsFolder -PathType Container) {
         else {
             $allApps += $projectTestApps
         }
-        #Go through all .app files and exclude any with ids in the excludeAppIds list
+        # Go through all .app files and exclude any with ids in the excludeAppIds list
         if ($allApps) {
             foreach($folder in $allApps) {
                 foreach($app in (Get-ChildItem -Path $folder -Filter "*.app")) {
                     Write-Host "Processing app: $($app.Name)"
                     $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
                     if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
-                        #If app should be included, verify that it does not depend on Tests-TestLibraries
+                        # If app should be included, verify that it does not depend on Tests-TestLibraries
                         $unknownDependenciesForApp = @()
-                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
+                        Sort-AppFilesByDependencies -appFiles @($app.FullName+$dependencies) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
                         $unknownDependenciesForApp | ForEach-Object {
                             if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
                                 Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
