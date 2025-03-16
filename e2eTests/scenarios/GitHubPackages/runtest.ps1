@@ -111,7 +111,7 @@ CreateAlGoRepository `
     -contentScript {
         Param([string] $path)
         $script:id5 = CreateNewAppInFolder -folder $path -name app5 -objID 50005 -dependencies @( @{ "id" = $script:id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $script:id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
-        Add-PropertiesToJsonFile -path (Join-Path $path '.AL-Go\settings.json') -properties @{ "country" = "dk" }
+        Add-PropertiesToJsonFile -path (Join-Path $path '.AL-Go\settings.json') -properties @{ "country" = "dk"; "nuGetFeedSelectMode" = "EarliestMatching" }
     }
 SetRepositorySecret -repository $repository -name 'GitHubPackagesContext' -value $githubPackagesContextJson
 $repoPath = (Get-Location).Path
@@ -120,7 +120,7 @@ $repoPath = (Get-Location).Path
 Set-Location $repoPath1
 WaitWorkflow -repository $repository1 -runid $run1.id
 
-# Run a second time with wait (due to GitHubPackages error with our organization?)
+# Run a second time with wait (to have at least two versions in the feed 1.0.2 and 1.0.3 - RUN_NUMBER 1 was initial commit)
 $run1 = RunCICD -repository $repository1 -branch $branch -wait
 
 # test artifacts generated in repository1
@@ -142,6 +142,9 @@ $run = RunCICD -repository $repository -branch $branch -wait
 
 # test artifacts generated in main repo
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=4} -repoVersion '1.0' -appVersion '1.0'
+
+# Check that the dependencies are version 1.0.2.0 due to the nuGetFeedSelectMode = EarliestMatching
+(Get-ChildItem -Path 'artifacts/*-main-Dependencies-*/*_1.0.2.0.app').Count | Should -Be 3 -Because "There should be 4 dependencies with version 1.0.2.0 due to the nuGetFeedSelectMode = EarliestMatching"
 
 Set-Location $prevLocation
 
