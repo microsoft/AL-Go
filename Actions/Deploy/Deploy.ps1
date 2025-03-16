@@ -234,11 +234,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                     if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
                         # If app should be included, verify that it does not depend on Tests-TestLibraries
                         $unknownDependenciesForApp = @()
-                        $knownApps = @($app.FullName)
-                        if ($dependencies) {
-                            $knownApps += @($dependencies.FullName)
-                        }
-                        Sort-AppFilesByDependencies -appFiles $knownApps -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
+                        Sort-AppFilesByDependencies -appFiles @($app.FullName + $dependencies) -unknownDependencies ([ref]$unknownDependenciesForApp) | Out-Null
                         $unknownDependenciesForApp | ForEach-Object {
                             if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
                                 Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
