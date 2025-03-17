@@ -1,3 +1,5 @@
+## v6.4
+
 ### Deprecations
 
 - `alwaysBuildAllProjects` will be removed after October 1st 2025. Please set the `onPull_Request` property of the `incrementalBuilds` setting to false to force full builds in Pull Requests.
@@ -12,6 +14,7 @@
 - Performance test sample code in 25.4 contains objects with ID 149201 and 149202, which are not renumbered
 - Issue 798 Publish To Environment breaks CI/CD pipelines
 - Issue 1182 Runs-on setting type is ambiguous - string or array
+- Issue 1502 NuGet dependency version is always LatestMatching
 
 ### New Workflow specific settings
 
@@ -20,6 +23,7 @@
 
 ### New Repository Settings
 
+- `nuGetFeedSelectMode` determines the select mode when finding Business Central app packages from NuGet feeds, based on the dependency version specified in app.json. Options are: `Earliest` for earliest version of the package, `EarliestMatching` for earliest version of the package also compatible with the Business Central version used, `Exact` for the exact version of the package, `Latest` for the latest version of the package, `LatestMatching` for the latest version of the package also compatible with the Business Central version used.
 - `deployTo<environment>` now has two additional properties:
   - `includeTestAppsInSandboxEnvironment`, which deploys test apps and their dependencies to the specified sandbox environment if set to `true`. Deployment will fail if used on a Prod environment or if the test app has a dependency on Tests-TestLibraries. Default value is `false`.
   - `excludeAppIds`, which is an array of app ids which will be excluded from deployment. Default value is `[]`
@@ -32,6 +36,14 @@
 
 > [!NOTE]
 > The projects mentioned here are AL-Go projects in a multi-project repository. A repository can contain multiple projects and a project can contain multiple apps.
+
+### Run "Update AL-Go System Files" on multiple branches
+
+_Update AL-Go System Files_ has a new input to specify a list of branches to be updated in a single workflow run.
+When running the workflow on a schedule, you can now also specify `includeBranches` in `workflowSchedule` setting, which allows you to update the specified branches. Read more at https://aka.ms/algosettings#workflowSchedule.
+
+> [!NOTE]
+> When running "Update AL-Go System Files" on multiple branches, the template repository URL will be determined based on the branch the workflow runs on and it will be used for all of the specified branches.
 
 ### Support for incremental builds
 

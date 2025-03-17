@@ -282,24 +282,24 @@ function Get-BuildAllProjectsBasedOnEventAndSettings {
 .Description
     Determines whether a full build is required.
     A full build is required if:
-    - No files were modified
     - The modified files contain a file that matches one of the fullBuildPatterns
 #>
-function Get-BuildAllProjects {
+function IsFullBuildRequired {
     param(
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         [string] $baseFolder,
         [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
         [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "Full build patterns", Mandatory = $false)]
-        [string[]] $fullBuildPatterns = @()
+        [string[]] $fullBuildPatterns = @(),
+        [string] $noticeMessage = ''
     )
 
     $settings = $env:Settings | ConvertFrom-Json
 
     if (!$modifiedFiles) {
-        Write-Host "No files modified, building everything"
-        return $true
+        Write-Host "No modified files"
+        return $false
     }
 
     $fullBuildPatterns += @(Join-Path '.github' '*.json')
@@ -315,25 +315,49 @@ function Get-BuildAllProjects {
         $fullBuildFolder = Join-Path $baseFolder $fullBuildFolder
 
         if ($modifiedFiles -like $fullBuildFolder) {
-            Write-Host "Changes to $fullBuildFolder, building everything"
+            if ($noticeMessage) {
+                Write-Host "::notice::Changes to $fullBuildFolder detected, $noticeMessage"
+            }
+            else {
+                Write-Host "Changes to $fullBuildFolder detected"
+            }
             return $true
         }
     }
-
-    Write-Host "No changes to fullBuildPatterns, not building everything"
-
+    Write-Host "No changes to full build patterns detected"
     return $false
+}
+
+<#
+.Synopsis
+    Determines whether all projects in a repository should be built
+.Outputs
+    A boolean indicating whether a full build is required.
+.Description
+    Determines whether a full build is required.
+    A full build is required if:
+    - The modified files contain a file that matches one of the fullBuildPatterns
+#>
+function Get-BuildAllProjects {
+    param(
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The modified files", Mandatory = $false)]
+        [string[]] $modifiedFiles = @()
+    )
+
+    return (IsFullBuildRequired -baseFolder $baseFolder -modifiedFiles $modifiedFiles -noticeMessage "building everything")
 }
 
 <#
 .Synopsis
     Determines whether all apps in a project should be built
 .Outputs
-    A boolean indicating whether a full build is required.
+    A boolean indicating whether all apps in a project should be built.
 .Description
-    Determines whether a full build is required.
-    A full build is required if:
-    - Get-BuildAllProjects returns true
+    Determines whether all apps in a project should be built.
+    All apps should be built if:
+    - The modified files contain a file that matches one of the fullBuildPatterns
     - The .AL-Go/settings.json file has been modified
 #>
 function Get-BuildAllApps {
@@ -346,18 +370,24 @@ function Get-BuildAllApps {
         [string[]] $modifiedFiles = @()
     )
 
+    if (IsFullBuildRequired -baseFolder $baseFolder -modifiedFiles $modifiedFiles) {
+        # Notice already given in Initialize
+        return $true
+    }
     if ($project) {
         $ALGoSettingsFile = @(Join-Path $project '.AL-Go/settings.json')
     }
     else {
         $ALGoSettingsFile = @('.AL-Go/settings.json')
     }
-    return (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($ALGoSettingsFile))
+    return (IsFullBuildRequired -baseFolder $baseFolder -modifiedFiles $modifiedFiles -fullBuildPatterns @($ALGoSettingsFile) -noticeMessage "building all apps")
 }
 
 <#
 .Synopsis
     Downloads unmodified artifacts from the baseline workflow run
+.Outputs
+    An array of objects containing the type, mask and a list of downloaded app file names.
 .Description
     Downloads unmodified artifacts from the baseline workflow run
     - Downloads the artifacts (apps, testapps and bcpttestapps) for the specified project and build mode from the last known good build.
@@ -430,9 +460,15 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         }
     }
     $additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+    $downloadedAppsByType = @()
     $appsToDownload.Keys | ForEach-Object {
         $appType = $_
         $mask = $appsToDownload."$appType".Mask
+        $thisDownloadedAppsType = @{
+            "type" = $appType
+            "mask" = $mask
+            "downloadedApps" = @()
+        }
         $downloads = $appsToDownload."$appType".Downloads
         $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
         if (!(Test-Path $thisArtifactFolder)) {
@@ -467,6 +503,7 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
                         Write-Host "Copy $($item.Name) to build folders"
                         Copy-Item -Path $item.FullName -Destination $thisArtifactFolder -Force
                         $appsToDownload."$appType".Downloaded++
+                        $thisDownloadedAppsType.downloadedApps += $item.Name
                     }
                 }
             }
@@ -474,8 +511,11 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         }
         $additionalDataForTelemetry.Add("$($appType)ToDownload", $appsToDownload."$appType".Downloads.Count)
         $additionalDataForTelemetry.Add("$($appType)Downloaded", $appsToDownload."$appType".Downloaded)
+        $downloadedAppsByType += $thisDownloadedAppsType
     }
     Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
+
+    return $downloadedAppsByType
 }
 
 Export-ModuleMember *-*

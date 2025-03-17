@@ -650,10 +650,12 @@ function GetDefaultSettings
             "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
         "trustMicrosoftNuGetFeeds"                      = $true
+        "nuGetFeedSelectMode"                           = "LatestMatching"
         "commitOptions"                                 = [ordered]@{
             "messageSuffix"                             = ""
             "pullRequestAutoMerge"                      = $false
             "pullRequestLabels"                         = @()
+            "createPullRequest"                         = $true
         }
         "trustedSigning"                                = [ordered]@{
             "Endpoint"                                  = ""
@@ -1380,7 +1382,8 @@ function CommitFromNewFolder {
         [string] $serverUrl,
         [string] $commitMessage,
         [string] $body = $commitMessage,
-        [string] $branch
+        [string] $branch,
+        [string] $headBranch = $ENV:GITHUB_REF_NAME
     )
 
     invoke-git add *
@@ -1425,9 +1428,9 @@ function CommitFromNewFolder {
             if ($settings.commitOptions.pullRequestLabels) {
                 $labels = "$($settings.commitOptions.pullRequestLabels -join ",")"
                 Write-Host "Adding labels: $labels"
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body" --label $labels
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body" --label $labels
             } else {
-                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $ENV:GITHUB_REF_NAME --body "$body"
+                invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body"
             }
 
             if ($settings.commitOptions.pullRequestAutoMerge) {
