@@ -682,11 +682,13 @@ function ReadSettings {
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
         [string] $repoName = "$ENV:GITHUB_REPOSITORY",
         [string] $project = '.',
+        [string] $buildMode = "Default",
         [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
         [string] $userName = "$ENV:GITHUB_ACTOR",
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
-        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings"
+        [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [switch] $silent
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -701,7 +703,7 @@ function ReadSettings {
 
         if (Test-Path $path) {
             try {
-                Write-Host "Applying settings from $path"
+                if (!$silent.IsPresent) { Write-Host "Applying settings from $path" }
                 $settings = Get-Content $path -Encoding UTF8 | ConvertFrom-Json
                 if ($settings) {
                     return $settings
@@ -712,7 +714,7 @@ function ReadSettings {
             }
         }
         else {
-            Write-Host "No settings found in $path"
+            if (!$silent.IsPresent) { Write-Host "No settings found in $path" }
         }
         return $null
     }
