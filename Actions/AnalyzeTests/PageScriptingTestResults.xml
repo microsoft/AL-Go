@@ -1,0 +1,37 @@
+<testsuites id="" name="" tests="3" failures="0" skipped="0" errors="0" time="30.647">
+  <testsuite name="D-a-AL-Go_PTE_Test1-AL-Go_PTE_Test1-Recordings-all" timestamp="2025-03-17T08:24:57.771Z" hostname="chromium" tests="3" failures="0" skipped="0" time="30.647" errors="0">
+    <testcase name=" (D:\a\AL-Go_PTE_Test1\AL-Go_PTE_Test1\Recordings\PSTest1.yml)" classname="dist\player.spec.js" time="14.492">
+      <properties>
+        <property name="log" value="http://bc13894368000/do#open-replaylog=H4sIAAAAAAAAA42S227bMAyG7_MUfAG7PsRHFAO6tBgKdFiR-aoIUMgW4wiVJU-SE_TtR9tx07UbMF8IMPnzJ_lJinVYwhYbbbhQ7YqjbYzondCqhAqtA_OWs44ZV64AeqP3QlKdGqSkMPZ2DHvgXnuKCnXUL0gBAKpocaoZPw961pLg62CFQmvhO1MUMLDVEmGDyqE5SwHMoJzocIv7EurgnQPNAButnNEyTD84_4jTBG4aJ47CCbRvWdbMG_1kEi1UB0G9yeIwCeZ5q2n2WyOkvNUnNWX-oHE_yS4K0AquGzZlv3w0vr5aMpOR1O0CYaYIURAlXhB7YVYFeRklZRj4UZA-nVV8MGxuGxVh8g7uuKdnD8uEVg-mwcV7hrAZrNMdYX1APtK9I1YLjE5zJkvYM2nnGzpjvudEOf31eetHsrys-Q_ry7ZwYham8fz_Xjz2kzh_Wp2lf5ety6Tws6wY-VzYhHEerilyFBw1XV65Y7ubB--bfn6s7p7H5xt--nd0egbtIJ3d-b1krycj2oPzqK3Y00OxXrDL8iKK8mCNAWJer7M4q-sobnKsecHTiPsnrLvVb68GGjY9AwAA&amp;zip=1">
+        </property>
+      </properties>
+      <system-out><![CDATA[
+[[ATTACHMENT|..\..\..\test-results\dist-player--D-a-AL-Go-PTE-4823d-st1-Recordings-PSTest1-yml--chromium\attachments\Recording-b207d02d19131ec2c0076d17bc0b35c0932fa685.yml]]
+
+[[ATTACHMENT|..\..\..\test-results\dist-player--D-a-AL-Go-PTE-4823d-st1-Recordings-PSTest1-yml--chromium\attachments\Replay-log-f06e101e634f85d25c2bbece09ac372d6f6b4858.yml]]
+]]></system-out>
+    </testcase>
+    <testcase name=" (D:\a\AL-Go_PTE_Test1\AL-Go_PTE_Test1\Recordings\PSTest2.yml)" classname="dist\player.spec.js" time="7.484">
+      <properties>
+        <property name="log" value="http://bc13894368000/do#open-replaylog=H4sIAAAAAAAAA42Sb0vDMBDG3-9T3BdI7Z-1XYMI_kMEFZHhCxnIrbl1wSwpSerw25u221SGYl4U8utzd89zrcYNcXii2lghdTMR5GorWy-N5jAn58Ee3jmP1vMJQGvNSqpQpzulAqbW9ZiB_2h7iu-yQU8BAYSahoaq_jBosQmSi85JTc7BPeoALDwZRXBJ2pM9SLEebTyTFsa6gf_w97AbBN7AaY0DPdupT0_2YKhTptl7GGNAGqc5izOWlPN4xtOcJ7OoKOOXnUp0FscpSTUrvqXrAzC3Nls9KJ3pbE373mO60QLcSecHvjECFYcVKjcuxXbayw3dCg7LN3Uc7DG0-SMRbNHBYCH6b7g0ieJZ9TLZSX_dQRaVRd7v4Ct_meVZAO9SkOFwxRe4OL9jN-b1cX792v8iydHdhyez5Drl3SJqFX5srWzWnoWpchW-q2PxIkGBqzSrqjoVybSOq7iYLqcVFiVW-TRPoy0tN5NPQU6TjqECAAA&amp;zip=1">
+        </property>
+      </properties>
+      <system-out><![CDATA[
+[[ATTACHMENT|..\..\..\test-results\dist-player--D-a-AL-Go-PTE-7e07c-st1-Recordings-PSTest2-yml--chromium\attachments\Recording-ff8fc7913ddf8e10c341cccb3299bc6ddbe9cd4e.yml]]
+
+[[ATTACHMENT|..\..\..\test-results\dist-player--D-a-AL-Go-PTE-7e07c-st1-Recordings-PSTest2-yml--chromium\attachments\Replay-log-618f1736f941f99d6d62df1b4507fd50f5cada61.yml]]
+]]></system-out>
+    </testcase>
+    <testcase name=" (D:\a\AL-Go_PTE_Test1\AL-Go_PTE_Test1\Recordings\PSTest3.yml)" classname="dist\player.spec.js" time="8.671">
+      <properties>
+        <property name="log" value="http://bc13894368000/do#open-replaylog=H4sIAAAAAAAAA42Sa0vDMBSGv-9XnD-Q2mZuvSCCN0SYMnSfZCBn7WmNpElJ0o39e9N088IQDCGQh_fkPW8ShS0VsHxZkXXTSUW2NKJzQqsCBgSGSm0qoZqJdWhcMQHojK6F9FWql9Jj6uyAGbh9N1DcigYdeQTgaxoKVcNg0GHjJde9FYqshUdUHhh41pLghpQj8yXFcmzjwVFrA_3V3dPBBpyGixIDvQzai7PjNlRJ3Rz9xwjAYz5j8ZQl6SrOCj7zM8rns9eDquoNjh78PEt_JBuaZ_Zd71RQWt2bko5nj8mGBmAhrAu01RXKAmqUdrwO0ysnWnqoCthsP05DLf0hf6aBHVoI9tG_g-XRPPPBDtI_ZUnEs5D_O3s2i7kHW1GRLuC2WOP6asHu9dtydfc2fI3kZO_8ygzZXjq7jjqJ-50Rzbtj3lXU_j0ti9ebap5UMc8opYRTjvmUE-Z1inGcphnm0Y427eQTPE-j9ZcCAAA&amp;zip=1">
+        </property>
+      </properties>
+      <system-out><![CDATA[
+[[ATTACHMENT|..\..\..\test-results\dist-player--D-a-AL-Go-PTE-c7232-st1-Recordings-PSTest3-yml--chromium\attachments\Recording-9287eaa0237605ee3e30ff8ceb50c75a3a51486c.yml]]
+
+[[ATTACHMENT|..\..\..\test-results\dist-player--D-a-AL-Go-PTE-c7232-st1-Recordings-PSTest3-yml--chromium\attachments\Replay-log-584128914c2712169b511d079a9f77d537b3e8c5.yml]]
+]]></system-out>
+    </testcase>
+  </testsuite>
+</testsuites>
