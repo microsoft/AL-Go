@@ -206,7 +206,9 @@ function DownloadPRArtifacts {
     )
 
     $prHeadRef = GetHeadRefFromRunId -repository $ENV:GITHUB_REPOSITORY -runId $prRunId -token $token
-    $lastKnownGoodBuildHeadRef = GetHeadRefFromRunId -repository $ENV:GITHUB_REPOSITORY -runId $lastKnownGoodBuildRunId -token $token
+    if ($lastKnownGoodBuildRunId -ne 0) {
+        $lastKnownGoodBuildHeadRef = GetHeadRefFromRunId -repository $ENV:GITHUB_REPOSITORY -runId $lastKnownGoodBuildRunId -token $token
+    }
 
     $prArtifactSuffix = ''
 
