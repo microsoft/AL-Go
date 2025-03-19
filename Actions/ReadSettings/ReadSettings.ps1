@@ -45,7 +45,7 @@ if ($settings.versioningstrategy -ne -1) {
         }
         15 { # Use maxValue
             $settings.appBuild = [Int32]::MaxValue
-            $settings.appRevision = 0
+            $settings.appRevision = $settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
         }
         default {
             OutputError -message "Unknown versioning strategy $($settings.versioningStrategy)"
