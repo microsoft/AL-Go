@@ -11,7 +11,7 @@ Param(
     [Parameter(HelpMessage = "The settings for all Deployment Environments", Mandatory = $true)]
     [string] $deploymentEnvironmentsJson,
     [Parameter(HelpMessage = "Artifacts version. Used to check if this is a deployment from a PR", Mandatory = $false)]
-    [string]$artifactsVersion = ''
+    [string] $artifactsVersion = ''
 )
 
 function CheckIfAppNeedsInstallOrUpgrade {
@@ -118,7 +118,7 @@ function InstallUnknownDependencies {
         $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
         # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
         foreach($app in $apps) {
-            #The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
+            # The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
             $appId, $appName = $app.Split(':')
             $appVersion = ""
             if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
@@ -127,7 +127,7 @@ function InstallUnknownDependencies {
                 Write-Host "Version not found or incorrect format for unknown dependency $app"
                 continue
             }
-            #Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
+            # Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
             $appJson = @{
                 "name" = $appName
                 "id" = $appId
@@ -199,9 +199,13 @@ if (Test-Path $artifactsFolder -PathType Container) {
         $project = $_.Replace('\','_').Replace('/','_')
         $artifactVersionFilter = '*.*.*.*'
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
-        #Artifacts from PRs are named differently - project-ref-Apps-PRx-date
+        # Artifacts from PRs are named differently - project-ref-Apps-PRx-date
         if ($artifactsVersion -like "PR_*") {
-            $prId = $artifactsVersion -replace "PR_", ""
+            $prId = $artifactsVersion.SubString(3)
+            $intId = 0
+            if (!([Int]::TryParse($prId, [ref] $intId))) {
+                throw "Invalid PR id: $prId"
+            }
             $artifactVersionFilter = "PR$prId-*"
             $refname = GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token
         }

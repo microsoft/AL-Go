@@ -93,10 +93,10 @@ elseif ($artifactsVersion -like "PR_*") {
     }
 
     if ($prArtifacts) {
-        OutputMessageAndArray "Artifacts from pr build" $prArtifacts.Name
+        OutputMessageAndArray -message "Artifacts from pr build" -arrayOfStrings $prArtifacts.Name
     }
     if ($lastKnownGoodBuildArtifacts) {
-        OutputMessageAndArray "Artifacts from last known good build" $lastKnownGoodBuildArtifacts.Name
+        OutputMessageAndArray -message "Artifacts from last known good build" -arrayOfStrings $lastKnownGoodBuildArtifacts.Name
     }
     DownloadPRArtifacts -token $token -path $artifactsFolder -prArtifacts $prArtifacts -lastKnownGoodBuildArtifacts $lastKnownGoodBuildArtifacts -prRunId $latestPRBuildId -lastKnownGoodBuildRunId $lastKnownGoodBuildId
 }

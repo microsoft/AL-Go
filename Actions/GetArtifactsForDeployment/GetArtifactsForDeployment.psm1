@@ -13,9 +13,9 @@
 function FindPRRunAnnotationForIncrementalBuilds {
     Param(
         [Parameter(Mandatory = $true)]
-        [string]$repository,
+        [string] $repository,
         [Parameter(Mandatory = $true)]
-        [string]$checkSuiteId,
+        [string] $checkSuiteId,
         [Parameter(Mandatory = $true)]
         [string] $token
     )
@@ -47,7 +47,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
         if($annotations -and $annotations.count -gt 0) {
             foreach($annotation in $annotations) {
-                if($annotation.message -match "https://github.com/$repository/actions/runs/([0-9]{1,11})") {
+                if($annotation.message -match "Last known good build: https://github.com/$repository/actions/runs/([0-9]{1,11})") {
                     Write-Host "Found PR run annotation message: $($annotation.message)"
                     $lastKnownGoodBuildId = $matches[1]
                     break
@@ -149,8 +149,8 @@ function FindLatestPRRun {
 #>
 function DownloadAndUnpackArtifact {
     Param(
-        [string]$token,
-        [string]$folder,
+        [string] $token,
+        [string] $folder,
         $artifact
     )
 
@@ -191,17 +191,18 @@ function DownloadAndUnpackArtifact {
 #>
 function DownloadPRArtifacts {
     Param(
-        [string]$token,
         [Parameter(Mandatory = $true)]
-        [string]$path,
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $path,
         [Parameter(Mandatory = $true)]
         $prArtifacts,
         [Parameter(Mandatory = $false)]
         $lastKnownGoodBuildArtifacts,
         [Parameter(Mandatory = $true)]
-        [string]$prRunId,
+        [string] $prRunId,
         [Parameter(Mandatory = $false)]
-        [string]$lastKnownGoodBuildRunId
+        [string] $lastKnownGoodBuildRunId
     )
 
     $prHeadRef = GetHeadRefFromRunId -repository $ENV:GITHUB_REPOSITORY -runId $prRunId -token $token
