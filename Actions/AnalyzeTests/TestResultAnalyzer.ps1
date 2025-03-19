@@ -90,6 +90,7 @@ function BuildHTMLFailureSummary {
         $currentLevel = $level
 
         #If we are at a leaf, insert the error message and stack trace
+        Write-Host "Debug: $node"
         if ($node.isLeaf) {
             $htmlFailureSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($node.errorMessage)</i><br/>") | Out-Null
             $htmlFailureSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace:</i><br/>") | Out-Null
@@ -438,10 +439,10 @@ function GetBcptSummaryMD {
 
     $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
     if ($baseLine) {
-        $summarySb.Append("\n<i>Used baseline provided in $([System.IO.Path]::GetFileName($baseLinePath)).</i>") | Out-Null
+        $summarySb.AppendLine("\n<i>Used baseline provided in $([System.IO.Path]::GetFileName($baseLinePath)).</i>") | Out-Null
     }
     else {
-        $summarySb.Append("\n<i>No baseline provided. Copy a set of BCPT results to $([System.IO.Path]::GetFileName($baseLinePath)) in the project folder in order to establish a baseline.</i>") | Out-Null
+        $summarySb.AppendLine("\n<i>No baseline provided. Copy a set of BCPT results to $([System.IO.Path]::GetFileName($baseLinePath)) in the project folder in order to establish a baseline.</i>") | Out-Null
     }
 
     $summarySb.ToString()
