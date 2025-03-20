@@ -12,7 +12,7 @@ switch ($env:GITHUB_EVENT_NAME) {
       $settings = ConvertFrom-Json $env:settings
 
       # Add defensive check to handle if workflowSchedule.includeBranches is not defined in settings
-      if (($settings.PSObject.Properties.Name -eq "workflowSchedule") -and $($settings.workflowSchedule.includeBranches)) {
+      if (($settings.PSObject.Properties.Name -eq "workflowSchedule") -and ($settings.workflowSchedule.PSObject.Properties.Name -eq "includeBranches") -and $($settings.workflowSchedule.includeBranches)) {
         $branchPatterns = @($($settings.workflowSchedule.includeBranches))
       }
       else {
