@@ -37,6 +37,12 @@ switch ($testType) {
     }
     'pageScripting' {
         $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\PageScriptingTestResults.xml"
+        # Debug stuff
+        Write-Host $testResultsFile
+        Write-Host "Project folder contents:"
+        Get-ChildItem -Path $project | ForEach-Object {
+            Write-Host $_.FullName
+        }
         $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile
         $testTitle = "Page Scripting test results"
     }
