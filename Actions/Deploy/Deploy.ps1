@@ -216,7 +216,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
         else {
             $allApps += $projectApps
         }
-        if (!($projectTestApps)) {
+        if ($deploymentSettings.includeTestAppsInSandboxEnvironment -and !($projectTestApps)) {
             if ($project -ne '*') {
                 Write-Host "::warning::There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
             }
