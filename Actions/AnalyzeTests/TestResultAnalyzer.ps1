@@ -90,7 +90,6 @@ function BuildHTMLFailureSummary {
         $currentLevel = $level
 
         #If we are at a leaf, insert the error message and stack trace
-        Write-Host "Debug: $node"
         if ($node.isLeaf) {
             $htmlFailureSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Error: $($node.errorMessage)</i><br/>") | Out-Null
             $htmlFailureSb.Append("<i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack trace:</i><br/>") | Out-Null
@@ -190,7 +189,7 @@ function GetTestResultSummaryMD {
                             $rootFailureNode.childSummaries.Add($suiteFailureNode) | Out-Null
                         }
                     }
-                    $failuresSB = BuildHTMLFailureSummary -failureStructure $rootFailureNode
+                    $failuresSB = BuildHTMLFailureSummary -rootFailureNode $rootFailureNode
                 }
                 $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
             }
@@ -463,6 +462,7 @@ function GetPageScriptingTestResultSummaryMD {
         $totalFailed = 0
         $totalSkipped = 0
 
+        $rootFailureNode = [FailureNode]::new($false)
         if ($testResults.testsuites) {
             $totalTests = $testResults.testsuites.tests
             $totalTime = $testResults.testsuites.time
@@ -479,8 +479,7 @@ function GetPageScriptingTestResultSummaryMD {
                 4 = $statusSkipped
             }
             $mdTableRows = [System.Collections.ArrayList]@()
-
-            $rootFailureNode = [FailureNode]::new($false)
+         
             foreach($testsuite in $testResults.testsuites.testsuite) {
                 $suiteTests = $testsuite.tests
                 $suiteTime = $testsuite.time
@@ -511,10 +510,10 @@ function GetPageScriptingTestResultSummaryMD {
                     $rootFailureNode.childSummaries.Add($suiteFailureNode)
                 }
             }
-            $failuresSb = BuildHTMLFailureSummary -failureStructure $rootFailureNode
             $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
         }
         if ($totalFailed -gt 0) {
+            $failuresSb = BuildHTMLFailureSummary -rootFailureNode $rootFailureNode
             $failuresSummaryMD = "<i>$totalFailed failing tests, download test results to see details</i>"
             $failuresSb.Insert(0,"<details><summary>$failuresSummaryMD</summary>") | Out-Null
             $failuresSb.Append("</details>") | Out-Null
