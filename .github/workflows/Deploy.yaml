@@ -112,13 +112,8 @@ jobs:
           }
           $allJobs = (gh api --paginate /repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($latestRun.id)/jobs | ConvertFrom-Json).jobs
 
-          $nonCriticalJobs = @("RemoveRepositories")
           foreach($job in $allJobs) {
             if ($job.conclusion -ne 'success') {
-              if($nonCriticalJobs -contains $job.name) {
-                Write-Host "Job $($job.name) was not successful, but it is not critical"
-                continue
-              }
               throw "Some jobs in the end to end tests run for the latest commit was skipped, failed or cancelled - see $($latestRun.html_url)"
             }
           }
