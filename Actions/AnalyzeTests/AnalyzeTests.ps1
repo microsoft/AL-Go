@@ -36,7 +36,7 @@ switch ($testType) {
         $testTitle = "Performance test results"
     }
     'pageScripting' {
-        $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\PageScriptingTestResults.xml"
+        $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\.buildartifacts\PageScriptingTestResults.xml"
         # Debug stuff
         Write-Host $testResultsFile
         Write-Host "Project folder contents:"
