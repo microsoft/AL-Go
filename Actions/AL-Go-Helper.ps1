@@ -422,8 +422,8 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
 
     if ("$env:settings" -ne "") {
         $repoSettingsPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).json"
-        $env:settings | ConvertTo-Json -Depth 100 | Set-Content -Path $repoSettingsPath -Encoding UTF8
-        $env:settings | ConvertTo-Json -Depth 100 | Out-Host
+        $env:settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
+        $env:settings | Out-Host
     }
     else {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
