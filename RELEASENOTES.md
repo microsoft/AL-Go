@@ -5,6 +5,15 @@
 - Issue 1522 Strange warnings in Deploy job post update to AL-Go 6.4
 - BcContainerHelper settings were only read from .github/AL-Go-Settings.json, not allowing global settings in ALGoOrgSettings for TrustedNuGetFeeds, MemoryLimit and other things that should be possible to define globally
 
+### Support for deploying to sandbox environments from a pull request
+
+AL-Go for GitHub now supports deploying from a PR. When using the 'Publish To Environment' workflow, it is now possible to input 'PR_X' as the App version, where 'X' is the PR Id. This will deploy the artifacts from the latest PR build to the chosen environment, if that build is completed and successful.
+
+All apps, which were not built by the PR build will be deployed from the last known good build. You can find a notification on the PR build explaining which build is used as the last known good build.
+
+> [!NOTE]
+> When deploying a PR build to a sandbox environment, the app will get a special version number, which is: major.minor.maxint.run-number. This means that the sandbox environment likely needs to be deleted after the testing has ended.
+
 ## v6.4
 
 ### Deprecations
