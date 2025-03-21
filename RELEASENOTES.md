@@ -1,6 +1,7 @@
 ### Issues
 
 - BcContainerHelper settings were only read from .github/AL-Go-Settings.json, not allowing global settings in ALGoOrgSettings for TrustedNuGetFeeds, MemoryLimit and other things that should be possible to define globally
+
 ## v6.4
 
 ### Deprecations
