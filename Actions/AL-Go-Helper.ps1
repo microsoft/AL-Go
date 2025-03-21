@@ -421,9 +421,9 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
     $bcContainerHelperVersion = $defaultBcContainerHelperVersion
 
     if ("$env:settings" -ne "") {
-        Write-Host "------------------------------- $env:settings"
         $repoSettingsPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).json"
         $env:settings | ConvertTo-Json -Depth 100 | Set-Content -Path $repoSettingsPath -Encoding UTF8
+        $env:settings | ConvertTo-Json -Depth 100 | Out-Host
     }
     else {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
@@ -444,8 +444,7 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
         }
         $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
     }
-
-    if ($bcContainerHelperVersion -eq '') {
+     if ($bcContainerHelperVersion -eq '') {
         $bcContainerHelperVersion = "latest"
     }
 
