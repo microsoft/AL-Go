@@ -1,3 +1,10 @@
+### Issues
+
+- Issue 1519 Submitting to AppSource WARNING: AuthContext.Scopes is .. should be
+- Issue 1521 Dependencies not installed for multi project incremental PR build
+- Issue 1522 Strange warnings in Deploy job post update to AL-Go 6.4
+- BcContainerHelper settings were only read from .github/AL-Go-Settings.json, not allowing global settings in ALGoOrgSettings for TrustedNuGetFeeds, MemoryLimit and other things that should be possible to define globally
+
 ## v6.4
 
 ### Deprecations
