@@ -212,7 +212,7 @@ else {
     # $update set, update the files
     try {
         # If a pull request already exists with the same REF, then exit
-        $branchSHA = RunAndCheck git rev-list -n 1 $updateBranch --
+        $branchSHA = RunAndCheck git rev-list -n 1 $updateBranch '--'
         $commitMessage = "[$($updateBranch)@$($branchSHA.SubString(0,7))] Update AL-Go System Files from $templateInfo - $($templateSha.SubString(0,7))"
 
         # Get Token with permissions to modify workflows in this repository
