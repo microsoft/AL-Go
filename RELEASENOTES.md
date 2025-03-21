@@ -1,3 +1,10 @@
+### Issues
+
+- Issue 1519 Submitting to AppSource WARNING: AuthContext.Scopes is .. should be
+- Issue 1521 Dependencies not installed for multi project incremental PR build
+- Issue 1522 Strange warnings in Deploy job post update to AL-Go 6.4
+- BcContainerHelper settings were only read from .github/AL-Go-Settings.json, not allowing global settings in ALGoOrgSettings for TrustedNuGetFeeds, MemoryLimit and other things that should be possible to define globally
+
 ### Support for deploying to sandbox environments from a pull request
 
 AL-Go for GitHub now supports deploying from a PR. When using the 'Publish To Environment' workflow, it is now possible to input 'PR_X' as the App version, where 'X' is the PR Id. This will deploy the artifacts from the latest PR build to the chosen environment, if that build is completed and successful.
