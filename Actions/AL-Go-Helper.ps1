@@ -423,12 +423,10 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
     if ("$env:settings" -ne "") {
         $repoSettingsPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).json"
         $env:settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
-        $env:settings | Out-Host
     }
     else {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
     }
-    Write-Host $repoSettingsPath
     if (Test-Path $repoSettingsPath) {
         # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in settings
         $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
@@ -444,7 +442,8 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
         }
         $params += @{ "bcContainerHelperConfigFile" = $repoSettingsPath }
     }
-     if ($bcContainerHelperVersion -eq '') {
+
+    if ($bcContainerHelperVersion -eq '') {
         $bcContainerHelperVersion = "latest"
     }
 
