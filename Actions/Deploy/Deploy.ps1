@@ -24,10 +24,10 @@ function CheckIfAppNeedsInstallOrUpgrade {
     $needsInstall = $false
     $needsUpgrade = $false
     if ($installedApp) {
-        $newVersion = [version]::new($appJson.Version)
+        $dependencyVersion = [version]::new($appJson.Version)
         $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
-        if ($newVersion -gt $installedVersion) {
-            $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion."
+        if ($dependencyVersion -gt $installedVersion) {
+            $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $dependencyVersion."
             if ($installMode -eq 'upgrade') {
                 Write-Host "$msg Needs upgrade."
                 $needsUpgrade = $true
@@ -36,8 +36,8 @@ function CheckIfAppNeedsInstallOrUpgrade {
                 Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
             }
         }
-        elseif ($newVersion -lt $installedVersion) {
-            Write-Host "::WARNING::Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion, used for this build. Please update your local copy of this dependency."
+        elseif ($dependencyVersion -lt $installedVersion) {
+            Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $dependencyVersion, used in app.json."
         }
         else {
             Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion."
@@ -232,7 +232,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
         else {
             $allApps += $projectApps
         }
-        if (!($projectTestApps)) {
+        if ($deploymentSettings.includeTestAppsInSandboxEnvironment -and !($projectTestApps)) {
             if ($project -ne '*') {
                 Write-Host "::warning::There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
             }
@@ -275,7 +275,7 @@ else {
 
 # Calculate unknown dependencies for all apps and known dependencies
 $unknownDependencies = @()
-Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) | Out-Null
+Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
 
 Write-Host "Apps to deploy"
 $apps | ForEach-Object {
