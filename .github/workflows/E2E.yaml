@@ -373,7 +373,6 @@ jobs:
             $host.SetShouldExit(1)
           }
 
-
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
