@@ -1,4 +1,6 @@
-﻿function Test-Property {
+﻿. (Join-Path $PSScriptRoot "AL-Go-Helper.ps1")
+
+function Test-Property {
     Param(
         [HashTable] $json,
         [string] $settingsDescription,
@@ -178,8 +180,11 @@ function TestALGoRepository {
             Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
         elseif ($_.Directory.Name -eq '.github' -and $_.BaseName -like '*ettings') {
-            if ($_.BaseName -eq 'AL-Go-Settings') {
+            if ($_.BaseName -eq [System.IO.Path]::GetFileName($RepoSettingsFile) -or $_.BaseName -eq [System.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile)) {
                 $type = 'Repo'
+            }
+            elseif ($_.BaseName -eq [System.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile)) {
+                $type = 'Project'
             }
             else {
                 $type = 'Workflow'
