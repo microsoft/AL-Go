@@ -139,8 +139,8 @@ $checkfiles = @(
 
 if ($realTemplateFolder) {
     $checkfiles += @(
-        @{ 'dstPath' = [system.IO.Path]::GetDirectoryName($IndirectTemplateRepoSettingsFile); 'newname' = [system.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile); 'SrcPath' = [system.IO.Path]::GetDirectoryName($RepoSettingsFile); 'pattern' = [system.IO.Path]::GetFileName($RepoSettingsFile); 'type' = 'template repo settings' }
-        @{ 'dstPath' = [system.IO.Path]::GetDirectoryName($IndirectTemplateProjectSettingsFile); 'newname' = [system.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile); 'SrcPath' = [system.IO.Path]::GetDirectoryName($ALGoSettingsFile); 'pattern' = [system.IO.Path]::GetFileName($ALGoSettingsFile); ; 'type' = 'template project settings' }
+        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($IndirectTemplateRepoSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings' }
+        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($IndirectTemplateProjectSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); ; 'type' = 'template project settings' }
     )
 }
 

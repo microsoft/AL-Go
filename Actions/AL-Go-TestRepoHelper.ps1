@@ -181,11 +181,11 @@ function TestALGoRepository {
         }
         elseif ($_.Directory.Name -eq '.github' -and $_.BaseName -like '*ettings') {
             Write-Host $_.BaseName
-            Write-Host [System.IO.Path]::GetFileName($RepoSettingsFile)
-            if ($_.BaseName -eq [System.IO.Path]::GetFileName($RepoSettingsFile) -or $_.BaseName -eq [System.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile)) {
+            Write-Host ([System.IO.Path]::GetFileName($RepoSettingsFile))
+            if ($_.BaseName -eq ([System.IO.Path]::GetFileName($RepoSettingsFile)) -or $_.BaseName -eq ([System.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile))) {
                 $type = 'Repo'
             }
-            elseif ($_.BaseName -eq [System.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile)) {
+            elseif ($_.BaseName -eq ([System.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile))) {
                 $type = 'Project'
             }
             else {
