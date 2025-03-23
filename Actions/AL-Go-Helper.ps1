@@ -13,8 +13,8 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
 $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
-$TemplateRepoSettingsFile = Join-Path '.github' 'templateRepoSettings.json'
-$TemplateProjectSettingsFile = Join-Path '.github' 'templateProjectSettings.json'
+$IndirectTemplateRepoSettingsFile = Join-Path '.github' 'templateRepoSettings.json'
+$IndirectTemplateProjectSettingsFile = Join-Path '.github' 'templateProjectSettings.json'
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPushBranches', Justification = 'False positive.')]
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
