@@ -180,6 +180,8 @@ function TestALGoRepository {
             Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
         elseif ($_.Directory.Name -eq '.github' -and $_.BaseName -like '*ettings') {
+            Write-Host $_.BaseName
+            Write-Host [System.IO.Path]::GetFileName($RepoSettingsFile)
             if ($_.BaseName -eq [System.IO.Path]::GetFileName($RepoSettingsFile) -or $_.BaseName -eq [System.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile)) {
                 $type = 'Repo'
             }
