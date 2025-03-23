@@ -472,9 +472,10 @@ class Yaml {
                     # Add permissions
                     [int]$start = 0
                     [int]$count = 0
-                    if ($srcYaml.Find($permissionPath.SubString($permissionPath.LastIndexOf('/')+1), [ref] $start, [ref] $count)) {
+                    $parentPath = $permissionPath.SubString(0,$permissionPath.SubString(0,$permissionPath.Length-1).LastIndexOf('/')+1)
+                    if ($srcYaml.Find($parentPath), [ref] $start, [ref] $count)) {
                         $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
-                        $srcYaml.Insert($start + 1, $yamlPermissions)
+                        $srcYaml.Insert($start + 1, [Yaml]::GetPermissionsArray($yamlPermissions))
                     }
                 }
             }
