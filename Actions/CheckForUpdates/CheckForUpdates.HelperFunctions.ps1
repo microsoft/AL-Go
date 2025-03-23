@@ -502,8 +502,7 @@ function GetSrcFolder {
 function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
-        [hashtable] $updateSettings,
-        [hashtable] $indirectTemplateSettings = @{}
+        [hashtable] $updateSettings
     )
 
     $modified = $false
@@ -528,20 +527,6 @@ function UpdateSettingsFile {
             $modified = $true
         }
     }
-    # Grab settings from indirectTemplateSettings if they are not already in settings
-    foreach($key in $indirectTemplateSettings.Keys) {
-        # CustomALGoSystemFiles will not be copied from the indirect template settings - they will be applied to the indirect template
-        # UnusedALGoSystemFiles will not be copied from the indirect template settings - they will be used during the update process
-        if (@('customALGoSystemFiles','unusedALGoSystemFiles') -contains $key) {
-            continue
-        }
-        if (!($settings.PSObject.Properties.Name -eq $key)) {
-            # Add the property if it doesn't exist
-            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $indirectTemplateSettings."$key"
-            $modified = $true
-        }
-    }
-
     if ($modified) {
         # Save the file with LF line endings and UTF8 encoding
         $settings | Set-JsonContentLF -path $settingsFile
