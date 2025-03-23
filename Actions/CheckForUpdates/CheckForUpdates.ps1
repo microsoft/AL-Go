@@ -140,7 +140,7 @@ $checkfiles = @(
 if ($realTemplateFolder) {
     $checkfiles += @(
         @{ 'dstPath' = [system.IO.Path]::GetDirectoryName($TemplateRepoSettingsFile); 'newname' = [system.IO.Path]::GetFileName($TemplateRepoSettingsFile); 'SrcPath' = [system.IO.Path]::GetDirectoryName($RepoSettingsFile); 'pattern' = [system.IO.Path]::GetFileName($RepoSettingsFile); 'type' = 'template repo settings' }
-        @{ "DstFile" = [system.IO.Path]::GetDirectoryName($TemplateProjectSettingsFile); 'newname' = [system.IO.Path]::GetFileName($TemplateProjectSettingsFile); 'SrcPath' = [system.IO.Path]::GetDirectoryName($ALGoSettingsFile); 'pattern' = [system.IO.Path]::GetFileName($ALGoSettingsFile); ; 'type' = 'template project settings' }
+        @{ 'dstPath' = [system.IO.Path]::GetDirectoryName($TemplateProjectSettingsFile); 'newname' = [system.IO.Path]::GetFileName($TemplateProjectSettingsFile); 'SrcPath' = [system.IO.Path]::GetDirectoryName($ALGoSettingsFile); 'pattern' = [system.IO.Path]::GetFileName($ALGoSettingsFile); ; 'type' = 'template project settings' }
     )
 }
 
