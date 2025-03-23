@@ -738,8 +738,8 @@ function ReadSettings {
         $settingsObjects += @($orgSettingsVariableObject)
     }
     # Read settings from repository settings file
-    $templateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $TemplateRepoSettingsFile)
-    $settingsObjects += @($templateRepoSettingsObject)
+    $indirectTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $IndirectTemplateRepoSettingsFile)
+    $settingsObjects += @($indirectTemplateRepoSettingsObject)
     # Read settings from repository settings file
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
     $settingsObjects += @($repoSettingsObject)
@@ -750,8 +750,8 @@ function ReadSettings {
     }
     if ($project) {
         # Read settings from repository settings file
-        $templateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $TemplateProjectSettingsFile)
-        $settingsObjects += @($templateProjectSettingsObject)
+        $indirectTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $IndirectTemplateProjectSettingsFile)
+        $settingsObjects += @($indirectTemplateProjectSettingsObject)
         # Read settings from project settings file
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
