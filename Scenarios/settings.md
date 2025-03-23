@@ -353,6 +353,8 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | InstallMissingDependencies | Install missing dependencies |
 | BackupBcContainerDatabases | Backup Databases in container for subsequent restore(s) |
 | RestoreDatabasesInBcContainer | Restore Databases in container |
+| PreCompileApp | Custom script to run _before_ compiling an app. The script should accept the type of the app (`[string] $appType`) and a reference to the compilation parameters (`[ref] $compilationParams`).<br/>Possible values for `$appType` are: _app_, _testApp_, _bcptApp_.
+| PostCompileApp | Custom script to run _after_ compiling an app. The script should accept the file path of the produced .app file (`[string] $appFilePath`), the type of the app (`[string] $appType`), and a hashtable of the compilation parameters (`[hashtable] $compilationParams`).<br/>Possible values for `$appType` are: _app_, _testApp_, _bcptApp_.
 | InstallMissingDependencies | Install missing dependencies |
 | PipelineFinalize.ps1 | Finalize the pipeline |
 

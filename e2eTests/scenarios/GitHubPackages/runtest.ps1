@@ -144,7 +144,7 @@ $run = RunCICD -repository $repository -branch $branch -wait
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1;"TestApps"=0;"Dependencies"=4} -repoVersion '1.0' -appVersion '1.0'
 
 # Check that the dependencies are version 1.0.2.0 due to the nuGetFeedSelectMode = EarliestMatching
-(Get-ChildItem -Path 'artifacts/*-main-Dependencies-*/*_1.0.2.0.app').Count | Should -Be 3 -Because "There should be 4 dependencies with version 1.0.2.0 due to the nuGetFeedSelectMode = EarliestMatching"
+(Get-ChildItem -Path 'artifacts/*-main-Dependencies-*/*_1.0.2.0.app').Count | Should -Be 4 -Because "There should be 4 dependencies with version 1.0.2.0 due to the nuGetFeedSelectMode = EarliestMatching"
 
 Set-Location $prevLocation
 

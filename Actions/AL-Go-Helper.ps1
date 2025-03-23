@@ -420,13 +420,19 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
 #
 function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_WORKSPACE) {
     $params = @{ "ExportTelemetryFunctions" = $true }
-    $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
 
     # Default BcContainerHelper Version is hardcoded in AL-Go-Helper (replaced during AL-Go deploy)
     $bcContainerHelperVersion = $defaultBcContainerHelperVersion
+
+    if ("$env:settings" -ne "") {
+        $repoSettingsPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).json"
+        $env:settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
+    }
+    else {
+        $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
+    }
     if (Test-Path $repoSettingsPath) {
-        # Read Repository Settings file (without applying organization variables, repository variables or project settings files)
-        # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in repo settings file
+        # Override default BcContainerHelper version from AL-Go-Helper only if new version is specifically specified in settings
         $repoSettings = Get-Content $repoSettingsPath -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable
         if ($repoSettings.Keys -contains "BcContainerHelperVersion" -and $defaultBcContainerHelperVersion -notlike 'https://*') {
             $bcContainerHelperVersion = $repoSettings.BcContainerHelperVersion

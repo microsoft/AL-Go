@@ -522,28 +522,6 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
-    # If any apps were downloaded as part of incremental builds in a pr, we should remove them again after the build to prevent them from being included in artifacts
-    if ($ENV:GITHUB_EVENT_NAME -like 'pull_request*' -and $downloadedAppsByType) {
-        $downloadedAppsByType | ForEach-Object {
-            if ($_.downloadedApps) {
-                $mask = $_.mask
-                $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
-                Write-Host "Removing pre-built apps from $thisArtifactFolder"
-                foreach($downloadedApp in $_.downloadedApps) {
-                    $thisApp = Join-Path $thisArtifactFolder $downloadedApp
-                    try {
-                        if (Test-Path $thisApp) {
-                            Remove-Item $thisApp
-                        }
-                        Write-Host "Removed pre-built app: $thisApp"
-                    } catch {
-                        Write-Host "Failed to remove pre-built app: $thisApp"
-                    }
-                }
-            }
-        }
-    }
-
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
         $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
