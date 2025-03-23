@@ -176,10 +176,10 @@ function TestALGoRepository {
     # Test .json files are formatted correctly
     # Get-ChildItem needs -force to include folders starting with . (e.x. .github / .AL-Go) on Linux
     Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse -Force | ForEach-Object {
-        if ($_.Directory.Name -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
+        if ($_.Directory.Name -eq ([System.IO.Path]::GetDirectoryName($ALGoSettingsFile) -and $_.Name -eq ([System.IO.Path]::GetFileName($ALGoSettingsFile)) {
             Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
-        elseif ($_.Directory.Name -eq '.github' -and $_.BaseName -like '*ettings') {
+        elseif ($_.Directory.Name -eq ([System.IO.Path]::GetDirectoryName($RepoSettingsFile) -and $_.BaseName -like '*ettings') {
             if ($_.Name -eq ([System.IO.Path]::GetFileName($RepoSettingsFile)) -or $_.Name -eq ([System.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile))) {
                 $type = 'Repo'
             }
