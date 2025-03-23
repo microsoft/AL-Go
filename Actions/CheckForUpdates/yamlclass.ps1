@@ -450,15 +450,33 @@ class Yaml {
         catch {
             return
         }
+
         # Merge permissions
         Write-host "Merge permissions"
-        $srcPermissionsObj = $srcYaml.Get('permissions:/')
-        $yamlPermissionsObj = $yaml.Get('permissions:/')
-        if ($srcPermissionsObj -and $yamlPermissionsObj) {
-            $srcPermissions = [Yaml]::GetPermissionsFromArray($srcPermissionsObj.content)
-            $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
-            if ("$srcPermissions" -ne "" -and "$yamlPermissions" -ne "") {
-                $srcYaml.Replace('permissions:/', [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+        $allJobs = $srcYaml.GetNextLevel('jobs:/')
+        $permissionPaths = @("permissions:/") + @($allJobs | ForEach-Object { "jobs:/$_/permissions:/" })
+        foreach($permissionPath in $permissionPaths) {
+            $srcPermissionsObj = $srcYaml.Get($permissionPath)
+            $yamlPermissionsObj = $yaml.Get($permissionPath)
+            if ($yamlPermissionsObj) {
+                # permissions exist and should be merged/added
+                if ($srcPermissionsObj) {
+                    # Merge permissions
+                    $srcPermissions = [Yaml]::GetPermissionsFromArray($srcPermissionsObj.content)
+                    $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
+                    if ("$srcPermissions" -ne "" -and "$yamlPermissions" -ne "") {
+                        $srcYaml.Replace($permissionPath, [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
+                    }
+                }
+                else {
+                    # Add permissions
+                    [int]$start = 0
+                    [int]$count = 0
+                    if ($srcYaml.Find($permissionPath.SubString($permissionPath.LastIndexOf('/')+1), [ref] $start, [ref] $count)) {
+                        $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
+                        $srcYaml.Insert($start + 1, $yamlPermissions)
+                    }
+                }
             }
         }
 

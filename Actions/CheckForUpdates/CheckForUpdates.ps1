@@ -245,7 +245,7 @@ foreach($checkfile in $checkfiles) {
                     if (Test-Path -Path $dstFile -PathType Leaf) {
                         if ($type -eq 'workflow') {
                             Write-Host "Apply customizations from my repository: $dstFile"
-                            [Yaml]::ApplyCustomizations([ref] $srcContent,$dstFile, $customizationAnchors)
+                            [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile, $customizationAnchors)
                         }
                         # file exists, compare and add to $updateFiles if different
                         $dstContent = Get-ContentLF -Path $dstFile
