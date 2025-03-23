@@ -473,7 +473,7 @@ class Yaml {
                     [int]$start = 0
                     [int]$count = 0
                     $parentPath = $permissionPath.SubString(0,$permissionPath.SubString(0,$permissionPath.Length-1).LastIndexOf('/')+1)
-                    if ($srcYaml.Find($parentPath), [ref] $start, [ref] $count)) {
+                    if ($srcYaml.Find($parentPath, [ref] $start, [ref] $count)) {
                         $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
                         $srcYaml.Insert($start + 1, [Yaml]::GetPermissionsArray($yamlPermissions))
                     }
