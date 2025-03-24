@@ -3,7 +3,7 @@
         Helper functions for creating markdown tables.
 
     .PARAMETER Headers
-        An array of strings representing the headers of the table. 
+        An array of strings representing the headers of the table.
         Each header should be in the format "label;location", where location can be "left", "l", "right", "r", or "center", "c".
 
     .PARAMETER Rows
@@ -23,7 +23,7 @@
 function BuildMarkdownTable {
     param (
         [Parameter(Mandatory = $true)]
-        [string[]] $Headers, 
+        [string[]] $Headers,
         [Parameter(Mandatory = $true)]
         [string[][]] $Rows
     )

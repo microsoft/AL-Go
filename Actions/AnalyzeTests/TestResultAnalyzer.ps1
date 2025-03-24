@@ -462,7 +462,7 @@ function GetPageScriptingTestResultSummaryMD {
                 4 = $statusSkipped
             }
             $mdTableRows = [System.Collections.ArrayList]@()
-         
+
             foreach($testsuite in $testResults.testsuites.testsuite) {
                 $suiteTests = $testsuite.tests
                 $suiteTime = $testsuite.time
