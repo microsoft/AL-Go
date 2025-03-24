@@ -59,10 +59,10 @@ function BuildMarkdownTable {
 
     foreach ($row in $Rows) {
         if ($row.Length -ne $columnCount) {
-            throw "Row '$row' does not have the same number of columns ($($row.Length)) as the headers ($columnCount)"
+            throw "Row '$($row -join ';')' does not have the same number of columns ($($row.Length)) as the headers ($columnCount)"
         }
-        $rowString = $row -join " | "
-        $rowString = "| $rowString |"
+        $rowString = $row -join "|"
+        $rowString = "|$rowString|"
         $tableSb.Append("$rowString\n") | Out-Null
     }
     $tableSb.Append("\n") | Out-Null
