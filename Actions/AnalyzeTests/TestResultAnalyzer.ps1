@@ -376,7 +376,7 @@ function GetBcptSummaryMD {
                         $diffDurationMinStr = ''
                         $baseNumberOfSQLStmtsStr = 'N/A'
                         $diffNumberOfSQLStmtsStr = ''
-                        $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $null, $null, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $null, $null)
+                        $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, '', '', $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, '', '')
                     }
                     else {
                         $statusStr = $statusOK
@@ -410,7 +410,7 @@ function GetBcptSummaryMD {
                                 }
                             }
                         }
-                        $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $diffDurationMinStr, $diffDurationMinPctStr, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $diffNumberOfSQLStmtsStr. $diffNumberOfSQLStmtsPctStr)
+                        $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $diffDurationMinStr, $diffDurationMinPctStr, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $diffNumberOfSQLStmtsStr, $diffNumberOfSQLStmtsPctStr)
                     }
                 }
                 $mdTableRows.Add($mdTableRow) | Out-Null
