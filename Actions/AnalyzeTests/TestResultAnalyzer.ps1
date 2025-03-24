@@ -299,13 +299,9 @@ function GetBcptSummaryMD {
     $mdTableRows = [System.Collections.ArrayList]@()
     if ($baseLine) {
         $mdTableHeaders = @("BCPT Suite;l", "Codeunit ID;l", "Codeunit Name;l", "Operation;l", "Status;c", "Duration (ms);r", "Duration base (ms);r", "Duration diff (ms);r", "Duration diff;r", "SQL Stmts;r", "SQL Stmts base;r", "SQL Stmts diff;r", "SQL Stmts diff;r")
-        # $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Status|Duration (ms)|Duration base (ms)|Duration diff (ms)|Duration diff|SQL Stmts|SQL Stmts base|SQL Stmts diff|SQL Stmts diff|\n") | Out-Null
-        # $summarySb.Append("|:---------|:----------|:------------|:--------|:----:|------------:|-----------------:|-----------------:|------------:|--------:|-------------:|-------------:|-------------:|\n") | Out-Null
     }
     else {
         $mdTableHeaders = @("BCPT Suite;l", "Codeunit ID;l", "Codeunit Name;l", "Operation;l", "Duration (ms);r", "SQL Stmts;r")
-        # $summarySb.Append("|BCPT Suite|Codeunit ID|Codeunit Name|Operation|Duration (ms)|SQL Stmts|\n") | Out-Null
-        # $summarySb.Append("|:---------|:----------|:------------|:--------|------------:|--------:|\n") | Out-Null
     }
 
     $lastSuiteName = ''
@@ -347,18 +343,12 @@ function GetBcptSummaryMD {
                 }
 
                 $pctDurationMin = ($durationMin-$baseDurationMin)*100/$baseDurationMin
-                # $durationMinStr = "$($durationMin.ToString("#"))|"
-                # $baseDurationMinStr = "$($baseDurationMin.ToString("#"))|"
-                # $diffDurationMinStr = "$($diffDurationMin.ToString("+#;-#;0"))|$($pctDurationMin.ToString('+#;-#;0'))%|"
                 $durationMinStr = "$($durationMin.ToString("#"))"
                 $baseDurationMinStr = "$($baseDurationMin.ToString("#"))"
                 $diffDurationMinStr = "$($diffDurationMin.ToString("+#;-#;0"))"
                 $diffDurationMinPctStr = "$($pctDurationMin.ToString('+#;-#;0'))%"
 
                 $pctNumberOfSQLStmts = ($numberOfSQLStmts-$baseNumberOfSQLStmts)*100/$baseNumberOfSQLStmts
-                # $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("#"))|"
-                # $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("#"))|"
-                # $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("+#;-#;0"))|$($pctNumberOfSQLStmts.ToString('+#;-#;0'))%|"
                 $numberOfSQLStmtsStr = "$($numberOfSQLStmts.ToString("#"))"
                 $baseNumberOfSQLStmtsStr = "$($baseNumberOfSQLStmts.ToString("#"))"
                 $diffNumberOfSQLStmtsStr = "$($diffNumberOfSQLStmts.ToString("+#;-#;0"))"
@@ -373,20 +363,15 @@ function GetBcptSummaryMD {
                 if (!$baseLine) {
                     # No baseline provided
                     $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $durationMinStr, $numberOfSQLStmtsStr)
-                    # $statusStr = ''
-                    # $baseDurationMinStr = ''
-                    # $diffDurationMinStr = ''
-                    # $baseNumberOfSQLStmtsStr = ''
-                    # $diffNumberOfSQLStmtsStr = ''
                 }
                 else {
                     if (!$baseLineFound) {
                         # Baseline provided, but not found for this operation
                         $statusStr = $statusSkipped
-                        $baseDurationMinStr = 'N/A'#'N/A|'
-                        $diffDurationMinStr = ''#'||'
-                        $baseNumberOfSQLStmtsStr = 'N/A'#'N/A|'
-                        $diffNumberOfSQLStmtsStr = ''#'||'
+                        $baseDurationMinStr = 'N/A'
+                        $diffDurationMinStr = ''
+                        $baseNumberOfSQLStmtsStr = 'N/A'
+                        $diffNumberOfSQLStmtsStr = ''
                         $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $null, $null, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $null, $null)
                     }
                     else {
@@ -423,10 +408,8 @@ function GetBcptSummaryMD {
                         }
                         $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $diffDurationMinStr, $diffDurationMinPctStr, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $diffNumberOfSQLStmtsStr. $diffNumberOfSQLStmtsPctStr)
                     }
-                    # $statusStr += '|'
                 }
                 $mdTableRows.Add($mdTableRow) | Out-Null
-                #$summarySb.Append("|$thisSuiteName|$thisCodeunitID|$thisCodeunitName|$thisOperationName|$statusStr$durationMinStr$baseDurationMinStr$diffDurationMinStr$numberOfSQLStmtsStr$baseNumberOfSQLStmtsStr$diffNumberOfSQLStmtsStr\n") | Out-Null
 
                 $lastSuiteName = $suiteName
                 $lastCodeunitID = $codeUnitID
