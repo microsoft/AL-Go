@@ -7,6 +7,10 @@ $statusSkipped = " :question:"
 # This function will not fail if the file does not exist or if any test errors are found
 # TestResults is in JUnit format
 # Returns both a summary part and a failures part
+$mdHelperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\MarkDownHelper.psm1"
+if (Test-Path $mdHelperPath) {
+    Import-Module $mdHelperPath
+}
 
 #Helper function to build a markdown table.
 #Headers are an array of strings with format "label;location" where location is 'left', 'right' or 'center'

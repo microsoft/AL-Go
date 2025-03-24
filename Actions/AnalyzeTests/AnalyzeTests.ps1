@@ -8,10 +8,6 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 . (Join-Path -Path $PSScriptRoot 'TestResultAnalyzer.ps1')
-$mdHelperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\MarkDownHelper.psm1"
-if (Test-Path $mdHelperPath) {
-    Import-Module $mdHelperPath
-}
 
 $testResultsSummaryMD = ''
 $testResultsfailuresMD = ''
