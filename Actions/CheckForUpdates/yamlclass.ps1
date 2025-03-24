@@ -470,9 +470,17 @@ class Yaml {
                 }
                 else {
                     # Add permissions
-                    $parentPath = $permissionPath.Substring(0, $permissionPath.TrimEnd('/').LastIndexOf('/'))
+                    $parentPath = $permissionPath.Substring(0, $permissionPath.TrimEnd('/').LastIndexOf('/')+1)
+                    if ($parentPath) {
+                        # Job permissions are inserted before steps
+                        $beforePath = "$($parentPath)steps:"
+                    }
+                    else {
+                        # Global permissions are inserted before jobs
+                        $beforePath = "jobs:"
+                    }
                     $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
-                    $srcYaml.Replace("$parentPath/steps:", @("permissions:") + @([Yaml]::GetPermissionsArray($yamlPermissions) | ForEach-Object { "  $_" }) + $srcYaml.Get("$parentPath/steps:").content)
+                    $srcYaml.Replace($beforePath, @("permissions:") + @([Yaml]::GetPermissionsArray($yamlPermissions) | ForEach-Object { "  $_" }) + $srcYaml.Get($beforePath).content)
                 }
             }
         }
