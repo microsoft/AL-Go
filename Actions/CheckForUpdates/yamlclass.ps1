@@ -470,8 +470,9 @@ class Yaml {
                 }
                 else {
                     # Add permissions
+                    $parentPath = $permissionPath.Substring(0, $permissionPath.TrimEnd('/').LastIndexOf('/'))
                     $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
-                    $srcYaml.Replace("$($permissionPath)steps:", @("permissions:") + @([Yaml]::GetPermissionsArray($yamlPermissions) | ForEach-Object { "  $_" }) + $srcYaml.Get("$($permissionPath)steps:").content)
+                    $srcYaml.Replace("$parentPath/steps:", @("permissions:") + @([Yaml]::GetPermissionsArray($yamlPermissions) | ForEach-Object { "  $_" }) + $srcYaml.Get("$parentPath/steps:").content)
                 }
             }
         }
