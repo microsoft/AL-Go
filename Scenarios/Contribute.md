@@ -5,7 +5,7 @@ This section describes how to contribute to AL-Go. How to set up your own enviro
 You can do this in two ways:
 
 - Use a fork of AL-Go for GitHub in your own **personal GitHub account** in development mode
-- Use 2 public repositories in your own **personal GitHub account** (AL-Go-PTE, AL-Go-AppSource and AL-Go-Actions, much like in production)
+- Use 2 public repositories in your own **personal GitHub account** (AL-Go-PTE and AL-Go-AppSource, much like in production)
 
 ## Use a fork of AL-Go for GitHub in "development mode"
 
