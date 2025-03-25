@@ -23,6 +23,7 @@ jobs:
   RemoveRepositories:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }} # Run only if dispatched or the End to end tests workflow has succeeded
     runs-on: [ ubuntu-latest ]
+    name: Remove Temp Repos
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
