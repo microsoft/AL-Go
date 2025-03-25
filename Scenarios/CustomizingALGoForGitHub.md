@@ -223,10 +223,10 @@ At this time, the anchor-points where you can add custom steps are:
 | Workflow | Job | Step | Before or After |
 | :-- | :-- | :-- | :-: |
 | \_BuildALGoProject.yaml | BuildALGoProject | Read settings | After |
-| | | Read secrets | After |
-| | | Build | Before |
-| | | Read secrets | After |
-| | | Cleanup | Before |
+| \_BuildALGoProject.yaml | BuildALGoProject | Read secrets | After |
+| \_BuildALGoProject.yaml | BuildALGoProject | Build | Before |
+| \_BuildALGoProject.yaml | BuildALGoProject | Build | After |
+| \_BuildALGoProject.yaml | BuildALGoProject | Cleanup | Before |
 
 The custom step needs to be named `CustomStep<something>` and if inserted in any of the specified anchor-points, it will be maintained after running Update AL-Go System Files. An example of a custom step could be a step, which modifies settings based on some business logic
 
