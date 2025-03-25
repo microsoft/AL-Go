@@ -50,4 +50,3 @@ jobs:
           gitHubOwner: ${{ steps.getGitHubOwner.outputs.githubowner }}
         run: |
           .\Internal\Scripts\RemoveTempRepos.ps1 -githubOwner $env:githubOwner -token '${{ Secrets.E2EPAT }}'
-
