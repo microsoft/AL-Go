@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-Import-Module (Join-Path "..\.." "e2eTests\e2eTestHelper.psm1") -DisableNameChecking
+Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
 
 SetTokenAndRepository -github -githubOwner $githubOwner -token $token -repository ''
 

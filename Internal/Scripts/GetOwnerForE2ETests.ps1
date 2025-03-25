@@ -9,7 +9,7 @@ if (!($githubOwner)) {
     $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
 }
 
-$orgmap = Get-Content -Path (Join-Path "..\.." "e2eTests\orgmap.json") -Encoding UTF8 -Raw | ConvertFrom-Json
+$orgmap = Get-Content -Path (Join-Path "." "e2eTests/orgmap.json") -Encoding UTF8 -Raw | ConvertFrom-Json
 if ($orgmap.PSObject.Properties.Name -eq $githubOwner) {
   $githubOwner = $orgmap."$githubOwner"
 }
