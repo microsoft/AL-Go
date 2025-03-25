@@ -1,4 +1,4 @@
-# #7 Use Azure KeyVault for secrets with AL-Go
+# Use Azure KeyVault for secrets with AL-Go
 
 *Prerequisites: A completed [scenario 6](UpdateAlGoSystemFiles.md), an Azure KeyVault and you will need to follow the guidelines on how to connect to an Azure KeyVault as specified [here](https://learn.microsoft.com/azure/developer/github/connect-from-azure?tabs=azure-portal%2Cwindows#use-the-azure-login-action-with-a-service-principal-secret). Add your KeyVault name to the the JSON construct from this walkthrough (using **“keyVaultName” : “{your keyvault name}”**) and add this compressed JSON construct as a repository secret called AZURE_CREDENTIALS. You can also specify the KeyVault name in the AL-Go settings file if you do not want to mess with the JSON construct.*
 

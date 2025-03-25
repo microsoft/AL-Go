@@ -7,7 +7,7 @@
 )
 
 function IsGitHubPagesAvailable() {
-    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
@@ -20,7 +20,7 @@ function IsGitHubPagesAvailable() {
 }
 
 function GetGitHubEnvironments() {
-    $headers = GetHeader -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
     try {
         Write-Host "Requesting environments from GitHub"
@@ -36,7 +36,7 @@ function GetGitHubEnvironments() {
 function Get-BranchesFromPolicy($ghEnvironment) {
     if ($ghEnvironment) {
         # Environment is defined in GitHub - check protection rules
-        $headers = GetHeader -token $env:GITHUB_TOKEN
+        $headers = GetHeaders -token $env:GITHUB_TOKEN
         $branchPolicy = ($ghEnvironment.protection_rules | Where-Object { $_.type -eq "branch_policy" })
         if ($branchPolicy) {
             if ($ghEnvironment.deployment_branch_policy.protected_branches) {
@@ -60,7 +60,7 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
-$includeGitHubPages = $getEnvironments.Split(',') | Where-Object { 'github-pages' -like $_ }
+$includeGitHubPages = 'github-pages' -like $getEnvironments
 $generateALDocArtifact = ($includeGitHubPages) -and (($type -eq 'Publish') -or $settings.alDoc.continuousDeployment)
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
 Write-Host "GenerateALDocArtifact=$([int]$generateALDocArtifact)"
@@ -85,7 +85,10 @@ $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')
-$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments }
+if ($settings.Keys -contains 'UpdateALGoSystemFilesEnvironment' -and $settings.updateALGoSystemFilesEnvironment) {
+    $settings.excludeEnvironments += @($settings.updateALGoSystemFilesEnvironment)
+}
+$environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) | Select-Object -unique | Where-Object { $settings.excludeEnvironments -notcontains $_.Split(' ')[0] -and $_.Split(' ')[0] -like $getEnvironments.Split(' ')[0] }
 
 Write-Host "Environments found: $($environments -join ', ')"
 
@@ -104,14 +107,17 @@ if (!($environments)) {
                 "Branches" = $null
                 "BranchesFromPolicy" = @()
                 "Projects" = '*'
+                "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
                 "SyncMode" = $null
                 "Scope" = $null
                 "buildMode" = $null
                 "continuousDeployment" = !($getEnvironments -like '* (PROD)' -or $getEnvironments -like '* (Production)' -or $getEnvironments -like '* (FAT)' -or $getEnvironments -like '* (Final Acceptance Test)')
-                "runs-on" = @($settings."runs-on".Split(',').Trim())
+                "runs-on" = $settings."runs-on"
                 "shell" = $settings."shell"
                 "companyId" = ''
                 "ppEnvironmentUrl" = ''
+                "includeTestAppsInSandboxEnvironment" = $false
+                "excludeAppIds" = @()
             }
         }
         $unknownEnvironment = 1
@@ -149,10 +155,12 @@ else {
             "Scope" = $null
             "buildMode" = $null
             "continuousDeployment" = $null
-            "runs-on" = @($settings."runs-on".Split(',').Trim())
+            "runs-on" = $settings."runs-on"
             "shell" = $settings."shell"
             "companyId" = ''
             "ppEnvironmentUrl" = ''
+            "includeTestAppsInSandboxEnvironment" = $false
+            "excludeAppIds" = @()
         }
 
         # Check DeployTo<environmentName> setting
@@ -165,7 +173,14 @@ else {
             foreach($key in $keys) {
                 if ($deploymentSettings.ContainsKey($key)) {
                     if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
-                        Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                        if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
+                            # Support setting runs-on as an array in settings to not break old settings
+                            # See https://github.com/microsoft/AL-Go/issues/1182
+                            $deployTo."$key" = $deployTo."$key" -join ','
+                        }
+                        else {
+                            Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                        }
                     }
                     Write-Host "Property $key = $($deployTo."$key")"
                     $deploymentSettings."$key" = $deployTo."$key"
@@ -179,6 +194,10 @@ else {
             }
             if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
                 throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
+            }
+            if ($deploymentSettings."runs-on" -like "*ubuntu-*" -and $deploymentSettings."shell" -eq "powershell") {
+                Write-Host "Switching deployment shell to pwsh for ubuntu"
+                $deploymentSettings."shell" = "pwsh"
             }
         }
 
@@ -253,7 +272,7 @@ else {
 $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
 $deploymentEnvironments.Keys | Sort-Object | ForEach-Object {
     $deploymentEnvironment = $deploymentEnvironments."$_"
-    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject $deploymentEnvironment."runs-on" -compress)"; "shell" = $deploymentEnvironment."shell" }
+    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject @($deploymentEnvironment."runs-on".Split(',').Trim()) -compress)"; "shell" = $deploymentEnvironment."shell" }
 }
 $environmentsMatrixJson = $json | ConvertTo-Json -Depth 99 -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsMatrixJson=$environmentsMatrixJson"

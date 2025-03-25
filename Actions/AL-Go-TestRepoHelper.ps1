@@ -43,6 +43,23 @@ function Test-Shell {
     }
 }
 
+function Test-Deprecations {
+    Param(
+        [HashTable] $json,
+        [string] $settingsDescription
+    )
+
+    # cleanModePreprocessorSymbols is deprecated
+    if ($json.Keys -contains 'cleanModePreprocessorSymbols') {
+        OutputWarning -Message "cleanModePreprocessorSymbols in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#cleanModePreprocessorSymbols"
+    }
+
+    # <workflowName>Schedule is deprecated
+    ($json.Keys | Where-Object {$_ -like '*Schedule' -and $_ -ne 'WorkflowSchedule'}) | ForEach-Object {
+        OutputWarning -Message "$_ in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#_workflow_Schedule. This warning will become an error in the future."
+    }
+}
+
 function Test-SettingsJson {
     Param(
         [hashtable] $json,
@@ -50,6 +67,8 @@ function Test-SettingsJson {
         [ValidateSet('Repo','Project','Workflow','Variable')]
         [string] $type
     )
+
+    Test-Deprecations -json $json -settingsDescription $settingsDescription
 
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'shell'
     Test-Shell -json $json -settingsDescription $settingsDescription -property 'gitHubRunnerShell'
@@ -71,18 +90,17 @@ function Test-SettingsJson {
     if ($type -eq 'Workflow') {
         # Test for things that should / should not exist in a workflow settings file
     }
+    else {
+        # workflowSchedule and workflowConcurrency should only exist in workflow specific settings files (or conditional settings - not tested)
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'workflowSchedule' -maynot
+        Test-Property -settingsDescription $settingsDescription -json $json -key 'workflowConcurrency' -maynot
+    }
     if ($type -eq 'Variable') {
         # Test for things that should / should not exist in a settings variable
     }
     if ($type -eq 'Project' -or $type -eq 'Workflow') {
         # templateUrl should not be in Project or Workflow settings
         Test-Property -settingsDescription $settingsDescription -json $json -key 'templateUrl' -maynot
-
-        # schedules and runs-on should not be in Project or Workflow settings
-        # These properties are used in Update AL-Go System Files, hence they should only be in Repo settings
-        'nextMajorSchedule','nextMinorSchedule','currentSchedule','runs-on' | ForEach-Object {
-            Test-Property -settingsDescription $settingsDescription -json $json -key $_ -shouldnot
-        }
     }
 }
 
@@ -100,7 +118,7 @@ function Test-JsonStr {
 
     try {
         $json = $jsonStr | ConvertFrom-Json | ConvertTo-HashTable
-        Test-SettingsJson -json $json -settingsDescription $settingsDescription -type:$type
+        Test-SettingsJson -json $json -settingsDescription $settingsDescription -type $type
     }
     catch {
         OutputError "$($_.Exception.Message.Replace("`r",'').Replace("`n",' ')) in $settingsDescription"

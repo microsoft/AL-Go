@@ -1,4 +1,4 @@
-# #16 Add a performance test app to an existing project
+# Add a performance test app to an existing project
 
 *Prerequisites: A completed [scenario 1](GetStarted.md)*
 

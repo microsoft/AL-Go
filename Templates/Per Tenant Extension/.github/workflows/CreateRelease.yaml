@@ -1,6 +1,9 @@
 name: ' Create release'
 run-name: "Create release - Version ${{ inputs.tag }}"
 
+concurrency:
+  group: ${{ github.workflow }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -55,8 +58,6 @@ permissions:
   id-token: write
   pull-requests: write
 
-concurrency: release
-
 defaults:
   run:
     shell: powershell
@@ -103,7 +104,7 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'TokenForPush'
+          getSecrets: 'TokenForPush,ghTokenWorkflow'
           useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Determine Projects
@@ -117,6 +118,7 @@ jobs:
         with:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: true
 
       - name: Analyze Artifacts
@@ -163,7 +165,7 @@ jobs:
             $appVersion = "$env:_appVersion"
             if ($appVersion -eq "latest") {
               Write-Host "Grab latest"
-              $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*" -or $_.name -like "$project-$refname-PowerPlatformSolution-*" } | Select-Object -First 1
+              $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*.*.*.*" -or $_.name -like "$project-$refname-PowerPlatformSolution-*.*.*.*" } | Select-Object -First 1
             }
             else {
               Write-Host "Search for $project-$refname-Apps-$appVersion or $project-$refname-PowerPlatformSolution-$appVersion"

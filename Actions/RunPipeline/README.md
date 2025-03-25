@@ -22,6 +22,8 @@ Run pipeline in AL-Go repository
 | buildMode | | Specifies a mode to use for the build steps | Default |
 | installAppsJson | | A JSON-formatted list of apps to install | [] |
 | installTestAppsJson | | A JSON-formatted list of test apps to install | [] |
+| baselineWorkflowRunId | RunId of the baseline workflow run | |
+| baselineWorkflowSHA | SHA of the baseline workflow run | |
 
 ## OUTPUT
 

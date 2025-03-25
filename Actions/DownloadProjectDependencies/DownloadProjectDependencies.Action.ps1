@@ -3,7 +3,7 @@
     [string] $project,
     [string] $baseFolder,
     [string] $buildMode = 'Default',
-    [string] $projectsDependenciesJson,
+    [string] $projectDependenciesJson,
     [string] $baselineWorkflowRunID = '0',
     [string] $destinationPath,
     [string] $token
@@ -29,7 +29,7 @@ function DownloadDependenciesFromCurrentBuild {
     param(
         $baseFolder,
         $project,
-        $projectsDependencies,
+        $projectDependencies,
         $buildMode,
         $baselineWorkflowRunID,
         $destinationPath,
@@ -39,8 +39,8 @@ function DownloadDependenciesFromCurrentBuild {
     Write-Host "Downloading dependencies for project '$project'"
 
     $dependencyProjects = @()
-    if ($projectsDependencies.Keys -contains $project) {
-        $dependencyProjects = @($projectsDependencies."$project")
+    if ($projectDependencies.Keys -contains $project) {
+        $dependencyProjects = @($projectDependencies."$project")
     }
 
     Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
@@ -52,7 +52,7 @@ function DownloadDependenciesFromCurrentBuild {
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
 
         $dependencyBuildMode = $buildMode
-        if (!($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
+        if ($dependencyBuildMode -ne 'Default' -and !($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
             # Download the default build mode if the specified build mode is not supported for the dependency project
             Write-Host "Build mode '$dependencyBuildMode' is not supported for project '$dependencyProject'. Using the default build mode."
             $dependencyBuildMode = 'Default';
@@ -93,9 +93,16 @@ function DownloadDependenciesFromCurrentBuild {
         $baselineWorkflowRunID = $probingPath.baselineWorkflowID
 
         Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowRunID"
-
-        $dependency = GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ }
-        $downloadedDependencies += $dependency
+        GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath | Where-Object { $_ } | ForEach-Object {
+            $dependencyFileName = [System.IO.Path]::GetFileName($_.Trim('()'))
+            if ($downloadedDependencies | Where-Object { [System.IO.Path]::GetFileName($_.Trim('()')) -eq $dependencyFileName }) {
+                Write-Host "Dependency app '$dependencyFileName' already downloaded"
+            }
+            else {
+                Write-Host "Dependency app '$dependencyFileName' downloaded"
+                $downloadedDependencies += $_
+            }
+        }
     }
 
     return $downloadedDependencies
@@ -108,15 +115,13 @@ Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMo
 $downloadedDependencies = @()
 
 Write-Host "::group::Downloading project dependencies from current build"
-$projectsDependencies = $projectsDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectsDependencies $projectsDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
+$projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectDependencies $projectDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
-
-Write-Host "Downloaded dependencies: $($downloadedDependencies -join ', ')"
 
 $downloadedApps = @()
 $downloadedTestApps = @()
@@ -132,8 +137,8 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-Write-Host "Downloaded dependencies apps: $($DownloadedApps -join ', ')"
-Write-Host "Downloaded dependencies test apps: $($DownloadedTestApps -join ', ')"
+OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
+OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
 
 $DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
 $DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress

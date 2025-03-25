@@ -3,7 +3,7 @@ Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1' -Resolve)
 
 #region Loading telemetry helper
 function DownloadNugetPackage($PackageName, $PackageVersion) {
-    $nugetPackagePath = Join-Path "$ENV:GITHUB_WORKSPACE" "/.nuget/packages/$PackageName/$PackageVersion/"
+    $nugetPackagePath = Join-Path "$ENV:RUNNER_TEMP" "/.nuget/packages/$PackageName/$PackageVersion/"
 
     if (-not (Test-Path -Path $nugetPackagePath)) {
         $url = "https://www.nuget.org/api/v2/package/$PackageName/$PackageVersion"
@@ -264,12 +264,17 @@ function Trace-DeprecationWarning {
         [String] $Message,
         [Parameter(Mandatory = $true)]
         [String] $DeprecationTag,
+        [switch] $WillBecomeError,
         [Parameter(Mandatory = $false)]
         [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     )
 
     # Show deprecation warning in GitHub
-    OutputWarning -message "$Message. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
+    $warningMessage = "$Message. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
+    if ($WillBecomeError) {
+        $warningMessage += " This warning will become an error in the future."
+    }
+    OutputWarning -message $warningMessage
 
     # Log deprecation warning to telemetry
     Add-TelemetryProperty -Hashtable $AdditionalData -Key 'DeprecationTag' -Value $DeprecationTag

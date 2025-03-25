@@ -1,4 +1,4 @@
-# #B Migrate a repository from Azure DevOps to AL-Go for GitHub with history
+# Migrate a repository from Azure DevOps to AL-Go for GitHub with history
 
 *This walkthrough explains how to migrate a repository from Azure DevOps to AL-Go for GitHub **while preserving the full commit history**. As a sample, I will use a repository, which was setup using the CI/CD Hands On Lab, including scripts and pipelines from this.*
 

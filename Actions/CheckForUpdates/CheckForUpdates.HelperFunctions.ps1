@@ -50,16 +50,26 @@ function GetLatestTemplateSha {
     $branch = $templateUrl.Split('@')[1]
 
     try {
+        Write-Host "Get latest SHA for $templateUrl"
         $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
-        $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
     } catch {
-        if ($_.Exception.Message -like "*401*") {
-            throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-        } else {
+        Write-Host "Exception: $($_.Exception.Message)"
+        if ($_.Exception.Message -like "*Unauthorized*") {
+            try {
+                Write-Host "retry without Authorization header"
+                $headers.Remove('Authorization')
+                $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
+            }
+            catch {
+                throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
+            }
+        }
+        else {
             throw $_.Exception.Message
         }
     }
 
+    $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
     if (!$branchInfo) {
         throw "$templateUrl doesn't exist"
     }
@@ -293,14 +303,53 @@ function GetWorkflowContentWithChangesFromSettings {
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
     $yaml = [Yaml]::Load($srcFile)
-    $workflowScheduleKey = "$($baseName)Schedule"
+    $yamlName = $yaml.get('name:')
+    if ($yamlName) {
+        $workflowName = $yamlName.content.SubString('name:'.Length).Trim().Trim('''"').Trim()
+    }
+    else {
+        $workflowName = $baseName
+    }
 
-    # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have a RepoSetting called <workflowname>Schedule, which will be used to set the schedule for the workflow
-    if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
+    $workflowScheduleKey = "WorkflowSchedule"
+    $workflowConcurrencyKey = "WorkflowConcurrency"
+    foreach($key in @($workflowScheduleKey,$workflowConcurrencyKey)) {
+        if ($repoSettings.Keys -contains $key -and ($repoSettings."$key")) {
+            throw "The $key setting is not allowed in the global repository settings. Please use the workflow specific settings file or conditional settings."
+        }
+    }
+
+    # Re-read settings and this time include workflow specific settings
+    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' | ConvertTo-HashTable -recurse
+
+    # Old Schedule key is deprecated, but still supported
+    $oldWorkflowScheduleKey = "$($baseName)Schedule"
+    if ($repoSettings.Keys -contains $oldWorkflowScheduleKey) {
+        # DEPRECATION: REPLACE WITH ERROR AFTER October 1st 2025 --->
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
-            # Read the section under the on: key and add the schedule section
-            $yamlOn = $yaml.Get('on:/')
-            $yaml.Replace('on:/', $yamlOn.content+@('schedule:', "  - cron: '$($repoSettings."$workflowScheduleKey")'"))
+            OutputWarning "Both $oldWorkflowScheduleKey and $workflowScheduleKey are defined in the settings file. $oldWorkflowScheduleKey will be ignored. This warning will become an error in the future"
+        }
+        else {
+            Trace-DeprecationWarning -Message "$oldWorkflowScheduleKey is deprecated" -DeprecationTag "_workflow_Schedule" -WillBecomeError
+            # Convert the old <workflow>Schedule setting to the new WorkflowSchedule setting
+            $repoSettings."$workflowScheduleKey" = @{ "cron" = $repoSettings."$oldWorkflowScheduleKey" }
+        }
+        # <--- REPLACE WITH ERROR AFTER October 1st 2025
+    }
+
+    # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have concurrency and schedule defined
+    if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
+        # Add Schedule and Concurrency settings to the workflow
+        if ($repoSettings.Keys -contains $workflowScheduleKey) {
+            if ($repoSettings."$workflowScheduleKey" -isnot [hashtable] -or $repoSettings."$workflowScheduleKey".Keys -notcontains 'cron' -or $repoSettings."$workflowScheduleKey".cron -isnot [string]) {
+                throw "The $workflowScheduleKey setting must be a structure containing a cron property"
+            }
+            # Replace or add the schedule part under the on: key
+            $yaml.ReplaceOrAdd('on:/', 'schedule:', @("- cron: '$($repoSettings."$workflowScheduleKey".cron)'"))
+        }
+        if ($repoSettings.Keys -contains $workflowConcurrencyKey) {
+            # Replace or add the concurrency part
+            $yaml.ReplaceOrAdd('', 'concurrency:', $repoSettings."$workflowConcurrencyKey")
         }
     }
 

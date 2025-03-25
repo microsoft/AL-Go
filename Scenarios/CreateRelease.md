@@ -1,4 +1,4 @@
-# #4 Create a release of your application
+# Create a release of your application
 
 *Prerequisites: A completed [scenario 3](RegisterSandboxEnvironment.md)*
 
