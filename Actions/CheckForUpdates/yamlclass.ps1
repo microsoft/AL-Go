@@ -144,9 +144,18 @@ class Yaml {
             $this.Remove($start, $count)
             $this.Insert($start, $yamlContent)
         }
-        else {
-            Write-Host -ForegroundColor Red "cannot locate $line"
-        }
+    }
+
+    # Add the lines in $content to the lines for the specified Yaml path, given by $line
+    [void] Add([string] $line, [string[]] $content) {
+        $this.Replace($line, $this.Get($line).content + $content)
+    }
+
+    # Replace or add a key and content to the lines for the specified Yaml path, given by $line
+    [void] ReplaceOrAdd([string] $line, [string] $key, [string[]]$content) {
+        # Remove the key part under the line
+        $this.Replace("$line$key",@())
+        $this.Add($line, @($key) + @($content | ForEach-Object { "  $_" }))
     }
 
     # Replace all occurrences of $from with $to throughout the Yaml content

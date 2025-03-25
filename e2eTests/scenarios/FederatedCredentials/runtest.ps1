@@ -5,7 +5,8 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
@@ -57,14 +58,14 @@ $branch = "e2e"
 $template = "https://github.com/$appSourceTemplate"
 $repository = 'microsoft/bcsamples-bingmaps.appsource'
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
-$headers = @{
-    "Authorization" = "token $token"
-    "X-GitHub-Api-Version" = "2022-11-28"
-    "Accept" = "application/vnd.github+json"
-}
-$existingBranch = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null | ConvertFrom-Json
-if ($existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+
+# Get the branches from https://github.com/microsoft/bcsamples-bingmaps.appsource
+# Use e2e PAT to get the branches - as token doesn't have access to the repository
+$headers = GetHeaders -token $e2epat -repository "$githubOwner/.github"
+$existingBranchJson = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null
+$existingBranch = $existingBranchJson | ConvertFrom-Json
+if ($existingBranch -and $existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
     Write-Host "Removing existing branch $branch"
     Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
     Start-Sleep -Seconds 10
@@ -73,6 +74,7 @@ $latestSha = (gh api /repos/$repository/commits/main | ConvertFrom-Json).sha
 gh api --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/git/refs -f ref=refs/heads/$branch -f sha=$latestSha
 
 # Upgrade AL-Go System Files to test version
+# bcsamples-bingmaps.appsource already has the GHTOKENWORKFLOW secret
 RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -repository $repository -branch $branch | Out-Null
 
 # Run CI/CD workflow
