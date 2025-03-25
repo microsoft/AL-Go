@@ -29,12 +29,11 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Check E2EPAT Secret is defined
+      - name: Stop if E2EPAT Secret is not defined
+        if: ${{ Secrets.E2EPAT == '' }}
         run: |
-          if ('${{ Secrets.E2EPAT }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
-            exit 1
-          }
+          Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
+          exit 1
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
