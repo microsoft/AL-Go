@@ -43,10 +43,10 @@ jobs:
         env:
           githubOwner: ${{ github.event.inputs.githubOwner }}
         run: |
-          .\Internal\Scripts\GetOwnerForE2ETests.ps1 -githubOwner $env:githubOwner
+          ${{ github.workspace }}\Internal\Scripts\GetOwnerForE2ETests.ps1 -githubOwner $env:githubOwner
 
       - name: Remove Temp Repositories
         env:
           gitHubOwner: ${{ steps.getGitHubOwner.outputs.githubowner }}
         run: |
-          .\Internal\Scripts\RemoveTempRepos.ps1 -githubOwner $env:githubOwner -token '${{ Secrets.E2EPAT }}'
+          ${{ github.workspace }}\Internal\Scripts\RemoveTempRepos.ps1 -githubOwner $env:githubOwner -token '${{ Secrets.E2EPAT }}'
