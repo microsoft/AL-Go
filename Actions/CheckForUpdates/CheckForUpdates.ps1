@@ -92,7 +92,7 @@ if (-not $isDirectALGo) {
         $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
             # The template repository is a url to another AL-Go repository (an indirect template repository)
-            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the indirect template reposotiry points to the "real" template repository
+            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the indirect template repository points to the "real" template repository
             # Copy files and folders from the indirect template repository, but grab the unmodified file from the "real" template repository if it exists and apply customizations
             # Copy .github/AL-Go-Settings.json to .github/templateRepoSettings.json (will be read before .github/AL-Go-Settings.json in the final repo)
             # Copy .AL-Go/settings.json to .github/templateProjectSettings.json (will be read before .AL-Go/settings.json in the final repo)
