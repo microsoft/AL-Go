@@ -24,9 +24,7 @@ none
 
 ### OUTPUT variables
 
-| Name | Description |
-| :-- | :-- |
-| TestResultMD | MarkDown of the test result with \\n instead of line breaks |
+none
 
 ### SUMMARY
 
