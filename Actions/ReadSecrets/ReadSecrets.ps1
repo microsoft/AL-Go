@@ -119,7 +119,7 @@ try {
             }
         }
     }
-    
+
     # Loop through secrets (use @() to allow us to remove items from the collection while looping)
     foreach($secret in @($secretsCollection)) {
         $secretSplit = $secret.Split('=')
