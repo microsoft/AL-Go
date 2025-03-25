@@ -48,6 +48,6 @@ jobs:
 
       - name: Cleanup Temp Repositories
         env:
-          gitHubOwner: ${{ steps.getGitHubOwner.outputs.githubOwner }}
+          githubOwner: ${{ steps.getGitHubOwner.outputs.githubOwner }}
         run: |
           ${{ github.workspace }}/Internal/Scripts/RemoveTempRepos.ps1 -githubOwner $env:githubOwner -token '${{ Secrets.E2EPAT }}'
