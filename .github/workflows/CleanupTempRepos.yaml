@@ -20,10 +20,10 @@ permissions:
   contents: read
 
 jobs:
-  RemoveRepositories:
+  CleanupRepos:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }} # Run only if dispatched or the End to end tests workflow has succeeded
     runs-on: [ ubuntu-latest ]
-    name: Remove Temp Repos
+    name: Cleanup Temp Repos
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
@@ -46,7 +46,7 @@ jobs:
         run: |
           ${{ github.workspace }}/Internal/Scripts/GetOwnerForE2ETests.ps1 -githubOwner $env:githubOwner
 
-      - name: Remove Temp Repositories
+      - name: Cleanup Temp Repositories
         env:
           gitHubOwner: ${{ steps.getGitHubOwner.outputs.githubowner }}
         run: |
