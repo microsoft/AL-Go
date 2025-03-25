@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       appVersion:
-        description: App version to deploy to environment(s) (current, prerelease, draft, latest or version number)
+        description: App version to deploy to environment(s) (current, prerelease, draft, latest, version number or PR_<PR Id>)
         required: false
         default: 'current'
       environmentName:
@@ -172,6 +172,7 @@ jobs:
           artifactsFolder: '.artifacts'
           type: 'Publish'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+          artifactsVersion: ${{ github.event.inputs.appVersion }}
 
       - name: Deploy to Power Platform
         if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
