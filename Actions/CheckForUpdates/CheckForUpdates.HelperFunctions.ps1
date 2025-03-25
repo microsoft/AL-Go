@@ -569,9 +569,6 @@ function GetCustomALGoSystemFiles {
         }
     }
 
-    if ($settings.customALGoSystemFiles -isnot [Array]) {
-        throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
-    }
     foreach($customspec in $settings.customALGoSystemFiles) {
         if ($customspec -isnot [Hashtable]) {
             throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
