@@ -101,6 +101,25 @@ try {
 
     $analyzeRepoParams = @{}
 
+    $authContext = $null
+    $environmentName = ""
+    if ($cicdAuthContext) {
+        $authContextHT = $cicdAuthContext | ConvertFrom-Json | ConvertTo-HashTable
+        if ($authContextHT.ContainsKey('environmentName')) {
+            $environmentName = $authContextHT.environmentName
+            $authContextHT.Remove('environmentName')
+            if ($environmentName -notlike 'https://*') {
+                $authContext = New-BcAuthContext @authContextHT
+                # When using online environment for builds, use CompilerFolder to avoid creating a container
+                $settings.useCompilerFolder = $true
+            }
+        }
+        else {
+            Write-Host "::WARNING::CI/CD AuthContext is missing environmentName, ignoring cicdAuthContext secret."
+        }
+    }
+    $CreateRuntimePackages = $false
+
     if ($artifact) {
         # Avoid checking the artifact setting in AnalyzeRepo if we have an artifactUrl
         $settings.artifact = $artifact
@@ -277,22 +296,6 @@ try {
             Write-Host "::endgroup::"
         }
     }
-    $authContext = $null
-    $environmentName = ""
-    if ($cicdAuthContext) {
-        $authContext = $cicdAuthContext | ConvertFrom-Json | ConvertTo-HashTable
-        if ($authContext.ContainsKey('environmentName')) {
-            $environmentName = $authContext.environmentName
-            $authContext.Remove('environmentName')
-            if ($environmentName -notlike 'https://*') {
-                $authContext = New-BcAuthContext @authContext
-            }
-        }
-        else {
-            Write-Host "::WARNING::CI/CD AuthContext is missing environmentName, ignoring cicdAuthContext secret."
-        }
-    }
-    $CreateRuntimePackages = $false
 
     if ($settings.versioningStrategy -eq -1) {
         $artifactVersion = [Version]$settings.artifact.Split('/')[4]
