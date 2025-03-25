@@ -1,7 +1,7 @@
 ﻿Param(
     [Parameter(HelpMessage = "Project to analyze", Mandatory = $false)]
     [string] $project = '.',
-    [Parameter(HelpMessage = "Tests to analyze", Mandatory = $false)]
+    [Parameter(HelpMessage = "Tests to analyze", Mandatory = $true)]
     [ValidateSet('normal', 'bcpt', 'pageScripting')]
     [string] $testType = 'normal'
 )
@@ -33,13 +33,7 @@ switch ($testType) {
     }
     'pageScripting' {
         $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\.buildartifacts\PageScriptingTestResults.xml"
-        # Debug stuff
-        Write-Host $testResultsFile
-        Write-Host "Project folder contents:"
-        Get-ChildItem -Path $project | ForEach-Object {
-            Write-Host $_.FullName
-        }
-        $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile
+        $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile -project $project
         $testTitle = "Page Scripting test results"
     }
     default {

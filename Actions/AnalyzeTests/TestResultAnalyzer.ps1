@@ -436,7 +436,8 @@ function GetBcptSummaryMD {
 
 function GetPageScriptingTestResultSummaryMD {
     Param(
-        [string] $testResultsFile
+        [string] $testResultsFile,
+        [string] $project = ''
     )
 
     $summarySb = [System.Text.StringBuilder]::new()
@@ -468,6 +469,7 @@ function GetPageScriptingTestResultSummaryMD {
             $mdTableRows = [System.Collections.ArrayList]@()
 
             foreach($testsuite in $testResults.testsuites.testsuite) {
+                $suitePrettyName = if ($project) { $testsuite.name -replace ".*?(?=$project)",  "" } else { "" }
                 $suiteTests = $testsuite.tests
                 $suiteTime = $testsuite.time
                 $suiteFailed = $testsuite.failures
@@ -478,7 +480,7 @@ function GetPageScriptingTestResultSummaryMD {
 
                 if ($suiteFailed -gt 0 ) {
                     $suiteFailureNode = [FailureNode]::new($false)
-                    $suiteFailureNode.summaryDetails = "$testsuite.name, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds"
+                    $suiteFailureNode.summaryDetails = "$suitePrettyName, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds"
                     foreach($testcase in $testsuite.testcase) {
                         $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
                         if ($testcase.failure) {
