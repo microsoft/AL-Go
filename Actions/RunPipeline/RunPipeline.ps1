@@ -103,19 +103,13 @@ try {
 
     $authContext = $null
     $environmentName = ""
-    if ($cicdAuthContext) {
+    if ($cicdAuthContext -and $settings.cicdEnvironmentName) {
         $authContextHT = $cicdAuthContext | ConvertFrom-Json | ConvertTo-HashTable
-        if ($authContextHT.ContainsKey('environmentName')) {
-            $environmentName = $authContextHT.environmentName
-            $authContextHT.Remove('environmentName')
-            if ($environmentName -notlike 'https://*') {
-                $authContext = New-BcAuthContext @authContextHT
-                # When using online environment for builds, use CompilerFolder to avoid creating a container
-                $settings.useCompilerFolder = $true
-            }
-        }
-        else {
-            Write-Host "::WARNING::CI/CD AuthContext is missing environmentName, ignoring cicdAuthContext secret."
+        $environmentName = $settings.cicdEnvironmentName
+        if ($environmentName -notlike 'https://*') {
+            $authContext = New-BcAuthContext @authContextHT
+            # When using online environment for builds, use CompilerFolder to avoid creating a container
+            $settings.useCompilerFolder = $true
         }
     }
     $CreateRuntimePackages = $false
