@@ -235,7 +235,7 @@ The custom step needs to be named `CustomStep<something>` and if inserted in any
         run: |
           $settings = $env:Settings | ConvertFrom-Json
           $settings.artifact = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://bca-url-proxy.azurewebsites.net/bca-url/sandbox/us?select=weekly&doNotRedirect=true"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($$settings | ConvertTo-Json -Depth 99 -Compress)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($settings | ConvertTo-Json -Depth 99 -Compress)"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$($settings.artifact)"
 ```
 
