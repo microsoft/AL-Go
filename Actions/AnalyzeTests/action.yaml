@@ -11,7 +11,7 @@ inputs:
     default: '.'
   testType:
     description: Tests to analyze
-    required: false
+    required: true
     default: 'normal'
 runs:
   using: composite
