@@ -475,7 +475,7 @@ function GetPageScriptingTestResultSummaryMD {
                 $suiteFailed = $testsuite.failures
                 $suiteSkipped = $testsuite.skipped
                 $suitePassed = $suiteTests - $suiteFailed - $suiteSkipped
-                $mdTableRow = @($testsuite.name, $suiteTests, $suitePassed, $suiteFailed, $suiteSkipped, $suiteTime)
+                $mdTableRow = @($suitePrettyName, $suiteTests, $suitePassed, $suiteFailed, $suiteSkipped, $suiteTime)
                 $mdTableRows.Add($mdTableRow) | Out-Null
 
                 if ($suiteFailed -gt 0 ) {
