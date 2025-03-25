@@ -509,6 +509,14 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
+    
+    if (Test-Path $buildOutputFile)
+    {
+        Write-Host "Build output file located at: $buildOutputFile"
+
+        Get-Content $buildOutputFile | Write-Host
+    }
+
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
         $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
