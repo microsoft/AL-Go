@@ -220,7 +220,7 @@ You can also add custom steps to AL-Go for GitHub Workflows, but only in pre-def
 
 At this time, the anchor-points where you can add custom steps are:
 
-| Workflow | Job | Step | Before or AFter |
+| Workflow | Job | Step | Before or After |
 | :-- | :-- | :-- | :-: |
 | \_BuildALGoProject.yaml | BuildALGoProject | Read settings | After |
 | | | Read secrets | After |
