@@ -3,7 +3,7 @@
     [string] $project = '.',
     [Parameter(HelpMessage = "Tests to analyze", Mandatory = $true)]
     [ValidateSet('normal', 'bcpt', 'pageScripting')]
-    [string] $testType = 'normal'
+    [string] $testType
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)

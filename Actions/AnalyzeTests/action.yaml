@@ -12,7 +12,6 @@ inputs:
   testType:
     description: Tests to analyze
     required: true
-    default: 'normal'
 runs:
   using: composite
   steps:
