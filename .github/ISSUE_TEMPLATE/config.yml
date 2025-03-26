@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Feature request
     url: https://github.com/microsoft/AL-Go/discussions/new?category=ideas
-    about: Are you missing a feature in AL-Go for GitHub? Please share your ideas with us on in the discussion forum.
+    about: Are you missing a feature in AL-Go for GitHub? Please share your ideas with us in the discussion forum.
   - name: Ask a question
     url: https://github.com/microsoft/AL-Go/discussions/new?category=q-a
     about: Do you have a question about AL-Go for GitHub? Please ask us in the discussion forum.
