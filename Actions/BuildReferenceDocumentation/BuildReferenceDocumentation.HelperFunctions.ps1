@@ -199,10 +199,10 @@ function GenerateDocsSite {
 
         $arguments = $aldocArguments + @(
             "init"
-            "--output", """$docfxpath""",
-            "--loglevel", $loglevel,
-            "--targetpackages", """'$($apps -join "','")'"""
-            )
+            "--output ""$docfxpath""",
+            "--loglevel $loglevel",
+            "--targetpackages ""$($apps -join '","')"""
+        ) -join ' '
         Write-Host "invoke $aldocCommand $arguments"
         CmdDo -command $aldocCommand -arguments $arguments
 
@@ -232,10 +232,10 @@ function GenerateDocsSite {
         $apps | ForEach-Object {
             $arguments = $aldocArguments + @(
                 "build"
-                "--output", """$docfxpath""",
-                "--loglevel", $loglevel,
-                "--source", $_
-                )
+                "--output ""$docfxpath""",
+                "--loglevel $loglevel",
+                "--source ""$_"""
+            ) -join ' '
             Write-Host "invoke $aldocCommand $arguments"
             CmdDo -command $aldocCommand -arguments $arguments
         }
@@ -250,12 +250,12 @@ function GenerateDocsSite {
 
         $arguments = @(
             "build"
-            "--output", """$docsPath""",
-            "--logLevel", $loglevel,
+            "--output ""$docsPath""",
+            "--logLevel $loglevel",
             """$docfxJsonFile"""
-            )
+        ) -join ' '
         if ($hostIt) {
-            $arguments += @("-s")
+            $arguments += " -s"
             Write-Host "Generate and host site"
         }
         Write-Host "invoke doxfx $arguments"
