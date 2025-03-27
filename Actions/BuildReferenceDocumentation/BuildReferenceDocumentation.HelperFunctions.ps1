@@ -199,12 +199,12 @@ function GenerateDocsSite {
 
         $arguments = $aldocArguments + @(
             "init"
-            "--output", "'$docfxpath'",
-            "--loglevel", "$loglevel",
-            "--targetpackages", """$($apps -join '","')"""
-        )
+            "--output ""$docfxpath"""
+            "--loglevel $loglevel"
+            "--targetpackages ""$($apps -join '","')"""
+            )
         Write-Host "invoke $aldocCommand $arguments"
-        & $aldocCommand @arguments
+        CmdDo -command $aldocCommand -arguments $arguments
 
         # Update docfx.json
         Write-Host "Update docfx.json"
@@ -232,12 +232,12 @@ function GenerateDocsSite {
         $apps | ForEach-Object {
             $arguments = $aldocArguments + @(
                 "build"
-                "--output", """$docfxpath""",
-                "--loglevel", $loglevel,
-                "--source", """$_"""
-            )
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--source ""$_"""
+                )
             Write-Host "invoke $aldocCommand $arguments"
-            & $aldocCommand @arguments
+            CmdDo -command $aldocCommand -arguments $arguments
         }
 
         # Set release notes
@@ -250,16 +250,16 @@ function GenerateDocsSite {
 
         $arguments = @(
             "build"
-            "--output", """$docsPath""",
-            "--logLevel", "$loglevel",
+            "--output ""$docsPath"""
+            "--logLevel $loglevel"
             """$docfxJsonFile"""
-        )
+            )
         if ($hostIt) {
             $arguments += @("-s")
             Write-Host "Generate and host site"
         }
         Write-Host "invoke doxfx $arguments"
-        & docfx @arguments
+        CmdDo -command docfx -arguments $arguments
     }
     finally {
         Remove-Item -Path $docfxPath -Recurse -Force
