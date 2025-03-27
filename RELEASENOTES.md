@@ -5,6 +5,7 @@
 - Issue 1522 Strange warnings in Deploy job post update to AL-Go 6.4
 - BcContainerHelper settings were only read from .github/AL-Go-Settings.json, not allowing global settings in ALGoOrgSettings for TrustedNuGetFeeds, MemoryLimit and other things that should be possible to define globally
 - Issue 1526 When updating AL-Go system files, the update process (creating a PR or directly pushing to the branch) fails when there is a file or directory in the repo with the same name as the branch that is to be updated
+- Legacy code signing stopped working
 
 ### Support for deploying to sandbox environments from a pull request
 
