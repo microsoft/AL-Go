@@ -76,15 +76,12 @@ function GetGithubSecret {
     if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
         $value = $script:githubSecrets."$secret"
         if ($value) {
-            MaskValue -key $envVar -value $value
             if ($encrypted) {
                 # Return encrypted string
-                return (ConvertTo-SecureString -String $value -AsPlainText -Force | ConvertFrom-SecureString)
+                $value = ConvertTo-SecureString -String $value -AsPlainText -Force | ConvertFrom-SecureString
             }
-            else {
-                # Return decrypted string
-                return $value
-            }
+            MaskValue -key $envVar -value $value
+            return $value
         }
     }
 
@@ -179,6 +176,7 @@ function GetKeyVaultSecret {
         if ($encrypted) {
             # Return encrypted string
             $value = $keyVaultSecret.SecretValue | ConvertFrom-SecureString
+            MaskValue -key $envVar -value $value
         }
         else {
             # Return decrypted string
