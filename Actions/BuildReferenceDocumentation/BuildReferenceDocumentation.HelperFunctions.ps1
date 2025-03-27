@@ -184,7 +184,7 @@ function GenerateDocsSite {
         $aldocCommand = $aldocPath
     }
 
-    $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) "test, path"   #([Guid]::NewGuid().ToString())
     New-Item -Path $docfxPath -ItemType Directory | Out-Null
     try {
         # Generate new toc.yml with releases and apps
@@ -199,12 +199,12 @@ function GenerateDocsSite {
 
         $arguments = $aldocArguments + @(
             "init"
-            "--output ""$docfxpath""",
-            "--loglevel $loglevel",
-            "--targetpackages ""$($apps -join '","')"""
-        ) -join ' '
+            "--output", """$docfxpath""",
+            "--loglevel", "$loglevel",
+            "--targetpackages", """$($apps -join '","')"""
+        )
         Write-Host "invoke $aldocCommand $arguments"
-        CmdDo -command $aldocCommand -arguments $arguments
+        & $aldocCommand @arguments
 
         # Update docfx.json
         Write-Host "Update docfx.json"
@@ -232,12 +232,12 @@ function GenerateDocsSite {
         $apps | ForEach-Object {
             $arguments = $aldocArguments + @(
                 "build"
-                "--output ""$docfxpath""",
-                "--loglevel $loglevel",
-                "--source ""$_"""
-            ) -join ' '
+                "--output", """$docfxpath""",
+                "--loglevel", $loglevel,
+                "--source", """$_"""
+            )
             Write-Host "invoke $aldocCommand $arguments"
-            CmdDo -command $aldocCommand -arguments $arguments
+            & $aldocCommand @arguments
         }
 
         # Set release notes
@@ -250,16 +250,16 @@ function GenerateDocsSite {
 
         $arguments = @(
             "build"
-            "--output ""$docsPath""",
-            "--logLevel $loglevel",
+            "--output", """$docsPath""",
+            "--logLevel", "$loglevel",
             """$docfxJsonFile"""
-        ) -join ' '
+        )
         if ($hostIt) {
-            $arguments += " -s"
+            $arguments += @("-s")
             Write-Host "Generate and host site"
         }
         Write-Host "invoke doxfx $arguments"
-        CmdDo -command docfx -arguments $arguments
+        & docfx @arguments
     }
     finally {
         Remove-Item -Path $docfxPath -Recurse -Force
