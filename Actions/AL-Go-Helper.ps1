@@ -684,6 +684,7 @@ function ReadSettings {
         "sendExtendedTelemetryToMicrosoft"              = $false
         "environments"                                  = @()
         "buildModes"                                    = @()
+        "cicdEnvironmentName"                           = ""
         "useCompilerFolder"                             = $false
         "pullRequestTrigger"                            = "pull_request_target"
         "bcptThresholds"                                = [ordered]@{
