@@ -93,11 +93,6 @@ function Remove-PropertiesFromJsonFile {
     }
 }
 
-function DisplayTokenAndRepository {
-    Write-Host "Token: $($script:token)"
-    Write-Host "Repo: $defaultRepository"
-}
-
 function RunWorkflow {
     Param(
         [string] $name,
