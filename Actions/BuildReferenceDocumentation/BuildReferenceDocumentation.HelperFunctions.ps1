@@ -184,7 +184,7 @@ function GenerateDocsSite {
         $aldocCommand = $aldocPath
     }
 
-    $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) "Test, Path"
     New-Item -Path $docfxPath -ItemType Directory | Out-Null
     try {
         # Generate new toc.yml with releases and apps
