@@ -264,7 +264,6 @@ function GenerateDocsSite {
     finally {
         Remove-Item -Path $docfxPath -Recurse -Force
     }
-    throw "errer"
 }
 
 # Build a list of all projects (folders) and apps to use when building reference documentation
