@@ -199,7 +199,7 @@ function GenerateDocsSite {
 
         $arguments = $aldocArguments + @(
             "init"
-            "--output", """$docfxpath""",
+            "--output", "'$docfxpath'",
             "--loglevel", "$loglevel",
             "--targetpackages", """$($apps -join '","')"""
         )
