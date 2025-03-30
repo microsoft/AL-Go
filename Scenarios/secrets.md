@@ -53,13 +53,12 @@ So, don't have multi-line secrets, where individual lines are not secrets as thi
 
 If your GitHub organization might have many organizational secrets, please only allow access to the secrets actually used by your AL-Go for GitHub repository. If any of the secrets made available to your repository contains multi-line secrets or have secrets, where the value is not really a secret, it might break core functionality in AL-Go for GitHub.
 
-
-# List of secrets
+# List of secrets used by AL-Go for GitHub
 
 The following is a list of secrets and a brief description:
 
 - [Azure_Credentials](#Azure_Credentials) - Connect to Azure
-- [AuthContext](#AuthContext) - Deploy to an environment
+- [AuthContext or <EnvironmentName>_AuthContext](#AuthContext) - Deploy to an environment
 - [AppSourceContext](#AppSourceContext) - Deliver to AppSource
 - [StorageContext](#StorageContext) - Deliver to storage
 - [GitHubPackagesContext](#GitHubPackagesContext) - Deliver to GitHub Packages
