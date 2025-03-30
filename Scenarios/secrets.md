@@ -236,4 +236,4 @@ When using Git submodules from private repositories, the `GitSubmodulesToken` sh
 
 ## **LicenseFileUrl** -> Use specific license during CI/CD
 
-AL-Go for GitHub will use the Demo license from Business Central (also known as the CRONUS license) for CI/CD, unless a specific license file URL is added as a secret called LicenseFileUrl. The secret needs to be a direct download URL to the secret, which should be used for CI/CD.
+AL-Go for GitHub will use the Demo license from Business Central (also known as the CRONUS license) for CI/CD, unless a specific license file URL is added as a secret called LicenseFileUrl. The secret should be a direct download URL for the license file, which will be used during CI/CD.

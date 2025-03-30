@@ -1,4 +1,6 @@
 Param(
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
+    [string] $token,
     [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
     [string] $environmentName,
     [Parameter(HelpMessage = "Path to the downloaded artifacts to deploy", Mandatory = $true)]
@@ -7,7 +9,9 @@ Param(
     [ValidateSet('CD','Publish')]
     [string] $type = "CD",
     [Parameter(HelpMessage = "The settings for all Deployment Environments", Mandatory = $true)]
-    [string] $deploymentEnvironmentsJson
+    [string] $deploymentEnvironmentsJson,
+    [Parameter(HelpMessage = "Artifacts version. Used to check if this is a deployment from a PR", Mandatory = $false)]
+    [string] $artifactsVersion = ''
 )
 
 function CheckIfAppNeedsInstallOrUpgrade {
@@ -20,10 +24,10 @@ function CheckIfAppNeedsInstallOrUpgrade {
     $needsInstall = $false
     $needsUpgrade = $false
     if ($installedApp) {
-        $newVersion = [version]::new($appJson.Version)
+        $dependencyVersion = [version]::new($appJson.Version)
         $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
-        if ($newVersion -gt $installedVersion) {
-            $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $newVersion."
+        if ($dependencyVersion -gt $installedVersion) {
+            $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $dependencyVersion."
             if ($installMode -eq 'upgrade') {
                 Write-Host "$msg Needs upgrade."
                 $needsUpgrade = $true
@@ -32,8 +36,8 @@ function CheckIfAppNeedsInstallOrUpgrade {
                 Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
             }
         }
-        elseif ($newVersion -lt $installedVersion) {
-            Write-Host "::WARNING::Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $newVersion, used for this build. Please update your local copy of this dependency."
+        elseif ($dependencyVersion -lt $installedVersion) {
+            Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $dependencyVersion, used in app.json."
         }
         else {
             Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion."
@@ -114,7 +118,7 @@ function InstallUnknownDependencies {
         $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
         # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
         foreach($app in $apps) {
-            #The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
+            # The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
             $appId, $appName = $app.Split(':')
             $appVersion = ""
             if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
@@ -123,7 +127,7 @@ function InstallUnknownDependencies {
                 Write-Host "Version not found or incorrect format for unknown dependency $app"
                 continue
             }
-            #Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
+            # Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
             $appJson = @{
                 "name" = $appName
                 "id" = $appId
@@ -150,6 +154,7 @@ function InstallUnknownDependencies {
     }
 }
 
+Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
@@ -192,21 +197,32 @@ $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
 if (Test-Path $artifactsFolder -PathType Container) {
     $deploymentSettings.Projects.Split(',') | ForEach-Object {
         $project = $_.Replace('\','_').Replace('/','_')
+        $artifactVersionFilter = '*.*.*.*'
         $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
+        # Artifacts from PRs are named differently - project-ref-Apps-PRx-date
+        if ($artifactsVersion -like "PR_*") {
+            $prId = $artifactsVersion.SubString(3)
+            $intId = 0
+            if (!([Int]::TryParse($prId, [ref] $intId))) {
+                throw "Invalid PR id: $prId"
+            }
+            $artifactVersionFilter = "PR$prId-*"
+            $refname = GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token
+        }
         Write-Host "project '$project'"
 
         $allApps = @()
-        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-*.*.*.*") | ForEach-Object { $_.FullName })
+        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
         $projectTestApps = @()
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
             Write-Host "Including test apps for deployment"
-            $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-*.*.*.*") | ForEach-Object { $_.FullName })
+            $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
         }
         if ($deploymentSettings.excludeAppIds) {
             Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
         }
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
-            $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildMode)Dependencies-*.*.*.*/*.app")) | ForEach-Object { $_.FullName } )
+            $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildMode)Dependencies-$artifactVersionFilter/*.app")) | ForEach-Object { $_.FullName } )
         }
         if (!($projectApps)) {
             if ($project -ne '*') {
@@ -216,7 +232,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
         else {
             $allApps += $projectApps
         }
-        if (!($projectTestApps)) {
+        if ($deploymentSettings.includeTestAppsInSandboxEnvironment -and !($projectTestApps)) {
             if ($project -ne '*') {
                 Write-Host "::warning::There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
             }
@@ -259,7 +275,7 @@ else {
 
 # Calculate unknown dependencies for all apps and known dependencies
 $unknownDependencies = @()
-Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) | Out-Null
+Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
 
 Write-Host "Apps to deploy"
 $apps | ForEach-Object {
@@ -337,6 +353,9 @@ else {
         }
         elseif (!$sandboxEnvironment -and $deploymentSettings.includeTestAppsInSandboxEnvironment) {
             Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment, as test apps can only be deployed to sandbox environments"
+        }
+        elseif (!$sandboxEnvironment -and $artifactsVersion -like "PR_*") {
+            Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment, as deploying from a PR is only supported in sandbox environments"
         }
         else {
             if ($dependencies) {
