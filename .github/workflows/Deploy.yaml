@@ -151,19 +151,30 @@ jobs:
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        if: ${{ vars.APP_ID != '' }}
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Deploy
         env:
           branch: ${{ needs.Inputs.outputs.branch }}
           copyToMain: ${{ needs.Inputs.outputs.copyToMain }}
           directCommit: ${{ needs.Inputs.outputs.directCommit }}
           defaultBcContainerHelperVersion: ${{ needs.Inputs.outputs.defaultBcContainerHelperVersion }}
+          AuthToken: ${{ steps.app-token.outputs.token || Secrets.OrgPAT }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
-            $token = '${{ Secrets.OrgPAT }}'
-            if (!$token) {
-              throw "In order to run the Deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token"
+            # Check if auth token is set
+            if ($env:AuthToken -eq "") {
+              throw "In order to run the Deploy workflow, you need a Secret called OrgPAT containing a valid Personal Access Token or a GitHub app set up."
             }
+            Write-Host "Updating GitHub token"
+            $ENV:GITHUB_TOKEN = $env:AuthToken
             $githubOwner = "$env:GITHUB_REPOSITORY_OWNER"
             if ("$env:defaultBcContainerHelperVersion" -eq "") {
               if ($env:branch -eq 'preview') {
@@ -181,7 +192,7 @@ jobs:
                   "copyToMain" = ($env:copyToMain -eq 'true')
                   "defaultBcContainerHelperVersion" = $env:defaultBcContainerHelperVersion
             }
-            . ".\Internal\Deploy.ps1" -config $config -token $token -directCommit ($env:directCommit -eq 'true')
+            . ".\Internal\Deploy.ps1" -config $config -directCommit ($env:directCommit -eq 'true')
           }
           catch {
             Write-Host "::Error::Error deploying repositories. The error was $($_.Exception.Message)"
