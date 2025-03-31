@@ -8,21 +8,19 @@ $statusSkipped = " :question:"
 # TestResults is in JUnit format
 # Returns both a summary part and a failures part
 $mdHelperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\MarkDownHelper.psm1"
-if (Test-Path $mdHelperPath) {
-    Import-Module $mdHelperPath
-}
+Import-Module $mdHelperPath
 
 #Helper function to build a markdown table.
 #Headers are an array of strings with format "label;location" where location is 'left', 'right' or 'center'
 #Rows is a 2D array of data.
-#ResultEmojis is a hashtable with column index as key and emoji as value. This is needed because we display an emoji with any result > 0, and an empty cell if the result is 0
+#ResultIcons is a hashtable with column index as key and emoji/icon as value. This is needed because we display an emojis/icons with any result > 0, and an empty cell if the result is 0
 function BuildTestMarkdownTable {
     param(
         [Parameter(Mandatory = $true)]
         [string[]] $Headers,
         [Parameter(Mandatory = $true)]
         [System.Collections.ArrayList] $Rows,
-        [hashtable] $resultEmojis
+        [hashtable] $resultIcons
     )
 
     $mdTableSB = [System.Text.StringBuilder]::new()
@@ -30,10 +28,10 @@ function BuildTestMarkdownTable {
     foreach($row in $Rows) {
         Write-Host $row
         for($i=0; $i -lt $row.Length; $i++) {
-            #If resultEmojis has a key for this column, we want to display an emoji for values > 0 and an empty cell for 0
-            if ($resultEmojis.ContainsKey($i)) {
+            #If resultIcons has a key for this column, we want to display an emoji for values > 0 and an empty cell for 0
+            if ($resultIcons.ContainsKey($i)) {
                 if ($row[$i] -gt 0) {
-                    $row[$i] = "$($row[$i])$($resultEmojis[$i])"
+                    $row[$i] = "$($row[$i])$($resultIcons[$i])"
                 }
                 else {
                     $row[$i] = $null
@@ -43,7 +41,12 @@ function BuildTestMarkdownTable {
         Write-Host $row
     }
 
-    $mdTable = BuildMarkdownTable -Headers $Headers -Rows $Rows
+    $mdTable = ''
+    try {
+        $mdTable = Build-MarkdownTable -Headers $Headers -Rows $Rows
+    } catch {
+        $mdTable = "<i>Failed to generate result table</i>"
+    }
     $mdTableSB.Append($mdTable) | Out-Null
 
     return $mdTableSB
