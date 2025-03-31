@@ -198,7 +198,7 @@ function GetTestResultSummaryMD {
                     }
                     $failuresSB = BuildHTMLFailureSummary -rootFailureNode $rootFailureNode
                 }
-                $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
+                $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultIcons $mdTableEmojis
             }
         }
         if ($totalFailed -gt 0) {
@@ -426,7 +426,7 @@ function GetBcptSummaryMD {
         }
     }
 
-    $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
+    $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultIcons $mdTableEmojis
     if ($baseLine) {
         $summarySb.AppendLine("\n<i>Used baseline provided in $([System.IO.Path]::GetFileName($baseLinePath)).</i>") | Out-Null
     }
@@ -502,7 +502,7 @@ function GetPageScriptingTestResultSummaryMD {
                     $rootFailureNode.childSummaries.Add($suiteFailureNode)
                 }
             }
-            $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultEmojis $mdTableEmojis
+            $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultIcons $mdTableEmojis
         }
         if ($totalFailed -gt 0) {
             $failuresSb = BuildHTMLFailureSummary -rootFailureNode $rootFailureNode

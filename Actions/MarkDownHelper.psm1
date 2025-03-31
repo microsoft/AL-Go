@@ -56,7 +56,7 @@ function Build-MarkdownTable {
             Write-Host "Invalid header format: ($header), should be 'label;alignment'. Defaulting to 'left'."
             $separatorRow += ":---|"
         }
-        
+
     }
 
     $tableSb.Append("$headerRow\n") | Out-Null
