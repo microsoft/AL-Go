@@ -58,7 +58,7 @@ If your GitHub organization might have many organizational secrets, please only 
 The following is a list of secrets and a brief description:
 
 - [Azure_Credentials](#Azure_Credentials) - Connect to Azure
-- [AuthContext or \<EnvironmentName\>_AuthContext](#AuthContext) - Deploy to an environment
+- [AuthContext or \<EnvironmentName>\_AuthContext](#AuthContext) - Deploy to an environment
 - [AppSourceContext](#AppSourceContext) - Deliver to AppSource
 - [StorageContext](#StorageContext) - Deliver to storage
 - [GitHubPackagesContext](#GitHubPackagesContext) - Deliver to GitHub Packages
