@@ -11,7 +11,7 @@ $mdHelperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\MarkDownHelper.psm1
 Import-Module $mdHelperPath
 
 #Helper function to build a markdown table.
-#Headers are an array of strings with format "label;location" where location is 'left', 'right' or 'center'
+#Headers are an array of strings with format "label;alignment" where alignment is 'left', 'right' or 'center'
 #Rows is a 2D array of data.
 #ResultIcons is a hashtable with column index as key and emoji/icon as value. This is needed because we display an emojis/icons with any result > 0, and an empty cell if the result is 0
 function BuildTestMarkdownTable {
