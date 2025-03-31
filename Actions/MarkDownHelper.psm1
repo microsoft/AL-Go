@@ -34,24 +34,29 @@ function Build-MarkdownTable {
     $columnCount = $Headers.Length
     foreach ($header in $Headers) {
         $headerParts = $header -split ";"
-        if ($headerParts.Length -ne 2) {
-            throw "Header '$header' is not in the correct format. It should be 'label;alignment'"
-        }
         $headerRow += "$($headerParts[0])|"
-        switch ($headerParts[1].ToLower()) {
-            {$_ -in @('l','left')} {
-                $separatorRow += ":---|"
-            }
-            {$_ -in @('r','right')} {
-                $separatorRow += "---:|"
-            }
-            {$_ -in @('c','center')} {
-                $separatorRow += ":---:|"
-            }
-            default {
-                throw "Header '$header' has an invalid alignment. It should be 'left', 'right' or 'center'"
+        if ($headerParts.Length -eq 2) {
+            switch ($headerParts[1].ToLower()) {
+                {$_ -in @('l','left')} {
+                    $separatorRow += ":---|"
+                }
+                {$_ -in @('r','right')} {
+                    $separatorRow += "---:|"
+                }
+                {$_ -in @('c','center')} {
+                    $separatorRow += ":---:|"
+                }
+                default {
+                    Write-Host "Invalid alignment: ($_), should be 'left', 'right' or 'center'. Defaulting to 'left'."
+                    $separatorRow += ":---|"
+                }
             }
         }
+        else {
+            Write-Host "Invalid header format: ($header), should be 'label;alignment'. Defaulting to 'left'."
+            $separatorRow += ":---|"
+        }
+        
     }
 
     $tableSb.Append("$headerRow\n") | Out-Null
