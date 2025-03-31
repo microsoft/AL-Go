@@ -4,7 +4,7 @@
 
     .PARAMETER Headers
         An array of strings representing the headers of the table.
-        Each header should be in the format "label;location", where location can be "left", "l", "right", "r", or "center", "c".
+        Each header should be in the format "label;alignment", where alighment can be "left", "l", "right", "r", or "center", "c".
 
     .PARAMETER Rows
         An array of arrays representing the rows of the table. Each row should have the same number of elements as there are headers.
@@ -20,7 +20,7 @@
         )
         $markdownTable = BuildMarkdownTable -Headers $headers -Rows $rows
 #>
-function BuildMarkdownTable {
+function Build-MarkdownTable {
     param (
         [Parameter(Mandatory = $true)]
         [string[]] $Headers,
@@ -35,7 +35,7 @@ function BuildMarkdownTable {
     foreach ($header in $Headers) {
         $headerParts = $header -split ";"
         if ($headerParts.Length -ne 2) {
-            throw "Header '$header' is not in the correct format. It should be 'label;location'"
+            throw "Header '$header' is not in the correct format. It should be 'label;alignment'"
         }
         $headerRow += "$($headerParts[0])|"
         switch ($headerParts[1].ToLower()) {
@@ -49,7 +49,7 @@ function BuildMarkdownTable {
                 $separatorRow += ":---:|"
             }
             default {
-                throw "Header '$header' has an invalid location. It should be 'left', 'right' or 'center'"
+                throw "Header '$header' has an invalid alignment. It should be 'left', 'right' or 'center'"
             }
         }
     }
@@ -69,3 +69,5 @@ function BuildMarkdownTable {
 
     return $tableSb.ToString()
 }
+
+Export-ModuleMember -Function *-*
