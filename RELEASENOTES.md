@@ -7,6 +7,12 @@
 - Issue 1526 When updating AL-Go system files, the update process (creating a PR or directly pushing to the branch) fails when there is a file or directory in the repo with the same name as the branch that is to be updated
 - Legacy code signing stopped working
 
+### Page Scripting visualizer
+
+Page scripting tests have been available for AL-Go for GitHub for a while but required manual inspection of the Page scripting artifact to see the results. It is now possible to get a quick overview in the job summary section of a CICD build, similar to how regular and bcpt test results are displayed.
+
+No new settings are required. Test results will automatically be displayed if tests are enabled via the existing setting [pageScriptingTests](https://aka.ms/algosettings#pageScriptingTests).
+
 ### Support for deploying to sandbox environments from a pull request
 
 AL-Go for GitHub now supports deploying from a PR. When using the 'Publish To Environment' workflow, it is now possible to input 'PR_X' as the App version, where 'X' is the PR Id. This will deploy the artifacts from the latest PR build to the chosen environment, if that build is completed and successful.
