@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [string] $githubOwner,
     [string] $e2epat,
     [string] $bcContainerHelperVersion = ''
@@ -23,8 +23,8 @@ $config = [ordered]@{
     "baseFolder" = [System.IO.Path]::GetTempPath()
     "defaultBcContainerHelperVersion" = $bcContainerHelperVersion
 }
-
-. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -config $config -token $e2epat -DirectCommit $true
+$ENV:GITHUB_TOKEN = $e2epat
+. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -config $config -DirectCommit $true
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "actionsRepo=$actionsRepo"
 Write-Host "actionsRepo=$actionsRepo"
