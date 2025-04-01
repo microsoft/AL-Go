@@ -1,3 +1,5 @@
+## v7.0
+
 ### Issues
 
 - Issue 1519 Submitting to AppSource WARNING: AuthContext.Scopes is .. should be
