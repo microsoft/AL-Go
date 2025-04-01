@@ -64,7 +64,7 @@ By creating a secret called Azure_Credentials you can give your GitHub repositor
 > [!NOTE]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
 
-n Azure Key Vault can be set up for two different security models: Role Based Access Control (RBAC) (recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the Key Vault, the following roles/permissions need to be assigned to the app registration or Managed Identity, on which the authentication is performed:
+An Azure Key Vault can be set up for two different security models: Role Based Access Control (RBAC) (recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the Key Vault, the following roles/permissions need to be assigned to the app registration or Managed Identity, on which the authentication is performed:
 
 | Security Model | Read Secrets | Sign Apps |
 | :-- | :-- | :-- |
@@ -90,10 +90,15 @@ Example: `{"keyVaultName":"MyKeyVault","clientId":"<clientId>","clientSecret":"<
 With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your Key Vault in order for AL-Go for GitHub to sign your apps.
 
 <a id="AuthContext"></a>
+<a id="CICDAuthContext"></a>
 
-## **AuthContext** -> Deploy to an environment
+## **AuthContext** -> Connect to online environments
 
-Whenever AL-Go for GitHub is doing to deploy to an environment, it will need an AuthContext secret. The AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
+Whenever AL-Go for GitHub is going to connect to an online environment, it will need an AuthContext secret.
+
+For publishing to an environment, the AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
+
+For using online environments during CI/CD (for running tests etc.) you need to provide a secret called **CICDAuthContext**. If a CICDAuthContext secret exists, the online environment pointed out by this authentication context, will be used when running CI/CD for symbols, upgrade testing and test running.
 
 ### Managed identity
 
