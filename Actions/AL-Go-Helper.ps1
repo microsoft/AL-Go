@@ -13,13 +13,15 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
 $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
+$IndirectTemplateRepoSettingsFile = Join-Path '.github' 'templateRepoSettings.json'
+$IndirectTemplateProjectSettingsFile = Join-Path '.github' 'templateProjectSettings.json'
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPushBranches', Justification = 'False positive.')]
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -38,6 +40,8 @@ $runAlPipelineOverrides = @(
     "InstallMissingDependencies"
     "PreCompileApp"
     "PostCompileApp"
+    "PipelineInitialize"
+    "PipelineFinalize"
 )
 
 # Well known AppIds
@@ -500,6 +504,10 @@ function MergeCustomObjectIntoOrderedDictionary {
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
+            elseif ($dstProp -is [String] -and $srcProp -is [Object[]]) {
+                # For properties like "runs-on", which is a string, you can specify an array in settings, which gets joined with a comma
+                $dst."$prop" = $srcProp -join ', '
+            }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
                 # This is not seen as an error and will not throw an error
@@ -535,8 +543,10 @@ function MergeCustomObjectIntoOrderedDictionary {
 # Read settings from the settings files
 # Settings are read from the following files:
 # - ALGoOrgSettings (github Variable)                 = Organization settings variable
+# - .github/templateRepoSettings.json                 = Repository settings from indirect template
 # - .github/AL-Go-Settings.json                       = Repository Settings file
 # - ALGoRepoSettings (github Variable)                = Repository settings variable
+# - .github/templateProjectSettings.json              = Project settings from indirect template
 # - <project>/.AL-Go/settings.json                    = Project settings file
 # - .github/<workflowName>.settings.json              = Workflow settings file
 # - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
@@ -591,6 +601,7 @@ function ReadSettings {
     $settings = [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
+        "customALGoSystemFiles"                         = @()
         "projects"                                      = @()
         "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
@@ -733,6 +744,9 @@ function ReadSettings {
         $settingsObjects += @($orgSettingsVariableObject)
     }
     # Read settings from repository settings file
+    $indirectTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $IndirectTemplateRepoSettingsFile)
+    $settingsObjects += @($indirectTemplateRepoSettingsObject)
+    # Read settings from repository settings file
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
     $settingsObjects += @($repoSettingsObject)
     # Read settings from repository settings variable (parameter)
@@ -741,6 +755,9 @@ function ReadSettings {
         $settingsObjects += @($repoSettingsVariableObject)
     }
     if ($project) {
+        # Read settings from repository settings file
+        $indirectTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $IndirectTemplateProjectSettingsFile)
+        $settingsObjects += @($indirectTemplateProjectSettingsObject)
         # Read settings from project settings file
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
