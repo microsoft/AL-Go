@@ -50,6 +50,7 @@ try {
     invoke-git config --global user.name "$($config.githubOwner)"
     invoke-git config --global hub.protocol https
     invoke-git config --global core.autocrlf false
+    invoke-gh auth setup-git
 
     # All references inside microsoft/AL-Go and forks of it are to microsoft/AL-Go-Actions@main, microsoft/AL-Go-PTE@main and microsoft/AL-Go-AppSource@main
     # When deploying to new repos, the originalOwnerAndRepo should be changed to the new owner and repo
@@ -156,7 +157,6 @@ try {
             }
             invoke-git clone --quiet $serverUrl
             Set-Location $repo
-            invoke-gh auth setup-git
             try {
                 invoke-git checkout $branch
                 Get-ChildItem -Path "." -Exclude ".git" -Force | Remove-Item -Force -Recurse
@@ -175,7 +175,6 @@ try {
             invoke-gh repo create $ownerRepo --public --clone
             Start-Sleep -Seconds 10
             Set-Location $repo
-            invoke-gh auth setup-git
             invoke-git checkout -b $branch
             invoke-git commit --allow-empty -m 'init'
             invoke-git branch -M $branch
