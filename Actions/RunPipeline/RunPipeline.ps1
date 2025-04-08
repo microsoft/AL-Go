@@ -108,7 +108,7 @@ try {
         if ($gitHubHostedRunner -and $settings.useCompilerFolder) {
             # If we are running GitHub hosted agents and UseCompilerFolder is set (and we have an artifactUrl), we need to set the artifactCachePath
             $runAlPipelineParams += @{
-                "artifactCachePath" = Join-Path $ENV:GITHUB_WORKSPACE ".artifactcache"
+                "artifactCachePath" = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
             }
             $analyzeRepoParams += @{
                 "doNotCheckArtifactSetting" = $true
