@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1640 AL1040 error due to app folder within the artifacts cache being incorrectly recognized as an app folder
+
 ## v7.0
 
 ### Issues
