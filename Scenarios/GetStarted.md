@@ -3,14 +3,14 @@
 *Prerequisites: A GitHub account, VS-Code (with AL and PowerShell extensions installed), and Docker installed locally*
 
 1. Navigate to [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) and choose **Use this template**
-   ![Use this template](https://github.com/microsoft/AL-Go/assets/10775043/b808352c-c293-4ed3-b460-40e7b0ec36e9)
+   ![Use this template](https://github.com/user-attachments/assets/02a1caaa-e318-4210-b3d3-7fa4f150279d)
 1. Enter **app1** as repository name, select Public or Private and select **Create Repository from template**
 1. Select **Actions** -> **Create a new app** -> **Run workflow**
-   ![Run workflow](https://github.com/microsoft/AL-Go/assets/10775043/6c1ac9c3-14c2-4917-a31a-d94e5bb7bd66)
-1. Enter **Name**, **Publisher**, **ID range** and specify **Y** in **Direct Commit** and choose **Run workflow**.
+   ![Run workflow](https://github.com/user-attachments/assets/a9157b1d-5f37-4836-8026-fde6652ba49b)
+1. Enter **Name**, **Publisher**, **ID range**, select **Direct Commit** and choose **Run workflow**.
 1. When the workflow is complete, select **< > Code** in the top bar
 1. Choose the **Code** button and copy the **https Clone Url** (in this picture: *https://github.com/freddydk/App1.git*)
-   ![Clone](https://github.com/microsoft/AL-Go/assets/10775043/84b92edb-72b8-4444-908c-0c6f6bc2b7f7)
+   ![Clone](https://github.com/user-attachments/assets/59f13304-a694-40d6-93c5-38efc77f850d)
 1. Start **VS Code**, press **Ctrl+Shift+P** and select **Git Clone**, paste the clone URL and select a folder in which you want to clone the directory.
 1. **Open the cloned repository** and **open the workspace** when VS Code asks you (or do it manually)
 
