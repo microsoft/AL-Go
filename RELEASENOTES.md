@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1640 AL1040 error due to app folder within the artifacts cache being incorrectly recognized as an app folder
+- Issue 1630 Error when downloading a release, when the destination folder already exists.
 
 ## v7.0
 
