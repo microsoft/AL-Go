@@ -108,7 +108,7 @@ try {
         if ($gitHubHostedRunner -and $settings.useCompilerFolder) {
             # If we are running GitHub hosted agents and UseCompilerFolder is set (and we have an artifactUrl), we need to set the artifactCachePath
             $runAlPipelineParams += @{
-                "artifactCachePath" = Join-Path $ENV:GITHUB_WORKSPACE ".artifactcache"
+                "artifactCachePath" = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
             }
             $analyzeRepoParams += @{
                 "doNotCheckArtifactSetting" = $true
@@ -251,7 +251,9 @@ try {
             if ($latestRelease) {
                 Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
                 $artifactsFolder = Join-Path $baseFolder "artifacts"
-                New-Item $artifactsFolder -ItemType Directory | Out-Null
+                if(-not (Test-Path $artifactsFolder)) {
+                    New-Item $artifactsFolder -ItemType Directory | Out-Null
+                }
                 DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"
                 $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
             }

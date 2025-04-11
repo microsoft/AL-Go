@@ -521,7 +521,7 @@ function MergeCustomObjectIntoOrderedDictionary {
                         if ($srcElmType -eq "PSCustomObject") {
                             # Array of objects are not checked for uniqueness
                             $ht = [ordered]@{}
-                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture "iv-iv" | ForEach-Object {
+                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture "iv" | ForEach-Object {
                                 $ht[$_.Name] = $_.Value
                             }
                             $dst."$prop" += @($ht)

@@ -53,7 +53,21 @@ So, don't have multi-line secrets, where individual lines are not secrets as thi
 
 If your GitHub organization might have many organizational secrets, please only allow access to the secrets actually used by your AL-Go for GitHub repository. If any of the secrets made available to your repository contains multi-line secrets or have secrets, where the value is not really a secret, it might break core functionality in AL-Go for GitHub.
 
-# Secrets
+# List of secrets used by AL-Go for GitHub
+
+The following is a list of secrets and a brief description:
+
+- [Azure_Credentials](#Azure_Credentials) - Connect to Azure
+- [AuthContext or \<EnvironmentName>\_AuthContext](#AuthContext) - Deploy to an environment
+- [AppSourceContext](#AppSourceContext) - Deliver to AppSource
+- [StorageContext](#StorageContext) - Deliver to storage
+- [GitHubPackagesContext](#GitHubPackagesContext) - Deliver to GitHub Packages
+- [NuGetContext](#NuGetContext) - Deliver to NuGet
+- [GhTokenWorkflow](#GhTokenWorkflow) - Update AL-Go System Files
+- [GitSubmodulesToken](#GitSubmodulesToken) - Use Git Submodules from private repositories
+- [LicenseFileUrl](#LicenseFileUrl) - Use specific license during CI/CD
+
+# Detailed secrets description
 
 <a id="Azure_Credentials"></a>
 
@@ -222,3 +236,9 @@ When running the Update AL-Go System Files workflow, you will need a secret call
 ## **GitSubmodulesToken** -> Use Git Submodules from private repositories
 
 When using Git submodules from private repositories, the `GitSubmodulesToken` should be a personal access token with permissions to read these repositories. You can also define a setting called `gitSubmodulesTokenSecretName` with the name of a secret to use instead (f.ex. GhTokenWorkflow).
+
+<a id="LicenseFileUrl"></a>
+
+## **LicenseFileUrl** -> Use specific license during CI/CD
+
+AL-Go for GitHub will use the Demo license from Business Central (also known as the CRONUS license) for CI/CD, unless a specific license file URL is added as a secret called LicenseFileUrl. The secret should be a direct download URL for the license file, which will be used during CI/CD.

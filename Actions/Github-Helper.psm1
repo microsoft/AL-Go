@@ -170,7 +170,7 @@ function GetDependencies {
                 }
             }
             $projects = $dependency.projects
-            $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
+            $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/").TrimEnd("/")
             if ($dependency.release_status -eq "latestBuild") {
                 $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
                 $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID

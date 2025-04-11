@@ -108,7 +108,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules
+          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules
 
       - name: Determine whether to build project
         id: DetermineBuildProject
@@ -149,7 +149,7 @@ jobs:
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          path: .artifactcache
+          path: ${{ runner.temp }}/.artifactcache
           key: ${{ env.artifactCacheKey }}
 
       - name: Download Project Dependencies
@@ -283,6 +283,25 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+          testType: "normal"
+
+      - name: Analyze BCPT Test Results
+        id: analyzeTestResultsBCPT
+        if: (success() || failure()) && env.doNotRunBcptTests == 'False'
+        uses: microsoft/AL-Go-Actions/AnalyzeTests@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          testType: "bcpt"
+
+      - name: Analyze Page Scripting Test Results
+        id: analyzeTestResultsPageScripting
+        if: (success() || failure()) && env.doNotRunpageScriptingTests == 'False'
+        uses: microsoft/AL-Go-Actions/AnalyzeTests@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          testType: "pageScripting"
 
       - name: Cleanup
         if: always() && steps.DetermineBuildProject.outputs.BuildIt == 'True'
