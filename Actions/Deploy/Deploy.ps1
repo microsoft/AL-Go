@@ -193,6 +193,7 @@ if (-not $authContext) {
 
 $apps = @()
 $dependencies = @()
+$unknownDependencies = @()
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
 if (Test-Path $artifactsFolder -PathType Container) {
     $deploymentSettings.Projects.Split(',') | ForEach-Object {
@@ -268,6 +269,8 @@ if (Test-Path $artifactsFolder -PathType Container) {
                 }
             }
         }
+        # Calculate unknown dependencies for all apps and known dependencies
+        Sort-AppFilesByDependencies -appFiles @($projectTestApps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
     }
 }
 else {
@@ -275,8 +278,8 @@ else {
 }
 
 # Calculate unknown dependencies for all apps and known dependencies
-$unknownDependencies = @()
-Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
+# $unknownDependencies = @()
+# Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
 
 Write-Host "Apps to deploy"
 $apps | ForEach-Object {
