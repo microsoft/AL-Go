@@ -193,6 +193,7 @@ if (-not $authContext) {
 
 $apps = @()
 $dependencies = @()
+$unknownDependencies = @()
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
 if (Test-Path $artifactsFolder -PathType Container) {
     $deploymentSettings.Projects.Split(',') | ForEach-Object {
@@ -230,7 +231,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
             }
         }
         else {
-            $allApps += $projectApps
+            $allApps += @{path=$projectApps; isTestApps=$false}
         }
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment -and !($projectTestApps)) {
             if ($project -ne '*') {
@@ -238,26 +239,27 @@ if (Test-Path $artifactsFolder -PathType Container) {
             }
         }
         else {
-            $allApps += $projectTestApps
+            $allApps += @{path=$projectTestApps; isTestApps=$true}
         }
         # Go through all .app files and exclude any with ids in the excludeAppIds list
         # Also exclude apps with direct dependencies on Tests-TestLibraries
         if ($allApps) {
             foreach($folder in $allApps) {
-                foreach($app in (Get-ChildItem -Path $folder -Filter "*.app")) {
+                foreach($app in (Get-ChildItem -Path $folder.path -Filter "*.app")) {
                     Write-Host "Processing app: $($app.Name)"
                     $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
                     if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
                         # If app should be included, verify that it does not depend on Tests-TestLibraries
-                        $unknownDependenciesForApp = @()
-                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) -WarningAction SilentlyContinue | Out-Null
-                        $unknownDependenciesForApp | ForEach-Object {
-                            if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
-                                Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
-                                continue
+                        if ($folder.isTestApps) {
+                            $unknownDependenciesForApp = @()
+                            Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) -WarningAction SilentlyContinue | Out-Null
+                            $unknownDependenciesForApp | ForEach-Object {
+                                if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
+                                    Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
+                                    continue
+                                }
                             }
                         }
-
                         $apps += $app.FullName
                         Write-Host "App $($app.Name) with id $($appJson.id) included in deployment"
                     }
@@ -267,15 +269,13 @@ if (Test-Path $artifactsFolder -PathType Container) {
                 }
             }
         }
+        # Calculate unknown dependencies for all apps and known dependencies
+        Sort-AppFilesByDependencies -appFiles @($projectTestApps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
     }
 }
 else {
     throw "Artifact $artifactsFolder was not found. Make sure that the artifact files exist and files are not corrupted."
 }
-
-# Calculate unknown dependencies for all apps and known dependencies
-$unknownDependencies = @()
-Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
 
 Write-Host "Apps to deploy"
 $apps | ForEach-Object {
