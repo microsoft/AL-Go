@@ -109,7 +109,7 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'ghTokenWorkflow'
+          getSecrets: 'ghTokenWorkflow,CustomALGoSystemFilesSecrets'
 
       - name: Calculate Commit Options
         env:
