@@ -277,10 +277,6 @@ else {
     throw "Artifact $artifactsFolder was not found. Make sure that the artifact files exist and files are not corrupted."
 }
 
-# Calculate unknown dependencies for all apps and known dependencies
-# $unknownDependencies = @()
-# Sort-AppFilesByDependencies -appFiles @($apps + $dependencies) -unknownDependencies ([ref]$unknownDependencies) -WarningAction SilentlyContinue | Out-Null
-
 Write-Host "Apps to deploy"
 $apps | ForEach-Object {
     Write-Host "- $([System.IO.Path]::GetFileName($_))"
