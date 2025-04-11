@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1630 Error when downloading a release, when the destination folder already exists.
+
 ## v7.0
 
 ### Issues
