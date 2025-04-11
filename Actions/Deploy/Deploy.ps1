@@ -121,7 +121,11 @@ function InstallUnknownDependencies {
             # The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
             $appId, $appName = $app.Split(':')
             $appVersion = ""
-            if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
+            if ($appName -like 'Microsoft__EXCLUDE_*') {
+                Write-Host "App $appName is ignored as it is marked as EXCLUDE"
+                continue
+            }
+            elseif ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
                 $appVersion = $matches.1
             } else {
                 Write-Host "Version not found or incorrect format for unknown dependency $app"
