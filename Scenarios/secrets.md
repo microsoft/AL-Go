@@ -90,15 +90,10 @@ Example: `{"keyVaultName":"MyKeyVault","clientId":"<clientId>","clientSecret":"<
 With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your Key Vault in order for AL-Go for GitHub to sign your apps.
 
 <a id="AuthContext"></a>
-<a id="CICDAuthContext"></a>
 
-## **AuthContext** -> Connect to online environments
+## **AuthContext** -> Deploy to an online environment
 
-Whenever AL-Go for GitHub is going to connect to an online environment, it will need an AuthContext secret.
-
-For publishing to an environment, the AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
-
-For using online environments during CI/CD (for running tests etc.) you need to provide a secret called **CICDAuthContext**. If a CICDAuthContext secret exists, the online environment pointed out by this authentication context, will be used when running CI/CD for symbols, upgrade testing and test running.
+Whenever AL-Go for GitHub is doing to deploy to an environment, it will need an AuthContext secret. The AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
 
 ### Managed identity
 
@@ -127,6 +122,22 @@ Example:`{"tenantId":"d630ce39-5a0c-41ec-bf0d-6758ad558f0c","scopes":"https://ap
 Under Certificates & Secrets in the app registration, you can create a Client Secret, which you can specify in the AuthContext secret in AL-Go for GitHub. With the ClientId and ClientSecret, anybody can authenticate and perform actions as the connected user inside Business Central.
 
 Example: `{"tenantId":"<tenantId>","scopes":"https://api.businesscentral.dynamics.com/","clientId":"<clientId>","clientSecret":"<clientSecret>"}`
+
+<a id="CICDAuthContext"></a>
+
+## **CICDAuthContext** -> Use online environment for CI/CD
+
+For using online environments during CI/CD (for running tests etc.) you need to provide a secret called **CICDAuthContext**. If a CICDAuthContext secret exists, the online environment pointed out by this authentication context, will be used when running CI/CD for symbols, upgrade testing and test running.
+
+> [!NOTE]
+> The scopes
+### Impersonation/RefreshToken
+
+Specifying a RefreshToken allows AL-Go for GitHub to get access to impersonate the user who created the refresh token and act on behalf of that user on the scopes for which the refresh token was created. In this case, access is given to act as the user in Business Central.
+
+Providing an AuthContext secret with a refreshtoken typically allows you to get access for 90 days. After the 90 days, you need to refresh the AuthContext secret with a new refreshToken. Note that anybody with the refreshToken can get access to call the API on behalf of the user, it doesn't have to be inside a workflow/pipeline.
+
+Example: `{"tenantId":"<tenantId>","scopes":"https://projectmadeira.com/","RefreshToken":"<refreshToken>","clientId":"<clientId>"}`
 
 <a id="AppSourceContext"></a>
 
