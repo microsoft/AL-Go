@@ -112,7 +112,6 @@ try {
             $settings.useCompilerFolder = $true
         }
     }
-    $CreateRuntimePackages = $false
 
     if ($artifact) {
         # Avoid checking the artifact setting in AnalyzeRepo if we have an artifactUrl
@@ -515,7 +514,6 @@ try {
         -buildArtifactFolder $buildArtifactFolder `
         -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
-        -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
