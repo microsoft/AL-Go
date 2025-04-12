@@ -52,7 +52,7 @@ jobs:
       githubOwner: ${{ steps.check.outputs.githubOwner }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
@@ -105,7 +105,7 @@ jobs:
       appSourceAppRepo: ${{ steps.setup.outputs.appSourceAppRepo }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
@@ -117,9 +117,10 @@ jobs:
         id: setup
         env:
           _bcContainerHelperVersion: ${{ github.event.inputs.bcContainerHelperVersion }}
+          GH_TOKEN: ${{ secrets.E2EPAT }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -e2epat '${{ Secrets.E2EPAT }}' -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
+          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
 
   Analyze:
     runs-on: [ ubuntu-latest ]
@@ -131,7 +132,7 @@ jobs:
       scenarios: ${{ steps.Analyze.outputs.scenarios }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
@@ -212,7 +213,7 @@ jobs:
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
@@ -248,7 +249,7 @@ jobs:
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
@@ -284,7 +285,7 @@ jobs:
     strategy: ${{ fromJson(needs.Analyze.outputs.publictestruns) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
@@ -332,7 +333,7 @@ jobs:
     strategy: ${{ fromJson(needs.Analyze.outputs.privatetestruns) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
@@ -380,7 +381,7 @@ jobs:
     strategy: ${{ fromJson(needs.Analyze.outputs.releases) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
 
