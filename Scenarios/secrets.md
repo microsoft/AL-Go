@@ -217,3 +217,24 @@ When running the Update AL-Go System Files workflow, you will need a secret call
 ## **GitSubmodulesToken** -> Use Git Submodules from private repositories
 
 When using Git submodules from private repositories, the `GitSubmodulesToken` should be a personal access token with permissions to read these repositories. You can also define a setting called `gitSubmodulesTokenSecretName` with the name of a secret to use instead (f.ex. GhTokenWorkflow).
+
+<a id="BuildAuthContext"></a>
+
+## **BuildAuthContext** -> Use online environment during build for running tests
+
+For using online environments during builds for running tests, you need to provide an authcontext secret and set the `BuildAuthContextSecretName` in settings to the name of this secret. You also need to set the `BuildEnvironmentName` setting to the name of the environment.
+
+> [!WARNING]
+> You cannot use the same environment for multiple workflows and branches when building as the different workflows will deploy the apps with different version numbers and thus, it isn't sure that apps from the 
+
+> [!NOTE]
+> The scopes
+
+### Impersonation/RefreshToken
+
+Specifying a RefreshToken allows AL-Go for GitHub to get access to impersonate the user who created the refresh token and act on behalf of that user on the scopes for which the refresh token was created. In this case, access is given to act as the user in Business Central.
+
+Providing an AuthContext secret with a refreshtoken typically allows you to get access for 90 days. After the 90 days, you need to refresh the AuthContext secret with a new refreshToken. Note that anybody with the refreshToken can get access to call the API on behalf of the user, it doesn't have to be inside a workflow/pipeline.
+
+Example: `{"tenantId":"<tenantId>","scopes":"https://projectmadeira.com/","RefreshToken":"<refreshToken>","clientId":"<clientId>"}`
+
