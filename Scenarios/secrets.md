@@ -123,22 +123,6 @@ Under Certificates & Secrets in the app registration, you can create a Client Se
 
 Example: `{"tenantId":"<tenantId>","scopes":"https://api.businesscentral.dynamics.com/","clientId":"<clientId>","clientSecret":"<clientSecret>"}`
 
-<a id="CICDAuthContext"></a>
-
-## **CICDAuthContext** -> Use online environment for CI/CD
-
-For using online environments during CI/CD (for running tests etc.) you need to provide a secret called **CICDAuthContext**. If a CICDAuthContext secret exists, the online environment pointed out by this authentication context, will be used when running CI/CD for symbols, upgrade testing and test running.
-
-> [!NOTE]
-> The scopes
-### Impersonation/RefreshToken
-
-Specifying a RefreshToken allows AL-Go for GitHub to get access to impersonate the user who created the refresh token and act on behalf of that user on the scopes for which the refresh token was created. In this case, access is given to act as the user in Business Central.
-
-Providing an AuthContext secret with a refreshtoken typically allows you to get access for 90 days. After the 90 days, you need to refresh the AuthContext secret with a new refreshToken. Note that anybody with the refreshToken can get access to call the API on behalf of the user, it doesn't have to be inside a workflow/pipeline.
-
-Example: `{"tenantId":"<tenantId>","scopes":"https://projectmadeira.com/","RefreshToken":"<refreshToken>","clientId":"<clientId>"}`
-
 <a id="AppSourceContext"></a>
 
 ## **AppSourceContext** -> Deliver to AppSource
