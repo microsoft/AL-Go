@@ -7,7 +7,7 @@
 - Issue 1526 When updating AL-Go system files, the update process (creating a PR or directly pushing to the branch) fails when there is a file or directory in the repo with the same name as the branch that is to be updated
 - Legacy code signing stopped working
 
-### Add support for running pipeline on Online environment
+### Use online environment during build for running tests
 
 TODO: Describe cicdAuthContext secret
 
