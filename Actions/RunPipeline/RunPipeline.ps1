@@ -86,7 +86,7 @@ try {
 
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString','cicdAuthContext' | ForEach-Object {
+    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString','buildAuthContext' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -103,9 +103,9 @@ try {
 
     $authContext = $null
     $environmentName = ""
-    if ($cicdAuthContext -and $settings.cicdEnvironmentName) {
-        $authContextHT = $cicdAuthContext | ConvertFrom-Json | ConvertTo-HashTable
-        $environmentName = $settings.cicdEnvironmentName
+    if ($buildAuthContext -and $settings.buildEnvironmentName) {
+        $authContextHT = $buildAuthContext | ConvertFrom-Json | ConvertTo-HashTable
+        $environmentName = $settings.buildEnvironmentName
         if ($environmentName -notlike 'https://*') {
             $authContext = New-BcAuthContext @authContextHT
             # When using online environment for builds, use CompilerFolder to avoid creating a container

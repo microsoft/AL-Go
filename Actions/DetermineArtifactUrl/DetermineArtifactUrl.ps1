@@ -8,15 +8,15 @@
 DownloadAndImportBcContainerHelper
 #endregion
 
-#region Action: Determine artifacts to use based on cicdAuthContext or settings
+#region Action: Determine artifacts to use based on buildAuthContext or settings
 $artifactUrl = $null
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 if ($env:Secrets) {
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
-    if ($secrets.ContainsKey('cicdAuthContext') -and $settings.cicdEnvironmentName) {
-        $cicdAuthContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.cicdAuthContext))
-        $authContextHT = $cicdAuthContext | ConvertFrom-Json | ConvertTo-HashTable
-        $environmentName = $settings.cicdEnvironmentName
+    if ($secrets.ContainsKey('buildAuthContext') -and $settings.buildEnvironmentName) {
+        $buildAuthContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.buildAuthContext))
+        $authContextHT = $buildAuthContext | ConvertFrom-Json | ConvertTo-HashTable
+        $environmentName = $settings.buildEnvironmentName
         if ($environmentName -notlike 'https://*') {
             $authContext = New-BcAuthContext @authContextHT
             $bcEnvironment = Get-BcEnvironments -bcAuthContext $authContext | Where-Object { $_.name -eq $environmentName -and $_.type -eq "Sandbox" }

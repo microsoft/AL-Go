@@ -122,7 +122,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: '${{ inputs.secrets }},appDependencySecrets,AZURE_CREDENTIALS,-gitSubmodulesToken,cicdAuthContext'
+          getSecrets: '${{ inputs.secrets }},appDependencySecrets,AZURE_CREDENTIALS,-gitSubmodulesToken,buildAuthContext'
 
       - name: Checkout Submodules
         if: env.useGitSubmodules != 'false' && env.useGitSubmodules != ''
