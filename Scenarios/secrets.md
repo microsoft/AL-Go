@@ -41,7 +41,7 @@ AL-Go for GitHub uses JSON structures for some secrets (like authentication cont
 
 In this case, a secret is created with the following value:
 
-```
+```json
 {
   "prop": "value"
 }
@@ -245,10 +245,10 @@ AL-Go for GitHub will use the Demo license from Business Central (also known as 
 For using online environments during builds for running tests, you need to provide an authcontext secret and set the `BuildAuthContextSecretName` in settings to the name of this secret. You also need to set the `BuildEnvironmentName` setting to the name of the environment.
 
 > [!WARNING]
-> You cannot use the same environment for multiple workflows and branches when building as the different workflows will deploy the apps with different version numbers and thus, it isn't sure that apps from the 
+> The `buildEnvironmentName` (and potentially the `buildAuthContextSecretName`) settings should be defined for a specific branch in a specific workflow as you cannot re-use the same environment for builds in different branches/workflows.
 
 > [!NOTE]
-> The scopes
+> The scopes for the AuthContext secret should be `https://projectmaderia.com/`, as the default will not work for running tests in the online environment.
 
 ### Impersonation/RefreshToken
 
