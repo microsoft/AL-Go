@@ -2,6 +2,7 @@
 
 - Issue 1640 AL1040 error due to app folder within the artifacts cache being incorrectly recognized as an app folder
 - Issue 1630 Error when downloading a release, when the destination folder already exists.
+- Issue 1540 and 1649 apps with dependencies to Microsft__EXCLUDE_ apps fails deployment
 
 ## v7.0
 
