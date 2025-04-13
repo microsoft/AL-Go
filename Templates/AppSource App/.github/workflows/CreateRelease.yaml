@@ -212,6 +212,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/CreateReleaseNotes@main
         with:
           shell: powershell
+          appVersion: ${{ github.event.inputs.appVersion }}
           tag_name: ${{ github.event.inputs.tag }}
           target_commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
 

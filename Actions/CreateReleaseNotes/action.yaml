@@ -12,6 +12,9 @@ inputs:
     description: The GitHub token running the action
     required: false
     default: ${{ github.token }}
+  appVersion:
+    description: App version
+    required: true
   tag_name:
     description: Tag name
     required: true
@@ -34,11 +37,12 @@ runs:
       id: createreleasenotes
       env:
         _token: ${{ inputs.token }}
+        _appVersion: ${{ inputs.appVersion }}
         _tag_name: ${{ inputs.tag_name }}
         _target_commitish: ${{ inputs.target_commitish }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CreateReleaseNotes" -Action {
-          ${{ github.action_path }}/CreateReleaseNotes.ps1 -token $ENV:_token -tag_name $ENV:_tag_name -target_commitish $ENV:_target_commitish
+          ${{ github.action_path }}/CreateReleaseNotes.ps1 -token $ENV:_token -appVersion $ENV:_appVersion -tag_name $ENV:_tag_name -target_commitish $ENV:_target_commitish
         }
 branding:
   icon: terminal
