@@ -58,7 +58,7 @@ function MaskValue {
             Write-Host "::add-mask::$_"
         }
     }
-    Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value.Trim())))"
+    Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value)))"
 }
 
 function GetGithubSecret {
