@@ -1,8 +1,8 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
-    [Parameter(HelpMessage = "App Version", Mandatory = $true)]
-    [string] $appVersion,
+    [Parameter(HelpMessage = "Build Version", Mandatory = $true)]
+    [string] $buildVersion,
     [Parameter(HelpMessage = "Tag name", Mandatory = $true)]
     [string] $tag_name,
     [Parameter(HelpMessage = "Last commit to include in release notes", Mandatory = $false)]
@@ -50,7 +50,7 @@ if ($latestRelease -and $latestRelease.PSobject.Properties.name -eq "tag_name") 
             OutputError "The release tag is the same as the latest release tag."
         }
         elseif ($compareResult -eq -1) {
-            if ($appVersion -eq 'latest') {
+            if ($buildVersion -eq 'latest') {
                 OutputError -message "The release tag is older than the latest release tag."
             }
             else {

@@ -7,8 +7,8 @@ concurrency:
 on:
   workflow_dispatch:
     inputs:
-      appVersion:
-        description: App version to promote to release (default is latest)
+      buildVersion:
+        description: Build version to promote to release (default is latest)
         required: false
         default: 'latest'
       name:
@@ -124,7 +124,7 @@ jobs:
       - name: Analyze Artifacts
         id: analyzeartifacts
         env:
-          _appVersion: ${{ github.event.inputs.appVersion }}
+          _buildVersion: ${{ github.event.inputs.buildVersion }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $projects = '${{ steps.determineProjects.outputs.ProjectsJson }}' | ConvertFrom-Json
@@ -162,14 +162,14 @@ jobs:
             }
             $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
             Write-Host "Analyzing artifacts for project $project"
-            $appVersion = "$env:_appVersion"
-            if ($appVersion -eq "latest") {
+            $buildVersion = "$env:_buildVersion"
+            if ($buildVersion -eq "latest") {
               Write-Host "Grab latest"
               $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*.*.*.*" -or $_.name -like "$project-$refname-PowerPlatformSolution-*.*.*.*" } | Select-Object -First 1
             }
             else {
-              Write-Host "Search for $project-$refname-Apps-$appVersion or $project-$refname-PowerPlatformSolution-$appVersion"
-              $artifact = $allArtifacts | Where-Object { $_.name -eq "$project-$refname-Apps-$appVersion"-or $_.name -eq "$project-$refname-PowerPlatformSolution-$appVersion" } | Select-Object -First 1
+              Write-Host "Search for $project-$refname-Apps-$buildVersion or $project-$refname-PowerPlatformSolution-$buildVersion"
+              $artifact = $allArtifacts | Where-Object { $_.name -eq "$project-$refname-Apps-$buildVersion"-or $_.name -eq "$project-$refname-PowerPlatformSolution-$buildVersion" } | Select-Object -First 1
             }
             if ($artifact) {
               $startIndex = $artifact.name.LastIndexOf('-') + 1
@@ -212,7 +212,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/CreateReleaseNotes@main
         with:
           shell: powershell
-          appVersion: ${{ github.event.inputs.appVersion }}
+          buildVersion: ${{ github.event.inputs.buildVersion }}
           tag_name: ${{ github.event.inputs.tag }}
           target_commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
 
@@ -305,7 +305,7 @@ jobs:
           type: 'Release'
           projects: ${{ matrix.project }}
           deliveryTarget: 'NuGet'
-          artifacts: ${{ github.event.inputs.appVersion }}
+          artifacts: ${{ github.event.inputs.buildVersion }}
           atypes: 'Apps,TestApps'
 
       - name: Deliver to Storage
@@ -318,7 +318,7 @@ jobs:
           type: 'Release'
           projects: ${{ matrix.project }}
           deliveryTarget: 'Storage'
-          artifacts: ${{ github.event.inputs.appVersion }}
+          artifacts: ${{ github.event.inputs.buildVersion }}
           atypes: 'Apps,TestApps,Dependencies'
 
   CreateReleaseBranch:
