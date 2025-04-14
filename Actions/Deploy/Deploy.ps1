@@ -45,7 +45,7 @@ function CheckIfAppNeedsInstallOrUpgrade {
     }
     else {
         Write-Host "Dependency app $($appJson.name) is not installed."
-        $needsInstall = $true
+        $needsInstall = ($installMode -ne 'ignore')
     }
     return $needsInstall, $needsUpgrade
 }
@@ -89,7 +89,7 @@ function InstallOrUpgradeApps {
                     $PTEsToInstall += $app
                 }
                 else {
-                    Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
+                    Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
                     # Update installed apps list as dependencies may have changed / been installed
                     $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
                 }
