@@ -54,7 +54,7 @@ if ($latestRelease -and $latestRelease.PSobject.Properties.name -eq "tag_name") 
                 OutputError -message "The release tag is older than the latest release tag."
             }
             else {
-                OutputWarning -message "The release tag is older than the latest release tag. The app version is set to $appVersion, so the action will continue."
+                OutputWarning -message "The release tag is older than the latest release tag. The release notes for the release might be wrong."
             }
         }
     }
