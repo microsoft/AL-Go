@@ -45,7 +45,7 @@ function CheckIfAppNeedsInstallOrUpgrade {
     }
     else {
         Write-Host "Dependency app $($appJson.name) is not installed."
-        $needsInstall = $true
+        $needsInstall = ($installMode -ne 'ignore')
     }
     return $needsInstall, $needsUpgrade
 }
@@ -89,7 +89,7 @@ function InstallOrUpgradeApps {
                     $PTEsToInstall += $app
                 }
                 else {
-                    Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
+                    Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
                     # Update installed apps list as dependencies may have changed / been installed
                     $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
                 }
@@ -121,7 +121,11 @@ function InstallUnknownDependencies {
             # The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
             $appId, $appName = $app.Split(':')
             $appVersion = ""
-            if ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
+            if ($appName -like 'Microsoft__EXCLUDE_*') {
+                Write-Host "App $appName is ignored as it is marked as EXCLUDE"
+                continue
+            }
+            elseif ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
                 $appVersion = $matches.1
             } else {
                 Write-Host "Version not found or incorrect format for unknown dependency $app"
@@ -143,7 +147,7 @@ function InstallUnknownDependencies {
                 }
             }
             if ($needsUpgrade -or $needsInstall) {
-                Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies
+                Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
                 # Update installed apps list as dependencies may have changed / been installed
                 $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
             }
