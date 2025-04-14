@@ -496,6 +496,40 @@ function SemVerStrToSemVerObj {
     }
 }
 
+# Compare SemVerStr1 and SemVerStr2
+# Returns -1 if SemVerStr1 < SemVerStrj2
+# Returns 1 if SemVerStr1 > SemVerStr2
+# Returns 0 if SemVerStr1 = SemVerStr2
+function CompareSemVerStrs {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $semVerStr1,
+        [Parameter(Mandatory = $true)]
+        [string] $semVerStr2
+    )
+
+    Process {
+        $semVerObj1 = $semVerStr1 | SemVerStrToSemVerObj
+        $semVerObj2 = $semVerStr2 | SemVerStrToSemVerObj
+        $result = $semVerObj1.Major.CompareTo($semVerObj2.Major)
+        if ($result -eq 0) {
+            $result = $semVerObj1.Minor.CompareTo($semVerObj2.Minor)
+            if ($result -eq 0) {
+                $result = $semVerObj1.Patch.CompareTo($semVerObj2.Patch)
+                if ($result -eq 0) {
+                    for ($i=0; $i -lt 5; $i++) {
+                        $result = ("$($semVerObj1."Addt$i")".CompareTo("$($semVerObj2."Addt$i")"))
+                        if ($result -ne 0) {
+                            return $result
+                        }
+                    }
+                }
+            }
+        }
+        return $result
+    }
+}
+
 function GetReleases {
     Param(
         [string] $token,
