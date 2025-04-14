@@ -380,9 +380,9 @@ try {
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
-                $parameters.missingDependencies | ForEach-Object {
-                    $appid = $_.Split(':')[0]
-                    $appName = $_.Split(':')[1]
+                foreach($missingDependency in $parameters.missingDependencies) {
+                    $appid = $missingDependency.Split(':')[0]
+                    $appName = $missingDependency.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
 
