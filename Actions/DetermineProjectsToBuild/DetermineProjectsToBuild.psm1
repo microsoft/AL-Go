@@ -54,8 +54,8 @@ function ShouldBuildProject {
         $project,
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         $baseFolder,
-        [Parameter(HelpMessage = "A list of modified files", Mandatory = $true)]
-        $modifiedFiles
+        [Parameter(HelpMessage = "A list of modified files", Mandatory = $false)]
+        $modifiedFiles = @()
     )
     Write-Host "Determining whether to build project $project based on modified files"
 
@@ -405,8 +405,8 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         [string] $project = '',
         [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $true)]
         [string] $baselineWorkflowRunId,
-        [Parameter(HelpMessage = "Array of modified files in the repository (all projects)", Mandatory = $true)]
-        [string[]] $modifiedFiles,
+        [Parameter(HelpMessage = "Array of modified files in the repository (all projects)", Mandatory = $false)]
+        [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The build artifact folder", Mandatory = $true)]
         [string] $buildArtifactFolder,
         [Parameter(HelpMessage = "The build mode", Mandatory = $true)]
