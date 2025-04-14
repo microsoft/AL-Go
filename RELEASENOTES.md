@@ -5,6 +5,7 @@
 - Issue 1540 and 1649 Apps with dependencies to Microsft\_\_EXCLUDE\_ apps fails deployment
 - Issue 1547 Dependencies will be installed even if DependencyInstallMode is ignore, but dependencies will never be installed on production environments
 - Issue 1655 GithubPackageContext does not work together with private trustedNuGetFeeds
+- Issue 1627 AL-Go should throw an error or a warning if you create a release, which is older than the latest release
 
 ## v7.0
 
