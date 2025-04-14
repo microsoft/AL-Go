@@ -242,7 +242,7 @@ AL-Go for GitHub will use the Demo license from Business Central (also known as 
 
 ## **BuildAuthContext** -> Use online environment during build for running tests
 
-For using online environments during builds for running tests, you need to provide an authcontext secret and set the `BuildAuthContextSecretName` in settings to the name of this secret. You also need to set the `BuildEnvironmentName` setting to the name of the environment.
+For using online environments during builds for running tests, you need to provide a `buildAuthContext` secret. You also need to set the `BuildEnvironmentName` setting to the name of the environment. Note that you can give the setting another name and set the `buildAuthContextSecretName` to the name of the secret to use.
 
 > [!WARNING]
 > The `buildEnvironmentName` (and potentially the `buildAuthContextSecretName`) settings should be defined for a specific branch in a specific workflow as you cannot re-use the same environment for builds in different branches/workflows.

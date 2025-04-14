@@ -684,8 +684,8 @@ function ReadSettings {
         "sendExtendedTelemetryToMicrosoft"              = $false
         "environments"                                  = @()
         "buildModes"                                    = @()
-        "buildAuthContextSecretName"                    = ""
         "buildEnvironmentName"                          = ""
+        "buildAuthContextSecretName"                    = "buildAuthContext"
         "useCompilerFolder"                             = $false
         "pullRequestTrigger"                            = "pull_request_target"
         "bcptThresholds"                                = [ordered]@{

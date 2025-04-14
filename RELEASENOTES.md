@@ -5,12 +5,11 @@
 
 ### New Workflow specific settings
 
-- `buildEnvironmentName` - should be the Business Central environment name (from the Admin Center) for the environment you want to use if you want to run tests using online environments.
-- `buildAuthContextSecretName` - should be the name of the secret containing the [buildAuthContext](https://aka.ms/algosecrets#buildAuthContext) secret, which is needed if you want to run tests using online environments.
+- `buildEnvironmentName` - should be the Business Central environment name (from the Admin Center) for the environment you want to use if you want to run tests using online environments. Note that you also need to create a [buildAuthContext](https://aka.ms/algosecrets#buildAuthContext) secret, which gives access to this environment.
 
 ### Use online environment during build for running tests
 
-By creating a [build authentication context](https://aka.ms/algosecrets#buildAuthContext) and setting the [buildEnvironmentName](https://aka.ms/algosettings#buildEnvironmentName) and [buildAuthContextSecretName](https://aka.ms/algosettings#buildAuthContextSecretName) for a specific branch and a specific workflow, will cause AL-Go for GitHub to use this environment for running tests. An example of how to define these settings could be:
+By creating a [build authentication context](https://aka.ms/algosecrets#buildAuthContext) secret and setting the [buildEnvironmentName](https://aka.ms/algosettings#buildEnvironmentName) for a specific branch and a specific workflow, will cause AL-Go for GitHub to use this environment for running tests. An example of how to define these settings could be:
 
 ```json
   "useCompilerFolder": true,
