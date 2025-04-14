@@ -34,17 +34,17 @@ Describe 'CreateReleaseNotes Tests' {
     }
 
     It 'Confirms that right functions are called' {
-        Mock GetLatestRelease { return "{""tag_name"" : ""1.0.0.0""}" | ConvertFrom-Json }
+        Mock GetLatestRelease { return "{""tag_name"" : ""1.0.0""}" | ConvertFrom-Json }
         Mock GetReleaseNotes  { return "{
             ""name"": ""tagname"",
             ""body"": ""Mocked notes""
         }" }
         Mock DownloadAndImportBcContainerHelper  {}
 
-        . $scriptPath -token "" -tag_name "1.0.5"
+        . $scriptPath -token "" -appVersion "latest" -tag_name "1.0.5"
 
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1
-        Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.5" -and $previous_tag_name -eq "1.0.0.0" }
+        Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.5" -and $previous_tag_name -eq "1.0.0" }
 
         $releaseNotes | Should -Be "Mocked notes"
     }
@@ -57,7 +57,7 @@ Describe 'CreateReleaseNotes Tests' {
         }"}
         Mock DownloadAndImportBcContainerHelper  {}
 
-        . $scriptPath -token "" -tag_name "1.0.5"
+        . $scriptPath -token "" -appVersion "latest" -tag_name "1.0.5"
 
         Should -Invoke -CommandName GetLatestRelease -Exactly -Times 1
         Should -Invoke -CommandName GetReleaseNotes -Exactly -Times 1 -ParameterFilter { $tag_name -eq "1.0.5" -and $previous_tag_name -eq "" }
