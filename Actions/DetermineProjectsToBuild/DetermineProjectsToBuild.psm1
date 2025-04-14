@@ -43,10 +43,9 @@ function Get-ModifiedFiles {
 
 <#
 .Synopsis
-    Filters AL-Go projects based on modified files.
-
+    Determines whether a project should be built based on the modified files.
 .Outputs
-    An array of AL-Go projects, filtered based on the modified files.
+    A boolean indicating whether the project should be built.
 #>
 function ShouldBuildProject {
     param (
@@ -54,11 +53,16 @@ function ShouldBuildProject {
         $project,
         [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
         $baseFolder,
-        [Parameter(HelpMessage = "A list of modified files", Mandatory = $true)]
-        $modifiedFiles
+        [Parameter(HelpMessage = "A list of modified files", Mandatory = $false)]
+        $modifiedFiles = @()
     )
-    Write-Host "Determining whether to build project $project based on modified files"
 
+    if (-not $modifiedFiles) {
+        Write-Host "No modified files found, not building project $project"
+        return $false
+    }
+
+    Write-Host "Determining whether to build project $project based on modified files"
     $projectFolders = GetProjectFolders -baseFolder $baseFolder -project $project -includeAlGoFolder
 
     $modifiedProjectFolders = @()
@@ -75,7 +79,7 @@ function ShouldBuildProject {
         return $true
     }
 
-    Write-Host "No modified files found for project $project. Not building project"
+    Write-Host "No modified files found for project $project. Not building project $project"
     return $false
 }
 
@@ -405,8 +409,8 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         [string] $project = '',
         [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $true)]
         [string] $baselineWorkflowRunId,
-        [Parameter(HelpMessage = "Array of modified files in the repository (all projects)", Mandatory = $true)]
-        [string[]] $modifiedFiles,
+        [Parameter(HelpMessage = "Array of modified files in the repository (all projects)", Mandatory = $false)]
+        [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The build artifact folder", Mandatory = $true)]
         [string] $buildArtifactFolder,
         [Parameter(HelpMessage = "The build mode", Mandatory = $true)]
