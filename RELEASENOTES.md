@@ -2,6 +2,9 @@
 
 - Issue 1640 AL1040 error due to app folder within the artifacts cache being incorrectly recognized as an app folder
 - Issue 1630 Error when downloading a release, when the destination folder already exists.
+- Issue 1540 and 1649 Apps with dependencies to Microsft\_\_EXCLUDE\_ apps fails deployment
+- Issue 1547 Dependencies will be installed even if DependencyInstallMode is ignore, but dependencies will never be installed on production environments
+- Issue 1655 GithubPackageContext does not work together with private trustedNuGetFeeds
 
 ### New Workflow specific settings
 
