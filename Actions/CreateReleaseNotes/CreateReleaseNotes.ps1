@@ -1,6 +1,8 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
+    [Parameter(HelpMessage = "Build Version", Mandatory = $true)]
+    [string] $buildVersion,
     [Parameter(HelpMessage = "Tag name", Mandatory = $true)]
     [string] $tag_name,
     [Parameter(HelpMessage = "Last commit to include in release notes", Mandatory = $false)]
@@ -41,7 +43,27 @@ if ($latestRelease -and $latestRelease.PSobject.Properties.name -eq "target_comm
 $latestReleaseTag = ""
 if ($latestRelease -and $latestRelease.PSobject.Properties.name -eq "tag_name") {
     $latestReleaseTag = $latestRelease.tag_name
+    Write-Host "Latest release tag: $latestReleaseTag"
+    try {
+        $compareResult = CompareSemVerStrs -semVerStr1 $tag_name -semVerStr2 $latestReleaseTag
+        if ($compareResult -eq 0) {
+            OutputError "The release tag is the same as the latest release tag."
+        }
+        elseif ($compareResult -eq -1) {
+            if ($buildVersion -eq 'latest') {
+                OutputError -message "The release tag is older than the latest release tag."
+            }
+            else {
+                OutputWarning -message "The release tag is older than the latest release tag. The release notes for the release might be wrong."
+            }
+        }
+    }
+    catch {
+        OutputWarning "Unable to compare the release tag $tag_name with the latest release tag $latestReleaseTag. The release might have been created manually."
+    }
 }
+
+
 
 try {
     $releaseNotes = GetReleaseNotes -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY  -tag_name $tag_name -previous_tag_name $latestReleaseTag -target_commitish $target_commitish | ConvertFrom-Json
