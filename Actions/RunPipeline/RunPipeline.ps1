@@ -380,11 +380,26 @@ try {
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
-                $parameters.missingDependencies | ForEach-Object {
-                    $appid = $_.Split(':')[0]
-                    $appName = $_.Split(':')[1]
+                foreach($missingDependency in $parameters.missingDependencies) {
+                    $appid = $missingDependency.Split(':')[0]
+                    $appName = $missingDependency.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
+
+                    # If dependency app is already installed, skip it
+                    # If dependency app is already published, synchronize and install it
+                    if ($parameters.ContainsKey('containerName')) {
+                        $appInfo = Get-BcContainerAppInfo -containerName $parameters.containerName -tenantSpecificProperties | Where-Object { $_.AppId -eq $appid }
+                        if ($appInfo) {
+                            # App already exists
+                            if (-not $appInfo.isInstalled) {
+                                Sync-BcContainerApp -containerName $parameters.containerName -tenant $parameters.tenant -appPublisher $appInfo.Publisher -appName $appInfo.Name -appVersion "$($appInfo.version)"
+                                Install-BcContainerApp -containerName $parameters.containerName -tenant $parameters.tenant -appPublisher $appInfo.Publisher -appName $appInfo.Name -appVersion "$($appInfo.version)"
+                            }
+                            continue
+                        }
+                    }
+
                     $publishParams = @{
                         "nuGetServerUrl" = $gitHubPackagesCredential.serverUrl
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
