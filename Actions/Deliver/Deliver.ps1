@@ -240,6 +240,8 @@ foreach ($thisProject in $projectList) {
         catch {
             throw "$($deliveryTarget)Context secret is malformed. Needs to be formatted as Json, containing serverUrl and token as a minimum."
         }
+        # Do not search trusted NuGet feeds for packages when looking for whether packages have been delivered
+        $bcContainerHelperConfig.TrustedNuGetFeeds = @()
         'Apps','TestApps' | ForEach-Object {
             $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
             if ($folder.Count -gt 1) {
