@@ -7,6 +7,7 @@
 - Issue 1655 GithubPackageContext does not work together with private trustedNuGetFeeds
 - Issue 1627 AL-Go should throw an error or a warning if you create a release, which is older than the latest release
 - Issue 1657 When no files modified on Git, deployment fails
+- Issue 1530 Dependency Field Service Integration does not get published in container while Installing apps
 
 ## v7.0
 
