@@ -41,7 +41,7 @@ AL-Go for GitHub uses JSON structures for some secrets (like authentication cont
 
 In this case, a secret is created with the following value:
 
-```
+```json
 {
   "prop": "value"
 }
@@ -78,7 +78,7 @@ By creating a secret called Azure_Credentials you can give your GitHub repositor
 > [!NOTE]
 > In order to use a KeyVault for signing apps, it needs to be a premium SKU KeyVault. You can use this command to modify an existing KeyVault: `az keyvault update --set properties.sku.name=premium --name <KeyVaultName> --resource-group <ResourceGroupName>`
 
-n Azure Key Vault can be set up for two different security models: Role Based Access Control (RBAC) (recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the Key Vault, the following roles/permissions need to be assigned to the app registration or Managed Identity, on which the authentication is performed:
+An Azure Key Vault can be set up for two different security models: Role Based Access Control (RBAC) (recommended) and Vault Access Policy. In order for AL-Go for GitHub to use the Key Vault, the following roles/permissions need to be assigned to the app registration or Managed Identity, on which the authentication is performed:
 
 | Security Model | Read Secrets | Sign Apps |
 | :-- | :-- | :-- |
@@ -105,7 +105,7 @@ With this setup, you can create a setting called `keyVaultCodesignCertificateNam
 
 <a id="AuthContext"></a>
 
-## **AuthContext** -> Deploy to an environment
+## **AuthContext** -> Deploy to an online environment
 
 Whenever AL-Go for GitHub is doing to deploy to an environment, it will need an AuthContext secret. The AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
 
@@ -237,3 +237,23 @@ When using Git submodules from private repositories, the `GitSubmodulesToken` sh
 ## **LicenseFileUrl** -> Use specific license during CI/CD
 
 AL-Go for GitHub will use the Demo license from Business Central (also known as the CRONUS license) for CI/CD, unless a specific license file URL is added as a secret called LicenseFileUrl. The secret should be a direct download URL for the license file, which will be used during CI/CD.
+
+<a id="BuildAuthContext"></a>
+
+## **BuildAuthContext** -> Use online environment during build for running tests
+
+For using online environments during builds for running tests, you need to provide a `buildAuthContext` secret. You also need to set the `BuildEnvironmentName` setting to the name of the environment. Note that you can give the setting another name and set the `buildAuthContextSecretName` to the name of the secret to use.
+
+> [!WARNING]
+> The `buildEnvironmentName` (and potentially the `buildAuthContextSecretName`) settings should be defined for a specific branch in a specific workflow as you cannot re-use the same environment for builds in different branches/workflows.
+
+> [!NOTE]
+> The scopes for the AuthContext secret should be `https://projectmaderia.com/`, as the default will not work for running tests in the online environment.
+
+### Impersonation/RefreshToken
+
+Specifying a RefreshToken allows AL-Go for GitHub to get access to impersonate the user who created the refresh token and act on behalf of that user on the scopes for which the refresh token was created. In this case, access is given to act as the user in Business Central.
+
+Providing an AuthContext secret with a refreshtoken typically allows you to get access for 90 days. After the 90 days, you need to refresh the AuthContext secret with a new refreshToken. Note that anybody with the refreshToken can get access to call the API on behalf of the user, it doesn't have to be inside a workflow/pipeline.
+
+Example: `{"tenantId":"<tenantId>","scopes":"https://projectmadeira.com/","RefreshToken":"<refreshToken>","clientId":"<clientId>"}`

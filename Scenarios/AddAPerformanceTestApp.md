@@ -42,7 +42,7 @@
 
 8. After uploading a `bcptThresholds.json` file with this content:
 
-   ```
+   ```json
    {
      "durationWarning": 0,
      "durationError": 1
