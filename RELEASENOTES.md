@@ -8,6 +8,8 @@
 - Issue 1627 AL-Go should throw an error or a warning if you create a release, which is older than the latest release
 - Issue 1657 When no files modified on Git, deployment fails
 - Issue 1530 Dependency Field Service Integration does not get published in container while Installing apps
+- Issue 1644 Support for AppAuth when using a private Template repository from another organization
+- Issue 1478 Rate Limit Exceeded when running Update AL-Go System files
 
 ## v7.0
 
