@@ -150,7 +150,7 @@ TestNumberOfRuns -expectedNumberOfRuns $runs -repository $repository
 Test-ArtifactsFromRun -runid $run.id -expectedArtifacts @{"Apps"=2;"TestApps"=1} -expectedNumberOfTests $expectedNumberOfTests -folder 'artifacts' -repoVersion '1.0' -appVersion ''
 
 # Create Release
-RunCreateRelease -appVersion "1.0.$($runs-3).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
+RunCreateRelease -buildVersion "1.0.$($runs-3).0" -name 'v1.0' -tag '1.0.0' -wait -branch $branch | Out-Null
 $runs++
 
 # Create New App
@@ -248,7 +248,7 @@ if (!(Test-Path "$($project1Folder).AL-Go\*.ps1")) { throw "Local PowerShell scr
 if (!(Test-Path ".github\workflows\AddExistingAppOrTestApp.yaml")) { throw "AddExistingAppOrTestApp.yaml was not updated by Update AL-Go System Files" }
 
 # Create Release
-RunCreateRelease -appVersion latest -name "v3.0" -tag "3.0.0" -wait -branch $branch | Out-Null
+RunCreateRelease -buildVersion latest -name "v3.0" -tag "3.0.0" -wait -branch $branch | Out-Null
 $runs++
 
 # Launch Current, NextMinor and NextMajor builds
