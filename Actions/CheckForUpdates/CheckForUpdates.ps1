@@ -53,7 +53,7 @@ if (-not $response -or $response.StatusCode -ne 200) {
     # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
     # Get token with read permissions for the template repository
     $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
-    $templateReadToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repository $templateRepository -repositories @($templateRepositoryUrl)
+    $templateReadToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repositories @($templateRepository)
 
     # Use read token for authenticated API request
     $headers = GetHeaders -token $templateReadToken
