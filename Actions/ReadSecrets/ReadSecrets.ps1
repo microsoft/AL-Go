@@ -165,7 +165,7 @@ try {
                 }
                 if ($base64encoded) {
                     Write-Host "Base64 encode secret"
-                    $secretValue = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue))
+                    $secretValue = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($secretValue.Trim()))
                 }
                 $outSecrets += @{ "$secretsPropertyName" = $secretValue }
                 Write-Host "$($secretsPropertyName) successfully read from secret $secretName"

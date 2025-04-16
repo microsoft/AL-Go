@@ -1,6 +1,6 @@
 ﻿function RunCreateRelease {
     Param(
-        [string] $appVersion,
+        [string] $buildVersion,
         [string] $name,
         [string] $tag,
         [ValidateSet('Release','Draft','Prerelease')]
@@ -17,7 +17,7 @@
 
     $workflowName = 'Create release'
     $parameters = @{
-        "appVersion" = $appVersion
+        "buildVersion" = $buildVersion
         "name" = $name
         "tag" = $tag
         "releaseType" = $releaseType
