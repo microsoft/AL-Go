@@ -682,7 +682,7 @@ function WaitForRateLimit {
         Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percentRemaining%)"
     }
     if ($percentRemaining-lt $percentage) {
-        $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($resetTime).ToLocalTime()
+        $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($rate.reset).ToLocalTime()
         $waitTime = ($resetTimestamp - (Get-Date)).TotalSeconds
         if ($waitTime -gt 0) {
             Write-Host "`nLess than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
