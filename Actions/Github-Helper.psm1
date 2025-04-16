@@ -1223,7 +1223,7 @@ function GetGitHubAppAuthToken {
     $body = @{}
     # If repositories are provided, limit the requested repositories to those
     if ($repositories) {
-        $body += @{ "repositories" = @($repositories | ForEach-Object { $_.SubString($_.LastIndexOf('/')+1) } ) }
+        $body += @{ "repositories" = @($repositories | ForEach-Object { ($_ -split '/')[-2..-1] -join '/' }) }
     }
     # If permissions are provided, limit the requested permissions to those
     if ($permissions) {
