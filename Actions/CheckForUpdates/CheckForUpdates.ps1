@@ -52,8 +52,9 @@ $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepos
 if (-not $response -or $response.StatusCode -ne 200) {
     # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
     # Get token with read permissions for the template repository
+    # NOTE that the GitHub app needs to be installed in the template repository for this to work
     $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
-    $templateReadToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repositories @($templateRepository)
+    $templateReadToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repository $templateRepository
 
     # Use read token for authenticated API request
     $headers = GetHeaders -token $templateReadToken

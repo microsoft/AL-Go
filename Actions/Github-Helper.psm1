@@ -180,7 +180,7 @@ function GetDependencies {
             $projects = $dependency.projects
             $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/").TrimEnd("/")
             if ($dependency.release_status -eq "latestBuild") {
-                $token = GetAccessToken -token $dependency.authTokenSecret -repositories @($repository) -permissions @{"contents"="read";"metadata"="read"}
+                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
                 $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
                 if ($artifacts) {
                     $artifacts | ForEach-Object {
@@ -203,7 +203,7 @@ function GetDependencies {
                 }
             }
             elseif ($dependency.release_status -ne "thisBuild" -and $dependency.release_status -ne "include") {
-                $token = GetAccessToken -token $dependency.authTokenSecret -repositories @($repository) -permissions @{"contents"="read";"metadata"="read"}
+                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
                 $releases = GetReleases -api_url $api_url -token $token -repository $repository
                 if ($dependency.version -ne "latest") {
                     $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
@@ -661,7 +661,7 @@ function GetHeaders {
         "X-GitHub-Api-Version" = $apiVersion
     }
     if (![string]::IsNullOrEmpty($token)) {
-        $accessToken = GetAccessToken -token $token -api_url $api_url -repositories @($repository) -permissions @{"contents"="read";"metadata"="read";"actions"="read"}
+        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository -permissions @{"contents"="read";"metadata"="read";"actions"="read"}
         $headers["Authorization"] = "token $accessToken"
     }
     return $headers
