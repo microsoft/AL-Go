@@ -125,7 +125,7 @@ It is recommended to prefix your workflows with `my`, `our`, your name or your o
 
 ### Adding custom scripts
 
-You can add custom powershell scripts under the .github folder for repository scoped scripts or in the .AL-Go folder for project scoped scripts. Specially named scripts in the .AL-Go folder can override standard functionality in AL-Go for GitHub workflows. A list of these script overrides can be found [here](https://aka.ms/algosettings#customdeployment). Scripts under the .github folder can be used in custom workflows instead of using inline scripts inside the workflow.
+You can add custom powershell scripts under the .github folder for repository scoped scripts or in the .AL-Go folder for project scoped scripts. Specially named scripts in the .AL-Go folder can override standard functionality in AL-Go for GitHub workflows. A list of these script overrides can be found [here](https://aka.ms/algosettings#scriptoverrides). Scripts under the .github folder can be used in custom workflows instead of using inline scripts inside the workflow.
 
 One example of a script override is the NewBcContainer override used in the System Application project in BCApps (can be found [here](https://github.com/microsoft/BCApps/blob/main/build/projects/System%20Application/.AL-Go/NewBcContainer.ps1)). This override looks like:
 
