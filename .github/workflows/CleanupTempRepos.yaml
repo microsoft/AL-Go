@@ -26,6 +26,7 @@ jobs:
     name: Cleanup Temp Repos
     steps:
       - name: Harden Runner
+        if: github.repository_owner == 'microsoft'
         uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           egress-policy: audit
