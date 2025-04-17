@@ -281,12 +281,9 @@ Using a fork of AL-Go for GitHub to have your "own" public version of AL-Go for 
 > [!NOTE]
 > When customizing AL-Go for GitHub using a fork, your customizations are public and will be visible to everyone. For more information, [read this](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-permissions-and-visibility-of-forks).
 
-There are two ways of forking AL-Go for GitHub. You can fork the main [AL-Go for GitHub](https://github.com/microsoft/AL-Go) repository or you can fork the template repositories [AL-Go PTE](https://github.com/microsoft/AL-Go-PTE) and/or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource).
+There are two ways of forking AL-Go for GitHub. You can fork the main [AL-Go for GitHub](https://github.com/microsoft/AL-Go) repository and develop AL-Go for GitHub like we do in Microsoft, or you can fork the template repositories [AL-Go PTE](https://github.com/microsoft/AL-Go-PTE) and/or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource).
 
-For simple changes to the templates, you can fork the template repositories and make the changes directly in your fork. Note that we do not accept any pull requests to the template repositories as they are deployed from the main AL-Go repository. We do not actually develop anything in the template repositories ourself. In the template repositories you will find a branch for every version of AL-Go we have shipped. The main branch is the latest version and the preview branch is the next version. You can customize the preview branch and/or the main branch and then use your fork as the template repository when running Update AL-Go System Files from your app repositories.
-
-> [!NOTE]
-> We do NOT accept pull requests to the template repositories. You need to follow the guidelines [here](Contribute.md) in order to contribute to AL-Go development.
+While we don't recommend forking the template repositories, we realize that it is possible for simple changes to the templates. You can fork the template repositories and make the changes directly in your fork. Note that we do not accept any pull requests to the template repositories as they are deployed from the main AL-Go repository. We do not actually develop anything in the template repositories ourself. In the template repositories you will find a branch for every version of AL-Go we have shipped. The main branch is the latest version and the preview branch is the next version. You can customize the preview branch and/or the main branch and then use your fork as the template repository when running Update AL-Go System Files from your app repositories.
 
 > [!TIP]
 > When forking the template repositories, you should include all branches in order to be able to use either the latest version of AL-Go or the preview version of AL-Go.
