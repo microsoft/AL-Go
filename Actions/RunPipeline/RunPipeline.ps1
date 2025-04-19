@@ -373,10 +373,6 @@ try {
     if ((($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds') -and ($bcContainerHelperConfig.TrustedNuGetFeeds.Count -gt 0)) -or ($gitHubPackagesContext)) -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
         if ($githubPackagesContext) {
             $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
-            if (!($gitHubPackagesCredential.PSObject.Properties.Name -eq 'token')) {
-                Write-Host "Using GITHUB_TOKEN for GitHub packages"
-                $gitHubPackagesCredential | Add-Member -MemberType NoteProperty -Name 'token' -Value $token
-            }
         }
         else {
             $gitHubPackagesCredential = [PSCustomObject]@{ "serverUrl" = ''; "token" = '' }
@@ -389,8 +385,6 @@ try {
                     $appName = $missingDependency.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
-
-                    Write-Host "Installing missing dependency $appid ($appName) version $version"
 
                     # If dependency app is already installed, skip it
                     # If dependency app is already published, synchronize and install it

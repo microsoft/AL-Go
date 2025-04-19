@@ -234,13 +234,7 @@ foreach ($thisProject in $projectList) {
             }
             $nuGetServerUrl = $nuGetAccount.ServerUrl
             Write-Host $nuGetAccount.ServerUrl
-            if ($nuGetAccount.ContainsKey('Token')) {
-                $nuGetToken = GetAccessToken -token $nuGetAccount.Token -permissions @{"packages"="write";"contents"="read";"metadata"="read"}
-            }
-            else {
-                Write-Host "Using GITHUB_TOKEN for authentication"
-                $nuGetToken = $token
-            }
+            $nuGetToken = GetAccessToken -token $nuGetAccount.Token -permissions @{"packages"="write";"contents"="read";"metadata"="read"}
             Write-Host "$($deliveryTarget)Context secret OK"
         }
         catch {
