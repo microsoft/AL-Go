@@ -374,6 +374,7 @@ try {
         if ($githubPackagesContext) {
             $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
             if (!($gitHubPackagesCredential.PSObject.Properties.Name -eq 'token')) {
+                Write-Host "Using GITHUB_TOKEN for GitHub packages"
                 $gitHubPackagesCredential | Add-Member -MemberType NoteProperty -Name 'token' -Value $ENV:GITHUB_TOKEN
             }
         }
