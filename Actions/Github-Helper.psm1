@@ -1336,21 +1336,3 @@ function Invoke-CommandWithRetry {
         }
     }
 }
-
-function DumpTokenPermissions {
-    Param(
-        [string] $token
-    )
-
-    $headers = @{
-        "Authorization" = "token $token"
-        "User-Agent"    = "scopecheck"
-        "X-GitHub-Api-Version" = "2022-11-28"
-    }
-      
-    Write-Host "Token (length: $($token.Length)) permissions:"
-    $response = Invoke-WebRequest "https://api.github.com/" -Headers $headers
-    ($response.Headers.'X-OAuth-Scopes' -split ',\s*') | Sort-Object | ForEach-Object {
-        Write-Host "- $_"
-    }
-}
