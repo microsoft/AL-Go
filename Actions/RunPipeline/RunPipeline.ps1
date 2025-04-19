@@ -373,6 +373,9 @@ try {
     if ((($bcContainerHelperConfig.ContainsKey('TrustedNuGetFeeds') -and ($bcContainerHelperConfig.TrustedNuGetFeeds.Count -gt 0)) -or ($gitHubPackagesContext)) -and ($runAlPipelineParams.Keys -notcontains 'InstallMissingDependencies')) {
         if ($githubPackagesContext) {
             $gitHubPackagesCredential = $gitHubPackagesContext | ConvertFrom-Json
+            if (!($gitHubPackagesCredential.PSObject.Properties.Name -eq 'token')) {
+                $gitHubPackagesCredential | Add-Member -MemberType NoteProperty -Name 'token' -Value $ENV:GITHUB_TOKEN
+            }
         }
         else {
             $gitHubPackagesCredential = [PSCustomObject]@{ "serverUrl" = ''; "token" = '' }
