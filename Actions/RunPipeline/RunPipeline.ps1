@@ -384,11 +384,14 @@ try {
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
+                $parameters | ConvertTo-Json | Out-Host
                 foreach($missingDependency in $parameters.missingDependencies) {
                     $appid = $missingDependency.Split(':')[0]
                     $appName = $missingDependency.Split(':')[1]
                     $version = $appName.SubString($appName.LastIndexOf('_')+1)
                     $version = [System.Version]$version.SubString(0,$version.Length-4)
+
+                    Write-Host "Installing missing dependency $appid ($appName) version $version"
 
                     # If dependency app is already installed, skip it
                     # If dependency app is already published, synchronize and install it
@@ -416,6 +419,7 @@ try {
                             "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
                         }
                     }
+                    $publishParams | ConvertTo-Json | Out-Host
                     if ($parameters.ContainsKey('containerName')) {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
