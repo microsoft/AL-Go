@@ -384,7 +384,6 @@ try {
         $runAlPipelineParams += @{
             "InstallMissingDependencies" = {
                 Param([Hashtable]$parameters)
-                $parameters | ConvertTo-Json | Out-Host
                 foreach($missingDependency in $parameters.missingDependencies) {
                     $appid = $missingDependency.Split(':')[0]
                     $appName = $missingDependency.Split(':')[1]
