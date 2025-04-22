@@ -33,6 +33,7 @@ Describe "ReadSettings Schema" {
         $actionName = "ReadSettings"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $schemaPath = Join-Path $scriptRoot "settings.schema.json"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
         $schema = Get-Content -Path $schemaPath -Raw
     }
 
