@@ -124,13 +124,13 @@ if (-not $isDirectALGo) {
 $checkfiles = @(
     @{ 'dstPath' = (Join-Path '.github' 'workflows'); 'newname' = ''; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
     @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.ps1'; 'type' = 'script' }
 )
 
 if ($realTemplateFolder) {
     $checkfiles += @(
         @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($IndirectTemplateRepoSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings' }
         @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($IndirectTemplateProjectSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); ; 'type' = 'template project settings' }
-        @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.ps1'; 'type' = 'script' }
     )
 }
 
