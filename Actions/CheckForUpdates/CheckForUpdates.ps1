@@ -1,10 +1,8 @@
 ﻿Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
-    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token,
     [Parameter(HelpMessage = "Base64 encoded GhTokenWorkflow secret", Mandatory = $false)]
-    [string] $ghTokenWorkflow,
+    [string] $token,
     [Parameter(HelpMessage = "URL of the template repository (default is the template repository used to create the repository)", Mandatory = $false)]
     [string] $templateUrl = "",
     [Parameter(HelpMessage = "Set this input to true in order to download latest version of the template repository (else it will reuse the SHA from last update)", Mandatory = $true)]
@@ -42,17 +40,9 @@ if ($update -eq 'Y') {
     }
 }
 
-if ($ghTokenWorkflow) {
+if ($token) {
     # token comes from a secret, base 64 encoded
-    $ghTokenWorkflow = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ghTokenWorkflow))
-}
-elseif ($token) {
-    try {
-        # if running Direct AL-Go development, token might be the GhTokenWorkflow secret
-        $ghTokenWorkflow = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
-        $token = $null
-    }
-    catch {}
+    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
 
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
@@ -77,7 +67,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 }
 
 $realTemplateFolder = $null
-$templateFolder = DownloadTemplateRepository -token $token -ghTokenWorkflow $ghTokenWorkflow -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+$templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
@@ -106,7 +96,7 @@ if (-not $isDirectALGo) {
             }
 
             # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
-            $realTemplateFolder = DownloadTemplateRepository -token $token -ghTokenWorkflow $ghTokenWorkflow -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
+            $realTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
             Write-Host "Real Template Folder: $realTemplateFolder"
 
             # Set TemplateBranch and TemplateOwner
@@ -296,7 +286,7 @@ else {
         $commitMessage = "[$($updateBranch)@$($branchSHA.SubString(0,7))] Update AL-Go System Files from $templateInfo - $($templateSha.SubString(0,7))"
 
         # Get Token with permissions to modify workflows in this repository
-        $repoWriteToken = GetAccessToken -token $ghTokenWorkflow -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
+        $repoWriteToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
         $env:GH_TOKEN = $repoWriteToken
 
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
