@@ -40,7 +40,13 @@ function DownloadTemplateRepository {
     }
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
     $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
-    $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
+    $response = $null
+    try {
+        $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
+    }
+    catch {
+        # Ignore error, $response will be null
+    }
     if (-not $response -or $response.StatusCode -ne 200) {
         # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
         # Get token with read permissions for the template repository
