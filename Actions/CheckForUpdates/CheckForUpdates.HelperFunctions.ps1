@@ -37,7 +37,7 @@ function DownloadTemplateRepository {
     $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
 
     if ([string]::IsNullOrEmpty($ENV:GITHUB_TOKEN)) {
-        throw "GITHUB_TOKEN is not set."
+        Write-Host "::WARNING::GITHUB_TOKEN is not set."
     }
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
     $headers = GetHeaders -token $token -repository $templateRepository
