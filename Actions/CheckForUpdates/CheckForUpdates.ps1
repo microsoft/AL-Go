@@ -45,21 +45,6 @@ if ($token) {
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
 
-# Use Authenticated API request if possible to avoid the 60 API calls per hour limit
-$headers = GetHeaders -token $ENV:GITHUB_TOKEN
-$templateRepositoryUrl = $templateUrl.Split('@')[0]
-$response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
-if (-not $response -or $response.StatusCode -ne 200) {
-    # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
-    # Get token with read permissions for the template repository
-    # NOTE that the GitHub app needs to be installed in the template repository for this to work
-    $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
-    $templateReadToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repository $templateRepository
-
-    # Use read token for authenticated API request
-    $headers = GetHeaders -token $templateReadToken
-}
-
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
 # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on" etc.
 # if $update is set to Y, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
@@ -82,7 +67,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 }
 
 $realTemplateFolder = $null
-$templateFolder = DownloadTemplateRepository -headers $headers -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+$templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
@@ -111,7 +96,7 @@ if (-not $isDirectALGo) {
             }
 
             # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
-            $realTemplateFolder = DownloadTemplateRepository -headers $headers -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
+            $realTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
             Write-Host "Real Template Folder: $realTemplateFolder"
 
             # Set TemplateBranch and TemplateOwner

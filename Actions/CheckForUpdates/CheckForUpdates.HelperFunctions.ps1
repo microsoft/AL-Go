@@ -15,8 +15,8 @@ function GetCustomizationAnchors {
 <#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
-.PARAMETER headers
-The headers to use when calling the GitHub API
+.PARAMETER token
+The GitHub token / PAT to use for authentication (if the template repository is private/internal)
 .PARAMETER templateUrl
 The URL to the template repository
 .PARAMETER templateSha
@@ -26,11 +26,27 @@ If true, the latest SHA of the template repository will be downloaded
 #>
 function DownloadTemplateRepository {
     Param(
-        [hashtable] $headers,
+        [string] $token,
         [string] $templateUrl,
         [ref] $templateSha,
         [bool] $downloadLatest
     )
+
+    $templateRepositoryUrl = $templateUrl.Split('@')[0]
+    $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
+
+    if ([string]::IsNullOrEmpty($ENV:GITHUB_TOKEN)) {
+        throw "GITHUB_TOKEN is not set."
+    }
+    # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
+    $headers = GetHeaders -token $ENV:GITHUB_TOKEN -repository $templateRepository
+    $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
+    if (-not $response -or $response.StatusCode -ne 200) {
+        # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
+        # Get token with read permissions for the template repository
+        # NOTE that the GitHub app needs to be installed in the template repository for this to work
+        $headers = GetHeaders -token $token -repository $templateRepository
+    }
 
     # Construct API URL
     $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
