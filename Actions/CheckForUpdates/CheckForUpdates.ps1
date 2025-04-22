@@ -40,21 +40,25 @@ if ($update -eq 'Y') {
     }
 }
 
-$readToken = $token
 if ($token) {
     # token comes from a secret, base 64 encoded
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
-
-    # Get token with read permissions for this and the template repository - if private and in the same organization
-    $repositories = @($ENV:GITHUB_REPOSITORY)
-    if ($templateUrl -like "https://github.com/$($ENV:GITHUB_REPOSITORY_OWNER)/*") {
-        $repositories += $templateUrl.Split('@')[0]
-    }
-    $readToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repositories $repositories
 }
 
 # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
-$headers = GetHeaders -token $readToken
+$headers = GetHeaders -token $ENV:GITHUB_TOKEN
+$templateRepositoryUrl = $templateUrl.Split('@')[0]
+$response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
+if (-not $response -or $response.StatusCode -ne 200) {
+    # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
+    # Get token with read permissions for the template repository
+    # NOTE that the GitHub app needs to be installed in the template repository for this to work
+    $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
+    $templateReadToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repository $templateRepository
+
+    # Use read token for authenticated API request
+    $headers = GetHeaders -token $templateReadToken
+}
 
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
 # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on" etc.
@@ -297,8 +301,8 @@ else {
         $commitMessage = "[$($updateBranch)@$($branchSHA.SubString(0,7))] Update AL-Go System Files from $templateInfo - $($templateSha.SubString(0,7))"
 
         # Get Token with permissions to modify workflows in this repository
-        $writeToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
-        $env:GH_TOKEN = $writeToken
+        $repoWriteToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
+        $env:GH_TOKEN = $repoWriteToken
 
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
@@ -307,7 +311,7 @@ else {
         }
 
         # If $directCommit, then changes are made directly to the default branch
-        $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $writeToken -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
+        $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $repoWriteToken -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
 
         invoke-git status
 

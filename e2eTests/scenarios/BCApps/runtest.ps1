@@ -115,7 +115,7 @@ elseif ($prs.Count -gt 1) {
 
 $headers = GetHeaders -token $e2epat -repository "$($githubOwner)/.github"
 $url = "https://api.github.com/repos/$repository/actions/runs"
-$run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url -retry).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'pull_request' } | Where-Object { $_.name -eq 'Pull Request Build' }
+$run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'pull_request' } | Where-Object { $_.name -eq 'Pull Request Build' }
 if (-not $run) {
     throw "No Pull Request Build workflow run was found"
 }
