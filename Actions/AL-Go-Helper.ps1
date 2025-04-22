@@ -822,13 +822,7 @@ function ReadSettings {
     if ($settings.githubRunnerShell -eq "") {
         $settings.githubRunnerShell = $settings.shell
     }
-    # Check that gitHubRunnerShell and Shell is valid
-    if ($settings.githubRunnerShell -ne "powershell" -and $settings.githubRunnerShell -ne "pwsh") {
-        throw "Invalid value for setting: gitHubRunnerShell: $($settings.githubRunnerShell)"
-    }
-    if ($settings.shell -ne "powershell" -and $settings.shell -ne "pwsh") {
-        throw "Invalid value for setting: shell: $($settings.githubRunnerShell)"
-    }
+
     if (($settings.githubRunner -like "*ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
         Write-Host "Switching shell to pwsh for ubuntu"
         $settings.githubRunnerShell = "pwsh"
@@ -837,6 +831,18 @@ function ReadSettings {
     if($settings.projectName -eq '') {
         $settings.projectName = $project # Default to project path as project name
     }
+
+    Write-Host "Testing settings against the settings schema"
+    $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99
+    $settingsSchema = Get-Content -Path "$PSScriptRoot\settings.schema.json" -Raw
+
+    try{
+        Test-Json -json $settingsJson -schema $settingsSchema
+    }
+    catch {
+        throw "Settings are not valid. Error: $($_.Exception.Message)"
+    }
+
     $settings
 }
 
