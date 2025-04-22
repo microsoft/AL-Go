@@ -93,5 +93,5 @@ try{
     Test-Json -json $outSettingsJson -schema $schema
 }
 catch {
-    throw "Settings are not valid. Error: $_.Exception.Message"
+    throw "Settings are not valid. Error: $($_.Exception.Message)"
 }
