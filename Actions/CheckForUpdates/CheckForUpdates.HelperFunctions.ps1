@@ -27,6 +27,7 @@ If true, the latest SHA of the template repository will be downloaded
 function DownloadTemplateRepository {
     Param(
         [string] $token,
+        [string] $ghTokenWorkflow,
         [string] $templateUrl,
         [ref] $templateSha,
         [bool] $downloadLatest
@@ -39,13 +40,13 @@ function DownloadTemplateRepository {
         throw "GITHUB_TOKEN is not set."
     }
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
-    $headers = GetHeaders -token $ENV:GITHUB_TOKEN -repository $templateRepository
+    $headers = GetHeaders -token $token -repository $templateRepository
     $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
     if (-not $response -or $response.StatusCode -ne 200) {
         # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
         # Get token with read permissions for the template repository
         # NOTE that the GitHub app needs to be installed in the template repository for this to work
-        $headers = GetHeaders -token $token -repository $templateRepository
+        $headers = GetHeaders -token $ghTokenWorkflow -repository $templateRepository
     }
 
     # Construct API URL
