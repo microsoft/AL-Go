@@ -474,7 +474,9 @@ try {
     Write-Host "baselineWorkflowRunId: $baselineWorkflowRunId"
     Write-Host "baselineWorkflowSHA: $baselineWorkflowSHA"
 
-    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask "BuildOutput" -projects $project
+    if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
+     
+    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask "BuildOutput" -projects $projectName
 
     Write-Host "runArtifact: $runArtifact"
 
