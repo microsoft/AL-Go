@@ -19,7 +19,7 @@ $artifacts = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -to
 
 Write-Host "Downloading build logs from previous good build."
 
-$artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
+$artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".warnings"
 Initialize-Directory -Path $artifactsFolder
 
 $artifacts | ForEach-Object {
