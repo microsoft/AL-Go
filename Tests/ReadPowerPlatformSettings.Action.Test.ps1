@@ -207,8 +207,6 @@ Describe "Read Power Platform Settings Action Tests" {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-        }
         $outputs = [ordered]@{
             "ppEnvironmentUrl" = "Power Platform Environment URL"
             "ppUserName" = "Power Platform Username"
@@ -219,6 +217,6 @@ Describe "Read Power Platform Settings Action Tests" {
             "companyId" = "Business Central Company Id"
             "environmentName" = "Business Central Environment Name"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 }

@@ -51,7 +51,6 @@ function YamlTest {
         [string] $scriptRoot,
         [string] $actionName,
         [string] $actionScript,
-        $permissions = @{},
         $outputs = @{}
     )
 
@@ -65,12 +64,6 @@ function YamlTest {
     $yaml = [System.Text.StringBuilder]::new()
     $yaml.AppendLine("name: *") | Out-Null
     $yaml.AppendLine("author: *") | Out-Null
-    if ($permissions -and $permissions.Count -gt 0) {
-        $yaml.AppendLine("permissions:") | Out-Null
-        $permissions.Keys | ForEach-Object {
-            $yaml.AppendLine("  $($_): $($permissions."$_")") | Out-Null
-        }
-    }
     $cmd = get-command $actionname
     $yaml.AppendLine("inputs:") | Out-Null
     $yaml.AppendLine("  shell:") | Out-Null
