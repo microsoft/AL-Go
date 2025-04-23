@@ -491,9 +491,6 @@ try {
         gci $artifactsFolder -File -Recurse | Write-Host
     }
 
-
-    Write-Host "runArtifact: $runArtifact"
-
     # end of test
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
