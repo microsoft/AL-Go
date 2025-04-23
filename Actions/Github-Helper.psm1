@@ -94,10 +94,10 @@ function InvokeWebRequest {
                 if ($remaining -le 0) {
                     $resetTime = [int64]$response.Headers["X-RateLimit-Reset"]  # Unix timestamp in seconds
                     $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($resetTime).ToLocalTime()
-                    $waitTime = ($resetTimestamp - (Get-Date)).TotalSeconds
-                    if ($waitTime -gt 0) {
-                        Write-Host "Rate limit exceeded, waiting $waitTime seconds for limits to reset"
-                        Start-Sleep -seconds $waitTime
+                    $waitSeconds = ($resetTimestamp - (Get-Date)).TotalSeconds
+                    if ($waitSeconds -gt 0) {
+                        Write-Host "Rate limit exceeded, waiting $waitSeconds seconds for limits to reset"
+                        Start-Sleep -seconds $waitSeconds
                     }
                     continue
                 }
@@ -683,10 +683,10 @@ function WaitForRateLimit {
     }
     if ($percentRemaining-lt $percentage) {
         $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($rate.reset).ToLocalTime()
-        $waitTime = ($resetTimestamp - (Get-Date)).TotalSeconds
-        if ($waitTime -gt 0) {
-            Write-Host "`nLess than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-            Start-Sleep -seconds ($waitTime.TotalSeconds+1)
+        $waitSeconds = ($resetTimestamp - (Get-Date)).TotalSeconds
+        if ($waitSeconds -gt 0) {
+            Write-Host "`nLess than 10% API calls left, waiting for $waitSeconds seconds for limits to reset."
+            Start-Sleep -seconds $waitSeconds
         }
     }
 }
