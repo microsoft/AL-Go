@@ -18,13 +18,11 @@ Describe "ReadSecrets Action Tests" {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-        }
         $outputs = [ordered]@{
             "Secrets" = "All requested secrets in compressed JSON format"
             "TokenForPush" = "The token to use when workflows are pushing changes (either directly, or via pull requests)."
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
     # Call action
