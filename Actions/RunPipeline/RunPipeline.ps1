@@ -481,9 +481,10 @@ try {
 
     $artifacts | ForEach-Object {
         $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
-        $folder = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
+        DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
     
-        gci $folder -File -Recurse | Write-Host
+        "Done downloading artifacts." | Write-Host
+        gci $artifactsFolder -File -Recurse | Write-Host
     }
 
 
