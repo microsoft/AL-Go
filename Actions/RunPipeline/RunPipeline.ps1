@@ -481,6 +481,10 @@ try {
 
     $artifacts | ForEach-Object {
         $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
+
+        if (!(Test-Path $artifactsFolder)) {
+            New-Item $artifactsFolder -ItemType Directory | Out-Null
+        }
         DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
     
         "Done downloading artifacts." | Write-Host
