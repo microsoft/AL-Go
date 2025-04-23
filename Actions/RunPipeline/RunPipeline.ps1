@@ -480,6 +480,7 @@ try {
     $artifacts = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
 
     $artifacts | ForEach-Object {
+        $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
         $folder = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
     
         gci $folder -File -Recurse | Write-Host
