@@ -466,12 +466,19 @@ try {
     # see if we can download builds logs from last good run
     Import-Module (Join-Path $PSScriptRoot "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
+    Write-Host "?????WARNINGS?????"
+
     $targetBranch = "main"
     $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $targetBranch -token $token -retention $settings.incrementalBuilds.retentionDays
 
     Write-Host "baselineWorkflowRunId: $baselineWorkflowRunId"
     Write-Host "baselineWorkflowSHA: $baselineWorkflowSHA"
-    Write-Host "?????WARNINGS?????"
+
+    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask "BuildOutput" -projects $project
+
+    Write-Host "runArtifact: $runArtifact"
+
+    # end of test
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
