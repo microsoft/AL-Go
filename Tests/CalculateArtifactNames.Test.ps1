@@ -140,8 +140,6 @@ Describe 'CalculateArtifactNames Action Tests' {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-        }
         $outputs = [ordered]@{
             "AppsArtifactsName" = "Artifacts name for Apps"
             "PowerPlatformSolutionArtifactsName" = "Artifacts name for PowerPlatform Solution"
@@ -155,6 +153,6 @@ Describe 'CalculateArtifactNames Action Tests' {
             "ContainerEventLogArtifactsName" = "Artifacts name for ContainerEventLog"
             "BuildMode" = "Build mode used when building the artifacts"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 }
