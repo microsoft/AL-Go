@@ -103,13 +103,14 @@ try {
 
     $authContext = $null
     $environmentName = ""
-    if ($buildAuthContext -and $settings.buildEnvironmentName) {
+    if ($settings.buildEnvironmentName) {
+        if (-not $buildAuthContext) {
+            throw "When using an online environment for testing, you need to specify a secret called buildAuthContext"
+        }
         $authContextHT = $buildAuthContext | ConvertFrom-Json | ConvertTo-HashTable
         $environmentName = $settings.buildEnvironmentName
         if ($environmentName -notlike 'https://*') {
             $authContext = New-BcAuthContext @authContextHT
-            # When using online environment for builds, use CompilerFolder to avoid creating a container
-            $settings.useCompilerFolder = $true
         }
     }
 

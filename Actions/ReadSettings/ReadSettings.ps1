@@ -54,6 +54,11 @@ if ($settings.versioningstrategy -ne -1) {
     }
 }
 
+if ($settings.buildEnvironmentName -and -not $settings.useCompilerFolder) {
+    Write-Host "Using an online environment for testing, use CompilerFolder to build the app"
+    $settings.useCompilerFolder = $true
+}
+
 $outSettings = @{}
 $settings.Keys | ForEach-Object {
     $setting = $_

@@ -13,7 +13,10 @@ $artifactUrl = $null
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 if ($env:Secrets) {
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
-    if ($secrets.ContainsKey('buildAuthContext') -and $settings.buildEnvironmentName) {
+    if ($settings.buildEnvironmentName) {
+        if (-not $secrets.ContainsKey('buildAuthContext')) {
+            throw "When using an online environment for testing, you need to specify a secret called buildAuthContext"
+        }
         $buildAuthContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets.buildAuthContext))
         $authContextHT = $buildAuthContext | ConvertFrom-Json | ConvertTo-HashTable
         $environmentName = $settings.buildEnvironmentName
@@ -23,7 +26,6 @@ if ($env:Secrets) {
             if (-not $bcEnvironment) {
                 throw "Business Central online environment '$environmentName' not found"
             }
-            $settings.useCompilerFolder = $true
             $bcBaseApp = Get-BcPublishedApps -bcAuthContext $authContext -environment $environmentName | Where-Object { $_.Name -eq "Base Application" -and $_.state -eq "installed" }
             if (-not $bcBaseApp) {
                 throw "Base Application not found in environment '$environmentName'"

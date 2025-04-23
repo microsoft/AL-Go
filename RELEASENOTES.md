@@ -10,6 +10,7 @@
 - Issue 1530 Dependency Field Service Integration does not get published in container while Installing apps
 - Issue 1644 Support for AppAuth when using a private Template repository from another organization
 - Issue 1478 Rate Limit Exceeded when running Update AL-Go System files
+- Issue 1669 GitHub App authentication to download dependencies from private repositories
 
 ### New Workflow specific settings
 
@@ -29,7 +30,8 @@ By creating a [build authentication context](https://aka.ms/algosecrets#buildAut
       "settings": {
         "doNotPublishApps": false,
         "buildEnvironmentName": "cicd",
-        "buildAuthContextSecretName": "cicdAuthContext"
+        "buildAuthContextSecretName": "cicdAuthContext",
+        "workflowConcurrency": [ "group: ${{ github.workflow }}-${{ github.ref }}", "cancel-in-progress: false" ]
       }
     }
   ]
