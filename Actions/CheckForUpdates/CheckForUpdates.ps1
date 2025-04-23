@@ -103,14 +103,16 @@ if (-not $isDirectALGo) {
 # dstPath: The path to the file in the current repository
 # srcPath: The path to the file in the template repository
 # pattern: The pattern to use when searching for files in the template repository
-# type: The type of file (script, workflow, releasenotes)
+# type: The type of file (script, workflow, releasenotes, settings)
 # The files currently checked are:
 # - All files in .github/workflows
 # - All files in .github that ends with .copy.md
 # - All PowerShell scripts in .AL-Go folders (all projects)
+# - All AL-Go settings files
 $checkfiles = @(
     @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
     @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = 'AL-Go-Settings.json'; 'type' = 'settings' }
 )
 
 # Get the list of projects in the current repository
@@ -120,6 +122,7 @@ Write-Host "Projects found: $($projects.Count)"
 foreach($project in $projects) {
     Write-Host "- $project"
     $checkfiles += @(@{ 'dstPath' = Join-Path $project '.AL-Go'; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' })
+    $checkfiles += @(@{ 'dstPath' = Join-Path $project '.AL-Go'; 'srcPath' = '.AL-Go'; 'pattern' = 'settings.json'; 'type' = 'settings' })
 }
 
 # $updateFiles will hold an array of files, which needs to be updated
