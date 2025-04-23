@@ -832,7 +832,6 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
-
     if(Get-Command Test-Json -ErrorAction SilentlyContinue) { # Test-Json is only available in PowerShell 6.2 and later
         if (!$silent.IsPresent) { Write-Host "Testing settings against the settings schema" }
         $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99
