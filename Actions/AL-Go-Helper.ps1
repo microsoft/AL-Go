@@ -824,7 +824,7 @@ function ReadSettings {
     }
 
     if (($settings.githubRunner -like "*ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
-        Write-Host "Switching shell to pwsh for ubuntu"
+        if (!$silent.IsPresent) { Write-Host "Switching shell to pwsh for ubuntu" }
         $settings.githubRunnerShell = "pwsh"
     }
 
@@ -832,12 +832,12 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
-    Write-Host "Testing settings against the settings schema"
+    if (!$silent.IsPresent) { Write-Host "Testing settings against the settings schema" }
     $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99
     $settingsSchema = Get-Content -Path "$PSScriptRoot\settings.schema.json" -Raw
 
     try{
-        Test-Json -json $settingsJson -schema $settingsSchema
+        Test-Json -json $settingsJson -schema $settingsSchema | Out-Null
     }
     catch {
         throw "Settings are not valid. Error: $($_.Exception.Message)"

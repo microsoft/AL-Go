@@ -358,8 +358,7 @@
             "description": "The shell to be used for the GitHub runner. See https://aka.ms/ALGoSettings#githubrunnershell"
         },
         "cacheImageName": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
         },
         "cacheKeepDays": {
             "type": "number",
@@ -370,8 +369,7 @@
             "description": "Switch whether to build all projects on PR Builds. See https://aka.ms/ALGoSettings#alwaysbuildallprojects"
         },
         "microsoftTelemetryConnectionString": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
         },
         "partnerTelemetryConnectionString": {
             "type": "string",
@@ -401,7 +399,6 @@
         },
         "pullRequestTrigger": {
             "type": "string",
-            "minLength": 1,
             "pattern": "^(pull_request|pull_request_target)$",
             "description": "The type of pull request trigger. See https://aka.ms/ALGoSettings#pullrequesttrigger"
         },
@@ -473,20 +470,16 @@
                     }
                 },
                 "header": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                 },
                 "footer": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                 },
                 "defaultIndexMD": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                 },
                 "defaultReleaseMD": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                 }
             },
             "required": [
