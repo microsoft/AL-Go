@@ -15,14 +15,9 @@ Describe "CheckForUpdates Action Tests" {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-            "contents" = "write"
-            "pull-requests" = "write"
-            "workflows" = "write"
-        }
         $outputs = [ordered]@{
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
     It 'Test YamlClass' {

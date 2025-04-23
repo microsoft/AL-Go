@@ -18,12 +18,10 @@ Describe "WorkflowInitialize Action Tests" {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-        }
         $outputs = [ordered]@{
           "telemetryScopeJson" = "A telemetryScope that covers the workflow"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
     It 'Test Test-AL-Go-Repository' {

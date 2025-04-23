@@ -18,12 +18,10 @@ Describe "ReadSettings Action Tests" {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-        }
         $outputs = [ordered]@{
             "GitHubRunnerJson" = "GitHubRunner in compressed Json format"
             "GitHubRunnerShell" = "Shell for GitHubRunner jobs"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 }
