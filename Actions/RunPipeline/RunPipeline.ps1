@@ -488,7 +488,12 @@ try {
         DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
     
         "Done downloading artifacts." | Write-Host
-        gci $artifactsFolder -File -Recurse | Write-Host
+        gci $artifactsFolder -File -Recurse | ForEach-Object {
+            $fileName = $_.FullName
+           
+            Write-Host "Previous build output to follow."
+            Get-Content $fileName | Write-Host
+        }
     }
 
     # end of test
