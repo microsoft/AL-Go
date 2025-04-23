@@ -476,7 +476,20 @@ try {
 
     if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
      
-    $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask "BuildOutput" -projects $projectName
+    $mask = "BuildOutput"
+    $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
+
+    #runArtifact: @{id=2993592102; node_id=MDg6QXJ0aWZhY3QyOTkzNTkyMTAy; name=MyTestPTE-main-BuildOutput-1.0.13.0; size_in_bytes=466;
+
+    $file = DownloadArtifact -path $buildArtifactFolder -token $token -artifact $artifact
+    if ($file) {
+        Write-Host "Artifact downloaded for mask $mask"
+        $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
+        Expand-Archive -Path $file -DestinationPath $thisArtifactFolder -Force
+        Remove-Item -Path $file -Force
+
+        gci $thisArtifactFolder -File -Recurse | Write-Host
+    }
 
     Write-Host "runArtifact: $runArtifact"
 
