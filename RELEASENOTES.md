@@ -10,7 +10,6 @@
 - Issue 1530 Dependency Field Service Integration does not get published in container while Installing apps
 - Issue 1644 Support for AppAuth when using a private Template repository from another organization
 - Issue 1478 Rate Limit Exceeded when running Update AL-Go System files
-- Issue 1669 GitHub App authentication to download dependencies from private repositories
 
 ### New Workflow specific settings
 
