@@ -544,13 +544,6 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
-    if (Test-Path $buildOutputFile)
-    {
-        Write-Host "Build output file located at: $buildOutputFile"
-
-        Get-Content $buildOutputFile | Write-Host
-    }
-
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
         $destFolder = Join-Path $ENV:GITHUB_WORKSPACE $project
@@ -561,6 +554,13 @@ try {
         Copy-Item -Path $buildOutputFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
+
+    & $PSScriptRoot\..\Actions\CheckForNewWarnings\CheckForNewWarnings.ps1 `
+        -token $token `
+        -project $project `
+        -settings $settings `
+        -targetBranch "main" `
+        -prBuildOutputFile $buildOutputFile
 }
 catch {
     throw
