@@ -1,5 +1,7 @@
 ### Test settings against a JSON schema
+
 AL-Go for GitHub settings now has a schema. The following line is added at the beginning to any AL-Go settings files to utilize the schema:
+
 ```
 "$schema": "https://raw.githubusercontent.com/microsoft/AL-Go/refs/heads/main/Actions/settings.schema.json"
 ```
