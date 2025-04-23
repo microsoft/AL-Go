@@ -228,6 +228,14 @@ try {
                     throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helpers.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$"'
                 }
             }
+
+            # Replace the link to the AL-Go settings schema in the settings files
+            if(($_.Name -contains 'settings.json') -or ($_.Name -eq 'AL-Go-Settings.json')) {
+                $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go\/$originalBranch\/Actions\/settings.schema.json"
+                $replace = "`${1}https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions/settings.schema.json"
+                $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
+            }
+
             [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
         }
         if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {
