@@ -463,6 +463,16 @@ try {
         $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
 
+    # see if we can download builds logs from last good run
+    Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
+
+    $targetBranch = "main"
+    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $targetBranch -token $token -retention $settings.incrementalBuilds.retentionDays
+
+    Write-Host "baselineWorkflowRunId: $baselineWorkflowRunId"
+    Write-Host "baselineWorkflowSHA: $baselineWorkflowSHA"
+    Write-Host "?????WARNINGS?????"
+
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
         -accept_insiderEula `
@@ -509,7 +519,6 @@ try {
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
-    
     if (Test-Path $buildOutputFile)
     {
         Write-Host "Build output file located at: $buildOutputFile"
