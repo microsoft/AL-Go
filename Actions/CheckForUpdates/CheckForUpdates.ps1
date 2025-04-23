@@ -170,7 +170,7 @@ foreach($checkfile in $checkfiles) {
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
 
                 if ($isDirectALGo) {
-                    # If we are using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+                    # If we are using direct AL-Go repo, we need to change the owner to the templateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
