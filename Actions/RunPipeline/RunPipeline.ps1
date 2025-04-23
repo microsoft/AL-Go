@@ -555,7 +555,7 @@ try {
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
 
-    & $PSScriptRoot\..\Actions\CheckForNewWarnings\CheckForNewWarnings.ps1 `
+    & $PSScriptRoot\..\CheckForNewWarnings\CheckForNewWarnings.ps1 `
         -token $token `
         -project $project `
         -settings $settings `
