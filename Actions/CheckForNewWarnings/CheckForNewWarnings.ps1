@@ -27,7 +27,13 @@ $artifacts | ForEach-Object {
     DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
 
     "Done downloading artifacts." | Write-Host
-    $referenceBuildLog = Get-ChildItem $artifactsFolder -File -Recurse | Select-Object -First 1
+    $referenceBuildLog = Get-ChildItem $artifactsFolder -File -Recurse | Select-Object -First 1   # I should check based on the name of $prBuildoutputFile
 
-    Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$referenceBuildLog'."
+    Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
+
+    $refWarnings = Get-Warnings -BuildFile $referenceBuildLog.FullName
+    $prWarnings = Get-Warnings -BuildFile $prBuildOutputFile
+
+    Write-Host "Found $($refWarnings.Count) warnings in reference build."
+    Write-Host "Found $($prWarnings.Count) warnings in PR build."
 }
