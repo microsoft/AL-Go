@@ -58,7 +58,7 @@ function Compare-Files
         Where-Object { $_.SideIndicator -eq "=>" } | 
         Select-Object -Property Id,File,Description,Line,Col | ForEach-Object {
 
-            Write-Host "::warning::file=$($_.File),line=$($_.Line):: New warning introduced in this PR: $($_.Id) $($_.Description)"
+            Write-Host "::error::file=$($_.File),line=$($_.Line),col=$($_.Col)::New warning introduced in this PR: $($_.Id) $($_.Description)"
 
         }    
 }
