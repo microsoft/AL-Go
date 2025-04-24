@@ -145,7 +145,7 @@ Which basically launches a script located in the script folder in the repository
 
 ### Adding custom workflows and/or scripts using a URL
 
-By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings#customalgosystemfiles) in your [repo settings](https://aka.ms/algosettings#settings), you can tell AL-Go for GitHub that these files should be included in the update. Example:
+By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings#customalgosystemfiles) in your [repo settings](https://aka.ms/algosettings#settings), you can tell AL-Go for GitHub that these files should be included in the update. Examples:
 
 ```
   "customALGoSystemFiles": [
@@ -162,6 +162,13 @@ By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings
       "Source": "https://github.com/freddydk/CustomALGoSystemFiles/archive/refs/heads/main.zip",
       "FileSpec": "*/.github/*",
       "Recurse": true
+    },
+    {
+      "Destination": ".github/",
+      "Source": "https://api.github.com/repos/BusinessCentralApps/CustomALGoSystemFiles/zipball/main",
+      "AuthTokenSecret": "SECRETNAME",
+      "FileSpec": "*/.github/*",
+      "Recurse": true
     }
   ]
 ```
@@ -174,6 +181,7 @@ By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings
 | Source | URL to a either a single file or a .zip file containing custom AL-Go System Files. Must be https. | Yes | |
 | FileSpec | If the source URL points to a .zip file, this property can specify which files to include. The FileSpec can include a subfolder inside the .zip file, and must include a file name pattern. | No | * |
 | Recurse | Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec) | No | true |
+| AuthTokenSecret | The name of a secret (like ghTokenWorkflow) which contains a Personal Access Token or GitHub App specification with access to the files. |
 
 This setting will cause AL-Go for GitHub to include these files during the next update.
 

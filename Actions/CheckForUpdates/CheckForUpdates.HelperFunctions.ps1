@@ -599,8 +599,6 @@ function GetCustomALGoSystemFiles {
             if ($source -like 'https://api.github.com/repos/*/*/zipball/*') {
                 $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[1..2] -join '/'
                 $ext = '.zip'
-                # When downloading a zipball, the content is inside a subfolder with the repository name and the sha
-                $filespec = "*/$filespec"
             }
             else {
                 $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[0..1] -join '/'
@@ -623,7 +621,7 @@ function GetCustomALGoSystemFiles {
                 $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
                 Push-Location -Path $subFolder
                 try {
-                    Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File | ForEach-Object {
+                    Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File -Force | ForEach-Object {
                         $destRelativeFileName = Resolve-Path $_.FullName -Relative
                         $destFileName = Join-Path $destination $destRelativeFileName
                         $destFileName = $destFileName.TrimStart('\/')
