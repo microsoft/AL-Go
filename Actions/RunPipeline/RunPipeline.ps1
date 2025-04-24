@@ -528,8 +528,7 @@ try {
         -project $project `
         -settings $settings `
         -targetBranch $ENV:GITHUB_BASE_REF `
-        -prBuildOutputFile $buildOutputFile `
-        -resultsDir (Join-Path $ENV:GITHUB_WORKSPACE $project)
+        -prBuildOutputFile $buildOutputFile
 }
 catch {
     throw

@@ -3,8 +3,7 @@ Param(
     [string] $project,
     [object] $settings,
     [string] $targetBranch,
-    [string] $prBuildOutputFile,
-    [string] $resultsDir
+    [string] $prBuildOutputFile
 )
 
 if (-not $ENV:GITHUB_BASE_REF)
@@ -47,6 +46,6 @@ $prWarnings = @(Get-Warnings -BuildFile $prBuildOutputFile)
 Write-Host "Found $($refWarnings.Count) warnings in reference build."
 Write-Host "Found $($prWarnings.Count) warnings in PR build."
 
-$outputFile = Join-Path $resultsDir "new-warnings.txt"
-"::warning file=./App/HelloWorld.al::New warnings added!" | Out-File $outputFile
+Write-Host "::warning file=./App/HelloWorld.al::New warnings added!" 
+
 
