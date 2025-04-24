@@ -39,13 +39,6 @@ DownloadArtifact -token $token -artifact $artifact -path $artifactsFolder -unpac
 $referenceBuildLog = Get-ChildItem $artifactsFolder -File -Recurse | Select-Object -First 1
 
 Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
-
-$refWarnings =  @(Get-Warnings -BuildFile $referenceBuildLog.FullName)
-$prWarnings = @(Get-Warnings -BuildFile $prBuildOutputFile)
-
-Write-Host "Found $($refWarnings.Count) warnings in reference build."
-Write-Host "Found $($prWarnings.Count) warnings in PR build."
-
-Write-Host "::warning file=./App/HelloWorld.al::New warnings added!" 
+Compare-Files -referenceBuild $referenceBuildLog.FullName -prBuild $prBuildOutputFile
 
 

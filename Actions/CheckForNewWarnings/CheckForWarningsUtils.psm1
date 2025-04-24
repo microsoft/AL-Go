@@ -39,6 +39,31 @@ function Get-Warnings
     return $warnings
 }
 
+function Compare-Files
+{
+    [CmdletBinding()]
+    param (
+        [string] $referenceBuild,
+        [string] $prBuild,
+        [switch] $treatAsErrors
+    )
+
+    $refWarnings =  @(Get-Warnings -BuildFile $referenceBuild)
+    $prWarnings = @(Get-Warnings -BuildFile $prBuild)
+
+    Write-Host "Found $($refWarnings.Count) warnings in reference build."
+    Write-Host "Found $($prWarnings.Count) warnings in PR build."   
+
+    Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Line,Col -PassThru | 
+        Where-Object { $_.SideIndicator -eq "=>" } | 
+        Select-Object -Property Id,File,Description,Line,Col | ForEach-Object {
+
+            Write-Host "::warning::file=$($_.File),line=$($_.Line):: New warning introduced in this PR: $($_.Id) $($_.Description)"
+
+        }    
+}
+
 
 Export-ModuleMember -Function Initialize-Directory
 Export-ModuleMember -Function Get-Warnings
+Export-ModuleMember -Function Compare-Files
