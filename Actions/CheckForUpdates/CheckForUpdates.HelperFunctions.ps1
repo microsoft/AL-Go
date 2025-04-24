@@ -583,7 +583,7 @@ function GetCustomALGoSystemFiles {
             $authTokenSecret = $customspec.AuthTokenSecret
             $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($authTokenSecret)"))
         }
-        $headers = Get-Headers -token $authToken -repository $source
+        $headers = GetHeaders -token $authToken -repository $source
 
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
