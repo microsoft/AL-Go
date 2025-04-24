@@ -110,7 +110,7 @@ try {
             if ($customspec.PSObject.Properties.name -eq "Source") {
                 # If the Source URLs contains '${{SECRETNAME}}' we need to get the secret
                 $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-                if ($_ -match $pattern) {
+                if ($customspec.Source -match $pattern) {
                     $secretName = $matches[2]
                     if ($secretsCollection -notcontains $secretName) {
                         $secretsCollection += $secretName
