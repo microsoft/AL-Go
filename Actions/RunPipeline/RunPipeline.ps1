@@ -466,38 +466,6 @@ try {
     # see if we can download builds logs from last good run
     Import-Module (Join-Path $PSScriptRoot "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
 
-    Write-Host "?????WARNINGS?????"
-
-    $targetBranch = "main"
-    $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $env:GITHUB_REPOSITORY -branch $targetBranch -token $token -retention $settings.incrementalBuilds.retentionDays
-
-    Write-Host "baselineWorkflowRunId: $baselineWorkflowRunId"
-    Write-Host "baselineWorkflowSHA: $baselineWorkflowSHA"
-
-    if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
-     
-    $mask = "BuildOutput"
-    $artifacts = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
-
-    $artifacts | ForEach-Object {
-        $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
-
-        if (!(Test-Path $artifactsFolder)) {
-            New-Item $artifactsFolder -ItemType Directory | Out-Null
-        }
-        DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
-    
-        "Done downloading artifacts." | Write-Host
-        gci $artifactsFolder -File -Recurse | ForEach-Object {
-            $fileName = $_.FullName
-           
-            Write-Host "Previous build output to follow."
-            Get-Content $fileName | Write-Host
-        }
-    }
-
-    # end of test
-
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
         -accept_insiderEula `
