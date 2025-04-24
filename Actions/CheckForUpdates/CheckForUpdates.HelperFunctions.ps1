@@ -605,6 +605,8 @@ function GetCustomALGoSystemFiles {
                 if (!($destination.EndsWith('/') -or $destination.EndsWith('\'))) {
                     throw "customALGoSystemFiles setting is wrongly formatted, destination must be a folder (terminated with / or \). See https://aka.ms/algosettings#customalgosystemfiles."
                 }
+                Write-Host "Downloading $source to $zipName"
+                $headers | Out-Host
                 Invoke-RestMethod -UseBasicParsing -Method Get -Headers $headers -Uri $source -OutFile $zipName
                 Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
                 $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
