@@ -104,15 +104,10 @@ Example: `{"keyVaultName":"MyKeyVault","clientId":"<clientId>","clientSecret":"<
 With this setup, you can create a setting called `keyVaultCodesignCertificateName` containing the name of the imported certificate in your Key Vault in order for AL-Go for GitHub to sign your apps.
 
 <a id="AuthContext"></a>
-<a id="CICDAuthContext"></a>
 
-## **AuthContext** -> Connect to online environments
+## **AuthContext** -> Deploy to an environment
 
-Whenever AL-Go for GitHub is going to connect to an online environment, it will need an AuthContext secret.
-
-For publishing to an environment, the AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
-
-For using online environments during CI/CD (for running tests etc.) you need to provide a secret called **CICDAuthContext**. If a CICDAuthContext secret exists, the online environment pointed out by this authentication context, will be used when running CI/CD for symbols, upgrade testing and test running.
+Whenever AL-Go for GitHub is doing to deploy to an environment, it will need an AuthContext secret. The AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
 
 ### Managed identity
 
