@@ -579,13 +579,16 @@ function GetCustomALGoSystemFiles {
         }
 
         $authToken = $null
+        $repository = $null
         if ($customspec.ContainsKey('AuthTokenSecret')) {
             $authTokenSecret = $customspec.AuthTokenSecret
             Write-Host "Using secret $authTokenSecret"
             $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($authTokenSecret)"))
-            Write-Host "$authToken.Substring(0, 5)..."
+            Write-Host "$($authToken.Substring(0, 5))..."
+            # if the AuthToken is a GitHub App specification, we need to get the repository name from the URL
+            $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[0..1] -join '/'
         }
-        $headers = GetHeaders -token $authToken -repository $source
+        $headers = GetHeaders -token $authToken -repository $repository
 
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
