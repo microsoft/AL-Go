@@ -523,12 +523,17 @@ try {
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
 
-    & $PSScriptRoot\..\CheckForNewWarnings\CheckForNewWarnings.ps1 `
-        -token $token `
-        -project $project `
-        -settings $settings `
-        -targetBranch "main" `
-        -prBuildOutputFile $buildOutputFile
+    Write-Host "WARN: checking for new warnings only on pull requests. Target is: $($ENV:GITHUB_BASE_REF)"
+
+    if ($ENV:GITHUB_BASE_REF)
+    {
+        & $PSScriptRoot\..\CheckForNewWarnings\CheckForNewWarnings.ps1 `
+            -token $token `
+            -project $project `
+            -settings $settings `
+            -targetBranch $ENV:GITHUB_BASE_REF `
+            -prBuildOutputFile $buildOutputFile
+    }
 }
 catch {
     throw
