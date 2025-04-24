@@ -54,15 +54,19 @@ function Compare-Files
     Write-Host "Found $($refWarnings.Count) warnings in reference build."
     Write-Host "Found $($prWarnings.Count) warnings in PR build."   
 
-    Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Line,Col -PassThru | 
+    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Line,Col -PassThru | 
         Where-Object { $_.SideIndicator -eq "=>" } | 
-        Select-Object -Property Id,File,Description,Line,Col | ForEach-Object {
-
-            Write-Host "::error::file=$($_.File),line=$($_.Line),col=$($_.Col)::New warning introduced in this PR: $($_.Id) $($_.Description)"
-
+        Select-Object -Property Id,File,Description,Line,Col 
+        
+    $delta | ForEach-Object {
+            Write-Host "::error file=$($_.File),line=$($_.Line),col=$($_.Col)::New warning introduced in this PR: [$($_.Id)] $($_.Description)"
         }    
-}
 
+    if ($delta)
+    {
+        throw "New warnings were introduced in this PR."
+    }
+}
 
 Export-ModuleMember -Function Initialize-Directory
 Export-ModuleMember -Function Get-Warnings
