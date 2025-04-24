@@ -646,8 +646,8 @@ function GetCustomALGoSystemFiles {
             }
         }
         finally {
-            if (Test-Path -Path $zipName) { Remove-Item $zipName -Force }
             Remove-Item -Path $tempFolder -Recurse -Force
+            if (Test-Path -Path $zipName) { Remove-Item $zipName -Force }
         }
     }
 }

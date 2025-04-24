@@ -195,6 +195,9 @@ This setting will cause AL-Go for GitHub to include these files during the next 
 > [!NOTE]
 > If the destination is in the .AL-Go folder, the file(s) will be copied to all .AL-Go folders in multi-project repositories.
 
+> [!NOTE]
+> If the source is a private or internal GitHub repository and you are using a GitHub app for authentication, you should use https://api.github.com/repos/OWNER/REPO/zipball/BRANCH instead of https://github.com/OWNER/REPO/archive/refs/heads/BRANCH.zip.
+
 ### Adding custom jobs
 
 You can also add custom jobs to any of the existing AL-Go for GitHub workflows. Custom jobs can depend on other jobs and other jobs can made to depend on custom jobs. Custom jobs needs to be named `CustomJob<something>`, but can specify another name to be shown in the UI. Example:
