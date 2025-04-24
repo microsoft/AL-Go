@@ -110,7 +110,9 @@ if (-not $isDirectALGo) {
 # - All PowerShell scripts in .AL-Go folders (all projects)
 $checkfiles = @(
     @{ 'dstPath' = Join-Path '.github' 'workflows'; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
-    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' },
+    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = 'AL-Go-Settings.json'; 'type' = 'settings' },
+    @{ 'dstPath' = '.github'; 'srcPath' = '.github'; 'pattern' = '*.settings.json'; 'type' = 'settings' }
 )
 
 # Get the list of projects in the current repository
@@ -119,7 +121,10 @@ $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSet
 Write-Host "Projects found: $($projects.Count)"
 foreach($project in $projects) {
     Write-Host "- $project"
-    $checkfiles += @(@{ 'dstPath' = Join-Path $project '.AL-Go'; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' })
+    $checkfiles += @(
+        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' },
+        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'srcPath' = '.AL-Go'; 'pattern' = 'settings.json'; 'type' = 'settings' }
+    )
 }
 
 # $updateFiles will hold an array of files, which needs to be updated
@@ -176,24 +181,46 @@ foreach($checkfile in $checkfiles) {
 
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
                 if ($unusedALGoSystemFiles -contains $fileName) {
-                    # file is not used by ALGo, remove it if it exists
+                    # file is not used by AL-Go, remove it if it exists
                     # do not add it to $updateFiles if it does not exist
                     if ($dstFileExists) {
                         $removeFiles += @(Join-Path $dstPath $filename)
                     }
+                    continue
                 }
-                elseif ($dstFileExists) {
-                    # file exists, compare and add to $updateFiles if different
-                    $dstContent = Get-ContentLF -Path $dstFile
-                    if ($dstContent -cne $srcContent) {
-                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
-                        $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+
+                switch ($type) {
+                    "settings" {
+                        if($dstFileExists) {
+                            # The changes in the settings file are only on the $schema proprerty
+
+                            # Get $schema from the source file (the file is always a JSON)
+                            $srcSettingsSchema = ($srcContent | ConvertFrom-Json)."`$schema"
+
+                            # Replace the schema in the destination file with the one from the source file, without changing the rest of the file
+                            $dstFileContent = Get-ContentLF -Path $dstFile
+                            $newDstFileContent = $dstFileContent -replace '"\$schema":(\s*)"(.*)"', "`$schema:`${1}`"$srcSettingsSchema`""
+                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $newDstFileContent }
+                        }
+                     }
+                    Default {
+                        # For all other files, we need to compare the content of the file in the template repository with the one in the current repository
+                        # If the file does not exist in the current repository, we need to add it to the $updateFiles array
+                        # If the file exists in the current repository, we need to compare the content and only add it to the $updateFiles array if it is different
+                        if ($dstFileExists) {
+                            # file exists, compare and add to $updateFiles if different
+                            $dstContent = Get-ContentLF -Path $dstFile
+                            if ($dstContent -cne $srcContent) {
+                                Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
+                                $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+                            }
+                        }
+                        else {
+                            # new file, add to $updateFiles
+                            Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
+                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+                        }
                     }
-                }
-                else {
-                    # new file, add to $updateFiles
-                    Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
-                    $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }
         }
