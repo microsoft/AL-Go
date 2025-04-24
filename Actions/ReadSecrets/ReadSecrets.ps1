@@ -100,7 +100,7 @@ try {
     }
 
     if ($getCustomALGoSystemFilesSecrets) {
-        # Look through custominstallApps and installTestApps for secrets and add them to the collection of secrets to get
+        # Look through customALGoSystemFiles for secrets and add them to the collection of secrets to get
         foreach($customspec in $settings.customALGoSystemFiles) {
             if ($customspec.PSObject.Properties.name -eq "AuthTokenSecret") {
                 if ($secretsCollection -notcontains $customspec.authTokenSecret) {
