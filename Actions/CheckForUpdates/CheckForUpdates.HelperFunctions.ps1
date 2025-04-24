@@ -569,13 +569,23 @@ function GetCustomALGoSystemFiles {
         if ($customspec.Source -match $pattern) {
             $source = $source.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
         }
+        if ($source -isnot [string] -or $source -notlike 'https://*' -or (-not [System.Uri]::IsWellFormedUriString($source,1))) {
+            throw "customALGoSystemFiles setting is wrongly formatted, Source must be a secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
 
         $destination = $customSpec.Destination.Replace('/',[IO.Path]::DirectorySeparatorChar).Replace('\',[IO.Path]::DirectorySeparatorChar)
         if ($destination -isnot [string] -or $destination -eq '') {
             throw "customALGoSystemFiles setting is wrongly formatted, Destination must be a string, which isn't blank. See https://aka.ms/algosettings#customalgosystemfiles."
         }
-        if ($source -isnot [string] -or $source -notlike 'https://*' -or (-not [System.Uri]::IsWellFormedUriString($source,1))) {
-            throw "customALGoSystemFiles setting is wrongly formatted, Source must be a secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
+
+        if ($customSpec.ContainsKey('FileSpec')) { $fileSpec = $customSpec.FileSpec } else { $fileSpec = '*' }
+        if ($fileSpec -isnot [string]) {
+            throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        if ($customSpec.ContainsKey('Recurse')) { $recurse = $customSpec.Recurse } else { $recurse = $true }
+        if ($fileSpec -isnot [string] -or $recurse -isnot [boolean]) {
+            throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string and Recurse must be boolean. See https://aka.ms/algosettings#customalgosystemfiles."
         }
 
         $ext = [System.IO.Path]::GetExtension($source)
@@ -589,6 +599,8 @@ function GetCustomALGoSystemFiles {
             if ($source -like 'https://api.github.com/repos/*/*/zipball/*') {
                 $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[1..2] -join '/'
                 $ext = '.zip'
+                # When downloading a zipball, the content is inside a subfolder with the repository name and the sha
+                $filespec = "*/$filespec"
             }
             else {
                 $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[0..1] -join '/'
@@ -601,12 +613,6 @@ function GetCustomALGoSystemFiles {
         $zipName = "$tempFolder$ext"
         try {
             if ($ext -eq '.zip') {
-                Write-Host "$($destination):"
-                if ($customSpec.ContainsKey('FileSpec')) { $fileSpec = $customSpec.FileSpec } else { $fileSpec = '*' }
-                if ($customSpec.ContainsKey('Recurse')) { $recurse = $customSpec.Recurse } else { $recurse = $true }
-                if ($fileSpec -isnot [string] -or $recurse -isnot [boolean]) {
-                    throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string and Recurse must be boolean. See https://aka.ms/algosettings#customalgosystemfiles."
-                }
                 if (!($destination.EndsWith('/') -or $destination.EndsWith('\'))) {
                     throw "customALGoSystemFiles setting is wrongly formatted, destination must be a folder (terminated with / or \). See https://aka.ms/algosettings#customalgosystemfiles."
                 }
