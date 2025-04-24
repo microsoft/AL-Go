@@ -158,6 +158,10 @@ By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings
       "Source": "https://raw.githubusercontent.com/microsoft/BCApps/main/build/scripts/NewBcContainer.ps1"
     },
     {
+      "Destination": ".AL-Go/NewBcContainer.ps1",
+      "Source": "https://myfiles.blob.core.windows.net/myalgosystemfiles/NewBcContainer.ps1?${{SECRETNAME}}"
+    },
+    {
       "Destination": ".github/",
       "Source": "https://github.com/freddydk/CustomALGoSystemFiles/archive/refs/heads/main.zip",
       "FileSpec": "*/.github/*",
@@ -178,8 +182,8 @@ By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings
 | Property | Description | Mandatory | Default |
 | :-- | :-- | :-: | :-- |
 | Destination | Path in which the file should be placed. Can include the filename if the source doesn't point to a .zip file, must include a terminating / or \\ if a filename is not included. | Yes | |
-| Source | URL to a either a single file or a .zip file containing custom AL-Go System Files. Must be https. | Yes | |
-| FileSpec | If the source URL points to a .zip file, this property can specify which files to include. The FileSpec can include a subfolder inside the .zip file, and must include a file name pattern. | No | * |
+| Source | URL to a either a single file or a .zip file containing custom AL-Go System Files. Must be https. The source URL can contain embedded secrets using the `${{SECRETNAME}}` construct. | Yes | |
+| FileSpec | If the source URL points to a .zip file, this property can specify which files to include. The FileSpec can include subfolders inside the .zip file, and must include a file name pattern. | No | * |
 | Recurse | Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec) | No | true |
 | AuthTokenSecret | The name of a secret (like ghTokenWorkflow) which contains a Personal Access Token or GitHub App specification with access to the files. |
 
