@@ -3,8 +3,15 @@ Param(
     [string] $project,
     [object] $settings,
     [string] $targetBranch,
-    [string] $prBuildOutputFile
+    [string] $prBuildOutputFile,
+    [string] $resultsDir
 )
+
+if (-not $ENV:GITHUB_BASE_REF)
+{
+    Write-Host "Checking for warnings only runs on pull requests."
+    return
+}
 
 if (-not $settings.checkForNewWarnings)
 {
@@ -12,7 +19,7 @@ if (-not $settings.checkForNewWarnings)
     return
 }
 
-Write-Host "Analyzing PR build for new warnings..."
+Write-Host "Analyzing build for new warnings..."
 
 Import-Module (Join-Path $PSScriptRoot "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
 Import-Module (Join-Path $PSScriptRoot ".\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
@@ -21,25 +28,25 @@ $baselineWorkflowRunId,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repos
 if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
     
 $mask = Get-Item $prBuildOutputFile | Select-Object -ExpandProperty BaseName 
-$artifacts = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName
+$artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName | Select-Object -First 1
 
 Write-Host "Downloading build logs from previous good build."
 
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".warnings"
 Initialize-Directory -Path $artifactsFolder
+DownloadArtifact -token $token -artifact $artifact -path $artifactsFolder -unpack
 
-$artifacts | ForEach-Object {
+"Done downloading artifacts." | Write-Host
+$referenceBuildLog = Get-ChildItem $artifactsFolder -File -Recurse | Select-Object -First 1
 
-    DownloadArtifact -token $token -artifact $_ -path $artifactsFolder -unpack
+Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
 
-    "Done downloading artifacts." | Write-Host
-    $referenceBuildLog = Get-ChildItem $artifactsFolder -File -Recurse | Select-Object -First 1   # I should check based on the name of $prBuildoutputFile
+$refWarnings =  @(Get-Warnings -BuildFile $referenceBuildLog.FullName)
+$prWarnings = @(Get-Warnings -BuildFile $prBuildOutputFile)
 
-    Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
+Write-Host "Found $($refWarnings.Count) warnings in reference build."
+Write-Host "Found $($prWarnings.Count) warnings in PR build."
 
-    $refWarnings =  @(Get-Warnings -BuildFile $referenceBuildLog.FullName)
-    $prWarnings = @(Get-Warnings -BuildFile $prBuildOutputFile)
+$outputFile = Join-Path $resultsDir "new-warnings.txt"
+"::warning file=./App/HelloWorld.al::New warnings added!" | Out-File $outputFile
 
-    Write-Host "Found $($refWarnings.Count) warnings in reference build."
-    Write-Host "Found $($prWarnings.Count) warnings in PR build."
-}

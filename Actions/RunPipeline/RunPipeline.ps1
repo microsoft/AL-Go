@@ -523,16 +523,13 @@ try {
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
 
-    if ($ENV:GITHUB_BASE_REF)
-    {
-        # check for new compiler warnings on pull requests (pending settings)
-        & $PSScriptRoot\..\CheckForNewWarnings\CheckForNewWarnings.ps1 `
-            -token $token `
-            -project $project `
-            -settings $settings `
-            -targetBranch $ENV:GITHUB_BASE_REF `
-            -prBuildOutputFile $buildOutputFile
-    }
+    & $PSScriptRoot\..\CheckForNewWarnings\CheckForNewWarnings.ps1 `
+        -token $token `
+        -project $project `
+        -settings $settings `
+        -targetBranch $ENV:GITHUB_BASE_REF `
+        -prBuildOutputFile $buildOutputFile `
+        -resultsDir (Join-Path $ENV:GITHUB_WORKSPACE $project)
 }
 catch {
     throw
