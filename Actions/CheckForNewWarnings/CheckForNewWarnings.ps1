@@ -31,8 +31,8 @@ $artifacts | ForEach-Object {
 
     Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
 
-    $refWarnings = Get-Warnings -BuildFile $referenceBuildLog.FullName
-    $prWarnings = Get-Warnings -BuildFile $prBuildOutputFile
+    $refWarnings =  @(Get-Warnings -BuildFile $referenceBuildLog.FullName)
+    $prWarnings = @(Get-Warnings -BuildFile $prBuildOutputFile)
 
     Write-Host "Found $($refWarnings.Count) warnings in reference build."
     Write-Host "Found $($prWarnings.Count) warnings in PR build."
