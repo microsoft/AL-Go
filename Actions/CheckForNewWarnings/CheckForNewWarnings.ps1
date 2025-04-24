@@ -6,6 +6,12 @@ Param(
     [string] $prBuildOutputFile
 )
 
+if (-not $settings.checkForNewWarnings)
+{
+    Write-Host "Checking for new warnings is disabled in the settings."
+    return
+}
+
 Write-Host "Analyzing PR build for new warnings..."
 
 Import-Module (Join-Path $PSScriptRoot "..\Github-Helper.psm1" -Resolve) -DisableNameChecking

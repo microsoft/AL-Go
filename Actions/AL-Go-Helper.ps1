@@ -634,6 +634,7 @@ function ReadSettings {
         "installTestLibraries"                          = $false
         "installPerformanceToolkit"                     = $false
         "enableCodeCop"                                 = $false
+        "checkForNewWarnings"                           = $false
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
         "customCodeCops"                                = @()

@@ -523,10 +523,9 @@ try {
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Host "WARN: checking for new warnings only on pull requests. Target is: $($ENV:GITHUB_BASE_REF)"
-
     if ($ENV:GITHUB_BASE_REF)
     {
+        # check for new compiler warnings on pull requests (pending settings)
         & $PSScriptRoot\..\CheckForNewWarnings\CheckForNewWarnings.ps1 `
             -token $token `
             -project $project `
