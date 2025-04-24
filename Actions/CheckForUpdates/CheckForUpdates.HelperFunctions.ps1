@@ -581,7 +581,9 @@ function GetCustomALGoSystemFiles {
         $authToken = $null
         if ($customspec.PSObject.Properties.Name -eq 'AuthTokenSecret') {
             $authTokenSecret = $customspec.AuthTokenSecret
+            Write-Host "Using secret $authTokenSecret"
             $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($authTokenSecret)"))
+            Write-Host "$authToken.Substring(0, 5)..."
         }
         $headers = GetHeaders -token $authToken -repository $source
 
