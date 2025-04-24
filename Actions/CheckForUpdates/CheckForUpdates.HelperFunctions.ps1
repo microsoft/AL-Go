@@ -578,24 +578,26 @@ function GetCustomALGoSystemFiles {
             throw "customALGoSystemFiles setting is wrongly formatted, Source must be a secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
         }
 
+        $ext = [System.IO.Path]::GetExtension($source)
         $authToken = $null
         $repository = $null
         if ($customspec.ContainsKey('AuthTokenSecret')) {
             $authTokenSecret = $customspec.AuthTokenSecret
             Write-Host "Using secret $authTokenSecret"
             $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($authTokenSecret)"))
-            Write-Host "$($authToken.Substring(0, 5))..."
             # if the AuthToken is a GitHub App specification, we need to get the repository name from the URL
-            $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[0..1] -join '/'
+            if ($source -like 'https://api.github.com/repos/*/*/zipball/*') {
+                $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[1..2] -join '/'
+                $ext = '.zip'
+            }
+            else {
+                $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[0..1] -join '/'
+            }
         }
         $headers = GetHeaders -token $authToken -repository $repository
 
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
-        $ext = [System.IO.Path]::GetExtension($source)
-        if ($ext -eq '') {
-            $ext = '.zip'
-        }
         $zipName = "$tempFolder$ext"
         try {
             if ($ext -eq '.zip') {
