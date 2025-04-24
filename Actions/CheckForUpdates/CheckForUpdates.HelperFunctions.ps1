@@ -593,6 +593,9 @@ function GetCustomALGoSystemFiles {
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
         $ext = [System.IO.Path]::GetExtension($source)
+        if ($ext -eq '') {
+            $ext = '.zip'
+        }
         $zipName = "$tempFolder$ext"
         try {
             if ($ext -eq '.zip') {
