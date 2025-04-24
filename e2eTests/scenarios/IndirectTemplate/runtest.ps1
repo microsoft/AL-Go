@@ -25,12 +25,10 @@ Write-Host -ForegroundColor Yellow @'
 #  - Create a new repository based on the PTE template with no apps (this will be the "indirect" template repository)
 #  - Create a new repository based on the PTE template with 1 app, using compilerfolder and donotpublishapps (this will be the "final" template repository)
 #  - Run Update AL-Go System Files in final repo (using indirect repo as template)
-#  - Add CustomStep to indirect repo
 #  - Run Update AL-Go System files in indirect repo
 #  - Validate that custom step is present in indirect repo
 #  - Run Update AL-Go System files in final repo
 #  - Validate that custom step is present in final repo
-#  - Add CustomStep in final repo
 #  - Run Update AL-Go System files in final repo
 #  - Validate that both custom steps is present in final repo
 #
@@ -94,24 +92,6 @@ $buildYaml | Should -Not -BeNullOrEmpty
 
 # Modify the permissions
 $buildYaml.Replace('permissions:/contents: read', @('contents: write', 'issues: read'))
-
-# Add customization steps
-$customizationAnchors = GetCustomizationAnchors
-$idx = 0
-foreach($anchor in $customizationAnchors.'_BuildALGoProject.yaml'.BuildALGoProject) {
-    $idx++
-    $customStep = @{
-        "Name" = "CustomStep-Template$idx"
-        "Content" = @(
-            "- name: CustomStep-Template$idx"
-            "  run: |"
-            "    Write-Host 'CustomStep-Template$idx was here!'"
-        )
-        "AnchorStep" = $anchor.Step
-        "Before" = $anchor.Before
-    }
-    $buildYaml.AddCustomStepsToAnchor('BuildALGoProject', $customStep, $anchor.Step, $anchor.Before)
-}
 $buildYaml.Save($buildALGoProjectWorkflow)
 
 # Add Custom Jobs to CICD.yaml
@@ -166,24 +146,6 @@ Pull
 $buildALGoProjectWorkflow = Join-Path $repoPath '.github/workflows/_BuildALGoProject.yaml'
 $buildYaml = [yaml]::Load($buildALGoProjectWorkflow)
 $buildYaml | Should -Not -BeNullOrEmpty
-
-# Add customization steps
-$customizationAnchors = GetCustomizationAnchors
-$idx = 0
-foreach($anchor in $customizationAnchors.'_BuildALGoProject.yaml'.BuildALGoProject) {
-    $idx++
-    $customStep = @{
-        "Name" = "CustomStep-Final$idx"
-        "Content" = @(
-            "- name: CustomStep-Final$idx"
-            "  run: |"
-            "    Write-Host 'CustomStep-Final$idx was here!'"
-        )
-        "AnchorStep" = $anchor.Step
-        "Before" = $anchor.Before
-    }
-    $buildYaml.AddCustomStepsToAnchor('BuildALGoProject', $customStep, $anchor.Step, $anchor.Before)
-}
 
 # save
 $buildYaml.Save($buildALGoProjectWorkflow)
@@ -246,31 +208,6 @@ Pull
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait
-
-# Check Custom Steps
-1..$idx | ForEach-Object {
-    Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName "CustomStep-Template$_" -expectedText "CustomStep-Template$_ was here!"
-}
-1..$idx | ForEach-Object {
-    Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName "CustomStep-Final$_" -expectedText "CustomStep-Final$_ was here!"
-}
-
-# Check correct order of custom steps
-DownloadWorkflowLog -repository $repository -runid $run.id -path 'logs'
-$logcontent = Get-Content -Path 'logs/0_Build . (Default)  . (Default).txt' -Encoding utf8 -Raw
-Remove-Item -Path 'logs' -Recurse -Force
-$idx = 0
-foreach($anchor in $customizationAnchors.'_BuildALGoProject.yaml'.BuildALGoProject) {
-    $idx++
-    $templateStepIdx = $logcontent.IndexOf("CustomStep-Template$idx was here!")
-    $finalStepIdx = $logcontent.IndexOf("CustomStep-Final$idx was here!")
-    if ($anchor.Before) {
-        $finalStepIdx | Should -BeGreaterThan $templateStepIdx -Because "CustomStep-Final$idx should be after CustomStep-Template$idx"
-    }
-    else {
-        $finalStepIdx | Should -BeLessThan $templateStepIdx -Because "CustomStep-Final$idx should be before CustomStep-Template$idx"
-    }
-}
 
 # Check Custom Jobs
 Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-TemplateInit' -stepName 'Init' -expectedText 'CustomJob-TemplateInit was here!'

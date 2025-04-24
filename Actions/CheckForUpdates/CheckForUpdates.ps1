@@ -224,18 +224,17 @@ foreach($checkfile in $checkfiles) {
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
-                $customizationAnchors = GetCustomizationAnchors
                 if ($type -eq 'workflow' -and $realSrcFile -ne $srcFile) {
                     # Apply customizations from indirect template repository
                     Write-Host "Apply customizations from indirect template repository: $srcFile"
-                    [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile, $customizationAnchors)
+                    [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile)
                 }
 
                 if ($unusedALGoSystemFiles -notcontains $fileName) {
                     if (Test-Path -Path $dstFile -PathType Leaf) {
                         if ($type -eq 'workflow') {
                             Write-Host "Apply customizations from my repository: $dstFile"
-                            [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile, $customizationAnchors)
+                            [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
                         }
                         # file exists, compare and add to $updateFiles if different
                         $dstContent = Get-ContentLF -Path $dstFile

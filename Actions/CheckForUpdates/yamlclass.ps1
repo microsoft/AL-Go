@@ -315,95 +315,6 @@ class Yaml {
         return $steps
     }
 
-    [hashtable[]] GetCustomStepsFromAnchor([string] $job, [string] $anchorStep, [bool] $before) {
-        $steps = $this.GetStepsFromJob($job)
-        $anchorIdx = $steps.IndexOf($anchorStep)
-        if ($anchorIdx -lt 0) {
-            Write-Host "Cannot find anchor step '$anchorStep' in job '$job'"
-            return @()
-        }
-        $idx = $anchorIdx
-        $customSteps = @()
-        if ($before) {
-            while ($idx -gt 0 -and $steps[$idx-1] -like 'CustomStep*') {
-                $idx--
-            }
-            if ($idx -ne $anchorIdx) {
-                $customSteps = @($steps[$idx..($anchorIdx-1)])
-                # Reverse the order of the custom steps in order to apply in correct order from the anchor step
-                [array]::Reverse($customSteps)
-            }
-        }
-        else {
-            while ($idx -lt $steps.Count-1 -and $steps[$idx+1] -like 'CustomStep*') {
-                $idx++
-            }
-            if ($idx -ne $anchorIdx) {
-                $customSteps = @($steps[($anchorIdx+1)..$idx])
-            }
-        }
-        $result = @()
-        foreach($customStep in $customSteps) {
-            $stepContent = $this.Get("Jobs:/$($job):/steps:/- name: $($customStep)").content
-            $result += @(@{"Name" = $customStep; "Content" =  $stepContent; "AnchorStep" = $anchorStep; "Before" = $before })
-        }
-        return $result
-    }
-
-    [hashtable[]] GetCustomStepsFromYaml([string] $job, [hashtable[]] $anchors) {
-        $steps = $this.GetStepsFromJob($job)
-        $result = @()
-        foreach($anchor in $anchors) {
-            $result += $this.GetCustomStepsFromAnchor($job, $anchor.Step, $anchor.Before)
-        }
-        foreach($step in $steps) {
-            if ($step -like 'CustomStep*') {
-                if (-not ($result | Where-Object { $_.Name -eq $step })) {
-                    Write-Host "Custom step '$step' does not belong to a supported anchor"
-                }
-            }
-        }
-        return $result
-    }
-
-    [void] AddCustomStepsToAnchor([string] $job, [hashtable[]] $customSteps, [string] $anchorStep, [bool] $before) {
-        $steps = $this.GetStepsFromJob($job)
-        if (!$steps) {
-            Write-Host "::Warning::Cannot find job '$job'"
-            return
-        }
-        $anchorIdx = $steps.IndexOf($anchorStep)
-        if ($anchorIdx -lt 0) {
-            Write-Host "::Warning::Cannot find anchor step '$anchorStep' in job '$job'"
-            return
-        }
-        foreach($customStep in $customSteps | Where-Object { $_.AnchorStep -eq $anchorStep -and $_.Before -eq $before }) {
-            if ($steps -contains $customStep.Name) {
-                Write-Host "Custom step '$($customStep.Name)' already exists in job '$job'"
-            }
-            else {
-                $anchorStart = 0
-                $anchorCount = 0
-                if ($this.Find("Jobs:/$($job):/steps:/- name: $($anchorStep)", [ref] $anchorStart, [ref] $anchorCount)) {
-                    if ($before) {
-                        $this.Insert($anchorStart-1, @('') + @($customStep.Content | ForEach-Object { "      $_" }))
-                    }
-                    else {
-                        $this.Insert($anchorStart+$anchorCount, @('') + @($customStep.Content | ForEach-Object { "      $_" }))
-                    }
-                }
-            }
-            # Use added step as anchor for next step
-            $anchorStep = $customStep.Name
-        }
-    }
-
-    [void] AddCustomStepsToYaml([string] $job, [hashtable[]] $customSteps, [hashtable[]] $anchors) {
-        foreach($anchor in $anchors) {
-            $this.AddCustomStepsToAnchor($job, $customSteps, $anchor.Step, $anchor.Before)
-        }
-    }
-
     static [PSCustomObject] GetPermissionsFromArray([string[]] $permissionsArray) {
         $permissions = [PSCustomObject]@{}
         $permissionsArray | ForEach-Object {
@@ -442,7 +353,7 @@ class Yaml {
         return $permissions
     }
 
-    static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [hashtable] $anchors) {
+    static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile) {
         $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
         try {
             $yaml = [Yaml]::Load($yamlFile)
@@ -485,19 +396,6 @@ class Yaml {
             }
         }
 
-        # Apply cystom steps
-        Write-Host "Apply custom steps"
-        $filename = [System.IO.Path]::GetFileName($yamlFile)
-        if ($anchors.ContainsKey($filename)) {
-            $fileAnchors = $anchors."$filename"
-            foreach($job in $fileAnchors.Keys) {
-                # Locate custom steps in destination YAML
-                $customSteps = $yaml.GetCustomStepsFromYaml($job, $fileAnchors."$job")
-                if ($customSteps) {
-                    $srcYaml.AddCustomStepsToYaml($job, $customSteps, $fileAnchors."$job")
-                }
-            }
-        }
         # Locate custom jobs in destination YAML
         Write-Host "Apply custom jobs"
         $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))

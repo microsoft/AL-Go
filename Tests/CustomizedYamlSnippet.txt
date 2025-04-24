@@ -46,23 +46,11 @@ jobs:
         with:
           shell: powershell
 
-      - name: CustomStep-MyStep1
-        run: |
-          Write-Host 'My own step1!'
-
-      - name: CustomStep-MyStepX
-        run: |
-          Write-Host 'Some stepX!'
-
       - name: Read settings
         id: ReadSettings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-
-      - name: CustomStep-MyStep2
-        run: |
-          Write-Host 'My own step2!'
 
   CheckForUpdates:
     runs-on: [ windows-latest ]

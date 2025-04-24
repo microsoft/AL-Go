@@ -413,32 +413,6 @@ Custom jobs will be preserved when running Update AL-Go System Files.
 
 **Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
 
-<a id="customsteps"></a>
-
-## Custom steps in the \_BuildALGoProject workflow
-
-Adding a custom step is done by adding a step with the name `CustomStep<something>` to the \_BuildALGoProject.yaml workflow at one of these anchor points:
-
-- Before Read Settings
-- Before Read Secrets
-- Before or After Build
-- Before Cleanup
-
-Example, insert the following step before the Build step:
-
-```
-      - name: CustomStep that will run before the Build step
-        run: |
-          Write-Host "before build"
-
-      - name: Build
-        uses: ...
-```
-
-Custom steps will be preserved when running Update AL-Go System Files.
-
-**Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
-
 <a id="indirect"></a>
 
 ## Indirect template repositories

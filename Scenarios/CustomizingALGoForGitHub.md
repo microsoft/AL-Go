@@ -214,37 +214,6 @@ Adding a custom job like this, will cause this job to run simultaneously with th
 > [!CAUTION]
 > Custom jobs might be broken if the customized AL-Go for GitHub workflow has been refactored and the referenced jobs have been renamed.
 
-### Adding custom steps
-
-You can also add custom steps to AL-Go for GitHub Workflows, but only in pre-defined anchor-points. The reason for only allowing custom steps at pre-defined anchor-points is that we want to limit the number of places where steps can be added in order to have some level of freedom to refactor, develop and maintain the AL-Go for GitHub workflows, without breaking customizations constantly.
-
-At this time, the anchor-points where you can add custom steps are:
-
-| Workflow | Job | Step | Before or After |
-| :-- | :-- | :-- | :-: |
-| \_BuildALGoProject.yaml | BuildALGoProject | Read settings | After |
-| \_BuildALGoProject.yaml | BuildALGoProject | Read secrets | After |
-| \_BuildALGoProject.yaml | BuildALGoProject | Build | Before |
-| \_BuildALGoProject.yaml | BuildALGoProject | Build | After |
-| \_BuildALGoProject.yaml | BuildALGoProject | Cleanup | Before |
-
-The custom step needs to be named `CustomStep<something>` and if inserted in any of the specified anchor-points, it will be maintained after running Update AL-Go System Files. An example of a custom step could be a step, which modifies settings based on some business logic
-
-```yaml
-      - name: CustomStep-ModifySettings
-        run: |
-          $settings = $env:Settings | ConvertFrom-Json
-          $settings.artifact = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://bca-url-proxy.azurewebsites.net/bca-url/sandbox/us?select=weekly&doNotRedirect=true"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($settings | ConvertTo-Json -Depth 99 -Compress)"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=$($settings.artifact)"
-```
-
-> [!TIP]
-> Create a feature request [here](https://github.com/microsoft/AL-Go/issues/new?assignees=&labels=enhancement&projects=&template=enhancement.yaml&title=%5BEnhancement%5D%3A+) with a description on where you would like additional anchor-points and what you want to use it for.
-
-> [!CAUTION]
-> Please be aware that changes to AL-Go for GitHub might break with future versions of AL-Go for GitHub. We will of course try to keep these breaking changes to a minimum, but the only way you can be sure to NOT be broken is by NOT customizing AL-Go for GitHub.
-
 ### Modifying workflow permissions
 
 If any of your custom jobs require permissions, which exceeds the permissions already assigned in the workflow, then these permissions can be specified directly on the custom job.

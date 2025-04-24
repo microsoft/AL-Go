@@ -127,19 +127,8 @@ Describe "CheckForUpdates Action Tests" {
         $customJobs | Should -Not -BeNullOrEmpty
         $customJobs.Count | Should -be 1
 
-        # Get Custom steps from yaml
-        $customStep1 = $customizedYaml.GetCustomStepsFromAnchor('Initialization', 'Read settings', $true)
-        $customStep1 | Should -Not -BeNullOrEmpty
-        $customStep1.Count | Should -be 2
-
-        $customStep2 = $customizedYaml.GetCustomStepsFromAnchor('Initialization', 'Read settings', $false)
-        $customStep2 | Should -Not -BeNullOrEmpty
-        $customStep2.Count | Should -be 1
-
         # Apply Custom jobs and steps to yaml
         $yaml.AddCustomJobsToYaml($customJobs)
-        $yaml.AddCustomStepsToAnchor('Initialization', $customStep1, 'Read settings', $true)
-        $yaml.AddCustomStepsToAnchor('Initialization', $customStep2, 'Read settings', $false)
 
         # Check if new yaml content is equal to customized yaml content
         ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")

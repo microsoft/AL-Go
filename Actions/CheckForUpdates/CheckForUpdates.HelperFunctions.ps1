@@ -1,17 +1,3 @@
-function GetCustomizationAnchors {
-    return @{
-        "_BuildALGoProject.yaml" = @{
-            "BuildALGoProject" = @(
-                @{ "Step" = 'Read settings'; "Before" = $false }
-                @{ "Step" = 'Read secrets'; "Before" = $false }
-                @{ "Step" = 'Build'; "Before" = $true }
-                @{ "Step" = 'Build'; "Before" = $false }
-                @{ "Step" = 'Cleanup'; "Before" = $true }
-            )
-        }
-    }
-}
-
 <#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
