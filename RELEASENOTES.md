@@ -17,6 +17,7 @@ AL-Go for GitHub settings now has a schema. The following line is added at the b
 - Issue 1657 When no files modified on Git, deployment fails
 - Issue 1530 Dependency Field Service Integration does not get published in container while Installing apps
 - Issue 1644 Support for AppAuth when using a private Template repository from another organization
+- Issue 1669 GitHub App authentication to download dependencies from private repositories
 - Issue 1478 Rate Limit Exceeded when running Update AL-Go System files
 
 ## v7.0
