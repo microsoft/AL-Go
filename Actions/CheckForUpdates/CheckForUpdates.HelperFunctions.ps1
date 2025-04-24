@@ -21,9 +21,6 @@ function DownloadTemplateRepository {
     $templateRepositoryUrl = $templateUrl.Split('@')[0]
     $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
 
-    if ([string]::IsNullOrEmpty($ENV:GITHUB_TOKEN)) {
-        Write-Host "::WARNING::GITHUB_TOKEN is not set."
-    }
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
     $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
     try {
@@ -565,14 +562,28 @@ function GetCustomALGoSystemFiles {
         if (!($customSpec.ContainsKey('Source') -and $customSpec.ContainsKey('Destination'))) {
             throw "customALGoSystemFiles setting is wrongly formatted, Source and Destination must be specified. See https://aka.ms/algosettings#customalgosystemfiles."
         }
+
         $source = $customspec.Source
+        # Replace embedded secrets in the source URL with the value of the secret
+        $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+        if ($customspec.Source -match $pattern) {
+            $source = $source.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+        }
+
         $destination = $customSpec.Destination.Replace('/',[IO.Path]::DirectorySeparatorChar).Replace('\',[IO.Path]::DirectorySeparatorChar)
         if ($destination -isnot [string] -or $destination -eq '') {
             throw "customALGoSystemFiles setting is wrongly formatted, Destination must be a string, which isn't blank. See https://aka.ms/algosettings#customalgosystemfiles."
         }
         if ($source -isnot [string] -or $source -notlike 'https://*' -or (-not [System.Uri]::IsWellFormedUriString($source,1))) {
-            throw "customALGoSystemFiles setting is wrongly formatted, Source must secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
+            throw "customALGoSystemFiles setting is wrongly formatted, Source must be a secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
         }
+
+        $authToken = $null
+        if ($customspec.PSObject.Properties.Name -eq 'AuthTokenSecret') {
+            $authTokenSecret = $customspec.AuthTokenSecret
+            $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($authTokenSecret)"))
+        }
+        $headers = Get-Headers -token $authToken -repository $source
 
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
@@ -589,7 +600,7 @@ function GetCustomALGoSystemFiles {
                 if (!($destination.EndsWith('/') -or $destination.EndsWith('\'))) {
                     throw "customALGoSystemFiles setting is wrongly formatted, destination must be a folder (terminated with / or \). See https://aka.ms/algosettings#customalgosystemfiles."
                 }
-                Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $zipName
+                Invoke-RestMethod -UseBasicParsing -Method Get -Headers $headers -Uri $source -OutFile $zipName
                 Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
                 $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
                 Push-Location -Path $subFolder
@@ -614,7 +625,7 @@ function GetCustomALGoSystemFiles {
                 }
                 Write-Host "$($destination):"
                 $tempFilename = Join-Path $tempFolder ([System.IO.Path]::GetFileName($source))
-                Invoke-RestMethod -UseBasicParsing -Method Get -Uri $source -OutFile $tempFilename
+                Invoke-RestMethod -UseBasicParsing -Method Get -Headers $headers -Uri $source -OutFile $tempFilename
                 YieldItem -baseFolder $baseFolder -source $tempFilename -destination $destination -projects $projects
             }
         }

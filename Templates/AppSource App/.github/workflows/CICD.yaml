@@ -160,12 +160,13 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'ghTokenWorkflow'
+          getSecrets: 'ghTokenWorkflow,CustomALGoSystemFilesSecrets'
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}

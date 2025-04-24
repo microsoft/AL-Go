@@ -15,10 +15,11 @@
 
 - `customALGoSystemFiles` is an array of JSON objects, which holds information about custom AL-Go System Files, which will be applied during Update AL-Go System Files. Every object can hold these 4 properties:
 
-  - **Destination** (mandatory) - Path in which the file should be placed (Can include the filename if the source doesn't point to a .zip file)
-  - **Source** (mandatory) - URL to a either a single file or a .zip file containing
+  - **Destination** (mandatory) - Path in which the file should be placed (Can include the filename if the source doesn't point to a .zip file).
+  - **Source** (mandatory) - URL to a either a single file or a .zip file containing. Note that the source URL can contain embedded secrets using ${{SECRETNAME}} as part of the URL to hide SAS tokens or like.
   - **FileSpec** (optional) - If the source URL points to a .zip file, this property can specify which files to include if the source URL points to a .zip file. The FileSpec can include a subfolder inside the .zip file, and must include a file name pattern.
-  - **Recurse** (optional) - Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec)
+  - **Recurse** (optional) - Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec).
+  - **AuthTokenSecret** (optional) - the name of a secret (like ghTokenWorkflow) which contains a Personal Access Token or GitHub App specification with access to the source files.
 
 ### Add custom jobs to AL-Go workflows
 
