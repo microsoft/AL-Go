@@ -45,7 +45,10 @@ if ($token) {
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
 
-$secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+$secrets = @{}
+if ($env:secrets) {
+    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+}
 
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
 # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on" etc.
