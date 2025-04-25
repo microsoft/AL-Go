@@ -46,7 +46,7 @@ if ($token) {
 }
 
 $secrets = @{}
-if ($env:secrets) {
+if ($env:Secrets) {
     $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
 }
 
