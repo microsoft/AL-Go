@@ -62,6 +62,11 @@ function Compare-Files
             Write-Host "::error file=$($_.File),line=$($_.Line),col=$($_.Col)::New warning introduced in this PR: [$($_.Id)] $($_.Description)"
         }    
 
+    if ($delta)
+    {
+        throw "New warnings were introduced in this PR."
+    }
+
 }
 
 Export-ModuleMember -Function Initialize-Directory
