@@ -424,10 +424,11 @@ try {
                     }
                     if ($parameters.ContainsKey('bcAuthContext') -and ($parameters.ContainsKey('environment'))) {
                         try {
+                            Write-Host "Trying to install app $($appid) from AppSource."
                             Install-BcAppFromAppSource -bcAuthContext $parameters.bcAuthContext -environment $parameters.environment -appId $appid -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
                         }
                         catch {
-                            Write-Host "Failed to install app $($appid) from app source. Error was: $($_.Exception.Message)"
+                            Write-Host "Failed to install app $($appid) from AppSource. Error was: $($_.Exception.Message)"
                             Write-Host "Trying to publish from NuGet feeds instead"
                             Publish-BcNuGetPackageToContainer -bcAuthContext $parameters.bcAuthContext -environment $parameters.environment -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                         }
