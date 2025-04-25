@@ -133,6 +133,8 @@ jobs:
 
       - name: Update AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}

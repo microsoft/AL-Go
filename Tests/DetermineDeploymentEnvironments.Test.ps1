@@ -37,8 +37,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-        }
         $outputs = [ordered]@{
             "EnvironmentsMatrixJson" = "The Environment matrix to use for the Deploy step in compressed JSON format"
             "DeploymentEnvironmentsJson" = "Deployment Environments with settings in compressed JSON format"
@@ -47,7 +45,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             "GenerateALDocArtifact" = "Flag determining whether to generate the ALDoc artifact"
             "DeployALDocArtifact" = "Flag determining whether to deploy the ALDoc artifact to GitHub Pages"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
     # 2 environments defined in GitHub - no branch policy

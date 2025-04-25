@@ -9,6 +9,9 @@ inputs:
     description: Project to analyze
     required: false
     default: '.'
+  testType:
+    description: Tests to analyze
+    required: true
 runs:
   using: composite
   steps:
@@ -16,9 +19,10 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _project: ${{ inputs.project }}
+        _testType: ${{ inputs.testType }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "AnalyzeTests" -Action {
-          ${{ github.action_path }}/AnalyzeTests.ps1 -project $ENV:_project
+          ${{ github.action_path }}/AnalyzeTests.ps1 -project $ENV:_project -testType $ENV:_testType
         }
 branding:
   icon: terminal

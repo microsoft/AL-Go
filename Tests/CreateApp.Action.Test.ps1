@@ -18,13 +18,9 @@ Describe "CreateApp Action Tests" {
     }
 
     It 'Test action.yaml matches script' {
-        $permissions = [ordered]@{
-            "contents" = "write"
-            "pull-requests" = "write"
-        }
         $outputs = [ordered]@{
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
     # Call action
