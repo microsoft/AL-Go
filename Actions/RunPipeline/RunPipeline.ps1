@@ -424,7 +424,7 @@ try {
                     }
                     if ($parameters.ContainsKey('bcAuthContext') -and ($parameters.ContainsKey('environment'))) {
                         try {
-                            Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appid -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
+                            Install-BcAppFromAppSource -bcAuthContext $parameters.bcAuthContext -environment $parameters.environment -appId $appid -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
                         }
                         catch {
                             Write-Host "Failed to install app $($appid) from app source. Error was: $($_.Exception.Message)"
