@@ -54,7 +54,7 @@ function Compare-Files
     Write-Host "Found $($refWarnings.Count) warnings in reference build."
     Write-Host "Found $($prWarnings.Count) warnings in PR build."   
 
-    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Line,Col -PassThru | 
+    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Col -PassThru | 
         Where-Object { $_.SideIndicator -eq "=>" } | 
         Select-Object -Property Id,File,Description,Line,Col 
         
