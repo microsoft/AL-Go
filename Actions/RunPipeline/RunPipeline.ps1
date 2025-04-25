@@ -422,7 +422,17 @@ try {
                             "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
                         }
                     }
-                    if ($parameters.ContainsKey('containerName')) {
+                    if ($parameters.ContainsKey('bcAuthContext') -and ($parameters.ContainsKey('environment'))) {
+                        try {
+                            Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appid -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
+                        }
+                        catch {
+                            Write-Host "Failed to install app $($appid) from app source. Error was: $($_.Exception.Message)"
+                            Write-Host "Trying to publish from NuGet feeds instead"
+                            Publish-BcNuGetPackageToContainer -bcAuthContext $parameters.bcAuthContext -environment $parameters.environment -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
+                        }
+                    }
+                    elseif ($parameters.ContainsKey('containerName')) {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
