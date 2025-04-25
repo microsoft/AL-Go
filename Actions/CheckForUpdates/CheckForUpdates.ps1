@@ -199,9 +199,9 @@ foreach($checkfile in $checkfiles) {
 
                             # Replace the schema in the destination file with the one from the source file, without changing the rest of the file
                             $dstFileContent = Get-ContentLF -Path $dstFile
-                            $newDstFileContent = $dstFileContent -replace '"\$schema":(\s*)"(.*)"', '"$schema":${1}"$srcSettingsSchema"'
+                            $newDstFileContent = $dstFileContent -replace '"\$schema":(\s*)"(.*)"', "`"`$schema`":`${1}`"$srcSettingsSchema`""
 
-                            Write-Host "Chenged the `$schema property in ($dstFile) to $srcSettingsSchema"
+                            Write-Host "Changed the `$schema property in ($dstFile) to $srcSettingsSchema"
                             $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $newDstFileContent }
                         }
                      }
