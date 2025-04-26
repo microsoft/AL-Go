@@ -125,6 +125,8 @@ jobs:
         id: analyzeartifacts
         env:
           _buildVersion: ${{ github.event.inputs.buildVersion }}
+          GITHUB_TOKEN: ${{ github.token }}
+          TOKENFORPUSH: ${{ steps.ReadSecrets.outputs.TokenForPush }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $projects = '${{ steps.determineProjects.outputs.ProjectsJson }}' | ConvertFrom-Json
@@ -140,7 +142,7 @@ jobs:
           $allArtifacts = @()
           $page = 1
           $headers = @{
-            "Authorization" = "token ${{ github.token }}"
+            "Authorization" = "token $($ENV:GITHUB_TOKEN)"
             "X-GitHub-Api-Version" = "2022-11-28"
             "Accept" = "application/vnd.github+json; charset=utf-8"
           }
@@ -188,7 +190,6 @@ jobs:
             else {
               $sha = $artifact.workflow_run.head_sha
             }
-
             Write-host "Looking for $project-$refname-Apps-$artifactsVersion or $project-$refname-TestApps-$artifactsVersion or $project-$refname-Dependencies-$artifactsVersion or $project-$refname-PowerPlatformSolution-$artifactsVersion"
             $allArtifacts | Where-Object { ($_.name -like "$project-$refname-Apps-$artifactsVersion" -or $_.name -like "$project-$refname-TestApps-$artifactsVersion" -or $_.name -like "$project-$refname-Dependencies-$artifactsVersion" -or $_.name -like "$project-$refname-PowerPlatformSolution-$artifactsVersion") } | ForEach-Object {
               $atype = $_.name.SubString(0,$_.name.Length-$artifactsVersion.Length-1)
@@ -206,6 +207,19 @@ jobs:
           Write-Host "artifacts=$artifactsJson"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "commitish=$sha"
           Write-Host "commitish=$sha"
+          if ("$ENV:GITHUB_TOKEN" -eq "$ENV:TOKENFORPUSH") {
+            # See https://github.blog/changelog/2023-11-02-github-actions-enforcing-workflow-scope-when-creating-a-release/
+            $latestCommit = (Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches/$($ENV:GITHUB_REF_NAME)").commit.sha
+            if ($latestCommit -ne $sha) {
+              if ('${{ github.event.inputs.buildVersion }}' -eq 'latest') {
+                Write-Host "::ERROR::There has been changes to the $($ENV:GITHUB_REF_NAME) branch since the last successful build. Please run the CI/CD workflow to create the release or check the 'Use GhTokenWorkflow for PR/Commit' option when running the workflow."
+              }
+              else {
+                Write-Host "::ERROR::You are trying to create a release from a version which is not the latest build. Please check the 'Use GhTokenWorkflow for PR/Commit' option when running the workflow."
+              }
+              exit 1
+            }
+          }
 
       - name: Prepare release notes
         id: createreleasenotes
