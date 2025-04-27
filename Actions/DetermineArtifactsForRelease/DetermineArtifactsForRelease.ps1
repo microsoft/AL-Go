@@ -98,7 +98,7 @@ if ("$GITHUB_TOKEN" -eq "$TOKENFORPUSH") {
   $latestCommit = (Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches/$($ENV:GITHUB_REF_NAME)").commit.sha
   if ($latestCommit -ne $sha) {
     if ($buildVersion -eq 'latest') {
-      Write-Host "::ERROR::There has been changes to the $($ENV:GITHUB_REF_NAME) branch since the last successful build. Please run the CI/CD workflow to create the release or check the 'Use GhTokenWorkflow for PR/Commit' option when running the workflow."
+      Write-Host "::ERROR::There has been changes to the $($ENV:GITHUB_REF_NAME) branch since the last successful build. Please complete a new build by running the CI/CD workflow before retrying or check the 'Use GhTokenWorkflow for PR/Commit' option when running the workflow."
     }
     else {
       Write-Host "::ERROR::You are trying to create a release from a version which is not the latest build. Please check the 'Use GhTokenWorkflow for PR/Commit' option when running the workflow."
