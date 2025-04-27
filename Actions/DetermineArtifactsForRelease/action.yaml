@@ -20,24 +20,24 @@ inputs:
 outputs:
   artifacts:
     description: The artifacts to publish on the release
-    value: ${{ steps.analyzereleaseartifacts.outputs.artifacts }}
+    value: ${{ steps.determineArtifactsForRelease.outputs.artifacts }}
   commitish:
     description: The target commitish for the release
-    value: ${{ steps.analyzereleaseartifacts.outputs.commitish }}
+    value: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      id: analyzereleaseartifacts
+      id: determineArtifactsForRelease
       env:
         _buildVersion: ${{ inputs.buildVersion }}
         _GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
         _TOKENFORPUSH: ${{ inputs.TOKENFORPUSH }}
         _ProjectsJson: ${{ inputs.ProjectsJson }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "AnalyzeReleaseArtifacts" -Action {
-          ${{ github.action_path }}/AnalyzeReleaseArtifacts.ps1 -buildVersion $ENV:_buildVersion -GITHUB_TOKEN $ENV:_GITHUB_TOKEN -TOKENFORPUSH $ENV:_TOKENFORPUSH -ProjectsJson $ENV:_ProjectsJson
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineArtifactsForRelease" -Action {
+          ${{ github.action_path }}/DetermineArtifactsForRelease.ps1 -buildVersion $ENV:_buildVersion -GITHUB_TOKEN $ENV:_GITHUB_TOKEN -TOKENFORPUSH $ENV:_TOKENFORPUSH -ProjectsJson $ENV:_ProjectsJson
         }
 branding:
   icon: terminal

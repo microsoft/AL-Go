@@ -71,9 +71,9 @@ jobs:
     needs: [ ]
     runs-on: [ windows-latest ]
     outputs:
-      artifacts: ${{ steps.analyzeartifacts.outputs.artifacts }}
+      artifacts: ${{ steps.determineArtifactsForRelease.outputs.artifacts }}
       releaseId: ${{ steps.createrelease.outputs.releaseId }}
-      commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
+      commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
       releaseVersion: ${{ steps.createreleasenotes.outputs.releaseVersion }}
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
@@ -121,9 +121,9 @@ jobs:
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: true
 
-      - name: Analyze Release Artifacts
-        uses: microsoft/AL-Go-Actions/AnalyzeReleaseArtifacts@main
-        id: analyzeartifacts
+      - name: Determine artifacts for release
+        uses: microsoft/AL-Go-Actions/DetermineArtifactsForRelease@main
+        id: determineArtifactsForRelease
         with:
           shell: powershell
           buildVersion: ${{ github.event.inputs.buildVersion }}
@@ -138,7 +138,7 @@ jobs:
           shell: powershell
           buildVersion: ${{ github.event.inputs.buildVersion }}
           tag_name: ${{ github.event.inputs.tag }}
-          target_commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
+          target_commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
 
       - name: Create release
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -149,7 +149,7 @@ jobs:
           name: ${{ github.event.inputs.name }}
           draft: ${{ github.event.inputs.releaseType == 'Draft' }}
           prerelease: ${{ github.event.inputs.releaseType == 'Prerelease' }}
-          commitish: ${{ steps.analyzeartifacts.outputs.commitish }}
+          commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
         with:
           github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |

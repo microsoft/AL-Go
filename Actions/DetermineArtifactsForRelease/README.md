@@ -1,6 +1,6 @@
-# Creates release notes
+# Determine artifacts for release
 
-Creates release notes for a release, based on a given tag and the tag from the latest release
+Determine artifacts for a release based on build version and projects.
 
 ## INPUT
 
@@ -30,5 +30,5 @@ none
 
 | Name | Description |
 | :-- | :-- |
-| ReleaseVersion | The release version |
-| ReleaseNotes | Release notes generated based on the changes |
+| artifacts | The artifacts to publish on the release |
+| commitish | The target commitish for the release |

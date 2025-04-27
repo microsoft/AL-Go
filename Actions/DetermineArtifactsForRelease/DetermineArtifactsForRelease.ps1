@@ -9,7 +9,7 @@
     [string] $ProjectsJson
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 Write-Host "Get settings from env"
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
