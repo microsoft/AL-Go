@@ -219,8 +219,8 @@ jobs:
           script: |
             const releaseId = process.env.releaseId
             const matrixName = process.env.MATRIX_NAME
-            const assetPath = '${matrixName}.zip'
-            const assetName = encodeURIComponent('${matrixName}.zip'.replaceAll(' ','.')).replaceAll('%','')
+            const assetPath = `${matrixName}.zip`
+            const assetName = encodeURIComponent(`${matrixName}.zip`.replaceAll(' ','.')).replaceAll('%','')
             const fs = require('fs');
             const uploadAssetResponse = await github.rest.repos.uploadReleaseAsset({
               owner: context.repo.owner,
