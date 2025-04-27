@@ -1,11 +1,11 @@
 ﻿Param(
-    [Parameter(HelpMessage="Build version to find artifacts for", Mandatory=$true)]
+    [Parameter(HelpMessage = "Build version to find artifacts for", Mandatory = $true)]
     [string] $buildVersion,
-    [Parameter(HelpMessage="The GitHub token", Mandatory=$true)]
+    [Parameter(HelpMessage = "The GitHub token", Mandatory = $true)]
     [string] $GITHUB_TOKEN,
-    [Parameter(HelpMessage="The GhTokenWorkflow or the GitHub token (based on UseGhTokenWorkflow for PR/Commit)", Mandatory=$true)]
+    [Parameter(HelpMessage = "The GhTokenWorkflow or the GitHub token (based on UseGhTokenWorkflow for PR/Commit)", Mandatory = $true)]
     [string] $TOKENFORPUSH,
-    [Parameter(HelpMessage="Json structure containing projects to search for", Mandatory=$true)]
+    [Parameter(HelpMessage = "Json structure containing projects to search for", Mandatory = $true)]
     [string] $ProjectsJson
 )
 

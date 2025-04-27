@@ -1,4 +1,4 @@
-name: Analyze Release Artifacts
+name: Determine artifacts for release
 author: Microsoft Corporation
 inputs:
   shell:
