@@ -147,7 +147,7 @@ jobs:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
           tag_name: ${{ github.event.inputs.tag }}
           name: ${{ github.event.inputs.name }}
-          draft: ${{ github.event.inputs.releaseType == 'Draft' }}
+          releaseType: ${{ github.event.inputs.releaseType }}
           prerelease: ${{ github.event.inputs.releaseType == 'Prerelease' }}
           commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
         with:
@@ -160,8 +160,8 @@ jobs:
               tag_name: process.env.tag_name,
               name: process.env.name,
               body: bodyMD.replaceAll('\\n','\n').replaceAll('%0A','\n').replaceAll('%0D','\n').replaceAll('%25','%'),
-              draft: process.env.draft,
-              prerelease: process.env.prerelease,
+              draft: (process.env.releaseType == 'Draft'),
+              prerelease: (process.env.releaseType == 'Prerelease'),
               make_latest: 'legacy',
               target_commitish: process.env.commitish
             });
