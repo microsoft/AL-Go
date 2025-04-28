@@ -463,9 +463,6 @@ try {
         $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
 
-    # see if we can download builds logs from last good run
-    Import-Module (Join-Path $PSScriptRoot "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
-
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
         -accept_insiderEula `
