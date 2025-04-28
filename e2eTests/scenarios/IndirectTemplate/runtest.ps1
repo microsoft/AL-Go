@@ -26,6 +26,10 @@ Write-Host -ForegroundColor Yellow @'
 #  - Create a new repository based on the PTE template with 1 app, using compilerfolder and donotpublishapps (this will be the "final" template repository)
 #  - Run Update AL-Go System Files in final repo (using indirect repo as template)
 #  - Run Update AL-Go System files in indirect repo
+
+# TODO: describe the scenario
+
+
 #  - Validate that custom step is present in indirect repo
 #  - Run Update AL-Go System files in final repo
 #  - Validate that custom step is present in final repo
@@ -65,7 +69,7 @@ Set-Location $prevLocation
 $appName = 'MyApp'
 $publisherName = 'Contoso'
 
-# Create repository
+# Create final repository
 CreateAlGoRepository `
     -github:$github `
     -linux:$linux `
@@ -76,9 +80,9 @@ CreateAlGoRepository `
         Param([string] $path)
         $null = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
     }
-$repoPath = (Get-Location).Path
+$finalRepoPath = (Get-Location).Path
 
-# Update AL-Go System Files to uptake UseProjectDependencies setting
+# Update AL-Go System Files to use template repository
 RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
 
 Set-Location $templateRepoPath
@@ -86,13 +90,6 @@ Set-Location $templateRepoPath
 Pull
 
 # Make modifications to the template repository
-$buildALGoProjectWorkflow = Join-Path $templateRepoPath '.github/workflows/_BuildALGoProject.yaml'
-$buildYaml = [yaml]::Load($buildALGoProjectWorkflow)
-$buildYaml | Should -Not -BeNullOrEmpty
-
-# Modify the permissions
-$buildYaml.Replace('permissions:/contents: read', @('contents: write', 'issues: read'))
-$buildYaml.Save($buildALGoProjectWorkflow)
 
 # Add Custom Jobs to CICD.yaml
 $cicdWorkflow = Join-Path $templateRepoPath '.github/workflows/CICD.yaml'
@@ -100,7 +97,6 @@ $cicdYaml = [yaml]::Load($cicdWorkflow)
 $cicdYaml | Should -Not -BeNullOrEmpty
 
 # Modify the permissions
-$cicdYaml.Replace('permissions:/contents: read', @('contents: write', 'issues: read'))
 $customJobs = @(
     @{
         "Name" = "CustomJob-TemplateInit"
@@ -127,6 +123,19 @@ $customJobs = @(
         )
         "NeedsThis" = @( 'PostProcess' )
     }
+    @{
+        "Name" = "JustSomeTemplateJob"
+        "Content" = @(
+            "JustSomeTemplateJob:"
+            "  needs: [ PostProcess ]"
+            "  runs-on: [ windows-latest ]"
+            "  steps:"
+            "    - name: JustSomeTemplateStep"
+            "      run: |"
+            "        Write-Host 'JustSomeTemplateJob was here!'"
+        )
+        "NeedsThis" = @( )
+    }
 )
 # Add custom Jobs
 $cicdYaml.AddCustomJobsToYaml($customJobs)
@@ -139,26 +148,30 @@ CommitAndPush -commitMessage 'Add template customizations'
 CancelAllWorkflows -repository $templateRepository
 
 # Add local customizations to the final repository
-Set-Location $repoPath
+Set-Location $finalRepoPath
 Pull
 
-# Make modifications to the template repository
-$buildALGoProjectWorkflow = Join-Path $repoPath '.github/workflows/_BuildALGoProject.yaml'
-$buildYaml = [yaml]::Load($buildALGoProjectWorkflow)
-$buildYaml | Should -Not -BeNullOrEmpty
-
-# save
-$buildYaml.Save($buildALGoProjectWorkflow)
+# Make modifications to the final repository
 
 # Add Custom Jobs to CICD.yaml
-$cicdWorkflow = Join-Path $repoPath '.github/workflows/CICD.yaml'
+$cicdWorkflow = Join-Path $finalRepoPath '.github/workflows/CICD.yaml'
 $cicdYaml = [yaml]::Load($cicdWorkflow)
 $cicdYaml | Should -Not -BeNullOrEmpty
 
-# Modify the permissions
-$cicdYaml.Replace('permissions:/contents: read', @('contents: read', 'issues: write'))
-
 $customJobs = @(
+    @{
+        "Name" = "JustSomeJob"
+        "Content" = @(
+            "JustSomeJob:"
+            "  needs: [ Initialization ]"
+            "  runs-on: [ windows-latest ]"
+            "  steps:"
+            "    - name: JustSomeStep"
+            "      run: |"
+            "        Write-Host 'JustSomeJob was here!'"
+        )
+        "NeedsThis" = @( 'Build' )
+    }
     @{
         "Name" = "CustomJob-PreDeploy"
         "Content" = @(
@@ -206,6 +219,8 @@ CancelAllWorkflows -repository $repository
 # Pull changes
 Pull
 
+# TODO: Check that the settings from the indirect template repository was copied to $IndirectTemplateRepoSettingsFile and $IndirectTemplateProjectSettingsFile
+
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait
 
@@ -214,22 +229,16 @@ Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-TemplateInit' -stepNa
 Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-TemplateDeploy' -stepName 'Deploy' -expectedText 'CustomJob-TemplateDeploy was here!'
 Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-PreDeploy' -stepName 'PreDeploy' -expectedText 'CustomJob-PreDeploy was here!'
 Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-PostDeploy' -stepName 'PostDeploy' -expectedText 'CustomJob-PostDeploy was here!'
-
-# Check Permissions
-# TODO: check issues: write in cicd.yaml (from final) and issues: read in _buildALGoProject.yaml (from template)
-$buildALGoProjectWorkflow = Join-Path $repoPath '.github/workflows/_BuildALGoProject.yaml'
-$buildYaml = [yaml]::Load($buildALGoProjectWorkflow)
-$buildYaml | Should -Not -BeNullOrEmpty
-$buildYaml.get('Permissions:/issues:').content | Should -Be 'issues: read'
-
-$cicdWorkflow = Join-Path $repoPath '.github/workflows/CICD.yaml'
-$cicdYaml = [yaml]::Load($cicdWorkflow)
-$cicdYaml | Should -Not -BeNullOrEmpty
-$cicdYaml.get('Permissions:/issues:').content | Should -Be 'issues: write'
+Test-LogContainsFromRun -runid $run.id -jobName 'JustSomeJob' -stepName 'JustSomeStep' -expectedText 'JustSomeJob was here!' | Should -Throw
+Test-LogContainsFromRun -runid $run.id -jobName 'JustSomeTemplateJob' -stepName 'JustSomeTemplateStep' -expectedText 'JustSomeTemplateJob was here!' | Should -Throw
 
 Set-Location $prevLocation
 
+# TODO: Modify settings in the template repository and re-run Update AL-Go System Files in the final repository to check that the settings are copied to the final repository
+
+# TODO: Add tests for CustomALGoSystemFiles (with and without security)
+
 Read-Host "Press Enter to continue"
 
-RemoveRepository -repository $repository -path $repoPath
+RemoveRepository -repository $repository -path $finalRepoPath
 RemoveRepository -repository $templateRepository -path $templateRepoPath
