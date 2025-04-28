@@ -422,7 +422,7 @@ try {
                             "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
                         }
                     }
-                    if ($parameters.ContainsKey('bcAuthContext') -and ($parameters.ContainsKey('environment'))) {
+                    if ($parameters.ContainsKey('bcAuthContext') -and $parameters.ContainsKey('environment') -and $parameters.environment -notlike 'https://*') {
                         try {
                             Write-Host "Trying to install app $($appid) from AppSource."
                             Install-BcAppFromAppSource -bcAuthContext $parameters.bcAuthContext -environment $parameters.environment -appId $appid -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
