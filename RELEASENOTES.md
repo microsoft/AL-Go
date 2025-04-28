@@ -18,7 +18,7 @@
 
 ### Use online environment during build for running tests
 
-By creating a [build authentication context](https://aka.ms/algosecrets#buildAuthContext) secret and setting the [buildEnvironmentName](https://aka.ms/algosettings#buildEnvironmentName) for a specific branch and a specific workflow, will cause AL-Go for GitHub to use this environment for running tests. An example of how to define these settings could be:
+By creating a [build authentication context](https://aka.ms/algosecrets#buildAuthContext) secret and setting the [buildEnvironmentName](https://aka.ms/algosettings#buildEnvironmentName) for a specific branch and a specific workflow, will cause AL-Go for GitHub to use this environment for running tests. An example of how to define settings if you have dependencies to 3rd party AppSource apps, where you do not have runtime packages to satisfy the dependencies, could be:
 
 ```json
   "useCompilerFolder": true,
