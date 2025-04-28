@@ -125,7 +125,7 @@ jobs:
         id: setup
         env:
           _bcContainerHelperVersion: ${{ github.event.inputs.bcContainerHelperVersion }}
-          GH_TOKEN: ${{ steps.app-token.outputs.token || Secrets.E2EPAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.E2EPAT }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
