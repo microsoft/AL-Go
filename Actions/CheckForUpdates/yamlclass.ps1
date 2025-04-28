@@ -306,53 +306,6 @@ class Yaml {
         }
     }
 
-    [string[]] GetStepsFromJob([string] $job) {
-        $steps = $this.GetNextLevel("Jobs:/$($job):/steps:/") | Where-Object { $_ -like '- name: *' } | ForEach-Object { $_.Substring(8).Trim() }
-        if ($steps | Group-Object | Where-Object { $_.Count -gt 1 }) {
-            Write-Host "Duplicate step names in job '$job'"
-            return @()
-        }
-        return $steps
-    }
-
-    static [PSCustomObject] GetPermissionsFromArray([string[]] $permissionsArray) {
-        $permissions = [PSCustomObject]@{}
-        $permissionsArray | ForEach-Object {
-            $permissions | Add-Member -MemberType NoteProperty -Name $_.Split(':')[0].Trim() -Value $_.Split(':')[1].Trim()
-        }
-        return $permissions
-    }
-
-    static [string[]] GetPermissionsArray([PSCustomObject] $permissions) {
-        $permissionsArray = @()
-        $permissions.PSObject.Properties.Name | ForEach-Object {
-            $permissionsArray += "$($_): $($permissions."$_")"
-        }
-        return $permissionsArray
-    }
-
-    static [PSCustomObject] MergePermissions([PSCustomObject] $permissions, [PSCustomObject] $permissions2) {
-        $permissions2.PSObject.Properties.Name | ForEach-Object {
-            if ($permissions.PSObject.Properties.Name -eq $_) {
-                $permission = $permissions."$_"
-                $permission2 = $permissions2."$_"
-                if ($permission -eq 'write' -or $permission2 -eq 'write') {
-                    $permissions."$_" = 'write'
-                }
-                elseif ($permission -eq 'read' -or $permission2 -eq 'read') {
-                    $permissions."$_" = 'read'
-                }
-                else {
-                    $permissions."$_" = 'none'
-                }
-            }
-            else {
-                $permissions | Add-Member -MemberType NoteProperty -Name $_ -Value $permissions2."$_"
-            }
-        }
-        return $permissions
-    }
-
     static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile) {
         $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
         try {
@@ -360,40 +313,6 @@ class Yaml {
         }
         catch {
             return
-        }
-
-        # Merge permissions
-        Write-host "Merge permissions"
-        $allJobs = $srcYaml.GetNextLevel('jobs:/')
-        $permissionPaths = @("permissions:/") + @($allJobs | ForEach-Object { "jobs:/$_/permissions:/" })
-        foreach($permissionPath in $permissionPaths) {
-            $srcPermissionsObj = $srcYaml.Get($permissionPath)
-            $yamlPermissionsObj = $yaml.Get($permissionPath)
-            if ($yamlPermissionsObj) {
-                # permissions exist and should be merged/added
-                if ($srcPermissionsObj) {
-                    # Merge permissions
-                    $srcPermissions = [Yaml]::GetPermissionsFromArray($srcPermissionsObj.content)
-                    $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
-                    if ("$srcPermissions" -ne "" -and "$yamlPermissions" -ne "") {
-                        $srcYaml.Replace($permissionPath, [Yaml]::GetPermissionsArray([Yaml]::MergePermissions($srcPermissions, $yamlPermissions)))
-                    }
-                }
-                else {
-                    # Add permissions
-                    $parentPath = $permissionPath.Substring(0, $permissionPath.TrimEnd('/').LastIndexOf('/')+1)
-                    if ($parentPath) {
-                        # Job permissions are inserted before steps
-                        $beforePath = "$($parentPath)steps:"
-                    }
-                    else {
-                        # Global permissions are inserted before jobs
-                        $beforePath = "jobs:"
-                    }
-                    $yamlPermissions = [Yaml]::GetPermissionsFromArray($yamlPermissionsObj.content)
-                    $srcYaml.Replace($beforePath, @("permissions:") + @([Yaml]::GetPermissionsArray($yamlPermissions) | ForEach-Object { "  $_" }) + $srcYaml.Get($beforePath).content)
-                }
-            }
         }
 
         # Locate custom jobs in destination YAML
