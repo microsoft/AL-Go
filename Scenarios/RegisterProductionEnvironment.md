@@ -10,7 +10,6 @@
 1. When running the **Publish to Environment** workflow, you should see that the app is deployed to the **MYPROD** environment only.
    ![MYPROD](https://github.com/user-attachments/assets/04dab8af-57b4-4bc3-a0c2-6e6869d8df34)
 
-
 > [!NOTE]
 > If your Business Central environment name contains spaces or special characters, you might need to map your GitHub environment name to your Business Central environment name using the DeployTo setting with an EnvironmentName setting called DeployTo.
 
