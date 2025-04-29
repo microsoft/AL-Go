@@ -1,14 +1,10 @@
 param(
     [Parameter(Mandatory=$true, HelpMessage="The GitHub owner of the repositories to remove.")]
-    [string] $githubOwner,
-    [Parameter(Mandatory=$true, HelpMessage="The token use for the operation.")]
-    [string] $token
+    [string] $githubOwner
 )
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
-
-SetTokenAndRepository -github -githubOwner $githubOwner -token $token -repository ''
 
 @(invoke-gh repo list $githubOwner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$githubOwner/tmp*" } | ForEach-Object {
     $repo = $_
