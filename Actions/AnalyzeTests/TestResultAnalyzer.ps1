@@ -23,6 +23,7 @@ function BuildTestMarkdownTable {
         [hashtable] $resultIcons
     )
 
+    $mdTableRows = [System.Collections.ArrayList]@()
     $mdTableSB = [System.Text.StringBuilder]::new()
 
     foreach($row in $Rows) {
@@ -31,10 +32,10 @@ function BuildTestMarkdownTable {
             #If resultIcons has a key for this column, we want to display an emoji for values > 0 and an empty cell for 0
             if ($resultIcons.ContainsKey($i)) {
                 if ($row[$i] -gt 0) {
-                    $row[$i] = "$($row[$i])$($resultIcons[$i])"
+                    $mdTableRows.Add("$($row[$i])$($resultIcons[$i])") | Out-Null
                 }
                 else {
-                    $row[$i] = $null
+                    $mdTableRows.Add($null) | Out-Null
                 }
             }
         }
@@ -43,7 +44,7 @@ function BuildTestMarkdownTable {
 
     $mdTable = ''
     try {
-        $mdTable = Build-MarkdownTable -Headers $Headers -Rows $Rows
+        $mdTable = Build-MarkdownTable -Headers $Headers -Rows $mdTableRows
     } catch {
         $mdTable = "<i>Failed to generate result table</i>"
     }
@@ -197,9 +198,9 @@ function GetTestResultSummaryMD {
                         }
                     }
                     $failuresSB = BuildHTMLFailureSummary -rootFailureNode $rootFailureNode
-                }
-                $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultIcons $mdTableEmojis
+                }   
             }
+            $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultIcons $mdTableEmojis
         }
         if ($totalFailed -gt 0) {
             $failuresSummaryMD = "<i>$totalFailed failing tests, download test results to see details</i>"
