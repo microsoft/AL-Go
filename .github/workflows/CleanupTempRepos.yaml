@@ -27,11 +27,20 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
           egress-policy: audit
 
+      - uses: actions/create-github-app-token@3ff1caaa28b64c9cc276ce0a02e2ff584f3900c5 # v2.0.2
+        id: app-token
+        if: ${{ vars.E2E_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.E2E_APP_ID }}
+          private-key: ${{ secrets.E2E_PRIVATE_KEY }}
+          owner: ${{ github.event.inputs.githubOwner }}
+
       - name: Check E2EPAT Secret is defined
+        if: ${{ vars.E2E_APP_ID == '' }}
         run: |
           if ('${{ Secrets.E2EPAT }}' -eq '') {
             Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
@@ -50,5 +59,6 @@ jobs:
       - name: Cleanup Temp Repositories
         env:
           githubOwner: ${{ steps.getGitHubOwner.outputs.githubOwner }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.E2EPAT }}
         run: |
-          ${{ github.workspace }}/Internal/Scripts/RemoveTempRepos.ps1 -githubOwner $env:githubOwner -token '${{ Secrets.E2EPAT }}'
+          ${{ github.workspace }}/Internal/Scripts/RemoveTempRepos.ps1 -githubOwner $env:githubOwner
