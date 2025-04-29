@@ -849,7 +849,7 @@ function ReadSettings {
             Test-Json -json $settingsJson -schema $settingsSchema | Out-Null
         }
         catch {
-            throw "Settings are not valid. Error: $($_.Exception.Message)"
+            OutputWarning "Settings are not valid. Error: $($_.Exception.Message)"
         }
     }
 
