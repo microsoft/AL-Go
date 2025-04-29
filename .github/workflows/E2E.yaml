@@ -113,11 +113,19 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref }}
 
+      - uses: actions/create-github-app-token@3ff1caaa28b64c9cc276ce0a02e2ff584f3900c5 # v2.0.2
+        id: app-token
+        if: ${{ vars.E2E_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.E2E_APP_ID }}
+          private-key: ${{ secrets.E2E_PRIVATE_KEY }}
+          owner: ${{ needs.Check.outputs.githubowner }}
+
       - name: Setup Repositories
         id: setup
         env:
           _bcContainerHelperVersion: ${{ github.event.inputs.bcContainerHelperVersion }}
-          GH_TOKEN: ${{ secrets.E2EPAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.E2EPAT }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
@@ -140,13 +148,22 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref }}
 
+      - uses: actions/create-github-app-token@3ff1caaa28b64c9cc276ce0a02e2ff584f3900c5 # v2.0.2
+        id: app-token
+        if: ${{ vars.E2E_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.E2E_APP_ID }}
+          private-key: ${{ secrets.E2E_PRIVATE_KEY }}
+          owner: ${{ needs.Check.outputs.githubowner }}
+
       - name: Analyze
         id: Analyze
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || Secrets.E2EPAT }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
           Import-Module $modulePath -DisableNameChecking
-          SetTokenAndRepository -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -token '${{ Secrets.E2EPAT }}' -repository "microsoft/AL-Go"
           $maxParallel = [int]'${{ needs.Check.outputs.maxParallel }}'
 
           $publicTestruns = @{
