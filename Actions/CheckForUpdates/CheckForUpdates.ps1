@@ -197,12 +197,12 @@ foreach($checkfile in $checkfiles) {
                             # Get $schema from the source file (the file is always a JSON)
                             $srcSettingsSchema = ($srcContent | ConvertFrom-Json)."`$schema"
 
-                            # Replace the schema in the destination file with the one from the source file, without changing the rest of the file
-                            $dstFileContent = Get-ContentLF -Path $dstFile
-                            $newDstFileContent = $dstFileContent -replace '"\$schema":(\s*)"(.*)"', "`"`$schema`":`${1}`"$srcSettingsSchema`""
+                            # Replace or add the $schema property in the destination file
+                            $dstFileContentJson = Get-ContentLF -Path $dstFile | ConvertFrom-Json
+                            $dstFileContentJson | Add-Member -MemberType NoteProperty -Name "`$schema" -Value $srcSettingsSchema -Force
+                            $dstContent = $dstFileContentJson | ConvertTo-Json -Depth 100
 
-                            Write-Host "Changed the `$schema property in ($dstFile) to $srcSettingsSchema"
-                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $newDstFileContent }
+                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $dstContent }
                         }
                      }
                     Default {
