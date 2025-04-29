@@ -18,7 +18,7 @@
    ![Inspect PR](https://github.com/user-attachments/assets/f7855aaa-3233-4028-91ed-ffba9de797ae)
 1. Under **Actions** you should now see that a new CI/CD workdlow have been started.
    ![New CI/CD](https://github.com/user-attachments/assets/442930f6-508d-4e0f-8130-2ccc39099fef)
-1.  After the CI/CD workflow finishes, you can inspect the workflow output to see that the latest release was used as a baseline for the upgrade tests in the pipeline. You will also see that the new build, just created was deployed to the QA environment automatically.
+1. After the CI/CD workflow finishes, you can inspect the workflow output to see that the latest release was used as a baseline for the upgrade tests in the pipeline. You will also see that the new build, just created was deployed to the QA environment automatically.
    ![Success](https://github.com/user-attachments/assets/639851f5-fab2-4cc9-a43c-e4cdea974536)
 
 ______________________________________________________________________

@@ -26,7 +26,6 @@
 1. And/or you can open the QA environment, navigate to Customers and see that your very own Hello World message appears.
    ![Hello World](https://github.com/user-attachments/assets/87d78254-4cc5-4353-9837-e1d186f27f33)
 
-
 ______________________________________________________________________
 
 [back](../README.md)

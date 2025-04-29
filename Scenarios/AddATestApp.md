@@ -23,7 +23,6 @@
 1. This time it should be passing and if you investigate the CI/CD workflow, you will see that the deploy step has been skipped as no environment existed.
    ![Success](https://github.com/user-attachments/assets/47a6f189-5322-4539-bc92-d4fcf24cbdcf)
 
-
 ______________________________________________________________________
 
 [back](../README.md)
