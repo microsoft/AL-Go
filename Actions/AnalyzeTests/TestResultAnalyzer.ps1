@@ -202,7 +202,7 @@ function GetTestResultSummaryMD {
                         }
                     }
                     $failuresSB = BuildHTMLFailureSummary -rootFailureNode $rootFailureNode
-                }   
+                }
             }
             $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultIcons $mdTableEmojis
         }
