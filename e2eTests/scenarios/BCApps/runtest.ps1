@@ -69,7 +69,7 @@ CreateAlGoRepository `
 $repoPath = (Get-Location).Path
 Write-Host "Repo Path: $repoPath"
 
-RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $e2epat -repository $repository | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $algoauthapp -repository $repository | Out-Null
 
 SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $algoauthapp
 
