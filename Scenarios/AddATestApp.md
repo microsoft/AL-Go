@@ -6,7 +6,7 @@
    ![Cretae a new test app](https://github.com/user-attachments/assets/9173c04f-1ad1-424c-8078-5ee4dda9c48a)
 1. If you receive an error, stating that GitHub actions are **not allowed to create Pull Requests**, the reason for this is that your organizational settings doesn't allow the workflow to create pull requests, you can **click the link** and proceed to **create the pull request manually**:
    ![iPull request not allowed](https://github.com/user-attachments/assets/84b7f632-3895-4c52-975c-9c150e6ed997)
-1. If you got this error, you can change that behavior under **Organization** -> **Settings** -> **Actions** -> **General** -> **Workflow permissions** -> Check **Allow GitHub Actions to create and approve pull requests**. 
+1. If you got this error, you can change that behavior under **Organization** -> **Settings** -> **Actions** -> **General** -> **Workflow permissions** -> Check **Allow GitHub Actions to create and approve pull requests**.
    ![iAllow GitHub Actions to create and approve pull requests](https://github.com/user-attachments/assets/93454d6c-2b6a-4180-837c-a500be11f37c)
 1. When the workflow is done, navigate to **Pull Requests**, **inspect the PR**, **Merge the pull request** and **Confirm the merge**
    ![Merge pull request](https://github.com/user-attachments/assets/5f268ba9-dbf5-4df6-89c7-d8cce568b25a)

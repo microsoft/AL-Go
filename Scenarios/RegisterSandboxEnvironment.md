@@ -8,7 +8,7 @@
 
 1. On github.com, open **Settings** and **Environments** in your project. Click **New Environment** and specify the **name of the environment** you have created in your tenant and choose **Configure environment**
    ![New Environment](https://github.com/user-attachments/assets/df1ba43f-8adf-4400-87a9-a74c3d4f38f4)
-2. Under **Environment secrets**, choose the **Add environment secret** action. Create a secret called **AUTHCONTEXT**, and enter a **COMPRESSED JSON** construct with 3 values: TenantID (where the environment lives), ClientID, and ClientSecret (from the pre-requisites), like:
+1. Under **Environment secrets**, choose the **Add environment secret** action. Create a secret called **AUTHCONTEXT**, and enter a **COMPRESSED JSON** construct with 3 values: TenantID (where the environment lives), ClientID, and ClientSecret (from the pre-requisites), like:
    `{"TenantID":"<TenantID>","ClientID":"<theClientID>","ClientSecret":"<theClientSecret>"}`.
    ![image](https://github.com/user-attachments/assets/b36a92df-0f27-4c67-9670-02ef7cc68435)
 
@@ -23,7 +23,7 @@
 
 5. When the workflow completes, you can inspect the output of the workflow.
    ![Deploy To QA](https://github.com/user-attachments/assets/fbab7444-7b57-4b72-915a-992cdac88e8e)
-6. And/or you can open the QA environment, navigate to Customers and see that your very own Hello World message appears.
+1. And/or you can open the QA environment, navigate to Customers and see that your very own Hello World message appears.
    ![Hello World](https://github.com/user-attachments/assets/87d78254-4cc5-4353-9837-e1d186f27f33)
 
 
