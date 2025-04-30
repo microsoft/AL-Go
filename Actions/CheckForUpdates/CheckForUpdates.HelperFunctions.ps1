@@ -466,20 +466,32 @@ function GetSrcFolder {
     return $path
 }
 
-function UpdateSettingsFile {
+<#
+.SYNOPSIS
+Updates the settings file with the new settings
+.DESCRIPTION
+Updates the settings file with the new settings. If the settings file does not exist, it will be created. If the settings file exists, it will be updated with the new settings.
+.PARAMETER settingsFile
+The path to the settings file, which is a JSON file. The settings file will be created if it does not exist.
+.PARAMETER updateSettings
+A hashtable with the settings to update. The keys of the hashtable are the names of the settings and the values are the new values for the settings.
+.OUTPUTS
+    [PSCustomObject] The updated settings file content
+#>
+function UpdateSettings {
     Param(
         [string] $settingsFile,
-        [hashtable] $updateSettings,
-        [hashtable] $additionalSettings = @{}
+        [hashtable] $updateSettings
     )
 
-    # Update Repo Settings file with the template URL
     if (Test-Path $settingsFile) {
         $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
     }
     else {
         $settings = [PSCustomObject]@{}
     }
+
+    # Update settings file with the new settings
     foreach($key in $updateSettings.Keys) {
         if ($settings.PSObject.Properties.Name -eq $key) {
             $settings."$key" = $updateSettings."$key"
@@ -489,13 +501,18 @@ function UpdateSettingsFile {
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
         }
     }
-    # Grab settings from additionalSettings if they are not already in settings
-    foreach($key in $additionalSettings.Keys) {
-        if (!($settings.PSObject.Properties.Name -eq $key)) {
-            # Add the property if it doesn't exist
-            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $additionalSettings."$key"
-        }
-    }
+
+    return $settings
+}
+
+function UpdateSettingsFile {
+    Param(
+        [string] $settingsFile,
+        [hashtable] $updateSettings
+    )
+
+    $settings = UpdateSettings -settingsFile $settingsFile -updateSettings $updateSettings
+
     # Save the file with LF line endings and UTF8 encoding
     $settings | Set-JsonContentLF -path $settingsFile
 }

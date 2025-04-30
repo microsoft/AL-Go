@@ -198,11 +198,9 @@ foreach($checkfile in $checkfiles) {
                             $srcSettingsSchema = ($srcContent | ConvertFrom-Json)."`$schema"
 
                             # Replace or add the $schema property in the destination file
-                            $dstFileContentJson = Get-ContentLF -Path $dstFile | ConvertFrom-Json
-                            $dstFileContentJson | Add-Member -MemberType NoteProperty -Name "`$schema" -Value $srcSettingsSchema -Force
-                            $dstContent = $dstFileContentJson | ConvertTo-Json -Depth 100
+                            $newSettingsJson = UpdateSettings -settingsFile $dstFile -updateSettings @{ "`$schema" = $srcSettingsSchema } | ConvertTo-Json -Depth 100
 
-                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $dstContent }
+                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $newSettingsJson }
                         }
                      }
                     Default {
