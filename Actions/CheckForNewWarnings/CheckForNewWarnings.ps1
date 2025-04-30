@@ -47,7 +47,3 @@ finally
 {
     Write-Host "::endgroup::Done analyzing build for new warnings..."
 }
-
-
-
-
