@@ -1,9 +1,5 @@
 name: Check For Updates
 author: Microsoft Corporation
-permissions:
-  contents: write
-  pull-requests: write
-  workflows: write
 inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
