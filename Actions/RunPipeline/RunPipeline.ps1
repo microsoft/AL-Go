@@ -544,7 +544,6 @@ try {
         -targetBranch $ENV:GITHUB_BASE_REF `
         -buildMode $buildMode `
         -baselineWorkflowRunId $baselineWorkflowRunId `
-        -baselineWorkflowSHA $baselineWorkflowSHA `
         -prBuildOutputFile $buildOutputFile
 }
 catch {

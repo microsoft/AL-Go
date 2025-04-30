@@ -5,8 +5,7 @@ Param(
     [string] $targetBranch,
     [string] $buildMode,
     [string] $prBuildOutputFile,
-    [string] $baselineWorkflowRunId,
-    [string] $baselineWorkflowSHA
+    [string] $baselineWorkflowRunId
 )
 
 if (-not $ENV:GITHUB_BASE_REF)
