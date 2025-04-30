@@ -70,11 +70,11 @@ function Compare-Files
     $prWarnings = @(Get-Warnings -BuildFile $prBuild)
 
     Write-Host "Found $($refWarnings.Count) warnings in reference build."
-    Write-Host "Found $($prWarnings.Count) warnings in PR build."   
+    Write-Host "Found $($prWarnings.Count) warnings in PR build."
 
-    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Col -PassThru | 
-        Where-Object { $_.SideIndicator -eq "=>" } | 
-        Select-Object -Property Id,File,Description,Line,Col 
+    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Col -PassThru |
+        Where-Object { $_.SideIndicator -eq "=>" } |
+        Select-Object -Property Id,File,Description,Line,Col
 
     $delta | ForEach-Object {
             Write-Host "::error file=$($_.File),line=$($_.Line),col=$($_.Col)::New warning introduced in this PR: [$($_.Id)] $($_.Description)"
