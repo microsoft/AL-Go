@@ -1,6 +1,6 @@
 # Register a customer production environment for Manual Deployment
 
-*Prerequisites: A completed [scenario 4](CreateRelease.md), an online production environment setup for S2S as specified in task 2 here [Using Service to Service Authentication - Business Central | Microsoft Docs](https://go.microsoft.com/fwlink/?linkid=2217415&clcid=0x409), using the same Microsoft Entra application registration as scenario 3*
+*Prerequisites: A completed ["Create a release of your application"](CreateRelease.md) scenario, an online production environment setup for S2S as specified in task 2 here: [Using Service to Service Authentication - Business Central | Microsoft Docs](https://go.microsoft.com/fwlink/?linkid=2217415&clcid=0x409), using the same Microsoft Entra application registration as scenario 3*
 
 > [!NOTE]
 > For access to environments, environment secrets, and deployment branches in private or internal repositories, you must use GitHub Pro, GitHub Team, or GitHub Enterprise. (see [this](https://go.microsoft.com/fwlink/?linkid=2216857&clcid=0x409)). We are considering adding a secondary option for listing environments.

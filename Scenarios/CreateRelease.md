@@ -1,6 +1,6 @@
 # Create a release of your application
 
-*Prerequisites: A completed [scenario 3](RegisterSandboxEnvironment.md)*
+*Prerequisites: A completed ["Register a customer sandbox environment for Continuous Deployment using S2S"](Scenarios/RegisterSandboxEnvironment.md) scenario*
 
 1. On github.com, open **Actions** in your project and select **Create Release**. Choose **Run workflow**. Enter `v1.0` as **name** and `1.0.0` as **tag** of the release, type `+0.1` in new version number and then choose **Run workflow**.
 

@@ -1,6 +1,6 @@
 # Add a test app to an existing project
 
-*Prerequisites: A completed [scenario 1](GetStarted.md)*
+*Prerequisites: A completed ["Create a new per-tenant extension (like AL Go) and start developing in VS Code"](GetStarted.md) scenario*
 
 1. On **github.com**, open **Actions** on your solution, locate and select **Create a new test app** and then choose **Run workflow**. Enter values for **name**, **publisher**, and **ID range** and choose **Run workflow**
 

@@ -1,6 +1,6 @@
 # Update AL-Go system files
 
-*Prerequisites: A completed [scenario 5](RegisterProductionEnvironment.md)*
+*Prerequisites: A completed ["Register a customer production environment for Manual Deployment"](Scenarios/RegisterProductionEnvironment.md) scenario and a GhTokenWorkflow secret, created following [this walkthrough](GhTokenWorkflow.md)*
 
 1. Every time a CI/CD pipeline runs, it checks whether there are updates to AL-Go system files. AL-Go System files are scripts in the **.AL-Go folder** plus scripts and workflows in the **.github folder**. Looking at the latest CI/CD workflow, we can see that updates are available.
 
@@ -12,7 +12,7 @@
 
 1. Now there is an additional difference. AL-Go doesn’t support that anybody changes the AL-Go system files and will warn about these changes. The CI/CD pipeline, which kicked off when pushing the change, tells me about this.
 
-1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHTOKENWORKFLOW. Please use [this walkthrough](./GhTokenWorkflow.md) to create this secret.
+1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHTOKENWORKFLOW (see prerequisites). If not already done, please use [this walkthrough](GhTokenWorkflow.md) to create this secret.
 
 1. On github.com, under **Actions** in your project, select the **Update AL-Go system files** workflow and choose **Run workflow**. Leave the **Template Repository URL** blank and choose **Run workflow**.
 
