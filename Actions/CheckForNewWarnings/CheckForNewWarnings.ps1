@@ -27,18 +27,18 @@ try
     Import-Module (Join-Path $PSScriptRoot "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
     Import-Module (Join-Path $PSScriptRoot ".\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
 
+    Write-Host "Downloading build logs from previous good build."
+
     if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
     
     $mask = Get-Item $prBuildOutputFile | Select-Object -ExpandProperty BaseName
     if ($buildMode -ne 'Default')
     {
-        $mask = "$mask-$buildMode"
+        $mask = "$buildMode$mask"
     }
 
+    Write-Host "Downloading build output for project '$projectName' with mask '$mask'."
     $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName | Select-Object -First 1
-
-    Write-Host "Downloading build logs from previous good build."
-
 
     $artifactsFolder = Join-Path $ENV:RUNNER_TEMP ".warnings"
     Initialize-Directory -Path $artifactsFolder
