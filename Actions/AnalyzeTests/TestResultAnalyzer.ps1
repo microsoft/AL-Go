@@ -27,7 +27,7 @@ function BuildTestMarkdownTable {
     $mdTableSB = [System.Text.StringBuilder]::new()
 
     foreach($row in $Rows) {
-        Write-Host $row
+        $row -join ',' | Out-Host
         $formattedRow = @()
         for($i=0; $i -lt $row.Length; $i++) {
             #If resultIcons has a key for this column, we want to display an emoji for values > 0 and an empty cell for 0
@@ -36,14 +36,14 @@ function BuildTestMarkdownTable {
                     $formattedRow += "$($row[$i])$($resultIcons[$i])"
                 }
                 else {
-                    $formattedRow += $null
+                    $formattedRow += ""
                 }
             } else {
-                $formattedRow += $row[$i]
+                $formattedRow += "$($row[$i])"
             }
         }
         $mdTableRows.Add($formattedRow) | Out-Null
-        Write-Host $formattedRow
+        "|$($formattedRow -join '|')|" | Out-Host
     }
 
     $mdTable = ''
