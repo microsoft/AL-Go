@@ -57,7 +57,8 @@ function Get-Warnings
     Compare 2 build logs and throw if new warnings were added.
     .DESCRIPTION
     Compare 2 build logs and throw if new warnings were added.
-#>function Compare-Files
+#>
+function Compare-Files
 {
     [CmdletBinding()]
     param (
