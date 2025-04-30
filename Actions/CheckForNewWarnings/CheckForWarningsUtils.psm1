@@ -26,6 +26,7 @@ function Initialize-Directory
 function Get-Warnings
 {
     [CmdletBinding()]
+    [OutputType([PSObject[]])]
     param (
         [string] $BuildFile
     )
@@ -51,7 +52,12 @@ function Get-Warnings
     return $warnings
 }
 
-function Compare-Files
+<#
+    .SYNOPSIS
+    Compare 2 build logs and throw if new warnings were added.
+    .DESCRIPTION
+    Compare 2 build logs and throw if new warnings were added.
+#>function Compare-Files
 {
     [CmdletBinding()]
     param (

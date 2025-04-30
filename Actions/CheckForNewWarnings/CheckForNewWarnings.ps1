@@ -41,7 +41,7 @@ try
     $referenceBuildLog = Get-ChildItem $artifactsFolder -File -Recurse | Select-Object -First 1
 
     Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
-    Compare-Files -referenceBuild $referenceBuildLog.FullName -prBuild $prBuildOutputFile 
+    Compare-Files -referenceBuild $referenceBuildLog.FullName -prBuild $prBuildOutputFile
 }
 finally
 {
