@@ -1,3 +1,9 @@
+<#
+    .SYNOPSIS
+    Ensures that a specified directory exists. If the directory does not exist, it creates it.
+    .DESCRIPTION
+    Ensures that a specified directory exists. If the directory does not exist, it creates it.
+#>
 function Initialize-Directory
 {
     [CmdletBinding()]
@@ -11,6 +17,12 @@ function Initialize-Directory
     }
 }
 
+<#
+    .SYNOPSIS
+    This function parses a build log file and returns the AL warnings found in it.
+    .DESCRIPTION
+    This function parses a build log file and returns the AL warnings found in it.
+#>
 function Get-Warnings
 {
     [CmdletBinding()]
@@ -19,7 +31,7 @@ function Get-Warnings
     )
 
     $warnings = @()
-    
+
     if (Test-Path $BuildFile)
     {
         Get-Content $BuildFile | ForEach-Object {
@@ -44,8 +56,7 @@ function Compare-Files
     [CmdletBinding()]
     param (
         [string] $referenceBuild,
-        [string] $prBuild,
-        [switch] $treatAsErrors
+        [string] $prBuild
     )
 
     $refWarnings =  @(Get-Warnings -BuildFile $referenceBuild)
@@ -66,9 +77,7 @@ function Compare-Files
     {
         throw "New warnings were introduced in this PR."
     }
-
 }
 
 Export-ModuleMember -Function Initialize-Directory
-Export-ModuleMember -Function Get-Warnings
 Export-ModuleMember -Function Compare-Files
