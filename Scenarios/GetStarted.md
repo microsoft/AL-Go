@@ -11,6 +11,7 @@
    ![Create a new repository](https://github.com/user-attachments/assets/f82d3387-dc81-41d2-8fd5-6fc8ff78c574)
 
 1. In your new repository, select **Actions** -> **Show more workflows...**, **Create a new app** -> **Run workflow**
+
 1. Enter **Name**, **Publisher**, **ID range**, select **Direct Commit** and choose **Run workflow**.
 
    ![Create a new app](https://github.com/user-attachments/assets/3a955943-80cc-48a9-9958-d8c2b3132ac5)
@@ -40,34 +41,35 @@
 
     ![LocalDevEnv](https://github.com/user-attachments/assets/1b5f9304-bae0-4aba-a72d-358c266a5c94)
 
-1. Answer the questions asked about container name, authentication mechanism, credentials and select none for license file. The script might show a dialog asking for permissions to run docker commands, select **Yes** in this dialog. Wait for completion of the script.
+01. Answer the questions asked about container name, authentication mechanism, credentials and select none for license file. The script might show a dialog asking for permissions to run docker commands, select **Yes** in this dialog. Wait for completion of the script.
 
-   ![LocalDevEnv done](https://github.com/user-attachments/assets/9fd335d7-34cb-413e-9d33-3664fee93e80)
+    ![LocalDevEnv done](https://github.com/user-attachments/assets/9fd335d7-34cb-413e-9d33-3664fee93e80)
 
-1. In VS Code, press **Ctrl+Shift+P** and **clear the credentials cache**.
-1. Open the **HelloWorld.al** file, modify the string and press **F5**. Depending on authentication selected VS Code might ask for the credentials you provided earlier.
+01. In VS Code, press **Ctrl+Shift+P** and **clear the credentials cache**.
 
-   ![Modify Hello World](https://github.com/user-attachments/assets/87826e3b-1717-4f19-a69b-b61bf7092141)
+01. Open the **HelloWorld.al** file, modify the string and press **F5**. Depending on authentication selected VS Code might ask for the credentials you provided earlier.
 
-1. Login to **Business Central**, navigate to Customers and your **very own Hello World** opens up!
+    ![Modify Hello World](https://github.com/user-attachments/assets/87826e3b-1717-4f19-a69b-b61bf7092141)
 
-   ![My very own Hello world](https://github.com/user-attachments/assets/ffb0540b-a80e-4186-a280-9ae3a509c89c)
+01. Login to **Business Central**, navigate to Customers and your **very own Hello World** opens up!
 
-1. Back in **VS Code**, you will see that in addition to your changes in HelloWorld.al, the launch.json was also modified with the information about the local environment. **Stage your changes**, **commit** and **sync** your changes.
+    ![My very own Hello world](https://github.com/user-attachments/assets/ffb0540b-a80e-4186-a280-9ae3a509c89c)
 
-   ![launch.json](https://github.com/user-attachments/assets/e2baf584-12bf-4bd9-ab68-9d1210bab70c)
+01. Back in **VS Code**, you will see that in addition to your changes in HelloWorld.al, the launch.json was also modified with the information about the local environment. **Stage your changes**, **commit** and **sync** your changes.
 
-1. Back on github.com, click **Actions** and investigate your workflows.
+    ![launch.json](https://github.com/user-attachments/assets/e2baf584-12bf-4bd9-ab68-9d1210bab70c)
 
-   ![Actions](https://github.com/user-attachments/assets/505f63f0-d782-409b-8fd2-be3a9ea969cc)
+01. Back on github.com, click **Actions** and investigate your workflows.
 
-1. When the build is done, click the build and inspect the **Build summary**
+    ![Actions](https://github.com/user-attachments/assets/505f63f0-d782-409b-8fd2-be3a9ea969cc)
 
-   ![Build Summary](https://github.com/user-attachments/assets/688d814b-758f-4d49-a15a-02700f595a24)
+01. When the build is done, click the build and inspect the **Build summary**
 
-1. Inspect the workflow run by choosing the **build job**, expanding the **Run Pipeline** section and the **Compiling apps** subsection
+    ![Build Summary](https://github.com/user-attachments/assets/688d814b-758f-4d49-a15a-02700f595a24)
 
-   ![Inspect](https://github.com/user-attachments/assets/6db47088-bc21-4613-bd0f-609117ee2698)
+01. Inspect the workflow run by choosing the **build job**, expanding the **Run Pipeline** section and the **Compiling apps** subsection
+
+    ![Inspect](https://github.com/user-attachments/assets/6db47088-bc21-4613-bd0f-609117ee2698)
 
 ______________________________________________________________________
 
