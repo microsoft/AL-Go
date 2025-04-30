@@ -11,7 +11,9 @@
    ![localdevenv](https://github.com/microsoft/AL-Go/assets/10775043/9eb67bc0-5460-44c5-8ede-fc8f6545a821)
 
 1. Now there is an additional difference. AL-Go doesn’t support that anybody changes the AL-Go system files and will warn about these changes. The CI/CD pipeline, which kicked off when pushing the change, tells me about this.
+
 1. To update the AL-Go system files using the Update AL-Go System Files workflow, you need to provide a secret called GHTOKENWORKFLOW. Please use [this walkthrough](./GhTokenWorkflow.md) to create this secret.
+
 1. On github.com, under **Actions** in your project, select the **Update AL-Go system files** workflow and choose **Run workflow**. Leave the **Template Repository URL** blank and choose **Run workflow**.
 
    ![Update AL-Go System Files](https://github.com/user-attachments/assets/890990e3-7681-4abe-ab93-b99eab75ebbe)
