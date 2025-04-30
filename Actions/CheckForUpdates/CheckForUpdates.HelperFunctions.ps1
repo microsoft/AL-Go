@@ -35,7 +35,7 @@ function DownloadTemplateRepository {
 
     # Download template repository
     $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip" -retry
+    InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
     return $tempName
@@ -47,33 +47,14 @@ function GetLatestTemplateSha {
         [string] $apiUrl,
         [string] $templateUrl
     )
+
     $branch = $templateUrl.Split('@')[1]
-
+    Write-Host "Get latest SHA for $templateUrl"
     try {
-        Write-Host "Get latest SHA for $templateUrl"
-        $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
+        $branchInfo = (InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches/$branch").Content | ConvertFrom-Json
     } catch {
-        Write-Host "Exception: $($_.Exception.Message)"
-        if ($_.Exception.Message -like "*Unauthorized*") {
-            try {
-                Write-Host "retry without Authorization header"
-                $headers.Remove('Authorization')
-                $response = InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches?per_page=100" -retry
-            }
-            catch {
-                throw "Failed to update AL-Go System Files. Make sure that the personal access token, defined in the secret called GhTokenWorkflow, is not expired and it has permission to update workflows. (Error was $($_.Exception.Message))"
-            }
-        }
-        else {
-            throw $_.Exception.Message
-        }
+        throw "Failed to update AL-Go System Files. Could not get the latest SHA from template ($templateUrl). (Error was $($_.Exception.Message))"
     }
-
-    $branchInfo = ($response.content | ConvertFrom-Json) | Where-Object { $_.Name -eq $branch }
-    if (!$branchInfo) {
-        throw "$templateUrl doesn't exist"
-    }
-
     return $branchInfo.commit.sha
 }
 

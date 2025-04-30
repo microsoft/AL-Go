@@ -60,57 +60,67 @@ function InvokeWebRequest {
         [string] $method,
         [string] $body,
         [string] $outFile,
-        [string] $uri,
-        [switch] $retry
+        [string] $uri
     )
 
-    try {
-        $params = @{ "UseBasicParsing" = $true }
-        if ($headers) {
-            $params += @{ "headers" = $headers }
-        }
-        if ($method) {
-            $params += @{ "method" = $method }
-        }
-        if ($body) {
-            $params += @{ "body" = $body }
-        }
-        if ($outfile) {
-            $params += @{ "outfile" = $outfile }
-        }
+    $params = @{ "UseBasicParsing" = $true }
+    if ($headers) {
+        $params += @{ "headers" = $headers }
+    }
+    if ($method) {
+        $params += @{ "method" = $method }
+    }
+    if ($body) {
+        $params += @{ "body" = $body }
+    }
+    if ($outfile) {
+        $params += @{ "outfile" = $outfile }
+    }
+    while ($true) {
         try {
             $result = Invoke-WebRequest  @params -Uri $uri
+            break
         }
         catch [System.Net.WebException] {
             $response = $_.Exception.Response
             $responseUri = $response.ResponseUri.AbsoluteUri
             if ($response.StatusCode -eq 404 -and $responseUri -ne $uri) {
                 Write-Host "::Warning::Repository ($uri) was renamed or moved, please update your references with the new name. Trying $responseUri, as suggested by GitHub."
-                $result = Invoke-WebRequest @params -Uri $responseUri
+                $uri = $responseUri
+                continue
             }
-            else {
-                throw
+            if ($response.StatusCode -eq 403) {
+                $remaining = $response.Headers["X-RateLimit-Remaining"]
+                if ($remaining -le 0) {
+                    $resetTime = [int64]$response.Headers["X-RateLimit-Reset"]  # Unix timestamp in seconds
+                    $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($resetTime).ToLocalTime()
+                    $waitSeconds = ($resetTimestamp - (Get-Date)).TotalSeconds
+                    if ($waitSeconds -gt 0) {
+                        Write-Host "Rate limit exceeded, waiting $waitSeconds seconds for limits to reset"
+                        Start-Sleep -seconds $waitSeconds
+                    }
+                    continue
+                }
             }
+            if ($response.StatusCode -eq 401) {
+                if ($params.ContainsKey('Headers') -and $params.Headers.ContainsKey('Authorization')) {
+                    $publicResponse = Invoke-WebRequest -Method Head -Uri $uri -ErrorAction SilentlyContinue
+                    if ($publicResponse -and $publicResponse.StatusCode -eq 200) {
+                        Write-Host "Authenticated access to repository ($uri) was not permitted, retrying with un-authenticated access since the repository is public"
+                        $params.Headers.Remove('Authorization')
+                        continue
+                    }
+                }
+            }
+            $message = GetExtendedErrorMessage -errorRecord $_
         }
-        $result
-    }
-    catch {
-        $message = GetExtendedErrorMessage -errorRecord $_
-        if ($retry) {
-            Write-Host $message
-            Write-Host "...retrying in 1 minute"
-            Start-Sleep -Seconds 60
-            try {
-                Invoke-WebRequest  @params -Uri $uri
-                return
-            }
-            catch {
-                Write-Host "Retry failed as well"
-            }
+        catch {
+            $message = GetExtendedErrorMessage -errorRecord $_
         }
-        Write-Host $message
+        Write-Host -ForegroundColor Red $message
         throw $message
     }
+    $result
 }
 
 function GetDependencies {
@@ -170,9 +180,9 @@ function GetDependencies {
                 }
             }
             $projects = $dependency.projects
-            $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/")
+            $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/").TrimEnd("/")
             if ($dependency.release_status -eq "latestBuild") {
-                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
+                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"actions"="read";"metadata"="read"}
                 $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
                 if ($artifacts) {
                     $artifacts | ForEach-Object {
@@ -496,6 +506,40 @@ function SemVerStrToSemVerObj {
     }
 }
 
+# Compare SemVerStr1 and SemVerStr2
+# Returns -1 if SemVerStr1 < SemVerStrj2
+# Returns 1 if SemVerStr1 > SemVerStr2
+# Returns 0 if SemVerStr1 = SemVerStr2
+function CompareSemVerStrs {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $semVerStr1,
+        [Parameter(Mandatory = $true)]
+        [string] $semVerStr2
+    )
+
+    Process {
+        $semVerObj1 = $semVerStr1 | SemVerStrToSemVerObj
+        $semVerObj2 = $semVerStr2 | SemVerStrToSemVerObj
+        $result = $semVerObj1.Major.CompareTo($semVerObj2.Major)
+        if ($result -eq 0) {
+            $result = $semVerObj1.Minor.CompareTo($semVerObj2.Minor)
+            if ($result -eq 0) {
+                $result = $semVerObj1.Patch.CompareTo($semVerObj2.Patch)
+                if ($result -eq 0) {
+                    for ($i=0; $i -lt 5; $i++) {
+                        $result = ("$($semVerObj1."Addt$i")".CompareTo("$($semVerObj2."Addt$i")"))
+                        if ($result -ne 0) {
+                            return $result
+                        }
+                    }
+                }
+            }
+        }
+        return $result
+    }
+}
+
 function GetReleases {
     Param(
         [string] $token,
@@ -632,16 +676,18 @@ function WaitForRateLimit {
         [switch] $displayStatus
     )
 
-    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit" -retry).Content | ConvertFrom-Json).rate
+    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate
     $percentRemaining = [int]($rate.remaining*100/$rate.limit)
     if ($displayStatus) {
         Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percentRemaining%)"
     }
     if ($percentRemaining-lt $percentage) {
-        $resetTimeStamp = ([datetime] '1970-01-01Z').AddSeconds($rate.reset)
-        $waitTime = $resetTimeStamp.Subtract([datetime]::Now)
-        Write-Host "`nLess than 10% API calls left, waiting for $($waitTime.TotalSeconds) seconds for limits to reset."
-        Start-Sleep -seconds ($waitTime.TotalSeconds+1)
+        $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($rate.reset).ToLocalTime()
+        $waitSeconds = ($resetTimestamp - (Get-Date)).TotalSeconds
+        if ($waitSeconds -gt 0) {
+            Write-Host "`nLess than 10% API calls left, waiting for $waitSeconds seconds for limits to reset."
+            Start-Sleep -seconds $waitSeconds
+        }
     }
 }
 
