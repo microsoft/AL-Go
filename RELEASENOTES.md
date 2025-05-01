@@ -2,6 +2,10 @@
 
 - Add top-level permissions for _Increment Version Number_ workflow
 
+### Issues
+
+- Issue 1685 HttpError: Resource not accessible by integration
+
 ## v7.1
 
 ### Issues
@@ -18,7 +22,6 @@
 - Issue 1644 Support for AppAuth when using a private Template repository from another organization
 - Issue 1669 GitHub App authentication to download dependencies from private repositories
 - Issue 1478 Rate Limit Exceeded when running Update AL-Go System files
-- Issue 1685 HttpError: Resource not accessible by integration
 
 ## v7.0
 
