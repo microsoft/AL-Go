@@ -66,6 +66,7 @@ function Compare-Files
         [string] $prBuild
     )
 
+    $startTime = Get-Date
     $refWarnings =  @(Get-Warnings -BuildFile $referenceBuild)
     $prWarnings = @(Get-Warnings -BuildFile $prBuild)
 
@@ -79,6 +80,9 @@ function Compare-Files
     $delta | ForEach-Object {
             Write-Host "::error file=$($_.File),line=$($_.Line),col=$($_.Col)::New warning introduced in this PR: [$($_.Id)] $($_.Description)"
         }
+
+    $secondsElapsed = ((Get-Date) - $startTime).TotalSeconds
+    Trace-Information -Message "Checking for new warnings took $secondsElapsed seconds. Found $($refWarnings.Count) warnings in reference build and $($prWarnings.Count) warnings in PR build."
 
     if ($delta)
     {
