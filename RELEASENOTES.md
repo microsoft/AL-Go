@@ -1,5 +1,12 @@
+### Security
+
+- Add top-level permissions for _Increment Version Number_ workflow
+
+## v7.1
+
 ### Issues
 
+- Issue 1678 Test summary is showing too many status icons
 - Issue 1640 AL1040 error due to app folder within the artifacts cache being incorrectly recognized as an app folder
 - Issue 1630 Error when downloading a release, when the destination folder already exists.
 - Issue 1540 and 1649 Apps with dependencies to Microsft\_\_EXCLUDE\_ apps fails deployment
