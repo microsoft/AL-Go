@@ -2,6 +2,8 @@
 
 - Add top-level permissions for _Increment Version Number_ workflow
 
+## v7.1
+
 ### Issues
 
 - Issue 1678 Test summary is showing too many status icons
