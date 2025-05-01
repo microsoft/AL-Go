@@ -57,7 +57,7 @@ try
 
     Import-Module (Join-Path $PSScriptRoot "..\Github-Helper.psm1" -Resolve) -DisableNameChecking
     Import-Module (Join-Path $PSScriptRoot ".\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
-    Import-Module (Join-Path $PSScriptRoot "..\Actions\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
+    Import-Module (Join-Path $PSScriptRoot "..\TelemetryHelper.psm1" -Resolve) -DisableNameChecking
 
     Trace-Information -Message "Analyzing build logs for new warnings."
     Write-Host "Downloading build logs from previous good build."
