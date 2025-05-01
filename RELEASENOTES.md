@@ -1,3 +1,7 @@
+### Security
+
+- Add top-level permissions for _Increment Version Number_ workflow
+
 ## v7.1
 
 ### Issues
