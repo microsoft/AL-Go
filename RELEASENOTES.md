@@ -2,23 +2,6 @@
 
 - Add top-level permissions for _Increment Version Number_ workflow
 
-## v7.1
-
-### Issues
-
-- Issue 1678 Test summary is showing too many status icons
-- Issue 1640 AL1040 error due to app folder within the artifacts cache being incorrectly recognized as an app folder
-- Issue 1630 Error when downloading a release, when the destination folder already exists.
-- Issue 1540 and 1649 Apps with dependencies to Microsft\_\_EXCLUDE\_ apps fails deployment
-- Issue 1547 Dependencies will be installed even if DependencyInstallMode is ignore, but dependencies will never be installed on production environments
-- Issue 1654 GithubPackageContext does not work together with private trustedNuGetFeeds
-- Issue 1627 AL-Go should throw an error or a warning if you create a release, which is older than the latest release
-- Issue 1657 When no files modified on Git, deployment fails
-- Issue 1530 Dependency Field Service Integration does not get published in container while Installing apps
-- Issue 1644 Support for AppAuth when using a private Template repository from another organization
-- Issue 1669 GitHub App authentication to download dependencies from private repositories
-- Issue 1478 Rate Limit Exceeded when running Update AL-Go System files
-
 ### New Repository settings
 
 - `customALGoSystemFiles` is an array of JSON objects, which holds information about custom AL-Go System Files, which will be applied during Update AL-Go System Files. Every object can hold these 4 properties:
@@ -40,6 +23,23 @@ Note that custom jobs might break by future changes to AL-Go for GitHub workflow
 Create an AL-Go for GitHub repository based on [https://aka.ms/algopte](https://aka.ms/algopte) or [https://aka.ms/algoappsource](https://aka.ms/algoappsource), add custom workflows, custom jobs, custom steps and/or settings to this repository and then use that repository as the template repository for other repositories. Using indirect template repositories allows you to create and use highly customized template repositories and control the uptake of this in all repositories. See [https://aka.ms/algosettings#indirect](https://aka.ms/algosettings#indirect) for details.
 
 Note that customized repositories might break by future changes to AL-Go for GitHub. If you are customizing AL-Go for GitHub, you should always doublecheck the pull request when updating AL-Go system files in your indirect template repositories.
+
+## v7.1
+
+### Issues
+
+- Issue 1678 Test summary is showing too many status icons
+- Issue 1640 AL1040 error due to app folder within the artifacts cache being incorrectly recognized as an app folder
+- Issue 1630 Error when downloading a release, when the destination folder already exists.
+- Issue 1540 and 1649 Apps with dependencies to Microsft\_\_EXCLUDE\_ apps fails deployment
+- Issue 1547 Dependencies will be installed even if DependencyInstallMode is ignore, but dependencies will never be installed on production environments
+- Issue 1654 GithubPackageContext does not work together with private trustedNuGetFeeds
+- Issue 1627 AL-Go should throw an error or a warning if you create a release, which is older than the latest release
+- Issue 1657 When no files modified on Git, deployment fails
+- Issue 1530 Dependency Field Service Integration does not get published in container while Installing apps
+- Issue 1644 Support for AppAuth when using a private Template repository from another organization
+- Issue 1669 GitHub App authentication to download dependencies from private repositories
+- Issue 1478 Rate Limit Exceeded when running Update AL-Go System files
 
 ## v7.0
 
