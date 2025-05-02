@@ -48,7 +48,7 @@ if ($token) {
 # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
 $headers = GetHeaders -token $ENV:GITHUB_TOKEN
 $templateRepositoryUrl = $templateUrl.Split('@')[0]
-$response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
+$response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
 if (-not $response -or $response.StatusCode -ne 200) {
     # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
     # Get token with read permissions for the template repository
