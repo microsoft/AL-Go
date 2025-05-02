@@ -2,6 +2,10 @@
 
 - Add top-level permissions for _Increment Version Number_ workflow
 
+### Issues
+
+- Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
+
 ## v7.1
 
 ### Issues
