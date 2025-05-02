@@ -14,7 +14,7 @@ function GetArtifactMask
         [string] $buildMode
     )
 
-    $mask = Get-Item $prBuildOutputFile | Select-Object -ExpandProperty BaseName
+    $mask = Get-Item $buildOutputFile | Select-Object -ExpandProperty BaseName
     if ($buildMode -ne 'Default')
     {
         $mask = "$buildMode$mask"
@@ -35,7 +35,7 @@ function GetProjectName
     }
     else
     {
-        return $env:GITHUB_REPOSITORY -replace '.+/' 
+        return $env:GITHUB_REPOSITORY -replace '.+/'
     }
 }
 
