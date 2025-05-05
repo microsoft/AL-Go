@@ -552,6 +552,8 @@ function ReadSettings {
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [string] $environmentName = "",
+        [string] $environmentDeployToVariableValue = "",
         [switch] $silent
     )
 
@@ -745,6 +747,12 @@ function ReadSettings {
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
         $settingsObjects += @($projectSettingsObject)
+    }
+    if ($environmentDeployToVariableValue) {
+        # Read settings from environment variable (parameter)
+        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) } 
+        Write-Host "Environment variable settings: $environmentVariableObject" 
+        $settingsObjects += @($environmentVariableObject)
     }
     if ($workflowName) {
         # Read settings from workflow settings file
