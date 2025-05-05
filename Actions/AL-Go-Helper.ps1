@@ -750,8 +750,8 @@ function ReadSettings {
     }
     if ($environmentDeployToVariableValue) {
         # Read settings from environment variable (parameter)
-        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) } 
-        Write-Host "Environment variable settings: $environmentVariableObject" 
+        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) }
+        Write-Host "Environment variable settings: $environmentVariableObject"
         $settingsObjects += @($environmentVariableObject)
     }
     if ($workflowName) {
