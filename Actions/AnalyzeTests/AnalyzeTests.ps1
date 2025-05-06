@@ -42,16 +42,19 @@ switch ($testType) {
     }
 }
 
-# If summary fits, we will display it in the GitHub summary
-if ($testResultsSummaryMD.Length -gt (1MB - 1)) {
-    # If Test results summary is too long, we will not display it in the GitHub summary, instead we will display a message to download the test results
-    $testResultsSummaryMD = "<i>Test results summary size exceeds GitHub summary capacity. Download **TestResults** artifact to see details.</i>"
-}
-if ($testResultsSummaryMD.Length + $testResultsfailuresMD.Length -gt (1MB - 1)) {
-    # If Combined Test Results and failures exceeds GitHub summary capacity, we will not display the failures details, only the failures summary
-    $testResultsfailuresMD = $testResultsFailuresSummaryMD
-}
+# If no tests are found, don't add a job summary at all.
+if ($testResultsSummaryMD) {
+    # If summary fits, we will display it in the GitHub summary
+    if ($testResultsSummaryMD.Length -gt (1MB - 1)) {
+        # If Test results summary is too long, we will not display it in the GitHub summary, instead we will display a message to download the test results
+        $testResultsSummaryMD = "<i>Test results summary size exceeds GitHub summary capacity. Download **TestResults** artifact to see details.</i>"
+    }
+    if ($testResultsSummaryMD.Length + $testResultsfailuresMD.Length -gt (1MB - 1)) {
+        # If Combined Test Results and failures exceeds GitHub summary capacity, we will not display the failures details, only the failures summary
+        $testResultsfailuresMD = $testResultsFailuresSummaryMD
+    }
 
-Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "## $testTitle`n`n"
-Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultsSummaryMD.Replace("\n","`n"))`n`n"
-Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultsfailuresMD.Replace("\n","`n"))`n`n"
+    Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "## $testTitle`n`n"
+    Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultsSummaryMD.Replace("\n","`n"))`n`n"
+    Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "$($testResultsfailuresMD.Replace("\n","`n"))`n`n"
+}
