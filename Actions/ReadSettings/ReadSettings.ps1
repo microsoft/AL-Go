@@ -1,4 +1,6 @@
 ﻿Param(
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
+    [string] $token,
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
     [Parameter(HelpMessage = "Build mode", Mandatory = $false)]
@@ -13,7 +15,7 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$settings = ReadSettings -project $project -buildMode $buildMode -environmentName $environmentName -environmentDeployToVariableValue $environmentDeployToVariableValue
+$settings = ReadSettings -project $project -buildMode $buildMode -environmentName $environmentName -environmentDeployToVariableValue $environmentDeployToVariableValue -token $token
 if ($get) {
     $getSettings = $get.Split(',').Trim()
 }

@@ -554,7 +554,8 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentName = "",
         [string] $environmentDeployToVariableValue = "",
-        [switch] $silent
+        [switch] $silent,
+        [string] $token
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -753,6 +754,10 @@ function ReadSettings {
         $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) }
         Write-Host "Environment variable settings: $environmentVariableObject"
         $settingsObjects += @($environmentVariableObject)
+    }
+    else {
+        $r = Get-DeploymentEnvironmentVariables -token $token -repository $ENV:GITHUB_REPOSITORY -mask "DeployTo"
+        Write-Host $r
     }
     if ($workflowName) {
         # Read settings from workflow settings file
