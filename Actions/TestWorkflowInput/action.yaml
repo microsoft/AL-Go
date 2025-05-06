@@ -18,7 +18,7 @@ runs:
         _workflowName: ${{ inputs.workflowName }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "TestWorkflowInput" -Action {
-          ${{ github.action_path }}/TestWorkflowInput.ps1 -worklowName $env:_workflowName
+          ${{ github.action_path }}/TestWorkflowInput.ps1 -workflowName $env:_workflowName
         }
 branding:
   icon: terminal
