@@ -74,7 +74,7 @@ foreach($sourceRepo in $repositories) {
 
     # Upgrade AL-Go System Files to test version
     SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $algoauthapp
-    RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository | Out-Null
+    RunUpdateAlGoSystemFiles -directCommit -templateUrl $template -wait -repository $repository | Out-Null
 
     CancelAllWorkflows -repository $repository
 
