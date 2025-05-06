@@ -28,10 +28,13 @@ if ($null -ne $eventPath.inputs) {
       }
       default {
         Write-Host "- $inputName = '$inputValue' (no validation)"
-        continue
+        $err = 'OK'
       }
     }
-    if ($err) {
+    if ($err -eq 'OK') {
+      continue
+    }
+    elseif ($err) {
       $err = "- $inputName = '$inputValue' ($err)"
       if ($errorMessage -eq '') {
         $errorMessage = 'One or more input values have illegal values'
