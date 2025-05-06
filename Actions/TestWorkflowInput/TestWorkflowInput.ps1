@@ -27,8 +27,14 @@ if ($null -ne $eventPath.inputs) {
         $err = Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue $inputValue
       }
       default {
-        Write-Host "- $inputName = '$inputValue' (no validation)"
-        $err = 'OK'
+        if ($inputValue -is [boolean]) {
+          # Boolean values are always valid
+          $err = $null
+        }
+        else {
+          Write-Host "- $inputName = '$inputValue' (no validation)"
+          $err = 'OK'
+        }
       }
     }
     if ($err -eq 'OK') {
