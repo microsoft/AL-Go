@@ -466,6 +466,28 @@ function GetSrcFolder {
     return $path
 }
 
+function GetModifiedSettingsContent {
+    Param(
+        [string] $srcSettingsFile,
+        [string] $dstSettingsFile
+    )
+
+    $srcSettings = Get-ContentLF -Path $srcSettingsFile | ConvertFrom-Json
+    $dstSettings = Get-ContentLF -Path $dstSettingsFile | ConvertFrom-Json
+
+    $schemaKey = '$schema'
+    $schemaValue = $srcSettings."$schemaKey"
+
+    if ($dstSettings.PSObject.Properties.Name -eq $schemaKey) {
+        $dstSettings."$schemaKey" = $schemaValue
+    }
+    else {
+        $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue
+    }
+
+    return $dstSettings | ConvertTo-JsonLF
+}
+
 function UpdateSettingsFile {
     Param(
         [string] $settingsFile,

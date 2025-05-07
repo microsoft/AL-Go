@@ -162,20 +162,26 @@ foreach($checkfile in $checkfiles) {
                 $dstFile = Join-Path $dstFolder $fileName
                 $srcFile = $_.FullName
                 Write-Host "SrcFolder: $srcFolder"
-                if ($type -eq "workflow") {
-                    # for workflow files, we might need to modify the file based on the settings
-                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
-                }
-                else {
-                    # For non-workflow files, just read the file content
-                    $srcContent = Get-ContentLF -Path $srcFile
-                }
 
+                switch ($type) {
+                    "workflow" {
+                        # For workflow files, we might need to modify the file based on the settings
+                        $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
+                     }
+                     "settings" {
+                        # For settings files, we need to modify the file based on the settings
+                        $srcContent = GetModifiedSettingsContent -srcSettingsFile $srcFile -dstSettingsFile $dstFile
+                     }
+                    Default {
+                        # For non-workflow files, just read the file content
+                        $srcContent = Get-ContentLF -Path $srcFile
+                    }
+                }
                 # Replace static placeholders
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
 
                 if ($isDirectALGo) {
-                    # If we are using direct AL-Go repo, we need to change the owner to the templateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+                    # If we are using direct AL-Go repo, we need to change the owner to the remplateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
@@ -186,43 +192,19 @@ foreach($checkfile in $checkfiles) {
                     if ($dstFileExists) {
                         $removeFiles += @(Join-Path $dstPath $filename)
                     }
-                    continue
                 }
-
-                switch ($type) {
-                    "settings" {
-                        if($dstFileExists) {
-                            # The changes in the settings file are only on the $schema proprerty
-
-                            # Get $schema from the source file (the file is always a JSON)
-                            $srcSettingsSchema = ($srcContent | ConvertFrom-Json)."`$schema"
-
-                            # Replace or add the $schema property in the destination file
-                            $dstFileContentJson = Get-ContentLF -Path $dstFile | ConvertFrom-Json
-                            $dstFileContentJson | Add-Member -MemberType NoteProperty -Name "`$schema" -Value $srcSettingsSchema -Force
-                            $dstContent = $dstFileContentJson | ConvertTo-Json -Depth 100
-
-                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $dstContent }
-                        }
-                     }
-                    Default {
-                        # For all other files, we need to compare the content of the file in the template repository with the one in the current repository
-                        # If the file does not exist in the current repository, we need to add it to the $updateFiles array
-                        # If the file exists in the current repository, we need to compare the content and only add it to the $updateFiles array if it is different
-                        if ($dstFileExists) {
-                            # file exists, compare and add to $updateFiles if different
-                            $dstContent = Get-ContentLF -Path $dstFile
-                            if ($dstContent -cne $srcContent) {
-                                Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
-                                $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
-                            }
-                        }
-                        else {
-                            # new file, add to $updateFiles
-                            Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
-                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
-                        }
+                elseif ($dstFileExists) {
+                    # file exists, compare and add to $updateFiles if different
+                    $dstContent = Get-ContentLF -Path $dstFile
+                    if ($dstContent -cne $srcContent) {
+                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
+                        $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                     }
+                }
+                else {
+                    # new file, add to $updateFiles
+                    Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
+                    $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }
         }
