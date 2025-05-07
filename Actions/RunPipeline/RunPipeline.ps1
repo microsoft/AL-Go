@@ -537,8 +537,10 @@ try {
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
 
-    & $PSScriptRoot\..\CheckForNewWarnings\CheckForNewWarnings.ps1 `
-        -token $token `
+    # check for new warnings
+    Import-Module (Join-Path $PSScriptRoot ".\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
+
+    Test-ForNewWarnings -token $token `
         -project $project `
         -settings $settings `
         -targetBranch $ENV:GITHUB_BASE_REF `
