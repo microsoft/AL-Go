@@ -395,6 +395,17 @@ Describe "ReadSettings" {
         Test-Json -json $schema | Should -Be $true
     }
 
+    It 'All default settings are in the schema' {
+        $defaultSettings = GetDefaultSettings
+
+        $schemaObj = $schema | ConvertFrom-Json
+
+        $defaultSettings.Keys | ForEach-Object {
+            $property = $_
+            $schemaObj.properties.PSObject.Properties.Name | Should -Contain $property
+        }
+    }
+
     It 'Default settings match schema' {
         $defaultSettings = GetDefaultSettings
         Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
