@@ -840,17 +840,24 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
-    if(Get-Command Test-Json -ErrorAction SilentlyContinue) { # Test-Json is only available in PowerShell 6.2 and later
-        if (!$silent.IsPresent) { Write-Host "Testing settings against the settings schema" }
-        $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99
-        $settingsSchema = Get-Content -Path "$PSScriptRoot\settings.schema.json" -Raw
+    if (!$silent.IsPresent) { Write-Host "Testing settings against the settings schema" }
+    $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99
+    $settingsSchema = Get-Content -Path "$PSScriptRoot\settings.schema.json" -Raw
 
-        try{
+    try{
+        if(!(Get-Command Test-Json -ErrorAction SilentlyContinue)) {
+            $command = [scriptblock] {
+                Test-Json -json $args[0] -schema $args[1] | Out-Null
+            }
+            # Run with pwsh as Test-Json is not available in PowerShell versions lower than 6.2
+            . pwsh -Command $command -args $settingsJson, $settingsSchema
+        }
+        else {
             Test-Json -json $settingsJson -schema $settingsSchema | Out-Null
         }
-        catch {
-            OutputWarning "Settings are not valid. Error: $($_.Exception.Message)"
-        }
+    }
+    catch {
+        OutputWarning "Settings are not valid. Error: $($_.Exception.Message)"
     }
 
     $settings
