@@ -4,15 +4,13 @@
     .DESCRIPTION
     Ensures that a specified directory exists. If the directory does not exist, it creates it.
 #>
-function Initialize-Directory
-{
+function Initialize-Directory {
     [CmdletBinding()]
     param (
         [string] $Path
     )
 
-    if (!(Test-Path $Path))
-    {
+    if (!(Test-Path $Path)) {
         New-Item -Path $Path -ItemType Directory | Out-Null
     }
 }
@@ -23,8 +21,7 @@ function Initialize-Directory
     .DESCRIPTION
     This function parses a build log file and returns the AL warnings found in it.
 #>
-function Get-Warnings
-{
+function Get-Warnings {
     [CmdletBinding()]
     [OutputType([PSObject[]])]
     param (
@@ -33,8 +30,7 @@ function Get-Warnings
 
     $warnings = @()
 
-    if (Test-Path $BuildFile)
-    {
+    if (Test-Path $BuildFile) {
         Get-Content $BuildFile | ForEach-Object {
             if ($_  -match "::warning file=(.+),line=([0-9]{1,5}),col=([0-9]{1,5})::([A-Z]{2}[0-9]{4}) (.+)")
             {
@@ -58,8 +54,7 @@ function Get-Warnings
     .DESCRIPTION
     Compare 2 build logs and throw if new warnings were added.
 #>
-function Compare-Files
-{
+function Compare-Files {
     [CmdletBinding()]
     param (
         [string] $referenceBuild,
@@ -75,7 +70,7 @@ function Compare-Files
 
     $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Col -PassThru |
         Where-Object { $_.SideIndicator -eq "=>" } |
-        Select-Object -Property Id,File,Description,Line,Col
+        Select-Object -Property Id,File,Description,Line,Col -Unique
 
     $delta | ForEach-Object {
             Write-Host "::error file=$($_.File),line=$($_.Line),col=$($_.Col)::New warning introduced in this PR: [$($_.Id)] $($_.Description)"
@@ -84,14 +79,18 @@ function Compare-Files
     $secondsElapsed = ((Get-Date) - $startTime).TotalSeconds
     Trace-Information -Message "Checking for new warnings took $secondsElapsed seconds. Found $($refWarnings.Count) warnings in reference build and $($prWarnings.Count) warnings in PR build."
 
-    if ($delta)
-    {
+    if ($delta) {
         throw "New warnings were introduced in this PR."
     }
 }
 
-function Test-ForNewWarnings
-{
+<#
+    .SYNOPSIS
+    Tests for new warnings in PR build.
+    .DESCRIPTION
+    If enabled, will fail if new warnings are found in the PR build compared to the baseline workflow run.
+#>
+function Test-ForNewWarnings {
     [CmdletBinding()]
     Param(
         [string] $token,
@@ -102,50 +101,42 @@ function Test-ForNewWarnings
         [string] $baselineWorkflowRunId
     )
 
-    function GetArtifactMask
-    {
+    function GetArtifactMask {
         param (
             [string] $buildOutputFile,
             [string] $buildMode
         )
 
         $mask = Get-Item $buildOutputFile | Select-Object -ExpandProperty BaseName
-        if ($buildMode -ne 'Default')
-        {
+        if ($buildMode -ne 'Default') {
             $mask = "$buildMode$mask"
         }
 
         return $mask
     }
 
-    function GetProjectName
-    {
+    function GetProjectName {
         param (
             [string] $project
         )
 
-        if ($project)
-        {
+        if ($project) {
             return $project
         }
-        else
-        {
+        else{
             return $env:GITHUB_REPOSITORY -replace '.+/'
         }
     }
 
-    try
-    {
+    try {
         Write-Host "::group::Analyzing build for new warnings..."
 
-        if (-not $ENV:GITHUB_BASE_REF)
-        {
+        if (-not $ENV:GITHUB_BASE_REF) {
             Write-Host "Checking for warnings only runs on pull requests."
             return
         }
 
-        if (-not $settings.failOnNewWarnings)
-        {
+        if (-not $settings.failOnNewWarnings) {
             Write-Host "Checking for new warnings is not enabled in the settings."
             return
         }
@@ -162,8 +153,7 @@ function Test-ForNewWarnings
         Write-Host "Downloading build output for project '$projectName' with mask '$mask'."
         $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $projectName | Select-Object -First 1
 
-        if (-not $artifact)
-        {
+        if (-not $artifact){
             Write-Host "No artifacts found for project '$projectName', skipping check for new warnings."
             return
         }
@@ -178,11 +168,9 @@ function Test-ForNewWarnings
         Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
         Compare-Files -referenceBuild $referenceBuildLog.FullName -prBuild $prBuildOutputFile
     }
-    finally
-    {
+    finally{
         Write-Host "::endgroup::Done analyzing build for new warnings..."
     }
-
 }
 
 Export-ModuleMember -Function Test-ForNewWarnings
