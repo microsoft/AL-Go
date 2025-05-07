@@ -190,12 +190,14 @@ else {
             Write-Host "Setting $settingsName"
             $deployTo = $settings."$settingsName"
             $deployToEnvironmentVariable = Get-DeployToEnvironmentVariable -ghEnvironment $ghEnvironment
-            $evKeys = @($deployToEnvironmentVariable.Keys)
-            Write-Host "Debug deployTo before: $($deployTo | ConvertTo-Json -Depth 99)"
-            foreach($key in $evKeys) {
-                $deployTo."$key" = $deployToEnvironmentVariable."$key"
-            }
-            Write-Host "Debug deployTo after: $($deployTo | ConvertTo-Json -Depth 99)"
+            if ($deployToEnvironmentVariable) {
+                $evKeys = @($deployToEnvironmentVariable.Keys)
+                Write-Host "Debug deployTo before: $($deployTo | ConvertTo-Json -Depth 99)"
+                foreach($key in $evKeys) {
+                    $deployTo."$key" = $deployToEnvironmentVariable."$key"
+                }
+                Write-Host "Debug deployTo after: $($deployTo | ConvertTo-Json -Depth 99)"
+            }  
             $keys = @($deployTo.Keys)
             foreach($key in $keys) {
                 if ($deploymentSettings.ContainsKey($key)) {
