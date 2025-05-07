@@ -56,6 +56,25 @@ function Get-BranchesFromPolicy($ghEnvironment) {
     }
 }
 
+function Get-DeployToEnvironmentVariable($ghEnvironment) {
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
+
+    $ghEnvironmentDeployToVariable = $null
+
+    $url = "$($ghEnvironment.url)/variables"
+    try {
+        Write-Host "Requesting deployment environment variables from GitHub for environment $($ghEnvironment.name)"
+        $ghEnvironmentVariables = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
+        $ghEnvironmentDeployToVariable = $ghEnvironmentVariables.variables | Where-Object { $_.name -eq 'DeployTo' }
+        Write-Host "Debug found env variable: $($ghEnvironmentDeployToVariable | ConvertTo-Json -Depth 99)"
+    }
+    catch {
+        Write-Host "Failed to get deployment environment variables from GitHub API - Environments are not supported in this repository"
+    }
+    
+    return $ghEnvironmentDeployToVariable
+}
+
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
@@ -127,6 +146,7 @@ else {
     foreach($environmentName in $environments) {
         Write-Host "Environment: $environmentName"
         $envName = $environmentName.Split(' ')[0]
+        $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $environmentName }
 
         # Check Obsolete Settings
         foreach($obsoleteSetting in "$($envName)-Projects","$($envName)_Projects") {
@@ -169,6 +189,8 @@ else {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             Write-Host "Setting $settingsName"
             $deployTo = $settings."$settingsName"
+            $deployToEnvironmentVariable = Get-DeployToEnvironmentVariable -ghEnvironment $ghEnvironment
+            MergeCustomObjectIntoOrderedDictionary -dst $deployTo -src $deployToEnvironmentVariable
             $keys = @($deployTo.Keys)
             foreach($key in $keys) {
                 if ($deploymentSettings.ContainsKey($key)) {
@@ -202,7 +224,6 @@ else {
         }
 
         # Get Branch policies on GitHub Environment
-        $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $environmentName }
         $deploymentSettings.BranchesFromPolicy = @(Get-BranchesFromPolicy -ghEnvironment $ghEnvironment)
 
         # Include Environment if:
