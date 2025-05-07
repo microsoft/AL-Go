@@ -543,7 +543,6 @@ try {
     Test-ForNewWarnings -token $token `
         -project $project `
         -settings $settings `
-        -targetBranch $ENV:GITHUB_BASE_REF `
         -buildMode $buildMode `
         -baselineWorkflowRunId $baselineWorkflowRunId `
         -prBuildOutputFile $buildOutputFile
