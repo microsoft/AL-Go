@@ -5,11 +5,14 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eKey,
     [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
+    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
+    [string] $azureConnectionSecret,
+    [string] $githubPackagesToken
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -54,24 +57,20 @@ if ($linux) {
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
-$branch = "e2e"
+$repository = "$githubOwner/tmp-bingmaps.appsource"
+$branch = "main"
 $template = "https://github.com/$appSourceTemplate"
-$repository = 'microsoft/bcsamples-bingmaps.appsource'
+$sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will create a copy of this repository
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+# Create temp repository from sourceRepository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eKey -repository $repository
+CreateAlGoRepository `
+    -github:$github `
+    -template "https://github.com/$sourceRepository" `
+    -repository $repository `
+    -branch $branch
 
-# Get the branches from https://github.com/microsoft/bcsamples-bingmaps.appsource
-# Use e2e PAT to get the branches - as token doesn't have access to the repository
-$headers = GetHeaders -token $e2epat -repository "$githubOwner/.github"
-$existingBranchJson = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null
-$existingBranch = $existingBranchJson | ConvertFrom-Json
-if ($existingBranch -and $existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
-    Write-Host "Removing existing branch $branch"
-    Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
-    Start-Sleep -Seconds 10
-}
-$latestSha = (gh api /repos/$repository/commits/main | ConvertFrom-Json).sha
-gh api --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/git/refs -f ref=refs/heads/$branch -f sha=$latestSha
+SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureConnectionSecret
 
 # Upgrade AL-Go System Files to test version
 # bcsamples-bingmaps.appsource already has the GHTOKENWORKFLOW secret
@@ -107,4 +106,5 @@ Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app" | ForEach-Object {
 # Check that two apps were signed
 $noOfApps | Should -Be 2
 
+$headers = GetHeaders -token $ENV:GH_TOKEN -repository "$githubOwner/.github"
 Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers

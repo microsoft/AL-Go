@@ -5,11 +5,14 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eKey,
     [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
+    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
+    [string] $azureConnectionSecret,
+    [string] $githubPackagesToken
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -51,7 +54,7 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eKey -repository $repository
 
 $appName = 'MyApp'
 $publisherName = 'Freddy'

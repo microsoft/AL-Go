@@ -4,7 +4,8 @@ Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eKey,
     [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $contentPath = "pte",
     [string] $release = "v2.2",
@@ -59,7 +60,7 @@ else {
 $template = "https://github.com/$template"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eKey -repository $repository
 
 # Create repo
 CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
@@ -96,13 +97,14 @@ catch {
 $runs++
 
 # Update AL-Go System Files
-# for Upgrade scenarios before version 6.4 we need to set the GHTOKENWORKFLOW secret to a PAT
+# for Upgrade scenarios before version 6.4 we need to set the GHTOKENWORKFLOW secret to a PAT (in this case an access token for the e2e test)
 # for Upgrade scenarios 6.4 or after we can set the GHTOKENWORKFLOW secret to a GH APP
 if ($releaseVersion -ge [System.Version]"6.4") {
     SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $algoauthapp
 }
 else {
-    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $e2epat
+    RefreshToken -repository $repository -force
+    SetRepositorySecret -repository $repository -name 'GHTOKENWORKFLOW' -value $ENV:GH_TOKEN
 }
 RunUpdateAlGoSystemFiles -templateUrl $template -wait -repository $repository -branch $branch | Out-Null
 
