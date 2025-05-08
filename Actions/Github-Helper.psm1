@@ -657,7 +657,7 @@ function GetHeaders {
         [string] $apiVersion = "2022-11-28",
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string] $permissions = @{"contents"="read";"metadata"="read";"actions"="read"}
+        [System.Collections.Hashtable] $permissions = @{"contents"="read";"metadata"="read";"actions"="read"}
      )
     $headers = @{
         "Accept" = $accept
