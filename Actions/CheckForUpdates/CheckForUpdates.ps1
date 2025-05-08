@@ -63,6 +63,12 @@ if ($token) {
     $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
 }
 
+# Get secrets for Custom AL-Go System Files
+$secrets = @{}
+if ($env:Secrets) {
+    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+}
+
 # CheckForUpdates will read all AL-Go System files from the Template repository and compare them to the ones in the current repository
 # CheckForUpdates will apply changes to the AL-Go System files based on AL-Go repo settings, such as "runs-on" etc.
 # if $update is set to Y, CheckForUpdates will also update the AL-Go System files in the current repository using a PR or a direct commit (if $directCommit is set to true)
