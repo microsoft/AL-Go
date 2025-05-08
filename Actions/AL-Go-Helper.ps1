@@ -869,13 +869,14 @@ function ValidateSettings {
             }
 
             if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $result = pwsh -noprofile -Command $command -ArgumentList $settingsJson, $settingsSchemaFile
+                $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile
             }
             else {
                 $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
             }
         }
         catch {
+            OutputWarning "Error validating settings. Error: $($_.Exception.Message)"
         }
         if ($result) {
             OutputWarning "Settings are not valid. Error: $result"
