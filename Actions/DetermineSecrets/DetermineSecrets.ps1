@@ -19,7 +19,6 @@ function AddSecret {
         [switch] $useMapping
     )
 
-    Write-Host "Adding secret: '$secret'"
     if ($secret) {
         $secretName = $secret.TrimStart('-*')
         $secretNameProperty = "$($secretName)SecretName"
