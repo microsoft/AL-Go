@@ -71,6 +71,14 @@ jobs:
         with:
           shell: powershell
 
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: 'TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main

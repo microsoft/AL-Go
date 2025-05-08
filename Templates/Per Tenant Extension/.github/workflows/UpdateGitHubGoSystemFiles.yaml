@@ -103,6 +103,13 @@ jobs:
           shell: powershell
           get: commitOptions
 
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: 'ghTokenWorkflow'
+
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main

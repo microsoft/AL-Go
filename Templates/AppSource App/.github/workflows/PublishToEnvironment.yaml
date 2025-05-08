@@ -73,6 +73,13 @@ jobs:
           $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.environmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -145,6 +152,13 @@ jobs:
         with:
           shell: ${{ matrix.shell }}
           get: type,powerPlatformSolutionFolder
+
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
       - name: Read secrets
         id: ReadSecrets

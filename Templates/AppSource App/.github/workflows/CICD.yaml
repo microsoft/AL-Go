@@ -70,6 +70,14 @@ jobs:
           shell: powershell
           get: type,powerPlatformSolutionFolder,useGitSubmodules
 
+      - name: Determine submodules token
+        id: DetermineSubmodulesToken
+        if: env.useGitSubmodules != 'false' && env.useGitSubmodules != ''
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: '-gitSubmodulesToken'
+
       - name: Read submodules token
         id: ReadSubmodulesToken
         if: env.useGitSubmodules != 'false' && env.useGitSubmodules != ''
@@ -113,6 +121,13 @@ jobs:
           projectsJson: '${{ steps.determineProjectsToBuild.outputs.ProjectsJson }}'
           checkContextSecrets: 'false'
 
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: ${{ steps.DetermineDeliveryTargetSecrets.outputs.ContextSecrets }}
+
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -153,6 +168,13 @@ jobs:
         with:
           shell: powershell
           get: templateUrl
+
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: 'ghTokenWorkflow'
 
       - name: Read secrets
         id: ReadSecrets
@@ -277,6 +299,13 @@ jobs:
           $envName = '${{ matrix.environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -330,6 +359,13 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: '${{ matrix.deliveryTarget }}Context'
 
       - name: Read secrets
         id: ReadSecrets

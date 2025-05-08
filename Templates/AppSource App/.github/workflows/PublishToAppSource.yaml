@@ -64,6 +64,13 @@ jobs:
         with:
           shell: powershell
 
+      - name: Determine secrets
+        id: DetermineSecrets
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: 'appSourceContext'
+
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main

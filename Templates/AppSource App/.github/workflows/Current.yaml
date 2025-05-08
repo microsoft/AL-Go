@@ -52,6 +52,14 @@ jobs:
           shell: powershell
           get: useGitSubmodules,shortLivedArtifactsRetentionDays
 
+      - name: Determine submodules secrets
+        id: DetermineSecrets
+        if: env.useGitSubmodules != 'false' && env.useGitSubmodules != ''
+        uses: microsoft/AL-Go-Actions/DetermineSecrets@main
+        with:
+          shell: powershell
+          getSecrets: '-gitSubmodulesToken'
+
       - name: Read submodules token
         id: ReadSubmodulesToken
         if: env.useGitSubmodules != 'false' && env.useGitSubmodules != ''
