@@ -856,23 +856,24 @@ function ValidateSettings {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         $settings
     )
+    Process {
+        $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
+        $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
 
-    $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
-    $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
-
-    try{
-        if(!(Get-Command Test-Json -ErrorAction SilentlyContinue)) {
-            $res = "Test-Json -json '$settingsJson' -SchemaFile '$settingsSchemaFile' | Out-Null" | pwsh -Command -
-            if($res -ne "") {
-                throw "$res"
+        try{
+            if(!(Get-Command Test-Json -ErrorAction SilentlyContinue)) {
+                $res = "Test-Json -json '$settingsJson' -SchemaFile '$settingsSchemaFile' | Out-Null" | pwsh -Command -
+                if($res -ne "") {
+                    throw "$res"
+                }
+            }
+            else {
+                Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile | Out-Null
             }
         }
-        else {
-            Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile | Out-Null
+        catch {
+            OutputWarning "Settings are not valid. Error: $($_.Exception.Message)"
         }
-    }
-    catch {
-        OutputWarning "Settings are not valid. Error: $($_.Exception.Message)"
     }
 }
 
