@@ -100,10 +100,9 @@ jobs:
 
       - name: Test Workflow Input
         if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: microsoft/AL-Go-Actions/TestWorkflowInput@main
+        uses: microsoft/AL-Go-Actions/ValidateWorkflowInput@main
         with:
           shell: powershell
-          workflowName: 'CreateRelease'
 
       - name: Read secrets
         id: ReadSecrets

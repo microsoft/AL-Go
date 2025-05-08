@@ -8,6 +8,10 @@
 
 
 <#
+  Validates the version number input for the workflow.
+  The version number must be a valid version number or a relative version number.
+  The version number can have 2 or 3 segments, depending on the versioning strategy.
+  The function checks if the version number is in the correct format and throws an error if it is not.
 #>
 function Test-UpdateVersionNumber {
     [CmdletBinding()]
@@ -25,11 +29,11 @@ function Test-UpdateVersionNumber {
     if ($strategy3) {
         $legalRelativeValues += @('+0.0.1')
     }
-    $errorMessage = "Must be a version number with $(2+[int]$strategy3) segments or one of: $($legalRelativeValues -join ', ')"
+    $errorMessage = "$inputName is '$inputValue', must be a version number with $(2+[int]$strategy3) segments or one of: $($legalRelativeValues -join ', ')"
     if ($inputValue.StartsWith('+')) {
         # Relative version number
         if ($legalValues -notcontains $inputValue) {
-            return $errorMessage
+            throw $errorMessage
         }
     }
     else {
@@ -38,10 +42,10 @@ function Test-UpdateVersionNumber {
             $versionNumber = [System.Version]::Parse($inputValue)
         }
         catch {
-            return $errorMessage
+            throw $errorMessage
         }
         if (($versionNumber.Revision -ne -1) -or (!$strategy3 -and ($versionNumber.Build -ne -1))) {
-            return $errorMessage
+            throw $errorMessage
         }
     }
 }
