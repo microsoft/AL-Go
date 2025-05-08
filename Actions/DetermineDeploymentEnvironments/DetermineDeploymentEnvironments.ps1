@@ -59,7 +59,7 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 }
 
 function Get-DeployToEnvironmentVariable($ghEnvironment) {
-    $headers = GetHeaders -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $ghTokenWorkflow -permissions @{"contents"="read";"metadata"="read";"actions"="read";"environments"="read"}
 
     $ghEnvironmentDeployToVariable = $null
 
