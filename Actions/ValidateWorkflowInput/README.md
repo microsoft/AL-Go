@@ -1,8 +1,10 @@
-# Test Workflow Input
+# Validate Workflow Input
 
-Test Workflow Input
+Validate Workflow Input
 
 ## INPUT
+
+Validation script for calling workflow must exist
 
 ### ENV variables
 
@@ -13,8 +15,7 @@ none
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| workflowName | | The name of the workflow on which input parameters should be tested | |
 
 ## OUTPUT
 
-none
+throws if validation script doesn't exist or any validated fields are invalid
