@@ -18,11 +18,11 @@ inputs:
     required: false
     default: ''
   environmentName:
-    description: Environment name to use for the settings file
+    description: Environment name for current deployment. Should only be set when environmentDeployToVariableValue is also set.
     required: false
     default: ''
   environmentDeployToVariableValue:
-    description: Deploy to settings variable defined in the github environment
+    description: Value of the DeployTo settings variable defined in the github environment. If this is set, the environmentName should also be set.
     required: false
     default: ''
 outputs:

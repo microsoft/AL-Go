@@ -5,9 +5,9 @@
     [string] $buildMode = "Default",
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
     [string] $get = "",
-    [Parameter(HelpMessage = "Current environment name", Mandatory = $false)]
+    [Parameter(HelpMessage = "Environment name for current deployment. Should only be set when environmentDeployToVariableValue is also set.", Mandatory = $false)]
     [string] $environmentName = "",
-    [Parameter(HelpMessage = "Environment deploy to variable", Mandatory = $false)]
+    [Parameter(HelpMessage = "Value of the DeployTo settings variable defined in the github environment. If this is set, the environmentName should also be set.", Mandatory = $false)]
     [string] $environmentDeployToVariableValue = ""
 )
 
