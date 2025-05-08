@@ -863,7 +863,7 @@ function ValidateSettings {
         try{
             Write-Host "Current PS version: $($PSVersionTable.PSVersion.Major)"
             if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $res = "Write-Host `"pwsh version: `$(`$PSVersionTable.PSVersion.Major)`"; Test-Json -json '$settingsJson' -SchemaFile '$settingsSchemaFile' | Out-Null" | pwsh -Command -
+                $res = "`"pwsh version: `$(`$PSVersionTable.PSVersion.Major)`"; Test-Json -json '$settingsJson' -SchemaFile '$settingsSchemaFile' | Out-Null" | pwsh -Command -
                 if($res -ne "") {
                     throw "$res"
                 }
