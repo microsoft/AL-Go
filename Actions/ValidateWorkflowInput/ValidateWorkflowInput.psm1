@@ -32,7 +32,7 @@ function Validate-UpdateVersionNumber {
     $errorMessage = "$inputName is '$inputValue', must be a version number with $(2+[int]$strategy3) segments or one of: $($legalRelativeValues -join ', ')"
     if ($inputValue.StartsWith('+')) {
         # Relative version number
-        if ($legalValues -notcontains $inputValue) {
+        if ($legalRelativeValues -notcontains $inputValue) {
             throw $errorMessage
         }
     }
