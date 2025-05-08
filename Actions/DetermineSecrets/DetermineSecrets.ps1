@@ -27,7 +27,7 @@ function AddSecret {
         }
         # Secret is the AL-Go name of the secret
         # SecretName is the actual name of the secret to get from the KeyVault or GitHub environment
-        if ($script:secretsCollection -notcontains $secret) {
+        if ($secretName -and ($script:secretsCollection -notcontains $secret)) {
             # Add secret to the collection of secrets to get
             $script:secretsCollection += $secret
             $script:secretNames += @{
