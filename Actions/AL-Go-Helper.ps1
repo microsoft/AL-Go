@@ -541,6 +541,7 @@ function MergeCustomObjectIntoOrderedDictionary {
 # - .github/<workflowName>.settings.json              = Workflow settings file
 # - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
 # - <project>/.AL-Go/<userName>.settings.json         = User settings file
+# - DeployTo (github Variable)                        = Deployment Environment settings variable
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
@@ -748,12 +749,6 @@ function ReadSettings {
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
         $settingsObjects += @($projectSettingsObject)
     }
-    if ($environmentDeployToVariableValue) {
-        # Read settings from environment variable (parameter)
-        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) }
-        Write-Host "Environment variable settings: $environmentVariableObject"
-        $settingsObjects += @($environmentVariableObject)
-    }
     if ($workflowName) {
         # Read settings from workflow settings file
         $workflowSettingsObject = GetSettingsObject -Path (Join-Path $gitHubFolder "$workflowName.settings.json")
@@ -765,6 +760,12 @@ function ReadSettings {
             $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
+    }
+    if ($environmentDeployToVariableValue) {
+        # Read settings from environment variable (parameter)
+        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) }
+        Write-Host "Environment variable settings: $environmentVariableObject"
+        $settingsObjects += @($environmentVariableObject)
     }
     foreach($settingsJson in $settingsObjects) {
         if ($settingsJson) {
