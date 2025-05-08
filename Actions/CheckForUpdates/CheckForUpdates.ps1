@@ -24,6 +24,7 @@ function GetHeadersForTemplateUrl([string] $templateUrl, [string] $token) {
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
     $headers = GetHeaders -token $ENV:GITHUB_TOKEN
     $templateRepositoryUrl = $templateUrl.Split('@')[0]
+    Write-Host "Template Repository URL: $templateRepositoryUrl"
     $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
     if (-not $response -or $response.StatusCode -ne 200) {
         # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
