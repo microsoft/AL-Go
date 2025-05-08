@@ -163,6 +163,17 @@ foreach($checkfile in $checkfiles) {
                 $srcFile = $_.FullName
                 Write-Host "SrcFolder: $srcFolder"
 
+                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
+                if ($unusedALGoSystemFiles -contains $fileName) {
+                    # File is not used by AL-Go, remove it if it exists
+                    # do not add it to $updateFiles if it does not exist
+                    if ($dstFileExists) {
+                        Write-Host "Removing $type ($(Join-Path $dstPath $filename)) as it is marked as unused."
+                        $removeFiles += @(Join-Path $dstPath $filename)
+                    }
+                    return
+                }
+
                 switch ($type) {
                     "workflow" {
                         # For workflow files, we might need to modify the file based on the settings
@@ -185,20 +196,15 @@ foreach($checkfile in $checkfiles) {
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
-                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
-                if ($unusedALGoSystemFiles -contains $fileName) {
-                    # file is not used by AL-Go, remove it if it exists
-                    # do not add it to $updateFiles if it does not exist
-                    if ($dstFileExists) {
-                        $removeFiles += @(Join-Path $dstPath $filename)
-                    }
-                }
-                elseif ($dstFileExists) {
+                if ($dstFileExists) {
                     # file exists, compare and add to $updateFiles if different
                     $dstContent = Get-ContentLF -Path $dstFile
                     if ($dstContent -cne $srcContent) {
-                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
+                        Write-Host "Updates in $type ($(Join-Path $dstPath $filename)) available"
                         $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+                    }
+                    else {
+                        Write-Host "No changes in $type ($(Join-Path $dstPath $filename))"
                     }
                 }
                 else {
