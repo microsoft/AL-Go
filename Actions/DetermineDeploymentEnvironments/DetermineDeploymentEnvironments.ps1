@@ -63,9 +63,9 @@ function Get-DeployToEnvironmentVariable($ghEnvironment) {
 
     $ghEnvironmentDeployToVariable = $null
 
-    $url = "$($ghEnvironment.url)/variables"
     try {
         Write-Host "Requesting deployment environment variables from GitHub for environment $($ghEnvironment.name)"
+        $url = "$($ghEnvironment.url)/variables"
         $ghEnvironmentVariables = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
         $ghEnvironmentDeployToVariableJson = $ghEnvironmentVariables.variables | Where-Object { $_.name -eq 'DeployTo' } | ForEach-Object { $_.value }
         $ghEnvironmentDeployToVariable = $ghEnvironmentDeployToVariableJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
