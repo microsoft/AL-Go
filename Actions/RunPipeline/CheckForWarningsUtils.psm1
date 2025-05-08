@@ -136,7 +136,7 @@ function Test-ForNewWarnings {
             return
         }
 
-        if (-not $settings.failOnNewWarnings) {
+        if ($settings.failOn -ne 'newWarning') {
             Write-Host "Checking for new warnings is not enabled in the settings."
             return
         }
