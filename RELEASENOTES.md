@@ -6,11 +6,9 @@
 
 - Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
 
-## v7.2
-
 ### Failing pull requests if new warnings are added
 
-By setting failOn to 'newWarning', pull requests will fail if new warnings are introduced. This feature compares the warnings in the pull request build against those in the latest successful CI/CD build and fails if new warnings are detected. This setting only has effect if setting enableCodeCop is also set to true.
+By setting failOn to 'newWarning', pull requests will fail if new warnings are introduced. This feature compares the warnings in the pull request build against those in the latest successful CI/CD build and fails if new warnings are detected.
 
 ## v7.1
 
