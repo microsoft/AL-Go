@@ -64,12 +64,10 @@ function Get-DeployToEnvironmentVariable($ghEnvironment) {
     $ghEnvironmentDeployToVariable = $null
 
     $url = "$($ghEnvironment.url)/variables"
-    Write-Host "Debug url: $url"
     try {
         Write-Host "Requesting deployment environment variables from GitHub for environment $($ghEnvironment.name)"
         $ghEnvironmentVariables = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
         $ghEnvironmentDeployToVariableJson = $ghEnvironmentVariables.variables | Where-Object { $_.name -eq 'DeployTo' } | ForEach-Object { $_.value }
-        Write-Host "Debug found env variable: $ghEnvironmentDeployToVariableJson"
         $ghEnvironmentDeployToVariable = $ghEnvironmentDeployToVariableJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
     }
     catch {
@@ -196,11 +194,9 @@ else {
             $deployToEnvironmentVariable = Get-DeployToEnvironmentVariable -ghEnvironment $ghEnvironment
             if ($deployToEnvironmentVariable) {
                 $evKeys = @($deployToEnvironmentVariable.Keys)
-                Write-Host "Debug deployTo before: $($deployTo | ConvertTo-Json -Depth 99)"
                 foreach($key in $evKeys) {
                     $deployTo."$key" = $deployToEnvironmentVariable."$key"
                 }
-                Write-Host "Debug deployTo after: $($deployTo | ConvertTo-Json -Depth 99)"
             }  
             $keys = @($deployTo.Keys)
             foreach($key in $keys) {
