@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [switch] $local
 )
 
@@ -860,20 +860,19 @@ function ValidateSettings {
         $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
         $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
 
+        $result = ""
         try{
-            Write-Host "Current PS version: $($PSVersionTable.PSVersion.Major)"
             if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $res = "`"pwsh version: `$(`$PSVersionTable.PSVersion.Major)`"; Test-Json -json '$settingsJson' -SchemaFile '$settingsSchemaFile' | Out-Null" | pwsh -Command -
-                if($res -ne "") {
-                    throw "$res"
-                }
+                $result = ("`$result = ''; Test-Json -Json '$settingsJson' -SchemaFile '$settingsSchemaFile' -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null; return `$result" | pwsh -Command -)
             }
             else {
-                Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile | Out-Null
+                Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
             }
         }
         catch {
-            OutputWarning "Settings are not valid. Error: $($_.Exception.Message)"
+        }
+        if ($result) {
+            OutputWarning "Settings are not valid. Error: $result"
         }
     }
 }
