@@ -258,4 +258,26 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
     }
+
+    IT 'Test calling action directly - 1 environment defined in GitHub, one in settings - environment variable set' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @(); "url" = "abc/variables" } ) })}
+        }
+
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "variables" = @( @{ "name" = "DeployTo"; "value" = '{"includeTestAppsInSandboxEnvironment": false}' } ) })}
+        }
+
+        # Add Branch policy to settings to only allow branch to deploy to test environment
+        $settings += @{
+            "DeployToTest" = @{
+                "includeTestAppsInSandboxEnvironment" = $true
+            }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).test.includeTestAppsInSandboxEnvironment | Should -Be $false
+    }
 }
