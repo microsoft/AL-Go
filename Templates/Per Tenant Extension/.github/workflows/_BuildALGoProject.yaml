@@ -273,7 +273,7 @@ jobs:
 
       - name: Analyze Test Results
         id: analyzeTestResults
-        if: (success() || failure()) && env.doNotRunTests == 'False' 
+        if: (success() || failure()) && env.doNotRunTests == 'False'
         uses: microsoft/AL-Go-Actions/AnalyzeTests@main
         with:
           shell: ${{ inputs.shell }}
