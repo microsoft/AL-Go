@@ -99,7 +99,7 @@ The repository settings are only read from the repository settings file (.github
 | <a id="enableUICop"></a>enableUICop | If enableUICop is set to true, the CI/CD workflow will enable the UICop analyzer when building. | false |
 | <a id="customCodeCops"></a>customCodeCops | CustomCodeCops is an array of paths or URLs to custom Code Cop DLLs you want to enable when building. | [ ] |
 | <a id="enableCodeAnalyzersOnTestApps"></a>enableCodeAnalyzersOnTestApps | If enableCodeAnalyzersOnTestApps is set to true, the code analyzers will be enabled when building test apps as well. | false |
-| <a id="failOn"></a>failOn | Specifies what the pipeline will fail on. Allowed values are none, warning and error | error |
+| <a id="failOn"></a>failOn | Specifies what the pipeline will fail on. Allowed values are none, warning, newWarning and error | error |
 | <a id="rulesetFile"></a>rulesetFile | Filename of the custom ruleset file | |
 | <a id="enableExternalRulesets"></a>enableExternalRulesets | If enableExternalRulesets is set to true, then you can have external rule references in the ruleset | false |
 | <a id="vsixFile"></a>vsixFile | Determines which version of the AL Language Extension to use for building the apps. This can be:<br />**default** to use the AL Language Extension which ships with the Business Central version you are building for<br />**latest** to always download the latest AL Language Extension from the marketplace<br />**preview** to always download the preview AL Language Extension from the marketplace.<br/>or a **direct download URL** pointing to the AL Language VSIX file to use for building the apps.<br />By default, AL-Go uses the AL Language extension, which is shipped with the artifacts used for the build. | default |
