@@ -10,7 +10,7 @@
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
 # Build an array of secrets to get (and the names of the secrets)
-[System.Collections.ArrayList]$secretsCollection = @()
+[System.Collections.ArrayList] $secretsCollection = @()
 $secretNames = @{}
 
 function AddSecret {
@@ -28,10 +28,10 @@ function AddSecret {
         }
         # Secret is the AL-Go name of the secret
         # SecretName is the actual name of the secret to get from the KeyVault or GitHub environment
-        if ($secretsCollection -notcontains $secret) {
+        if ($script:secretsCollection -notcontains $secret) {
             # Add secret to the collection of secrets to get
-            $secretsCollection += $secret
-            $secretNames += @{
+            $script:secretsCollection += $secret
+            $script:secretNames += @{
                 "$secret" = "$secretName"
             }
         }
