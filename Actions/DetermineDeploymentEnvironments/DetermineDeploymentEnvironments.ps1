@@ -3,7 +3,9 @@
     [string] $getEnvironments,
     [Parameter(HelpMessage = "Type of deployment (CD, Publish or All)", Mandatory = $true)]
     [ValidateSet('CD','Publish','All')]
-    [string] $type
+    [string] $type,
+    [Parameter(HelpMessage = "ghTokenWorkflow secret used to read deployment environment variables", Mandatory = $false)]
+    [string] $ghTokenWorkflow
 )
 
 function IsGitHubPagesAvailable() {
@@ -57,7 +59,7 @@ function Get-BranchesFromPolicy($ghEnvironment) {
 }
 
 function Get-DeployToEnvironmentVariable($ghEnvironment) {
-    $headers = GetHeaders -token $env:GITHUB_TOKEN
+    $headers = GetHeaders -token $ghTokenWorkflow
 
     $ghEnvironmentDeployToVariable = $null
 
