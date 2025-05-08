@@ -14,6 +14,7 @@ inputs:
   ghTokenWorkflow:
     description: ghTokenWorkflow secret used to read deployment environment variables
     required: false
+    default: ''
 outputs:
   EnvironmentsMatrixJson:
     description: The Environment matrix to use for the Deploy step in compressed JSON format

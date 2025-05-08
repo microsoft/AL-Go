@@ -5,7 +5,7 @@
     [ValidateSet('CD','Publish','All')]
     [string] $type,
     [Parameter(HelpMessage = "ghTokenWorkflow secret used to read deployment environment variables", Mandatory = $false)]
-    [string] $ghTokenWorkflow
+    [string] $ghTokenWorkflow = ""
 )
 
 function IsGitHubPagesAvailable() {
