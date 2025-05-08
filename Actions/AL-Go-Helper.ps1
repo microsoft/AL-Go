@@ -840,27 +840,40 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
-    if (!$silent.IsPresent) { Write-Host "Testing settings against the settings schema" }
-    $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99
-    $settingsSchema = Get-Content -Path "$PSScriptRoot\settings.schema.json" -Raw
+    $settings | ValidateSettings
+
+    $settings
+}
+
+<#
+    .SYNOPSIS
+        Validate the settings against the settings schema file.
+    .PARAMETER settings
+        The settings to validate.
+#>
+function ValidateSettings {
+    Param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        $settings
+    )
+
+    $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
+    $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
 
     try{
         if(!(Get-Command Test-Json -ErrorAction SilentlyContinue)) {
-            $command = [scriptblock] {
-                Test-Json -json $args[0] -schema $args[1] | Out-Null
+            $res = "Test-Json -json '$settingsJson' -SchemaFile '$settingsSchemaFile' | Out-Null" | pwsh -Command -
+            if($res -ne "") {
+                throw "$res"
             }
-            # Run with pwsh as Test-Json is not available in PowerShell versions lower than 6.2
-            . pwsh -Command $command -args $settingsJson, $settingsSchema
         }
         else {
-            Test-Json -json $settingsJson -schema $settingsSchema | Out-Null
+            Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile | Out-Null
         }
     }
     catch {
         OutputWarning "Settings are not valid. Error: $($_.Exception.Message)"
     }
-
-    $settings
 }
 
 function ExcludeUnneededApps {
