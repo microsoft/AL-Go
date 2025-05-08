@@ -70,7 +70,7 @@ function Get-DeployToEnvironmentVariable($ghEnvironment) {
         $ghEnvironmentVariables = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
         $ghEnvironmentDeployToVariableJson = $ghEnvironmentVariables.variables | Where-Object { $_.name -eq 'DeployTo' } | ForEach-Object { $_.value }
         Write-Host "Debug found env variable: $ghEnvironmentDeployToVariableJson"
-        $ghEnvironmentDeployToVariable = $ghEnvironmentDeployToVariableJson | ConvertFrom-Json
+        $ghEnvironmentDeployToVariable = $ghEnvironmentDeployToVariableJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
     }
     catch {
         Write-Host "Failed to get deployment environment variables from GitHub API - Environments are not supported in this repository"
