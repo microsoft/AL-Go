@@ -42,14 +42,20 @@ switch ($testType) {
     }
 }
 
+$titleSize = ("## $testTitle`n`n").Length
+$summarySize = ("$($testResultsSummaryMD.Replace("\n","`n"))`n`n").Length
+$failureSummarySize = ("$($testResultsfailuresMD.Replace("\n","`n"))`n`n").Length
+
+# GitHub job summaries are limited to just under 1MB and we call Add-Content 3 times which each adds a new line, hence 1MB - 4.
 # If no tests are found, don't add a job summary at all.
 if ($testResultsSummaryMD) {
     # If summary fits, we will display it in the GitHub summary
-    if ($testResultsSummaryMD.Length -gt (1MB - 1)) {
+    if ($titleSize + $summarySize -gt (1MB - 4)) {
         # If Test results summary is too long, we will not display it in the GitHub summary, instead we will display a message to download the test results
         $testResultsSummaryMD = "<i>Test results summary size exceeds GitHub summary capacity. Download **TestResults** artifact to see details.</i>"
+        $summarySize = $testResultsSummaryMD.Length
     }
-    if ($testResultsSummaryMD.Length + $testResultsfailuresMD.Length -gt (1MB - 1)) {
+    if ($titleSize + $summarySize + $failureSummarySize -gt (1MB - 4)) {
         # If Combined Test Results and failures exceeds GitHub summary capacity, we will not display the failures details, only the failures summary
         $testResultsfailuresMD = $testResultsFailuresSummaryMD
     }
