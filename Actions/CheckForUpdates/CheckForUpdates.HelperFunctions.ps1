@@ -485,12 +485,7 @@ function GetModifiedSettingsContent {
     $schemaKey = '$schema'
     $schemaValue = $srcSettings."$schemaKey"
 
-    if ($dstSettings.PSObject.Properties.Name -eq $schemaKey) {
-        $dstSettings."$schemaKey" = $schemaValue
-    }
-    else {
-        $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue
-    }
+    $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
 
     return $dstSettings | ConvertTo-JsonLF
 }
