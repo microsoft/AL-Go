@@ -134,5 +134,13 @@ Describe "CheckForUpdates Action Tests" {
         ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
     }
 
-    # Call action
+    It 'Test that Update AL-Go System Files uses fixes runs-on' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $updateYamlFile = Join-Path $scriptRoot "..\..\Templates\Per Tenant Extension\.github\workflows\UpdateGitHubGoSystemFiles.yaml"
+        $updateYaml = [Yaml]::Load($updateYamlFile)
+        $updateYaml.content | Where-Object { $_ -like '*runs-on:*' } | ForEach-Object {
+            $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
+        }
+    }
 }

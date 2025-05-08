@@ -74,7 +74,7 @@ jobs:
   UpdateALGoSystemFiles:
     name: "[${{ matrix.branch }}] Update AL-Go System Files"
     needs: [ Initialize ]
-    runs-on: [ windows-latest ]
+    runs-on: windows-latest
     strategy:
       matrix:
         branch: ${{ fromJson(needs.Initialize.outputs.UpdateBranches).branches }}

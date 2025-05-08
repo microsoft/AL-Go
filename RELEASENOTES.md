@@ -2,6 +2,10 @@
 
 - Add top-level permissions for _Increment Version Number_ workflow
 
+### Issues
+
+- Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
+
 ### New Repository settings
 
 - `customALGoSystemFiles` is an array of JSON objects, which holds information about custom AL-Go System Files, which will be applied during Update AL-Go System Files. Every object can hold these 4 properties:
