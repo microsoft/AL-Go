@@ -1,5 +1,5 @@
 ﻿. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "ValidateWorkflowInput.psm1" -Resolve) -Force
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "ValidateWorkflowInput.psm1" -Resolve) -Force -DisableNameChecking
 
 $workflowName = "$ENV:GITHUB_WORKFLOW".Trim().Replace(' ','').ToLowerInvariant().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 $ValidateWorkflowScript = Join-Path -Path $PSScriptRoot -ChildPath "Validate-$workflowName.ps1"
