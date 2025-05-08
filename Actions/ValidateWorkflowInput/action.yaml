@@ -1,4 +1,4 @@
-name: Test Workflow Input
+name: Validate Workflow Input
 author: Microsoft Corporation
 inputs:
   shell:
