@@ -73,7 +73,7 @@ foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
             }
         }
         default {
-            AddSecret -secret $secret¨ -useMapping
+            AddSecret -secret $secret -useMapping
         }
     }
 }
