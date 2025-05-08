@@ -73,7 +73,7 @@ function Get-DeployToEnvironmentVariable($ghEnvironment) {
     catch {
         Write-Host "Failed to get deployment environment variables from GitHub API - Environments are not supported in this repository"
     }
-    
+
     return $ghEnvironmentDeployToVariable
 }
 
@@ -197,7 +197,7 @@ else {
                 foreach($key in $evKeys) {
                     $deployTo."$key" = $deployToEnvironmentVariable."$key"
                 }
-            }  
+            }
             $keys = @($deployTo.Keys)
             foreach($key in $keys) {
                 if ($deploymentSettings.ContainsKey($key)) {
