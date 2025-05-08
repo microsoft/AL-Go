@@ -18,7 +18,6 @@ permissions:
   contents: read
   id-token: write
   pages: read
-  environments: read
 
 env:
   workflowDepth: 1
