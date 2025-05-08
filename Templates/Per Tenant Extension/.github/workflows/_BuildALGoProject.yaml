@@ -73,6 +73,10 @@ on:
         description: Flag determining whether to use the Artifacts Cache
         type: boolean
         default: false
+      needsContext:
+        description: JSON formatted needs context
+        type: string
+        default: '{}'
 
 permissions:
   actions: read
@@ -167,6 +171,7 @@ jobs:
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
+          NeedsContext: ${{ inputs.needsContext }}
         with:
           shell: ${{ inputs.shell }}
           artifact: ${{ env.artifact }}

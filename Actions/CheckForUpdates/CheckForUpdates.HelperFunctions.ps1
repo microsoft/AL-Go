@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
-.PARAMETER headers
-The headers to use when calling the GitHub API
+.PARAMETER token
+The GitHub token / PAT to use for authentication (if the template repository is private/internal)
 .PARAMETER templateUrl
 The URL to the template repository
 .PARAMETER templateSha
@@ -12,11 +12,30 @@ If true, the latest SHA of the template repository will be downloaded
 #>
 function DownloadTemplateRepository {
     Param(
-        [hashtable] $headers,
+        [string] $token,
         [string] $templateUrl,
         [ref] $templateSha,
         [bool] $downloadLatest
     )
+
+    $templateRepositoryUrl = $templateUrl.Split('@')[0]
+    $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
+
+    # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
+    $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
+    try {
+        $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl
+    }
+    catch {
+        # Ignore error
+        $response = $null
+    }
+    if (-not $response -or $response.StatusCode -ne 200) {
+        # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
+        # Get token with read permissions for the template repository
+        # NOTE that the GitHub app needs to be installed in the template repository for this to work
+        $headers = GetHeaders -token $token -repository $templateRepository
+    }
 
     # Construct API URL
     $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
@@ -427,7 +446,7 @@ function IsDirectALGo {
 
 function GetSrcFolder {
     Param(
-        [hashtable] $repoSettings,
+        [string] $repoType,
         [string] $templateUrl,
         [string] $templateFolder,
         [string] $srcPath
@@ -439,7 +458,7 @@ function GetSrcFolder {
         return ''
     }
     if (IsDirectALGo -templateUrl $templateUrl) {
-        switch ($repoSettings.type) {
+        switch ($repoType) {
             "PTE" {
                 $typePath = "Per Tenant Extension"
             }
@@ -469,33 +488,166 @@ function GetSrcFolder {
 function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
-        [hashtable] $updateSettings,
-        [hashtable] $additionalSettings = @{}
+        [hashtable] $updateSettings
     )
 
+    $modified = $false
     # Update Repo Settings file with the template URL
     if (Test-Path $settingsFile) {
         $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
     }
     else {
         $settings = [PSCustomObject]@{}
+        $modified = $true
     }
     foreach($key in $updateSettings.Keys) {
         if ($settings.PSObject.Properties.Name -eq $key) {
-            $settings."$key" = $updateSettings."$key"
+            if ($settings."$key" -ne $updateSettings."$key") {
+                $settings."$key" = $updateSettings."$key"
+                $modified = $true
+            }
         }
         else {
             # Add the property if it doesn't exist
             $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $updateSettings."$key"
+            $modified = $true
         }
     }
-    # Grab settings from additionalSettings if they are not already in settings
-    foreach($key in $additionalSettings.Keys) {
-        if (!($settings.PSObject.Properties.Name -eq $key)) {
-            # Add the property if it doesn't exist
-            $settings | Add-Member -MemberType NoteProperty -Name "$key" -Value $additionalSettings."$key"
+    if ($modified) {
+        # Save the file with LF line endings and UTF8 encoding
+        $settings | Set-JsonContentLF -path $settingsFile
+    }
+    return $modified
+}
+
+function GetCustomALGoSystemFiles {
+    Param(
+        [string] $baseFolder,
+        [hashtable] $settings,
+        [string[]] $projects
+    )
+
+    function YieldItem{
+        Param(
+            [string] $baseFolder,
+            [string] $source,
+            [string] $destination,
+            [string[]] $projects
+        )
+
+        if ($destination -like ".AL-Go$([IO.Path]::DirectorySeparatorChar)*") {
+            $destinations = $projects | ForEach-Object { Join-Path $_ $destination }
+        }
+        else {
+            $destinations = @($destination)
+        }
+        $destinations | ForEach-Object {
+            Write-Host "- $_"
+            $content = Get-ContentLF -Path $source
+            $existingFile = Join-Path $baseFolder $_
+            $existingContent = ''
+            if (Test-Path -Path $existingFile) {
+                $existingContent = Get-ContentLF -Path $existingFile
+            }
+            if ($content -ne $existingContent) {
+                Write-Output @{ "DstFile" = $_; "content" = $content }
+            }
         }
     }
-    # Save the file with LF line endings and UTF8 encoding
-    $settings | Set-JsonContentLF -path $settingsFile
+
+    foreach($customspec in $settings.customALGoSystemFiles) {
+        if ($customspec -isnot [Hashtable]) {
+            throw "customALGoSystemFiles setting is wrongly formatted, must be an array of objects. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+        if (!($customSpec.ContainsKey('Source') -and $customSpec.ContainsKey('Destination'))) {
+            throw "customALGoSystemFiles setting is wrongly formatted, Source and Destination must be specified. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        $source = $customspec.Source
+        # Replace embedded secrets in the source URL with the value of the secret
+        $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+        if ($customspec.Source -match $pattern) {
+            $source = $source.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+        }
+        if ($source -isnot [string] -or $source -notlike 'https://*' -or (-not [System.Uri]::IsWellFormedUriString($source,1))) {
+            throw "customALGoSystemFiles setting is wrongly formatted, Source must be a secure download URL. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        $destination = $customSpec.Destination.Replace('/',[IO.Path]::DirectorySeparatorChar).Replace('\',[IO.Path]::DirectorySeparatorChar)
+        if ($destination -isnot [string] -or $destination -eq '') {
+            throw "customALGoSystemFiles setting is wrongly formatted, Destination must be a string, which isn't blank. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        if ($customSpec.ContainsKey('FileSpec')) { $fileSpec = $customSpec.FileSpec } else { $fileSpec = '*' }
+        if ($fileSpec -isnot [string]) {
+            throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        if ($customSpec.ContainsKey('Recurse')) { $recurse = $customSpec.Recurse } else { $recurse = $true }
+        if ($fileSpec -isnot [string] -or $recurse -isnot [boolean]) {
+            throw "customALGoSystemFiles setting is wrongly formatted, fileSpec must be string and Recurse must be boolean. See https://aka.ms/algosettings#customalgosystemfiles."
+        }
+
+        $ext = [System.IO.Path]::GetExtension($source)
+        $authToken = $null
+        $repository = $null
+        if ($customspec.ContainsKey('AuthTokenSecret')) {
+            $authTokenSecret = $customspec.AuthTokenSecret
+            Write-Host "Using secret $authTokenSecret"
+            $authToken = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($authTokenSecret)"))
+            # if the AuthToken is a GitHub App specification, we need to get the repository name from the URL
+            if ($source -like 'https://api.github.com/repos/*/*/zipball/*') {
+                $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[1..2] -join '/'
+                $ext = '.zip'
+            }
+            else {
+                $repository = ([Uri]$source).AbsolutePath.TrimStart('/').Split('/')[0..1] -join '/'
+            }
+        }
+        $headers = GetHeaders -token $authToken -repository $repository
+
+        $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        New-Item -Path $tempFolder -ItemType Directory | Out-Null
+        $zipName = "$tempFolder$ext"
+        try {
+            if ($ext -eq '.zip') {
+                if (!($destination.EndsWith('/') -or $destination.EndsWith('\'))) {
+                    throw "customALGoSystemFiles setting is wrongly formatted, destination must be a folder (terminated with / or \). See https://aka.ms/algosettings#customalgosystemfiles."
+                }
+                Write-Host "Downloading $source to $zipName"
+                $headers | Out-Host
+                Invoke-RestMethod -UseBasicParsing -Method Get -Headers $headers -Uri $source -OutFile $zipName
+                Expand-Archive -Path $zipName -DestinationPath $tempFolder -Force
+                $subFolder = Join-Path $tempFolder ([System.IO.Path]::GetDirectoryName($fileSpec)) -Resolve
+                Push-Location -Path $subFolder
+                try {
+                    Get-ChildItem -Path $subFolder -Filter ([System.IO.Path]::GetFileName($fileSpec)) -Recurse:$recurse -File -Force | ForEach-Object {
+                        $destRelativeFileName = Resolve-Path $_.FullName -Relative
+                        $destFileName = Join-Path $destination $destRelativeFileName
+                        $destFileName = $destFileName.TrimStart('\/')
+                        YieldItem -baseFolder $baseFolder -source $_.FullName -destination $destFileName -projects $projects
+                    }
+                }
+                finally {
+                    Pop-Location
+                }
+            }
+            else {
+                if ($customSpec.ContainsKey('FileSpec') -or $customSpec.ContainsKey('Recurse')) {
+                    throw "customALGoSystemFiles setting is wrongly formatted, FileSpec and Recurse are only allowed with .zip files. See https://aka.ms/algosettings#customalgosystemfiles."
+                }
+                if ($destination.endsWith([IO.Path]::DirectorySeparatorChar)) {
+                    $destination = Join-Path $destination ([System.IO.Path]::GetFileName($source))
+                }
+                Write-Host "$($destination):"
+                $tempFilename = Join-Path $tempFolder ([System.IO.Path]::GetFileName($source))
+                Invoke-RestMethod -UseBasicParsing -Method Get -Headers $headers -Uri $source -OutFile $tempFilename
+                YieldItem -baseFolder $baseFolder -source $tempFilename -destination $destination -projects $projects
+            }
+        }
+        finally {
+            Remove-Item -Path $tempFolder -Recurse -Force
+            if (Test-Path -Path $zipName) { Remove-Item $zipName -Force }
+        }
+    }
 }
