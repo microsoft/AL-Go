@@ -6,6 +6,10 @@
 
 - Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
 
+### Workflow input validation
+
+Some workflow inputs are now validated early in order to avoid workflows to make modifications like creating a release, when we already should know that an error will occur later.
+
 ## v7.1
 
 ### Issues
