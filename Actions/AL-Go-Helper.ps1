@@ -862,11 +862,17 @@ function ValidateSettings {
 
         $result = ""
         try{
+            $command  = [scriptblock] {
+                $result = ''
+                Test-Json -Json $args[0] -SchemaFile $args[1] -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
+                return $result
+            }
+
             if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $result = ("`$result = ''; Test-Json -Json '$settingsJson' -SchemaFile '$settingsSchemaFile' -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null; return `$result" | pwsh -Command -)
+                $result = pwsh -noprofile -Command $command -ArgumentList $settingsJson, $settingsSchemaFile
             }
             else {
-                Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
+                $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
             }
         }
         catch {
