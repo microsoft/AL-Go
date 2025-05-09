@@ -30,11 +30,10 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Check E2EPAT Secret is defined
-        if: ${{ vars.E2E_APP_ID == '' }}
+      - name: Check E2E app is set up
         run: |
-          if ('${{ Secrets.E2EPAT }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2EPAT containing a valid Personal Access Token with the following permissions: admin:org, delete_repo, repo, workflow, packages:write"
+          if (('${{ vars.E2E_APP_ID }}' -eq '') -or ('${{ secrets.E2E_PRIVATE_KEY }}' -eq '')) {
+            Write-Host "::Error:: In order to clean up the temp repositories you must have a secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID defined in your repository."
             exit 1
           }
 
@@ -58,6 +57,6 @@ jobs:
       - name: Cleanup Temp Repositories
         env:
           githubOwner: ${{ steps.getGitHubOwner.outputs.githubOwner }}
-          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.E2EPAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           ${{ github.workspace }}/Internal/Scripts/RemoveTempRepos.ps1 -githubOwner $env:githubOwner

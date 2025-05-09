@@ -5,11 +5,14 @@ Param(
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eAppKey,
     [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
+    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
+    [string] $azureConnectionSecret,
+    [string] $githubPackagesToken
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -24,6 +27,8 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test uses the bcsamples-bingmaps.appsource repository and will deliver a new build of the app to AppSource.
 # The bcsamples-bingmaps.appsource repository is setup to use an Azure KeyVault for secrets and app signing.
+# During the test, the bcsamples-bingmaps.appsource repository will be copied to a new repository called tmp-bingmaps.appsource.
+# tmp-bingmaps.appsource has access to the same Azure KeyVault as bcsamples-bingmaps.appsource using federated credentials.
 # The bcSamples-bingmaps.appsource repository is setup for continuous delivery to AppSource
 # This test will deliver another build of the latest app version already delivered to AppSource (without go-live)
 #
@@ -34,14 +39,11 @@ Write-Host -ForegroundColor Yellow @'
 # bcsamples-bingmaps.appsource is using a Entra ID app registration for delivering to AppSource
 # The Entra ID app registration is using federated credentials (branches main and e2e)
 #
-#  - Remove branch e2e in repository microsoft/bcsamples-bingmaps.appsource (if it exists)
-#  - Create a new branch called e2e in repository microsoft/bcsamples-bingmaps.appsource (based on main)
-#  - Update AL-Go System Files in branch e2e in repository microsoft/bcsamples-bingmaps.appsource
-#  - Invoke CI/CD in branch e2e in repository microsoft/bcsamples-bingmaps.appsource
+#  - Create a new repository called tmp-bingmaps.appsource (based on bcsamples-bingmaps.appsource)
+#  - Update AL-Go System Files in branch main in tmp-bingmaps.appsource
+#  - Invoke CI/CD in branch main in repository tmp-bingmaps.appsource
 #  - Check that artifacts are created and signed
 #  - Check that the app is delivered to AppSource
-#  - Remove the branch e2e in repository microsoft/bcsamples-bingmaps.appsource
-#
 '@
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -54,24 +56,21 @@ if ($linux) {
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
-$branch = "e2e"
+$repository = "$githubOwner/tmp-bingmaps.appsource"
+$branch = "main"
 $template = "https://github.com/$appSourceTemplate"
-$repository = 'microsoft/bcsamples-bingmaps.appsource'
+$sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will create a copy of this repository
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+# Create temp repository from sourceRepository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+CreateAlGoRepository `
+    -github:$github `
+    -template "https://github.com/$sourceRepository" `
+    -repository $repository `
+    -addRepoSettings @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" } `
+    -branch $branch
 
-# Get the branches from https://github.com/microsoft/bcsamples-bingmaps.appsource
-# Use e2e PAT to get the branches - as token doesn't have access to the repository
-$headers = GetHeaders -token $e2epat -repository "$githubOwner/.github"
-$existingBranchJson = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/branches/$branch 2> $null
-$existingBranch = $existingBranchJson | ConvertFrom-Json
-if ($existingBranch -and $existingBranch.PSObject.Properties.Name -eq 'Name' -and $existingBranch.Name -eq $branch) {
-    Write-Host "Removing existing branch $branch"
-    Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
-    Start-Sleep -Seconds 10
-}
-$latestSha = (gh api /repos/$repository/commits/main | ConvertFrom-Json).sha
-gh api --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/git/refs -f ref=refs/heads/$branch -f sha=$latestSha
+SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureConnectionSecret
 
 # Upgrade AL-Go System Files to test version
 # bcsamples-bingmaps.appsource already has the GHTOKENWORKFLOW secret
@@ -106,5 +105,3 @@ Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app" | ForEach-Object {
 }
 # Check that two apps were signed
 $noOfApps | Should -Be 2
-
-Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
