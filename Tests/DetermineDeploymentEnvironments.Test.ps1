@@ -268,7 +268,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "variables" = @( @{ "name" = "DeployTo"; "value" = '{"includeTestAppsInSandboxEnvironment": false}' } ) })}
         }
 
-        # Add Branch policy to settings to only allow branch to deploy to test environment
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
         $settings += @{
             "DeployToTest" = @{
                 "includeTestAppsInSandboxEnvironment" = $true
