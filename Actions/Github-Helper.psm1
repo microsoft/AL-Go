@@ -857,7 +857,7 @@ function ConvertTo-JsonLF {
                 Write-Host "WARNING: pwsh (PowerShell 7) not installed, JSON will be formatted by PowerShell $($PSVersionTable.PSVersion)"
             }
         }
-        return $content
+        return $content.Replace("`r", "")
     }
 }
 
