@@ -30,14 +30,6 @@ jobs:
         with:
           egress-policy: audit
 
-      - uses: actions/create-github-app-token@3ff1caaa28b64c9cc276ce0a02e2ff584f3900c5 # v2.0.2
-        id: app-token
-        if: ${{ vars.E2E_APP_ID != '' }}
-        with:
-          app-id: ${{ vars.E2E_APP_ID }}
-          private-key: ${{ secrets.E2E_PRIVATE_KEY }}
-          owner: ${{ github.event.inputs.githubOwner }}
-
       - name: Check E2EPAT Secret is defined
         if: ${{ vars.E2E_APP_ID == '' }}
         run: |
@@ -54,6 +46,14 @@ jobs:
           githubOwner: ${{ github.event.inputs.githubOwner }}
         run: |
           ${{ github.workspace }}/Internal/Scripts/GetOwnerForE2ETests.ps1 -githubOwner $env:githubOwner
+
+      - uses: actions/create-github-app-token@3ff1caaa28b64c9cc276ce0a02e2ff584f3900c5 # v2.0.2
+        id: app-token
+        if: ${{ vars.E2E_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.E2E_APP_ID }}
+          private-key: ${{ secrets.E2E_PRIVATE_KEY }}
+          owner: ${{ steps.getGitHubOwner.outputs.githubOwner }}
 
       - name: Cleanup Temp Repositories
         env:
