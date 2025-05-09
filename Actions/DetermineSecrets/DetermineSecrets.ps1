@@ -80,12 +80,12 @@ foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
 
 # Calculate output for secrets
 # one output called FORMATSTR with the content: {{"secret1":{0},"secret2":{1},"secret3":{2}}}
-# and one output per secret called S0, S1, S2 with the name of the GitHub Secret (or Azure DevOps secret) to look for
+# and one environment variable per secret called S0, S1, S2 with the name of the GitHub Secret (or Azure DevOps secret) to look for
 $cnt = 0
 $formatArr = @()
 foreach($secret in $secretsCollection) {
     $formatArr += @("""$Secret"":{$cnt}")
-    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "S$cnt=$($secretNames[$secret])"
+    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV -Value "S$cnt=$($secretNames[$secret])"
     Write-Host "S$cnt=$($secretNames[$secret])"
     $cnt++
 }
