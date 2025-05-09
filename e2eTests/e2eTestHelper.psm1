@@ -69,7 +69,7 @@ function RefreshToken {
     if ($github) {
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
-        invoke-gh auth setup-git
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     }
     else {
         $realToken | invoke-gh auth login --with-token
