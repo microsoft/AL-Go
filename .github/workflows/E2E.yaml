@@ -256,7 +256,7 @@ jobs:
       - name: Run test on Windows
         run: |
           try {
-            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -azureConnectionSecret '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
+            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -azureConnectionSecret '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
           }
           catch {
             Write-Host $_.Exception.Message
@@ -292,7 +292,7 @@ jobs:
       - name: Run tests
         run: |
           try {
-            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -azureConnectionSecret '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
+            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiToken '${{ Secrets.adminCenterApiCredentials }}' -azureConnectionSecret '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
           }
           catch {
             Write-Host $_.Exception.Message
@@ -340,7 +340,7 @@ jobs:
       - name: Run tests
         run: |
           try {
-            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
+            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
           }
           catch {
             Write-Host $_.Exception.Message
@@ -388,7 +388,7 @@ jobs:
       - name: Run tests
         run: |
           try {
-            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -private -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
+            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -private -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiToken ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
           }
           catch {
             Write-Host $_.Exception.Message
@@ -434,7 +434,7 @@ jobs:
       - name: Run tests
         run: |
           try {
-            . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -contentPath ${{ steps.calculateParams.outputs.contentPath }}
+            . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -contentPath ${{ steps.calculateParams.outputs.contentPath }}
           }
           catch {
             Write-Host $_.Exception.Message

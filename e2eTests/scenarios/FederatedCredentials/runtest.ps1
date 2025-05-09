@@ -6,7 +6,7 @@ Param(
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $e2eAppId,
-    [string] $e2eKey,
+    [string] $e2eAppKey,
     [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
@@ -62,7 +62,7 @@ $template = "https://github.com/$appSourceTemplate"
 $sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will create a copy of this repository
 
 # Create temp repository from sourceRepository
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 CreateAlGoRepository `
     -github:$github `
     -template "https://github.com/$sourceRepository" `
