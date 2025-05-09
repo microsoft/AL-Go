@@ -1303,12 +1303,12 @@ function CheckAppDependencyProbingPaths {
                                 foreach($propertyName in "appFolders", "testFolders", "bcptTestFolders") {
                                     Write-Host "Adding folders from $depProject to $propertyName in $project"
                                     $found = $false
-                                    foreach($_ in $depSettings."$propertyName") {
-                                        $folder = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$_") -Relative
-                                        if (!$settings."$propertyName".Contains($folder)) {
-                                            $settings."$propertyName" += @($folder)
+                                    foreach($folder in $depSettings."$propertyName") {
+                                        $relativeFolderPath = Resolve-Path -Path (Join-Path $baseFolder "$depProject/$folder") -Relative
+                                        if (!$settings."$propertyName".Contains($relativeFolderPath)) {
+                                            $settings."$propertyName" += @($relativeFolderPath)
                                             $found = $true
-                                            Write-Host "- $folder"
+                                            Write-Host "- $relativeFolderPath"
                                         }
                                     }
                                     if (!$found) { Write-Host "- No folders added" }
