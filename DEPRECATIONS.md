@@ -18,7 +18,7 @@ When handling support requests, we will request that you to use the latest versi
 
 The old setting would determine whether or not to build all project during the Pull Request workflow. With incremental Builds now supported, please set the `onPull_Request` property of the `incrementalBuilds` setting to false to force full builds in Pull Requests.
 
-```
+```json
 "incrementalBuilds": {
     "onPull_Request": false
 }
@@ -30,7 +30,7 @@ The old setting would determine whether or not to build all project during the P
 
 The old setting, where the setting key was a combination of the workflow name and `Schedule` (dynamic setting key name) is no longer supported. Instead you need to use a setting called [workflowSchedule](https://aka.ms/algosettings#workflowSchedule) and either use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) or place the setting in a workflow specific settings file. Example using conditional settings:
 
-```
+```json
 "conditionalSettings": [
     {
         "workflows": [ "Update AL-Go System Files" ],
@@ -54,7 +54,7 @@ The old setting, where the setting key was a combination of the workflow name an
 
 [preprocessorSymbols](https://aka.ms/algosettings#preprocessorSymbols) are now supported as a global setting and can be applied to buildModes using [Conditional Settings](https://aka.ms/algosettings#conditional-settings). Example:
 
-```
+```json
 "conditionalSettings": [
     {
         "buildModes": [ "Clean" ],

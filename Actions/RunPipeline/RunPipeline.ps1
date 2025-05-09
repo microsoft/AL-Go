@@ -86,7 +86,7 @@ try {
 
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString','buildAuthContext' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -100,6 +100,19 @@ try {
     }
 
     $analyzeRepoParams = @{}
+
+    $authContext = $null
+    $environmentName = ""
+    if ($settings.buildEnvironmentName) {
+        if (-not $buildAuthContext) {
+            throw "When using an online environment for testing, you need to specify a secret called buildAuthContext"
+        }
+        $authContextHT = $buildAuthContext | ConvertFrom-Json | ConvertTo-HashTable
+        $environmentName = $settings.buildEnvironmentName
+        if ($environmentName -notlike 'https://*') {
+            $authContext = New-BcAuthContext @authContextHT
+        }
+    }
 
     if ($artifact) {
         # Avoid checking the artifact setting in AnalyzeRepo if we have an artifactUrl
@@ -279,9 +292,6 @@ try {
             Write-Host "::endgroup::"
         }
     }
-    $authContext = $null
-    $environmentName = ""
-    $CreateRuntimePackages = $false
 
     if ($settings.versioningStrategy -eq -1) {
         $artifactVersion = [Version]$settings.artifact.Split('/')[4]
@@ -412,7 +422,18 @@ try {
                             "CopyInstalledAppsToFolder" = $parameters.CopyInstalledAppsToFolder
                         }
                     }
-                    if ($parameters.ContainsKey('containerName')) {
+                    if ($parameters.ContainsKey('bcAuthContext') -and $parameters.ContainsKey('environment') -and $parameters.environment -notlike 'https://*') {
+                        try {
+                            Write-Host "Trying to install app $($appid) from AppSource."
+                            Install-BcAppFromAppSource -bcAuthContext $parameters.bcAuthContext -environment $parameters.environment -appId $appid -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
+                        }
+                        catch {
+                            Write-Host "Failed to install app $($appid) from AppSource. Error was: $($_.Exception.Message)"
+                            Write-Host "Trying to publish from NuGet feeds instead"
+                            Publish-BcNuGetPackageToContainer -bcAuthContext $parameters.bcAuthContext -environment $parameters.environment -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
+                        }
+                    }
+                    elseif ($parameters.ContainsKey('containerName')) {
                         Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
                     }
                     else {
@@ -522,7 +543,6 @@ try {
         -buildArtifactFolder $buildArtifactFolder `
         -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
-        -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
 
