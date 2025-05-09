@@ -27,6 +27,8 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test uses the bcsamples-bingmaps.appsource repository and will deliver a new build of the app to AppSource.
 # The bcsamples-bingmaps.appsource repository is setup to use an Azure KeyVault for secrets and app signing.
+# During the test, the bcsamples-bingmaps.appsource repository will be copied to a new repository called tmp-bingmaps.appsource.
+# tmp-bingmaps.appsource has access to the same Azure KeyVault as bcsamples-bingmaps.appsource using federated credentials.
 # The bcSamples-bingmaps.appsource repository is setup for continuous delivery to AppSource
 # This test will deliver another build of the latest app version already delivered to AppSource (without go-live)
 #
@@ -37,14 +39,11 @@ Write-Host -ForegroundColor Yellow @'
 # bcsamples-bingmaps.appsource is using a Entra ID app registration for delivering to AppSource
 # The Entra ID app registration is using federated credentials (branches main and e2e)
 #
-#  - Remove branch e2e in repository microsoft/bcsamples-bingmaps.appsource (if it exists)
-#  - Create a new branch called e2e in repository microsoft/bcsamples-bingmaps.appsource (based on main)
-#  - Update AL-Go System Files in branch e2e in repository microsoft/bcsamples-bingmaps.appsource
-#  - Invoke CI/CD in branch e2e in repository microsoft/bcsamples-bingmaps.appsource
+#  - Create a new repository called tmp-bingmaps.appsource (based on bcsamples-bingmaps.appsource)
+#  - Update AL-Go System Files in branch main in tmp-bingmaps.appsource
+#  - Invoke CI/CD in branch main in repository tmp-bingmaps.appsource
 #  - Check that artifacts are created and signed
 #  - Check that the app is delivered to AppSource
-#  - Remove the branch e2e in repository microsoft/bcsamples-bingmaps.appsource
-#
 '@
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -105,6 +104,3 @@ Get-Item "signedApps/Main App-$branch-Apps-*.*.*.0/*.app" | ForEach-Object {
 }
 # Check that two apps were signed
 $noOfApps | Should -Be 2
-
-$headers = GetHeaders -token $ENV:GH_TOKEN -repository "$githubOwner/.github"
-Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$repository/git/refs/heads/$branch" -Headers $headers
