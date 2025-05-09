@@ -67,7 +67,6 @@ function RefreshToken {
     $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
     $script:lastTokenRefresh = [DateTime]::Now
     if ($github) {
-        Write-Host "Setting token in environment variables"
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
         invoke-gh auth setup-git
