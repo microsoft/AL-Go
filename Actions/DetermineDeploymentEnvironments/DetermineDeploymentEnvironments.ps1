@@ -3,7 +3,9 @@
     [string] $getEnvironments,
     [Parameter(HelpMessage = "Type of deployment (CD, Publish or All)", Mandatory = $true)]
     [ValidateSet('CD','Publish','All')]
-    [string] $type
+    [string] $type,
+    [Parameter(HelpMessage = "ghTokenWorkflow secret used to read deployment environment variables", Mandatory = $false)]
+    [string] $ghTokenWorkflow = ""
 )
 
 function IsGitHubPagesAvailable() {
@@ -54,6 +56,25 @@ function Get-BranchesFromPolicy($ghEnvironment) {
             Write-Host "GitHub Environment $($ghEnvironment.name) does not have a branch policy defined"
         }
     }
+}
+
+function Get-DeployToEnvironmentVariable($ghEnvironment, $ghTokenWorkflow) {
+    $headers = GetHeaders -token $ghTokenWorkflow -permissions @{"contents"="read";"metadata"="read";"actions"="read";"environments"="read"}
+
+    $ghEnvironmentDeployToVariable = $null
+
+    try {
+        Write-Host "Requesting deployment environment variables from GitHub for environment $($ghEnvironment.name)"
+        $url = "$($ghEnvironment.url)/variables"
+        $ghEnvironmentVariables = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
+        $ghEnvironmentDeployToVariableJson = $ghEnvironmentVariables.variables | Where-Object { $_.name -eq 'DeployTo' } | ForEach-Object { $_.value }
+        $ghEnvironmentDeployToVariable = $ghEnvironmentDeployToVariableJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    }
+    catch {
+        Write-Host "Failed to get deployment environment variables from GitHub API - Environments are not supported in this repository"
+    }
+
+    return $ghEnvironmentDeployToVariable
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -127,6 +148,7 @@ else {
     foreach($environmentName in $environments) {
         Write-Host "Environment: $environmentName"
         $envName = $environmentName.Split(' ')[0]
+        $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $environmentName }
 
         # Check Obsolete Settings
         foreach($obsoleteSetting in "$($envName)-Projects","$($envName)_Projects") {
@@ -169,6 +191,13 @@ else {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             Write-Host "Setting $settingsName"
             $deployTo = $settings."$settingsName"
+            $deployToEnvironmentVariable = Get-DeployToEnvironmentVariable -ghEnvironment $ghEnvironment -ghTokenWorkflow $ghTokenWorkflow
+            if ($deployToEnvironmentVariable) {
+                $evKeys = @($deployToEnvironmentVariable.Keys)
+                foreach($key in $evKeys) {
+                    $deployTo."$key" = $deployToEnvironmentVariable."$key"
+                }
+            }
             $keys = @($deployTo.Keys)
             foreach($key in $keys) {
                 if ($deploymentSettings.ContainsKey($key)) {
@@ -202,7 +231,6 @@ else {
         }
 
         # Get Branch policies on GitHub Environment
-        $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $environmentName }
         $deploymentSettings.BranchesFromPolicy = @(Get-BranchesFromPolicy -ghEnvironment $ghEnvironment)
 
         # Include Environment if:

@@ -4,12 +4,16 @@
     [Parameter(HelpMessage = "Build mode", Mandatory = $false)]
     [string] $buildMode = "Default",
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
-    [string] $get = ""
+    [string] $get = "",
+    [Parameter(HelpMessage = "Environment name for current deployment. Should only be set when environmentDeployToVariableValue is also set.", Mandatory = $false)]
+    [string] $environmentName = "",
+    [Parameter(HelpMessage = "Value of the DeployTo settings variable defined in the github environment. If this is set, the environmentName should also be set.", Mandatory = $false)]
+    [string] $environmentDeployToVariableValue = ""
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$settings = ReadSettings -project $project -buildMode $buildMode
+$settings = ReadSettings -project $project -buildMode $buildMode -environmentName $environmentName -environmentDeployToVariableValue $environmentDeployToVariableValue
 if ($get) {
     $getSettings = $get.Split(',').Trim()
 }

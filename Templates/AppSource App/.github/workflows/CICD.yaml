@@ -140,6 +140,7 @@ jobs:
           shell: powershell
           getEnvironments: '*'
           type: 'CD'
+          ghTokenWorkflow: '${{ secrets.ghTokenWorkflow }}'
 
   CheckForUpdates:
     needs: [ Initialization ]
@@ -269,6 +270,8 @@ jobs:
         with:
           shell: ${{ matrix.shell }}
           get: type,powerPlatformSolutionFolder
+          environmentName: ${{ matrix.environment }}
+          environmentDeployToVariableValue: ${{ vars.DeployTo }}
 
       - name: EnvName
         id: envName
