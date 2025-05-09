@@ -466,6 +466,30 @@ function GetSrcFolder {
     return $path
 }
 
+function GetModifiedSettingsContent {
+    Param(
+        [string] $srcSettingsFile,
+        [string] $dstSettingsFile
+    )
+
+    $srcSettings = Get-ContentLF -Path $srcSettingsFile | ConvertFrom-Json
+
+    if(Test-Path -Path $dstFile -PathType Leaf) {
+        $dstSettings = Get-ContentLF -Path $dstSettingsFile | ConvertFrom-Json
+    }
+    else {
+        # If the destination settings file does not exist, create an empty object
+        $dstSettings = [PSCustomObject]@{}
+    }
+
+    $schemaKey = '$schema'
+    $schemaValue = $srcSettings."$schemaKey"
+
+    $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
+
+    return $dstSettings | ConvertTo-JsonLF
+}
+
 function UpdateSettingsFile {
     Param(
         [string] $settingsFile,
