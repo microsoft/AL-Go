@@ -33,7 +33,7 @@ jobs:
       - name: Check E2E app is set up
         run: |
           if (('${{ vars.E2E_APP_ID }}' -eq '') -or ('${{ secrets.E2E_PRIVATE_KEY }}' -eq '')) {
-            Write-Host "::Error:: E2E_APP_ID and E2E_PRIVATE_KEY must be set in the repository secrets to clean up the temp repositories."
+            Write-Host "::Error:: In order to clean up the temp repositories you must have a secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID defined in your repository."
             exit 1
           }
 

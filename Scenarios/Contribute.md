@@ -79,7 +79,7 @@ In your personal fork, you can now run the end to end tests, if the following pr
 
 - You need the following variables:
 
-  - **E2E_APP_ID** the app id for the GitHub app installed on the GitHub organization used for testing
+  - **E2E_APP_ID** the app ID for the GitHub app installed on the GitHub organization used for testing
 
 - You need the following secrets:
 
