@@ -58,7 +58,7 @@ function Get-BranchesFromPolicy($ghEnvironment) {
     }
 }
 
-function Get-DeployToEnvironmentVariable($ghEnvironment) {
+function Get-DeployToEnvironmentVariable($ghEnvironment, $ghTokenWorkflow) {
     $headers = GetHeaders -token $ghTokenWorkflow -permissions @{"contents"="read";"metadata"="read";"actions"="read";"environments"="read"}
 
     $ghEnvironmentDeployToVariable = $null
@@ -191,7 +191,7 @@ else {
             # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
             Write-Host "Setting $settingsName"
             $deployTo = $settings."$settingsName"
-            $deployToEnvironmentVariable = Get-DeployToEnvironmentVariable -ghEnvironment $ghEnvironment
+            $deployToEnvironmentVariable = Get-DeployToEnvironmentVariable -ghEnvironment $ghEnvironment -ghTokenWorkflow $ghTokenWorkflow
             if ($deployToEnvironmentVariable) {
                 $evKeys = @($deployToEnvironmentVariable.Keys)
                 foreach($key in $evKeys) {
