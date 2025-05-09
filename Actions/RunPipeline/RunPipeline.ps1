@@ -556,6 +556,16 @@ try {
         Copy-Item -Path $buildOutputFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
     }
+
+    # check for new warnings
+    Import-Module (Join-Path $PSScriptRoot ".\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
+
+    Test-ForNewWarnings -token $token `
+        -project $project `
+        -settings $settings `
+        -buildMode $buildMode `
+        -baselineWorkflowRunId $baselineWorkflowRunId `
+        -prBuildOutputFile $buildOutputFile
 }
 catch {
     throw

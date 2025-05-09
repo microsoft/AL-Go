@@ -2,6 +2,14 @@
 
 - Add top-level permissions for _Increment Version Number_ workflow
 
+### Issues
+
+- Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
+
+### Failing pull requests if new warnings are added
+
+By setting failOn to 'newWarning', pull requests will fail if new warnings are introduced. This feature compares the warnings in the pull request build against those in the latest successful CI/CD build and fails if new warnings are detected.
+
 ### New Workflow specific settings
 
 - `buildEnvironmentName` - should be the Business Central environment name (from the Admin Center) for the environment you want to use if you want to run tests using online environments. Note that you also need to create a [buildAuthContext](https://aka.ms/algosecrets#buildAuthContext) secret, which gives access to this environment.
