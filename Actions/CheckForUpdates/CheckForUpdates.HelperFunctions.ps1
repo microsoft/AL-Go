@@ -487,6 +487,9 @@ function GetModifiedSettingsContent {
 
     $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
 
+    # Make sure the $schema property is the first property in the object
+    $dstSettings = $dstSettings | Select-Object @{ Name = '$schema'; Expression = { $_.'$schema' } }, * -ExcludeProperty '$schema'
+
     return $dstSettings | ConvertTo-JsonLF
 }
 
