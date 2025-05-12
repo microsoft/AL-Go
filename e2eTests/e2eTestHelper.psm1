@@ -75,6 +75,10 @@ function RefreshToken {
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
         invoke-gh auth setup-git # Use GitHub CLI as a credential helper
+    } else {
+        $ENV:GITHUB_TOKEN = gh auth token
+        $ENV:GH_TOKEN = gh auth token
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     }
 }
 
@@ -515,7 +519,11 @@ function CreateAlGoRepository {
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner) {
-        invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        if ($github) {
+            invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        } else {
+            invoke-git remote set-url origin "https://github.com/$repository"
+        }
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
