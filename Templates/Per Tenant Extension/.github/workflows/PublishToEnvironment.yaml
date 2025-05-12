@@ -23,7 +23,6 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  DebugLogging: ${{ runner.debug }}
 
 jobs:
   Initialization:
