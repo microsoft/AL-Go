@@ -1,7 +1,13 @@
 $debugLoggingEnabled = $false
-if ($env:DEBUGLOGGING -eq 'true') {
-    $debugLoggingEnabled = $true
+try {
+    Write-Host "DEBUGLOGGING environment variable: $env:DEBUGLOGGING"
+    if ($env:DEBUGLOGGING -eq 1 -or $env:DEBUGLOGGING -eq "true") {
+        $debugLoggingEnabled = $true
+    }
+} catch {
+    Write-Host "Failed to parse DEBUGLOGGING environment variable. Defaulting to false."
 }
+
 
 # Debug logging that is only written when additional logging is enabled
 function Write-Debug-Info {
