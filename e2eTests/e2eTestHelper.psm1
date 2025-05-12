@@ -46,6 +46,9 @@ function SetTokenAndRepository {
     }
 
     # Repository isn't created yet so authenticating towards the .github repository
+    if (-not $github) {
+        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo #TODO: Revisit this list to see if we can remove some scopes
+    }
     RefreshToken -token $token -repository "$githubOwner/.github"
 }
 
