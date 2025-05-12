@@ -109,8 +109,8 @@ Get-ChildItem -Recurse -Path 'settings.json' | ForEach-Object {
 $run = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{"versioningStrategy" = 3} -commit -wait
 
 # Check that workflow run uses federated credentials and signing was successful
-Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Connecting to Azure using clientId and federated token'
-Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText '(?m)^.*Signing .* succeeded.*$' -isRegEx | Out-Null
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)*Main App (Default)' -stepName 'Sign' -expectedText 'Connecting to Azure using clientId and federated token'
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)*Main App (Default)' -stepName 'Sign' -expectedText '(?m)^.*Signing .* succeeded.*$' -isRegEx | Out-Null
 
 # Check that Deliver to AppSource uses federated credentials and that a new submission was created
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Read secrets' -expectedText 'Query federated token'
