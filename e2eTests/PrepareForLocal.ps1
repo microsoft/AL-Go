@@ -1,5 +1,7 @@
 ﻿. (Get-Item "C:\src\github\microsoft\navcontainerhelper\Import-BcContainerHelper.ps1").FullName
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
+
 $ErrorActionPreference = "STOP"; Set-StrictMode -Version 2.0
 $ENV:GITHUB_API_URL = "https://api.github.com"
 
