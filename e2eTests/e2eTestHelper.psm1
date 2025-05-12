@@ -33,10 +33,21 @@ function SetTokenAndRepository {
         invoke-git config --global core.autocrlf false
     }
 
-    if ($appKey -and $appId) {
+    if (-not $github) {
+        # Running locally - Ensure the user is authenticated with the GitHub CLI.
+        # This is required for local runs to perform GitHub-related operations.
+        invoke-gh auth status
+    } elseif ($appKey -and $appId) {
+        # Running in GitHub Actions
         $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
+    } else {
+        throw "GitHub App ID and Private Key not set. In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
     }
+
     # Repository isn't created yet so authenticating towards the .github repository
+    if (-not $github) {
+        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo
+    }
     RefreshToken -token $token -repository "$githubOwner/.github"
 }
 
@@ -49,30 +60,31 @@ function RefreshToken {
         [Parameter(Mandatory = $false)]
         [switch] $force
     )
-
-    if ($token) {
-        $script:token = $token
-    }
-
-    if ($script:token -eq "DefaultToken") {
-        throw "Token not set."
-    }
-
-    # Check if the last token refresh was more than 30 minutes ago
-    if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
-        return
-    }
-
-    Write-Host "Authenticating with GitHub using token"
-    $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
-    $script:lastTokenRefresh = [DateTime]::Now
     if ($github) {
+        if ($token) {
+            $script:token = $token
+        }
+
+        if ($script:token -eq "DefaultToken") {
+            throw "Token not set."
+        }
+
+        # Check if the last token refresh was more than 30 minutes ago
+        if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
+            return
+        }
+
+        Write-Host "Authenticating with GitHub using token"
+        $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
+        $script:lastTokenRefresh = [DateTime]::Now
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
         invoke-gh auth setup-git # Use GitHub CLI as a credential helper
-    }
-    else {
-        $realToken | invoke-gh auth login --with-token
+    } else {
+        $realToken = gh auth token
+        $ENV:GITHUB_TOKEN = $realToken
+        $ENV:GH_TOKEN = $realToken
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     }
 }
 
@@ -513,7 +525,11 @@ function CreateAlGoRepository {
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner) {
-        invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        if ($github) {
+            invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        } else {
+            invoke-git remote set-url origin "https://github.com/$repository"
+        }
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
