@@ -97,14 +97,14 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 
 |Variable|Type|Description|
 |---|---|---|
-|$Global:E2EgitHubOwner| String | The GitHub owner of the test repositories (like `freddydk` or `microsoft`) |
-|$Global:SecureALGOAUTHAPP | SecureString | A json secret containing GitHubAppClientId and PrivateKey for a GitHub App with these repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_ |
-|$Global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
-|$Global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
-|$Global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
-|$Global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
-|$Global:SecureAzureConnectionSecret| String | A JSON string containing the Azure_Credentials set up with [federated credentials](https://github.com/microsoft/AL-Go/blob/main/Scenarios/secrets.md#federated-credential) |
-|$Global:SecureGitHubPackagesToken| String | A classic PAT with read/write access to GitHub packages in the organization the E2E tests are running in.  |
+|$global:E2EgitHubOwner| String | The GitHub owner of the test repositories (like `freddydk` or `microsoft`) |
+|$global:SecureALGOAUTHAPP | SecureString | A json secret containing GitHubAppClientId and PrivateKey for a GitHub App with these repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_ |
+|$global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
+|$global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
+|$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
+|$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
+|$global:SecureAzureConnectionSecret| String | A JSON string containing the Azure_Credentials set up with [federated credentials](https://github.com/microsoft/AL-Go/blob/main/Scenarios/secrets.md#federated-credential) |
+|$global:SecureGitHubPackagesToken| String | A classic PAT with read/write access to GitHub packages in the organization the E2E tests are running in.  |
 
 ## GitHub Codespaces
 
