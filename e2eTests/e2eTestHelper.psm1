@@ -33,9 +33,19 @@ function SetTokenAndRepository {
         invoke-git config --global core.autocrlf false
     }
 
-    if ($appKey -and $appId) {
+    if (-not $github) {
+        # Running locally - Check that user is logged in with gh cli
+        if ((invoke-gh auth status) -like "*not logged in*") {
+            throw "Not logged in to GitHub. Please run 'gh auth login' to log in."
+        }
+        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo #TODO: Revisit this list to see if we can remove some scopes
+    } elseif ($appKey -and $appId) {
+        # Running in GitHub Actions
         $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
+    } else {
+        throw "GitHub App ID and Private Key not set. In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
     }
+
     # Repository isn't created yet so authenticating towards the .github repository
     RefreshToken -token $token -repository "$githubOwner/.github"
 }
@@ -49,30 +59,31 @@ function RefreshToken {
         [Parameter(Mandatory = $false)]
         [switch] $force
     )
-
-    if ($token) {
-        $script:token = $token
-    }
-
-    if ($script:token -eq "DefaultToken") {
-        throw "Token not set."
-    }
-
-    # Check if the last token refresh was more than 30 minutes ago
-    if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
-        return
-    }
-
-    Write-Host "Authenticating with GitHub using token"
-    $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
-    $script:lastTokenRefresh = [DateTime]::Now
     if ($github) {
+        if ($token) {
+            $script:token = $token
+        }
+
+        if ($script:token -eq "DefaultToken") {
+            throw "Token not set."
+        }
+
+        # Check if the last token refresh was more than 30 minutes ago
+        if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
+            return
+        }
+
+        Write-Host "Authenticating with GitHub using token"
+        $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
+        $script:lastTokenRefresh = [DateTime]::Now
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
         invoke-gh auth setup-git # Use GitHub CLI as a credential helper
-    }
-    else {
-        $realToken | invoke-gh auth login --with-token
+    } else {
+        $realToken = gh auth token
+        $ENV:GITHUB_TOKEN = $realToken
+        $ENV:GH_TOKEN = $realToken
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     }
 }
 
@@ -513,7 +524,11 @@ function CreateAlGoRepository {
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner) {
-        invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        if ($github) {
+            invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        } else {
+            invoke-git remote set-url origin "https://github.com/$repository"
+        }
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
@@ -677,43 +692,50 @@ function Test-LogContainsFromRun {
     )
 
     DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
-    # Log format changes are rolling out on GitHub Actions, we have to support both
-    $oldStepLogFile = "logs/$jobName/*_$stepName.txt"
-    $newJobLogFile = "logs/*_$jobName.txt"
-    if (Test-Path -Path $oldStepLogFile) {
-        $runPipelineLog = Get-Content -Path (Get-Item $oldStepLogFile).FullName -encoding utf8 -raw
+    try {
+        # Log format changes are rolling out on GitHub Actions, we have to support both
+        $oldStepLogFile = "logs/$jobName/*_$stepName.txt"
+        $newJobLogFile = "logs/*_$jobName.txt"
+        if (Test-Path -Path $oldStepLogFile) {
+            $runPipelineLog = Get-Content -Path (Get-Item $oldStepLogFile).FullName -encoding utf8 -raw
+        }
+        else {
+            $jobLog = Get-Content -Path (Get-Item $newJobLogFile).FullName -encoding utf8
+            $emit = $false
+            $runPipelineLog = @($jobLog | ForEach-Object {
+                if ($emit -and $_ -like "*##[[]group]Run *@*") {
+                    Write-Host -ForegroundColor Yellow "Foundend $_"
+                    $emit = $false
+                }
+                elseif ($_ -like "*##[[]group]Run *$StepName@*") {
+                    Write-Host -ForegroundColor Yellow "Foundstart $_"
+                    $emit = $true
+                }
+                else {
+                    Write-Host -ForegroundColor Gray $_
+                }
+                if ($emit) { $_ }
+            }) -join "`n"
+        }
+
+        if ($isRegEx) {
+            $found = $runPipelineLog -match $expectedText
+            return $Matches
+        }
+        else {
+            $found = $runPipelineLog.indexOf($expectedText, [System.StringComparison]::OrdinalIgnoreCase) -ne -1
+        }
+
+        if ($found) {
+            Write-Host "'$expectedText' found in the log for '$jobName -> $stepName' as expected"
+        }
+        else {
+            throw "Expected to find '$expectedText' in the log for '$jobName -> $stepName', but did not find it"
+        }
     }
-    else {
-        $jobLog = Get-Content -Path (Get-Item $newJobLogFile).FullName -encoding utf8
-        $emit = $false
-        $runPipelineLog = @($jobLog | ForEach-Object {
-            if ($emit -and $_ -like "*##[[]group]Run *@*") {
-                Write-Host -ForegroundColor Yellow "Foundend $_"
-                $emit = $false
-            }
-            elseif ($_ -like "*##[[]group]Run *$StepName@*") {
-                Write-Host -ForegroundColor Yellow "Foundstart $_"
-                $emit = $true
-            }
-            else {
-                Write-Host -ForegroundColor Gray $_
-            }
-            if ($emit) { $_ }
-        }) -join "`n"
+    finally {
+        Remove-Item -Path 'logs' -Recurse -Force
     }
-    if ($isRegEx) {
-        $found = $runPipelineLog -match $expectedText
-    }
-    else {
-        $found = $runPipelineLog.indexOf($expectedText, [System.StringComparison]::OrdinalIgnoreCase) -ne -1
-    }
-    if ($found) {
-        Write-Host "'$expectedText' found in the log for '$jobName -> $stepName' as expected"
-    }
-    else {
-        throw "Expected to find '$expectedText' in the log for '$jobName -> $stepName', but did not find it"
-    }
-    Remove-Item -Path 'logs' -Recurse -Force
 }
 
 . (Join-Path $PSScriptRoot "Workflows\RunAddExistingAppOrTestApp.ps1")

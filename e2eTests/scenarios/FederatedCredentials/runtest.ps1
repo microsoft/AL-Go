@@ -11,7 +11,7 @@ Param(
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $azureConnectionSecret,
+    [string] $azureConnectionSecret = ($global:SecureAzureCredentials | Get-PlainText),
     [string] $githubPackagesToken
 )
 
@@ -80,9 +80,8 @@ WaitWorkflow -repository $repository -runid $run.id -noError
 # The CI/CD workflow should fail because the version number of the app in thie repository is lower than the version number in AppSource
 # Reason being that major.minor from the original bcsamples-bingmaps.appsource is the same and the build number in the newly created repository is lower than the one in AppSource
 # This error is expected we will grab the version number from AppSource, add one to revision number (by switching to versioningstrategy 3 in the tmp repo) and use it in the next run
-Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Deliver' -expectedText '^.*The new version number \((\d+(?:\.\d+){3})\) is lower than the existing version number \((\d+(?:\.\d+){3})\) in Partner Center.*$' -isRegEx
-
-$appSourceVersion = [System.Version]$Matches[2]
+$MatchArr = Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Deliver' -expectedText '(?m)^.*The new version number \((\d+(?:\.\d+){3})\) is lower than the existing version number \((\d+(?:\.\d+){3})\) in Partner Center.*$' -isRegEx
+$appSourceVersion = [System.Version]$MatchArr[2]
 $newVersion = [System.Version]::new($appSourceVersion.Major, $appSourceVersion.Minor, $appSourceVersion.Build, 0)
 $newRepoVersion = "$($newVersion.Major).$($newVersion.Minor).$($newVersion.Build)"
 
@@ -101,16 +100,16 @@ Get-ChildItem -recurse -filter 'app.json' | ForEach-Object {
 # Update RepoVersion in settings.json
 Get-ChildItem -Recurse -Path 'settings.json' | ForEach-Object {
     $settingsJson = $_.FullName
-    Add-PropertiesToJsonFile -path $settingsJson -properties @{"RepoVersion" = $newRepoVersion}
+    Add-PropertiesToJsonFile -path $settingsJson -properties @{"RepoVersion" = $newRepoVersion; "versioningStrategy" = 16+3}
 }
 
 # Switch to versioning strategy 3 (build number) and wait for the workflow to finish
 # Versioning strategy 3 uses RUN_NUMBER as revision number, causing the next build to be higher than the one in AppSource, but lower then the next from the original repo
-$run = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{"VersioningStrategy" = 3} -commit -wait
+$run = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{"versioningStrategy" = 3} -commit -wait
 
 # Check that workflow run uses federated credentials and signing was successful
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Connecting to Azure using clientId and federated token'
-Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText 'Signing .* succeeded' -isRegEx
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Build Main App (Default)  Main App (Default)' -stepName 'Sign' -expectedText '(?m)^.*Signing .* succeeded.*$' -isRegEx | Out-Null
 
 # Check that Deliver to AppSource uses federated credentials and that a new submission was created
 Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Read secrets' -expectedText 'Query federated token'
