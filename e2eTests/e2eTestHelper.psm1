@@ -34,7 +34,8 @@ function SetTokenAndRepository {
     }
 
     if (-not $github) {
-        # Running locally - Check that user is logged in with gh cli
+        # Running locally - Ensure the user is authenticated with the GitHub CLI.
+        # This is required for local runs to perform GitHub-related operations.
         invoke-gh auth status
     } elseif ($appKey -and $appId) {
         # Running in GitHub Actions
