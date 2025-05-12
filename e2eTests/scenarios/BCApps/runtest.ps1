@@ -3,13 +3,13 @@
 Param(
     [switch] $github,
     [switch] $linux,
-    [string] $githubOwner = $global:E2EgithubOwner,
+    [string] $githubOwner = $Global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $e2eAppId,
     [string] $e2eAppKey,
     [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
-    [string] $pteTemplate = $global:pteTemplate,
-    [string] $appSourceTemplate = $global:appSourceTemplate,
+    [string] $pteTemplate = $Global:pteTemplate,
+    [string] $appSourceTemplate = $Global:appSourceTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
     [string] $azureConnectionSecret,
     [string] $githubPackagesToken

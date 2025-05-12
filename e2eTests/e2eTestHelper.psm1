@@ -35,7 +35,13 @@ function SetTokenAndRepository {
 
     if ($appKey -and $appId) {
         $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
+    } elseif(-not $github) {
+        # Check that user is logged in with gh cli. Throw if not
+        if ((invoke-gh auth status) -like "*not logged in*") {
+            throw "Not logged in to GitHub. Please run 'gh auth login' to log in."
+        }
     }
+
     # Repository isn't created yet so authenticating towards the .github repository
     RefreshToken -token $token -repository "$githubOwner/.github"
 }
@@ -49,30 +55,26 @@ function RefreshToken {
         [Parameter(Mandatory = $false)]
         [switch] $force
     )
-
-    if ($token) {
-        $script:token = $token
-    }
-
-    if ($script:token -eq "DefaultToken") {
-        throw "Token not set."
-    }
-
-    # Check if the last token refresh was more than 30 minutes ago
-    if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
-        return
-    }
-
-    Write-Host "Authenticating with GitHub using token"
-    $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
-    $script:lastTokenRefresh = [DateTime]::Now
     if ($github) {
+        if ($token) {
+            $script:token = $token
+        }
+
+        if ($script:token -eq "DefaultToken") {
+            throw "Token not set."
+        }
+
+        # Check if the last token refresh was more than 30 minutes ago
+        if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
+            return
+        }
+
+        Write-Host "Authenticating with GitHub using token"
+        $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
+        $script:lastTokenRefresh = [DateTime]::Now
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
         invoke-gh auth setup-git # Use GitHub CLI as a credential helper
-    }
-    else {
-        $realToken | invoke-gh auth login --with-token
     }
 }
 
