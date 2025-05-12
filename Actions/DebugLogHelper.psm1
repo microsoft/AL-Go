@@ -1,7 +1,7 @@
 $debugLoggingEnabled = $false
 try {
-    Write-Host "DEBUGLOGGING environment variable: $env:DEBUGLOGGING"
-    if ($env:DEBUGLOGGING -eq 1 -or $env:DEBUGLOGGING -eq "true") {
+    Write-Host "DEBUGLOGGING environment variable: $env:_DEBUGLOGGING"
+    if ($env:_DEBUGLOGGING -eq 1 -or $env:_DEBUGLOGGING -eq "true") {
         $debugLoggingEnabled = $true
     }
 } catch {
