@@ -80,7 +80,7 @@ WaitWorkflow -repository $repository -runid $run.id -noError
 # The CI/CD workflow should fail because the version number of the app in thie repository is lower than the version number in AppSource
 # Reason being that major.minor from the original bcsamples-bingmaps.appsource is the same and the build number in the newly created repository is lower than the one in AppSource
 # This error is expected we will grab the version number from AppSource, add one to revision number (by switching to versioningstrategy 3 in the tmp repo) and use it in the next run
-Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Deliver' -expectedText '^The new version number \((\d+(?:\.\d+){3})\) is lower than the existing version number \((\d+(?:\.\d+){3})\) in Partner Center$' -isRegEx
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Deliver' -expectedText '^.*The new version number \((\d+(?:\.\d+){3})\) is lower than the existing version number \((\d+(?:\.\d+){3})\) in Partner Center.*$' -isRegEx
 
 $appSourceVersion = [System.Version]$Matches[2]
 $newVersion = [System.Version]::new($appSourceVersion.Major, $appSourceVersion.Minor, $appSourceVersion.Build, 0)
