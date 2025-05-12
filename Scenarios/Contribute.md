@@ -63,12 +63,31 @@ In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end
 
 In your personal fork, you can now run the end to end tests, if the following pre-requisites are available:
 
+- You need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)
+
+- You need a GitHub App installed on **all repositories** in the GitHub organization with the following permissions:
+
+  - Repository
+    - Actions: Read / Write
+    - Administration: Read / Write
+    - Contents: Read / Write
+    - Packages: Read / Write
+    - Pages: Read / Write
+    - Pull Requests: Read / Write
+    - Secrets: Read / Write
+    - Workflows: Read / Write
+
+- You need the following variables:
+
+  - **E2E_APP_ID** the app ID for the GitHub app installed on the GitHub organization used for testing
+
 - You need the following secrets:
-  - E2EPAT needs to be a Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_
-  - ALGOAUTHAPP needs to be a JSON-formatted secret containing GitHubAppClientId and PrivateKey for a GitHub App with the following repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_.
-  - AdminCenterApiCredentials needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
-  - LicenseFileUrl needs to be a direct download URL to a developer .bclicense file
-- Beside the secrets, you need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)
+
+  - **ALGOAUTHAPP** needs to be a JSON-formatted secret containing GitHubAppClientId and PrivateKey for a GitHub App with the following repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_.
+  - **AdminCenterApiCredentials** needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
+  - **E2E_PRIVATE_KEY** a private key for the GitHub app installed on the GitHub organization used for testing
+  - **E2EAZURECREDENTIALS** a federated credential set up as described [here](secrets.md#federated-credential)
+  - **E2E_GHPACKAGESPAT** a classic PAT with the following permissions: write:packages, delete:packages
 
 Run the End to end tests by running the *End to end tests* workflow and specify your organization in the corresponding field.
 End to end testing will create a lot of repositories called tmpXYZ, where XYZ is a random letter combination. If End to end tests are failing, the tmp repositories are NOT removed, but can be used for troubleshooting.
@@ -79,12 +98,13 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |Variable|Type|Description|
 |---|---|---|
 |$global:E2EgitHubOwner| String | The GitHub owner of the test repositories (like `freddydk` or `microsoft`) |
-|$global:SecureE2EPAT| SecureString | A Personal Access Token with these permissions: _admin:org, delete:packages, delete_repo, repo, workflow, write:packages_ |
 |$global:SecureALGOAUTHAPP | SecureString | A json secret containing GitHubAppClientId and PrivateKey for a GitHub App with these repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_ |
 |$global:SecureAdminCenterApiToken| SecureString | Admin Center API Credentials |
 |$global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
 |$global:pteTemplate| String | URL for your PTE template (like `freddyk/AL-Go-PTE@main` or `freddydk/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
 |$global:appSourceTemplate| String | URL for your PTE template (like `freddyk/AL-Go-AppSource@main` or `freddydk/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
+|$global:SecureAzureConnectionSecret| SecureString | A JSON string containing the Azure_Credentials set up with [federated credentials](https://github.com/microsoft/AL-Go/blob/main/Scenarios/secrets.md#federated-credential) |
+|$global:SecureGitHubPackagesToken| SecureString | A classic PAT with read/write access to GitHub packages in the organization the E2E tests are running in. |
 
 ## GitHub Codespaces
 
