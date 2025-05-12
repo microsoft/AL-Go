@@ -33,13 +33,16 @@ function SetTokenAndRepository {
         invoke-git config --global core.autocrlf false
     }
 
-    if ($appKey -and $appId) {
-        $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
-    } elseif(-not $github) {
-        # Check that user is logged in with gh cli. Throw if not
+    if (-not $github) {
+        # Running locally - Check that user is logged in with gh cli
         if ((invoke-gh auth status) -like "*not logged in*") {
             throw "Not logged in to GitHub. Please run 'gh auth login' to log in."
         }
+    } elseif ($appKey -and $appId) {
+        # Running in GitHub Actions
+        $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
+    } else {
+        throw "GitHub App ID and Private Key not set. In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
     }
 
     # Repository isn't created yet so authenticating towards the .github repository
@@ -76,8 +79,9 @@ function RefreshToken {
         $ENV:GH_TOKEN = $realToken
         invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     } else {
-        $ENV:GITHUB_TOKEN = gh auth token
-        $ENV:GH_TOKEN = gh auth token
+        $realToken = gh auth token
+        $ENV:GITHUB_TOKEN = $realToken
+        $ENV:GH_TOKEN = $realToken
         invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     }
 }
