@@ -10,7 +10,7 @@ Param(
     [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $Global:pteTemplate,
     [string] $appSourceTemplate = $Global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
+    [string] $adminCenterApiToken = ($Global:SecureAdminCenterApiToken | Get-PlainText),
     [string] $azureConnectionSecret,
     [string] $githubPackagesToken
 )
