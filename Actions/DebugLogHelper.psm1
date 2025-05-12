@@ -21,7 +21,7 @@ function Write-Debug-FunctionCallInfo {
         [Parameter(Mandatory = $true)]
         [string] $FunctionName,
         [Parameter(Mandatory = $true)]
-        [System.Management.Automation.PSBoundParametersDictionary] $Parameters
+        [System.Object] $Parameters
     )
 
     if ($debugLoggingEnabled) {
