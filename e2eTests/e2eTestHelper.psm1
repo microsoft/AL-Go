@@ -677,18 +677,41 @@ function Test-LogContainsFromRun {
     )
 
     DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
-    $runPipelineLog = Get-Content -Path (Get-Item "logs/$jobName/*_$stepName.txt").FullName -encoding utf8 -raw
+    # Log format changes are rolling out on GitHub Actions, we have to support both
+    $oldStepLogFile = "logs/$jobName/*_$stepName.txt"
+    $newJobLogFile = "logs/*_$jobName.txt"
+    if (Test-Path -Path $oldStepLogFile) {
+        $runPipelineLog = Get-Content -Path (Get-Item $oldStepLogFile).FullName -encoding utf8 -raw
+    }
+    else {
+        $jobLog = Get-Content -Path (Get-Item $newJobLogFile).FullName -encoding utf8
+        $emit = $false
+        $runPipelineLog = @($jobLog | ForEach-Object {
+            if ($emit -and $_ -like "*##[[]group]Run *@*") {
+                Write-Host -ForegroundColor Yellow "Foundend $_"
+                $emit = $false
+            }
+            elseif ($_ -like "*##[[]group]Run *$StepName@*") {
+                Write-Host -ForegroundColor Yellow "Foundstart $_"
+                $emit = $true
+            }
+            else {
+                Write-Host -ForegroundColor Gray $_
+            }
+            if ($emit) { $_ }
+        }) -join "`n"
+    }
     if ($isRegEx) {
         $found = $runPipelineLog -match $expectedText
     }
     else {
-        $found = $runPipelineLog.contains($expectedText, [System.StringComparison]::OrdinalIgnoreCase)
+        $found = $runPipelineLog.indexOf($expectedText, [System.StringComparison]::OrdinalIgnoreCase) -ne -1
     }
     if ($found) {
-        Write-Host "'$expectedText' found in the log for $jobName/$stepName as expected"
+        Write-Host "'$expectedText' found in the log for '$jobName -> $stepName' as expected"
     }
     else {
-        throw "Expected to find '$expectedText' in the log for $jobName/$stepName, but did not find it"
+        throw "Expected to find '$expectedText' in the log for '$jobName -> $stepName', but did not find it"
     }
     Remove-Item -Path 'logs' -Recurse -Force
 }
