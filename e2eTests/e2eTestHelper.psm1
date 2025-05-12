@@ -239,7 +239,7 @@ function CancelAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
-    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     foreach($run in $runs.workflow_runs) {
         Write-Host $run.name
         if ($run.status -eq 'in_progress') {
@@ -259,7 +259,7 @@ function WaitAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
-    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     $workflowRuns = $runs.workflow_runs | Select-Object -First $top
     foreach($run in $workflowRuns) {
         WaitWorkflow -repository $repository -runid $run.id -noDelay -noError:$noError

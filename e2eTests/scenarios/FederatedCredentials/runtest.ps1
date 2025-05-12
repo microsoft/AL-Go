@@ -1,5 +1,6 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [switch] $linux,
@@ -10,8 +11,8 @@ Param(
     [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $azureConnectionSecret = ($global:SecureAzureConnectionSecret | Get-PlainText),
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
+    [string] $azureCredentials = ($global:SecureAzureCredentials | Get-PlainText),
     [string] $githubPackagesToken = ($global:SecureGitHubPackagesToken | Get-PlainText)
 )
 
@@ -66,14 +67,14 @@ CreateAlGoRepository `
     -repository $repository `
     -addRepoSettings @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" }
 
-SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureConnectionSecret
+SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
 
 # Upgrade AL-Go System Files to test version
 RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -repository $repository | Out-Null
 
 # Wait for CI/CD to complete
 Start-Sleep -Seconds 60
-$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id -noError
 
@@ -100,7 +101,7 @@ Get-ChildItem -recurse -filter 'app.json' | ForEach-Object {
 # Update RepoVersion in settings.json
 Get-ChildItem -Recurse -Path 'settings.json' | ForEach-Object {
     $settingsJson = $_.FullName
-    Add-PropertiesToJsonFile -path $settingsJson -properties @{"RepoVersion" = $newRepoVersion; "versioningStrategy" = 16+3}
+    Add-PropertiesToJsonFile -path $settingsJson -properties @{"RepoVersion" = $newRepoVersion; "versioningStrategy" = 3}
 }
 
 # Switch to versioning strategy 3 (build number) and wait for the workflow to finish

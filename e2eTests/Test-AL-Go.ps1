@@ -1,5 +1,6 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
@@ -8,7 +9,7 @@ Param(
     [string] $e2eAppKey,
     [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $template = $global:pteTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private,
@@ -188,8 +189,8 @@ Pull -branch $branch
 Test-PropertiesInJsonFile -jsonFile "$($project2folder)My TestApp\app.json" -properties @{ "name" = "My TestApp"; "publisher" = "My Publisher"; 'idRanges[0].from' = 58000; "idRanges[0].to" = 59000; 'idRanges.Count' = 1 }
 
 # Create Online Development Environment
-if ($adminCenterApiToken -and -not $multiProject) {
-    SetRepositorySecret -repository $repository -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiToken
+if ($adminCenterApiCredentials -and -not $multiProject) {
+    SetRepositorySecret -repository $repository -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentials
     RunCreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
     $runs++
 }
@@ -282,9 +283,9 @@ Set-Location $prevLocation
 
 RemoveRepository -repository $repository -path $repoPath
 
-if ($adminCenterApiToken) {
+if ($adminCenterApiCredentials) {
     try {
-        $params = $adminCenterApiToken | ConvertFrom-Json | ConvertTo-HashTable
+        $params = $adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable
         $authContext = New-BcAuthContext @params
         Remove-BcEnvironment -bcAuthContext $authContext -environment $repoName -doNotWait
     }
