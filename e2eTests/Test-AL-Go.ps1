@@ -6,7 +6,7 @@ Param(
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
     [string] $e2eAppId,
     [string] $e2eAppKey,
-    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
+    [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $template = $global:pteTemplate,
     [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
     [switch] $multiProject,

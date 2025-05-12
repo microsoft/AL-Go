@@ -34,11 +34,10 @@ function SetTokenAndRepository {
     }
 
     if (-not $github) {
-        # Running locally - Check that user is logged in with gh cli
-        if ((invoke-gh auth status) -like "*not logged in*") {
-            throw "Not logged in to GitHub. Please run 'gh auth login' to log in."
-        }
-        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo #TODO: Revisit this list to see if we can remove some scopes
+        # Running locally - Ensure the user is authenticated with the GitHub CLI.
+        # This is required for local runs to perform GitHub-related operations.
+        invoke-gh auth status
+        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo
     } elseif ($appKey -and $appId) {
         # Running in GitHub Actions
         $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
