@@ -1,5 +1,6 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [switch] $linux,
@@ -10,8 +11,8 @@ Param(
     [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
-    [string] $azureConnectionSecret = ($global:SecureAzureConnectionSecret | Get-PlainText),
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
+    [string] $azureCredentials = ($global:SecureAzureCredentials | Get-PlainText),
     [string] $githubPackagesToken = ($global:SecureGitHubPackagesToken | Get-PlainText)
 )
 
@@ -111,7 +112,7 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWork
 
 # Wait for CI/CD to complete
 Start-Sleep -Seconds 60
-$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id
 
@@ -144,7 +145,7 @@ Start-Sleep -Seconds 30
 # Modify app4 in a commit and wait for CI/CD workflow to finish
 $run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 
-$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $workflowRuns = $runs.workflow_runs | Select-Object -First 2
 
 # Check that the latest CI/CD is the first in the list
@@ -182,7 +183,7 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWork
 
 # Wait for CI/CD to complete
 Start-Sleep -Seconds 60
-$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id
 

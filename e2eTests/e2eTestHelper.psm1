@@ -37,6 +37,7 @@ function SetTokenAndRepository {
         # Running locally - Ensure the user is authenticated with the GitHub CLI.
         # This is required for local runs to perform GitHub-related operations.
         invoke-gh auth status
+        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo
     } elseif ($appKey -and $appId) {
         # Running in GitHub Actions
         $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
@@ -45,9 +46,6 @@ function SetTokenAndRepository {
     }
 
     # Repository isn't created yet so authenticating towards the .github repository
-    if (-not $github) {
-        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo
-    }
     RefreshToken -token $token -repository "$githubOwner/.github"
 }
 
@@ -241,7 +239,7 @@ function CancelAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
-    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     foreach($run in $runs.workflow_runs) {
         Write-Host $run.name
         if ($run.status -eq 'in_progress') {
@@ -261,7 +259,7 @@ function WaitAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
-    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     $workflowRuns = $runs.workflow_runs | Select-Object -First $top
     foreach($run in $workflowRuns) {
         WaitWorkflow -repository $repository -runid $run.id -noDelay -noError:$noError
@@ -647,10 +645,11 @@ function RemoveRepository {
     }
     if ($repository) {
         try {
-            $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
-            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository (user $($user.login))"
             $owner = $repository.Split("/")[0]
-            if ($owner -eq $user.login) {
+            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
+            # Remove all packages belonging to the repository
+            $ownerType = invoke-gh api users/$owner --jq .type -silent -returnValue
+            if ($ownerType -eq 'User') {
                 # Package belongs to a user
                 $ownerStr = "users/$owner"
             }
@@ -693,20 +692,50 @@ function Test-LogContainsFromRun {
     )
 
     DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
-    $runPipelineLog = Get-Content -Path (Get-Item "logs/$jobName/*_$stepName.txt").FullName -encoding utf8 -raw
-    if ($isRegEx) {
-        $found = $runPipelineLog -match $expectedText
+    try {
+        # Log format changes are rolling out on GitHub Actions, we have to support both
+        $oldStepLogFile = "logs/$jobName/*_$stepName.txt"
+        $newJobLogFile = "logs/*_$jobName.txt"
+        if (Test-Path -Path $oldStepLogFile) {
+            $runPipelineLog = Get-Content -Path (Get-Item $oldStepLogFile).FullName -encoding utf8 -raw
+        }
+        else {
+            $jobLog = Get-Content -Path (Get-Item $newJobLogFile).FullName -encoding utf8
+            $emit = $false
+            $runPipelineLog = @($jobLog | ForEach-Object {
+                if ($emit -and $_ -like "*##[[]group]Run *@*") {
+                    Write-Host -ForegroundColor Yellow "Foundend $_"
+                    $emit = $false
+                }
+                elseif ($_ -like "*##[[]group]Run *$StepName@*") {
+                    Write-Host -ForegroundColor Yellow "Foundstart $_"
+                    $emit = $true
+                }
+                else {
+                    Write-Host -ForegroundColor Gray $_
+                }
+                if ($emit) { $_ }
+            }) -join "`n"
+        }
+
+        if ($isRegEx) {
+            $found = $runPipelineLog -match $expectedText
+            return $Matches
+        }
+        else {
+            $found = $runPipelineLog.indexOf($expectedText, [System.StringComparison]::OrdinalIgnoreCase) -ne -1
+        }
+
+        if ($found) {
+            Write-Host "'$expectedText' found in the log for '$jobName -> $stepName' as expected"
+        }
+        else {
+            throw "Expected to find '$expectedText' in the log for '$jobName -> $stepName', but did not find it"
+        }
     }
-    else {
-        $found = $runPipelineLog.contains($expectedText, [System.StringComparison]::OrdinalIgnoreCase)
+    finally {
+        Remove-Item -Path 'logs' -Recurse -Force
     }
-    if ($found) {
-        Write-Host "'$expectedText' found in the log for $jobName/$stepName as expected"
-    }
-    else {
-        throw "Expected to find '$expectedText' in the log for $jobName/$stepName, but did not find it"
-    }
-    Remove-Item -Path 'logs' -Recurse -Force
 }
 
 . (Join-Path $PSScriptRoot "Workflows\RunAddExistingAppOrTestApp.ps1")
