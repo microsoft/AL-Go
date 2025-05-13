@@ -244,6 +244,7 @@ jobs:
   UploadArtifacts:
     needs: [ CreateRelease ]
     runs-on: [ windows-latest ]
+    name: Upload ${{ matrix.name }}
     strategy:
       matrix: ${{ fromJson(needs.CreateRelease.outputs.artifacts) }}
       fail-fast: true

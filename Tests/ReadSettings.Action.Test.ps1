@@ -24,7 +24,4 @@ Describe "ReadSettings Action Tests" {
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
-
-    # Call action
-
 }

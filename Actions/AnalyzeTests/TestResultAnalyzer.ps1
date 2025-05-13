@@ -217,7 +217,6 @@ function GetTestResultSummaryMD {
         }
     }
     else {
-        $summarySb.Append("<i>No test results found</i>") | Out-Null
         $failuresSummaryMD = ''
     }
     $summarySb.ToString()
@@ -281,7 +280,7 @@ function GetBcptSummaryMD {
 
     $bcpt = ReadBcptFile -bcptTestResultsFile $bcptTestResultsFile
     if (-not $bcpt) {
-        return '<i>No test results found</i>'
+        return ''
     }
     $baseLine = ReadBcptFile -bcptTestResultsFile $baseLinePath
     if ($baseLine) {
@@ -521,7 +520,6 @@ function GetPageScriptingTestResultSummaryMD {
         }
     }
     else {
-        $summarySb.Append("<i>No test results found</i>") | Out-Null
         $failuresSummaryMD = ''
     }
 
