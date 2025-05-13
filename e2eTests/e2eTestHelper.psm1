@@ -645,10 +645,11 @@ function RemoveRepository {
     }
     if ($repository) {
         try {
-            $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
-            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository (user $($user.login))"
             $owner = $repository.Split("/")[0]
-            if ($owner -eq $user.login) {
+            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
+            # Remove all packages belonging to the repository
+            $ownerType = invoke-gh api users/$userOrOrg --jq .type -silent -returnValue
+            if ($ownerType -eq 'User') {
                 # Package belongs to a user
                 $ownerStr = "users/$owner"
             }

@@ -61,6 +61,14 @@ $sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will cre
 
 # Create temp repository from sourceRepository
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+
+gh api repos/$repository --method HEAD
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Repository $repository already exists. Deleting it."
+    gh repo delete $repository --yes | Out-Host
+    Start-Sleep -Seconds 30
+}
+
 CreateAlGoRepository `
     -github:$github `
     -template "https://github.com/$sourceRepository" `
