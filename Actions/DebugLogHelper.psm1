@@ -17,7 +17,7 @@ function Write-Debug-Info {
     )
 
     if ($debugLoggingEnabled) {
-        Write-Host -ForegroundColor Green "DEBUG: $Message"
+        Write-Host -ForegroundColor Green "[Debug] $Message"
     }
 }
 
@@ -31,7 +31,7 @@ function Write-Debug-FunctionCallInfo {
     )
 
     if ($debugLoggingEnabled) {
-        Write-Host -ForegroundColor Green "DEBUG: Function '$functionName' called with parameters:"
+        Write-Host -ForegroundColor Green "[Debug] Function '$functionName' called with parameters:"
         foreach ($param in $Parameters.Keys) {
             Write-Host -ForegroundColor Green "  $($param): $($Parameters[$param])"
         }
@@ -40,5 +40,10 @@ function Write-Debug-FunctionCallInfo {
 
 # Regular log that is always written
 function Write-Info {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $Message
+    )
 
+    Write-Host "$Message"
 }
