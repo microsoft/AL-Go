@@ -1,15 +1,19 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eAppKey,
+    [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
+    [string] $azureCredentials = ($global:SecureAzureCredentials | Get-PlainText),
+    [string] $githubPackagesToken = ($global:SecureGitHubPackagesToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -57,7 +61,7 @@ Push-Location
 $repository = "$githubOwner/$repoName"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
 # Create repository1
 CreateAlGoRepository `
@@ -113,7 +117,7 @@ elseif ($prs.Count -gt 1) {
     throw "More than one Pull Request exists"
 }
 
-$headers = GetHeaders -token $e2epat -repository "$($githubOwner)/.github"
+$headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
 $url = "https://api.github.com/repos/$repository/actions/runs"
 $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'pull_request' } | Where-Object { $_.name -eq 'Pull Request Build' }
 if (-not $run) {

@@ -1,13 +1,15 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eAppKey,
+    [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $template = $global:pteTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText),
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
     [switch] $multiProject,
     [switch] $appSourceApp,
     [switch] $private,
@@ -101,7 +103,7 @@ else {
 $template = "https://github.com/$template"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
 # Create repo
 # Set DoNotPublishApps to true until we have test apps and set useCompilerFolder
@@ -187,8 +189,8 @@ Pull -branch $branch
 Test-PropertiesInJsonFile -jsonFile "$($project2folder)My TestApp\app.json" -properties @{ "name" = "My TestApp"; "publisher" = "My Publisher"; 'idRanges[0].from' = 58000; "idRanges[0].to" = 59000; 'idRanges.Count' = 1 }
 
 # Create Online Development Environment
-if ($adminCenterApiToken -and -not $multiProject) {
-    SetRepositorySecret -repository $repository -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiToken
+if ($adminCenterApiCredentials -and -not $multiProject) {
+    SetRepositorySecret -repository $repository -name 'ADMINCENTERAPICREDENTIALS' -value $adminCenterApiCredentials
     RunCreateOnlineDevelopmentEnvironment -environmentName $repoName -directCommit -branch $branch | Out-Null
     $runs++
 }
@@ -281,9 +283,9 @@ Set-Location $prevLocation
 
 RemoveRepository -repository $repository -path $repoPath
 
-if ($adminCenterApiToken) {
+if ($adminCenterApiCredentials) {
     try {
-        $params = $adminCenterApiToken | ConvertFrom-Json | ConvertTo-HashTable
+        $params = $adminCenterApiCredentials | ConvertFrom-Json | ConvertTo-HashTable
         $authContext = New-BcAuthContext @params
         Remove-BcEnvironment -bcAuthContext $authContext -environment $repoName -doNotWait
     }

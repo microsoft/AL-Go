@@ -1,15 +1,19 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eAppKey,
+    [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
+    [string] $azureCredentials = ($global:SecureAzureCredentials | Get-PlainText),
+    [string] $githubPackagesToken = ($global:SecureGitHubPackagesToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -62,7 +66,7 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
 # Create repo
 CreateAlGoRepository `
@@ -85,7 +89,7 @@ $run = RunCICD -repository $repository -branch $branch -wait
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '1.0' -appVersion '1.0'
 
 # Check that no previous release was found
-Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText 'No previous release found'
+Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)*(Default)' -stepName 'Build' -expectedText 'No previous release found'
 
 # Release version 1.0
 $tag1 = '1.0.0'
@@ -102,7 +106,7 @@ $run = RunCICD -repository $repository -branch $branch -wait
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '2.0' -appVersion '2.0'
 
 # Check that $tag1 was used as previous release
-Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver1 (tag $tag1) as previous release"
+Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)*(Default)' -stepName 'Build' -expectedText "Using $ver1 (tag $tag1) as previous release"
 
 # Release version 2.0
 $tag2 = '2.0.0'
@@ -125,7 +129,7 @@ WaitWorkflow -runid $run.id -repository $repository -noDelay
 Test-ArtifactsFromRun -runid $run.id -folder 'artifacts' -expectedArtifacts @{"Apps"=1} -repoVersion '2.1' -appVersion '2.1'
 
 # Check that $tag2 was used as previous release
-Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver2 (tag $tag2) as previous release"
+Test-LogContainsFromRun -runid $run.id -jobName 'Build . (Default)*(Default)' -stepName 'Build' -expectedText "Using $ver2 (tag $tag2) as previous release"
 
 Test-ArtifactsFromRun -runid $runRelease1.id -folder 'artifacts1' -expectedArtifacts @{"Apps"=1} -repoVersion '1.0' -appVersion '1.0'
 $noOfReleaseArtifacts = @(get-childitem -path 'artifacts1' -filter '*-release_1.0-Apps-1.0.*').count
@@ -134,7 +138,7 @@ if ($noOfReleaseArtifacts -ne 1) {
 }
 
 # Check that $tag1 was used as previous release for builds in release branch 1.0
-Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver1 (tag $tag1) as previous release"
+Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . (Default)*(Default)' -stepName 'Build' -expectedText "Using $ver1 (tag $tag1) as previous release"
 
 Test-ArtifactsFromRun -runid $runRelease2.id -folder 'artifacts2' -expectedArtifacts @{"Apps"=1} -repoVersion '2.0' -appVersion '2.0'
 $noOfReleaseArtifacts = @(get-childitem -path 'artifacts2' -filter '*-release_2.0-Apps-2.0.*').count
@@ -143,7 +147,7 @@ if ($noOfReleaseArtifacts -ne 1) {
 }
 
 # Check that $tag2 was used as previous release for builds in release branch 2.0
-Test-LogContainsFromRun -runid $runRelease2.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $ver2 (tag $tag2) as previous release"
+Test-LogContainsFromRun -runid $runRelease2.id -jobName 'Build . (Default)*(Default)' -stepName 'Build' -expectedText "Using $ver2 (tag $tag2) as previous release"
 
 # Release hotfix from version 1.0
 $hotTag1 = "1.0.$($runRelease1.run_number)"
@@ -169,7 +173,7 @@ if ($noOfReleaseArtifacts -ne 1) {
 }
 
 # Check that $hotTag1 was used as previous release for builds in release branch 1.0
-Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . (Default)  . (Default)' -stepName 'Build' -expectedText "Using $hotVer1 (tag $hotTag1) as previous release"
+Test-LogContainsFromRun -runid $runRelease1.id -jobName 'Build . (Default)*(Default)' -stepName 'Build' -expectedText "Using $hotVer1 (tag $hotTag1) as previous release"
 
 Set-Location $prevLocation
 
