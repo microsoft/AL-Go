@@ -140,7 +140,6 @@ jobs:
           shell: powershell
           getEnvironments: '*'
           type: 'CD'
-          ghTokenWorkflow: '${{ secrets.ghTokenWorkflow }}'
 
   CheckForUpdates:
     needs: [ Initialization ]

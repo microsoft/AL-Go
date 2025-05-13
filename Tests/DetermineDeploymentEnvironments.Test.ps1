@@ -37,6 +37,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     }
 
     It 'Test action.yaml matches script' {
+        $permissions = [ordered]@{
+        }
         $outputs = [ordered]@{
             "EnvironmentsMatrixJson" = "The Environment matrix to use for the Deploy step in compressed JSON format"
             "DeploymentEnvironmentsJson" = "Deployment Environments with settings in compressed JSON format"
@@ -45,16 +47,13 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             "GenerateALDocArtifact" = "Flag determining whether to generate the ALDoc artifact"
             "DeployALDocArtifact" = "Flag determining whether to deploy the ALDoc artifact to GitHub Pages"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -permissions $permissions -outputs $outputs
     }
 
     # 2 environments defined in GitHub - no branch policy
     It 'Test calling action directly - 2 environments defined in GitHub - no branch policy' {
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @(); "url" = "placeholder" }, @{ "name" = "another"; "protection_rules" = @(); "url" = "placeholder" } ) })}
-        }
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
-            throw "Not supported"
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
@@ -79,9 +78,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/branches' } -MockWith {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } ))}
         }
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
-            throw "Not supported"
-        }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
@@ -99,16 +95,13 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     # 2 environments defined in GitHub - one with branch policy = branch. the other with no branch policy
     It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy = main' {
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true; "url" = "placeholder" } }, @{ "name" = "another"; "protection_rules" = @(); "url" = "placeholder" } ) })}
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } ) })}
         }
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/branches' } -MockWith {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } ))}
         }
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/deployment-branch-policies' } -MockWith {
             return @{"Content" = (@{ "branch_policies" = @( @{ "name" = "branch" }, @{ "name" = "branch2" } ) } | ConvertTo-Json -Depth 99 -Compress)}
-        }
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
-            throw "Not supported"
         }
 
         $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
@@ -156,11 +149,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     # 2 environments defined in GitHub, 1 in settings - exclude another environment
     It 'Test calling action directly - 2 environments defined in GitHub, one in settings' {
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @(); "url" = "placeholder" }; @{ "name" = "another"; "protection_rules" = @(); "url" = "placeholder" } ) })}
-        }
-
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
-            throw "Not supported"
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }; @{ "name" = "another"; "protection_rules" = @() } ) })}
         }
 
         $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
@@ -203,10 +192,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             throw "Not supported"
         }
 
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
-            throw "Not supported"
-        }
-
         # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
         $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
         $env:Settings = $settings | ConvertTo-Json -Compress
@@ -228,10 +213,6 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
 
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            throw "Not supported"
-        }
-
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
             throw "Not supported"
         }
 
@@ -257,27 +238,5 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
-    }
-
-    IT 'Test calling action directly - 1 environment defined in GitHub, one in settings - environment variable set' {
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @(); "url" = "abc/variables" } ) })}
-        }
-
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/variables' } -MockWith {
-            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "variables" = @( @{ "name" = "DeployTo"; "value" = '{"includeTestAppsInSandboxEnvironment": false}' } ) })}
-        }
-
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
-        $settings += @{
-            "DeployToTest" = @{
-                "includeTestAppsInSandboxEnvironment" = $true
-            }
-        }
-        $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
-        PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).test.includeTestAppsInSandboxEnvironment | Should -Be $false
     }
 }

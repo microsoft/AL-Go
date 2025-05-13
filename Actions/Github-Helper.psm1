@@ -624,8 +624,7 @@ function GetAccessToken {
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string[]] $repositories = @($repository),
-        [hashtable] $permissions = @{}
+        [string[]] $repositories = @($repository)
     )
 
     if ([string]::IsNullOrEmpty($token)) {
@@ -640,7 +639,7 @@ function GetAccessToken {
         # GitHub App token format: {"GitHubAppClientId":"<client_id>","PrivateKey":"<private_key>"}
         try {
             $json = $token | ConvertFrom-Json
-            $realToken = GetGitHubAppAuthToken -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey -api_url $api_url -repository $repository -repositories $repositories -permissions $permissions
+            $realToken = GetGitHubAppAuthToken -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey -api_url $api_url -repository $repository -repositories $repositories -permissions @{"contents"="read";"metadata"="read";"actions"="read"}
             return $realToken
         }
         catch {
