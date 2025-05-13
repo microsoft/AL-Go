@@ -126,15 +126,15 @@ Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver
 
 # Test artifacts generated
 $artifacts = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/$repository/actions/runs/$($run.id)/artifacts | ConvertFrom-Json
-@($artifacts.artifacts.Name) -like "Library Apps-main-Apps-*.*.*.0" | Should -Be $true
-@($artifacts.artifacts.Name) -like "Main App-main-Apps-*.*.*.0" | Should -Be $true
-@($artifacts.artifacts.Name) -like "Main App-main-Dependencies-*.*.*.0" | Should -Be $true
+@($artifacts.artifacts.Name) -like "Library Apps-main-Apps-$($newVersion.Major).$($newVersion.Minor).$($newVersion.Build).*" | Should -Be $true
+@($artifacts.artifacts.Name) -like "Main App-main-Apps-$($newVersion.Major).$($newVersion.Minor).$($newVersion.Build).*" | Should -Be $true
+@($artifacts.artifacts.Name) -like "Main App-main-Dependencies-$($newVersion.Major).$($newVersion.Minor).$($newVersion.Build).*" | Should -Be $true
 
 Write-Host "Download build artifacts"
 invoke-gh run download $run.id --repo $repository --dir 'signedApps'
 
 $noOfApps = 0
-Get-Item "signedApps/Main App-main-Apps-*.*.*.0/*.app" | ForEach-Object {
+Get-Item "signedApps/Main App-main-Apps-$($newVersion.Major).$($newVersion.Minor).$($newVersion.Build).*/*.app" | ForEach-Object {
     $appFile = $_.FullName
     Write-Host "Check that $appFile was signed"
     [System.Text.Encoding]::Ascii.GetString([System.IO.File]::ReadAllBytes($appFile)).indexof('DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA') | Should -BeGreaterThan -1
