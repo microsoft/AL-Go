@@ -95,7 +95,7 @@ if ("$GITHUB_TOKEN" -eq "$TOKENFORPUSH") {
     $latestCommit = (Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/branches/$($ENV:GITHUB_REF_NAME)").commit.sha
     if ($latestCommit -ne $sha) {
         if ($buildVersion -eq 'latest') {
-            throw "The $($ENV:GITHUB_REF_NAME) branch has changed since the last successful build. To prevent this error, either enable “Use GhTokenWorkflow for PR/Commit” when you start the workflow, or first run the CI/CD pipeline to create a fresh build before rerunning the workflow."
+            throw "The $($ENV:GITHUB_REF_NAME) branch has changed since the last successful build. To prevent this error, either enable 'Use GhTokenWorkflow for PR/Commit' when you start the workflow, or first run the CI/CD pipeline to create a fresh build before rerunning the workflow."
         }
         else {
             throw "You’re attempting to create a release from a build that isn’t the most recent one. Enable the 'Use GhTokenWorkflow for PR/Commit' option when you run the workflow, to achieve this."
