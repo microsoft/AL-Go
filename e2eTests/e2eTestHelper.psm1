@@ -648,7 +648,7 @@ function RemoveRepository {
             $owner = $repository.Split("/")[0]
             Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
             # Remove all packages belonging to the repository
-            $ownerType = invoke-gh api users/$userOrOrg --jq .type -silent -returnValue
+            $ownerType = invoke-gh api users/$owner --jq .type -silent -returnValue
             if ($ownerType -eq 'User') {
                 # Package belongs to a user
                 $ownerStr = "users/$owner"
