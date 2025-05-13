@@ -493,7 +493,6 @@
         },
         "buildEnvironmentName": {
             "type": "string",
-            "minLength": 1,
             "description": "Name of online Business Central environment to use for running tests during CI/CD. See https://aka.ms/ALGoSettings#buildenvironmentname"
         },
         "buildAuthContextSecretName": {
