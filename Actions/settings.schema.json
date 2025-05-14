@@ -295,7 +295,7 @@
         },
         "failOn": {
             "type": "string",
-            "pattern": "^(none|warning|error)$",
+            "pattern": "^(none|warning|error|newWarning)$",
             "description": "See https://aka.ms/ALGoSettings#failon"
         },
         "treatTestFailuresAsWarnings": {
