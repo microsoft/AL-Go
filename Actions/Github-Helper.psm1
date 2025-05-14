@@ -319,12 +319,12 @@ function CmdDo {
 
 function invoke-gh {
     Param(
-        [parameter(mandatory = $false, ValueFromPipeline = $true)]
+        [parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [string] $inputStr = "",
         [switch] $silent,
         [switch] $returnValue,
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+        [parameter(Mandatory = $true, position = 0)][string] $command,
+        [parameter(Mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
     )
 
     Process {
@@ -346,12 +346,12 @@ function invoke-gh {
 
 function invoke-git {
     Param(
-        [parameter(mandatory = $false, ValueFromPipeline = $true)]
+        [parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [string] $inputStr = "",
         [switch] $silent,
         [switch] $returnValue,
-        [parameter(mandatory = $true, position = 0)][string] $command,
-        [parameter(mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
+        [parameter(Mandatory = $true, position = 0)][string] $command,
+        [parameter(Mandatory = $false, position = 1, ValueFromRemainingArguments = $true)] $remaining
     )
 
     Process {
@@ -772,7 +772,7 @@ function DownloadRelease {
 # No empty line at the end of the file
 function Get-ContentLF {
     Param(
-        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [parameter(Mandatory = $true, ValueFromPipeline = $false)]
         [string] $path
     )
 
@@ -786,7 +786,7 @@ function Get-ContentLF {
 # This function forces UTF8 encoding and LF line endings
 function Set-ContentLF {
     Param(
-        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [parameter(Mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
         [parameter(mandatory = $true, ValueFromPipeline = $true)]
         [string] $content
@@ -811,25 +811,49 @@ function Set-ContentLF {
 # }
 function Set-JsonContentLF {
     Param(
-        [parameter(mandatory = $true, ValueFromPipeline = $false)]
+        [parameter(Mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
-        [parameter(mandatory = $true, ValueFromPipeline = $true)]
+        [parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [object] $object
     )
 
     Process {
-        $object | ConvertTo-Json -Depth 99 | Set-ContentLF -path $path
+        $object | ConvertTo-JsonLF | Set-ContentLF -path $path
+    }
+}
+
+ <#
+    .SYNOPSIS
+        Converts a JSON string to a JSON object with LF line endings.
+    .DESCRIPTION
+        Converts a JSON string to a JSON object with LF line endings.
+        This ensures the same formatting in different PowerShell versions.
+    .PARAMETER object
+        The JSON object to convert.
+    .EXAMPLE
+        $json = ConvertTo-JsonLF -object $myObject
+ #>
+function ConvertTo-JsonLF {
+    Param(
+        [parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [object] $object
+    )
+
+    Process {
+        $content = $object | ConvertTo-Json -Depth 99
         if ($PSVersionTable.PSVersion.Major -lt 6) {
             try {
-                $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-                # This command will reformat a JSON file with LF line endings as PowerShell 7 would do it (when run using pwsh)
-                $command = "`$cr=[char]13;`$lf=[char]10;`$path='$path';`$content=Get-Content `$path -Encoding UTF8|ConvertFrom-Json|ConvertTo-Json -Depth 99;`$content=`$content -replace `$cr,'';`$content|Out-Host;[System.IO.File]::WriteAllText(`$path,`$content+`$lf)"
-                . pwsh -command $command
+                # This command will reformat a JSON content with LF line endings as PowerShell 7 would do it (when run using pwsh)
+                $command = [scriptblock] {
+                    $args[0] | ConvertFrom-Json | ConvertTo-Json -Depth 99
+                }
+                $content = pwsh -Command $command -args ($object | ConvertTo-Json -Depth 99 -Compress)
             }
             catch {
-                Write-Host "WARNING: pwsh (PowerShell 7) not installed, json will be formatted by PowerShell $($PSVersionTable.PSVersion)"
+                Write-Host "WARNING: pwsh (PowerShell 7) not installed, JSON will be formatted by PowerShell $($PSVersionTable.PSVersion)"
             }
         }
+        return $content.Replace("`r", "")
     }
 }
 

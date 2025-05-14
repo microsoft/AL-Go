@@ -228,6 +228,7 @@ try {
                     throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helpers.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$"'
                 }
             }
+
             [System.IO.File]::WriteAllText($dstFile, "$($lines -join "`n")`n")
         }
         if (Test-Path -Path (Join-Path '.' '.github') -PathType Container) {

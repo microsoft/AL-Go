@@ -149,9 +149,11 @@ if (-not $isDirectALGo) {
 # - All files in .github that ends with .copy.md
 # - All PowerShell scripts in .AL-Go folders (all projects)
 $checkfiles = @(
-    @{ 'dstPath' = (Join-Path '.github' 'workflows'); 'newname' = ''; 'srcPath' = Join-Path '.github' 'workflows'; 'pattern' = '*'; 'type' = 'workflow' },
+    @{ 'dstPath' = (Join-Path '.github' 'workflows'); 'newname' = ''; 'srcPath' = (Join-Path '.github' 'workflows'); 'pattern' = '*'; 'type' = 'workflow' },
     @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
     @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.ps1'; 'type' = 'script' }
+    @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = 'AL-Go-Settings.json'; 'type' = 'settings' },
+    @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.settings.json'; 'type' = 'settings' }
 )
 
 if ($realTemplateFolder) {
@@ -167,7 +169,10 @@ $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSet
 Write-Host "Projects found: $($projects.Count)"
 foreach($project in $projects) {
     Write-Host "- $project"
-    $checkfiles += @(@{ 'dstPath' = Join-Path $project '.AL-Go'; 'newname' = ''; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' })
+    $checkfiles += @(
+        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'newname' = ''; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' },
+        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'newname' = ''; 'srcPath' = '.AL-Go'; 'pattern' = 'settings.json'; 'type' = 'settings' }
+    )
 }
 
 # $updateFiles will hold an array of files, which needs to be updated
@@ -234,15 +239,30 @@ foreach($checkfile in $checkfiles) {
                         $isFileDirectALGo = IsDirectALGo -templateUrl $realTemplateUrl
                     }
                 }
-                if ($type -eq "workflow") {
-                    # for workflow files, we might need to modify the file based on the settings
-                    $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $realsrcFile -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
+                $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
+                if ($unusedALGoSystemFiles -contains $fileName) {
+                    # File is not used by AL-Go, remove it if it exists
+                    # do not add it to $updateFiles if it does not exist
+                    if ($dstFileExists) {
+                        Write-Host "Removing $type ($(Join-Path $dstPath $filename)) as it is marked as unused."
+                        $removeFiles += @(Join-Path $dstPath $filename)
+                    }
+                    return
                 }
-                else {
-                    # For non-workflow files, just read the file content
-                    $srcContent = Get-ContentLF -Path $realSrcFile
+                switch ($type) {
+                    "workflow" {
+                        # For workflow files, we might need to modify the file based on the settings
+                        $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $realsrcFile -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
+                     }
+                     "settings" {
+                        # For settings files, we need to modify the file based on the settings
+                        $srcContent = GetModifiedSettingsContent -srcSettingsFile $srcFile -dstSettingsFile $dstFile
+                     }
+                    Default {
+                        # For non-workflow files, just read the file content
+                        $srcContent = Get-ContentLF -Path $realSrcFile
+                    }
                 }
-
                 # Replace static placeholders
                 $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
 
@@ -257,24 +277,26 @@ foreach($checkfile in $checkfiles) {
                     [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile)
                 }
 
-                if ($unusedALGoSystemFiles -notcontains $fileName) {
-                    if (Test-Path -Path $dstFile -PathType Leaf) {
-                        if ($type -eq 'workflow') {
-                            Write-Host "Apply customizations from my repository: $dstFile"
-                            [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
-                        }
-                        # file exists, compare and add to $updateFiles if different
-                        $dstContent = Get-ContentLF -Path $dstFile
-                        if ($dstContent -cne $srcContent) {
-                            Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
-                            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
-                        }
+                if ($dstFileExists) {
+                    if ($type -eq 'workflow') {
+                        Write-Host "Apply customizations from my repository: $dstFile"
+                        [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
                     }
-                    else {
-                        # new file, add to $updateFiles
-                        Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
+
+                    # file exists, compare and add to $updateFiles if different
+                    $dstContent = Get-ContentLF -Path $dstFile
+                    if ($dstContent -cne $srcContent) {
+                        Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
                         $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                     }
+                    else {
+                        Write-Host "No changes in $type ($(Join-Path $dstPath $filename))"
+                    }
+                }
+                else {
+                    # new file, add to $updateFiles
+                    Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
+                    $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
                 }
             }
         }
@@ -327,8 +349,6 @@ else {
 
         invoke-git status
 
-        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
-
         # Update the files
         # Calculate the release notes, while updating
         $releaseNotes = ""
@@ -363,6 +383,9 @@ else {
             Write-Host "Remove $_"
             Remove-Item (Join-Path (Get-Location).Path $_) -Force
         }
+
+        # Update the templateUrl and templateSha in the repo settings file
+        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
 
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
