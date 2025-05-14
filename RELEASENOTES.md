@@ -43,6 +43,9 @@ By creating a [build authentication context](https://aka.ms/algosecrets#buildAut
   ]
 ```
 
+> [!NOTE]
+> When setting `buildEnvironmentName` AL-Go for GitHub will automatically switch to use the compiler folder feature for building. See [more](https://aka.ms/algosettings#useCompilerFolder).
+
 ## v7.1
 
 ### Issues
