@@ -6,7 +6,7 @@ inputs:
     required: false
     default: powershell
   gitHubSecrets:
-    description: All GitHub Secrets in compressed JSON format
+    description: A JSON structure with all secrets needed. The structure already contains the existing GitHub secrets
     required: true
   useGhTokenWorkflowForPush:
     description: Determines whether you want to use the GhTokenWorkflow secret for TokenForPush
