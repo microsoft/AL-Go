@@ -2,24 +2,6 @@ $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-function GetAzureCredentialsSecretName {
-    $settings = $env:Settings | ConvertFrom-Json
-    if ($settings.PSObject.Properties.Name -eq "AZURE_CREDENTIALSSecretName") {
-        return $settings.AZURE_CREDENTIALSSecretName
-    }
-    else {
-        return "AZURE_CREDENTIALS"
-    }
-}
-
-function GetAzureCredentials {
-    $secretName = GetAzureCredentialsSecretName
-    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
-        return $script:gitHubSecrets."$secretName"
-    }
-    return $null
-}
-
 function MaskValue {
     Param(
         [string] $key,
@@ -56,12 +38,12 @@ function MaskValue {
 }
 
 function GetKeyVaultCredentials {
+    Param(
+        [string] $jsonStr
+    )
+
     $creds = $null
-    $jsonStr = GetAzureCredentials
     if ($jsonStr) {
-        if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
-            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
-        }
         try {
             $creds = $jsonStr | ConvertFrom-Json
             if ($creds.PSObject.Properties.Name -eq 'ClientSecret' -and $creds.ClientSecret) {
@@ -73,7 +55,7 @@ function GetKeyVaultCredentials {
             $creds.TenantId | Out-Null
         }
         catch {
-            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
+            throw "Secret for Azure KeyVault Connection is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
         }
         $keyVaultNameExists = $creds.PSObject.Properties.Name -eq 'keyVaultName'
         $settings = $env:Settings | ConvertFrom-Json

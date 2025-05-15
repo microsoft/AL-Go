@@ -27,8 +27,7 @@ try {
     $ghSecrets = $gitHubSecrets | ConvertFrom-Json
 
     $outSecrets = [ordered]@{}
-    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    $keyVaultCredentials = GetKeyVaultCredentials
+    $keyVaultCredentials = GetKeyVaultCredentials -jsonStr $ghSecrets.AZURE_CREDENTIALS
     $getTokenForPush = $false
     $secrets = @($ghSecrets.PSObject.Properties.Name)
     for ($sno = 0; $sno -lt $secrets.Count; $sno++) {

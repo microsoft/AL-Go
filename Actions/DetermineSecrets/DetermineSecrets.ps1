@@ -37,6 +37,7 @@ function AddSecret {
     }
 }
 
+AddSecret -secret 'AZURE_CREDENTIALS' -useMapping
 foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
     switch ($secret) {
         'TokenForPush' {
