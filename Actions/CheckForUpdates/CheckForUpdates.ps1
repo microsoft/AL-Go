@@ -256,7 +256,7 @@ foreach($checkfile in $checkfiles) {
                      }
                      "settings" {
                         # For settings files, we need to modify the file based on the settings
-                        $srcContent = GetModifiedSettingsContent -srcSettingsFile $srcFile -dstSettingsFile $dstFile
+                        $srcContent = GetModifiedSettingsContent -srcSettingsFile $realSrcFile -dstSettingsFile $dstFile
                      }
                     Default {
                         # For non-workflow files, just read the file content
