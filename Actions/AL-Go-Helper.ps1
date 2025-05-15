@@ -357,7 +357,7 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
                 $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
                 $bcContainerHelperVersion = "preview"
                 Write-Host "Download failed, downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-                $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+                $webclient.DownloadFile("https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
             }
         }
         else {
@@ -367,7 +367,7 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
                 $bcContainerHelperVersion = 'preview'
             }
             Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper.blob.core.windows.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            $webclient.DownloadFile("https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $bcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
