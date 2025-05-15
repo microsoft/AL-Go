@@ -99,7 +99,7 @@ try {
         elseif ($secret -eq 'gitSubmodulesToken') {
             # If the gitSubmodulesToken secret was not found, use the github_token
             Write-Host "Using github_token for gitSubmodulesToken"
-            $outSecrets += @{ "$secret" = $ghSecret.'github_token' }
+            $outSecrets += @{ "$secret" = $ghSecrets.'github_token' }
         }
         else {
             $outSecrets += @{ "$secret" = "" }
