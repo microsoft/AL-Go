@@ -419,7 +419,7 @@ function IsDirectALGo {
     $directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
     if ($directALGo) {
         if ($templateUrl -like 'https://github.com/microsoft/AL-Go@*' -and -not ($templateUrl -like 'https://github.com/microsoft/AL-Go@*/*')) {
-            throw "You cannot use microsoft/AL-Go as a template repository. Please use a fork of AL-Go instead."
+            throw "You cannot use microsoft/AL-Go as a template repository. Please use microsoft/AL-Go-PTE, microsoft/AL-Go-AppSource or a fork of AL-Go instead."
         }
     }
     return $directALGo
