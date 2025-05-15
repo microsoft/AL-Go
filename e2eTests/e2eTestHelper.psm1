@@ -1,9 +1,10 @@
 ﻿$githubOwner = "githubOwner"
-$token = "token"
+$token = "DefaultToken"
 $defaultRepository = "repo"
 $defaultApplication = "22.0.0.0"
 $defaultRuntime = "10.0"
 $defaultPublisher = "MS Test"
+$lastTokenRefresh = 0
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
 . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
@@ -16,30 +17,74 @@ function SetTokenAndRepository {
     Param(
         [string] $githubOwner,
         [string] $token,
+        [string] $appId,
+        [string] $appKey,
         [string] $repository,
         [switch] $github
     )
 
     $script:githubOwner = $githubOwner
-    $script:token = $token
     $script:defaultRepository = $repository
-    $realToken = GetAccessToken -token $script:token -repository "$githubOwner/.github"
 
     if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf false
-        $ENV:GITHUB_TOKEN = ''
-        $ENV:GH_TOKEN = ''
     }
-    Write-Host "Authenticating with GitHub using token"
+
+    if (-not $github) {
+        # Running locally - Ensure the user is authenticated with the GitHub CLI.
+        # This is required for local runs to perform GitHub-related operations.
+        invoke-gh auth status
+    } elseif ($appKey -and $appId) {
+        # Running in GitHub Actions
+        $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
+    } else {
+        throw "GitHub App ID and Private Key not set. In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
+    }
+
+    # Repository isn't created yet so authenticating towards the .github repository
+    if (-not $github) {
+        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo
+    }
+    RefreshToken -token $token -repository "$githubOwner/.github"
+}
+
+function RefreshToken {
+    Param(
+        [Parameter(Mandatory = $false)]
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $false)]
+        [switch] $force
+    )
     if ($github) {
+        if ($token) {
+            $script:token = $token
+        }
+
+        if ($script:token -eq "DefaultToken") {
+            throw "Token not set."
+        }
+
+        # Check if the last token refresh was more than 30 minutes ago
+        if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
+            return
+        }
+
+        Write-Host "Authenticating with GitHub using token"
+        $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
+        $script:lastTokenRefresh = [DateTime]::Now
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
-    }
-    else {
-        $realToken | invoke-gh auth login --with-token
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
+    } else {
+        $realToken = gh auth token
+        $ENV:GITHUB_TOKEN = $realToken
+        $ENV:GH_TOKEN = $realToken
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     }
 }
 
@@ -111,7 +156,9 @@ function RunWorkflow {
         Write-Host ($parameters | ConvertTo-Json)
     }
 
-    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+    RefreshToken -repository $repository
+
+    $headers = GetHeaders -token $Env:GH_TOKEN -repository $repository
     WaitForRateLimit -headers $headers -displayStatus
 
     Write-Host "Get Workflows"
@@ -176,7 +223,8 @@ function DownloadWorkflowLog {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+    RefreshToken -repository $repository
+    $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
     $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
@@ -235,8 +283,9 @@ function WaitWorkflow {
     $count = 0
     $status = ""
     do {
+        RefreshToken -repository $repository
         if ($count % 45 -eq 0) {
-            $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+            $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
             $count++
         }
         if ($delay) {
@@ -470,12 +519,17 @@ function CreateAlGoRepository {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
     }
 
+    RefreshToken -repository $repository
+
     invoke-git add *
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
-    if ($githubOwner -and $script:token) {
-        $realToken = GetAccessToken -token $script:token -repository "$githubOwner/.github"
-        invoke-git remote set-url origin "https://$($githubOwner):$($realtoken)@github.com/$repository.git"
+    if ($githubOwner) {
+        if ($github) {
+            invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        } else {
+            invoke-git remote set-url origin "https://github.com/$repository"
+        }
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
@@ -498,8 +552,14 @@ function CommitAndPush {
         [switch] $wait
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
+    RefreshToken -repository $repository
+
     if ($wait) {
-        $headers = GetHeaders -token $token
+        $headers = GetHeaders -token $ENV:GH_TOKEN
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
@@ -539,7 +599,8 @@ function MergePRandPull {
     }
 
     Write-Host "Get Previous runs"
-    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+    RefreshToken -repository $repository
+    $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
     $url = "https://api.github.com/repos/$repository/actions/runs"
     $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
