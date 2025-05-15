@@ -32,7 +32,7 @@ try {
     $secrets = @($ghSecrets.PSObject.Properties.Name)
     for ($sno = 0; $sno -lt $secrets.Count; $sno++) {
         $secret = $secrets[$sno]
-        $secretName = (get-item "S$sno").value
+        $secretName = (get-item "ENV:S$sno").value
         if ($secret -eq 'TokenForPush') {
             $getTokenForPush = $true
         }
