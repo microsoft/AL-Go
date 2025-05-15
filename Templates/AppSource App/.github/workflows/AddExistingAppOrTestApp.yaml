@@ -73,7 +73,6 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ format(steps.DetermineSecrets.outputs.formatStr,toJSON(secrets[env.S0]),toJSON(secrets[env.S1]),toJSON(secrets[env.S2]),toJSON(secrets[env.S3]),toJSON(secrets[env.S4]),toJSON(secrets[env.S5]),toJSON(secrets[env.S6]),toJSON(secrets[env.S7]),toJSON(secrets[env.S8]),toJSON(secrets[env.S9]),toJSON(secrets[env.S10]),toJSON(secrets[env.S11]),toJSON(secrets[env.S12]),toJSON(secrets[env.S13]),toJSON(secrets[env.S14]),toJSON(secrets[env.S15]),toJSON(secrets[env.S16]),toJSON(secrets[env.S17]),toJSON(secrets[env.S18]),toJSON(secrets[env.S19]),toJSON(secrets[env.S20]),toJSON(secrets[env.S21]),toJSON(secrets[env.S22]),toJSON(secrets[env.S23]),toJSON(secrets[env.S24]),toJSON(secrets[env.S25]),toJSON(secrets[env.S26]),toJSON(secrets[env.S27]),toJSON(secrets[env.S28]),toJSON(secrets[env.S29]),toJSON(secrets[env.S30]),toJSON(secrets[env.S31])) }}
-          getSecrets: 'TokenForPush'
           useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
 
       - name: Add existing app
