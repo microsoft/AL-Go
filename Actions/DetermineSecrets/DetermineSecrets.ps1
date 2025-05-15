@@ -20,7 +20,7 @@ function AddSecret {
     )
 
     if ($secret) {
-        $secretName = $secret.TrimStart('-*')
+        $secretName = $secret
         $secretNameProperty = "$($secretName)SecretName"
         if ($useMapping.IsPresent -and $settings.Keys -contains $secretNameProperty) {
             $secretName = $settings."$secretNameProperty"
@@ -40,10 +40,16 @@ function AddSecret {
 foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
     switch ($secret) {
         'TokenForPush' {
+            AddSecret -secret 'TokenForPush'
             if ($useGhTokenWorkflowForPush -eq 'true') {
                 # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
                 AddSecret -secret 'ghTokenWorkflow' -useMapping
             }
+        }
+        'GitSubmodulesToken' {
+            # If we are getting the gitSubModules token, we might need to get the github token as well
+            AddSecret -secret $secret -useMapping
+            AddSecret -secret 'github_token'
         }
         'AppDependencySecrets' {
             # Loop through appDependencyProbingPaths and trustedNuGetFeeds and add secrets to the collection of secrets to get
