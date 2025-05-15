@@ -11,7 +11,7 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
 # Build an array of secrets to get (and the names of the secrets)
 $script:secretsCollection = [System.Collections.ArrayList]::new()
-$secretNames = @{}
+$script:secretNames = @{}
 
 function AddSecret {
     Param(
@@ -99,8 +99,8 @@ $cnt = 0
 $formatArr = @()
 foreach($secret in $script:secretsCollection) {
     $formatArr += @("""$Secret"":{$cnt}")
-    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV -Value "S$cnt=$($secretNames[$secret])"
-    Write-Host "S$cnt=$($secretNames[$secret])"
+    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV -Value "S$cnt=$($script:secretNames[$secret])"
+    Write-Host "S$cnt=$($script:secretNames[$secret])"
     $cnt++
 }
 Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "FORMATSTR={{$($formatArr -join ',')}}"
