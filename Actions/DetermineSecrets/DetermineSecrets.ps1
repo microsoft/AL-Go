@@ -10,7 +10,7 @@
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
 # Build an array of secrets to get (and the names of the secrets)
-[System.Collections.ArrayList] $secretsCollection = @()
+$script:secretsCollection = [System.Collections.ArrayList]::new()
 $secretNames = @{}
 
 function AddSecret {
@@ -45,6 +45,9 @@ foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
             if ($useGhTokenWorkflowForPush -eq 'true') {
                 # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
                 AddSecret -secret 'ghTokenWorkflow' -useMapping
+            }
+            else {
+                AddSecret -secret 'github_token'
             }
         }
         'GitSubmodulesToken' {
