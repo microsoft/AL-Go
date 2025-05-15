@@ -86,7 +86,7 @@ try {
                         MaskValue -key "$secret with federated token" -value $secretValue
                     }
                     catch {
-                        throw "$Secret doesn't contain any ClientSecret and AL-Go is unable to acquire an ID_TOKEN. Error was $($_.Exception.Message)"
+                        throw "$secret doesn't contain any ClientSecret and AL-Go is unable to acquire an ID_TOKEN. Error was $($_.Exception.Message)"
                     }
                 }
             }
