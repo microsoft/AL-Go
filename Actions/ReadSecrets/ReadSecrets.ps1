@@ -22,6 +22,7 @@ try {
     }
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path $PSScriptRoot "ReadSecretsHelper.psm1")
 
     $ghSecrets = $gitHubSecrets | ConvertFrom-Json
 
