@@ -419,7 +419,7 @@ function IsDirectALGo {
     $directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
     if ($directALGo) {
         if ($templateUrl -like 'https://github.com/microsoft/AL-Go@*' -and -not ($templateUrl -like 'https://github.com/microsoft/AL-Go@*/*')) {
-            throw "You cannot use microsoft/AL-Go as a template repository. Please use a fork of AL-Go instead."
+            throw "You cannot use microsoft/AL-Go as a template repository. Please use microsoft/AL-Go-PTE, microsoft/AL-Go-AppSource or a fork of AL-Go instead."
         }
     }
     return $directALGo
@@ -486,6 +486,9 @@ function GetModifiedSettingsContent {
     $schemaValue = $srcSettings."$schemaKey"
 
     $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
+
+    # Make sure the $schema property is the first property in the object
+    $dstSettings = $dstSettings | Select-Object @{ Name = '$schema'; Expression = { $_.'$schema' } }, * -ExcludeProperty '$schema'
 
     return $dstSettings | ConvertTo-JsonLF
 }

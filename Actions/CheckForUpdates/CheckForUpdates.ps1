@@ -251,8 +251,6 @@ else {
 
         invoke-git status
 
-        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
-
         # Update the files
         # Calculate the release notes, while updating
         $releaseNotes = ""
@@ -287,6 +285,9 @@ else {
             Write-Host "Remove $_"
             Remove-Item (Join-Path (Get-Location).Path $_) -Force
         }
+
+        # Update the templateUrl and templateSha in the repo settings file
+        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
 
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes
