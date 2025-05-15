@@ -48,11 +48,11 @@ try {
                 MaskValue -key $secret -value $secretValue
             }
             else {
-                Write-Host "Secret $secret, with the name $secretName, was not found in GitHub secrets or Key Vault $($keyVaultCredentials.keyVaultName)."
+                Write-Host "Secret $secret ($secretName), was not found in GitHub secrets or Key Vault $($keyVaultCredentials.keyVaultName)."
             }
         }
         else {
-            Write-Host "Secret $secret, with the name $secretName, was not found in GitHub secrets."
+            Write-Host "Secret $secret ($secretName), was not found in GitHub secrets."
         }
     }
 
@@ -73,7 +73,7 @@ try {
                 foreach($keyName in $json.Keys) {
                     if ((IsPropertySecret -propertyName $keyName) -and ($json."$keyName" -isnot [boolean])) {
                         # Mask individual values if property is secret
-                        MaskValue -key "$($secretName).$($keyName)" -value "$($json."$keyName")"
+                        MaskValue -key "$($secret).$($keyName)" -value "$($json."$keyName")"
                     }
                 }
                 # If secret is a JSON object for a federated token, query the ID_TOKEN and mask
@@ -83,10 +83,10 @@ try {
                         $result = Invoke-RestMethod -Method GET -UseBasicParsing -Headers @{ "Authorization" = "bearer $ENV:ACTIONS_ID_TOKEN_REQUEST_TOKEN"; "Accept" = "application/vnd.github+json" } -Uri "$ENV:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
                         $json += @{ "clientAssertion" = $result.value }
                         $secretValue = $json | ConvertTo-Json -Compress
-                        MaskValue -key "$secretName with federated token" -value $secretValue
+                        MaskValue -key "$secret with federated token" -value $secretValue
                     }
                     catch {
-                        throw "$SecretName doesn't contain any ClientSecret and AL-Go is unable to acquire an ID_TOKEN. Error was $($_.Exception.Message)"
+                        throw "$Secret doesn't contain any ClientSecret and AL-Go is unable to acquire an ID_TOKEN. Error was $($_.Exception.Message)"
                     }
                 }
             }
