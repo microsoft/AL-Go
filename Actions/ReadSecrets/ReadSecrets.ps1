@@ -37,13 +37,13 @@ try {
             $getTokenForPush = $true
         }
         if ($ghSecrets."$secret") {
-            Write-Host "Secret $secret was found in GitHub secrets with the name $secretName."
+            Write-Host "Secret $secret ($secretName) was found in GitHub secrets."
         }
         elseif ($keyVaultCredentials) {
             # Missing secret - read from KeyVault
             $secretValue = GetKeyVaultSecret -secretName $secretName -keyVaultCredentials $keyVaultCredentials
             if ($secretValue) {
-                Write-Host "Secret $secret was retrieved from the Key Vault $($keyVaultCredentials.keyVaultName) with the name $secretName."
+                Write-Host "Secret $secret ($secretName) was retrieved from the Key Vault $($keyVaultCredentials.keyVaultName)."
                 $ghSecrets."$secret" = $secretValue
                 MaskValue -key $secret -value $secretValue
             }
