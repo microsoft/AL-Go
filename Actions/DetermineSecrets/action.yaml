@@ -63,7 +63,7 @@ outputs:
     value: ${{ steps.DetermineSecrets.outputs.S14 }}
   S15:
     description: The actual name of the GitHub secrets to look for for secret #15
-    value: ${{ steps.DetermineSecrets.outputs.S15 }} 
+    value: ${{ steps.DetermineSecrets.outputs.S15 }}
   S16:
     description: The actual name of the GitHub secrets to look for for secret #16
     value: ${{ steps.DetermineSecrets.outputs.S16 }}
@@ -109,7 +109,7 @@ outputs:
   S30:
     description: The actual name of the GitHub secrets to look for for secret #30
     value: ${{ steps.DetermineSecrets.outputs.S30 }}
-  S31:  
+  S31:
     description: The actual name of the GitHub secrets to look for for secret #31
     value: ${{ steps.DetermineSecrets.outputs.S31 }}
 runs:
