@@ -151,7 +151,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
     }
 
-    It 'GetModifiedSettingsContent returns correct content when destination files isn''t empty' {
+    It 'GetModifiedSettingsContent returns correct content when destination file is not empty' {
         # Create settings files with the content
         @{ "`$schema" = "someSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
         @{ "setting1" = "value2" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpDstFile -Force
