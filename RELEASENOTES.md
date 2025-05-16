@@ -1,3 +1,7 @@
+### Removed functionality
+
+As stated in [AL-Go Deprecations](https://aka.ms/algodeprecations#cleanModePreprocessorSymbols), setting `cleanModePreprocessorSymbols` is now longer supported and will be ignored by AL-Go for GitHub.
+
 ### Security
 
 - Add top-level permissions for _Increment Version Number_ workflow
