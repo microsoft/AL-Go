@@ -1,6 +1,6 @@
 ### Removed functionality
 
-As stated in [AL-Go Deprecations](https://aka.ms/algodeprecations#cleanModePreprocessorSymbols), setting `cleanModePreprocessorSymbols` is now longer supported and will be ignored by AL-Go for GitHub.
+As stated in [AL-Go Deprecations](https://aka.ms/algodeprecations#cleanModePreprocessorSymbols), setting `cleanModePreprocessorSymbols` is no longer supported and will be ignored by AL-Go for GitHub.
 
 ### Security
 
