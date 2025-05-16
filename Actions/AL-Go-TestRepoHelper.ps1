@@ -49,11 +49,6 @@ function Test-Deprecations {
         [string] $settingsDescription
     )
 
-    # cleanModePreprocessorSymbols is deprecated
-    if ($json.Keys -contains 'cleanModePreprocessorSymbols') {
-        OutputWarning -Message "cleanModePreprocessorSymbols in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#cleanModePreprocessorSymbols"
-    }
-
     # <workflowName>Schedule is deprecated
     ($json.Keys | Where-Object {$_ -like '*Schedule' -and $_ -ne 'WorkflowSchedule'}) | ForEach-Object {
         OutputWarning -Message "$_ in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#_workflow_Schedule. This warning will become an error in the future."
