@@ -160,19 +160,35 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
         $modifiedContent = $modifiedContentJson | ConvertFrom-Json
         $modifiedContent | Should -Not -BeNullOrEmpty
-        $modifiedContent.setting1 | Should -Be "value2"
+        $modifiedContent.PSObject.Properties.Name.Count | Should -Be 2 # setting1 and $schema
+        $modifiedContent."setting1" | Should -Be "value2"
         $modifiedContent."`$schema" | Should -Be "someSchema"
     }
 
-    It 'GetModifiedSettingsContent returns correct content when destination files doesn''t exist' {
+    It 'GetModifiedSettingsContent returns correct content when destination file is empty' {
         # Create only the source file
         @{ "`$schema" = "someSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
-
+        '' | Out-File -FilePath $tmpDstFile -Force
         $modifiedContentJson = GetModifiedSettingsContent -srcSettingsFile $tmpSrcFile -dstSettingsFile $tmpDstFile
 
         $modifiedContent = $modifiedContentJson | ConvertFrom-Json
         $modifiedContent | Should -Not -BeNullOrEmpty
-        $modifiedContent.srcSetting | Should -Be "value1"
+        @($modifiedContent.PSObject.Properties.Name).Count | Should -Be 2 # srcSetting and $schema
+        $modifiedContent."`$schema" | Should -Be "someSchema"
+        $modifiedContent."srcSetting" | Should -Be "value1"
+    }
+
+    It 'GetModifiedSettingsContent returns correct content when destination file does not exist' {
+        # Create only the source file
+        @{ "`$schema" = "someSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
+
+        Test-Path $tmpDstFile | Should -Be $false
+        $modifiedContentJson = GetModifiedSettingsContent -srcSettingsFile $tmpSrcFile -dstSettingsFile $tmpDstFile
+
+        $modifiedContent = $modifiedContentJson | ConvertFrom-Json
+        $modifiedContent | Should -Not -BeNullOrEmpty
+        $modifiedContent.PSObject.Properties.Name.Count | Should -Be 2 # srcSetting and $schema
+        $modifiedContent."srcSetting" | Should -Be "value1"
         $modifiedContent."`$schema" | Should -Be "someSchema"
     }
 }

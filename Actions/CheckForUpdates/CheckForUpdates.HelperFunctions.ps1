@@ -474,9 +474,16 @@ function GetModifiedSettingsContent {
 
     $srcSettings = Get-ContentLF -Path $srcSettingsFile | ConvertFrom-Json
 
+    $dstSettings = $null
     if(Test-Path -Path $dstSettingsFile -PathType Leaf) {
         $dstSettings = Get-ContentLF -Path $dstSettingsFile | ConvertFrom-Json
+    }
 
+    if(!$dstSettings) {
+        # If the destination settings file does not exist or it's empty, create an new settings object with default values from the source settings (which includes the $schema property already)
+        $dstSettings = $srcSettings
+    }
+    else {
         # Change the $schema property to be the same as the source settings file (add it if it doesn't exist)
         $schemaKey = '$schema'
         $schemaValue = $srcSettings."$schemaKey"
@@ -485,10 +492,6 @@ function GetModifiedSettingsContent {
 
         # Make sure the $schema property is the first property in the object
         $dstSettings = $dstSettings | Select-Object @{ Name = '$schema'; Expression = { $_.'$schema' } }, * -ExcludeProperty '$schema'
-    }
-    else {
-        # If the destination settings file does not exist, create an new settings object with default values from the source settings (which includes the $schema property already)
-        $dstSettings = $srcSettings
     }
 
 
