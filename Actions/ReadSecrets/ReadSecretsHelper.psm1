@@ -1,30 +1,6 @@
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'GitHub Secrets come in as plain text')]
-Param(
-    [string] $_gitHubSecrets
-)
-
-$script:gitHubSecrets = $_gitHubSecrets | ConvertFrom-Json
 $script:escchars = @(' ','!','\"','#','$','%','\u0026','\u0027','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','\u003c','=','\u003e','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_',[char]96,'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~')
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-
-function GetAzureCredentialsSecretName {
-    $settings = $env:Settings | ConvertFrom-Json
-    if ($settings.PSObject.Properties.Name -eq "AZURE_CREDENTIALSSecretName") {
-        return $settings.AZURE_CREDENTIALSSecretName
-    }
-    else {
-        return "AZURE_CREDENTIALS"
-    }
-}
-
-function GetAzureCredentials {
-    $secretName = GetAzureCredentialsSecretName
-    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secretName) {
-        return $script:gitHubSecrets."$secretName"
-    }
-    return $null
-}
 
 function MaskValue {
     Param(
@@ -61,40 +37,13 @@ function MaskValue {
     Write-Host "::add-mask::$([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($value)))"
 }
 
-function GetGithubSecret {
-    param (
-        [string] $secretName,
-        [switch] $encrypted
-    )
-    $secretSplit = $secretName.Split('=')
-    $envVar = $secretSplit[0]
-    $secret = $envVar
-    if ($secretSplit.Count -gt 1) {
-        $secret = $secretSplit[1]
-    }
-
-    if ($script:gitHubSecrets.PSObject.Properties.Name -eq $secret) {
-        $value = $script:githubSecrets."$secret"
-        if ($value) {
-            if ($encrypted) {
-                # Return encrypted string
-                $value = ConvertTo-SecureString -String $value -AsPlainText -Force | ConvertFrom-SecureString
-            }
-            MaskValue -key $envVar -value $value
-            return $value
-        }
-    }
-
-    return $null
-}
-
 function GetKeyVaultCredentials {
+    Param(
+        [string] $jsonStr
+    )
+
     $creds = $null
-    $jsonStr = GetAzureCredentials
     if ($jsonStr) {
-        if ($jsonStr -contains "`n" -or $jsonStr -contains "`r") {
-            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) cannot contain line breaks, needs to be formatted as compressed JSON (no line breaks)"
-        }
         try {
             $creds = $jsonStr | ConvertFrom-Json
             if ($creds.PSObject.Properties.Name -eq 'ClientSecret' -and $creds.ClientSecret) {
@@ -106,7 +55,7 @@ function GetKeyVaultCredentials {
             $creds.TenantId | Out-Null
         }
         catch {
-            throw "Secret for Azure KeyVault Connection ($(GetAzureCredentialsSecretName)) is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
+            throw "Secret for Azure KeyVault Connection is wrongly formatted. Needs to be formatted as compressed JSON (no line breaks) and contain at least the properties: clientId, clientSecret, tenantId and subscriptionId."
         }
         $keyVaultNameExists = $creds.PSObject.Properties.Name -eq 'keyVaultName'
         $settings = $env:Settings | ConvertFrom-Json
@@ -185,32 +134,6 @@ function GetKeyVaultSecret {
             [Runtime.InteropServices.Marshal]::FreeBSTR($bstr)
             MaskValue -key $envVar -value $value
         }
-    }
-    return $value
-}
-
-function GetSecret {
-    param (
-        [string] $secret,
-        [PSCustomObject] $keyVaultCredentials,
-        [switch] $encrypted
-    )
-
-    Write-Host "Trying to get the secret ($secret) from the github environment."
-    $value = GetGithubSecret -secretName $secret -encrypted:$encrypted
-    if ($value) {
-        Write-Host "Secret ($secret) was retrieved from the github environment."
-    }
-    elseif ($keyVaultCredentials) {
-        Write-Host "Trying to get the secret ($secret) from Key Vault ($($keyVaultCredentials.keyVaultName))."
-        $value = GetKeyVaultSecret -secretName $secret -keyVaultCredentials $keyVaultCredentials -encrypted:$encrypted
-        if ($value) {
-            Write-Host "Secret ($secret) was retrieved from the Key Vault."
-        }
-    }
-    else {
-        Write-Host  "Could not find secret $secret in Github secrets or Azure Key Vault."
-        $value = $null
     }
     return $value
 }
