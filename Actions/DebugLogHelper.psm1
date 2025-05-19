@@ -1,8 +1,10 @@
 $debugLoggingEnabled = $false
 try {
-    Write-Host "RUNNER_DEBUG environment variable: $env:RUNNER_DEBUG"
     if ($env:RUNNER_DEBUG -eq 1) {
         $debugLoggingEnabled = $true
+        Write-Host "AL-Go extended debugging is enabled."
+    } else {
+        Write-Host "AL-Go extended debug logging is disabled."
     }
 } catch {
     Write-Host "Failed to parse RUNNER_DEBUG environment variable. Defaulting to false."
@@ -17,7 +19,7 @@ function Write-Debug-Info {
     )
 
     if ($debugLoggingEnabled) {
-        Write-Host -ForegroundColor Green "[Debug] $Message"
+        Write-Host -ForegroundColor Yellow "[AL-Go-Debug] $Message"
     }
 }
 
@@ -31,9 +33,12 @@ function Write-Debug-FunctionCallInfo {
     )
 
     if ($debugLoggingEnabled) {
-        Write-Host -ForegroundColor Green "[Debug] Function '$functionName' called with parameters:"
+        Write-Host -ForegroundColor Green "[AL-Go-Debug] Function '$functionName' called with parameters:"
         foreach ($param in $Parameters.Keys) {
-            Write-Host -ForegroundColor Green "  $($param): $($Parameters[$param])"
+            Write-Host -ForegroundColor Green "[AL-Go-Debug]  - $($param): $($Parameters[$param])"
+        }
+        if ($Parameters.Count -eq 0) {
+            Write-Host -ForegroundColor Green "[AL-Go-Debug]  - None"
         }
     }
 }
