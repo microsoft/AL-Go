@@ -10,6 +10,17 @@ try {
     Write-Host "Failed to parse RUNNER_DEBUG environment variable. Defaulting to false."
 }
 
+# Colors
+$colorCodeMagenta = '35'
+
+function Write-Debug-Base {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $Message
+    )
+
+    Write-Host "`e[${colorCodeMagenta}m[AL-Go-Debug]`e[0m $Message"
+}
 
 # Debug logging that is only written when additional logging is enabled
 function Write-Debug-Info {
@@ -19,7 +30,7 @@ function Write-Debug-Info {
     )
 
     if ($debugLoggingEnabled) {
-        Write-Host -ForegroundColor Yellow "[AL-Go-Debug] $Message"
+        Write-Debug-Base $Message
     }
 }
 
@@ -33,12 +44,12 @@ function Write-Debug-FunctionCallInfo {
     )
 
     if ($debugLoggingEnabled) {
-        Write-Host -ForegroundColor Green "[AL-Go-Debug] Function '$functionName' called with parameters:"
+        Write-Debug-Base "Function '$functionName' called with parameters:"
         foreach ($param in $Parameters.Keys) {
-            Write-Host -ForegroundColor Green "[AL-Go-Debug]  - $($param): $($Parameters[$param])"
+            Write-Debug-Base "- $($param): $($Parameters[$param])"
         }
         if ($Parameters.Count -eq 0) {
-            Write-Host -ForegroundColor Green "[AL-Go-Debug]  - None"
+            Write-Debug-Base "- None"
         }
     }
 }
@@ -50,5 +61,5 @@ function Write-Info {
         [string] $Message
     )
 
-    Write-Host "$Message"
+    Write-Host $Message
 }
