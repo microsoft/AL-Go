@@ -15,9 +15,6 @@ if (Test-Path $readSettingsModule) {
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-$ALGoFolderName = '.AL-Go'
-$ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
-$RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPushBranches', Justification = 'False positive.')]
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]

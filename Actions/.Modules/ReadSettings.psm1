@@ -1,3 +1,7 @@
+$ALGoFolderName = '.AL-Go'
+$ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
+$RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
+
 function GetDefaultSettings
 (
     [string] $repoName
@@ -427,3 +431,4 @@ function ReadSettings {
 }
 
 Export-ModuleMember -Function ReadSettings
+Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile
