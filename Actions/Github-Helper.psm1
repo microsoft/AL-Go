@@ -624,7 +624,8 @@ function GetAccessToken {
         [string] $token,
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [string[]] $repositories = @($repository)
+        [string[]] $repositories = @($repository),
+        [hashtable] $permissions = @{}
     )
 
     if ([string]::IsNullOrEmpty($token)) {
@@ -639,7 +640,7 @@ function GetAccessToken {
         # GitHub App token format: {"GitHubAppClientId":"<client_id>","PrivateKey":"<private_key>"}
         try {
             $json = $token | ConvertFrom-Json
-            $realToken = GetGitHubAppAuthToken -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey -api_url $api_url -repository $repository -repositories $repositories -permissions @{"contents"="read";"metadata"="read";"actions"="read"}
+            $realToken = GetGitHubAppAuthToken -gitHubAppClientId $json.GitHubAppClientId -privateKey $json.PrivateKey -api_url $api_url -repository $repository -repositories $repositories -permissions $permissions
             return $realToken
         }
         catch {
@@ -655,15 +656,14 @@ function GetHeaders {
         [string] $accept = "application/vnd.github+json",
         [string] $apiVersion = "2022-11-28",
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY,
-        [System.Collections.Hashtable] $permissions = @{"contents"="read";"metadata"="read";"actions"="read"}
+        [string] $repository = $ENV:GITHUB_REPOSITORY
      )
     $headers = @{
         "Accept" = $accept
         "X-GitHub-Api-Version" = $apiVersion
     }
     if (![string]::IsNullOrEmpty($token)) {
-        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository -permissions $permissions
+        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository -permissions @{"contents"="read";"metadata"="read";"actions"="read"}
         $headers["Authorization"] = "token $accessToken"
     }
     return $headers
