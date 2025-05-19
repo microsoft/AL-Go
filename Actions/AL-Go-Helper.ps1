@@ -695,6 +695,8 @@ function ReadSettings {
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [string] $environmentName = "",
+        [string] $environmentDeployToVariableValue = "",
         [switch] $silent
     )
 
