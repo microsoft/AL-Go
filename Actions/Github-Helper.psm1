@@ -657,7 +657,7 @@ function GetHeaders {
         [string] $apiVersion = "2022-11-28",
         [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $repository = $ENV:GITHUB_REPOSITORY
-     )
+    )
     $headers = @{
         "Accept" = $accept
         "X-GitHub-Api-Version" = $apiVersion
