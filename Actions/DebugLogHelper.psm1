@@ -19,7 +19,7 @@ function Write-Debug-Base {
         [string] $Message
     )
 
-    Write-Host "`e[${colorCodeMagenta}m[AL-Go-Debug]`e[0m $Message"
+    Write-Host "$([char] 27)[${colorCodeMagenta}m[AL-Go-Debug]$([char] 27)[0m $Message"
 }
 
 # Debug logging that is only written when additional logging is enabled
