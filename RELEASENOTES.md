@@ -6,6 +6,24 @@
 
 - Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
 
+### DeployTo setting can now be defined in GitHub deployment environment variables.
+
+The [DeployTo setting](https://aka.ms/algosettings#deployto) can now be defined in GitHub deployment environment variables. When defined this way, they will take priority over any DeployTo setting defined in AL-Go settings files.
+
+When defined in a deployment environment variable, the variable should be named 'DeployTo' and not 'DeployTo\<environmentname>', and the content should be a JSON block consisting of the DeployTo properties. Eg:
+
+```
+{
+  "Branches": [
+    "*"
+  ],
+  "includeTestAppsInSandboxEnvironment": false,
+  "excludeAppIds": [ 1234 ]
+}
+```
+
+Please note, that due to certain security limitations, the properties `runs-on`, `shell` and `ContinousDeployment` will <ins>**NOT**</ins> be respected if defined in a deployment environment variable. To use these properties, please keep them defined in your AL-Go settings file.
+
 ### Test settings against a JSON schema
 
 AL-Go for GitHub settings now has a schema. The following line is added at the beginning to any AL-Go settings files to utilize the schema:
