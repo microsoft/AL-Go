@@ -1,9 +1,10 @@
 ﻿$githubOwner = "githubOwner"
-$token = "token"
+$token = "DefaultToken"
 $defaultRepository = "repo"
 $defaultApplication = "22.0.0.0"
 $defaultRuntime = "10.0"
 $defaultPublisher = "MS Test"
+$lastTokenRefresh = 0
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
 . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
@@ -16,30 +17,72 @@ function SetTokenAndRepository {
     Param(
         [string] $githubOwner,
         [string] $token,
+        [string] $appId,
+        [string] $appKey,
         [string] $repository,
         [switch] $github
     )
 
     $script:githubOwner = $githubOwner
-    $script:token = $token
     $script:defaultRepository = $repository
-    $realToken = GetAccessToken -token $script:token -repository "$githubOwner/.github"
 
     if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf false
-        $ENV:GITHUB_TOKEN = ''
-        $ENV:GH_TOKEN = ''
     }
-    Write-Host "Authenticating with GitHub using token"
+
+    if (-not $github) {
+        # Running locally - Ensure the user is authenticated with the GitHub CLI.
+        # This is required for local runs to perform GitHub-related operations.
+        invoke-gh auth status
+        gh auth refresh --scopes repo,admin:org,workflow,write:packages,read:packages,delete:packages,user,delete_repo
+    } elseif ($appKey -and $appId) {
+        # Running in GitHub Actions
+        $token = @{ "GitHubAppClientId" = $appId; "PrivateKey" = ($appKey -join '') } | ConvertTo-Json -Compress -Depth 99
+    } else {
+        throw "GitHub App ID and Private Key not set. In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
+    }
+
+    # Repository isn't created yet so authenticating towards the .github repository
+    RefreshToken -token $token -repository "$githubOwner/.github"
+}
+
+function RefreshToken {
+    Param(
+        [Parameter(Mandatory = $false)]
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $false)]
+        [switch] $force
+    )
     if ($github) {
+        if ($token) {
+            $script:token = $token
+        }
+
+        if ($script:token -eq "DefaultToken") {
+            throw "Token not set."
+        }
+
+        # Check if the last token refresh was more than 30 minutes ago
+        if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
+            return
+        }
+
+        Write-Host "Authenticating with GitHub using token"
+        $realToken = GetAccessToken -token $script:token -repository $repository -repositories @()
+        $script:lastTokenRefresh = [DateTime]::Now
         $ENV:GITHUB_TOKEN = $realToken
         $ENV:GH_TOKEN = $realToken
-    }
-    else {
-        $realToken | invoke-gh auth login --with-token
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
+    } else {
+        $realToken = gh auth token
+        $ENV:GITHUB_TOKEN = $realToken
+        $ENV:GH_TOKEN = $realToken
+        invoke-gh auth setup-git # Use GitHub CLI as a credential helper
     }
 }
 
@@ -111,7 +154,9 @@ function RunWorkflow {
         Write-Host ($parameters | ConvertTo-Json)
     }
 
-    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+    RefreshToken -repository $repository
+
+    $headers = GetHeaders -token $Env:GH_TOKEN -repository $repository
     WaitForRateLimit -headers $headers -displayStatus
 
     Write-Host "Get Workflows"
@@ -176,7 +221,8 @@ function DownloadWorkflowLog {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+    RefreshToken -repository $repository
+    $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
     $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
     $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
     $log = InvokeWebRequest -Method Get -Headers $headers -Uri $run.logs_url
@@ -193,7 +239,7 @@ function CancelAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
-    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     foreach($run in $runs.workflow_runs) {
         Write-Host $run.name
         if ($run.status -eq 'in_progress') {
@@ -213,7 +259,7 @@ function WaitAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
-    $runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+    $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     $workflowRuns = $runs.workflow_runs | Select-Object -First $top
     foreach($run in $workflowRuns) {
         WaitWorkflow -repository $repository -runid $run.id -noDelay -noError:$noError
@@ -235,8 +281,9 @@ function WaitWorkflow {
     $count = 0
     $status = ""
     do {
+        RefreshToken -repository $repository
         if ($count % 45 -eq 0) {
-            $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+            $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
             $count++
         }
         if ($delay) {
@@ -470,12 +517,17 @@ function CreateAlGoRepository {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
     }
 
+    RefreshToken -repository $repository
+
     invoke-git add *
     invoke-git commit --allow-empty -m 'init'
     invoke-git branch -M $branch
-    if ($githubOwner -and $script:token) {
-        $realToken = GetAccessToken -token $script:token -repository "$githubOwner/.github"
-        invoke-git remote set-url origin "https://$($githubOwner):$($realtoken)@github.com/$repository.git"
+    if ($githubOwner) {
+        if ($github) {
+            invoke-git remote set-url origin "https://$($githubOwner)@github.com/$repository.git"
+        } else {
+            invoke-git remote set-url origin "https://github.com/$repository"
+        }
     }
     invoke-git push --set-upstream origin $branch
     if (!$github) {
@@ -498,8 +550,14 @@ function CommitAndPush {
         [switch] $wait
     )
 
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
+    RefreshToken -repository $repository
+
     if ($wait) {
-        $headers = GetHeaders -token $token
+        $headers = GetHeaders -token $ENV:GH_TOKEN
         Write-Host "Get Previous runs"
         $url = "https://api.github.com/repos/$repository/actions/runs"
         $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
@@ -539,7 +597,8 @@ function MergePRandPull {
     }
 
     Write-Host "Get Previous runs"
-    $headers = GetHeaders -token $script:token -repository "$($script:githubOwner)/.github"
+    RefreshToken -repository $repository
+    $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
     $url = "https://api.github.com/repos/$repository/actions/runs"
     $previousrunids = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
     if ($previousrunids) {
@@ -586,10 +645,11 @@ function RemoveRepository {
     }
     if ($repository) {
         try {
-            $user = invoke-gh api user -silent -returnValue | ConvertFrom-Json
-            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository (user $($user.login))"
             $owner = $repository.Split("/")[0]
-            if ($owner -eq $user.login) {
+            Write-Host -ForegroundColor Yellow "`nRemoving repository $repository"
+            # Remove all packages belonging to the repository
+            $ownerType = invoke-gh api users/$owner --jq .type -silent -returnValue
+            if ($ownerType -eq 'User') {
                 # Package belongs to a user
                 $ownerStr = "users/$owner"
             }
@@ -632,20 +692,50 @@ function Test-LogContainsFromRun {
     )
 
     DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
-    $runPipelineLog = Get-Content -Path (Get-Item "logs/$jobName/*_$stepName.txt").FullName -encoding utf8 -raw
-    if ($isRegEx) {
-        $found = $runPipelineLog -match $expectedText
+    try {
+        # Log format changes are rolling out on GitHub Actions, we have to support both
+        $oldStepLogFile = "logs/$jobName/*_$stepName.txt"
+        $newJobLogFile = "logs/*_$jobName.txt"
+        if (Test-Path -Path $oldStepLogFile) {
+            $runPipelineLog = Get-Content -Path (Get-Item $oldStepLogFile).FullName -encoding utf8 -raw
+        }
+        else {
+            $jobLog = Get-Content -Path (Get-Item $newJobLogFile).FullName -encoding utf8
+            $emit = $false
+            $runPipelineLog = @($jobLog | ForEach-Object {
+                if ($emit -and $_ -like "*##[[]group]Run *@*") {
+                    Write-Host -ForegroundColor Yellow "Foundend $_"
+                    $emit = $false
+                }
+                elseif ($_ -like "*##[[]group]Run *$StepName@*") {
+                    Write-Host -ForegroundColor Yellow "Foundstart $_"
+                    $emit = $true
+                }
+                else {
+                    Write-Host -ForegroundColor Gray $_
+                }
+                if ($emit) { $_ }
+            }) -join "`n"
+        }
+
+        if ($isRegEx) {
+            $found = $runPipelineLog -match $expectedText
+            return $Matches
+        }
+        else {
+            $found = $runPipelineLog.indexOf($expectedText, [System.StringComparison]::OrdinalIgnoreCase) -ne -1
+        }
+
+        if ($found) {
+            Write-Host "'$expectedText' found in the log for '$jobName -> $stepName' as expected"
+        }
+        else {
+            throw "Expected to find '$expectedText' in the log for '$jobName -> $stepName', but did not find it"
+        }
     }
-    else {
-        $found = $runPipelineLog.contains($expectedText, [System.StringComparison]::OrdinalIgnoreCase)
+    finally {
+        Remove-Item -Path 'logs' -Recurse -Force
     }
-    if ($found) {
-        Write-Host "'$expectedText' found in the log for $jobName/$stepName as expected"
-    }
-    else {
-        throw "Expected to find '$expectedText' in the log for $jobName/$stepName, but did not find it"
-    }
-    Remove-Item -Path 'logs' -Recurse -Force
 }
 
 . (Join-Path $PSScriptRoot "Workflows\RunAddExistingAppOrTestApp.ps1")

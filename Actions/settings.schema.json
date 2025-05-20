@@ -1,0 +1,742 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "Schema for AL-Go settings",
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(|PTE|AppSource App)$",
+            "description": "Type of the repository. See https://aka.ms/ALGoSettings#type"
+        },
+        "unusedALGoSystemFiles": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "description": "An array of files to be excluded from AL-Go for GitHub updates. See https://aka.ms/ALGoSettings#unusedALGoSystemFiles"
+            }
+        },
+        "projects": {
+            "type": "array",
+            "items": {
+                "type": "object"
+            },
+            "description": "An array of AL-Go projects. See https://aka.ms/ALGoSettings#projects"
+        },
+        "powerPlatformSolutionFolder": {
+            "type": "string",
+            "description": "Folder containing the Power Platform solution. See https://aka.ms/ALGoSettings#powerplatformsolutionfolder"
+        },
+        "country": {
+            "type": "string",
+            "minLength": 2,
+            "examples": [
+                "us",
+                "w1",
+                "base",
+                "at",
+                "au",
+                "be",
+                "bg",
+                "br",
+                "ca",
+                "ch",
+                "co",
+                "cz",
+                "de",
+                "dk",
+                "ee",
+                "es",
+                "fi",
+                "fr",
+                "gb",
+                "gr",
+                "hk",
+                "hr",
+                "hu",
+                "ie",
+                "in",
+                "is",
+                "it",
+                "jp",
+                "kr",
+                "lt",
+                "lv",
+                "mx",
+                "nl",
+                "no",
+                "nz",
+                "pe",
+                "ph",
+                "pl",
+                "pt",
+                "ro",
+                "rs",
+                "se",
+                "si",
+                "sk",
+                "th",
+                "tr",
+                "tw",
+                "ua",
+                "vn"
+            ],
+            "description": "Country version of Business Central used. See https://aka.ms/ALGoSettings#country"
+        },
+        "artifact": {
+            "type": "string",
+            "description": "Determines the BC artifact used for building and testing the app. See https://aka.ms/ALGoSettings#artifact"
+        },
+        "companyName": {
+            "type": "string",
+            "description": "See https://aka.ms/ALGoSettings#companyname"
+        },
+        "repoVersion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Version of the AL-Go project. See https://aka.ms/ALGoSettings#repoversion"
+        },
+        "repoName": {
+            "type": "string",
+            "description": "Name of the repository. See https://aka.ms/ALGoSettings#reponame"
+        },
+        "versioningStrategy": {
+            "type": "number",
+            "description": "The versioning strategy determines how versioning is performed. See https://aka.ms/ALGoSettings#versioningstrategy"
+        },
+        "runNumberOffset": {
+            "type": "number",
+            "description": "See https://aka.ms/ALGoSettings#runNumberOffset"
+        },
+        "appBuild": {
+            "type": "number"
+        },
+        "appRevision": {
+            "type": "number"
+        },
+        "keyVaultName": {
+            "type": "string",
+            "description": "Name of the Key Vault for storing secrets used by AL-Go for GitHub. See https://aka.ms/ALGoSettings#keyvaultname"
+        },
+        "licenseFileUrlSecretName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The name of the secret that holds the license file URL. See https://aka.ms/ALGoSettings#licenseFileUrlSecretName"
+        },
+        "ghTokenWorkflowSecretName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The name of the secret that holds the GhTokenWorkflow value. See https://aka.ms/ALGoSettings#ghTokenWorkflowSecretName"
+        },
+        "adminCenterApiCredentialsSecretName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The name of the secret that holds the AdminCenterApiCredentials value. See https://aka.ms/ALGoSettings#adminCenterApiCredentialsSecretName"
+        },
+        "applicationInsightsConnectionStringSecretName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The name of the secret that holds the ApplicationInsightsConnectionString value. See https://aka.ms/ALGoSettings#applicationInsightsConnectionStringSecretName"
+        },
+        "keyVaultCertificateUrlSecretName": {
+            "type": "string",
+            "description": "The name of the secret that holds the signing certificate URL. See https://aka.ms/ALGoSettings#keyVaultCertificateUrlSecretName"
+        },
+        "keyVaultCertificatePasswordSecretName": {
+            "type": "string"
+        },
+        "keyVaultClientIdSecretName": {
+            "type": "string"
+        },
+        "keyVaultCodesignCertificateName": {
+            "type": "string"
+        },
+        "codeSignCertificateUrlSecretName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Secret name that holds the signing certificate URL. See https://aka.ms/ALGoSettings#codeSignCertificateUrlSecretName"
+        },
+        "codeSignCertificatePasswordSecretName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Secret name that holds the signing certificate password. See https://aka.ms/ALGoSettings#codeSignCertificateUrlSecretName"
+        },
+        "additionalCountries": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of countries. See https://aka.ms/ALGoSettings#additionalcountries"
+        },
+        "appDependencies": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "projectName": {
+            "type": "string",
+            "description": "Friendly name for an AL-Go project. See https://aka.ms/ALGoSettings#projectname"
+        },
+        "appFolders": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of folders containing apps. See https://aka.ms/ALGoSettings#appfolders"
+        },
+        "testDependencies": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "testFolders": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of folders containing apps. See https://aka.ms/ALGoSettings#testFolders"
+        },
+        "bcptTestFolders": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of folders containing BCPT test apps. See https://aka.ms/ALGoSettings#bcpttestfolders"
+        },
+        "pageScriptingTests": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of page scripting tests. See https://aka.ms/ALGoSettings#pageScriptingTests"
+        },
+        "restoreDatabases": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of events, indicating when you want to start with clean databases in the container. See https://aka.ms/ALGoSettings#restoreDatabases"
+        },
+        "installApps": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            },
+            "description": "An array of apps to be installed. See https://aka.ms/ALGoSettings#installapps"
+        },
+        "installTestApps": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            },
+            "description": "An array of test apps to be installed. See https://aka.ms/ALGoSettings#installtestapps"
+        },
+        "installOnlyReferencedApps": {
+            "type": "boolean",
+            "description": "Install only referenced apps. See https://aka.ms/ALGoSettings#installonlyreferencedapps"
+        },
+        "generateDependencyArtifact": {
+            "type": "boolean",
+            "description": "See https://aka.ms/ALGoSettings#generatedependencyartifact"
+        },
+        "skipUpgrade": {
+            "type": "boolean",
+            "description": "See https://aka.ms/ALGoSettings#skipupgrade"
+        },
+        "applicationDependency": {
+            "type": "string",
+            "description": "See https://aka.ms/ALGoSettings#applicationdependency"
+        },
+        "updateDependencies": {
+            "type": "boolean",
+            "description": "See https://aka.ms/ALGoSettings#updatedependencies"
+        },
+        "installTestRunner": {
+            "type": "boolean",
+            "description": "Install the test runner. See https://aka.ms/ALGoSettings#installtestrunner"
+        },
+        "installTestFramework": {
+            "type": "boolean",
+            "description": "Install the test framework. See https://aka.ms/ALGoSettings#installtestframework"
+        },
+        "installTestLibraries": {
+            "type": "boolean",
+            "description": "Install the test libraries. See https://aka.ms/ALGoSettings#installtestlibraries"
+        },
+        "installPerformanceToolkit": {
+            "type": "boolean",
+            "description": "Install the performance toolkit. See https://aka.ms/ALGoSettings#installperformancetoolkit"
+        },
+        "enableCodeCop": {
+            "type": "boolean",
+            "description": "Enable CodeCop. See https://aka.ms/ALGoSettings#enablecodecop"
+        },
+        "enableUICop": {
+            "type": "boolean",
+            "description": "Enable UICop. See https://aka.ms/ALGoSettings#enableuicop"
+        },
+        "enableCodeAnalyzersOnTestApps": {
+            "type": "boolean",
+            "description": "Enable code analyzers on test apps. See https://aka.ms/ALGoSettings#enablecodeanalyzersonTestapps"
+        },
+        "customCodeCops": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            },
+            "description": "See https://aka.ms/ALGoSettings#customcodecops"
+        },
+        "failOn": {
+            "type": "string",
+            "pattern": "^(none|warning|error|newWarning)$",
+            "description": "See https://aka.ms/ALGoSettings#failon"
+        },
+        "treatTestFailuresAsWarnings": {
+            "type": "boolean"
+        },
+        "rulesetFile": {
+            "type": "string"
+        },
+        "enableExternalRulesets": {
+            "type": "boolean"
+        },
+        "vsixFile": {
+            "type": "string"
+        },
+        "assignPremiumPlan": {
+            "type": "boolean"
+        },
+        "enableTaskScheduler": {
+            "type": "boolean"
+        },
+        "doNotBuildTests": {
+            "type": "boolean"
+        },
+        "doNotRunTests": {
+            "type": "boolean"
+        },
+        "doNotRunBcptTests": {
+            "type": "boolean"
+        },
+        "doNotRunPageScriptingTests": {
+            "type": "boolean"
+        },
+        "doNotPublishApps": {
+            "type": "boolean"
+        },
+        "doNotSignApps": {
+            "type": "boolean"
+        },
+        "configPackages": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "appSourceCopMandatoryAffixes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of affixes, which is used for running AppSource Cop. See https://aka.ms/ALGoSettings#appsourcecopmandatoryaffixes"
+        },
+        "deliverToAppSource": {
+            "type": "object",
+            "properties": {
+                "mainAppFolder": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "string"
+                },
+                "includeDependencies": {
+                    "type": "array",
+                    "items": {
+                        "required": [],
+                        "properties": {}
+                    }
+                },
+                "continuousDelivery": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "mainAppFolder",
+                "productId",
+                "includeDependencies",
+                "continuousDelivery"
+            ],
+            "description": "See https://aka.ms/ALGoSettings#delivertoappsource"
+        },
+        "obsoleteTagMinAllowedMajorMinor": {
+            "type": "string",
+            "description": "Minimum allowed major.minor version for the obsolete tag. See https://aka.ms/ALGoSettings#obsoletetagminallowedmajorminor"
+        },
+        "memoryLimit": {
+            "type": "string"
+        },
+        "templateUrl": {
+            "type": "string",
+            "description": "URL of the template to be used. See https://aka.ms/ALGoSettings#templateurl"
+        },
+        "templateSha": {
+            "type": "string"
+        },
+        "templateBranch": {
+            "type": "string"
+        },
+        "appDependencyProbingPaths": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            },
+            "description": "See https://aka.ms/ALGoSettings#appdependencyprobingpaths"
+        },
+        "useProjectDependencies": {
+            "type": "boolean",
+            "description": "See https://aka.ms/ALGoSettings#useprojectdependencies"
+        },
+        "runs-on": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Specifies which github runner will be used for all non-build/test jobs in all workflows. See https://aka.ms/ALGoSettings#runs-on"
+        },
+        "shell": {
+            "type": "string",
+            "pattern": "^(|powershell|pwsh)$",
+            "description": "The shell to be used. See https://aka.ms/ALGoSettings#shell"
+        },
+        "githubRunner": {
+            "type": "string",
+            "description": "The GitHub runner to be used. See https://aka.ms/ALGoSettings#githubrunner"
+        },
+        "githubRunnerShell": {
+            "type": "string",
+            "pattern": "^(|powershell|pwsh)$",
+            "description": "The shell to be used for the GitHub runner. See https://aka.ms/ALGoSettings#githubrunnershell"
+        },
+        "cacheImageName": {
+            "type": "string"
+        },
+        "cacheKeepDays": {
+            "type": "number",
+            "description": "Number of days to keep the cache. See https://aka.ms/ALGoSettings#cachekeepdays"
+        },
+        "alwaysBuildAllProjects": {
+            "type": "boolean",
+            "description": "Switch whether to build all projects on PR Builds. See https://aka.ms/ALGoSettings#alwaysbuildallprojects"
+        },
+        "incrementalBuilds": {
+            "type": "object",
+            "properties": {
+                "onPush": {
+                    "type": "boolean"
+                },
+                "onPull_Request": {
+                    "type": "boolean"
+                },
+                "onSchedule": {
+                    "type": "boolean"
+                },
+                "retentionDays": {
+                    "type": "integer"
+                },
+                "mode": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "onPush",
+                "onPull_Request",
+                "onSchedule",
+                "retentionDays",
+                "mode"
+            ]
+        },
+        "nuGetFeedSelectMode": {
+            "type": "string",
+            "description": "Determines the select mode when finding Business Central app packages from NuGet feeds, based on the dependency version specified in app.json. See https://aka.ms/ALGoSettings#nugetfeedselectmode"
+        },
+        "microsoftTelemetryConnectionString": {
+            "type": "string"
+        },
+        "partnerTelemetryConnectionString": {
+            "type": "string",
+            "description": "Partner telemetry connection string. See https://aka.ms/ALGoSettings#bccontainerhelper-settings"
+        },
+        "sendExtendedTelemetryToMicrosoft": {
+            "type": "boolean",
+            "description": "Send extended telemetry to Microsoft. See https://aka.ms/ALGoSettings#bccontainerhelper-settings"
+        },
+        "environments": {
+            "type": "array",
+            "items": {
+                "required": [],
+                "properties": {}
+            }
+        },
+        "buildModes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of build modes. See https://aka.ms/ALGoSettings#buildmodes"
+        },
+        "useCompilerFolder": {
+            "type": "boolean",
+            "description": "Use the compiler folder instead of a BC container. See https://aka.ms/ALGoSettings#usecompilerfolder"
+        },
+        "pullRequestTrigger": {
+            "type": "string",
+            "pattern": "^(pull_request|pull_request_target)$",
+            "description": "The type of pull request trigger. See https://aka.ms/ALGoSettings#pullrequesttrigger"
+        },
+        "bcptThresholds": {
+            "type": "object",
+            "properties": {
+                "DurationWarning": {
+                    "type": "number"
+                },
+                "DurationError": {
+                    "type": "number"
+                },
+                "NumberOfSqlStmtsWarning": {
+                    "type": "number"
+                },
+                "NumberOfSqlStmtsError": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "DurationWarning",
+                "DurationError",
+                "NumberOfSqlStmtsWarning",
+                "NumberOfSqlStmtsError"
+            ],
+            "description": "Thresholds for BCPT tests. See https://aka.ms/ALGoSettings#bcptthresholds"
+        },
+        "fullBuildPatterns": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of patterns to be used for triggering full builds. See https://aka.ms/ALGoSettings#fullbuildpatterns"
+        },
+        "excludeEnvironments": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of environments to be excluded from the build. See https://aka.ms/ALGoSettings#excludeenvironments"
+        },
+        "alDoc": {
+            "type": "object",
+            "properties": {
+                "continuousDeployment": {
+                    "type": "boolean"
+                },
+                "deployToGitHubPages": {
+                    "type": "boolean"
+                },
+                "maxReleases": {
+                    "type": "number"
+                },
+                "groupByProject": {
+                    "type": "boolean"
+                },
+                "includeProjects": {
+                    "type": "array",
+                    "items": {
+                        "required": [],
+                        "properties": {}
+                    }
+                },
+                "excludeProjects": {
+                    "type": "array",
+                    "items": {
+                        "required": [],
+                        "properties": {}
+                    }
+                },
+                "header": {
+                    "type": "string"
+                },
+                "footer": {
+                    "type": "string"
+                },
+                "defaultIndexMD": {
+                    "type": "string"
+                },
+                "defaultReleaseMD": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "continuousDeployment",
+                "deployToGitHubPages",
+                "maxReleases",
+                "groupByProject",
+                "includeProjects",
+                "excludeProjects",
+                "header",
+                "footer",
+                "defaultIndexMD",
+                "defaultReleaseMD"
+            ]
+        },
+        "commitOptions": {
+            "type": "object",
+            "properties": {
+                "messageSuffix": {
+                    "type": "string"
+                },
+                "pullRequestAutoMerge": {
+                    "type": "boolean"
+                },
+                "pullRequestLabels": {
+                    "type": "array",
+                    "items": {}
+                },
+                "createPullRequest": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "messageSuffix",
+                "pullRequestAutoMerge",
+                "pullRequestLabels",
+                "createPullRequest"
+            ]
+        },
+        "trustedSigning": {
+            "type": "object",
+            "properties": {
+                "Endpoint": {
+                    "type": "string"
+                },
+                "Account": {
+                    "type": "string"
+                },
+                "CertificateProfile": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Endpoint",
+                "Account",
+                "CertificateProfile"
+            ]
+        },
+        "trustMicrosoftNuGetFeeds": {
+            "type": "boolean",
+            "description": "Trust Microsoft NuGet feeds. See https://aka.ms/ALGoSettings#trustMicrosoftNuGetFeeds"
+        },
+        "useGitSubmodules": {
+            "type": "string"
+        },
+        "gitSubmodulesTokenSecretName": {
+            "type": "string"
+        },
+        "shortLivedArtifactsRetentionDays": {
+            "type": "integer"
+        }
+    },
+    "required": [
+        "type",
+        "unusedALGoSystemFiles",
+        "projects",
+        "powerPlatformSolutionFolder",
+        "country",
+        "artifact",
+        "companyName",
+        "repoVersion",
+        "repoName",
+        "versioningStrategy",
+        "runNumberOffset",
+        "appBuild",
+        "appRevision",
+        "keyVaultName",
+        "licenseFileUrlSecretName",
+        "ghTokenWorkflowSecretName",
+        "adminCenterApiCredentialsSecretName",
+        "applicationInsightsConnectionStringSecretName",
+        "keyVaultCertificateUrlSecretName",
+        "keyVaultCertificatePasswordSecretName",
+        "keyVaultClientIdSecretName",
+        "keyVaultCodesignCertificateName",
+        "codeSignCertificateUrlSecretName",
+        "codeSignCertificatePasswordSecretName",
+        "additionalCountries",
+        "appDependencies",
+        "projectName",
+        "appFolders",
+        "testDependencies",
+        "testFolders",
+        "bcptTestFolders",
+        "installApps",
+        "installTestApps",
+        "installOnlyReferencedApps",
+        "generateDependencyArtifact",
+        "skipUpgrade",
+        "applicationDependency",
+        "updateDependencies",
+        "installTestRunner",
+        "installTestFramework",
+        "installTestLibraries",
+        "installPerformanceToolkit",
+        "enableCodeCop",
+        "enableUICop",
+        "enableCodeAnalyzersOnTestApps",
+        "customCodeCops",
+        "failOn",
+        "treatTestFailuresAsWarnings",
+        "rulesetFile",
+        "enableExternalRulesets",
+        "vsixFile",
+        "assignPremiumPlan",
+        "enableTaskScheduler",
+        "doNotBuildTests",
+        "doNotRunTests",
+        "doNotRunBcptTests",
+        "doNotPublishApps",
+        "doNotSignApps",
+        "configPackages",
+        "appSourceCopMandatoryAffixes",
+        "deliverToAppSource",
+        "obsoleteTagMinAllowedMajorMinor",
+        "memoryLimit",
+        "templateUrl",
+        "templateSha",
+        "templateBranch",
+        "appDependencyProbingPaths",
+        "useProjectDependencies",
+        "runs-on",
+        "shell",
+        "githubRunner",
+        "githubRunnerShell",
+        "cacheImageName",
+        "cacheKeepDays",
+        "alwaysBuildAllProjects",
+        "microsoftTelemetryConnectionString",
+        "partnerTelemetryConnectionString",
+        "sendExtendedTelemetryToMicrosoft",
+        "environments",
+        "buildModes",
+        "useCompilerFolder",
+        "pullRequestTrigger",
+        "bcptThresholds",
+        "fullBuildPatterns",
+        "excludeEnvironments",
+        "alDoc",
+        "trustMicrosoftNuGetFeeds"
+    ]
+}

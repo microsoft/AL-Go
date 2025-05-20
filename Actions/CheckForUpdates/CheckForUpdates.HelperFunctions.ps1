@@ -419,7 +419,7 @@ function IsDirectALGo {
     $directALGo = $templateUrl -like 'https://github.com/*/AL-Go@*'
     if ($directALGo) {
         if ($templateUrl -like 'https://github.com/microsoft/AL-Go@*' -and -not ($templateUrl -like 'https://github.com/microsoft/AL-Go@*/*')) {
-            throw "You cannot use microsoft/AL-Go as a template repository. Please use a fork of AL-Go instead."
+            throw "You cannot use microsoft/AL-Go as a template repository. Please use microsoft/AL-Go-PTE, microsoft/AL-Go-AppSource or a fork of AL-Go instead."
         }
     }
     return $directALGo
@@ -464,6 +464,38 @@ function GetSrcFolder {
     }
     $path = Join-Path -Path (Split-Path -Path (Split-Path -Path $path -Parent) -Parent) -ChildPath $srcPath
     return $path
+}
+
+function GetModifiedSettingsContent {
+    Param(
+        [string] $srcSettingsFile,
+        [string] $dstSettingsFile
+    )
+
+    $srcSettings = Get-ContentLF -Path $srcSettingsFile | ConvertFrom-Json
+
+    $dstSettings = $null
+    if(Test-Path -Path $dstSettingsFile -PathType Leaf) {
+        $dstSettings = Get-ContentLF -Path $dstSettingsFile | ConvertFrom-Json
+    }
+
+    if(!$dstSettings) {
+        # If the destination settings file does not exist or it's empty, create an new settings object with default values from the source settings (which includes the $schema property already)
+        $dstSettings = $srcSettings
+    }
+    else {
+        # Change the $schema property to be the same as the source settings file (add it if it doesn't exist)
+        $schemaKey = '$schema'
+        $schemaValue = $srcSettings."$schemaKey"
+
+        $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
+
+        # Make sure the $schema property is the first property in the object
+        $dstSettings = $dstSettings | Select-Object @{ Name = '$schema'; Expression = { $_.'$schema' } }, * -ExcludeProperty '$schema'
+    }
+
+
+    return $dstSettings | ConvertTo-JsonLF
 }
 
 function UpdateSettingsFile {
