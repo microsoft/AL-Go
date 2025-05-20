@@ -9,6 +9,7 @@ As stated in [AL-Go Deprecations](https://aka.ms/algodeprecations#cleanModePrepr
 ### Issues
 
 - Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
+- Issue 1685 HttpError: Resource not accessible by integration
 
 ### Test settings against a JSON schema
 
