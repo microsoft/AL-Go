@@ -1,0 +1,44 @@
+name: Determine artifacts for release
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  buildVersion:
+    description: Build version to find artifacts for
+    required: true
+  GITHUB_TOKEN:
+    description: The GitHub token
+    required: true
+  TOKENFORPUSH:
+    description: The GhTokenWorkflow or the GitHub token (based on UseGhTokenWorkflow for PR/Commit)
+    required: true
+  ProjectsJson:
+    description: Json structure containing projects to search for
+    required: true
+outputs:
+  artifacts:
+    description: The artifacts to publish on the release
+    value: ${{ steps.determineArtifactsForRelease.outputs.artifacts }}
+  commitish:
+    description: The target commitish for the release
+    value: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: determineArtifactsForRelease
+      env:
+        _buildVersion: ${{ inputs.buildVersion }}
+        _GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        _TOKENFORPUSH: ${{ inputs.TOKENFORPUSH }}
+        _ProjectsJson: ${{ inputs.ProjectsJson }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineArtifactsForRelease" -Action {
+          ${{ github.action_path }}/DetermineArtifactsForRelease.ps1 -buildVersion $ENV:_buildVersion -GITHUB_TOKEN $ENV:_GITHUB_TOKEN -TOKENFORPUSH $ENV:_TOKENFORPUSH -ProjectsJson $ENV:_ProjectsJson
+        }
+branding:
+  icon: terminal
+  color: blue
