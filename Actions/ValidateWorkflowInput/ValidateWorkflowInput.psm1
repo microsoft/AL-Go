@@ -1,5 +1,3 @@
-. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-
 <#
  .DESCRIPTION
   This module contains functions to validate input values for the workflow.
