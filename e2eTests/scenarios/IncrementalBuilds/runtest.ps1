@@ -1,15 +1,19 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $e2epat = ($Global:SecureE2EPAT | Get-PlainText),
-    [string] $algoauthapp = ($Global:SecureALGOAUTHAPP | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eAppKey,
+    [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
+    [string] $azureCredentials = ($global:SecureAzureCredentials | Get-PlainText),
+    [string] $githubPackagesToken = ($global:SecureGitHubPackagesToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -72,7 +76,7 @@ $template = "https://github.com/$pteTemplate"
 $x = 5
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $e2epat -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
 if ($linux) {
     $githubRunner = "ubuntu-latest"
@@ -108,7 +112,7 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWork
 
 # Wait for CI/CD to complete
 Start-Sleep -Seconds 60
-$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id
 
@@ -141,7 +145,7 @@ Start-Sleep -Seconds 30
 # Modify app4 in a commit and wait for CI/CD workflow to finish
 $run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 
-$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $workflowRuns = $runs.workflow_runs | Select-Object -First 2
 
 # Check that the latest CI/CD is the first in the list
@@ -179,7 +183,7 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWork
 
 # Wait for CI/CD to complete
 Start-Sleep -Seconds 60
-$runs = gh api /repos/$repository/actions/runs | ConvertFrom-Json
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id
 
