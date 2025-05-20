@@ -11,7 +11,7 @@ foreach($inputname in $eventPath.inputs.PSObject.Properties.Name) {
   $inputValue = $eventPath.inputs."$inputName"
   switch ($inputName) {
     'VersionNumber' {
-      Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue $inputValue
+      Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue $inputValue
     }
   }
 }

@@ -11,7 +11,7 @@
   The version number can have 2 or 3 segments, depending on the versioning strategy.
   The function checks if the version number is in the correct format and throws an error if it is not.
 #>
-function Validate-UpdateVersionNumber {
+function Test-UpdateVersionNumber {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
@@ -43,6 +43,9 @@ function Validate-UpdateVersionNumber {
             throw $errorMessage
         }
         if (($versionNumber.Revision -ne -1) -or (!$strategy3 -and ($versionNumber.Build -ne -1))) {
+            throw $errorMessage
+        }
+        if ($strategy3 -and $versionNumber.Build -eq -1) {
             throw $errorMessage
         }
     }
