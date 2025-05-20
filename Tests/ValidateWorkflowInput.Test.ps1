@@ -23,33 +23,33 @@ Describe "ValidateWorkflowInput Action Tests" {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
-    It 'Test Test-UpdateVersionNumber' {
+    It 'Test Validate-UpdateVersionNumber' {
         Import-Module (Join-Path -Path $scriptRoot -ChildPath "$($actionName).psm1" -Resolve) -Force -DisableNameChecking
         $inputName = 'UpdateVersionNumber'
 
         $settings = @{
             versioningStrategy = 0
         }
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+1'} | Should -Not -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.1'} | Should -Not -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.1'} | Should -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.0.1'} | Should -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2'} | Should -Not -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3'} | Should -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3.4'} | Should -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue 'a.b'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+1'} | Should -Not -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.1'} | Should -Not -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.1'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.0.1'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2'} | Should -Not -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3.4'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue 'a.b'} | Should -Throw
 
         $settings = @{
             versioningStrategy = 3
         }
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+1'} | Should -Not -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.1'} | Should -Not -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.1'} | Should -Not -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.0.1'} | Should -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2'} | Should -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3'} | Should -Not -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3.4'} | Should -Throw
-        { Test-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue 'a.b.c'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+1'} | Should -Not -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.1'} | Should -Not -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.1'} | Should -Not -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '+0.0.0.1'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3'} | Should -Not -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3.4'} | Should -Throw
+        { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue 'a.b.c'} | Should -Throw
     }
     # Call action
 

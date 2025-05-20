@@ -11,7 +11,7 @@
   The version number can have 2 or 3 segments, depending on the versioning strategy.
   The function checks if the version number is in the correct format and throws an error if it is not.
 #>
-function Test-UpdateVersionNumber {
+function Validate-UpdateVersionNumber {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
