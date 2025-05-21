@@ -8,7 +8,7 @@
 
 1. If you receive an error, stating that GitHub actions are **not allowed to create Pull Requests**, the reason for this is that your organizational settings doesn't allow the workflow to create pull requests, you can **click the link** and proceed to **create the pull request manually**:
 
-   ![iPull request not allowed](https://github.com/user-attachments/assets/84b7f632-3895-4c52-975c-9c150e6ed997)
+   ![Pull request not allowed](https://github.com/user-attachments/assets/84b7f632-3895-4c52-975c-9c150e6ed997)
 
 1. If you got this error, you can change that behavior under **Organization** -> **Settings** -> **Actions** -> **General** -> **Workflow permissions** -> Check **Allow GitHub Actions to create and approve pull requests**.
 
