@@ -26,7 +26,7 @@ GitHub runners can be registered for an organization (accessible for all reposit
 
 1. To create a self-hosted runner manually, choose Windows under Runner Image and x64 in architecture and follow the description on how to create a self-hosted runner manually
 1. Make sure that the following software is installed on the computer (the suggestion in parentheses explains the mechanism used in https://aka.ms/getbuildagent)
-   - Docker. Getbuildagent use [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM. Remember to set the EnvScope to Machine if you are installing Docker with a different user, than the user running the agents.
+   - Docker. Getbuildagent uses [this script](https://github.com/microsoft/nav-arm-templates/blob/master/InstallOrUpdateDockerEngine.ps1) to install or update Docker Engine on the Azure VM. Remember to set the EnvScope to Machine if you are installing Docker with a different user than the user running the agents.
    - The AZ PowerShell module (getbuildagent use `Install-Module az -force`)
    - GIT (getbuildagent use `choco install git --force --params "/NoAutoCrlf"` after installing choco using `https://chocolatey.org/install.ps1`))
    - 7zip (getbuildagent use `choco install 7zip`)
