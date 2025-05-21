@@ -22,7 +22,7 @@ After a few seconds, your new repository should be ready for you.
 | ![image](https://github.com/user-attachments/assets/c42701bc-517b-4da8-8bdf-1fc153dd9e73) |
 |-|
 
-In your new repository, click **Settings** -> **Actions** and verify that your repository has the permissions to run actions and reusable workflows, either all workflows or github and microsoft created actions are required.
+In your new repository, click **Settings** -> **Actions** and verify that your repository has the permissions to run actions and reusable workflows, either all workflows or GitHub and Microsoft created actions are required.
 
 | ![image](https://github.com/user-attachments/assets/b5da1c65-cf10-49ce-9f54-041620083996) |
 |-|
