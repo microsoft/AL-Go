@@ -215,6 +215,20 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
 
+  BuildPP:
+    needs: [ Initialization ]
+    if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.powerPlatformSolutionFolder != ''
+    name: Build PowerPlatform Solution
+    uses: ./.github/workflows/_BuildPowerPlatformSolution.yaml
+    secrets: inherit
+    with:
+      shell: ${{ needs.Initialization.outputs.githubRunnerShell }}
+      runsOn: ${{ needs.Initialization.outputs.githubRunner }}
+      parentTelemetryScopeJson: ${{ needs.Initialization.outputs.telemetryScopeJson }}
+      project: ${{ needs.Initialization.outputs.powerPlatformSolutionFolder }}
+      projectName: ${{ needs.Initialization.outputs.powerPlatformSolutionFolder }}
+      publishArtifacts: ${{ github.ref_name == 'main' || startswith(github.ref_name, 'release/') || startswith(github.ref_name, 'releases/') || needs.Initialization.outputs.deliveryTargetsJson != '[]' || needs.Initialization.outputs.environmentCount > 0 }}
+
   DeployALDoc:
     needs: [ Initialization, Build ]
     if: (!cancelled()) && needs.Build.result == 'Success' && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'

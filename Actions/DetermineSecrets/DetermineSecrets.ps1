@@ -10,8 +10,8 @@
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
 # Build an array of secrets to get (and the names of the secrets)
-[System.Collections.ArrayList] $secretsCollection = @()
-$secretNames = @{}
+$script:secretsCollection = [System.Collections.ArrayList]::new()
+$script:secretNames = @{}
 
 function AddSecret {
     Param(
@@ -45,6 +45,9 @@ foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
             if ($useGhTokenWorkflowForPush -eq 'true') {
                 # If we are using the ghTokenWorkflow for commits, we need to get ghTokenWorkflow secret
                 AddSecret -secret 'ghTokenWorkflow' -useMapping
+            }
+            else {
+                AddSecret -secret 'github_token'
             }
         }
         'GitSubmodulesToken' {
@@ -88,12 +91,16 @@ foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
 # Calculate output for secrets
 # one output called FORMATSTR with the content: {{"secret1":{0},"secret2":{1},"secret3":{2}}}
 # and one environment variable per secret called S0, S1, S2 with the name of the GitHub Secret (or Azure DevOps secret) to look for
+if ($script:secretsCollection.Count -gt 32) {
+    throw "Maximum number of secrets exceeded."
+}
+
 $cnt = 0
 $formatArr = @()
-foreach($secret in $secretsCollection) {
+foreach($secret in $script:secretsCollection) {
     $formatArr += @("""$Secret"":{$cnt}")
-    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "S$cnt=$($secretNames[$secret])"
-    Write-Host "S$cnt=$($secretNames[$secret])"
+    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "S$cnt=$($script:secretNames[$secret])"
+    Write-Host "S$cnt=$($script:secretNames[$secret])"
     $cnt++
 }
 Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "FORMATSTR={{$($formatArr -join ',')}}"
