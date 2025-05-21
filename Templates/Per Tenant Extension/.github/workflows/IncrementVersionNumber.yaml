@@ -66,6 +66,12 @@ jobs:
         with:
           shell: powershell
 
+      - name: Validate Workflow Input
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: microsoft/AL-Go-Actions/ValidateWorkflowInput@main
+        with:
+          shell: powershell
+
       - name: Determine secrets
         id: DetermineSecrets
         uses: microsoft/AL-Go-Actions/DetermineSecrets@main
