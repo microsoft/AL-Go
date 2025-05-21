@@ -92,7 +92,7 @@ $cnt = 0
 $formatArr = @()
 foreach($secret in $secretsCollection) {
     $formatArr += @("""$Secret"":{$cnt}")
-    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_ENV -Value "S$cnt=$($secretNames[$secret])"
+    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value "S$cnt=$($secretNames[$secret])"
     Write-Host "S$cnt=$($secretNames[$secret])"
     $cnt++
 }
