@@ -19,6 +19,10 @@ AL-Go for GitHub settings now has a schema. The following line is added at the b
 
 By setting failOn to 'newWarning', pull requests will fail if new warnings are introduced. This feature compares the warnings in the pull request build against those in the latest successful CI/CD build and fails if new warnings are detected.
 
+### Refactoring secrets reader
+
+Until this version, AL-Go would transfer all secrets available to the repository to a GitHub Action in order to determine which secrets would be needed and/or read from an Azure Key Vault. In this version, the ReadSecrets functionality has been split in two. One action to determine which secrets are needed and prepare an expression to convert only the needed secrets to JSON and one action to determine whether any secrets should be attempted read from an Azure Key Vault and perform the formatting of the secret outputs.
+
 ## v7.1
 
 ### Issues
