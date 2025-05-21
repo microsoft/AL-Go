@@ -4,7 +4,7 @@
 
 1. On **github.com**, open **Actions** on your solution, locate and select **Create a new test app** and then choose **Run workflow**. Enter values for **name**, **publisher**, and **ID range** and choose **Run workflow**
 
-   ![Cretae a new test app](https://github.com/user-attachments/assets/9173c04f-1ad1-424c-8078-5ee4dda9c48a)
+   ![Create a new test app](https://github.com/user-attachments/assets/9173c04f-1ad1-424c-8078-5ee4dda9c48a)
 
 1. If you receive an error, stating that GitHub actions are **not allowed to create Pull Requests**, the reason for this is that your organizational settings doesn't allow the workflow to create pull requests, you can **click the link** and proceed to **create the pull request manually**:
 
