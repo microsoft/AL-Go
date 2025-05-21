@@ -16,7 +16,7 @@
    ![image](https://github.com/user-attachments/assets/b36a92df-0f27-4c67-9670-02ef7cc68435)
 
 > [!NOTE]
-> The secret **NEEDS** to be compressed json and there should **NOT** be a newline after the secret value.
+> The secret **NEEDS** to be compressed JSON and there should **NOT** be a newline after the secret value.
 
 3. Navigate to **Actions**, select the **Publish To Environment** workflow and choose **Run workflow**. Enter **latest** in the **App version** field and the **name of your environment** or keep the * in the **environment to receive the new version** field. Click **Run workflow**.
    ![Publish To Environment](https://github.com/user-attachments/assets/9299009a-b429-477d-b1d0-c5bf96455a93)
