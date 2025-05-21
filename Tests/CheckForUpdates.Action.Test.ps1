@@ -144,3 +144,67 @@ Describe "CheckForUpdates Action Tests" {
         }
     }
 }
+
+Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        Import-Module (Join-Path $scriptRoot "..\Github-Helper.psm1") -DisableNameChecking -Force
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
+        $tmpSrcFile = Join-Path $PSScriptRoot "tempSrcFile.json"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
+        $tmpDstFile = Join-Path $PSScriptRoot "tempDestFile.json"
+    }
+
+    AfterEach {
+        # Clean up temporary files
+        if (Test-Path $tmpSrcFile) {
+            Remove-Item -Path $tmpSrcFile -Force
+        }
+        if (Test-Path $tmpDstFile) {
+            Remove-Item -Path $tmpDstFile -Force
+        }
+    }
+
+    It 'GetModifiedSettingsContent returns correct content when destination file is not empty' {
+        # Create settings files with the content
+        @{ "`$schema" = "someSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
+        @{ "setting1" = "value2" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpDstFile -Force
+
+        $modifiedContentJson = GetModifiedSettingsContent -srcSettingsFile $tmpSrcFile -dstSettingsFile $tmpDstFile
+
+        $modifiedContent = $modifiedContentJson | ConvertFrom-Json
+        $modifiedContent | Should -Not -BeNullOrEmpty
+        $modifiedContent.PSObject.Properties.Name.Count | Should -Be 2 # setting1 and $schema
+        $modifiedContent."setting1" | Should -Be "value2"
+        $modifiedContent."`$schema" | Should -Be "someSchema"
+    }
+
+    It 'GetModifiedSettingsContent returns correct content when destination file is empty' {
+        # Create only the source file
+        @{ "`$schema" = "someSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
+        '' | Out-File -FilePath $tmpDstFile -Force
+        $modifiedContentJson = GetModifiedSettingsContent -srcSettingsFile $tmpSrcFile -dstSettingsFile $tmpDstFile
+
+        $modifiedContent = $modifiedContentJson | ConvertFrom-Json
+        $modifiedContent | Should -Not -BeNullOrEmpty
+        @($modifiedContent.PSObject.Properties.Name).Count | Should -Be 2 # srcSetting and $schema
+        $modifiedContent."`$schema" | Should -Be "someSchema"
+        $modifiedContent."srcSetting" | Should -Be "value1"
+    }
+
+    It 'GetModifiedSettingsContent returns correct content when destination file does not exist' {
+        # Create only the source file
+        @{ "`$schema" = "someSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
+
+        Test-Path $tmpDstFile | Should -Be $false
+        $modifiedContentJson = GetModifiedSettingsContent -srcSettingsFile $tmpSrcFile -dstSettingsFile $tmpDstFile
+
+        $modifiedContent = $modifiedContentJson | ConvertFrom-Json
+        $modifiedContent | Should -Not -BeNullOrEmpty
+        $modifiedContent.PSObject.Properties.Name.Count | Should -Be 2 # srcSetting and $schema
+        $modifiedContent."srcSetting" | Should -Be "value1"
+        $modifiedContent."`$schema" | Should -Be "someSchema"
+    }
+}
