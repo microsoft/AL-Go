@@ -12,7 +12,7 @@
 
 1. If you got this error, you can change that behavior under **Organization** -> **Settings** -> **Actions** -> **General** -> **Workflow permissions** -> Check **Allow GitHub Actions to create and approve pull requests**.
 
-   ![iAllow GitHub Actions to create and approve pull requests](https://github.com/user-attachments/assets/93454d6c-2b6a-4180-837c-a500be11f37c)
+   ![Allow GitHub Actions to create and approve pull requests](https://github.com/user-attachments/assets/93454d6c-2b6a-4180-837c-a500be11f37c)
 
 1. When the workflow is done, navigate to **Pull Requests**, **inspect the PR**, **Merge the pull request** and **Confirm the merge**
 
