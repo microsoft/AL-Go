@@ -25,7 +25,7 @@
 
    ![Inspect PR](https://github.com/user-attachments/assets/f7855aaa-3233-4028-91ed-ffba9de797ae)
 
-1. Under **Actions** you should now see that a new CI/CD workdlow have been started.
+1. Under **Actions** you should now see that a new CI/CD workflow have been started.
 
    ![New CI/CD](https://github.com/user-attachments/assets/442930f6-508d-4e0f-8130-2ccc39099fef)
 
