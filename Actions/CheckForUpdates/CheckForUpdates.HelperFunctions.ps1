@@ -505,16 +505,14 @@ function GetModifiedSettingsContent {
     else {
         # Change the $schema property to be the same as the source settings file (add it if it doesn't exist)
         $schemaKey = '$schema'
-        $schemaValue = $srcSettings."$schemaKey"
+        if ($srcSettings.PSObject.Properties.Name -eq $schemaKey) {
+            $schemaValue = $srcSettings."$schemaKey"
 
-    $schemaKey = '$schema'
-    if ($srcSettings.PSObject.Properties.Name -eq $schemaKey) {
-        $schemaValue = $srcSettings."$schemaKey"
+            $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
 
-        $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
-
-        # Make sure the $schema property is the first property in the object
-        $dstSettings = $dstSettings | Select-Object @{ Name = '$schema'; Expression = { $_.'$schema' } }, * -ExcludeProperty '$schema'
+            # Make sure the $schema property is the first property in the object
+            $dstSettings = $dstSettings | Select-Object @{ Name = '$schema'; Expression = { $_.'$schema' } }, * -ExcludeProperty '$schema'
+        }
     }
 
     return $dstSettings | ConvertTo-JsonLF
