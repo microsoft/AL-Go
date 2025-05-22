@@ -656,14 +656,15 @@ function GetHeaders {
         [string] $accept = "application/vnd.github+json",
         [string] $apiVersion = "2022-11-28",
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [string] $repository = $ENV:GITHUB_REPOSITORY
+        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [hashtable] $permissions = @{"contents"="read";"metadata"="read";"actions"="read"}
     )
     $headers = @{
         "Accept" = $accept
         "X-GitHub-Api-Version" = $apiVersion
     }
     if (![string]::IsNullOrEmpty($token)) {
-        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository -permissions @{"contents"="read";"metadata"="read";"actions"="read"}
+        $accessToken = GetAccessToken -token $token -api_url $api_url -repository $repository -permissions $permissions
         $headers["Authorization"] = "token $accessToken"
     }
     return $headers
@@ -787,18 +788,13 @@ function Set-ContentLF {
     Param(
         [parameter(Mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
-        [parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        $content
+        [parameter(mandatory = $true, ValueFromPipeline = $true)]
+        [string] $content
     )
 
     Process {
         $path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
-        if ($content -is [array]) {
-            $content = $content -join "`n"
-        }
-        else {
-            $content = "$content".Replace("`r", "")
-        }
+        $content = "$content".Replace("`r", "").TrimEnd("`n")
         [System.IO.File]::WriteAllText($path, "$content`n")
     }
 }
