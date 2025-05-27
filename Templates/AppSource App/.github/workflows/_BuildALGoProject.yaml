@@ -65,10 +65,6 @@ on:
         required: false
         default: ''
         type: string
-      signArtifacts:
-        description: Flag indicating whether the apps should be signed
-        type: boolean
-        default: false
       useArtifactCache:
         description: Flag determining whether to use the Artifacts Cache
         type: boolean
@@ -179,7 +175,7 @@ jobs:
 
       - name: Sign
         id: sign
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != ''))
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != ''))
         uses: microsoft/AL-Go-Actions/Sign@main
         with:
           shell: ${{ inputs.shell }}
