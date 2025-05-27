@@ -25,7 +25,7 @@ By setting failOn to 'newWarning', pull requests will fail if new warnings are i
 
 ### Signing apps during 'Test Next Major', 'Test Next Minor' and 'Test Current' workflows
 
-App artifacts produced in 'Test Next Major', 'Test Next Minor' and 'Test Current' workflows are now signed by default. In order to skip signing, you must set `doNotSignApps` setting to `false`, either as a conditional setting or a workflow-specific setting.
+App artifacts produced in 'Test Next Major', 'Test Next Minor' and 'Test Current' workflows are now signed by default. In order to skip signing, you must set `doNotSignApps` setting to `true`, either as a conditional setting or a workflow-specific setting.
 
 ## v7.1
 
