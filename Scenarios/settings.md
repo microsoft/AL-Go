@@ -14,7 +14,7 @@ When running a workflow or a local script, the settings are applied by reading s
 
 1. `ALGoOrgSettings` is a **GitHub variable**, which can be defined on an **organizational level** and will apply to **all AL-Go repositories** in this organization.
 
-1. `.github/templateRepoSettings.doNotEdit.json` is the organizational settings from an indirect template repository (if applicable)
+1. `.github/templateRepoSettings.doNotEdit.json` is the repository settings from an indirect template repository (if applicable)
 
 1. `.github/AL-Go-settings.json` is the **repository settings file**. This settings file contains settings that are relevant for all projects in the repository. **Special note:** The repository settings file can also contains `BcContainerHelper` settings, which will be applied when loading `BcContainerHelper` in a workflow - the GitHub variables are not considered for BcContainerHelper settings. (see expert section).
 
