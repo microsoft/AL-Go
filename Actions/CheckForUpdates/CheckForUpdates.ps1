@@ -318,6 +318,7 @@ if ($update -ne 'Y') {
 
         }
         if ($removeFiles) {
+            $removeFiles = @($removeFiles | Select-Object -Unique)
             Write-Host "Removed files:"
             $removeFiles | ForEach-Object { Write-Host "- $_" }
         }

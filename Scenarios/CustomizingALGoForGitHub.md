@@ -2,7 +2,11 @@
 
 AL-Go for GitHub is a plug-and-play DevOps solution, intended to support 100% of the functionality needed by 90% of the people developing applications for Microsoft Dynamics 365 Business Central out-of-the-box.
 
-If AL-Go functionality out-of-the-box doesn't match your needs, you really have three options:
+If AL-Go functionality out-of-the-box doesn't match your needs, you should always start by creating a feature suggestion [here](https://github.com/microsoft/AL-Go/discussions) and see whether your needs are met by other mechanisms or required by other partners and should be part of AL-Go for GitHub?
+
+If your feature should be part of AL-Go for GitHub, you can select to [contribute](Contribute.md) to AL-Go for GitHub yourself or wait for Microsoft or other partners to pickup your feature suggestion.
+
+If your feature suggestion isn't accepted, you really have three options:
 
 1. Customize AL-Go for GitHub to fit your needs
 1. Select another managed DevOps solution
@@ -229,11 +233,9 @@ Adding a custom job like this, will cause this job to run simultaneously with th
 > [!CAUTION]
 > Custom jobs might be broken if the customized AL-Go for GitHub workflow has been refactored and the referenced jobs have been renamed.
 
-### Modifying workflow permissions
+### Custom job permissions
 
 If any of your custom jobs require permissions, which exceeds the permissions already assigned in the workflow, then these permissions can be specified directly on the custom job.
-
-If any of your custom steps require permissions, which exceeds the permissions already assigned in the workflow, you can modify the permissions of the workflow and assign additional permissions. AL-Go for GitHub will not allow you to remove permissions, which might be needed in other steps/jobs, but additional permissions will be included when running Update AL-Go System Files.
 
 ## Using indirect templates
 

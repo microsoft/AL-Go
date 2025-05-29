@@ -96,7 +96,6 @@ $cicdWorkflow = Join-Path $templateRepoPath '.github/workflows/CICD.yaml'
 $cicdYaml = [yaml]::Load($cicdWorkflow)
 $cicdYaml | Should -Not -BeNullOrEmpty
 
-# Modify the permissions
 $customJobs = @(
     @{
         "Name" = "CustomJob-TemplateInit"
