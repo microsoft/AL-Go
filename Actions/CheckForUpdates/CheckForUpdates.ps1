@@ -20,25 +20,6 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\TelemetryHelper.psm1
 . (Join-Path -Path $PSScriptRoot -ChildPath "yamlclass.ps1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
 
-function GetHeadersForTemplateUrl([string] $templateUrl, [string] $token) {
-    # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
-    $headers = GetHeaders -token $ENV:GITHUB_TOKEN
-    $templateRepositoryUrl = $templateUrl.Split('@')[0]
-    Write-Host "Template Repository URL: $templateRepositoryUrl"
-    $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Method Head -Uri $templateRepositoryUrl -ErrorAction SilentlyContinue
-    if (-not $response -or $response.StatusCode -ne 200) {
-        # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
-        # Get token with read permissions for the template repository
-        # NOTE that the GitHub app needs to be installed in the template repository for this to work
-        $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
-        $templateReadToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="read";"metadata"="read"} -repository $templateRepository
-
-        # Use read token for authenticated API request
-        $headers = GetHeaders -token $templateReadToken
-    }
-    return $headers
-}
-
 # ContainerHelper is used for determining project folders and dependencies
 DownloadAndImportBcContainerHelper
 
@@ -92,7 +73,6 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 }
 
 $realTemplateFolder = $null
-$templateHeaders = GetHeadersForTemplateUrl -templateUrl $templateUrl -token $token
 $templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 Write-Host "Template Folder: $templateFolder"
 
@@ -122,7 +102,6 @@ if (-not $isDirectALGo) {
             }
 
             # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
-            $realTemplateHeaders = GetHeadersForTemplateUrl -templateUrl $realTemplateUrl -token $token
             $realTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
             Write-Host "Real Template Folder: $realTemplateFolder"
 
