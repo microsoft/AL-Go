@@ -93,7 +93,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 
 $realTemplateFolder = $null
 $templateHeaders = GetHeadersForTemplateUrl -templateUrl $templateUrl -token $token
-$templateFolder = DownloadTemplateRepository -headers $templateHeaders -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+$templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
