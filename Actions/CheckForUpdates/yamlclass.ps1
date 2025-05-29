@@ -259,15 +259,18 @@ class Yaml {
             Write-Host "Custom Jobs:"
             foreach($customJob in $customJobs) {
                 Write-Host "- $customJob"
-                $jobsWithDependency = $nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } }
+                $jobsWithDependency = @($nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } })
                 # If any Build Job has a dependency on this CustomJob, add will be added to all build jobs later
                 if ($jobsWithDependency | Where-Object { $_ -like 'Build*' }) {
                     $jobsWithDependency = @($jobsWithDependency | Where-Object { $_ -notlike 'Build*' }) + @('Build')
                 }
                 if ($jobsWithDependency) {
                     Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
-                    $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = @($jobsWithDependency) })
                 }
+                else {
+                    Write-Host "  - No jobs with dependency on this"
+                }
+                $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = $jobsWithDependency })
             }
         }
         return $result
