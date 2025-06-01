@@ -31,7 +31,9 @@ function DownloadTemplateRepository {
         $response = $null
     }
     if (-not $response -or $response.StatusCode -ne 200) {
-        # GITHUB_TOKEN doesn't have access to template repository, must be is private/internal
+        # GITHUB_TOKEN doesn't have access to template repository, must be private/internal
+
+``
         # Get token with read permissions for the template repository
         # NOTE that the GitHub app needs to be installed in the template repository for this to work
         $headers = GetHeaders -token $token -repository $templateRepository
