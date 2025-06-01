@@ -258,7 +258,7 @@ foreach($checkfile in $checkfiles) {
 
                 if ($dstFileExists) {
                     if ($type -eq 'workflow') {
-                        Write-Host "Apply customizations from my repository: $dstFile"
+                        Write-Host "Apply customizations from current repository: $dstFile"
                         [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
                     }
 
