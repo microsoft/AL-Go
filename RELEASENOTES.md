@@ -15,16 +15,6 @@ As stated in [AL-Go Deprecations](https://aka.ms/algodeprecations#cleanModePrepr
 
 Some workflow inputs are now validated early in order to avoid workflows to make modifications like creating a release, when we already should know that an error will occur later.
 
-### New Repository settings
-
-- `customALGoSystemFiles` is an array of JSON objects, which holds information about custom AL-Go System Files, which will be applied during Update AL-Go System Files. Every object can hold these 4 properties:
-
-  - **Destination** (mandatory) - Path in which the file should be placed (Can include the filename if the source doesn't point to a .zip file).
-  - **Source** (mandatory) - URL to a either a single file or a .zip file containing. Note that the source URL can contain embedded secrets using ${{SECRETNAME}} as part of the URL to hide SAS tokens or like.
-  - **FileSpec** (optional) - If the source URL points to a .zip file, this property can specify which files to include if the source URL points to a .zip file. The FileSpec can include a subfolder inside the .zip file, and must include a file name pattern.
-  - **Recurse** (optional) - Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec).
-  - **AuthTokenSecret** (optional) - the name of a secret (like ghTokenWorkflow) which contains a Personal Access Token or GitHub App specification with access to the source files.
-
 ### Add custom jobs to AL-Go workflows
 
 It is now possible to add custom jobs to AL-Go workflows. The Custom Job needs to be named `CustomJob<something>` and should be placed after all other jobs in the .yaml file. The order of which jobs are executed is determined by the Needs statements. Your custom job will be executed after all jobs specified in the Needs clause in your job and if you need the job to be executed before other jobs, you should add the job name in the Needs clause of that job. See [https://aka.ms/algosettings#customjobs](https://aka.ms/algosettings#customjobs) for details.

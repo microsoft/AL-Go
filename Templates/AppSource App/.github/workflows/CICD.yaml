@@ -160,7 +160,7 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'ghTokenWorkflow,CustomALGoSystemFilesSecrets'
+          getSecrets: 'ghTokenWorkflow'
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main

@@ -145,62 +145,6 @@ Which basically launches a script located in the script folder in the repository
 > [!CAUTION]
 > Script overrides will almost certainly be broken in the future. The current script overrides is very much tied to the current implementation of the `Run-AlPipeline` function in BcContainerHelper. In the future, we will move this functionality to GitHub actions and no longer depend on BcContainerHelper and Run-AlPipeline. At that time, these script overrides will have to be changed to follow the new implementation.
 
-<a id="customALGoSystemFiles"></a>
-
-### Adding custom workflows and/or scripts using a URL
-
-By adding a setting called [`customALGoSystemFiles`](https://aka.ms/algosettings#customalgosystemfiles) in your [repo settings](https://aka.ms/algosettings#settings), you can tell AL-Go for GitHub that these files should be included in the update. Examples:
-
-```
-  "customALGoSystemFiles": [
-    {
-      "Destination": ".AL-Go/",
-      "Source": "https://raw.githubusercontent.com/freddydk/CustomALGoSystemFiles/main/.AL-Go/myDevEnv.ps1"
-    },
-    {
-      "Destination": ".AL-Go/NewBcContainer.ps1",
-      "Source": "https://raw.githubusercontent.com/microsoft/BCApps/main/build/scripts/NewBcContainer.ps1"
-    },
-    {
-      "Destination": ".AL-Go/NewBcContainer.ps1",
-      "Source": "https://myfiles.blob.core.windows.net/myalgosystemfiles/NewBcContainer.ps1?${{SECRETNAME}}"
-    },
-    {
-      "Destination": ".github/",
-      "Source": "https://github.com/freddydk/CustomALGoSystemFiles/archive/refs/heads/main.zip",
-      "FileSpec": "*/.github/*",
-      "Recurse": true
-    },
-    {
-      "Destination": ".github/",
-      "Source": "https://api.github.com/repos/BusinessCentralApps/CustomALGoSystemFiles/zipball/main",
-      "AuthTokenSecret": "SECRETNAME",
-      "FileSpec": "*/.github/*",
-      "Recurse": true
-    }
-  ]
-```
-
-`customALGoSystemFiles` is an array of objects, which currently can have 4 properties:
-
-| Property | Description | Mandatory | Default |
-| :-- | :-- | :-: | :-- |
-| Destination | Path in which the file should be placed. Can include the filename if the source doesn't point to a .zip file, must include a terminating / or \\ if a filename is not included. | Yes | |
-| Source | URL to a either a single file or a .zip file containing custom AL-Go System Files. Must be https. The source URL can contain embedded secrets using the `${{SECRETNAME}}` construct. | Yes | |
-| FileSpec | If the source URL points to a .zip file, this property can specify which files to include. The FileSpec can include subfolders inside the .zip file, and must include a file name pattern. | No | * |
-| Recurse | Include all files matching the file name pattern in FileSpec from all subfolders (under a given subfolder from FileSpec) | No | true |
-| AuthTokenSecret | The name of a secret (like ghTokenWorkflow) which contains a Personal Access Token or GitHub App specification with access to the files. |
-
-This setting will cause AL-Go for GitHub to include these files during the next update.
-
-> [!WARNING]
-> You can override existing AL-Go for GitHub system files this way, please prefix files in your repository with `my` or your organization name (except for DeployTo and DeliverTo) in order to avoid overriding future workflows from AL-Go for GitHub.
-
-> [!NOTE]
-> If the destination is in the .AL-Go folder, the file(s) will be copied to all .AL-Go folders in multi-project repositories.
-
-> [!NOTE]
-> If the source is a private or internal GitHub repository and you are using a GitHub app for authentication, you should use https://api.github.com/repos/OWNER/REPO/zipball/BRANCH instead of https://github.com/OWNER/REPO/archive/refs/heads/BRANCH.zip.
 
 ### Adding custom jobs
 
@@ -243,8 +187,6 @@ If you have have customizations you want to apply to multiple repositories, you 
 
 > [!NOTE]
 > Indirect templates can be public or private. If you are using a private indirect template, AL-Go for GitHub will use the GhTokenWorkflow secret for downloading the template during Update AL-Go System Files and check for updates.
-
-Repository and project settings from the indirect template will also be applied to the new repository during update AL-Go System Files, unless the setting already exists in the repository being updated. **UnusedALGoSystemFiles** and **CustomALGoSystemFiles** will NOT be copied from the indirect template, they will be applied during Update AL-Go System Files.
 
 > [!TIP]
 > The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a **GhTokenWorkflow** secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.

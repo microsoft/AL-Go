@@ -28,7 +28,6 @@ try {
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     $keyVaultCredentials = GetKeyVaultCredentials
     $getAppDependencySecrets = $false
-    $getCustomALGoSystemFilesSecrets = $false
     $getTokenForPush = $false
     [System.Collections.ArrayList]$secretsCollection = @()
     foreach($secret in ($getSecrets.Split(',') | Select-Object -Unique)) {
@@ -41,9 +40,6 @@ try {
         $secretNameProperty = "$($secret.TrimStart('-*'))SecretName"
         if ($secret -eq 'AppDependencySecrets') {
             $getAppDependencySecrets = $true
-        }
-        elseif ($secret -eq 'CustomALGoSystemFilesSecrets') {
-            $getCustomALGoSystemFilesSecrets = $true
         }
         else {
             $secretName = $secret
@@ -93,27 +89,6 @@ try {
                         if ($secretsCollection -notcontains $secretName) {
                             $secretsCollection += $secretName
                         }
-                    }
-                }
-            }
-        }
-    }
-
-    if ($getCustomALGoSystemFilesSecrets) {
-        # Look through customALGoSystemFiles for secrets and add them to the collection of secrets to get
-        foreach($customspec in $settings.customALGoSystemFiles) {
-            if ($customspec.PSObject.Properties.name -eq "AuthTokenSecret") {
-                if ($secretsCollection -notcontains $customspec.authTokenSecret) {
-                    $secretsCollection += $customspec.authTokenSecret
-                }
-            }
-            if ($customspec.PSObject.Properties.name -eq "Source") {
-                # If the Source URLs contains '${{SECRETNAME}}' we need to get the secret
-                $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-                if ($customspec.Source -match $pattern) {
-                    $secretName = $matches[2]
-                    if ($secretsCollection -notcontains $secretName) {
-                        $secretsCollection += $secretName
                     }
                 }
             }

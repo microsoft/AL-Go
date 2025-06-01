@@ -218,7 +218,8 @@ CancelAllWorkflows -repository $repository
 # Pull changes
 Pull
 
-# TODO: Check that the settings from the indirect template repository was copied to $IndirectTemplateRepoSettingsFile and $IndirectTemplateProjectSettingsFile
+(Join-Path (Get-Location) $IndirectTemplateRepoSettingsFile) | Should -Exist
+(Join-Path (Get-Location) $IndirectTemplateProjectSettingsFile) | Should -Exist
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait
@@ -232,12 +233,6 @@ Test-LogContainsFromRun -runid $run.id -jobName 'JustSomeJob' -stepName 'JustSom
 Test-LogContainsFromRun -runid $run.id -jobName 'JustSomeTemplateJob' -stepName 'JustSomeTemplateStep' -expectedText 'JustSomeTemplateJob was here!' | Should -Throw
 
 Set-Location $prevLocation
-
-# TODO: Modify settings in the template repository and re-run Update AL-Go System Files in the final repository to check that the settings are copied to the final repository
-
-# TODO: Add tests for CustomALGoSystemFiles (with and without security)
-
-Read-Host "Press Enter to continue"
 
 RemoveRepository -repository $repository -path $finalRepoPath
 RemoveRepository -repository $templateRepository -path $templateRepoPath

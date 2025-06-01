@@ -16,13 +16,6 @@
                 "description": "An array of files to be excluded from AL-Go for GitHub updates. See https://aka.ms/ALGoSettings#unusedALGoSystemFiles"
             }
         },
-        "customALGoSystemFiles": {
-            "type": "array",
-            "items": {
-                "type": "string",
-                "description": "An array of custom AL-Go System File specifications, which will be included in Update AL-Go System Files. See https://aka.ms/ALGoSettings#customALGoSystemFiles"
-            }
-        },
         "projects": {
             "type": "array",
             "items": {
