@@ -25,7 +25,7 @@ Keeping your repositories up-to-date can be done manually or on a schedule (like
 
 There are three ways you can customize AL-Go for GitHub to fit your needs. You can
 
-1. customize the repository with custom scripts, workflows, jobs or steps following the guidelines below
+1. customize the repository with custom scripts, workflows or jobs following the guidelines below
 1. create a customized repository and use this as your template repository (indirect template)
 1. fork the AL-Go for GitHub and create your "own" version (not recommended)
 
