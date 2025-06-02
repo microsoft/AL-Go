@@ -788,7 +788,7 @@ function Set-ContentLF {
     Param(
         [parameter(Mandatory = $true, ValueFromPipeline = $false)]
         [string] $path,
-        [parameter(mandatory = $true, ValueFromPipeline = $true)]
+        [parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string] $content
     )
 
