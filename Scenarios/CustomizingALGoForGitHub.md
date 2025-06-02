@@ -148,7 +148,7 @@ Which basically launches a script located in the script folder in the repository
 
 ### Adding custom jobs
 
-You can also add custom jobs to any of the existing AL-Go for GitHub workflows. Custom jobs can depend on other jobs and other jobs can made to depend on custom jobs. Custom jobs needs to be named `CustomJob<something>`, but can specify another name to be shown in the UI. Example:
+You can also add custom jobs to any of the existing AL-Go for GitHub workflows. Custom jobs can depend on other jobs and other jobs can be made to depend on custom jobs. Custom jobs need to be named `CustomJob<something>`, but can specify another name to be shown in the UI. Example:
 
 ```yaml
   CustomJob-CreateBuildTag:
