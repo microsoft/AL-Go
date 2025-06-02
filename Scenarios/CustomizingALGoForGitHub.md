@@ -131,7 +131,7 @@ It is recommended to prefix your workflows with `my`, `our`, your name or your o
 
 You can add custom powershell scripts under the .github folder for repository scoped scripts or in the .AL-Go folder for project scoped scripts. Specially named scripts in the .AL-Go folder can override standard functionality in AL-Go for GitHub workflows. A list of these script overrides can be found [here](https://aka.ms/algosettings#scriptoverrides). Scripts under the .github folder can be used in custom workflows instead of using inline scripts inside the workflow.
 
-One example of a script override is the NewBcContainer override used in the System Application project in BCApps (can be found [here](https://github.com/microsoft/BCApps/blob/main/build/projects/System%20Application/.AL-Go/NewBcContainer.ps1)). This override looks like:
+One example of a script override is the NewBcContainer override used in the System Application project in BCApps (can be found [here](https://github.com/microsoft/BCApps/blob/647efdacac0c0d13d726e14c89180a32cbb55cf2/build/projects/System%20Application/.AL-Go/NewBcContainer.ps1)). This override looks like:
 
 ```powershell
 Param([Hashtable] $parameters)
@@ -140,11 +140,10 @@ $script = Join-Path $PSScriptRoot "../../../scripts/NewBcContainer.ps1" -Resolve
 . $script -parameters $parameters
 ```
 
-Which basically launches a script located in the script folder in the repository for creating the build container needed for building and testing the System Application.
+Which basically launches a script located in the script folder in the repository for creating the build container needed for building and testing the System Application. That script can be found [here](https://github.com/microsoft/BCApps/blob/647efdacac0c0d13d726e14c89180a32cbb55cf2/build/scripts/NewBcContainer.ps1).
 
 > [!CAUTION]
 > Script overrides will almost certainly be broken in the future. The current script overrides is very much tied to the current implementation of the `Run-AlPipeline` function in BcContainerHelper. In the future, we will move this functionality to GitHub actions and no longer depend on BcContainerHelper and Run-AlPipeline. At that time, these script overrides will have to be changed to follow the new implementation.
-
 
 ### Adding custom jobs
 
