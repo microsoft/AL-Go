@@ -26,10 +26,6 @@ Write-Host -ForegroundColor Yellow @'
 #  - Create a new repository based on the PTE template with 1 app, using compilerfolder and donotpublishapps (this will be the "final" template repository)
 #  - Run Update AL-Go System Files in final repo (using indirect repo as template)
 #  - Run Update AL-Go System files in indirect repo
-
-# TODO: describe the scenario
-
-
 #  - Validate that custom step is present in indirect repo
 #  - Run Update AL-Go System files in final repo
 #  - Validate that custom step is present in final repo

@@ -315,6 +315,7 @@ class Yaml {
             $yaml = [Yaml]::Load($yamlFile)
         }
         catch {
+            Write-Host "Unable to read YAML file $yamlFile. Skipping custom jobs."
             return
         }
 
