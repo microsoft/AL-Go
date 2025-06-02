@@ -97,7 +97,7 @@ In this example the AuthContext secret is assumed to contain a Token property. R
 
 ### Adding custom workflows
 
-If you add new workflows to the `.github/workflows` folder, which is unknown to AL-Go for GitHub, AL-Go will leave them un-touched. These workflows needs to follow standard GitHub Actions schema (yaml) and can be triggered as any other workflows. Example:
+If you add new workflows to the `.github/workflows` folder, which is unknown to AL-Go for GitHub, AL-Go will leave them untouched. These workflows need to follow standard GitHub Actions schema (yaml) and can be triggered as any other workflows. Example:
 
 ```yaml
 name: 'Create Build Tag'
