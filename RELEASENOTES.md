@@ -10,6 +10,7 @@ As stated in [AL-Go Deprecations](https://aka.ms/algodeprecations#cleanModePrepr
 
 - Issue 1697 Error in CheckForUpdates: "Internet Explorer engine is not available" when using self-hosted runners
 - Issue 1685 HttpError: Resource not accessible by integration
+- Issue 1722 Check if apps are already installed on a higher version before deploying
 
 ### Workflow input validation
 
